@@ -527,6 +527,44 @@ AUDITED_BUILD_SCRIPTS = {
         "external-import/matrix/build_and_install_libolm.sh: builds libolm in /tmp, installs it in /usr/local"
     ),
 }
+# pip commands that write nothing the image keeps (cache only changes the cache).
+PIP_READ_ONLY_COMMANDS = frozenset(
+    {
+        "list",
+        "show",
+        "freeze",
+        "check",
+        "help",
+        "hash",
+        "debug",
+        "inspect",
+        "index",
+        "search",
+        "completion",
+        "cache",
+    }
+)
+# PIP_* variables that change no install location and no file pip writes.
+PIP_REVIEWED_VARIABLES = frozenset(
+    {
+        "PIP_BREAK_SYSTEM_PACKAGES",
+        "PIP_DISABLE_PIP_VERSION_CHECK",
+        "PIP_NO_CACHE_DIR",
+        "PIP_CACHE_DIR",
+        "PIP_DEFAULT_TIMEOUT",
+        "PIP_TIMEOUT",
+        "PIP_RETRIES",
+        "PIP_INDEX_URL",
+        "PIP_EXTRA_INDEX_URL",
+        "PIP_TRUSTED_HOST",
+        "PIP_NO_INPUT",
+        "PIP_PROGRESS_BAR",
+        "PIP_ROOT_USER_ACTION",
+        "PIP_PREFER_BINARY",
+        "PIP_QUIET",
+        "PIP_VERBOSE",
+    }
+)
 # Global pip options (before the command) that take a value.
 PIP_GLOBAL_OPTIONS_WITH_VALUE = frozenset(
     {
@@ -1466,6 +1504,12 @@ def check_shell_options(options):
         i += 1
 
 
+def check_shell_environment(program, env):
+    """bash runs the file of BASH_ENV before any script it is not interactive for."""
+    if posixpath.basename(program or "") == "bash" and env.get("BASH_ENV"):
+        raise Unsupported("bash with BASH_ENV set")
+
+
 def env_prefix(words, assigned, unset):
     """``env [-u NAME] [NAME=value] command``: the environment of the command."""
     assigned = dict(assigned)
@@ -1510,6 +1554,8 @@ def interpreter_of(text, model=None, env=None, files=None, stage=None):
     if not interpreter:
         return ""
     programs = [interpreter[0]]
+    if posixpath.basename(interpreter[0]) in SHELLS:
+        check_shell_options(interpreter[1:])
     if posixpath.basename(interpreter[0]) == "env":
         rest = [
             a
@@ -2047,6 +2093,7 @@ class Shell:
         elif name == "find":
             self._find(args)
         elif name in SHELLS:
+            check_shell_environment(name, env)
             self._nested_shell(args, conditional, env)
         elif PIP.match(name):
             self._pip(args, conditional)
@@ -2310,6 +2357,7 @@ class Shell:
         text = self._read(path)
         program = interpreter_of(text, self.model, env, self.files, self.stage)
         if program in SHELLS:
+            check_shell_environment(program, env)
             if not self.start and audited(text):
                 return True
             nested = self._nested(
@@ -2625,6 +2673,14 @@ class Shell:
         if not args:
             return
         command, args = args[0], args[1:]
+        if command in PIP_READ_ONLY_COMMANDS or (
+            command == "config" and args[:1] in (["list"], ["get"], ["debug"])
+        ):
+            return
+        if command not in ("install", "uninstall"):
+            # wheel and download build local projects; config set writes pip.conf.
+            raise Unsupported(f"pip {command}: its effect on the files is not modelled")
+        self._check_pip_configuration()
         relocated = False
         editable = False
         targets = []
@@ -2686,6 +2742,30 @@ class Shell:
                     "pip install into another directory than site-packages"
                 )
             self.model.install_package(self.files, path)
+
+    def _check_pip_configuration(self):
+        """pip also reads options from the environment (PIP_*) and from pip.conf:
+        only the reviewed variables are accepted, and no configuration file the
+        build wrote."""
+        for key in self.variables:
+            if key.startswith("PIP_") and key not in PIP_REVIEWED_VARIABLES:
+                raise Unsupported(f"pip with {key} set")
+        written = (*self.files, *self.stage.replaced)
+        places = [
+            f"{home}/{name}"
+            for home in (
+                "/etc",
+                "/etc/xdg/pip",
+                "/root/.pip",
+                "/root/.config/pip",
+                self.variables.get("HOME", "/root") + "/.config/pip",
+            )
+            for name in ("pip.conf", "pip.ini")
+        ]
+        if any(
+            posixpath.basename(p) in ("pip.conf", "pip.ini") for p in written
+        ) or any(self.stage.written(place) for place in places):
+            raise Unsupported("pip with a configuration file of the build")
 
     def _local_requirement(self, requirement):
         """Image path of a requirement that names a local directory, or None."""
@@ -3247,6 +3327,7 @@ class ImageModel:
                 raise Unsupported(
                     f"RUN through the shell {stage.shell[0]}, a file the build wrote"
                 )
+            check_shell_environment(stage.shell[0], stage.variables)
             shell.run(command)
         elif command:
             shell._statements([*command, "\n"])
@@ -3378,6 +3459,7 @@ class ImageModel:
         if shadow is None and PYTHON.match(name):
             return [(self.python_start(words, cwd, env, files), dict(files))]
         if shadow is None and name in SHELLS:
+            check_shell_environment(name, env)
             script = shell_script(words[1:], cwd, files, self)
             if script is None:
                 raise Unsupported("a shell started without a script")
@@ -3391,6 +3473,7 @@ class ImageModel:
             argv = [program, path, *words[1:]]
             return [(self.python_start(argv, cwd, env, files), dict(files))]
         if program in SHELLS:
+            check_shell_environment(program, env)
             return self._script(files, cwd, env, nesting, text)
         raise Unsupported(
             f"entry point {path} runs {program or 'an unknown interpreter'}"
@@ -3553,6 +3636,20 @@ class ImageModel:
             bases.append(entry)
         if not no_site:
             bases.append(SITE_PACKAGES)
+            # The user site-packages, and any other copy of site-packages, come
+            # before or beside the installed packages the model keeps.
+            elsewhere = sorted(
+                f
+                for f in files
+                if not f.startswith(SITE_PACKAGES + "/")
+                and re.search(
+                    rf"/(site|dist)-packages/{re.escape(parts[0])}(\.py$|/)", f
+                )
+            )
+            if elsewhere:
+                raise Unsupported(
+                    f"python -m {module}: a module {parts[0]} also lies in {posixpath.dirname(elsewhere[0])}"
+                )
         missing = Unsupported(f"module {module} is not a file of the image model")
 
         def find(names, search):
