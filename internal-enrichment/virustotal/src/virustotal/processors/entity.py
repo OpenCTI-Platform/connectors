@@ -123,14 +123,16 @@ class EntityProcessor(ABC):
                     getattr(builder, builder_method)(item)
                 except Exception as e:
                     self.helper.connector_logger.warning(
-                        "[VirusTotal] Error adding item to bundle", {
+                        "[VirusTotal] Error adding item to bundle",
+                        {
                             "entity_identifier": identifier,
                             "item": item,
                             "relationship": relationship,
                             "relationship_limit": self.connector.gti_relationship_limit,
                             "response": response,
                             "flag_name": flag_name,
-                        }, exc_info=e
+                        },
+                        exc_info=e,
                     )
 
     def _make_builder(self, json_data: dict, **kwargs) -> VirusTotalBuilder:

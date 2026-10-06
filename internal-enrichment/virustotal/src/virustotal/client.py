@@ -462,21 +462,23 @@ class VirusTotalClient:
 
         page_data = first_page.get("data", [])
         # Prevents erroring when data: null
-        collected_data = ([] if not page_data else list(page_data))
+        collected_data = [] if not page_data else list(page_data)
 
         page = first_page
         # Only loop while there is more data, and the last page returned data
-        while page_data and len(collected_data) < limit and page.get("links", {}).get("next"):
+        while (
+            page_data
+            and len(collected_data) < limit
+            and page.get("links", {}).get("next")
+        ):
             page = self._query(page["links"]["next"])
             if page is None or "error" in page:
                 break
             # Break and warn when consecutive pages return the same result
             if page_data == page.get("data", []):
                 self.helper.connector_logger.warning(
-                    "[VirusTotal] Consecutive pages returned the same result", {
-                        "page": page,
-                        "previous_page_data": page_data
-                    }
+                    "[VirusTotal] Consecutive pages returned the same result",
+                    {"page": page, "previous_page_data": page_data},
                 )
                 break
             page_data = page.get("data", [])
