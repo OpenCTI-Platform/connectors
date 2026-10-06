@@ -1,6 +1,8 @@
 import importlib.util
+import io
 import json
 import re
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -976,6 +978,14 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 02:45 UTC: python -mNAME is python -m NAME; sudo
+        # changes the environment and may change the directory.
+        ("RUN python3 -mvenv --clear --without-pip /opt/src", False),
+        (
+            "RUN python3 -mpip install --report /opt/src/.connector_version.json requests",
+            False,
+        ),
+        ("RUN sudo rm -f /tmp/cache", False),
         # Copilot review of 02:24 UTC: an arithmetic expansion may hold a
         # command substitution; a sourced file the model does not know may do
         # anything; chmod wildcards relative to the working directory.
@@ -1319,6 +1329,26 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
 
 
 @pytest.mark.parametrize(
+    "base, covered",
+    [
+        ("python:3.12-alpine", True),
+        ("filigran/alpine-python-fips:python3.12", True),
+        ("registry.access.redhat.com/ubi9/ubi-minimal", True),
+        # Their entry point, volumes or ONBUILD triggers are not known (the UBI
+        # python images set an ENTRYPOINT and a WORKDIR).
+        ("registry.access.redhat.com/ubi9/python-312", False),
+        ("ghcr.io/example/connector-base:1", False),
+    ],
+)
+def test_base_images_of_the_final_stage(tmp_path, base, covered):
+    dockerfile = (
+        f'FROM {base}\nCOPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n'
+    )
+    image = single(tmp_path, {"Dockerfile": dockerfile})
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
     "dockerfile, extra",
     [
         # Copilot review of 01:21 UTC: a file on PATH under the name of python runs.
@@ -1357,6 +1387,43 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
             {
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
+        ),
+        # Copilot review of 02:45 UTC: the program of find -exec, by path or on PATH.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY clean.sh /opt/tools/cat\n"
+            "RUN find /tmp -maxdepth 0 -exec /opt/tools/cat {} \\;\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"clean.sh": "#!/bin/sh\nrm -f /opt/sample/.connector_version.json\n"},
+        ),
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "COPY clean.sh /opt/tools/cat\nRUN find /tmp -maxdepth 0 -exec cat {} +\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"clean.sh": "#!/bin/sh\nrm -f /opt/sample/.connector_version.json\n"},
+        ),
+        # Copilot review of 02:45 UTC: a file a builder stage wrote keeps an
+        # unknown content where COPY --from puts it.
+        (
+            "FROM python:3.12-alpine AS builder\n"
+            "RUN echo 'rm -rf /opt/sample' > /tmp/python3 && chmod 755 /tmp/python3\n"
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY --from=builder /tmp/python3 /usr/local/bin/python3\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        (
+            "FROM python:3.12-alpine AS builder\n"
+            "RUN mkdir -p /out && echo 'rm -rf /opt/sample' > /out/python3\n"
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY --from=builder /out/ /usr/local/bin/\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        # Copilot review of 02:45 UTC: sudo in the start command.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nWORKDIR /opt/sample\n"
+            "CMD sudo --chdir=/tmp python3 main.py\n",
+            {},
         ),
         # Copilot review of 02:24 UTC: env is a program found on PATH too.
         (
@@ -1461,6 +1528,29 @@ def test_module_file_wins_over_a_namespace_directory(tmp_path):
     files["Dockerfile"] = files["Dockerfile"].replace("COPY pkg.py /opt/pkg.py\n", "")
     image = single(tmp_path / "namespace", files)
     assert image.reason == "stamp at /opt/pkg/.connector_version.json"
+
+
+def test_add_extracts_an_archive_whatever_its_name(tmp_path):
+    # Docker recognises a tar archive, compressed or not, by its content.
+    connector = make_connector(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/src\nADD payload.bin /opt/src/\n"
+                'CMD ["python3", "/opt/src/main.py"]\n'
+            )
+        },
+    )
+    payload = io.BytesIO()
+    with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+        member = tarfile.TarInfo(".connector_version.json")
+        archive.addfile(member, io.BytesIO(b""))
+    (connector / "payload.bin").write_bytes(payload.getvalue())
+    [image] = result(tmp_path, connector)
+    assert not image.covered
+    (connector / "payload.bin").write_bytes(b"not an archive")
+    [image] = result(tmp_path, connector)
+    assert image.covered, image.reason
 
 
 def test_symbolic_links_of_the_context(tmp_path):
