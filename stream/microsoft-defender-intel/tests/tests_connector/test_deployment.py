@@ -82,8 +82,11 @@ def make_indicator(indicator_id=INDICATOR_ID, value="198.51.100.7"):
     }
 
 
-def make_message(event, data):
-    return SimpleNamespace(event=event, data=json.dumps({"data": data}))
+def make_message(event, data, context=None):
+    payload = {"data": data}
+    if context is not None:
+        payload["context"] = context
+    return SimpleNamespace(event=event, data=json.dumps(payload))
 
 
 def http_error(status_code: int, text: str) -> DefenderApiHandlerError:
@@ -273,6 +276,186 @@ def test_failed_update_is_reported_failed(connector):
 def own(defender_id, opencti_id=INDICATOR_ID):
     """A Defender indicator the connector pushed for an OpenCTI indicator."""
     return {"id": defender_id, "externalId": opencti_id}
+
+
+def pattern_edit(former_pattern):
+    """The context of an update event that replaced the pattern of an indicator."""
+    return {
+        "patch": [{"op": "replace", "path": "/pattern", "value": "new"}],
+        "reverse_patch": [
+            {"op": "replace", "path": "/name", "value": "former name"},
+            {"op": "replace", "path": "/pattern", "value": former_pattern},
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "former_pattern, former_value",
+    [
+        ("[ipv4-addr:value = '198.51.100.7']", "198.51.100.7"),
+        (f"[file:hashes.'SHA-256' = '{'a' * 64}']", "a" * 64),
+    ],
+    ids=["an IP address", "a file"],
+)
+def test_a_pattern_edit_replaces_the_defender_indicator_of_the_former_value(
+    connector, former_pattern, former_value
+):
+    """The Defender indicator of a value the indicator no longer holds would stay
+    active: it is deleted once the new value is live."""
+    connector.api._send_request.side_effect = [
+        {"value": []},
+        {"value": [own("1")]},
+        {"id": "2"},
+        None,
+    ]
+    connector.helper.api.external_reference.read.return_value = {"id": "ref"}
+    indicator = make_indicator(value="203.0.113.9")
+
+    connector.process_message(
+        make_message("update", indicator, pattern_edit(former_pattern))
+    )
+
+    assert _sent(connector) == [
+        ("get", ""),
+        ("get", ""),
+        ("post", ""),
+        ("delete", "/1"),
+    ]
+    looked_up = connector.api._send_request.call_args_list[1].kwargs["params"]
+    assert looked_up.endswith(f"%27{former_value}%27")
+    created = connector.api._send_request.call_args_list[2].kwargs["json"]
+    assert created["indicatorValue"] == "203.0.113.9"
+    connector.helper.api.external_reference.delete.assert_called_once_with("ref")
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="2"
+    )
+    connector.assurance.report_removed.assert_not_called()
+
+
+def test_an_update_without_pattern_edit_reads_no_former_value(connector):
+    connector.api._send_request.side_effect = [
+        {"value": [own(DEFENDER_ID)]},
+        {"id": DEFENDER_ID},
+    ]
+    indicator = make_indicator()
+
+    connector.process_message(
+        make_message(
+            "update",
+            indicator,
+            {"reverse_patch": [{"op": "replace", "path": "/name", "value": "x"}]},
+        )
+    )
+
+    assert _sent(connector) == [("get", ""), ("post", "")]
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=DEFENDER_ID
+    )
+
+
+def test_a_pattern_edit_never_deletes_a_defender_indicator_of_another_indicator(
+    connector,
+):
+    connector.api._send_request.side_effect = [
+        {"value": []},
+        {"value": [own("77", opencti_id="another-indicator"), {"id": "78"}]},
+    ]
+
+    connector.process_message(
+        make_message(
+            "update",
+            make_indicator(value="203.0.113.9"),
+            pattern_edit("[ipv4-addr:value = '198.51.100.7']"),
+        )
+    )
+
+    assert _sent(connector) == [("get", ""), ("get", "")]
+    connector.assurance.report_pushed.assert_not_called()
+    connector.assurance.report_removed.assert_not_called()
+
+
+def test_a_pattern_edit_without_a_value_defender_takes_is_reported_removed(
+    connector,
+):
+    connector.api._send_request.side_effect = [{"value": [own("1")]}, None]
+    indicator = make_multi_indicator(EMAIL)
+
+    connector.process_message(
+        make_message(
+            "update", indicator, pattern_edit("[ipv4-addr:value = '198.51.100.7']")
+        )
+    )
+
+    assert _sent(connector) == [("get", ""), ("delete", "/1")]
+    connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=None
+    )
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_a_failed_pattern_edit_keeps_the_defender_indicator_of_the_former_value(
+    connector,
+):
+    connector.api._send_request.side_effect = [
+        {"value": []},
+        {"value": [own("1")]},
+        http_error(400, "Invalid indicator value"),
+    ]
+
+    connector.process_message(
+        make_message(
+            "update",
+            make_indicator(value="203.0.113.9"),
+            pattern_edit("[ipv4-addr:value = '198.51.100.7']"),
+        )
+    )
+
+    assert [entry for entry in _sent(connector) if entry[0] == "delete"] == []
+    connector.assurance.report_push_failed.assert_called_once()
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_a_failed_deletion_of_a_former_value_is_logged(connector):
+    connector.api._send_request.side_effect = [
+        {"value": []},
+        {"value": [own("1")]},
+        {"id": "2"},
+        http_error(503, "Unavailable"),
+    ]
+    indicator = make_indicator(value="203.0.113.9")
+
+    connector.process_message(
+        make_message(
+            "update", indicator, pattern_edit("[ipv4-addr:value = '198.51.100.7']")
+        )
+    )
+
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[UPDATE] Cannot delete the Defender indicator of a former value",
+        meta={"defender_id": "1", "opencti_id": INDICATOR_ID, "error": ANY},
+    )
+    connector.helper.api.external_reference.delete.assert_not_called()
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="2"
+    )
+
+
+def test_a_failed_deletion_leaves_an_edited_indicator_unreported(connector):
+    connector.api._send_request.side_effect = [
+        {"value": [own("1")]},
+        http_error(503, "Unavailable"),
+    ]
+
+    connector.process_message(
+        make_message(
+            "update",
+            make_multi_indicator(EMAIL),
+            pattern_edit("[ipv4-addr:value = '198.51.100.7']"),
+        )
+    )
+
+    connector.assurance.report_removed.assert_not_called()
+    connector.assurance.report_pushed.assert_not_called()
 
 
 def make_multi_indicator(*observables):

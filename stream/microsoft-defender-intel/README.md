@@ -71,7 +71,8 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 |-------------------------------------------|------------------------------------------------------------------------------------------------------|
 | Indicator created or updated in Defender  | `deployed`, with the Defender indicator id as external id                                            |
 | Indicator rejected by Defender            | `failed`, with the API error and the Defender response                                               |
-| Update of an indicator absent from Defender | Nothing: the indicator was never pushed                                                            |
+| Update of an indicator absent from Defender | Nothing: the indicator was never pushed (neither its current nor its former pattern)             |
+| Pattern edited to values Defender does not take | `removed`, once the Defender indicators of the former values are deleted                       |
 | Delete event processed                    | `removed` (also when the indicator was already absent from Defender)                                 |
 | Reconciliation, indicator present         | `active`                                                                                             |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in Defender), once a lookup by value confirms the absence (a Defender indicator pushed for another OpenCTI indicator with the same value does not count) |
@@ -89,7 +90,9 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 - **Indicators with several observables**: the connector creates one Defender indicator per observable Defender takes
   (IP addresses, domains, host names, URLs, and one hash per file: SHA-256, SHA-1 or MD5); other observable types are
   not pushed. A push is all or nothing: when Defender refuses one of them, the ones created are deleted again and the
-  indicator is reported `failed`. An update creates the Defender indicators that are missing. Reconciliation confirms
+  indicator is reported `failed`. An update creates the Defender indicators that are missing. When the pattern is
+  edited, the former pattern is read from the update event: the Defender indicators of the values the indicator no
+  longer holds are deleted once its new values are live (a failed update keeps them). Reconciliation confirms
   `active` only when every observable has its Defender indicator (a file by any of its hashes); otherwise the indicator
   is pushed again, or stays `failed` until a new push is requested.
 - **Hits**: during each reconciliation, the alerts created since the previous run are read with their evidence (alerts

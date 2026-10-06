@@ -2,6 +2,10 @@ import json
 from json import JSONDecodeError
 
 from connectors_sdk import DeploymentAssurance
+from connectors_sdk.connectors.stream.deployment import (
+    normalize_value,
+    pattern_observable_values,
+)
 from microsoft_defender_intel_connector.api_handler import (
     DefenderApiHandler,
     DefenderApiHandlerError,
@@ -79,17 +83,22 @@ class MicrosoftDefenderIntelConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-    def _convert_indicator_to_observables(self, data) -> list[dict]:
+    def _convert_indicator_to_observables(
+        self, data, observable_values: list[dict] | None = None
+    ) -> list[dict]:
         """
         Convert an OpenCTI indicator to its corresponding observables.
         Observables taken into account:
         :param data: OpenCTI indicator data
+        :param observable_values: Observable values converted instead of the ones of the indicator
         :return: Observables data
         """
         try:
             observables = []
-            parsed_observables = self.helper.get_attribute_in_extension(
-                "observable_values", data
+            parsed_observables = (
+                observable_values
+                if observable_values is not None
+                else self.helper.get_attribute_in_extension("observable_values", data)
             )
             if parsed_observables:
                 for observable in parsed_observables:
@@ -159,18 +168,86 @@ class MicrosoftDefenderIntelConnector:
                 )
         return result
 
-    def _supported_observables(self, data: dict) -> list[dict]:
+    def _supported_observables(
+        self, data: dict, observable_values: list[dict] | None = None
+    ) -> list[dict]:
         """
         Return the observables of an OpenCTI indicator that Defender takes as indicators
         (IP addresses, domains, host names, URLs, files with an MD5, SHA-1 or SHA-256).
         :param data: OpenCTI indicator (stream event shape)
+        :param observable_values: Observable values used instead of the ones of the indicator
         :return: The observables, one Defender indicator each
         """
         return [
             observable
-            for observable in self._convert_indicator_to_observables(data) or []
+            for observable in self._convert_indicator_to_observables(
+                data, observable_values
+            )
+            or []
             if observable.get("type") == "file" or observable.get("type") in IOC_TYPES
         ]
+
+    def _former_values(self, data: dict, context: dict | None) -> list[str]:
+        """
+        Return the values the connector pushed for the pattern an update replaced.
+        The former pattern is read from the reverse patch of the update event: an
+        update that does not change the pattern has none.
+        :param data: OpenCTI indicator (stream event shape, after the update)
+        :param context: Context of the update event
+        :return: The Defender values of the former pattern
+        """
+        reverse_patch = (context or {}).get("reverse_patch") or []
+        former_pattern = next(
+            (
+                patch.get("value")
+                for patch in reverse_patch
+                if isinstance(patch, dict) and patch.get("path") == "/pattern"
+            ),
+            None,
+        )
+        if not isinstance(former_pattern, str):
+            return []
+        return [
+            value
+            for observable in self._supported_observables(
+                data, pattern_observable_values(former_pattern)
+            )
+            if (value := self._observable_value(observable))
+        ]
+
+    def _delete_former_defender_indicators(
+        self, former_indicators: list[dict], opencti_id: str | None
+    ) -> bool:
+        """
+        Delete the Defender indicators of the values an updated indicator no longer holds,
+        once its current values are live. A failure is logged: the current values are
+        live, and the former ones stop at their `expirationTime`.
+        :param former_indicators: The Defender indicators of the former values
+        :param opencti_id: OpenCTI id of the indicator
+        :return: True when every one of them is deleted
+        """
+        deleted_all = True
+        for indicator in former_indicators:
+            defender_id = str(indicator["id"])
+            try:
+                self.api.delete_indicator(defender_id)
+            except Exception as err:
+                deleted_all = False
+                self.helper.connector_logger.warning(
+                    "[UPDATE] Cannot delete the Defender indicator of a former value",
+                    meta={
+                        "defender_id": defender_id,
+                        "opencti_id": opencti_id,
+                        "error": describe_error(err),
+                    },
+                )
+                continue
+            self.helper.connector_logger.info(
+                "[UPDATE] Indicator of a former value deleted",
+                {"defender_id": defender_id, "opencti_id": opencti_id},
+            )
+            self._delete_external_reference(defender_id)
+        return deleted_all
 
     @staticmethod
     def _observable_value(observable: dict) -> str | None:
@@ -285,10 +362,11 @@ class MicrosoftDefenderIntelConnector:
         elif is_observable(data):
             self._create_defender_indicator(data)
 
-    def _handle_update_event(self, data):
+    def _handle_update_event(self, data, context: dict | None = None):
         """
         Handle update event by trying to update the corresponding Threat Intelligence Indicator on Defender.
         :param data: Streamed data (representing either an observable or an indicator)
+        :param context: Context of the update event (its reverse patch holds the former pattern)
         """
         did_update = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
@@ -296,7 +374,9 @@ class MicrosoftDefenderIntelConnector:
             deployed_ids: list[str] = []
             created_ids: list[str] = []
             updated: list[dict] = []
+            former: dict[str, dict] = {}
             try:
+                observables = self._supported_observables(data)
                 existing = [
                     (
                         observable,
@@ -304,11 +384,23 @@ class MicrosoftDefenderIntelConnector:
                             self._observable_value(observable), opencti_id
                         ),
                     )
-                    for observable in self._supported_observables(data)
+                    for observable in observables
                 ]
-                # An indicator with at least one Defender indicator is deployed: every
-                # observable must have its own, the missing ones are created.
-                if any(found for _, found in existing):
+                current_values = {
+                    normalize_value(self._observable_value(observable))
+                    for observable in observables
+                }
+                # The Defender indicators of the values the edited pattern no longer holds.
+                for value in self._former_values(data, context):
+                    if normalize_value(value) not in current_values:
+                        for indicator in self._own_defender_indicators(
+                            value, opencti_id
+                        ):
+                            former[str(indicator["id"])] = indicator
+                # An indicator with at least one Defender indicator, for its current or
+                # its former pattern, is deployed: every observable must have its own,
+                # the missing ones are created.
+                if former or any(found for _, found in existing):
                     for observable, found in existing:
                         if found:
                             defender_id = str(found[0]["id"])
@@ -328,10 +420,18 @@ class MicrosoftDefenderIntelConnector:
                         )
                     did_update = True
             except Exception as err:
+                # The former values stay on Defender with the previous version.
                 self._restore_defender_indicators(updated)
                 self._roll_back_defender_indicators(created_ids)
                 self._report_failed(data, err)
                 raise
+            former_deleted = self._delete_former_defender_indicators(
+                list(former.values()), opencti_id
+            )
+            if former and former_deleted and not deployed_ids:
+                # No value of the edited pattern is taken by Defender: none is left.
+                if self.assurance is not None:
+                    self.assurance.report_removed(data, external_id=None)
             self._report_pushed(data, deployed_ids)
         elif is_observable(data):
             result = self.api.find_indicators(data["value"])
@@ -476,7 +576,7 @@ class MicrosoftDefenderIntelConnector:
             if msg.event == "create":
                 self._handle_create_event(data)
             if msg.event == "update":
-                self._handle_update_event(data)
+                self._handle_update_event(data, parsed_msg.get("context"))
             if msg.event == "delete":
                 self._handle_delete_event(data)
         except DefenderApiHandlerError as err:
