@@ -1428,6 +1428,10 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ),
         ("WORKDIR /opt/src\nRUN chmod 000 .connector_*.json", False),
         ("WORKDIR /opt/src\nRUN chmod 644 *.py", True),
+        # "." and ".." name the working directory and its parent.
+        ("WORKDIR /opt/src\nRUN chmod -R 000 .", False),
+        ("WORKDIR /opt/src/sub\nRUN chmod 000 ..", False),
+        ("WORKDIR /opt/src\nRUN chmod -R a+rX .", True),
         # A function runs where it is called, under a name it may shadow.
         (
             "RUN cat() { rm -f .connector_version.json; }; cd /opt/src; cat main.py",
@@ -2873,6 +2877,14 @@ def test_a_builtin_name_runs_the_builtin_only_as_a_bare_name(tmp_path, run, cove
             "mkdir -p /opt/alias && ln -s ../src /opt/alias/app; rm -f /opt/alias/other.json",
             True,
         ),
+        # Linux reads two leading slashes as one.
+        (
+            "ln -s /opt/src/nested /alias && rm -f //alias/../.connector_version.json",
+            False,
+        ),
+        ("ln -s //opt/src /alias && rm -f /alias/.connector_version.json", False),
+        ("ln -s //opt/src/nested /alias && rm -f /alias/keep.txt", False),
+        ("ln -s //opt/other /alias && rm -f /alias/.connector_version.json", True),
     ],
 )
 def test_links_and_parent_directories(tmp_path, run, covered):

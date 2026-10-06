@@ -737,15 +737,19 @@ def image_path(path, cwd, what="path", links=()):
     for index, part in enumerate(parts):
         if part != "..":
             continue
-        prefix = posixpath.normpath("/".join(parts[:index]) or "/")
+        prefix = normalized_path("/".join(parts[:index]) or "/")
         for link in links:
             if prefix == link or prefix.startswith(link.rstrip("/") + "/"):
                 raise Unsupported(
                     f"{what} '{path}' climbs out of the link {link} the build created"
                 )
-    normalized = posixpath.normpath(joined)
+    return normalized_path(joined)
+
+
+def normalized_path(path):
+    """Absolute ``path`` with ``.``, ``..`` and repeated slashes collapsed."""
     # Linux reads two leading slashes as one; normpath keeps them.
-    return "/" + normalized.lstrip("/")
+    return "/" + posixpath.normpath(path).lstrip("/")
 
 
 def path_candidates(command, value, links=()):
@@ -2781,7 +2785,8 @@ class Shell:
                 if created or STAMP in candidate:
                     raise Unsupported(f"'{candidate}' in an unknown working directory")
                 return
-            path = posixpath.join(self.cwd, candidate)
+            # "." and ".." name the working directory and its parent.
+            path = self._path(candidate, "named path")
             # Otherwise a bare word is a file only when the model has it in the
             # working directory.
             if not created and (
@@ -3037,7 +3042,7 @@ class Shell:
         ):
             self.stage.links[link] = None
         elif symbolic:
-            self.stage.links[link] = posixpath.normpath(
+            self.stage.links[link] = normalized_path(
                 posixpath.join(posixpath.dirname(link), target)
             )
         else:
