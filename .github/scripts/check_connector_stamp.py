@@ -177,8 +177,9 @@ GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
 TARBALL = re.compile(r"\.(tar|tar\.gz|tgz|tar\.bz2|tbz2|tar\.xz|txz)$")
 COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
-# Prefixes that are programs found on PATH, not shell builtins.
-EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo"})
+# Prefixes that are programs found on PATH, not shell builtins (time is a
+# keyword of bash, a program for sh).
+EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo", "time"})
 REDIRECTIONS = frozenset({">", ">>", "<", ">&", "<&", "&>", "&>>", ">|", "<>"})
 # Longest first: shlex returns a run of punctuation such as ");" as one token.
 OPERATORS = (
@@ -914,9 +915,12 @@ class Stage:
     unknown_dirs: set = field(default_factory=set)
 
     def written(self, path):
-        """``path`` holds what a build step wrote, with a content the model does not know."""
-        return path in self.replaced or any(
-            path == d or path.startswith(d.rstrip("/") + "/") for d in self.unknown_dirs
+        """``path`` holds what a build step wrote, with a content the model does
+        not know: it is such a path, or lies below one (a moved or linked
+        directory, a directory a COPY filled)."""
+        return any(
+            path == d or path.startswith(d.rstrip("/") + "/")
+            for d in (*self.replaced, *self.unknown_dirs)
         )
 
     def child(self):
@@ -2034,7 +2038,7 @@ class Shell:
             # uv venv replaces an existing environment directory.
             targets = [a for a in args[1:] if not a.startswith("-")]
             for target in targets or [".venv"]:
-                self._forget(target)
+                self._forget(target, record=False)
             return
         raise Unsupported(f"'uv {' '.join(args[:1])}' is not modelled")
 
@@ -2087,7 +2091,7 @@ class Shell:
                 # A configuration file of the build may add outputs.
                 raise Unsupported(f"{name} with a configuration file of the build")
             for output in download_outputs(name, args, self.cwd):
-                self._forget(output)
+                self._forget(output, created=True)
             return
         if name == "git" and args[:1] == ["clone"]:
             # A clone creates a new directory (git refuses a non-empty one),
@@ -2119,8 +2123,13 @@ class Shell:
             f"'{name}' is not a command the model knows the effects of on the image files"
         )
 
-    def _forget(self, candidate):
-        """``candidate`` (and everything below it) may have been rewritten."""
+    def _forget(self, candidate, created=False, record=True):
+        """``candidate`` (and everything below it) may have been rewritten.
+
+        ``created``: the command writes this file (a download, a log), so a bare
+        name is a path even when the model has nothing there. ``record``: the
+        path keeps a content the model does not know (not for an environment the
+        interpreter creates, whose programs are its own)."""
         if not candidate or candidate.startswith("-") or "\n" in candidate:
             return
         if "$" in candidate or "`" in candidate:
@@ -2131,24 +2140,27 @@ class Shell:
             not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate
         )
         if bare and not GLOB_CHARS.search(candidate):
-            # A bare word is a file only when the model has it in the working directory.
             if self.cwd is None:
-                if STAMP in candidate:
+                if created or STAMP in candidate:
                     raise Unsupported(f"'{candidate}' in an unknown working directory")
                 return
             path = posixpath.join(self.cwd, candidate)
-            if path not in self.files and not any(
-                f.startswith(path + "/") for f in self.files
+            # Otherwise a bare word is a file only when the model has it in the
+            # working directory.
+            if not created and (
+                path not in self.files
+                and not any(f.startswith(path + "/") for f in self.files)
             ):
                 return
         path = image_path(self._tilde(candidate), self.cwd, "named path")
         if path != "/":
             before = set(self.files)
             remove_files(self.files, path)
-            # Still there, with a content or mode the model does not know: an
-            # executable among them is no longer the file the model read.
-            self.stage.replaced.update(before - set(self.files))
-            self.stage.replaced.add(path)
+            if record:
+                # Still there, with a content or mode the model does not know:
+                # an executable among them is no longer the file the model read.
+                self.stage.replaced.update(before - set(self.files))
+                self.stage.replaced.add(path)
 
     def _executed_script(self, words, env, conditional):
         """A shell script of the image run as a command: it runs here (its
@@ -2279,9 +2291,10 @@ class Shell:
         else:
             link = image_path(self._tilde(operands[-1]), self.cwd, "link path")
             targets = operands[:-1] or [operands[-1]]
-            remove_files(self.files, link)
-            self.stage.replaced.add(link)
-            if no_target:
+            if no_target or len(operands) == 1 or not self._is_dir(link):
+                # The link is this path.
+                remove_files(self.files, link)
+                self.stage.replaced.add(link)
                 return
         for target in targets:
             # A link created inside an existing directory takes the target's name.
@@ -2309,7 +2322,7 @@ class Shell:
         for index, arg in enumerate(args):
             if arg.startswith(("-fprint", "-fls")) and index + 1 < len(args):
                 # find writes this file.
-                self._forget(args[index + 1])
+                self._forget(args[index + 1], created=True)
             if arg not in ("-exec", "-execdir", "-ok", "-okdir"):
                 continue
             command = []
@@ -2435,7 +2448,10 @@ class Shell:
                     i += 1
                     continue
                 if value:
-                    self._forget(value)
+                    # A report or a log is a file pip writes; a relocated
+                    # install holds the packages, taken as published.
+                    writes = option in PIP_WRITE_OPTIONS
+                    self._forget(value, created=writes, record=writes)
                 i += 1 if sep else 2
                 continue
             if option in ("-e", "--editable"):
@@ -2641,6 +2657,9 @@ class ImageModel:
             # Content the model does not know (external image, URL, archive) may
             # replace the destination, or anything below a destination directory.
             remove_files(stage.files, dest_path)
+            if not from_values:
+                # A URL, a repository or an archive of ADD: any file may land there.
+                stage.unknown_dirs.add(dest_path)
         if from_values and source_stage is not None:
             carried = self._carried_writes(source_stage, sources, dest_path, into_dir)
             if carried and keep_parents:
@@ -2668,9 +2687,15 @@ class ImageModel:
             return any(rx.match(name) or rx.match(relative) for rx in excludes)
 
         def place(target, origin, in_directory=False):
-            if origin[0] == "link":
-                # A link of the context: the destination holds what the model
-                # does not know.
+            through_written = any(
+                stage.written(parent)
+                for parent in self_and_parents(posixpath.dirname(target))
+                if parent != "/"
+            )
+            if origin[0] == "link" or through_written:
+                # A link of the context, or a path below one the build wrote (a
+                # link the copy writes through): the destination holds what the
+                # model does not know.
                 remove_files(stage.files, target)
                 stage.replaced.add(target)
             elif origin[0] == "stamp" and (
@@ -2770,36 +2795,34 @@ class ImageModel:
 
     @staticmethod
     def _carried_writes(source_stage, sources, dest_path, into_dir):
-        """Where the paths a build command wrote in ``source_stage`` (a link, a
-        redirection target, a download) land when a COPY --from takes them: they
-        keep a content the model does not know."""
+        """Where the regions of ``source_stage`` whose content the model does
+        not know (what a build command wrote, a directory a clone or a COPY
+        filled) land when a COPY --from takes them: they stay unknown there."""
+        regions = {*source_stage.replaced, *source_stage.unknown_dirs}
+
+        def below(path, region):
+            return path == region or path.startswith(region.rstrip("/") + "/")
+
         targets = set()
         for source in sources:
             path = image_path(source, "/", "COPY --from source")
-            regex = glob_regex(path.lstrip("/")) if GLOB_CHARS.search(path) else None
-            for written in source_stage.replaced:
-                for candidate in self_and_parents(written):
-                    if regex:
-                        matched = candidate != "/" and regex.match(
-                            candidate.lstrip("/")
-                        )
-                    else:
-                        matched = candidate == path
-                    if not matched:
-                        continue
-                    if candidate == written:
-                        # The source itself: into the directory, or as the destination.
-                        name = posixpath.basename(written)
-                        targets.add(
-                            posixpath.join(dest_path, name) if into_dir else dest_path
-                        )
-                    else:
-                        # Inside a copied directory, whose content lands in the destination.
-                        relative = posixpath.relpath(written, candidate)
-                        targets.add(
-                            posixpath.normpath(posixpath.join(dest_path, relative))
-                        )
-                    break
+            glob = GLOB_CHARS.search(path)
+            if glob:
+                # The directory the pattern starts from.
+                prefix = path[: glob.start()].rsplit("/", 1)[0] or "/"
+                if any(below(r, prefix) or below(prefix, r) for r in regions):
+                    targets.add(dest_path)
+                continue
+            for region in regions:
+                if below(path, region):
+                    # The source lies in such a region: what lands is unknown,
+                    # in the destination or below the destination directory.
+                    targets.add(dest_path)
+                elif below(region, path):
+                    # Inside a copied directory, whose content lands in the
+                    # destination.
+                    relative = posixpath.relpath(region, path)
+                    targets.add(posixpath.normpath(posixpath.join(dest_path, relative)))
         return targets
 
     @staticmethod
