@@ -1371,6 +1371,12 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i /tmp/sample.rpm", True),
+        # dnf, yum and microdnf: the root set by --setopt or a configuration file.
+        ("RUN microdnf -y --setopt=installroot=/opt/src install git", False),
+        ("RUN dnf -y --setopt installroot=/opt/src install git", False),
+        ("RUN yum -y -c /tmp/yum.conf install git", False),
+        ("RUN microdnf -y --config=/tmp/dnf.conf install git", False),
+        ("RUN microdnf -y --setopt=install_weak_deps=0 install git", True),
         ("RUN wget -O /opt/src/.connector_version.json https://example.com/x", False),
         ("RUN wget -P /tmp https://example.com/.connector_version.json", True),
         (
