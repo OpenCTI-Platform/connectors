@@ -190,7 +190,7 @@ graph LR
 
 | Event Type | Action                                       |
 |------------|----------------------------------------------|
-| create     | Creates entry in Splunk KV Store             |
+| create     | Creates entry in Splunk KV Store (replaces an entry already stored under the key) |
 | update     | Updates entry in Splunk KV Store             |
 | delete     | Removes entry from Splunk KV Store           |
 

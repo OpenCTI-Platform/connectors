@@ -99,6 +99,9 @@ class KVStore:
         return r.status_code < 300
 
     def create(self, id: str, payload: dict):
+        """Write an item. An item already stored under the key (a create event
+        replayed, an indicator pushed again by the reconciliation) is replaced, so
+        the item stored is always the payload written."""
         if id is not None and payload is not None:
             payload["_key"] = id
             r = requests.post(
@@ -107,22 +110,27 @@ class KVStore:
                 headers=self.headers,
                 verify=self.splunk_ssl_verify,
             )
-            if r.status_code != 409:
+            if r.status_code == 409:
+                self._replace(id, payload).raise_for_status()
+            else:
                 r.raise_for_status()
 
     def update(self, id: str, payload: dict):
         if id is not None and payload is not None:
             payload["_key"] = id
-            r = requests.put(
-                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-                json=payload,
-                headers=self.headers,
-                verify=self.splunk_ssl_verify,
-            )
+            r = self._replace(id, payload)
             if r.status_code == 404:
                 self.create(id, payload)
             else:
                 r.raise_for_status()
+
+    def _replace(self, id: str, payload: dict) -> requests.Response:
+        return requests.put(
+            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+            json=payload,
+            headers=self.headers,
+            verify=self.splunk_ssl_verify,
+        )
 
     def delete(self, id: str):
         if id is not None:

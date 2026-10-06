@@ -128,3 +128,41 @@ def test_run_saved_search_raises_without_results(kvstore, requests_mock):
 
     with pytest.raises(ValueError):
         kvstore.run_saved_search("broken", datetime.now(UTC), 10)
+
+
+def test_create_replaces_an_item_already_stored_under_the_key(kvstore, requests_mock):
+    """A replayed create event, or an indicator pushed again, must not leave the
+    previous payload in place while the push is reported deployed."""
+    requests_mock.post(DATA_URL, status_code=409, text="An object with name=a exists")
+    requests_mock.put(f"{DATA_URL}/a", json={"_key": "a"})
+
+    kvstore.create(
+        "a", {"type": "indicator", "pattern": "[ipv4-addr:value = '1.2.3.4']"}
+    )
+
+    post, put = requests_mock.request_history
+    assert (post.method, put.method) == ("POST", "PUT")
+    assert put.json() == {
+        "type": "indicator",
+        "pattern": "[ipv4-addr:value = '1.2.3.4']",
+        "_key": "a",
+    }
+
+
+def test_create_writes_a_new_item_once(kvstore, requests_mock):
+    requests_mock.post(DATA_URL, status_code=201, json={"_key": "a"})
+
+    kvstore.create("a", {"type": "indicator"})
+
+    assert [request.method for request in requests_mock.request_history] == ["POST"]
+
+
+@pytest.mark.parametrize("status", [404, 500])
+def test_create_raises_when_the_stored_item_cannot_be_replaced(
+    kvstore, requests_mock, status
+):
+    requests_mock.post(DATA_URL, status_code=409)
+    requests_mock.put(f"{DATA_URL}/a", status_code=status)
+
+    with pytest.raises(requests.HTTPError):
+        kvstore.create("a", {"type": "indicator"})
