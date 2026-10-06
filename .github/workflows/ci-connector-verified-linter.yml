@@ -1,15 +1,9 @@
 name: Connector Verified Linter
 
 on:
+  # No paths filter on pull_request, so the workflow always reports. The
+  # matrix scripts already select only the connectors changed by the PR.
   pull_request:
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
   merge_group:
     branches:
       - master
@@ -312,3 +306,44 @@ jobs:
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
           exit "$exit_code"
+
+  # Single, stable job name to set as a required status check. Matrix entries
+  # can't be required (their names change with the matrix content) and both
+  # matrices are skipped when there is nothing to lint, so this job always runs
+  # and gives one go/no-go. Same pattern as Tests Summary.
+  linter-summary:
+    name: Connector Linter Summary
+    needs:
+      - detect-connectors
+      - detect-new-connectors
+      - vclint
+      - vclint-new-connector-settings
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix results
+        env:
+          DETECT_RESULT: ${{ needs.detect-connectors.result }}
+          HAS_CONNECTORS: ${{ needs.detect-connectors.outputs.has_connectors }}
+          VCLINT_RESULT: ${{ needs.vclint.result }}
+          DETECT_NEW_RESULT: ${{ needs.detect-new-connectors.result }}
+          HAS_NEW_CONNECTORS: ${{ needs.detect-new-connectors.outputs.has_connectors }}
+          VCLINT_NEW_RESULT: ${{ needs.vclint-new-connector-settings.result }}
+        run: |
+          fail=0
+          # A matrix may only be skipped when its detector succeeded and found
+          # nothing to lint. A failed detection leaves has_connectors empty.
+          check() {
+            local label="$1" detect="$2" has="$3" matrix="$4"
+            if [ "$detect" != "success" ]; then
+              echo "::error::${label}: detection did not succeed (result: ${detect})."
+              fail=1
+            elif [ "$has" = "true" ] && [ "$matrix" != "success" ]; then
+              echo "::error::${label}: matrix did not succeed (result: ${matrix})."
+              fail=1
+            fi
+          }
+          check "Lint" "$DETECT_RESULT" "$HAS_CONNECTORS" "$VCLINT_RESULT"
+          check "VC305 (new connector)" "$DETECT_NEW_RESULT" "$HAS_NEW_CONNECTORS" "$VCLINT_NEW_RESULT"
+          [ "$fail" -eq 0 ] && echo "Connector linter checks passed."
+          exit "$fail"
