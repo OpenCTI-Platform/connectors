@@ -6,6 +6,7 @@ from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 from requests.cookies import RequestsCookieJar
 from stream_connector import ZscalerConnector
+from stream_connector.client import ZscalerClient
 from stream_connector.settings import ConnectorSettings
 
 
@@ -30,9 +31,9 @@ class StubConnectorSettings(ConnectorSettings):
                     "live_stream_no_dependencies": True,
                 },
                 "zscaler": {
-                    "username": "zscaler-user",
-                    "password": "zscaler-password",
-                    "api_key": "zscaler-api-key",
+                    "client_id": "zscaler-client-id",
+                    "client_secret": "zscaler-client-secret",
+                    "vanity_domain": "acme",
                     "blacklist_name": "BLACK_LIST_DYNDNS",
                     "ssl_verify": False,
                 },
@@ -74,68 +75,23 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
+    client = ZscalerClient(
+        logger=helper.connector_logger,
+        client_id=settings.zscaler.client_id,
+        client_secret=settings.zscaler.client_secret.get_secret_value(),
+        vanity_domain=settings.zscaler.vanity_domain,
+        cloud=settings.zscaler.cloud,
+        ssl_verify=settings.zscaler.ssl_verify,
+    )
     connector = ZscalerConnector(
         helper=helper,
-        ssl_verify=settings.zscaler.ssl_verify,
-        zscaler_username=settings.zscaler.username,
-        zscaler_password=settings.zscaler.password.get_secret_value(),
-        zscaler_api_key=settings.zscaler.api_key.get_secret_value(),
-        zscaler_api_base_url=settings.zscaler.api_base_url,
+        client=client,
         zscaler_blacklist_name=settings.zscaler.blacklist_name,
     )
 
     assert connector.helper is helper
-    assert connector.zscaler_username == "zscaler-user"
+    assert connector.client is client
     assert connector.zscaler_blacklist_name == "BLACK_LIST_DYNDNS"
-    assert connector.ssl_verify is False
-    assert connector.zscaler_base_url == "https://zsapi.zscalertwo.net/api/v1"
-
-
-@pytest.mark.parametrize(
-    "api_base_url, expected_base_url",
-    [
-        pytest.param(
-            HttpUrl("https://zsapi.zscalertwo.net/"),
-            "https://zsapi.zscalertwo.net/api/v1",
-            id="default_cloud",
-        ),
-        pytest.param(
-            HttpUrl("https://zsapi.zscalerone.net"),
-            "https://zsapi.zscalerone.net/api/v1",
-            id="other_cloud_without_trailing_slash",
-        ),
-        pytest.param(
-            HttpUrl("https://zsapi.zscloud.net/"),
-            "https://zsapi.zscloud.net/api/v1",
-            id="other_cloud_with_trailing_slash",
-        ),
-    ],
-)
-def test_connector_builds_base_url_from_api_base_url(api_base_url, expected_base_url):
-    connector = ZscalerConnector(
-        helper=MagicMock(),
-        ssl_verify=False,
-        zscaler_username="zscaler-user",
-        zscaler_password="zscaler-password",
-        zscaler_api_key="zscaler-api-key",
-        zscaler_api_base_url=api_base_url,
-        zscaler_blacklist_name="BLACK_LIST_DYNDNS",
-    )
-
-    assert connector.zscaler_base_url == expected_base_url
-
-
-def test_authenticate_with_zscaler_uses_configured_api_base_url(connector):
-    cookie_jar = RequestsCookieJar()
-    cookie_jar.set("JSESSIONID", "session-id")
-    response = MagicMock(status_code=200)
-    connector.session.post = MagicMock(return_value=response)
-    connector.session.cookies = cookie_jar
-
-    connector.authenticate_with_zscaler()
-
-    connector.session.post.assert_called_once()
-    assert (
-        connector.session.post.call_args.args[0]
-        == "https://zsapi.example.com/api/v1/authenticatedSession"
-    )
+    assert client.base_url == "https://api.zsapi.net/zia/api/v1"
+    assert client.token_url == "https://acme.zslogin.net/oauth2/v1/token"
+    assert client.ssl_verify is False
