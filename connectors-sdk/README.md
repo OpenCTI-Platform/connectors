@@ -99,9 +99,9 @@ class ConnectorSettings(BaseConnectorSettings):
    indicator is pushed again while one of them is missing. Value matching, for the vendor items and the hits alike, then
    only uses those values (an empty set when the connector pushes none of the pattern values), so an item holding a
    pattern value the connector does not push is never withdrawn. An item another live deployment shares is never
-   withdrawn. A `pending` deployment (analyst retry) is pushed again when the read-back finds it absent or only partly
-   on the vendor; one the vendor holds in full is confirmed `active` without a new push, which would duplicate it on
-   create-only vendor APIs.
+   withdrawn. A `pending` deployment (analyst retry) is pushed again when the read-back finds it absent, inactive or
+   only partly on the vendor; one the vendor holds in full is already live, so it is confirmed `active` without a new
+   push.
    An adapter keeping a local snapshot of what it pushes (uploaded as a whole) overrides `forget_indicator`, called
    for a deployment withdrawn while the vendor no longer holds it, so that the next upload does not restore it.
    When the vendor API cannot read the indicators back, a `DeploymentPushAdapter` (`push_indicator`, optional

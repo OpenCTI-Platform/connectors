@@ -874,8 +874,9 @@ class DeploymentReconciler:
                 removed_at=now,
             )
         if vendor_matches:
-            # A `pending` deployment (analyst retry) the vendor holds in full is
-            # confirmed, not pushed again: a new push duplicates it on create-only APIs.
+            # Only live items match here (inactive ones match a withdrawal alone): a
+            # `pending` deployment (analyst retry) the vendor holds in full is already
+            # live, so it is confirmed, not pushed again.
             return self._confirm_present(
                 adapter, deployment, vendor_matches, now, summary
             )

@@ -677,7 +677,7 @@ def test_pending_deployments_are_pushed_again_unless_the_vendor_holds_them_in_fu
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
     """An analyst retry is satisfied by a vendor already holding the whole indicator
-    (a new push would duplicate it on create-only APIs); a partial one is pushed."""
+    live: it is confirmed active; one only partly on the vendor is pushed again."""
     list_nodes(
         node_factory(indicator_id="pending-complete", status="pending"),
         node_factory(indicator_id="pending-partial", status="pending"),

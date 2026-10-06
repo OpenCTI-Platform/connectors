@@ -250,8 +250,8 @@ last report (no hit count: SentinelOne exposes none for these IOCs).
   permission denied" or "SentinelOne could not be reached for the IOC creation"; the HTTP status and the SentinelOne
   response are in the connector log.
 - **Deploy again** sets the deployment to `pending`: the next reconciliation pushes the indicator again and reports
-  `deployed` or `failed` (an indicator the read-back still finds in SentinelOne is confirmed `active` without a new
-  push, which would duplicate its IOCs).
+  `deployed` or `failed` (an indicator the read-back still finds live in SentinelOne is confirmed `active` without a
+  new push).
 - **Remove from this platform** withdraws the indicator: the next reconciliation deletes the IOCs created from it and
   reports it `removed`.
 
