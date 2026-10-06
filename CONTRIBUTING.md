@@ -175,7 +175,6 @@ Key tasks included:
 | `push_docker` | `push`, `p` | Push the image to the local registry |
 | `generate_config_schema` | `gs` | Generate JSON schema from connector settings |
 | `global_manifest` | — | Regenerate the global manifest file |
-| `deploy_to_catalog` | `deploy` | Build the connector, push to local registry, and restart OpenCTI |
 
 Run a task from inside a connector directory:
 
@@ -185,10 +184,10 @@ mise run build        # or: mise run b
 mise run gs
 ```
 
-> **Note:** Docker-related tasks (`build_docker`, `push_docker`, `deploy_to_catalog`) are designed for a local
+> **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
 > with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for
-> this registry, push sends them there, and deploy restarts the OpenCTI container so it pulls the updated image.
+> this registry, and push sends them there.
 > If your registry address differs, override it via the `DOCKER_REGISTRY` environment variable.
 
 #### Local Configuration
@@ -198,8 +197,7 @@ User-specific settings (paths, registries, env vars) should go in `.mise/config.
 ```toml
 # .mise/config.local.toml (not committed)
 [env]
-DOCKER_REPO_PATH = "/path/to/your/opencti-docker-compose"  # path to your OpenCTI-Platform/docker clone
-DOCKER_REGISTRY = "localhost:5000"                          # override if your registry differs
+DOCKER_REGISTRY = "localhost:5000"  # override if your registry differs
 ```
 
 You can also add personal tasks in `.mise/tasks/local/` (also git-ignored).

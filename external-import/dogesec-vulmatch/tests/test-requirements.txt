@@ -1,5 +1,5 @@
 pytest
 pytest-mock
 freezegun
-pycti==7.260928.1
+pycti==7.261002.0
 requests

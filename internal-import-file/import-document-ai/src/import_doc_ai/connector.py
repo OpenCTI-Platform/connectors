@@ -5,12 +5,10 @@ See : https://github.com/OpenCTI-Platform/connectors/blob/42e0ad002318224e88cac2
 import json
 
 import stix2
+from import_doc_ai.client_api import ImportDocumentAIClient
 from import_doc_ai.refang import refang_bundle_observables
-from pycti import OpenCTIConnectorHelper
-
-from .client_api import ImportDocumentAIClient
-from .settings import ConnectorSettings
-from .util import (
+from import_doc_ai.settings import ConnectorSettings
+from import_doc_ai.util import (
     OpenCTIFileObject,
     bulk_update_object_markings,
     compute_bundle_stats,
@@ -27,9 +25,11 @@ from .util import (
     make_report,
     relate_to,
     replace_in_bundle,
+    replace_objects_in_bundle,
     update_custom_properties,
     update_object_refs,
 )
+from pycti import OpenCTIConnectorHelper
 
 
 class Connector:
@@ -170,23 +170,26 @@ class Connector:
 
         # Handle location: special case x_opencti_location_type
         ai_locations_bundle = filter_bundle_entities_by_type(ai_bundle, {"location"})
-        for ai_location in ai_locations_bundle.get("objects", []):
-            ai_bundle = replace_in_bundle(
-                ai_bundle,
-                ai_location["id"],
-                convert_location_to_octi_location(ai_location),
-            )
+        ai_bundle = replace_objects_in_bundle(
+            ai_bundle,
+            {
+                ai_location["id"]: convert_location_to_octi_location(ai_location)
+                for ai_location in ai_locations_bundle.get("objects", [])
+            },
+        )
 
         # Handle observables: indicator creation delegation to the platform if relevant
         if self.config.import_document_ai.create_indicator:
             ai_observables_bundle = filter_bundle_observables(ai_bundle)
-            for ai_observable in ai_observables_bundle.get("objects", []):
-                updated_observable = update_custom_properties(
-                    {"x_opencti_create_indicator": True}, ai_observable
-                )
-                ai_bundle = replace_in_bundle(
-                    ai_bundle, ai_observable["id"], new_object=updated_observable
-                )
+            ai_bundle = replace_objects_in_bundle(
+                ai_bundle,
+                {
+                    ai_observable["id"]: update_custom_properties(
+                        {"x_opencti_create_indicator": True}, ai_observable
+                    )
+                    for ai_observable in ai_observables_bundle.get("objects", [])
+                },
+            )
 
         # Enrich the triggering entity reference if relevant
         # then propagate the triggering entity's marking_refs to the imported
@@ -261,7 +264,16 @@ class Connector:
         ## send bundle to OpenCTI
         # TODO sanitize entity with name <2 char
 
-        self.helper.send_stix2_bundle(
+        # No cleanup_inconsistent_bundle=True: the bundle references platform
+        # objects it does not carry (the triggering entity's markings, the
+        # triggering entity targeted by the related-to relationships, the
+        # existing content of a triggering container), and the cleanup strips
+        # every such reference before the platform can resolve it. Shipping the
+        # marking definitions instead is not an option: the worker re-imports
+        # them through markingDefinitionAdd, which the importing user may not be
+        # allowed to call. A reference the platform cannot resolve is already
+        # handled there (optional reference ignored, relationship rejected).
+        self.helper.send_stix2_bundle(  # noqa: VC312
             bundle=ai_bundle.serialize(),
             bypass_validation=data.get("bypass_validation", False),
             file_name="import-document-ai-" + file.stem + ".json",

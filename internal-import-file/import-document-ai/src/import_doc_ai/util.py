@@ -684,6 +684,30 @@ def replace_in_bundle(
     return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
 
 
+def replace_objects_in_bundle(
+    bundle: stix2.Bundle, new_objects_by_id: dict[str, stix2.v21._STIXBase21]
+) -> stix2.Bundle:
+    """Replace several objects of a STIX bundle in a single pass.
+
+    Equivalent to calling ``replace_in_bundle`` once per entry of
+    ``new_objects_by_id``, as long as no replacement changes the id of the
+    object it replaces, but rebuilds the bundle only once instead of once per
+    replaced object.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        new_objects_by_id (dict[str, stix2.v21._STIXBase21]): The replacement
+            objects, keyed by the id of the object they replace.
+
+    Returns:
+        (stix2.Bundle): The processed STIX bundle with the objects replaced.
+    """
+    updated_objects = [
+        new_objects_by_id.get(obj["id"], obj) for obj in bundle.get("objects", [])
+    ]
+    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
+
+
 def extend_bundle(
     bundle: stix2.Bundle, additional_objects: list[stix2.v21._STIXBase21]
 ) -> stix2.Bundle:
