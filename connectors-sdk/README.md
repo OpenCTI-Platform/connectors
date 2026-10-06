@@ -52,7 +52,9 @@ See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-co
 Connectors of type `INTERNAL_HUNT` execute the hunts dispatched by OpenCTI on a telemetry platform. Subclass
 `InternalHuntConnector`, declare the query languages, the pySigma backend and the query execution; the base class
 handles the rest (platform registration, native query override, preview mode, run timeout and `max_results`,
-benign suppression, STIX sightings and observed-data, hashed and truncated evidence, run report).
+benign suppression, STIX observables and observed-data, hashed and truncated evidence, the stable key of every hit,
+run report). Connectors send no sighting: OpenCTI keeps one sighting per technique and indicator of a hunt on the
+Security Platform, updated across runs from the hit keys.
 
 ```python
 from connectors_sdk import BaseConnectorSettings, BaseInternalHuntConnectorConfig, InternalHuntConnector

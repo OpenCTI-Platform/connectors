@@ -316,10 +316,21 @@ def _file_observables(value: str, tokens: set[str]) -> list[ObservableValue]:
     ]
 
 
+def _is_ip(value: str) -> bool:
+    """Return whether a value is an IP address, public or not."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
+
+
 def _hostname_observables(value: str, tokens: set[str]) -> list[ObservableValue]:
-    """Validate a host name."""
+    """Validate a host name: an IP address is never one, so an internal address stays out."""
     hostname = value.strip().lower().rstrip(".")
-    return [ObservableValue(HOSTNAME, hostname)] if _HOSTNAME.match(hostname) else []
+    if _is_ip(hostname) or not _HOSTNAME.match(hostname):
+        return []
+    return [ObservableValue(HOSTNAME, hostname)]
 
 
 def _user_observables(value: str, tokens: set[str]) -> list[ObservableValue]:

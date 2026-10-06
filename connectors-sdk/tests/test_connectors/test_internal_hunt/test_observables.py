@@ -122,6 +122,23 @@ def test_extract_observables_from_telemetry_fields():
     assert observables[0].value == "8.8.8.8"
 
 
+def test_an_ip_address_is_never_a_hostname():
+    # Given host fields holding addresses, internal or public
+    events = [
+        HuntEvent(fields={"host.ip": "10.0.0.5"}),
+        HuntEvent(fields={"host.name": "192.168.1.20", "hostname": "8.8.8.8"}),
+    ]
+
+    # When every supported type is allowed
+    found = {
+        (o.observable_type, o.value) for o in extract_observables(events, ALL_TYPES)
+    }
+
+    # Then no address becomes a hostname, and an internal one gives nothing
+    assert not any(kind == "Hostname" for kind, _ in found)
+    assert ("IPv4-Addr", "10.0.0.5") not in found
+
+
 def test_extract_observables_respects_allowed_types_explicit_fields_and_cap():
     # Given events with a field only known through an explicit mapping
     events = [

@@ -209,7 +209,8 @@ class InternalHuntConnector(ABC):
     bundle sending, evidence redaction and run reporting. For indicator hunts:
     the batching of the values by type, the matching of the values in the
     results (or the reading of aggregated rows, see ``ioc_aggregated``), one
-    result per value, and the sightings of the seen values.
+    result per value with the keys of its hits, and the observables of the
+    seen values (OpenCTI keeps their sightings).
 
     The ``OpenCTIConnectorHelper`` is created lazily by ``start()`` so that the
     connector can be instantiated and tested without an OpenCTI platform.
@@ -1099,9 +1100,9 @@ class InternalHuntConnector(ABC):
         if not objects:
             return
         bundle = self.helper.stix2_create_bundle(list(objects.values()))
-        # The bundle references entities that already exist in OpenCTI (techniques,
-        # indicators, Security Platform, markings, author): cleaning up "inconsistent"
-        # references would strip them from the sightings.
+        # The bundle references entities that already exist in OpenCTI (markings,
+        # author, the threats an outside-in hunt relates its infrastructure to):
+        # cleaning up "inconsistent" references would strip them from the objects sent.
         self.helper.send_stix2_bundle(
             bundle,
             work_id=self.helper.work_id,
