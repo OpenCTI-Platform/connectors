@@ -21,24 +21,31 @@ looks. The model covers exactly this:
   ``.dockerignore`` rules (or a Dockerfile-specific ``<Dockerfile>.dockerignore``;
   last match wins, ``!`` exceptions), plus the stamps the build step writes.
 * Instructions: FROM (stages), ARG / ENV, WORKDIR, COPY / ADD (``--from``
-  read from the root of the stage, ``--parents``, ``--exclude``, ``--chmod``
-  that removes a read permission drops the stamp, wildcards, file and
-  directory destinations; an ADD of a URL or of an archive brings no connector
-  file), RUN, SHELL, VOLUME (a stamp below a volume does not count: a mount
-  hides it), CMD / ENTRYPOINT (exec and shell forms).
-* RUN commands and entry scripts, read as POSIX shell (quoted and escaped
-  punctuation stays an argument): ``cd``, ``rm``, ``unlink``, ``mv`` and
-  ``ln`` (literal and wildcard operands, a wildcard never matching a leading
-  dot), ``find`` (``-delete``, ``-exec`` and its operands; a grouped expression
-  deletes everything below its roots), ``sh -c``, shell scripts of the image
-  that are run or sourced, ``pip install <path>``. An output redirection takes
-  its target out of the model. Any other command takes out of the model every
-  file it names - in its arguments, in a code string, in the script of the
-  image it runs - and everything below a directory it names, unless it is a
-  command that cannot rewrite or delete a file (``ls``, ``cat``, ``mkdir``,
-  ``chown``, a ``chmod`` that keeps the file readable, ...). Commands joined
-  by ``&&`` are followed as if each succeeds; a command that names no file is
-  taken to change none.
+  read from the root of the stage, ``--parents``, ``--exclude``, wildcards,
+  file and directory destinations; a ``--chmod`` that removes a read
+  permission replaces the destination with a stamp that does not count;
+  content the model does not know - an external image, a URL, an archive -
+  takes the destination, or everything below a destination directory, out of
+  the model), RUN, SHELL, VOLUME (a stamp below a volume does not count: a
+  mount hides it), CMD / ENTRYPOINT (exec and shell forms).
+* RUN commands and entry scripts, read as POSIX shell: quoted and escaped
+  punctuation stays an argument; each command expands its variables with the
+  values the preceding ones left (an unquoted expansion is split into words,
+  nothing expands inside single quotes). ``cd``, ``rm``, ``unlink``, ``mv``
+  (sources and the replaced destination) and ``ln`` (literal and wildcard
+  operands, a wildcard never matching a leading dot), ``find`` (``-delete``,
+  ``-exec`` and its operands; a grouped expression deletes everything below
+  its roots), ``sh -c``, shell scripts of the image that are run or sourced,
+  ``pip install <path>``. An output redirection takes its target out of the
+  model. Any other command takes out of the model every file it names - its
+  arguments, and in a code string or a script of the image it runs, the paths
+  and the quoted stamp names (relative ones against the working directory) -
+  and everything below a directory it names, unless it is a command that
+  cannot rewrite or delete a file (``ls``, ``cat``, ``mkdir``, ``chown``, a
+  ``chmod`` that keeps the file readable, ...). Commands joined
+  by ``&&`` are followed as if each succeeds. Build tools and interpreters
+  that work on their working directory (``git``, ``make``, ``npm``, ...) name
+  it implicitly; any other command that names no file is taken to change none.
 * Packaged connectors: the installed package carries the stamp only when the
   stamp reached the package directory before ``pip install``, setuptools
   discovery installs the package (``packages``, ``packages.find`` with its
@@ -164,6 +171,12 @@ OUTPUT_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>"})
 PUNCTUATION = "();<>|&"
 PROTECT = {char: chr(0xE000 + n) for n, char in enumerate(PUNCTUATION)}
 RESTORE = str.maketrans({v: k for k, v in PROTECT.items()})
+# A variable reference is kept as a marker until its command runs, so that it is
+# expanded with the variables the preceding commands left; an unquoted one is
+# split into words, as the shell does.
+VAR_UNQUOTED, VAR_QUOTED, VAR_END = "\ue020", "\ue021", "\ue022"
+VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}])(\\d+){VAR_END}")
+STRING_LITERAL = re.compile(r"""(['"])([^'"\n]*?)\1""")
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
 # read it, create something new, or change its owner. Any other command the
 # model does not interpret takes every file it names out of the model.
@@ -216,6 +229,29 @@ HARMLESS_COMMANDS = frozenset(
 )
 # Python modules run with -m that only add files.
 HARMLESS_PYTHON_MODULES = frozenset({"compileall", "venv", "ensurepip"})
+# Programs that work on their working directory without naming it (git clean,
+# make clean, npm prune): the working directory counts as named. A python script
+# of the image is read instead: the paths its code names count.
+WORKING_DIRECTORY_PROGRAMS = frozenset(
+    {
+        "cargo",
+        "cmake",
+        "git",
+        "go",
+        "gradle",
+        "make",
+        "mvn",
+        "ninja",
+        "node",
+        "npm",
+        "npx",
+        "perl",
+        "php",
+        "pnpm",
+        "ruby",
+        "yarn",
+    }
+)
 PATH_IN_TEXT = re.compile(r"(?:~|\.{1,2})?/[^\s'\"`(),;:|&<>]*")
 PIP_OPTIONS_WITH_VALUE = frozenset(
     {
@@ -850,6 +886,10 @@ class Shell:
         self.stack = []
         self.processes = []
         self.ended = False
+        # Variable references of the script, in the order the markers number them.
+        self.references = []
+        # Whether the command being run kept a shell variable unexpanded.
+        self.unresolved = False
 
     def run(self, script):
         if self.nesting > 8:
@@ -857,11 +897,28 @@ class Shell:
         for line in self._lines(script):
             if HEREDOC.search(line):
                 raise Unsupported("a here-document in a shell script")
-            tokens = self._tokens(expand(line, self.variables))
-            self._statements(tokens + ["\n"])
+            self._statements(self._tokens(line) + ["\n"])
             if self.ended:
                 break
         return self.processes
+
+    def _expand(self, word, split=True):
+        """Words of ``word`` once its variables are expanded with the current
+        values; an unquoted expansion is split on blanks."""
+        unquoted = False
+
+        def substitute(match):
+            nonlocal unquoted
+            unquoted = unquoted or match.group(1) == VAR_UNQUOTED
+            reference = self.references[int(match.group(2))]
+            value = expand(reference, self.variables)
+            if VARIABLE.search(value):
+                # A shell variable the build does not define stays unexpanded.
+                self.unresolved = True
+            return value
+
+        value = VAR_MARKER.sub(substitute, word)
+        return value.split() if split and unquoted else [value]
 
     def _nested(self, files, cwd, variables, start, conditional):
         """A shell run from this one; in a start script it adds its processes here."""
@@ -901,14 +958,23 @@ class Shell:
             lines.append(current)
         return lines
 
-    @staticmethod
-    def _protect(line):
-        """The line with quoted or escaped punctuation as private-use characters."""
+    def _protect(self, line):
+        """The line with quoted or escaped punctuation as private-use characters
+        and variable references as markers (none inside single quotes)."""
         out = []
         quote = None
         i = 0
         while i < len(line):
             char = line[i]
+            reference = (
+                VARIABLE.match(line, i) if char == "$" and quote != "'" else None
+            )
+            if reference:
+                kind = VAR_QUOTED if quote == '"' else VAR_UNQUOTED
+                out.append(f"{kind}{len(self.references)}{VAR_END}")
+                self.references.append(reference.group(0))
+                i = reference.end()
+                continue
             if quote:
                 if char == quote:
                     quote = None
@@ -932,9 +998,8 @@ class Shell:
             i += 1
         return "".join(out)
 
-    @staticmethod
-    def _tokens(line):
-        lexer = shlex.shlex(Shell._protect(line), posix=True, punctuation_chars=True)
+    def _tokens(self, line):
+        lexer = shlex.shlex(self._protect(line), posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
         try:
             tokens = list(lexer)
@@ -1030,17 +1095,24 @@ class Shell:
             self._command(words, writes, before, None)
 
     def _command(self, words, writes, before, after):
+        self.unresolved = False
         for target in writes:
             # Truncated or rewritten: the file no longer holds what the model knows.
-            path = image_path(self._tilde(target), self.cwd, "redirection target")
+            [value] = self._expand(target, split=False)
+            path = image_path(self._tilde(value), self.cwd, "redirection target")
             remove_files(self.files, path)
         assigned = {}
         while words and ASSIGNMENT.match(words[0]):
             key, _, value = words[0].partition("=")
-            assigned[key] = value
+            [assigned[key]] = self._expand(value, split=False)
+            if len(words) == 1 or all(ASSIGNMENT.match(w) for w in words):
+                # Assignments alone apply one after the other.
+                self.variables[key] = assigned[key]
             words = words[1:]
         if not words:
-            self.variables.update(assigned)
+            return
+        words = [part for word in words for part in self._expand(word)]
+        if not words:
             return
         handed_over = False
         while words:
@@ -1144,19 +1216,44 @@ class Shell:
             text = self.model.context.read(self.files.get(path)) if path else None
             if text:
                 texts.append(text)
-        candidates = set()
+        # Shell words (no blank) are paths as written; in code - a code string or a
+        # script - a "$" is regular expression or template syntax, not a variable.
+        words_named, code_named = set(), set()
         for text in texts:
-            candidates.add(text)
-            candidates.update(part for part in text.split("=")[1:])
-            candidates.update(PATH_IN_TEXT.findall(text))
-        for candidate in candidates:
-            self._forget(candidate.strip())
+            if not any(char.isspace() for char in text):
+                words_named.add(text)
+                words_named.update(text.split("=")[1:])
+                continue
+            if (
+                self.unresolved
+                and text in args
+                and VARIABLE.search(text)
+                and ("/" in text or STAMP in text)
+            ):
+                raise Unsupported(
+                    f"'{name}' runs code with a shell variable the build does not define"
+                )
+            code_named.update(PATH_IN_TEXT.findall(text))
+            # Quoted paths of code, relative ones resolved against the working directory.
+            code_named.update(
+                literal
+                for _, literal in STRING_LITERAL.findall(text)
+                if STAMP in literal or "/" in literal
+            )
+        if name in WORKING_DIRECTORY_PROGRAMS:
+            if self.cwd is None:
+                raise Unsupported(f"'{name}' in an unknown working directory")
+            words_named.add(self.cwd)
+        for candidate in words_named:
+            self._forget(candidate.strip(), strict=True)
+        for candidate in code_named:
+            self._forget(candidate.strip(), strict=False)
 
-    def _forget(self, candidate):
+    def _forget(self, candidate, strict=True):
         if not candidate or candidate.startswith("-") or "\n" in candidate:
             return
         if "$" in candidate or "`" in candidate:
-            if "/" in candidate or STAMP in candidate:
+            if strict and ("/" in candidate or STAMP in candidate):
                 raise Unsupported(
                     f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
                 )
@@ -1274,8 +1371,23 @@ class Shell:
             i += 1
         operands = self._operands(rest)
         sources = operands if target_dir else operands[:-1]
+        if not sources:
+            return
+        destination = target_dir if target_dir else operands[-1]
+        destination = image_path(self._tilde(destination), self.cwd, "mv destination")
+        if target_dir or len(sources) > 1 or self._is_dir(destination):
+            # Into a directory: each source replaces the entry of its name there.
+            for source in sources:
+                name = posixpath.basename(source.rstrip("/"))
+                remove_files(self.files, posixpath.join(destination, name))
+        else:
+            remove_files(self.files, destination)
         # The moved files leave their place; where they land is not modelled.
         self._delete(sources)
+
+    def _is_dir(self, path):
+        prefix = path.rstrip("/") + "/"
+        return path in self.stage.dirs or any(f.startswith(prefix) for f in self.files)
 
     def _link(self, args):
         """``ln``: the link replaces whatever the model had at its path."""
@@ -1536,32 +1648,44 @@ class ImageModel:
             glob_regex(p) for p in flags.get("exclude", []) if isinstance(p, str)
         ]
         keep_parents = bool(flags.get("parents"))
+        opaque = False
         if from_values:
             source_stage = self.named.get(str(from_values[-1]).lower())
             if source_stage is None:
-                # An external image: none of the connector's files come from it.
-                return
-            entries = self._stage_entries(source_stage, sources)
+                # An external image: none of the connector's files come from it,
+                # but its files may replace ones of the model.
+                entries, opaque = [], True
+            else:
+                entries = self._stage_entries(source_stage, sources)
         else:
-            entries = self._context_entries(instruction, sources)
+            entries, opaque = self._context_entries(instruction, sources)
         dest_path = image_path(dest, stage.workdir, "COPY destination")
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
+        if opaque:
+            # Content the model does not know (external image, URL, archive) may
+            # replace the destination, or anything below a destination directory.
+            remove_files(stage.files, dest_path)
 
         chmod = flags.get("chmod", [])
         unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
 
-        def excluded(relative, name, origin):
+        def excluded(relative, name):
             # Matched against the path in the source and in the context: never less than Docker excludes.
-            if unreadable and origin[0] == "stamp":
-                # --chmod removes a read permission: a non-root user cannot read the stamp.
-                return True
             return any(rx.match(name) or rx.match(relative) for rx in excludes)
+
+        def place(target, origin):
+            if unreadable and origin[0] == "stamp":
+                # --chmod removes a read permission: the copy replaces the
+                # destination with a stamp a non-root user cannot read.
+                stage.files.pop(target, None)
+            else:
+                stage.add_file(target, origin)
 
         for kind, source, members in entries:
             if kind == "dir" or keep_parents:
                 for relative, member_origin, member_name in members:
-                    if excluded(relative, member_name, member_origin):
+                    if excluded(relative, member_name):
                         continue
                     if keep_parents:
                         target = posixpath.join(dest_path, member_name)
@@ -1571,23 +1695,26 @@ class ImageModel:
                             if relative
                             else dest_path
                         )
-                    stage.add_file(posixpath.normpath(target), member_origin)
+                    place(posixpath.normpath(target), member_origin)
                 stage.dirs.add(dest_path)
                 continue
             relative, member_origin, member_name = members[0]
-            if excluded(relative, member_name, member_origin):
+            if excluded(relative, member_name):
                 continue
             if dest_is_dir or stage.is_dir(dest_path):
                 target = posixpath.join(dest_path, posixpath.basename(member_name))
             else:
                 target = dest_path
-            stage.add_file(target, member_origin)
+            place(target, member_origin)
 
     def _context_entries(self, instruction, sources):
-        """(kind, source, [(relative path, origin, context path)]) per copied source."""
+        """(kind, source, [(relative path, origin, context path)]) per copied
+        source, and whether a source brings content the model does not know."""
         entries = []
+        opaque = False
         for source in sources:
             if instruction == "ADD" and ("://" in source or source.startswith("git@")):
+                opaque = True
                 continue
             normalized = (
                 posixpath.normpath(source.lstrip("/"))
@@ -1613,6 +1740,7 @@ class ImageModel:
             for match in matches:
                 if instruction == "ADD" and TARBALL.search(match):
                     # A local archive is extracted: its content is not modelled.
+                    opaque = True
                     continue
                 if match in self.context.dirs and match not in self.context.files:
                     prefix = "" if match == "." else match + "/"
@@ -1636,7 +1764,7 @@ class ImageModel:
                             ],
                         )
                     )
-        return entries
+        return entries, opaque
 
     @staticmethod
     def _stage_entries(source_stage, sources):

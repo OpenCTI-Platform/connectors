@@ -292,6 +292,34 @@ def test_stamp_restored_after_the_code_directory_is_removed(tmp_path):
         ("chmod -R a+rX /opt/src && chown -R 1000 /opt/src", True),
         ("cat /opt/src/.connector_version.json && ls -la /opt/src", True),
         ("python -m compileall /opt/src", True),
+        # Programs working on their working directory without naming it.
+        ("cd /opt/src && git clean -fdx", False),
+        ("cd /opt/src && make clean", False),
+        ("cd /tmp && npm prune", True),
+        # Copilot review of 00:11 UTC: each command sees the variables the
+        # preceding ones left, with the shell quoting rules.
+        ('export APP=/opt/src && rm -f "$APP/.connector_version.json"', False),
+        ("APP=/opt/src; rm -rf $APP", False),
+        ("APP=/opt/src; echo '$APP' && rm -rf /tmp/$APP", True),
+        ("FILES='/tmp/a /opt/src/.connector_version.json'; rm -f $FILES", False),
+        ("FILES='/tmp/a /opt/src/.connector_version.json'; rm -f \"$FILES\"", True),
+        # Copilot review of 00:11 UTC: a quoted relative stamp name in code.
+        (
+            "cd /opt/src && python3 -c 'import os; os.unlink(\".connector_version.json\")'",
+            False,
+        ),
+        ("cd /tmp && python3 -c 'print(\".connector_version.json\")'", True),
+        # A "$" of code is not a shell variable; an unknown shell variable in code is reported.
+        ("python3 -c 'import re; re.compile(\"^/opt/[a-z]+$\")'", True),
+        ("python3 -c \"import shutil; shutil.rmtree('$TARGET/src')\"", False),
+        # Copilot review of 00:11 UTC: mv replaces its destination.
+        ("touch /tmp/empty && mv /tmp/empty /opt/src/.connector_version.json", False),
+        (
+            "mkdir /tmp/x && touch /tmp/x/.connector_version.json && mv /tmp/x/.connector_version.json /opt/src/",
+            False,
+        ),
+        ("touch /tmp/empty && mv -t /opt/src /tmp/.connector_version.json", False),
+        ("touch /tmp/empty && mv /tmp/empty /tmp/other", True),
     ],
 )
 def test_deletions_after_the_copy(tmp_path, command, covered):
@@ -365,13 +393,38 @@ def test_dockerfile_specific_ignore_file_wins(tmp_path):
         ("COPY --chmod=go-r src /opt/sample", False),
         ("COPY src /opt/sample\nVOLUME /opt/sample", False),
         ('COPY src /opt/sample\nVOLUME ["/data"]', True),
+        # Copilot review of 00:11 UTC: an unreadable copy still replaces the destination.
+        (
+            "COPY src /opt/sample\nCOPY --chmod=000 src/.connector_version.json /opt/sample/.connector_version.json",
+            False,
+        ),
+        ("COPY src /opt/sample\nCOPY --chmod=000 src /opt/sample", False),
+        (
+            "COPY src /opt/sample\nCOPY --chmod=000 --exclude=*.json src /opt/sample",
+            True,
+        ),
+        # Copilot review of 00:11 UTC: content the model does not know replaces the destination.
+        (
+            "COPY src /opt/sample\nCOPY --from=python:3.12-alpine /etc/passwd /opt/sample/.connector_version.json",
+            False,
+        ),
+        (
+            "COPY src /opt/sample\nADD https://example.com/stamp.json /opt/sample/.connector_version.json",
+            False,
+        ),
+        ("COPY src /opt/sample\nADD payload.tar /opt/sample/", False),
+        (
+            "COPY src /opt/sample\nCOPY --from=python:3.12-alpine /usr/bin/env /usr/local/bin/env",
+            True,
+        ),
     ],
 )
 def test_permissions_and_volumes(tmp_path, instructions, covered):
     image = single(
         tmp_path,
         {
-            "Dockerfile": f'FROM python:3.12-alpine\n{instructions}\nWORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+            "Dockerfile": f'FROM python:3.12-alpine\n{instructions}\nWORKDIR /opt/sample\nCMD ["python3", "main.py"]\n',
+            "payload.tar": "",
         },
     )
     assert image.covered is covered, image.reason
@@ -926,6 +979,8 @@ def test_workflow_watches_every_file_the_check_reads():
             assert f"{directory}/**" in paths, f"{event} does not watch {directory}"
         for name in (
             check.UBI9_DOCKERFILE,
+            # Copilot review of 00:11 UTC: the ignore file the shared Dockerfile reads.
+            f"{check.UBI9_DOCKERFILE}.dockerignore",
             check.UBI9_CONNECTORS,
             ".github/actions/build-connector-image/**",
             ".github/scripts/check_connector_stamp.py",
