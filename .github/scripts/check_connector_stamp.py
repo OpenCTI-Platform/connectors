@@ -221,6 +221,19 @@ RESTORE = str.maketrans({v: k for k, v in PROTECT.items()})
 VAR_UNQUOTED, VAR_QUOTED, VAR_END = "\ue020", "\ue021", "\ue022"
 # A command substitution, whose output is not known.
 VAR_SUBST = "\ue023"
+# A wildcard character that is quoted, escaped or not read by a shell (exec form)
+# is literal: it is carried as a private-use character until a command that
+# takes paths reads it as a bracket expression ([*] matches only "*").
+QUOTED_GLOB = {"*": "\ue030", "?": "\ue031", "[": "\ue032"}
+PLAIN_GLOB = str.maketrans({v: k for k, v in QUOTED_GLOB.items()})
+LITERAL_GLOB = str.maketrans({v: f"[{k}]" for k, v in QUOTED_GLOB.items()})
+
+
+def literal_globs(text):
+    """``text`` with its wildcard characters taken literally."""
+    return text.translate(str.maketrans(QUOTED_GLOB))
+
+
 # The value of a variable the model does not follow, or the output of a command
 # substitution: it keeps a "$", so a path built from it is reported, and it
 # matches no variable reference.
@@ -996,6 +1009,10 @@ class Stage:
     healthcheck: tuple = None
     # The external image the stage starts from, through the stages it builds on.
     base: str = None
+    # This stage declared a CMD (one inherited from the parent does not count).
+    cmd_set: bool = False
+    # Links a build command created: path -> what it stands for (None: unknown).
+    links: dict = field(default_factory=dict)
     # Directories below which a COPY put content the model does not know.
     unknown_dirs: set = field(default_factory=set)
 
@@ -1033,6 +1050,7 @@ class Stage:
             healthcheck=self.healthcheck,
             base=self.base,
             unknown_dirs=set(self.unknown_dirs),
+            links=dict(self.links),
         )
 
     def add_file(self, path, origin):
@@ -1487,6 +1505,24 @@ def download_outputs(program, args, cwd):
     return [output for output in outputs if output != "-"]
 
 
+def split_option(words):
+    """``words`` with an attached pip option value split off: -e./x,
+    --editable=./x, -rx.txt, --requirement=x.txt, -cx.txt, --constraint=x."""
+    if not words:
+        return words
+    first = words[0]
+    for short, long in (
+        ("-e", "--editable"),
+        ("-r", "--requirement"),
+        ("-c", "--constraint"),
+    ):
+        if first.startswith(long + "="):
+            return [long, first[len(long) + 1 :], *words[1:]]
+        if first.startswith(short) and len(first) > 2 and not first.startswith("--"):
+            return [short, first[2:], *words[1:]]
+    return words
+
+
 def check_shell_options(options):
     """Options of a shell the model reads its scripts with: -c, and the ones
     that only stop it on errors or trace it (-e, -u, -x, -o pipefail...)."""
@@ -1653,7 +1689,9 @@ class Shell:
                 # Unknown output: a "$" stays, so a path built from it is reported.
                 return UNKNOWN
             unquoted = unquoted or match.group(1) == VAR_UNQUOTED
-            return expand(self.references[int(match.group(2))], self.variables)
+            value = expand(self.references[int(match.group(2))], self.variables)
+            # The wildcard characters of a quoted expansion are literal.
+            return value if match.group(1) == VAR_UNQUOTED else literal_globs(value)
 
         value = VAR_MARKER.sub(substitute, word)
         if split and unquoted and "IFS" in self.variables:
@@ -1770,18 +1808,26 @@ class Shell:
                     quote = None
                     out.append(char)
                 elif quote == '"' and char == "\\" and i + 1 < len(line):
-                    out.append(char + PROTECT.get(line[i + 1], line[i + 1]))
+                    following = line[i + 1]
+                    out.append(
+                        char
+                        + QUOTED_GLOB.get(following, PROTECT.get(following, following))
+                    )
                     i += 1
                 else:
-                    out.append(PROTECT.get(char, char))
+                    # A quoted wildcard character is literal.
+                    out.append(QUOTED_GLOB.get(char, PROTECT.get(char, char)))
             elif char in ("'", '"'):
                 quote = char
                 out.append(char)
             elif char == "\\" and i + 1 < len(line):
                 following = line[i + 1]
-                out.append(
-                    PROTECT[following] if following in PROTECT else char + following
-                )
+                if following in QUOTED_GLOB:
+                    out.append(QUOTED_GLOB[following])
+                else:
+                    out.append(
+                        PROTECT[following] if following in PROTECT else char + following
+                    )
                 i += 1
             else:
                 out.append(char)
@@ -1955,13 +2001,16 @@ class Shell:
         for target in writes:
             # Truncated or rewritten: the file no longer holds what the model knows.
             [value] = self._expand(target, split=False)
+            value = value.translate(PLAIN_GLOB)
             path = image_path(self._tilde(value), self.cwd, "redirection target")
+            self._through_link(path)
             remove_files(self.files, path)
             self.stage.replaced.add(path)
         assigned = {}
         while words and ASSIGNMENT.match(words[0]):
             key, _, value = words[0].partition("=")
             [assigned[key]] = self._expand(value, split=False)
+            assigned[key] = assigned[key].translate(PLAIN_GLOB)
             if all(ASSIGNMENT.match(w) for w in words):
                 # Assignments alone apply one after the other; in a branch the model
                 # does not follow, the variable is no longer known.
@@ -2013,6 +2062,11 @@ class Shell:
         if not words:
             return
         in_pipeline = before == "|" or after == "|"
+        # Commands taking paths read a literal wildcard character as such; the
+        # others receive the characters the shell passes.
+        literal_args = [word.translate(LITERAL_GLOB) for word in words[1:]]
+        words = [word.translate(PLAIN_GLOB) for word in words]
+        assigned = {key: value.translate(PLAIN_GLOB) for key, value in assigned.items()}
         name = posixpath.basename(words[0])
         args = words[1:]
         # The shell looks the command up with all its variables; the command
@@ -2085,11 +2139,11 @@ class Shell:
                 raise Unsupported(f"'{name}' in the entry script")
             self._source(name, args)
         elif name in ("rm", "unlink"):
-            self._delete(self._operands(args))
+            self._delete(self._operands(literal_args))
         elif name == "mv":
-            self._move(args)
+            self._move(literal_args)
         elif name == "ln":
-            self._link(args)
+            self._link(literal_args)
         elif name == "find":
             self._find(args)
         elif name in SHELLS:
@@ -2105,7 +2159,7 @@ class Shell:
             if not conditional and before != "&&":
                 self.ended = True
         elif not self._executed_script(words, env, conditional):
-            self._other_command(words)
+            self._other_command(words, literal_args)
 
     def _module_shadow(self, name, env):
         """A file the build wrote that python -m ``name`` imports before the module
@@ -2216,7 +2270,7 @@ class Shell:
             return
         raise Unsupported(f"'uv {' '.join(args[:1])}' is not modelled")
 
-    def _other_command(self, words):
+    def _other_command(self, words, literal_args=None):
         """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
@@ -2232,7 +2286,8 @@ class Shell:
             return
         if name == "chmod":
             recursive = any(a in ("-R", "--recursive") for a in args)
-            operands = [a for a in args if a not in CHMOD_OPTIONS][1:]
+            paths = literal_args if literal_args is not None else args
+            operands = [a for a in paths if a not in CHMOD_OPTIONS][1:]
             for operand in operands:
                 path = image_path(self._tilde(operand), self.cwd, "chmod operand")
                 # A directory also needs its search permission (a pattern may
@@ -2339,6 +2394,7 @@ class Shell:
             ):
                 return
         path = image_path(self._tilde(candidate), self.cwd, "named path")
+        self._through_link(path)
         if path != "/":
             before = set(self.files)
             remove_files(self.files, path)
@@ -2469,6 +2525,7 @@ class Shell:
     def _delete(self, operands):
         for operand in operands:
             target = image_path(self._tilde(operand), self.cwd, "deleted path")
+            self._through_link(target)
             remove_files(self.files, target)
 
     def _move(self, args):
@@ -2479,6 +2536,11 @@ class Shell:
             return
         destination = target_dir if target_dir else operands[-1]
         destination = image_path(self._tilde(destination), self.cwd, "mv destination")
+        for path in (
+            destination,
+            *(image_path(self._tilde(s), self.cwd, "mv source") for s in sources),
+        ):
+            self._through_link(path)
         if target_dir or (
             not no_target and (len(sources) > 1 or self._is_dir(destination))
         ):
@@ -2503,6 +2565,9 @@ class Shell:
         operands = self._operands(rest)
         if not operands:
             return
+        symbolic = any(
+            re.fullmatch(r"-[a-zA-Z]*s[a-zA-Z]*", a) or a == "--symbolic" for a in rest
+        )
         if target_dir:
             link = image_path(self._tilde(target_dir), self.cwd, "link directory")
             targets = operands
@@ -2513,12 +2578,42 @@ class Shell:
                 # The link is this path.
                 remove_files(self.files, link)
                 self.stage.replaced.add(link)
+                self._record_link(link, targets[0], symbolic)
                 return
         for target in targets:
             # A link created inside an existing directory takes the target's name.
             name = posixpath.basename(target.rstrip("/"))
             remove_files(self.files, posixpath.join(link, name))
             self.stage.replaced.add(posixpath.join(link, name))
+            self._record_link(posixpath.join(link, name), target, symbolic)
+
+    def _record_link(self, link, target, symbolic):
+        """What the link at ``link`` stands for: a symbolic link resolves from its
+        own directory, a hard link names an existing file (None: not known)."""
+        if "$" in target or (
+            not symbolic and self.cwd is None and not target.startswith("/")
+        ):
+            self.stage.links[link] = None
+        elif symbolic:
+            self.stage.links[link] = posixpath.normpath(
+                posixpath.join(posixpath.dirname(link), target)
+            )
+        else:
+            self.stage.links[link] = image_path(self._tilde(target), self.cwd)
+
+    def _through_link(self, path):
+        """Report an operation on ``path`` when it goes through a link the build
+        created to files of the model: it acts on them under another name."""
+        for link, target in self.stage.links.items():
+            if path != link and not path.startswith(link.rstrip("/") + "/"):
+                continue
+            if target is None or any(
+                f == target or f.startswith(target.rstrip("/") + "/")
+                for f in self.files
+            ):
+                raise Unsupported(
+                    f"{path} goes through the link {link} the build created"
+                )
 
     def _find(self, args):
         # Options before the roots: -H, -L and -P (symbolic links), -D, -O.
@@ -2567,6 +2662,11 @@ class Shell:
                 raise Unsupported("a shell or xargs started from find")
             explicit = [word for word in command[1:] if word != "{}"]
             if program in ("rm", "unlink", "mv"):
+                if arg in ("-execdir", "-okdir") and any(
+                    not operand.startswith("/") for operand in self._operands(explicit)
+                ):
+                    # Resolved from the directory of each match.
+                    raise Unsupported(f"find {arg} {program} with a relative operand")
                 # Operands other than the matched path are deleted as well.
                 deletes = True
                 self._delete(self._operands(explicit))
@@ -2613,6 +2713,7 @@ class Shell:
             base = image_path(self._tilde(root), self.cwd, "find root")
             if GLOB_CHARS.search(base):
                 raise Unsupported(f"find root '{root}' with a wildcard")
+            self._through_link(base)
             # The installed packages are also reached by their native path; the
             # predicates hold as such only when the mapping is exact.
             exact = bool(NATIVE_SITE_PACKAGES.match(base))
@@ -2673,6 +2774,8 @@ class Shell:
         if not args:
             return
         command, args = args[0], args[1:]
+        # -e./x, -rx.txt, --editable=./x: the value of the option is attached.
+        args = [part for arg in args for part in split_option([arg])]
         if command in PIP_READ_ONLY_COMMANDS or (
             command == "config" and args[:1] in (["list"], ["get"], ["debug"])
         ):
@@ -2813,7 +2916,7 @@ class Shell:
                 line = line.split(" #", 1)[0].strip()
                 if not line or line.startswith("#"):
                     continue
-                words = line.split()
+                words = split_option(line.split())
                 if (
                     words[0] in ("-r", "--requirement", "-c", "--constraint")
                     and len(words) > 1
@@ -2901,9 +3004,13 @@ class ImageModel:
                     stage.volumes.append(image_path(path, stage.workdir, "VOLUME"))
             elif instruction == "ENTRYPOINT":
                 stage.entrypoint = parse_command(arguments)
-                stage.cmd = None
+                if not stage.cmd_set:
+                    # ENTRYPOINT clears a CMD inherited from the base, not one
+                    # this stage declared.
+                    stage.cmd = None
             elif instruction == "CMD":
                 stage.cmd = parse_command(arguments)
+                stage.cmd_set = True
             elif instruction == "HEALTHCHECK":
                 self._healthcheck(stage, arguments)
         if stage is None:
@@ -2943,7 +3050,8 @@ class ImageModel:
         if shell_form:
             shell.run(command)
         else:
-            shell._statements([*command, "\n"])
+            # No shell reads the exec form: its wildcard characters are literal.
+            shell._statements([*(literal_globs(w) for w in command), "\n"])
         if files != stage.files:
             raise Unsupported("the HEALTHCHECK command changes files of the image")
 
@@ -3336,7 +3444,8 @@ class ImageModel:
             check_shell_environment(stage.shell[0], stage.variables)
             shell.run(command)
         elif command:
-            shell._statements([*command, "\n"])
+            # No shell reads the exec form: its wildcard characters are literal.
+            shell._statements([*(literal_globs(w) for w in command), "\n"])
 
     def check_packaging(self, files, install_dir):
         """Code of the repository that pip runs for ``install_dir``, whatever
