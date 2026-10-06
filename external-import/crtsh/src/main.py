@@ -2,7 +2,6 @@
 import sys
 import time
 from datetime import datetime
-from os import environ
 
 from crtsh import CrtSHClient
 from lib.external_import import ExternalImportConnector
@@ -25,28 +24,28 @@ class CrtshConnector(ExternalImportConnector):
         )
 
     def _get_config_variables(self):
-        """Get config variables from the environment"""
-        self.domain = environ.get("CRTSH_DOMAIN", None)
+        """Get config variables from the connector settings"""
+        self.domain = self.config.crtsh.domain
         if not domain_validator(self.domain):
             msg = f"Error when grabbing CRTSH_DOMAIN environment variable: '{self.domain}'. It SHOULD be a valid domain name. "
             self.helper.log_error(msg)
             raise ValueError(msg)
-        self.labels = environ.get("CRTSH_LABELS", None)
+        self.labels = self.config.crtsh.labels
         if not isinstance(self.labels, str):
             msg = f"Error when grabbing CRTSH_LABELS environment variable: '{self.labels}'. It SHOULD be a string. "
             self.helper.log_error(msg)
             raise ValueError(msg)
-        self.marking_refs = environ.get("CRTSH_MARKING_REFS", None)
+        self.marking_refs = self.config.crtsh.marking_refs
         if self.marking_refs is not None and self.marking_refs not in MARKING_REFS:
             msg = f"Error when grabbing CRTSH_MARKING_REFS environment variable: '{self.marking_refs}'. It SHOULD be one of {MARKING_REFS}. "
             self.helper.log_error(msg)
             raise ValueError(msg)
-        self.is_expired = environ.get("CRTSH_IS_EXPIRED", False)
+        self.is_expired = self.config.crtsh.is_expired
         if self.is_expired not in [True, False, "true", "false"]:
             msg = f"Error when grabbing CRTSH_IS_EXPIRED environment variable: '{self.is_expired}'. It SHOULD be either `True` or `False`. `False` is assumed."
             self.helper.log_warning(msg)
             self.is_expired = False
-        self.is_wildcard = environ.get("CRTSH_IS_WILDCARD", False)
+        self.is_wildcard = self.config.crtsh.is_wildcard
         if self.is_wildcard not in [True, False, "true", "false"]:
             msg = f"Error when grabbing CRTSH_IS_WILDCARD environment variable: '{self.is_wildcard}'. It SHOULD be either `True` or `False`. `False` is assumed."
             self.helper.log_warning(msg)

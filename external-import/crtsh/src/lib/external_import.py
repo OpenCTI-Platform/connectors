@@ -1,9 +1,9 @@
-import os
 import sys
 import time
 from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ExternalImportConnector:
@@ -20,11 +20,12 @@ class ExternalImportConnector:
     """
 
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Specific connector attributes for external import connectors
         try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
+            self.interval = self.config.connector.run_every.lower()
             self.helper.log_info(
                 f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
             )
@@ -37,23 +38,7 @@ class ExternalImportConnector:
             self.helper.log_error(msg)
             raise ValueError(msg)
 
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
-            "true",
-            "false",
-        ]:
-            self.update_existing_data = (
-                True if update_existing_data.lower() == "true" else False
-            )
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
-            True,
-            False,
-        ]:
-            self.update_existing_data = update_existing_data
-        else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
-            self.helper.log_warning(msg)
-            self.update_existing_data = "false"
+        self.update_existing_data = self.config.connector.update_existing_data
 
     def _collect_intelligence(self) -> list:
         """Collect intelligence from the source"""
