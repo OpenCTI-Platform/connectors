@@ -817,6 +817,25 @@ def test_module_with_an_unknown_initializer(tmp_path, copies, reason):
             "RUN mkdir /opt/build/other && pip install /opt/build && rm -rf /opt/build",
             None,
         ),
+        # Copilot review of 22:26 UTC: a src/ directory of a mkdir that may not
+        # run may select the src layout or not.
+        (
+            "RUN if true; then mkdir /opt/build/src; fi; pip install /opt/build",
+            "not supported: automatic discovery in /opt/build, whose src exists only if a mkdir that may not run did",
+        ),
+        (
+            "RUN false && mkdir -p /opt/build/src/inner; pip install /opt/build",
+            "not supported: automatic discovery in /opt/build, whose src exists only if a mkdir that may not run did",
+        ),
+        (
+            "RUN find /tmp -maxdepth 0 -exec mkdir /opt/build/src \\; ; pip install /opt/build",
+            "not supported: automatic discovery in /opt/build, whose src exists only if a mkdir that may not run did",
+        ),
+        (
+            "RUN if true; then mkdir /opt/build/src; fi; mkdir -p /opt/build/src"
+            " && pip install /opt/build",
+            "not supported: module sample_connector is not a file of the image model",
+        ),
     ],
 )
 def test_automatic_discovery_reads_the_build_directories(tmp_path, build, reason):
@@ -830,6 +849,44 @@ def test_automatic_discovery_reads_the_build_directories(tmp_path, build, reason
         assert image.reason == reason
     else:
         assert image.covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "build, reason",
+    [
+        # Copilot review of 22:26 UTC: pip runs a setup.py a build command
+        # wrote, and reads its other packaging files, whether it installs the
+        # project in place, in a branch or not.
+        (
+            "RUN echo pass > /opt/build/setup.py && pip install /opt/build",
+            "not supported: pip install of /opt/build, whose setup.py a build command wrote",
+        ),
+        (
+            "RUN echo pass > /opt/build/setup.py && pip install -e /opt/build",
+            "not supported: pip install of /opt/build, whose setup.py a build command wrote",
+        ),
+        (
+            "RUN echo > /opt/build/setup.cfg; if true; then pip install /opt/build; fi",
+            "not supported: pip install of /opt/build, whose setup.cfg a build command wrote",
+        ),
+        (
+            "RUN echo > /tmp/manifest && mv /tmp/manifest /opt/build/MANIFEST.in"
+            " && pip install /opt/build",
+            "not supported: pip install of /opt/build, whose MANIFEST.in a build command wrote",
+        ),
+        (
+            "RUN echo pass > /opt/build/notes.txt && pip install /opt/build",
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+    ],
+)
+def test_packaging_files_a_build_command_wrote(tmp_path, build, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "RUN pip install /opt/build && rm -rf /opt/build", build
+    )
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile)
+    assert image.reason == reason
 
 
 @pytest.mark.parametrize(
@@ -2772,22 +2829,31 @@ def stamp_copied_after(tmp_path, run):
 
 
 @pytest.mark.parametrize(
-    "command",
+    "command, reason",
     [
         # Copilot review of 14:15 UTC: what find -exec mkdir or touch creates is
-        # in the model, as when the build runs the command itself.
-        "mkdir /opt/.connector_version.json",
-        "mkdir -p /opt/cache",
-        "touch /usr/local/bin/python3",
-        "touch /opt/marker",
+        # in the model, as when the build runs the command itself. Copilot review
+        # of 22:26 UTC: find runs it once for each match, so maybe never.
+        (
+            "mkdir /opt/.connector_version.json",
+            "not supported: /opt/.connector_version.json is a directory only if a"
+            " mkdir that may not run did",
+        ),
+        ("mkdir -p /opt/cache", None),
+        ("touch /usr/local/bin/python3", None),
+        ("touch /opt/marker", None),
     ],
 )
-def test_find_exec_creates_what_the_command_creates(tmp_path, command):
+def test_find_exec_creates_what_the_command_creates(tmp_path, command, reason):
     direct = stamp_copied_after(tmp_path / "direct", command)
     found = stamp_copied_after(
         tmp_path / "found", f"find /tmp -maxdepth 0 -exec {command} \\;"
     )
-    assert (found.covered, found.reason) == (direct.covered, direct.reason)
+    if reason:
+        assert not direct.covered
+        assert (found.covered, found.reason) == (False, reason)
+    else:
+        assert (found.covered, found.reason) == (direct.covered, direct.reason)
 
 
 @pytest.mark.parametrize(
@@ -3189,6 +3255,18 @@ def test_sourced_file_without_a_slash(tmp_path, run, covered):
         ("mkdir /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", False),
         ("mkdir -p /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", True),
         ("mkdir /tmp/a /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", True),
+        # Copilot review of 22:26 UTC: find runs -exec once for each match, so
+        # maybe never.
+        (
+            "find /tmp -maxdepth 0 -name absent -exec mkdir /tmp/gone \\; ;"
+            " cd /tmp/gone; rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "find /tmp -maxdepth 0 -exec mkdir -p /tmp/gone \\; ;"
+            " cd /tmp/gone; rm -f .connector_version.json",
+            False,
+        ),
     ],
 )
 def test_cd_into_a_directory_of_a_conditional_mkdir(tmp_path, run, covered):
