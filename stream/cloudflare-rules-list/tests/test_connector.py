@@ -177,7 +177,7 @@ def test_handle_delete_unknown_id_is_noop(connector):
 # --------------------------------------------------------------------------- #
 # _check_sync / _sync_to_cloudflare
 # --------------------------------------------------------------------------- #
-def test_check_sync_does_not_sync_before_interval(connector, monkeypatch):
+def test_check_sync_does_not_sync_before_interval(connector, monkeypatch, timers):
     connector.sync_interval = 9999
     connector._last_sync_time = 0.0
     monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 1.0)
@@ -185,6 +185,30 @@ def test_check_sync_does_not_sync_before_interval(connector, monkeypatch):
     monkeypatch.setattr(connector, "_sync_to_cloudflare", sync)
     connector._check_sync()
     sync.assert_not_called()
+    (timer,) = timers
+    assert timer.interval == 9998.0
+    assert timer.daemon is True
+
+
+def test_deferred_sync_errors_are_logged(connector, monkeypatch, timers):
+    """The timer thread logs an unexpected error instead of dying silently."""
+    connector.sync_interval = 60
+    connector._last_sync_time = 0.0
+    now = [10.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector._check_sync()
+    monkeypatch.setattr(
+        connector, "_sync_to_cloudflare", MagicMock(side_effect=RuntimeError("boom"))
+    )
+    now[0] = 60.0
+
+    timers[0].function()
+
+    connector.logger.error.assert_called_once_with(
+        "Deferred sync failed", meta={"error": "boom"}
+    )
 
 
 def test_sync_to_cloudflare_empty_cache(connector):

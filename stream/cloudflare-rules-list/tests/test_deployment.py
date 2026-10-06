@@ -559,6 +559,80 @@ def test_first_full_sync_retry_runs_on_a_host_booted_recently(
     assert connector._full_sync_done is True
 
 
+def test_change_cached_within_the_interval_is_uploaded_at_its_end(
+    connector, assurance, monkeypatch, timers
+):
+    """The last changes of a burst are uploaded and reported without a later event."""
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector.sync_interval = 60
+    connector.process_message(make_message("create", make_indicator()))
+    now[0] = 110.0
+    connector.process_message(
+        make_message("create", make_indicator(OTHER_STIX_ID, OTHER_ID, "203.0.113.9"))
+    )
+    now[0] = 120.0
+    connector.process_message(make_message("delete", make_indicator()))
+
+    connector.client.replace_list_items.assert_called_once()
+    (timer,) = timers
+    assert timer.interval == 50.0
+    assert timer.daemon is True
+
+    now[0] = 160.0
+    timer.function()
+
+    assert connector.client.replace_list_items.call_args.args == (
+        "list-123",
+        [{"ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"}],
+    )
+    statuses = [
+        (call.args[0].indicator_id, call.args[0].status)
+        for call in assurance.reporter.enqueue.call_args_list
+    ]
+    assert statuses == [
+        (STIX_ID, "deployed"),
+        (OTHER_STIX_ID, "deployed"),
+        (STIX_ID, "removed"),
+    ]
+
+
+def test_deferred_sync_does_nothing_once_an_upload_took_the_changes(
+    connector, monkeypatch, timers
+):
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector.sync_interval = 60
+    connector.process_message(make_message("create", make_indicator()))
+    now[0] = 110.0
+    connector.process_message(
+        make_message("create", make_indicator(OTHER_STIX_ID, OTHER_ID, "203.0.113.9"))
+    )
+    now[0] = 170.0
+    connector.process_message(make_message("delete", make_indicator()))
+    assert connector.client.replace_list_items.call_count == 2
+
+    timers[0].function()
+
+    assert connector.client.replace_list_items.call_count == 2
+    assert len(timers) == 1
+
+
+def test_events_changing_nothing_schedule_no_sync(connector, monkeypatch, timers):
+    monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 5.0)
+    connector.sync_interval = 60
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(make_message("merge", make_indicator()))
+    connector.process_message(make_message("delete", make_indicator(OTHER_STIX_ID)))
+
+    connector.client.replace_list_items.assert_called_once()
+    assert timers == []
+
+
 def test_stream_events_after_a_full_sync_share_its_keys(connector, assurance):
     connector.helper.api.indicator.list.return_value = [
         {

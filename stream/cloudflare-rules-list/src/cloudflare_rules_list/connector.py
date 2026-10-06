@@ -110,6 +110,10 @@ class Connector:
         # time.monotonic() counts from the host boot: never synced must open the
         # throttle window whatever the uptime.
         self._last_sync_time = float("-inf")
+        # Whether changes cached within the throttle window wait for an upload, and the
+        # sync scheduled at the end of the window to upload them.
+        self._sync_pending = False
+        self._deferred_sync: threading.Timer | None = None
         # Deployment write-back (dissemination assurance), set by `main.py`.
         self.assurance: "DeploymentAssurance | None" = None
 
@@ -255,17 +259,51 @@ class Connector:
     # Sync to Cloudflare
     # ------------------------------------------------------------------ #
     def _check_sync(self) -> None:
-        """Sync to Cloudflare if the configured interval has elapsed.
+        """Sync to Cloudflare if the configured interval has elapsed, else schedule one
+        deferred sync at the end of the interval: a change cached within the throttle
+        window is uploaded (and reported) even when no later stream event arrives.
 
         Until a full sync succeeds, the full sync is retried instead (at most once per
-        interval) and nothing else is uploaded.
+        interval) and nothing else is uploaded. The stream and the deferred sync check
+        under the lock, so the end of a window never uploads twice.
         """
-        if time.monotonic() - self._last_sync_time < self.sync_interval:
-            return
-        if self._full_sync_done:
-            self._sync_to_cloudflare()
-        else:
-            self._retry_full_sync()
+        with self._lock:
+            remaining = self.sync_interval - (time.monotonic() - self._last_sync_time)
+            if remaining > 0:
+                self._sync_pending = True
+                self._schedule_deferred_sync(remaining)
+                return
+            if self._full_sync_done:
+                self._sync_to_cloudflare()
+            else:
+                self._retry_full_sync()
+
+    def _schedule_deferred_sync(self, delay: float) -> None:
+        """Start the deferred sync, unless one is already scheduled (it uploads every
+        change cached until it runs).
+
+        Args:
+            delay: Seconds until the throttle window ends.
+        """
+        with self._lock:
+            if self._deferred_sync is not None:
+                return
+            timer = threading.Timer(delay, self._run_deferred_sync)
+            timer.daemon = True
+            self._deferred_sync = timer
+            timer.start()
+
+    def _run_deferred_sync(self) -> None:
+        """Sync the changes cached within the throttle window that no upload took since
+        (timer thread)."""
+        with self._lock:
+            self._deferred_sync = None
+            if not self._sync_pending:
+                return
+        try:
+            self._check_sync()
+        except Exception as exc:  # noqa: BLE001 - logged in the timer thread
+            self.logger.error("Deferred sync failed", meta={"error": str(exc)})
 
     def _retry_full_sync(self) -> None:
         """Retry a failed initial full sync, then start the deployment reconciliation."""
@@ -304,6 +342,7 @@ class Connector:
         """
         with self._lock:
             self._last_sync_time = time.monotonic()
+            self._sync_pending = False
             snapshot = dict(self._indicator_cache)
             indicators = {
                 key: value

@@ -118,8 +118,9 @@ fetched from its repository.
    once its operation completes: a response without an `operation_id` is
    treated as a failure, for replacements and deletions alike). This push is triggered by
    live-stream events and throttled to **at most once per
-   `CLOUDFLARE_SYNC_INTERVAL`** — an idle stream produces no uploads even after
-   the interval elapses.
+   `CLOUDFLARE_SYNC_INTERVAL`**: the changes received within the interval are
+   uploaded together at its end, even when no later event arrives (and reported
+   to OpenCTI then); an idle stream produces no uploads.
 
 IPv4 values are extracted from three shapes: STIX indicators with an
 `[ipv4-addr:value = '...']` pattern, STIX SCOs with `type: "ipv4-addr"`, and
