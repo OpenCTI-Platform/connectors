@@ -2777,6 +2777,61 @@ def test_a_builtin_name_runs_the_builtin_only_as_a_bare_name(tmp_path, run, cove
     assert image.covered is covered, image.reason
 
 
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 16:18 UTC: a .. after a link climbs from the target
+        # of the link, and the symbolic link of an option cluster (ln -s, -sf)
+        # resolves from its own directory.
+        (
+            "ln -s /opt/src/nested /alias && rm -f /alias/../.connector_version.json",
+            False,
+        ),
+        ("rm -f /opt/src/nested/../other.json", True),
+        (
+            "mkdir -p /opt/alias && ln -s ../src /opt/alias/app;"
+            " rm -f /opt/alias/app/.connector_version.json",
+            False,
+        ),
+        (
+            "mkdir -p /opt/alias && ln -sf ../src /opt/alias/app;"
+            " rm -f /opt/alias/app/.connector_version.json",
+            False,
+        ),
+        (
+            "mkdir -p /opt/alias && ln -s ../src /opt/alias/app; rm -f /opt/alias/other.json",
+            True,
+        ),
+    ],
+)
+def test_links_and_parent_directories(tmp_path, run, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\nRUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "src/nested/keep.txt": "",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+def test_a_connector_path_without_an_image_fails_the_check(tmp_path, capsys):
+    # Copilot review of 16:18 UTC: a requested path that names no image would
+    # report a check that never ran.
+    make_connector(tmp_path, {"Dockerfile": ALPINE_SRC})
+    assert check.main(["--root", str(tmp_path), "external-import/sample"]) == 0
+    with pytest.raises(SystemExit) as error:
+        check.main(
+            [
+                "--root",
+                str(tmp_path),
+                "external-import/sample",
+                "external-import/misspelled",
+            ]
+        )
+    assert error.value.code == 2
+    assert "external-import/misspelled" in capsys.readouterr().err
+
+
 def test_touch_keeps_the_content_of_a_file_of_the_model(tmp_path):
     files = {
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
