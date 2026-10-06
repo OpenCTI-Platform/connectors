@@ -1351,6 +1351,20 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN playwright pdf about:blank /opt/src/.connector_version.json", False),
         ("RUN playwright screenshot about:blank /tmp/page.png", False),
         ("RUN playwright", False),
+        # Copilot review of 11:49 UTC: what find -exec mv puts at its
+        # destination is not followed.
+        (
+            "RUN find /tmp -maxdepth 0 -exec mv /tmp/wrapper /usr/local/bin/python3 \\;",
+            False,
+        ),
+        ("RUN find /opt/src -name '*.pyc' -exec mv {} /tmp \\;", False),
+        ("RUN find /opt/src -name '*.pyc' -exec rm -f {} +", True),
+        # A device holds no file, unless the build made it a link to one.
+        ("RUN ls /opt/src > /dev/null 2> /dev/stderr", True),
+        (
+            "RUN ln -sf /opt/src/.connector_version.json /dev/stdout && echo x > /dev/stdout",
+            False,
+        ),
     ],
 )
 def test_build_steps(tmp_path, instructions, covered):
@@ -1713,6 +1727,20 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'HEALTHCHECK CMD true\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: HEALTHCHECK through the shell /usr/bin/pwsh",
         ),
+        # Copilot review of 11:49 UTC: a link the health check makes changes the
+        # image as much as a file it writes.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "HEALTHCHECK CMD ln -sf /tmp/wrapper /usr/local/bin/python3\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the HEALTHCHECK command changes files of the image",
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            'HEALTHCHECK CMD ["ln", "-sf", "/tmp/wrapper", "/usr/local/bin/python3"]\n'
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the HEALTHCHECK command changes files of the image",
+        ),
         # Copilot review of 01:56 UTC: any blank ends a COPY flag.
         (
             "FROM python:3.12-alpine\nCOPY --exclude=**/*.json\t src /opt/src\n"
@@ -1744,6 +1772,40 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
 def test_dockerfile_syntax(tmp_path, dockerfile, reason):
     image = single(tmp_path, {"Dockerfile": dockerfile})
     assert image.reason == reason
+
+
+def test_healthcheck_probe_leaves_the_stage_alone(tmp_path):
+    # Copilot review of 11:49 UTC: the health check runs on its own copy of the
+    # stage, which the start command is read from afterwards.
+    connector = make_connector(
+        tmp_path,
+        {
+            "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            'CMD ["python3", "/opt/src/main.py"]\n'
+        },
+    )
+    model = check.ImageModel(connector, connector / "Dockerfile", {})
+    stage = model.final
+    state = (
+        dict(stage.files),
+        set(stage.dirs),
+        set(stage.replaced),
+        dict(stage.links),
+        set(stage.unknown_dirs),
+    )
+    stage.healthcheck = (["ln", "-sf", "/tmp/wrapper", "/usr/local/bin/python3"], False)
+    with pytest.raises(check.Unsupported, match="changes files of the image"):
+        model._check_healthcheck(stage)
+    stage.healthcheck = ("mkdir -p /opt/health", True)
+    with pytest.raises(check.Unsupported, match="changes files of the image"):
+        model._check_healthcheck(stage)
+    assert (
+        stage.files,
+        stage.dirs,
+        stage.replaced,
+        stage.links,
+        stage.unknown_dirs,
+    ) == state
 
 
 @pytest.mark.parametrize(
@@ -2422,6 +2484,27 @@ def test_command_substitution_in_an_entry_script(tmp_path):
         "entrypoint.sh": '#!/bin/sh\nUNUSED="$(rm -f /opt/sample/.connector_version.json)"\ncd /opt/sample\nexec python3 main.py\n',
     }
     assert not single(tmp_path, files).covered
+
+
+@pytest.mark.parametrize(
+    "lines, covered",
+    [
+        # Copilot review of 11:49 UTC: a list whose operator ends a line goes on
+        # with the next line, so the assignment there may not run.
+        ("APP=/opt/sample\nfalse &&\nAPP=/tmp\n", False),
+        ("APP=/opt/sample\ntrue ||\nAPP=/tmp\n", False),
+        ("APP=/opt/sample\nfalse && APP=/tmp\n", False),
+        ("APP=/opt/sample\nfalse\nAPP=/tmp\n", True),
+        ("APP=/tmp\necho ready |\ncat > /dev/null\n", True),
+    ],
+)
+def test_list_continued_on_the_next_line(tmp_path, lines, covered):
+    files = {
+        "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
+        "entrypoint.sh": f'#!/bin/sh\n{lines}rm -f "$APP/.connector_version.json"\n'
+        "cd /opt/sample\nexec python3 main.py\n",
+    }
+    assert single(tmp_path, files).covered is covered
 
 
 @pytest.mark.parametrize(
