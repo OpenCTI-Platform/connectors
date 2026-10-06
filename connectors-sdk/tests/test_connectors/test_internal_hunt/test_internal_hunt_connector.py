@@ -3,6 +3,8 @@
 """Tests of the InternalHuntConnector base class."""
 
 import json
+import threading
+import time
 from datetime import datetime, timezone
 from enum import Enum
 from unittest.mock import MagicMock, patch
@@ -742,10 +744,39 @@ def test_timeout_cancels_and_fails_the_run(connector_factory, hunt_event, hunt_h
     # When/Then the run times out, the platform job is cancelled and the run is reported as a timeout
     with pytest.raises(HuntTimeoutError, match="1 seconds"):
         connector.process_message(event)
+    assert connector.release.wait(5)
     assert len(connector.timeouts) == 1
     args, kwargs = _report_kwargs(hunt_helper)
     assert args == ("run-1", "timeout")
     assert kwargs["error"].startswith("HuntTimeoutError")
+
+
+def test_a_slow_cancellation_never_delays_the_timeout_report(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a query running longer than the run timeout, on a platform slow to cancel it
+    connector = connector_factory(HuntResult())
+    connector.block = True
+    proceed = threading.Event()
+    cancelled = threading.Event()
+
+    def _slow_cancel(native_query):
+        proceed.wait(10)
+        cancelled.set()
+        connector.release.set()
+
+    connector.on_timeout = _slow_cancel
+    started = time.monotonic()
+
+    # When/Then the timeout is reported at the deadline while the cancellation still runs
+    with pytest.raises(HuntTimeoutError):
+        connector.process_message(hunt_event(limits={"timeout_seconds": 1}))
+    assert time.monotonic() - started < 5
+    args, _ = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "timeout")
+    assert not cancelled.is_set()
+    proceed.set()
+    assert cancelled.wait(5)
 
 
 def test_query_finishing_after_the_deadline_times_out(
@@ -820,6 +851,10 @@ def test_timeout_survives_cancellation_errors(connector_factory, hunt_event):
     # When/Then the timeout is still reported and the cancellation error logged
     with pytest.raises(HuntTimeoutError):
         connector.process_message(hunt_event(limits={"timeout_seconds": 1}))
+    for _ in range(50):
+        if connector.logger.warning.called:
+            break
+        time.sleep(0.1)
     connector.logger.warning.assert_called_once()
 
 

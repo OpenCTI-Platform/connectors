@@ -88,9 +88,11 @@ if [ "$TYPE_IS_VALID" = false ]; then
     exit 1
 fi
 
-if [[ ! "$NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
+# The name gives the Python class and module names: it starts with a letter,
+# and its segments of letters and digits are separated by single hyphens
+if [[ ! "$NAME" =~ ^[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$ ]]; then
     echo "Error: Connector name '$NAME' is invalid!"
-    echo "The name can only contain letters, digits, and hyphens (-)."
+    echo "The name starts with a letter and holds letters and digits, in segments separated by single hyphens (-), for example my-siem-2."
     exit 1
 fi
 

@@ -69,8 +69,8 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    [pySigma](https://github.com/SigmaHQ/pySigma) and the
    [Elasticsearch backend](https://github.com/SigmaHQ/pySigma-backend-elasticsearch);
 2. runs it on Elasticsearch over the run time window, within the run timeout and result limit;
-3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the Elastic
-   Security Security Platform, updated at each run);
+3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the Security
+   Platform of Elastic Security, updated at each run);
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave Elasticsearch: OpenCTI only receives counts and evidence values that are SHA-256 hashed and

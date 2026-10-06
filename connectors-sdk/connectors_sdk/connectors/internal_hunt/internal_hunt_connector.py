@@ -563,6 +563,8 @@ class InternalHuntConnector(ABC):
         """Hook called when ``execute`` exceeds the run timeout.
 
         Override it to cancel the job running on the platform. By default, does nothing.
+        It runs in a background thread while the timeout is reported, so a platform
+        slow to cancel never delays the report; an error it raises is logged.
 
         Args:
             native_query: Query that timed out.
@@ -1032,13 +1034,7 @@ class InternalHuntConnector(ABC):
         alive = worker.is_alive()
         if alive or outcome.get("late"):
             if alive:
-                try:
-                    self.on_timeout(native_query)
-                except Exception as err:
-                    self.logger.warning(
-                        "[HUNT] Unable to cancel the timed out query",
-                        {"error": _error_message(err)},
-                    )
+                self._cancel_in_background(request, native_query)
             raise HuntTimeoutError(
                 f"The hunt query did not complete within {request.limits.timeout_seconds} seconds."
             )
@@ -1054,6 +1050,28 @@ class InternalHuntConnector(ABC):
                 truncated=True,
             )
         return result
+
+    def _cancel_in_background(
+        self, request: HuntRequest, native_query: NativeQuery
+    ) -> None:
+        """Ask the platform to cancel a timed out query without holding the run report.
+
+        The run deadline has passed: a platform slow to answer the cancellation
+        must not delay the timeout report beyond ``limits.timeout_seconds``.
+        """
+
+        def _cancel() -> None:
+            try:
+                self.on_timeout(native_query)
+            except Exception as err:
+                self.logger.warning(
+                    "[HUNT] Unable to cancel the timed out query",
+                    {"error": _error_message(err)},
+                )
+
+        threading.Thread(
+            target=_cancel, name=f"hunt-cancel-{request.hunt_run.id}", daemon=True
+        ).start()
 
     def send_bundle(self, stix_objects: Sequence[Any]) -> list[str]:
         """Send the knowledge of a run to OpenCTI within the run work.

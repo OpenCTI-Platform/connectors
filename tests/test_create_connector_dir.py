@@ -84,3 +84,21 @@ def test_generated_connector_with_a_numeric_name_segment_compiles(
     for path, text in sources.items():
         assert "Demo-2" not in text, path
         compile(text, str(path), "exec")
+
+
+@pytest.mark.parametrize("name", ["2demo", "demo--2", "demo-", "-demo"])
+def test_names_that_give_no_python_identifier_are_refused(tmp_path, name):
+    # Given a copy of the templates
+    templates = tmp_path / "templates"
+    shutil.copytree(TEMPLATES_DIR, templates)
+
+    # When a connector is generated with a name its Python class cannot take
+    generation = subprocess.run(
+        ["bash", "create_connector_dir.sh", "-t", "internal-hunt", "-n", name],
+        cwd=templates,
+        capture_output=True,
+    )
+
+    # Then the script refuses it and generates nothing
+    assert generation.returncode != 0
+    assert not (tmp_path / "internal-hunt").exists()
