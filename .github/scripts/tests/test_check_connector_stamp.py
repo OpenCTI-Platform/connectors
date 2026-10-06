@@ -1456,6 +1456,33 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             " rm -f .connector_version.json",
             True,
         ),
+        # Copilot review of 12:58 UTC: find -delete takes the directories it
+        # matches away as well.
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; find /tmp/gone -delete; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; find /tmp -name gone -delete; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; find /tmp/gone -type f -delete; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            True,
+        ),
+        # Copilot review of 12:58 UTC: ${NAME:=word} and ${NAME=word} set the
+        # variable, nested in another expansion too; quoted or escaped, they are
+        # literal text.
+        ("RUN bash -c ': \"${GLOBIGNORE:=x}\"; rm -rf /opt/src/*'", False),
+        ("RUN bash -c ': \"${GLOBIGNORE=x}\"; rm -rf /opt/src/*'", False),
+        ("RUN bash -c ': \"${UNSET:-${GLOBIGNORE:=x}}\"; rm -rf /opt/src/*'", False),
+        ("RUN bash -c ': \"${GLOBIGNORE:-x}\"; rm -rf /opt/src/*'", True),
+        ("RUN echo '${GLOBIGNORE:=x}'; rm -rf /opt/src/*", True),
+        ("RUN echo \\${GLOBIGNORE:=x}; rm -rf /opt/src/*", True),
+        ('RUN echo "\\${GLOBIGNORE:=x}"; rm -rf /opt/src/*', True),
         # Copilot review of 12:40 UTC: the initializer of a package that python
         # -m imports first may hold what a build step wrote.
         (
