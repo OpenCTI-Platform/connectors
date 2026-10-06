@@ -235,6 +235,103 @@ def test_converter_converts_attck_labels_on_indicators_via_indicates() -> None:
         )
 
 
+def test_converter_uses_simple_indicator_value_as_name() -> None:
+    converter = _build_converter()
+    indicator_value = "55a06694bb96ecc422a7a6c731053b1ef5a35b5f5bac78752ca60b729cf7441f"
+    source_context = "MirrorBlast [profiles - 2342]"
+    stix_object = {
+        "type": "indicator",
+        "id": INDICATOR_ID,
+        "name": source_context,
+        "description": source_context,
+        "pattern": f"[file:hashes.'SHA-256'='{indicator_value}']",
+        "pattern_type": "stix",
+    }
+
+    converted = list(converter.process(stix_object))
+
+    assert len(converted) == 1
+    assert converted[0]["name"] == indicator_value
+    assert converted[0]["description"] == source_context
+    assert converted[0]["pattern"] == stix_object["pattern"]
+    assert converted[0]["id"] == INDICATOR_ID
+
+
+def test_converter_uses_simple_non_hash_indicator_values_as_name() -> None:
+    converter = _build_converter()
+    patterns_and_values = [
+        ("[url:value='https://example.org/path']", "https://example.org/path"),
+        ("[email-addr:value='analyst@example.org']", "analyst@example.org"),
+        ("[file:name='invoice.docm']", "invoice.docm"),
+    ]
+
+    for pattern, expected_name in patterns_and_values:
+        stix_object = {
+            "type": "indicator",
+            "id": INDICATOR_ID,
+            "name": "ThreatMatch source context",
+            "pattern": pattern,
+            "pattern_type": "stix",
+        }
+
+        converted = list(converter.process(stix_object))
+
+        assert converted[0]["name"] == expected_name
+        assert converted[0]["description"] == "ThreatMatch source context"
+
+
+def test_converter_requires_stix_pattern_type_for_name_extraction() -> None:
+    converter = _build_converter()
+    stix_object = {
+        "type": "indicator",
+        "id": INDICATOR_ID,
+        "name": "ThreatMatch source context",
+        "pattern": "[url:value='https://example.org/path']",
+        "pattern_type": "yara",
+    }
+
+    converted = list(converter.process(stix_object))
+
+    assert converted[0]["name"] == "ThreatMatch source context"
+
+
+def test_converter_keeps_source_name_for_compound_or_escaped_patterns() -> None:
+    converter = _build_converter()
+    for pattern in (
+        "[file:hashes.'SHA-256'='abc' AND file:name='sample.exe']",
+        r"[url:value='https://example.org/path\\'with-quote']",
+        "[ipv4-addr:value = 192.0.2.1]",
+    ):
+        stix_object = {
+            "type": "indicator",
+            "id": INDICATOR_ID,
+            "name": "ThreatMatch source context",
+            "pattern": pattern,
+            "pattern_type": "stix",
+        }
+
+        converted = list(converter.process(stix_object))
+
+        assert converted[0]["name"] == "ThreatMatch source context"
+
+
+def test_converter_omits_redundant_indicator_description() -> None:
+    converter = _build_converter()
+    stix_object = {
+        "type": "indicator",
+        "id": INDICATOR_ID,
+        "name": "https://example.org/path",
+        "description": "https://example.org/path",
+        "pattern": "[url:value='https://example.org/path']",
+        "pattern_type": "stix",
+    }
+
+    converted = list(converter.process(stix_object))
+
+    assert converted[0]["name"] == "https://example.org/path"
+    assert "description" not in converted[0]
+
+
 def test_converter_does_not_create_attack_patterns_for_reports() -> None:
     converter = _build_converter()
     stix_object = {

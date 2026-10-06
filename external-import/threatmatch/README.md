@@ -108,6 +108,7 @@ On each run (or according to `CONNECTOR_DURATION_PERIOD`):
 - **Relationship normalization**: generic `associated-content`/`associated_content` links are normalized to `related-to` (the connector does not infer stronger semantics such as attribution from this source relation alone).
 - **TTP normalization**: labels matching ATT&CK techniques (for example `T1566.004 - Spearphishing Voice`) are converted into STIX `attack-pattern` objects, linked with `uses` from threat-actor/intrusion-set/campaign/malware/tool entities and with `indicates` from indicators, so they appear in OpenCTI TTP views.
 - **Description normalization**: HTML descriptions are converted to Markdown text and inline links are extracted into STIX `external_references`.
+- **Indicator names**: for a simple single-value STIX equality pattern, the indicator name is set to the literal observable value (for example, a hash). ThreatMatch's contextual name is retained as the description when no source description is present; compound or unsupported patterns keep their source name.
 - **Metadata propagation**: markings and creators from source entities are propagated to derived entities and relationships created by the connector.
 - **Label merging across sources**: the same indicator can be reported by both profile exports and the TAXII IOC feed with different labels; rather than keeping only one source's labels, the connector merges all labels observed for a given indicator in a run.
 

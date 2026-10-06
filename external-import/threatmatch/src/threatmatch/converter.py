@@ -191,6 +191,10 @@ class Converter:
     # entities linked with `uses` (or `indicates` for indicators) so they
     # appear in OpenCTI's TTPs tab rather than flooding the label taxonomy.
     _ATTCK_LABEL_RE = re.compile(r"^(T\d{4}(?:\.\d{3})?)\s*-\s*(.+)$")
+    _SIMPLE_INDICATOR_PATTERN_RE = re.compile(
+        r"""^\[\s*[a-z][a-z0-9-]*:(?:[A-Za-z_][A-Za-z0-9_-]*|'[A-Za-z0-9_-]+')"""
+        r"""(?:\.(?:[A-Za-z_][A-Za-z0-9_-]*|'[A-Za-z0-9_-]+'))*\s*=\s*'([^'\\]*)'\s*\]$"""
+    )
     TTP_USER_TYPES = frozenset(
         {"threat-actor", "intrusion-set", "malware", "tool", "campaign"}
     )
@@ -296,6 +300,42 @@ class Converter:
                 cleaned_aliases.append(alias)
         stix_object["aliases"] = list(dict.fromkeys(cleaned_aliases))
 
+    def _handle_indicator_name(self, stix_object: dict[str, Any]) -> None:
+        if stix_object.get("type") != "indicator":
+            return
+        if stix_object.get("pattern_type") != "stix":
+            return
+
+        pattern = stix_object.get("pattern")
+        if not isinstance(pattern, str):
+            return
+        match = self._SIMPLE_INDICATOR_PATTERN_RE.fullmatch(pattern)
+        if not match or not match.group(1):
+            return
+
+        indicator_value = match.group(1)
+        source_name = stix_object.get("name")
+        source_name = source_name.strip() if isinstance(source_name, str) else ""
+        description = stix_object.get("description")
+        meaningful_description = (
+            isinstance(description, str)
+            and bool(description.strip())
+            and description.strip() != indicator_value
+        )
+        if (
+            source_name
+            and source_name != indicator_value
+            and not meaningful_description
+        ):
+            stix_object["description"] = source_name
+        elif (
+            source_name == indicator_value
+            and isinstance(description, str)
+            and description.strip() == indicator_value
+        ):
+            stix_object.pop("description")
+        stix_object["name"] = indicator_value
+
     def _handle_goals_labels(self, stix_object: dict[str, Any]) -> None:
         """Remove labels only when they exactly duplicate structured goals."""
         labels = stix_object.get("labels")
@@ -358,6 +398,7 @@ class Converter:
             self._handle_threat_actor_as_intrusion_set(stix_object)
             self._handle_relationship(stix_object)
             related_objects = self._handle_object_refs(stix_object)
+            self._handle_indicator_name(stix_object)
             self._handle_description(stix_object)
             self._handle_names_and_aliases(stix_object)
             related_objects += self._create_attack_patterns(stix_object)
