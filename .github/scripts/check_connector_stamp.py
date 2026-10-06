@@ -644,17 +644,19 @@ def written_stamps(connector_dir):
     return stamps
 
 
-def glob_regex(pattern):
-    """Translate a Docker path pattern (.dockerignore, COPY) into a regular expression."""
+def glob_regex(pattern, globstar=True):
+    """Translate a Docker path pattern into a regular expression. ``globstar``:
+    ``**`` crosses directories (.dockerignore, COPY --exclude); COPY sources use
+    Go's filepath.Match, where it is two ``*``."""
     out = []
     i = 0
     while i < len(pattern):
         char = pattern[i]
-        if pattern.startswith("**/", i):
+        if globstar and pattern.startswith("**/", i):
             out.append("(?:.*/)?")
             i += 3
             continue
-        if pattern.startswith("**", i):
+        if globstar and pattern.startswith("**", i):
             out.append(".*")
             i += 2
             continue
@@ -918,18 +920,27 @@ class Stage:
         """``path`` holds what a build step wrote, with a content the model does
         not know: it is such a path, or lies below one (a moved or linked
         directory, a directory a COPY filled)."""
-        return any(
-            path == d or path.startswith(d.rstrip("/") + "/")
-            for d in (*self.replaced, *self.unknown_dirs)
-        )
+        for region in (*self.replaced, *self.unknown_dirs):
+            if path == region or path.startswith(region.rstrip("/") + "/"):
+                return True
+            # A pattern a command wrote through (mv /tmp/tools/* /opt/bin/).
+            if GLOB_CHARS.search(region) and any(
+                shell_glob_match(region, p) for p in self_and_parents(path)
+            ):
+                return True
+        return False
 
     def child(self):
-        # ENV values are part of the image; ARG values end with their stage.
+        # ENV values are part of the image. Whether a stage built on this one
+        # keeps its ARG values depends on the builder version: not known.
         return Stage(
             workdir=self.workdir,
             files=dict(self.files),
             dirs=set(self.dirs),
-            variables=dict(self.env),
+            variables={
+                **{key: UNKNOWN for key in self.variables if key not in self.env},
+                **self.env,
+            },
             env=dict(self.env),
             shell=list(self.shell),
             entrypoint=self.entrypoint,
@@ -1451,7 +1462,7 @@ def interpreter_of(text, model=None, env=None, files=None, stage=None):
     return posixpath.basename(programs[-1])
 
 
-def shell_script(args, cwd, files, model):
+def shell_script(args, cwd, files, model, stage=None):
     """What a shell started with ``args`` runs: its ``-c`` string or a script
     file of the image model; None when it reads its standard input."""
     i = 0
@@ -1465,7 +1476,10 @@ def shell_script(args, cwd, files, model):
     if i >= len(args):
         return None
     path = image_path(args[i], cwd, "shell script")
-    text = model.context.read(files.get(path))
+    # Below a mount or another path of unknown content, the file is not the
+    # one the model has.
+    unknown = stage is not None and stage.written(path)
+    text = None if unknown else model.context.read(files.get(path))
     if text is None:
         raise Unsupported(f"shell script {path} is not a file of the image model")
     return text
@@ -1596,6 +1610,8 @@ class Shell:
                     raise Unsupported("an unterminated command substitution")
                 inner = line[i + 2 : end]
                 arithmetic = inner.startswith("(") and inner.endswith(")")
+                if arithmetic and re.search(r"(?<![=!<>])=(?!=)|\+\+|--", inner):
+                    raise Unsupported("an arithmetic expansion that assigns a variable")
                 if arithmetic and ("$(" in inner or "`" in inner):
                     raise Unsupported(
                         "a command substitution in an arithmetic expansion"
@@ -1999,8 +2015,15 @@ class Shell:
             + " has effects on the files the model does not know"
         )
 
+    def _read(self, path):
+        """Text of a file of the model, None when the model does not know it
+        (below a mount or another path of unknown content included)."""
+        if path is None or self.stage.written(path):
+            return None
+        return self.model.context.read(self.files.get(path))
+
     def _audited_script(self, path):
-        text = self.model.context.read(self.files.get(path))
+        text = self._read(path)
         if text is None:
             raise Unsupported(
                 f"build-time script {path} is not a file of the image model"
@@ -2168,7 +2191,7 @@ class Shell:
         script of the image is a python process of a start script. True when the
         command was one of these."""
         path = self.model.find_executable(words[0], self.cwd, env, self.files)
-        text = self.model.context.read(self.files.get(path)) if path else None
+        text = self._read(path)
         program = interpreter_of(text, self.model, env, self.files, self.stage)
         if program in SHELLS:
             if not self.start and audited(text):
@@ -2189,7 +2212,7 @@ class Shell:
         if not args:
             raise Unsupported(f"'{name}' without a file")
         path = image_path(args[0], self.cwd, "sourced file")
-        text = self.model.context.read(self.files.get(path))
+        text = self._read(path)
         if text is None:
             # A file the model does not know may do anything to the files.
             raise Unsupported(f"sourced file {path} is not a file of the image model")
@@ -2418,7 +2441,7 @@ class Shell:
                     del self.files[path]
 
     def _nested_shell(self, args, conditional, env):
-        script = shell_script(args, self.cwd, self.files, self.model)
+        script = shell_script(args, self.cwd, self.files, self.model, self.stage)
         if script is None:
             raise Unsupported("a shell reading its commands from its standard input")
         if not self.start and audited(script):
@@ -2620,6 +2643,9 @@ class ImageModel:
     def _arg(self, stage, arguments):
         before = dict(stage.variables)
         for key, value in assignments(arguments).items():
+            if key in stage.env:
+                # An ENV value wins over an ARG of the same name.
+                continue
             if key in self.build_args:
                 value = self.build_args[key]
             elif value is None:
@@ -2676,6 +2702,21 @@ class ImageModel:
             # Files of an image whose content is not known: any of them, a
             # wrapper named after a program included, may land there.
             stage.unknown_dirs.add(dest_path)
+        if from_values and not into_dir:
+            for source in sources:
+                path = image_path(source, "/", "COPY --from source")
+                # A file of the model, or a directory of the model, whose
+                # content keeps its names below the destination.
+                known = source_stage is not None and (
+                    path in source_stage.files or source_stage.is_dir(path)
+                )
+                renamed = posixpath.basename(path.rstrip("/")) != posixpath.basename(
+                    dest_path
+                )
+                if renamed and not known:
+                    # A file the model does not know, under another name: it is
+                    # not the program that name stands for (/bin/sh as python3).
+                    stage.replaced.add(dest_path)
 
         chmod = flags.get("chmod", [])
         unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
@@ -2747,7 +2788,7 @@ class ImageModel:
                 else "."
             )
             if GLOB_CHARS.search(normalized):
-                regex = glob_regex(normalized)
+                regex = glob_regex(normalized, globstar=False)
                 matches = sorted(
                     rel
                     for rel in (*self.context.files, *self.context.dirs)
@@ -2840,7 +2881,7 @@ class ImageModel:
                 opaque = True
             if GLOB_CHARS.search(path):
                 # Docker wildcards: unlike the shell, "*" matches a leading dot.
-                regex = glob_regex(path.lstrip("/"))
+                regex = glob_regex(path.lstrip("/"), globstar=False)
                 matched = sorted(
                     {
                         candidate
@@ -2878,8 +2919,34 @@ class ImageModel:
         return entries, opaque
 
     def _run(self, stage, arguments):
+        mounts = set()
         while arguments.startswith("--"):
-            arguments = first_word(arguments)[1]
+            flag, arguments = first_word(arguments)
+            if flag.startswith("--mount="):
+                # A mount puts other content at its target for this RUN only.
+                options = dict(
+                    item.partition("=")[::2]
+                    for item in flag[len("--mount=") :].split(",")
+                )
+                target = next(
+                    (
+                        options[k]
+                        for k in ("target", "dst", "destination")
+                        if options.get(k)
+                    ),
+                    None,
+                )
+                if target is None:
+                    raise Unsupported(f"RUN {flag} without a target")
+                mounts.add(image_path(target, stage.workdir, "mount target"))
+        added = mounts - stage.unknown_dirs
+        stage.unknown_dirs |= added
+        try:
+            self._run_command(stage, arguments)
+        finally:
+            stage.unknown_dirs -= added
+
+    def _run_command(self, stage, arguments):
         command, shell_form = parse_command(arguments)
         shell = Shell(
             self, stage, stage.files, stage.workdir, dict(stage.variables), start=False
@@ -2905,6 +2972,19 @@ class ImageModel:
                 texts[name] = self.context.read(origin) or ""
         if not texts:
             return
+        # Code of the repository that pip runs, whatever package it finds.
+        if "setup.py" in texts:
+            raise Unsupported("packaging declared in setup.py")
+        try:
+            build_system = tomllib.loads(texts.get("pyproject.toml", "")).get(
+                "build-system", {}
+            )
+        except tomllib.TOMLDecodeError as error:
+            raise Unsupported(f"pyproject.toml not readable: {error}") from error
+        if build_system.get("backend-path"):
+            raise Unsupported(
+                f"{install_dir}: an in-tree build backend runs during pip install"
+            )
         config = None
         for root in ["."] + [r for r in self._roots(texts) if r != "."]:
             base = posixpath.normpath(posixpath.join(install_dir, root))

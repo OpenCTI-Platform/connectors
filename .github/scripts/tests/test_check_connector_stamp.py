@@ -978,6 +978,17 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 03:33 UTC: an arithmetic expansion that assigns; an
+        # ENV value wins over a later ARG.
+        (
+            "ENV N=0\nRUN echo $((N=1)); rm -f /opt/src$N/.connector_version.json",
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nARG APP=/tmp\nRUN rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        ("RUN echo $((1 + 2 == 3))", True),
         # Copilot review of 03:01 UTC: a substitution inside a parameter
         # expansion; the roots of find after its leading options.
         (
@@ -1429,6 +1440,30 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
         ),
+        # Copilot review of 03:33 UTC: wildcard moves and links, a file of a
+        # known image under another name, a RUN mount.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /tmp/tools/python3\n"
+            'RUN mv /tmp/tools/* /usr/local/bin/\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /tmp/tools/python3\n"
+            'RUN ln -sf /tmp/tools/* /usr/local/bin/\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY --from=python:3.12-alpine /bin/sh /usr/local/bin/python3\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "RUN --mount=type=bind,source=wrapper.sh,target=/usr/local/bin/python3 "
+            'python3 -m compileall /opt/sample\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": "#!/bin/sh\nrm -rf /opt/sample\n"},
+        ),
         # Copilot review of 03:16 UTC: what lies below a moved or linked
         # directory, a download under a bare name, an ADD archive, and the
         # unknown directories a stage copy takes.
@@ -1636,6 +1671,50 @@ def test_module_file_wins_over_a_namespace_directory(tmp_path):
     files["Dockerfile"] = files["Dockerfile"].replace("COPY pkg.py /opt/pkg.py\n", "")
     image = single(tmp_path / "namespace", files)
     assert image.reason == "stamp at /opt/pkg/.connector_version.json"
+
+
+@pytest.mark.parametrize(
+    "files, reason",
+    [
+        # Copilot review of 03:33 UTC: a stage built on another may keep its
+        # ARG values.
+        (
+            {
+                "Dockerfile": (
+                    "FROM python:3.12-alpine AS parent\nARG APP=/opt/src\nCOPY src /opt/src\n"
+                    'FROM parent\nRUN rm -f "${APP:-/tmp}/.connector_version.json"\n'
+                    'CMD ["python3", "/opt/src/main.py"]\n'
+                )
+            },
+            "not supported: deleted path '${APP:-/tmp}/.connector_version.json' uses a variable or a command the build does not define",
+        ),
+        # Copilot review of 03:33 UTC: in COPY sources ** is two *, as in Go's
+        # filepath.Match.
+        (
+            {
+                "Dockerfile": (
+                    "FROM python:3.12-alpine\nCOPY src/**/*.json /opt/app/\n"
+                    'COPY src/main.py /opt/app/\nCMD ["python3", "/opt/app/main.py"]\n'
+                ),
+                "src/data/config.json": "{}",
+            },
+            "no COPY carries a stamp into the final image",
+        ),
+        # Copilot review of 03:33 UTC: setup.py runs, whatever package pip finds.
+        (
+            {
+                "Dockerfile": (
+                    "FROM python:3.12-alpine\nCOPY src /opt/build\nRUN pip install /opt/build\n"
+                    'CMD ["python3", "/opt/build/main.py"]\n'
+                ),
+                "src/setup.py": "import os\nos.remove('.connector_version.json')\n",
+            },
+            "not supported: packaging declared in setup.py",
+        ),
+    ],
+)
+def test_build_semantics_of_docker_and_pip(tmp_path, files, reason):
+    assert single(tmp_path, files).reason == reason
 
 
 def test_add_extracts_an_archive_whatever_its_name(tmp_path):
