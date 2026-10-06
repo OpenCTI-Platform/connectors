@@ -1,4 +1,4 @@
-google-auth==2.59.0
+google-auth==2.60.0
 pycti==7.261002.0
 pydantic~=2.13.5
 pysigma==1.5.1
