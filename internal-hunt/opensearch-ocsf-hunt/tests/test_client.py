@@ -345,6 +345,25 @@ def test_lucene_keeps_the_document_id_with_the_source(requests_mock):
     assert result.rows == [{"a": 1, "_id": "doc-7"}]
 
 
+def test_lucene_keeps_apart_documents_of_two_indices_with_the_same_id(requests_mock):
+    # Given two documents with the same id in two indices of the pattern
+    requests_mock.post(
+        SEARCH_URL,
+        json={
+            "hits": {
+                "hits": [
+                    {"_index": "ocsf-1", "_id": "doc-7", "_source": {"a": 1}},
+                    {"_index": "ocsf-2", "_id": "doc-7", "_source": {"a": 2}},
+                ]
+            }
+        },
+    )
+
+    # When/Then each row is identified by its index and its id
+    result = _client().lucene(["ocsf-*"], "a:*", START, END, 5, RunDeadline(30))
+    assert [row["_id"] for row in result.rows] == ["ocsf-1/doc-7", "ocsf-2/doc-7"]
+
+
 def test_lucene_full_page_without_total_is_partial(requests_mock):
     # Given a full page answered without a total
     requests_mock.post(SEARCH_URL, json={"hits": {"hits": [{"_id": "1"}]}})

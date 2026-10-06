@@ -287,7 +287,8 @@ def test_build_hit_evidence_describes_each_hit_on_its_own():
         "ws1",
         "alice",
     )
-    assert first.process == "C:\\Windows\\power"
+    # The values that identify the hit are whole, the previews of matched values truncated
+    assert first.process == "C:\\Windows\\powershell.exe"
     assert [(f.field, f.value_preview) for f in first.matched] == [
         ("CommandLine", "powershell -enc ")
     ]
@@ -298,6 +299,28 @@ def test_build_hit_evidence_describes_each_hit_on_its_own():
     # And a hit without time comes last, a matched field without value is left out
     assert third.timestamp is None
     assert third.matched == []
+
+
+def test_hit_keys_do_not_depend_on_the_preview_length():
+    # Given two events whose ids and hosts share their first characters
+    hits = [
+        (HuntEvent(fields={"event.id": "detection-0001-a"}), []),
+        (HuntEvent(fields={"event.id": "detection-0001-b"}), []),
+        (HuntEvent(fields={"host.name": "workstation-finance-01"}), []),
+        (HuntEvent(fields={"host.name": "workstation-finance-02"}), []),
+    ]
+
+    # When the keys are built with a short and a long preview length
+    short = build_hit_keys(hits, HuntLimits(evidence_max_value_length=4))
+    long = build_hit_keys(hits, HuntLimits(evidence_max_value_length=256))
+
+    # Then each hit keeps its own key, the same whatever the preview length
+    assert short == long
+    assert len(set(short)) == 4
+    sampled = build_hit_evidence(
+        hits, HuntLimits(evidence_max_items=4, evidence_max_value_length=4)
+    )
+    assert [hit_key(hit) for hit in sampled] == short
 
 
 def test_build_hit_evidence_is_capped_by_the_evidence_limit():

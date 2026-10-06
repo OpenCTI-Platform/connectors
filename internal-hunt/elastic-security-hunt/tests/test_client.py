@@ -241,7 +241,7 @@ def test_eql_reads_events_and_sequences(requests_mock):
     )
 
     # Then the request is restricted to the window and the events are read with
-    # their document ids
+    # their index and document id, a document id being unique within its index only
     request = requests_mock.last_request
     body = request.json()
     assert body["size"] == 5
@@ -250,8 +250,8 @@ def test_eql_reads_events_and_sequences(requests_mock):
     assert request.qs["ignore_unavailable"] == ["true"]
     assert result.rows == [
         {"process": {"name": "a"}},
-        {"b": 1, "_id": "e1"},
-        {"_id": "e2"},
+        {"b": 1, "_id": "logs-a/e1"},
+        {"_id": "x/e2"},
     ]
     # And the events of the sequence share a label derived from their ids, the
     # same at every run that finds the sequence

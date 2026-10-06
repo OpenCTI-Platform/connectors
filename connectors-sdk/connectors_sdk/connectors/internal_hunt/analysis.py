@@ -424,8 +424,10 @@ def build_hit_evidence(
     """Build the redacted evidence of single hits: what matched, where, by whom and when.
 
     One item per event, the earliest first (events without time last). A
-    matched value is hashed whole and its preview truncated; the event id, host,
-    user and process are truncated to the same length.
+    matched value is hashed whole and its preview truncated. The event id, host,
+    user and process are sent whole: they identify the hit (``hit_key``), so its
+    key does not depend on the preview length, and OpenCTI truncates them when it
+    stores them.
 
     Args:
         hits: Each result event with the fields the hunt matched in it.
@@ -511,8 +513,8 @@ def build_hit_keys(
 ) -> list[str]:
     """Return the distinct keys of every hit read, sampled or not, in the order first met.
 
-    The evidence of each hit is built as for the sample (same value lengths), so
-    the key of a sampled hit is the one OpenCTI recomputes from the sample.
+    The evidence of each hit is built as for the sample, so the key of a sampled
+    hit is the one OpenCTI recomputes from the sample.
 
     Args:
         hits: Each result event with the fields the hunt matched in it.
@@ -552,7 +554,7 @@ def _hit_evidence(
         for field in present_fields(event, names):
             texts = value_strings(event.fields[field])
             if texts:
-                return texts[0][:length]
+                return texts[0]
         return None
 
     return HuntHitEvidence(
