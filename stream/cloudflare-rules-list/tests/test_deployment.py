@@ -433,7 +433,7 @@ def test_failed_observable_listing_fails_the_full_sync(connector, assurance):
 
 
 def test_stream_events_retry_a_failed_full_sync_instead_of_uploading(
-    connector, assurance
+    connector, assurance, timers
 ):
     connector._full_sync_done = False
     connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
@@ -478,7 +478,7 @@ def test_stream_events_retry_a_failed_full_sync_instead_of_uploading(
     assert connector._full_sync_done is True
 
 
-def test_rejected_full_sync_upload_fails_the_full_sync(connector, assurance):
+def test_rejected_full_sync_upload_fails_the_full_sync(connector, assurance, timers):
     connector._full_sync_done = False
     connector.helper.api.indicator.list.return_value = [
         {
@@ -531,16 +531,64 @@ def test_other_stream_events_only_retry_a_failed_full_sync(connector, assurance)
     connector.client.replace_list_items.assert_called_once_with("list-123", [])
 
 
-def test_full_sync_retry_waits_for_the_sync_interval(connector, assurance):
+def test_full_sync_retry_waits_for_the_sync_interval(
+    connector, assurance, monkeypatch, timers
+):
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
     connector._full_sync_done = False
     connector.sync_interval = 3600
     connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
 
     connector.process_message(make_message("create", make_indicator()))
+    now[0] = 1000.0
     connector.process_message(make_message("delete", make_indicator()))
 
     connector.helper.api.indicator.list.assert_called_once()
     connector.client.replace_list_items.assert_not_called()
+    assert [timer.interval for timer in timers] == [3600.0]
+
+    now[0] = 3700.0
+    timers[0].function()
+
+    assert connector.helper.api.indicator.list.call_count == 2
+    assert [timer.interval for timer in timers] == [3600.0, 3600.0]
+
+
+def test_failed_full_sync_is_retried_on_a_quiet_stream(
+    connector, assurance, monkeypatch, timers
+):
+    """No stream event arrives: a scheduled retry still recovers a failed full sync,
+    never sooner than a minute apart without a sync interval."""
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector._full_sync_done = False
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+
+    connector.run()
+
+    assert [timer.interval for timer in timers] == [60.0]
+    now[0] = 160.0
+    timers[0].function()
+
+    assert connector.helper.api.indicator.list.call_count == 2
+    assert [timer.interval for timer in timers] == [60.0, 60.0]
+    assurance.start.assert_not_called()
+
+    connector.helper.api.indicator.list.side_effect = None
+    connector.helper.api.indicator.list.return_value = []
+    now[0] = 220.0
+    timers[1].function()
+
+    connector.client.replace_list_items.assert_called_once_with("list-123", [])
+    assert connector._full_sync_done is True
+    assurance.start.assert_called_once()
+    assert len(timers) == 2
 
 
 def test_first_full_sync_retry_runs_on_a_host_booted_recently(
@@ -686,7 +734,9 @@ def test_run_starts_the_write_back_after_the_full_sync(connector, assurance):
     assert order == ["full sync", "assurance", "stream"]
 
 
-def test_failed_full_sync_does_not_start_the_reconciliation(connector, assurance):
+def test_failed_full_sync_does_not_start_the_reconciliation(
+    connector, assurance, timers
+):
     connector._full_sync_done = False
     connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
 

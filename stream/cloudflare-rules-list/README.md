@@ -108,8 +108,8 @@ fetched from its repository.
    the ones past their `valid_until`) and `IPv4-Addr`
    observables from OpenCTI into an in-memory snapshot, then immediately push
    that snapshot to Cloudflare. When a listing fails or Cloudflare rejects the
-   snapshot, the next live-stream events retry the full sync (at most once per
-   `CLOUDFLARE_SYNC_INTERVAL`) until it succeeds.
+   snapshot, the full sync is retried at the end of each `CLOUDFLARE_SYNC_INTERVAL`
+   (a minute apart at least), and by the next live-stream events, until it succeeds.
 3. **Listen** to the OpenCTI live stream — cache IPv4 values on create/update,
    drop them on delete, and on an update that revokes them, expires them or
    leaves them without an IPv4 value.
@@ -165,7 +165,8 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
   accepts the snapshot. When a listing fails, nothing is uploaded and the list keeps its items; when Cloudflare
   rejects the snapshot, the indicators are reported `failed`. Until a full sync succeeds, every stream event retries
   it (at most once per `CLOUDFLARE_SYNC_INTERVAL`) instead of uploading a snapshot of the stream objects alone, and
-  the reconciliation starts once it succeeds.
+  it is also retried at the end of each interval (a minute apart at least) when no stream event arrives; the
+  reconciliation starts once it succeeds.
 - **Hits**: not reported. Hits of a list are the firewall events of the rules referencing it, which the connector does
   not manage.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
