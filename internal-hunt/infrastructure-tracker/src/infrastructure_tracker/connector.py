@@ -206,8 +206,9 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
     required_permissions = REQUIRED_PERMISSIONS
     documentation_url = DOCUMENTATION_URL
     entity_fields = ("ip", "domain")
-    # A hit is a host: its address, else its domain, names it in the evidence and keys it across runs
-    hit_fields = HitFields(host=("ip", "domain"))
+    # A hit is a host: its address, else its domain, names it in the evidence and is its identity
+    # across runs (its time is when a source last saw it, which moves from one run to the next)
+    hit_fields = HitFields(event_id=("ip", "domain"), host=("ip", "domain"))
     evidence_excluded_fields = frozenset({CERTIFICATES_FIELD})
 
     def __init__(self, settings: ConnectorSettings) -> None:

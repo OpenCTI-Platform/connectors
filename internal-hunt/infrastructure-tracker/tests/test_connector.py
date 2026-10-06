@@ -19,11 +19,13 @@ from conftest import (
 )
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
+    HuntHitEvidence,
     HuntLimits,
     HuntTimeoutError,
     HuntTimeWindow,
     HuntTranslationError,
     NativeQuery,
+    hit_key,
 )
 from infrastructure_tracker import InfrastructureTrackerConnector
 from infrastructure_tracker.connector import (
@@ -213,12 +215,20 @@ def test_process_message_maps_the_infrastructure(
     assert "certificates" not in evidence_fields
     assert "jarm" in evidence_fields
     assert "2 hit(s)" in message
-    # Each hit is a host named by its address, which keeps two hosts apart in the hit keys
+    # Each hit is a host named and keyed by its address: its key does not move with
+    # the time a source last saw it, so the host stays a known hit at the next runs
     assert sorted(hit["host"] for hit in kwargs["hits_sample"]) == [
         "10.0.0.1",
         "8.8.8.8",
     ]
-    assert len(set(kwargs["hit_keys"])) == 2
+    assert sorted(hit["event_id"] for hit in kwargs["hits_sample"]) == [
+        "10.0.0.1",
+        "8.8.8.8",
+    ]
+    assert set(kwargs["hit_keys"]) == {
+        hit_key(HuntHitEvidence(event_id=address))
+        for address in ("8.8.8.8", "10.0.0.1")
+    }
 
     # And the infrastructure, its public observables and detection indicators are sent
     sent = helper.stix2_create_bundle.call_args.args[0]
