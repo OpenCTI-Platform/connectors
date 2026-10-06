@@ -1348,6 +1348,52 @@ def test_adapter_credits_every_indicator_sharing_an_evidence_value():
     assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
 
 
+def test_adapter_credits_no_hit_to_a_value_never_pushed_to_defender():
+    """Only the values the connector pushes match the evidence: a network traffic
+    address or an artifact hash of the pattern never has a Defender indicator."""
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    sha256 = "37c09c95f77e5677332de338b7e972cff67347ed2c807c15b415c41b0d4a9ac4"
+    connector.api.list_alerts = MagicMock(
+        return_value=[
+            {
+                "alertCreationTime": "2026-10-03T11:10:00Z",
+                "evidence": [
+                    {"entityType": "Ip", "ipAddress": "203.0.113.9"},
+                    {"entityType": "File", "sha256": sha256},
+                ],
+            }
+        ]
+    )
+    deployments = [
+        IndicatorDeployment(
+            relationship_id="r1",
+            status="active",
+            indicator_id=INDICATOR_ID,
+            pattern=(
+                "[network-traffic:dst_ref.value = '203.0.113.9'] OR "
+                f"[artifact:hashes.'SHA-256' = '{sha256}'] OR "
+                "[ipv4-addr:value = '198.51.100.7']"
+            ),
+            pattern_type="stix",
+        ),
+        IndicatorDeployment(
+            relationship_id="r2",
+            status="active",
+            indicator_id=OTHER_ID,
+            pattern=f"[file:hashes.'SHA-256' = '{sha256}']",
+            pattern_type="stix",
+        ),
+    ]
+    adapter = MicrosoftDefenderDeploymentAdapter(
+        connector, clock=lambda: datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    )
+
+    hits = list(adapter.collect_hits(deployments, since))
+
+    assert [hit.indicator_id for hit in hits] == [OTHER_ID]
+
+
 def serve_alerts(minutes):
     """Fake `list_alerts`: the alerts created at `11:<minute>` within the window,
     capped like the API (in no particular order)."""

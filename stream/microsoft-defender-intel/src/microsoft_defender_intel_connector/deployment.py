@@ -125,6 +125,33 @@ def _belongs_to(indicator: dict[str, Any], deployment: IndicatorDeployment) -> b
     )
 
 
+def _defender_values(deployment: IndicatorDeployment) -> tuple[set[str], set[str]]:
+    """Return the normalized values the connector pushes to Defender for an indicator.
+
+    Only the IP addresses, domains, host names and URLs of a STIX pattern, and the
+    MD5, SHA-1 and SHA-256 hashes of its files, reach Defender: the other values of
+    the pattern never have a Defender indicator.
+
+    :param deployment: The deployment.
+    :return: The values pushed with their own Defender indicator, and the file hashes.
+    """
+    values: set[str] = set()
+    file_hashes: set[str] = set()
+    if deployment.pattern_type not in (None, "stix"):
+        return values, file_hashes
+    for pattern_value in extract_pattern_values(deployment.pattern):
+        value = normalize_value(pattern_value.value)
+        if not value:
+            continue
+        algorithm = pattern_value.hash_algorithm
+        if algorithm is not None:
+            if algorithm.lower() in FILE_HASH_TYPES_MAPPER:
+                file_hashes.add(value)
+        elif pattern_value.object_type in PATTERN_VALUE_TYPES:
+            values.add(value)
+    return values, file_hashes
+
+
 def _floor_second(value: datetime) -> datetime:
     """Return a date without its fraction of a second."""
     return value.replace(microsecond=0)
@@ -278,28 +305,15 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         :param vendor_matches: Its Defender indicators.
         :return: False when an observable has no Defender indicator.
         """
-        if deployment.pattern_type not in (None, "stix"):
-            return True
         vendor_values = {
             normalized
             for vendor_indicator in vendor_matches
             if (normalized := normalize_value(vendor_indicator.value))
         }
-        file_hashes: set[str] = set()
-        for pattern_value in extract_pattern_values(deployment.pattern):
-            value = normalize_value(pattern_value.value)
-            if not value:
-                continue
-            algorithm = pattern_value.hash_algorithm
-            if algorithm is not None:
-                if algorithm.lower() in FILE_HASH_TYPES_MAPPER:
-                    file_hashes.add(value)
-            elif (
-                pattern_value.object_type in PATTERN_VALUE_TYPES
-                and value not in vendor_values
-            ):
-                return False
-        return not file_hashes or not file_hashes.isdisjoint(vendor_values)
+        values, file_hashes = _defender_values(deployment)
+        return values <= vendor_values and (
+            not file_hashes or not file_hashes.isdisjoint(vendor_values)
+        )
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Push an indicator again, with the stream create path.
@@ -326,7 +340,9 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         """Read the Defender alerts whose evidence matches deployed indicators.
 
         Each alert counts one hit per matching indicator, at the alert creation time;
-        a value shared by several indicators credits each of them.
+        a value shared by several indicators credits each of them. Only the values
+        the connector pushes to Defender match: a value of the pattern Defender never
+        holds (such as a network traffic address or an artifact hash) credits no hit.
 
         :param resume: End of the first window to read, when the previous read ran
             out of requests while still halving the windows starting at `since`.
@@ -334,7 +350,8 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
-            for value in deployment.values:
+            values, file_hashes = _defender_values(deployment)
+            for value in values | file_hashes:
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
