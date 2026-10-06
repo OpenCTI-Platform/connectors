@@ -141,8 +141,8 @@ def collect_image_name_mismatches(
         if not isinstance(raw_value, str) or not raw_value.strip():
             continue  # non-empty check already enforced by collect_duplicates
         expected = f"{PUBLISHED_IMAGE_PREFIX}{Path(path).parent.parent.name}"
-        if raw_value.strip() != expected:
-            mismatches.append((path, raw_value.strip(), expected))
+        if raw_value != expected:
+            mismatches.append((path, raw_value, expected))
     return sorted(mismatches)
 
 
