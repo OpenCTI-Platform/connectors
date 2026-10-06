@@ -88,6 +88,7 @@ import posixpath
 import re
 import shlex
 import sys
+import tarfile
 import tomllib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -180,7 +181,6 @@ VARIABLE = re.compile(
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
-TARBALL = re.compile(r"\.(tar|tar\.gz|tgz|tar\.bz2|tbz2|tar\.xz|txz)$")
 COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
 # Prefixes that are programs found on PATH, not shell builtins (time is a
 # keyword of bash, a program for sh).
@@ -755,8 +755,7 @@ def glob_regex(pattern, globstar=True):
         elif char == "[" and pattern.find("]", i + 1) != -1:
             end = pattern.find("]", i + 1)
             body = pattern[i + 1 : end]
-            if body.startswith(("!", "^")):
-                body = "^" + body[1:]
+            # Go negates a class with "^" only: "[!x]" matches "!" or "x".
             out.append("[" + body.replace("\\", "\\\\") + "]")
             i = end
         else:
@@ -974,18 +973,22 @@ class BuildContext:
         return (self.root / origin[1]).read_text(encoding="utf-8", errors="replace")
 
     def is_archive(self, rel):
-        """ADD extracts a local tar archive, compressed or not, whatever its name:
-        Docker tells it by its content."""
+        """ADD extracts a local tar archive, compressed or not, whatever its name,
+        and copies any other file as it is: Docker tells them apart by content."""
         origin = self.files.get(rel)
         if origin is None or origin[0] == "stamp":
             return False
         if origin[0] == "link":
             # The archive test reads the file the link points to.
             return True
-        with open(self.root / rel, "rb") as handle:
-            head = handle.read(265)
-        compressed = head.startswith((b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00"))
-        return compressed or head[257:262] == b"ustar"
+        path = self.root / rel
+        with open(path, "rb") as handle:
+            head = handle.read(4)
+        if head == b"\x28\xb5\x2f\xfd":
+            # zstd, which Docker decompresses and this Python may not read.
+            return True
+        # Old tar headers without the ustar magic, plain or gzip, bzip2, xz.
+        return tarfile.is_tarfile(path)
 
     def ignored_stamps(self):
         return [
@@ -1310,8 +1313,9 @@ CHMOD_OPTIONS = frozenset(
 
 
 def harmless_mode(args, search=False):
-    """A chmod that only adds permissions, or sets a mode everyone can read (and,
-    for a directory, search)."""
+    """A chmod after which everyone can still read (and, for a directory,
+    search): an octal mode with these bits, or symbolic clauses that never take
+    them away, whether they add permissions or set them explicitly."""
     modes = [a for a in args if a not in CHMOD_OPTIONS]
     if not modes:
         return True
@@ -1319,9 +1323,24 @@ def harmless_mode(args, search=False):
     if re.fullmatch(r"[0-7]{3,4}", mode):
         needed = 5 if search else 4
         return all(int(digit) & needed == needed for digit in mode[-3:])
-    return all(
-        re.fullmatch(r"[ugoa]*\+[rwxXst]+", clause) for clause in mode.split(",")
-    )
+    # What a file had before is enough, as for a copy without a mode.
+    kept = {(who, bit): True for who in "ugo" for bit in "rx"}
+    for clause in mode.split(","):
+        parsed = re.fullmatch(r"([ugoa]*)((?:[-+=][rwxXst]*)+)", clause)
+        if not parsed:
+            # g=u and the other forms copying a class are not followed.
+            return False
+        classes = parsed.group(1).replace("a", "ugo") or "ugo"
+        for operator, perms in re.findall(r"([-+=])([rwxXst]*)", parsed.group(2)):
+            # X is the search permission of a directory.
+            given = {"r": "r" in perms, "x": "x" in perms or "X" in perms}
+            for who in classes:
+                for bit, present in given.items():
+                    if operator == "=":
+                        kept[who, bit] = present
+                    elif present:
+                        kept[who, bit] = operator == "+"
+    return all(kept[who, bit] for who in "ugo" for bit in ("rx" if search else "r"))
 
 
 def target_options(args):
@@ -1363,6 +1382,34 @@ def target_options(args):
             rest.append(arg)
         i += 1
     return target, no_target, rest
+
+
+def continues_line(line):
+    """Whether a shell line goes on with the next one: it ends with a backslash
+    that is not escaped by another, not between single quotes and not in a
+    comment (a quote left open is reported when the line is read)."""
+    quote = None
+    i = 0
+    while i < len(line):
+        char = line[i]
+        if quote == "'":
+            if char == "'":
+                quote = None
+        elif char == "\\":
+            if i + 1 == len(line):
+                return True
+            i += 1
+        elif quote == '"':
+            if char == '"':
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif char == "#" and (
+            i == 0 or line[i - 1].isspace() or line[i - 1] in ";&|()"
+        ):
+            return False
+        i += 1
+    return False
 
 
 def matching_parenthesis(line, opening):
@@ -1740,10 +1787,11 @@ class Shell:
         lines = []
         current = ""
         for raw in script.splitlines():
-            if raw.endswith("\\"):
-                current += raw[:-1]
+            line = current + raw
+            if continues_line(line):
+                current = line[:-1]
                 continue
-            lines.append(current + raw)
+            lines.append(line)
             current = ""
         if current:
             lines.append(current)
@@ -2135,7 +2183,7 @@ class Shell:
                 )
             return
         if name == "cd":
-            self._cd(args, conditional, in_pipeline, lookup)
+            self._cd(args, conditional, in_pipeline, lookup, after)
         elif name in ("pushd", "popd"):
             self._unknown_directory(f"'{name}'")
         elif name == "eval":
@@ -2494,7 +2542,7 @@ class Shell:
             raise Unsupported(f"working directory changed by {why} in the entry script")
         self.cwd = None
 
-    def _cd(self, args, conditional, in_pipeline, env):
+    def _cd(self, args, conditional, in_pipeline, env, after):
         if in_pipeline:
             return
         targets = [a for a in args if a not in ("-L", "-P", "--")]
@@ -2509,7 +2557,18 @@ class Shell:
         if env.get("CDPATH") and not target.startswith(("/", ".")):
             self._unknown_directory("a relative 'cd' searched in CDPATH")
             return
-        self.cwd = image_path(target, self.cwd, "'cd' target")
+        target = image_path(target, self.cwd, "'cd' target")
+        if not self._is_dir(target):
+            # The image may not have it: a failed cd leaves the shell where it was.
+            if after != "&&":
+                self._unknown_directory(
+                    "a 'cd' to a directory the image model does not know"
+                )
+                return
+            # The commands of the && list run there only; after the list the
+            # shell may still be where it was.
+            self.chain_directory = True
+        self.cwd = target
 
     def _tilde(self, value):
         if value == "~" or value.startswith("~/"):
@@ -3301,9 +3360,7 @@ class ImageModel:
                     else []
                 )
             for match in matches:
-                if instruction == "ADD" and (
-                    TARBALL.search(match) or self.context.is_archive(match)
-                ):
+                if instruction == "ADD" and self.context.is_archive(match):
                     # A local archive is extracted: its content is not modelled.
                     opaque = True
                     continue
