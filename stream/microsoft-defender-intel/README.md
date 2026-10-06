@@ -74,7 +74,7 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 | Update of an indicator absent from Defender | Nothing: the indicator was never pushed                                                            |
 | Delete event processed                    | `removed` (also when the indicator was already absent from Defender)                                 |
 | Reconciliation, indicator present         | `active`                                                                                             |
-| Reconciliation, indicator absent          | `removed` (deleted or expired in Defender), once a lookup by value confirms the absence              |
+| Reconciliation, indicator absent          | `removed` (deleted or expired in Defender), once a lookup by value confirms the absence (a Defender indicator pushed for another OpenCTI indicator with the same value does not count) |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator Defender still holds in full is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Defender and reported `removed` |
 | Reconciliation, unknown indicator         | Defender indicators of the connector with no deployment yet are reported `active` (backfill)         |

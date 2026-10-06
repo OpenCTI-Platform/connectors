@@ -612,6 +612,65 @@ def test_adapter_confirms_an_absence_when_the_connector_indicators_expired():
     assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is False
 
 
+def test_adapter_confirms_an_absence_when_the_value_is_held_for_another_indicator():
+    """A Defender indicator pushed for another OpenCTI indicator holding the same
+    value is not the deployment's: the read-back would not match it either."""
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {"id": "9", "application": APPLICATION_NAME, "externalId": OTHER_ID}
+            ]
+        },
+        {
+            "value": [
+                {"id": "10", "application": APPLICATION_NAME, "externalID": OTHER_ID}
+            ]
+        },
+    ]
+
+    assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is True
+
+
+@pytest.mark.parametrize(
+    "defender_indicator",
+    [
+        {"id": "9", "externalId": INDICATOR_ID},
+        {"id": "9", "externalID": INDICATOR_ID.upper()},
+        {"id": "9", "externalId": f"indicator--{INDICATOR_ID}"},
+        {"id": DEFENDER_ID, "externalId": OTHER_ID},
+        {"id": "9"},
+    ],
+    ids=[
+        "its OpenCTI id",
+        "its OpenCTI id in another case",
+        "its STIX id",
+        "its Defender id",
+        "no OpenCTI id",
+    ],
+)
+def test_adapter_absence_counts_the_defender_indicators_of_the_deployment(
+    defender_indicator,
+):
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [{**defender_indicator, "application": APPLICATION_NAME}]},
+    ]
+    deployment = IndicatorDeployment(
+        relationship_id="relationship",
+        status="active",
+        indicator_id=INDICATOR_ID,
+        indicator_standard_id=f"indicator--{INDICATOR_ID}",
+        external_id=DEFENDER_ID,
+        pattern="[ipv4-addr:value = '198.51.100.7']",
+        pattern_type="stix",
+    )
+
+    assert adapter.confirm_absent(deployment) is False
+
+
 def test_adapter_absence_lookup_errors_are_readable():
     connector = build_connector()
     adapter = MicrosoftDefenderDeploymentAdapter(connector)
@@ -1586,6 +1645,44 @@ def test_withdrawal_deletes_every_ioc_of_the_indicator(e2e_connector, router):
     (batch,) = router.calls_of("IndicatorReportDeployments(")
     assert batch["reports"][0]["indicatorId"] == INDICATOR_ID
     assert batch["reports"][0]["status"] == "removed"
+
+
+def test_withdrawal_of_a_value_held_for_another_indicator_is_reported(
+    e2e_connector, router
+):
+    """A withdrawn indicator whose Defender indicator is gone is reported removed,
+    even though Defender holds its value for another OpenCTI indicator, which stays."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "active", "198.51.100.7", revoked=True),
+        deployment_node(OTHER_ID, "active", "198.51.100.7"),
+    ]
+    other_indicator = {
+        "id": 6372,
+        "indicatorValue": "198.51.100.7",
+        "externalId": OTHER_ID,
+    }
+    e2e_connector.api._send_request.side_effect = [
+        {"value": [other_indicator]},
+        # The withdrawn indicator is looked up by its value before it is reported removed
+        {"value": [{**other_indicator, "application": APPLICATION_NAME}]},
+        {"value": []},
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.marked_removed == 1
+    assert summary.confirmed_active == 1
+    assert summary.absence_unconfirmed == 0
+    assert [
+        entry
+        for entry in e2e_connector.api._send_request.call_args_list
+        if entry.args[0] == "delete"
+    ] == []
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    reports = {report["indicatorId"]: report for report in batch["reports"]}
+    assert reports[INDICATOR_ID]["status"] == "removed"
+    assert reports[OTHER_ID]["status"] == "active"
+    assert reports[OTHER_ID]["externalId"] == "6372"
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):
