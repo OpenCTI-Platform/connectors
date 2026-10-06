@@ -253,9 +253,13 @@ def value_hit_keys(
 ) -> dict[str, list[str]]:
     """Return the keys of the hits holding each value of a batch, by value key.
 
+    The values a hit holds are read in every field of its event, so a value found
+    in a field the hit does not report (excluded from the evidence) still has the
+    key of the hit; the key derives from the fields the hit reports.
+
     Args:
         batch: The values looked up.
-        hits: The events holding a value, with the fields holding one (``value_hits``).
+        hits: The events holding a value, with the fields they report (``value_hits``).
         limits: Run limits (preview length of the hit evidence the keys derive from).
         hit_fields: Fields read for the event id, host, user and process.
 
@@ -266,7 +270,7 @@ def value_hit_keys(
     keys: dict[str, dict[str, None]] = {}
     for event, fields in hits:
         texts = [
-            text for name in fields for text in value_strings(event.fields.get(name))
+            text for value in event.fields.values() for text in value_strings(value)
         ]
         [key] = build_hit_keys([(event, fields)], limits, hit_fields)
         for ioc_key, pattern in patterns.items():

@@ -2,6 +2,7 @@
 # type: ignore
 """Tests of indicator hunts in the internal hunt connector base."""
 
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -342,6 +343,67 @@ def test_reports_each_hit_with_the_field_holding_the_value(
         ("WKS-01", "alice", [("DestinationIp", "198.51.100.7")]),
         ("WKS-02", None, [("query", "www.evil.example")]),
     ]
+
+
+def test_a_hit_never_reports_an_excluded_field(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a raw event holding an address in a field and in the raw payload the
+    # connector excludes from the evidence
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00",
+                DestinationIp="198.51.100.7",
+                _raw="conn 198.51.100.7 secret payload",
+                host="WKS-01",
+            ),
+        ],
+    )
+    connector = _indicator_connector(hunt_settings, hunt_helper, result)
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the hit reports the field, not the raw payload, the value keeps the key
+    # of the hit, and that key is the one OpenCTI recomputes from the sampled hit
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    (hit,) = kwargs["hits_sample"]
+    assert [m["field"] for m in hit["matched"]] == ["DestinationIp"]
+    assert "secret" not in str(kwargs)
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["hit_keys"] == kwargs["hit_keys"]
+    assert kwargs["hit_keys"] == [hit_key(HuntHitEvidence.model_validate(hit))]
+
+
+def test_a_value_found_only_in_an_excluded_field_keeps_its_hit(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a raw event holding an address in the raw payload only
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00",
+                _raw="conn 198.51.100.7 secret payload",
+                host="WKS-01",
+            ),
+        ],
+    )
+    connector = _indicator_connector(hunt_settings, hunt_helper, result)
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the hit is reported without any matched field, and the value keeps
+    # the key of the hit OpenCTI recomputes from the sample
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    (hit,) = kwargs["hits_sample"]
+    assert (hit["host"], hit["matched"]) == ("WKS-01", [])
+    assert "secret" not in json.dumps(kwargs["hits_sample"])
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-ip"]["hit_keys"] == kwargs["hit_keys"]
+    assert kwargs["hit_keys"] == [hit_key(HuntHitEvidence.model_validate(hit))]
 
 
 def test_aggregated_lookups_report_no_single_hit(

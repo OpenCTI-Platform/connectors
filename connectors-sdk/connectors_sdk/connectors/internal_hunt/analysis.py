@@ -387,6 +387,21 @@ def _count_field_values(
     return counters
 
 
+def evidence_fields(fields: Iterable[str], excluded_fields: Iterable[str]) -> list[str]:
+    """Return the fields a hit may report: neither excluded nor under an excluded field.
+
+    Args:
+        fields: Fields of a hit (the fields the hunt matched in it).
+        excluded_fields: Fields never reported (raw payloads, bookkeeping),
+            with their dotted children.
+
+    Returns:
+        The fields kept, in their order.
+    """
+    excluded = {name.lower() for name in excluded_fields}
+    return [field for field in fields if not _is_excluded(field, excluded)]
+
+
 def _is_excluded(field: str, excluded: set[str]) -> bool:
     """Whether a dotted field or one of its parents is excluded (lower-case names)."""
     parts = field.lower().split(".")

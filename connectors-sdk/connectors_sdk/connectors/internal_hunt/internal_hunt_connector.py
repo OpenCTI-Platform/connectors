@@ -45,6 +45,7 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
     build_hit_keys,
     count_distinct_entities,
     event_time_bounds,
+    evidence_fields,
     present_fields,
     suppress_benign,
 )
@@ -220,8 +221,8 @@ class InternalHuntConnector(ABC):
         sigma_output_format: pySigma backend output format (backend default when None).
         query_join: Operator joining several translated queries (e.g. ``" OR "``),
             or None to reject Sigma documents translating into several queries.
-        evidence_excluded_fields: Result fields never sampled as evidence, with
-            their sub-fields.
+        evidence_excluded_fields: Result fields never sampled as evidence nor
+            reported in the evidence of a hit, with their sub-fields.
         entity_fields: Result fields identifying hosts, users and network peers,
             sampled as evidence right after the fields of the detection.
         hit_fields: Result fields naming the event id, host, user and process
@@ -794,7 +795,13 @@ class InternalHuntConnector(ABC):
         result_ids = list(objects)
         hits_count = result.hits_count
         hits = [
-            (event, present_fields(event, native_query.fields))
+            (
+                event,
+                evidence_fields(
+                    present_fields(event, native_query.fields),
+                    self.evidence_excluded_fields,
+                ),
+            )
             for event in result.events
         ]
         self._send_objects(objects)
@@ -914,7 +921,10 @@ class InternalHuntConnector(ABC):
                 found = aggregated_observations(batch, result.events)
             else:
                 found = match_events(batch, result.events, self.ioc_host_fields)
-                batch_hits = value_hits(batch, result.events)
+                batch_hits = [
+                    (event, evidence_fields(fields, self.evidence_excluded_fields))
+                    for event, fields in value_hits(batch, result.events)
+                ]
                 hits.extend(batch_hits)
                 batch_keys = value_hit_keys(
                     batch, batch_hits, request.limits, self.hit_fields

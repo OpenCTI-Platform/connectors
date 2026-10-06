@@ -23,6 +23,7 @@ from connectors_sdk.connectors.internal_hunt import (
     build_hit_keys,
     count_distinct_entities,
     event_time_bounds,
+    evidence_fields,
     flatten_fields,
     hit_key,
     present_fields,
@@ -322,6 +323,15 @@ def test_hit_keys_do_not_depend_on_the_preview_length():
         hits, HuntLimits(evidence_max_items=4, evidence_max_value_length=4)
     )
     assert [hit_key(hit) for hit in sampled] == short
+
+
+def test_evidence_fields_leave_out_excluded_fields_and_their_children():
+    # Given/When/Then an excluded field and its dotted children are never reported,
+    # whatever their case, the other fields keep their order
+    assert evidence_fields(
+        ["CommandLine", "_raw", "_RAW.text", "Raw", "event.original", "event.code"],
+        ["_raw", "event.original"],
+    ) == ["CommandLine", "Raw", "event.code"]
 
 
 def test_long_identity_values_are_sent_as_their_digest():

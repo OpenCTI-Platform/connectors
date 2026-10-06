@@ -35,7 +35,7 @@ from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
 )
 from connectors_sdk.models import IPV4Address
 
-from .conftest import DummyHuntConnector, make_hunt_config
+from .conftest import SIGMA_RULE, DummyHuntConnector, make_hunt_config
 
 MODULE = "connectors_sdk.connectors.internal_hunt.internal_hunt_connector"
 
@@ -440,6 +440,36 @@ def test_execution_reports_each_hit_with_what_matched(
         hit_key(HuntHitEvidence(**first)),
         hit_key(HuntHitEvidence(**second)),
     ]
+
+
+def test_a_hit_never_reports_a_field_the_connector_excludes(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a rule naming the raw payload the connector excludes from the evidence,
+    # and a hit holding it next to a detection field
+    rule = SIGMA_RULE.replace("DestinationIp: 8.8.8.8", "_raw|contains: secret")
+    result = _results(
+        {
+            "CommandLine": "powershell -enc AAAA",
+            "_raw": "powershell -enc AAAA secret payload",
+            "host": "ws1",
+        },
+    )
+    connector = connector_factory(result)
+
+    # When the run is processed
+    connector.process_message(hunt_event({"sigma_rule": rule}))
+
+    # Then the hit reports the detection field only, nothing of the raw payload
+    _, kwargs = _report_kwargs(hunt_helper)
+    (hit,) = kwargs["hits_sample"]
+    assert [item["field"] for item in hit["matched"]] == ["CommandLine"]
+    raw_hash = sha256_hex("powershell -enc AAAA secret payload")
+    reported = json.dumps([kwargs["hits_sample"], kwargs["evidence_sample"]])
+    assert "secret" not in reported
+    assert raw_hash not in reported
+    # And the hit key is the one OpenCTI recomputes from the sampled hit
+    assert kwargs["hit_keys"] == [hit_key(HuntHitEvidence(**hit))]
 
 
 def test_older_pycti_gets_the_evidence_aggregated_per_field_only(
