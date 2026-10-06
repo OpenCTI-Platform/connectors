@@ -4,14 +4,14 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'crt.sh'
-  scope: 'crtsh'
-  log_level: 'error'
-  run_every: '1h' # Format: 7d, 12h, 10m, 30s
+  # name: 'crt.sh'
+  # scope: 'crtsh'
+  # log_level: 'error'
+  # run_every: '1h' # Format: 7d, 12h, 10m, 30s
 
 crtsh:
   domain: 'ChangeMe'
-  labels: 'crtsh,osint'
-  marking_refs: 'TLP:WHITE'
-  is_expired: false
-  is_wildcard: false
+  # labels: 'crtsh,osint'
+  # marking_refs: 'TLP:WHITE'
+  # is_expired: false
+  # is_wildcard: false
