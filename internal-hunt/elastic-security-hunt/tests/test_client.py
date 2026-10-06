@@ -296,6 +296,30 @@ def test_eql_counts_sequences_and_flags_the_events_cut(requests_mock):
     assert (result.total, result.partial) == (2, True)
 
 
+def test_eql_keeps_one_event_of_every_sequence(requests_mock):
+    # Given two sequences of two events each, for a cap of two events
+    sequences = [
+        {"events": [{"_source": {"s": name, "step": step}} for step in range(2)]}
+        for name in ("a", "b")
+    ]
+    requests_mock.post(
+        EQL_URL,
+        json={
+            "hits": {"total": {"value": 2, "relation": "eq"}, "sequences": sequences}
+        },
+    )
+
+    # When the query runs
+    result = _client().eql(["logs-*"], "q", START, END, 2, RunDeadline(30), "k")
+
+    # Then each sequence keeps one event, so both hits have their key, and the
+    # events cut make the result partial
+    assert [row["s"] for row in result.rows] == ["a", "b"]
+    first, second = result.sequences
+    assert first != second
+    assert (result.total, result.partial) == (2, True)
+
+
 def test_eql_tells_apart_sequences_sharing_their_events_with_ids(requests_mock):
     # Given two sequences with the same event that has a document id, and a
     # different event without one

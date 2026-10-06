@@ -255,24 +255,28 @@ class ElasticsearchClient(HuntApiClient):
             params={"ignore_unavailable": "true", "allow_no_indices": "true"},
         )
         hits = answer.get("hits") or {}
-        events = list(hits.get("events") or [])
-        labels: list[str | None] = [None] * len(events)
+        plain = list(hits.get("events") or [])
         sequences = hits.get("sequences") or []
+        cut = len(plain) > max_results
+        events = plain[:max_results]
+        labels: list[str | None] = [None] * len(events)
         # hits.total counts sequences: the events of one sequence are one hit,
-        # identified by its events, so that every run finding it gives it the same key
+        # identified by its events, so that every run finding it gives it the same
+        # key. Each sequence keeps one event, so that every hit has its key, and the
+        # budget left goes to the other events in order
+        extra = max(max_results - len(events) - len(sequences), 0)
         for sequence in sequences:
             sequence_events = sequence.get("events") or []
-            events.extend(sequence_events)
-            labels.extend([_sequence_label(sequence_events)] * len(sequence_events))
+            kept = sequence_events[: 1 + extra]
+            extra -= max(len(kept) - 1, 0)
+            cut = cut or len(kept) < len(sequence_events)
+            events.extend(kept)
+            labels.extend([_sequence_label(sequence_events)] * len(kept))
         rows = [_source(event) for event in events]
-        total, relation = _total(hits, len(sequences) or len(rows))
-        # Sequences can hold more events than the cap: the events cut here make the result partial
-        partial = (
-            bool(answer.get("is_partial"))
-            or relation == "gte"
-            or len(rows) > max_results
-        )
-        return SearchResult(rows[:max_results], total, partial, labels[:max_results])
+        total, relation = _total(hits, len(sequences) or len(plain))
+        # The events cut here make the result partial
+        partial = bool(answer.get("is_partial")) or relation == "gte" or cut
+        return SearchResult(rows, total, partial, labels)
 
     # ------------------------------------------------------------------
     # Lucene
