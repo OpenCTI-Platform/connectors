@@ -41,6 +41,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "update_existing_data": True,
+                    "duration_period": "PT10M",
                 },
                 "cybersixgill": {
                     "client_id": "test-client-id",
@@ -49,7 +50,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "create_indicators": False,
                     "enable_relationships": True,
                     "fetch_size": 1000,
-                    "interval_sec": 600,
                 },
             }
         )

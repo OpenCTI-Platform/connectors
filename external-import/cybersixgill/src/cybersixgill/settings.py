@@ -1,13 +1,15 @@
 """OpenCTI Cybersixgill connector settings module."""
 
+from datetime import timedelta
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
-from pydantic.json_schema import SkipJsonSchema
 
 
 class CybersixgillConnectorConfig(BaseExternalImportConnectorConfig):
@@ -32,11 +34,9 @@ class CybersixgillConnectorConfig(BaseExternalImportConnectorConfig):
         description="Whether to update data already ingested into the platform.",
         default=False,
     )
-    # Override `BaseExternalImportConnectorConfig.duration_period` as the connector
-    # keeps its own scheduling loop, driven by `cybersixgill.interval_sec`.
-    duration_period: SkipJsonSchema[None] = Field(
-        description="Do not use. Not implemented in the connector yet, use `CYBERSIXGILL_INTERVAL_SEC` instead.",
-        default=None,
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+        default=timedelta(minutes=5),
     )
 
 
@@ -67,9 +67,11 @@ class CybersixgillConfig(BaseConfigModel):
         description="Number of indicators to fetch per run.",
         default=2000,
     )
-    interval_sec: int = Field(
-        description="Import interval in seconds.",
-        default=300,
+    interval_sec: int | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda seconds: timedelta(seconds=int(seconds)),
     )
 
 
