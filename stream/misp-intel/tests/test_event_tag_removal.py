@@ -222,9 +222,13 @@ def api_handler():
 
 
 def _existing_event(*tag_names):
+    # Fields always returned by MISP and read by update_event()
     event = MISPEvent()
     event.uuid = "container-uuid"
     event.info = "Test report"
+    event.distribution = 1
+    event.threat_level_id = 2
+    event.analysis = 2
     for tag_name in tag_names:
         event.add_tag(tag_name)
     return event

@@ -113,9 +113,13 @@ def test_create_event_with_converter_output(api_handler, helper, config):
 def test_update_event_with_converter_output(api_handler, helper, config):
     """Updating an already tagged event must not raise on MISPTag entries."""
     event_data = _event_data(helper, config)
+    # Fields always returned by MISP and read by update_event()
     existing_event = MISPEvent()
     existing_event.uuid = EVENT_UUID
     existing_event.info = "Test report"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
     existing_event.add_tag("tlp:red")
     existing_event.add_tag("analyst:manual")
     api_handler.misp.get_event.return_value = existing_event
