@@ -30,10 +30,6 @@ class CybersixgillConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=["cybersixgill"],
     )
-    update_existing_data: bool = Field(
-        description="Whether to update data already ingested into the platform.",
-        default=False,
-    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=5),

@@ -15,7 +15,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT5M"` | The period of time to await between two runs of the connector. |
-| CONNECTOR_UPDATE_EXISTING_DATA | `boolean` |  | boolean |  | `false` | Whether to update data already ingested into the platform. |
 | CYBERSIXGILL_CREATE_OBSERVABLES | `boolean` |  | boolean |  | `true` | Create observables from indicators. |
 | CYBERSIXGILL_CREATE_INDICATORS | `boolean` |  | boolean |  | `true` | Create STIX indicators. |
 | CYBERSIXGILL_ENABLE_RELATIONSHIPS | `boolean` |  | boolean |  | `true` | Create relationships between SDOs. |
