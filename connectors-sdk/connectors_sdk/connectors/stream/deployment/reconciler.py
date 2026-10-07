@@ -100,6 +100,10 @@ class _ConnectorStateGuard:
     kept key the current state no longer holds is forgotten.
     """
 
+    _install_lock = threading.Lock()
+    """Installs one guard per helper: the stream and the reconciliation threads can
+    both make the first call, and nested guards would hold distinct locks."""
+
     def __init__(self, helper: Any) -> None:
         self._helper = helper
         self._lock = threading.RLock()
@@ -111,9 +115,13 @@ class _ConnectorStateGuard:
     def of(cls, helper: Any) -> "_ConnectorStateGuard":
         """Return the guard of a helper, installed on its first use."""
         guard = getattr(helper, "_deployment_state_guard", None)
-        if not isinstance(guard, cls):
-            guard = cls(helper)
-            helper._deployment_state_guard = guard
+        if isinstance(guard, cls):
+            return guard
+        with cls._install_lock:
+            guard = getattr(helper, "_deployment_state_guard", None)
+            if not isinstance(guard, cls):
+                guard = cls(helper)
+                helper._deployment_state_guard = guard
         return guard
 
     def _current(self) -> dict[str, Any] | None:

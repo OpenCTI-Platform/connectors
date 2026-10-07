@@ -3,6 +3,7 @@
 """Tests of the deployment reconciliation."""
 
 import threading
+import time
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
@@ -1832,6 +1833,53 @@ def test_concurrent_writers_never_roll_back_the_stream_position_or_the_checkpoin
     assert reconciler_module._ConnectorStateGuard.of(helper) is guard
     assert helper.holder["state"]["start_from"] == f"{rounds}-0"
     assert checkpoint_of(helper) == rounds
+
+
+def test_a_guard_installed_while_waiting_for_the_install_lock_is_returned():
+    guard_class = reconciler_module._ConnectorStateGuard
+    installed = guard_class(MagicMock())
+
+    class LateHelper:
+        """A helper whose guard another thread installs after the first check."""
+
+        reads = 0
+
+        @property
+        def _deployment_state_guard(self):
+            self.reads += 1
+            return None if self.reads == 1 else installed
+
+    assert guard_class.of(LateHelper()) is installed
+
+
+def test_concurrent_first_uses_install_a_single_guard(router, monkeypatch):
+    """The stream and the reconciliation threads can make the first call at once:
+    every writer gets the same guard, wrapping the original `set_state` once."""
+    helper = stateful_helper(router, {"start_from": "0-0"})
+    original_write = helper.set_state
+    guard_class = reconciler_module._ConnectorStateGuard
+    install = guard_class.__init__
+
+    def slow_install(self, installed_helper):
+        install(self, installed_helper)
+        time.sleep(0.2)
+
+    monkeypatch.setattr(guard_class, "__init__", slow_install)
+    start = threading.Barrier(4)
+    guards = []
+
+    def first_use():
+        start.wait()
+        guards.append(guard_class.of(helper))
+
+    threads = [threading.Thread(target=first_use) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len({id(guard) for guard in guards}) == 1
+    assert guards[0]._write is original_write
 
 
 def test_connector_state_errors_never_stop_the_hits(
