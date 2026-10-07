@@ -98,6 +98,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Hard Delete          | misp.hard_delete          | `MISP_HARD_DELETE`            | true              | No        | Permanently delete events without blocklisting.            |
 | Tag OpenCTI          | misp.tag_opencti          | `MISP_TAG_OPENCTI`            | true              | No        | Add OpenCTI-specific tags to MISP events.                  |
 | Tag Prefix           | misp.tag_prefix           | `MISP_TAG_PREFIX`             | opencti:          | No        | Prefix for OpenCTI tags.                                   |
+| Marking Types to Convert | misp.marking_types_to_convert | `MISP_MARKING_TYPES_TO_CONVERT` | TLP,PAP | No | Marking definition types whose container markings are converted to MISP event tags. Only controls tag conversion, does not filter exported objects. |
 | HTTP Proxy           | proxy.http                | `PROXY_HTTP`                  |                   | No        | HTTP proxy URL.                                            |
 | HTTPS Proxy          | proxy.https               | `PROXY_HTTPS`                 |                   | No        | HTTPS proxy URL.                                           |
 | No Proxy             | proxy.no_proxy            | `PROXY_NO_PROXY`              | localhost,127.0.0.1| No       | Comma-separated list of hosts to bypass proxy.             |
@@ -206,6 +207,8 @@ graph LR
 | update     | Updates MISP event (or creates if not found) |
 | delete     | Deletes or blocklists MISP event, removes external reference if container still exists |
 
+When a marking or a report type is removed from a container, the update event of the stream is used to remove the corresponding MISP event tag. Other tags (labels, tags added manually in MISP) are not removed.
+
 ### Supported Container Types
 
 | OpenCTI Container Type | STIX Type               | MISP Event Created |
@@ -229,6 +232,8 @@ graph LR
 | Configured Owner Org    | Org (Owner Org)  | Organization that owns the event         |
 | Calculated Threat Level | Threat Level ID  | Mapped based on indicator/observable scores |
 | Labels                  | Tags             | Container labels as event tags           |
+| Markings                | Tags             | Container markings of the types set in `MISP_MARKING_TYPES_TO_CONVERT` as event tags |
+| Report Types            | Tags             | Report types as `report-type:*` event tags |
 | Description             | Comment Attribute| Added as comment attribute               |
 | Analysis Status         | Analysis         | Always set to 2 (Completed)              |
 
@@ -369,6 +374,9 @@ The connector generates various tags for MISP events:
 | Source tag              | `source:opencti`                 | `source:opencti`                           |
 | Container type          | `opencti:type:{type}`            | `opencti:type:report`                      |
 | Confidence level        | `confidence:{level}`             | `confidence:85`                            |
+| TLP marking             | `tlp:{level}`                    | `tlp:amber+strict`                         |
+| PAP marking             | `PAP:{level}`                    | `PAP:AMBER`                                |
+| Report type             | `report-type:{type}`             | `report-type:threat-report`                |
 | Galaxy clusters         | `misp-galaxy:{type}="{value}"`   | `misp-galaxy:threat-actor="APT29"`         |
 | MITRE ATT&CK            | `misp-galaxy:mitre-attack-pattern="{name} - {id}"` | `misp-galaxy:mitre-attack-pattern="Spearphishing - T1566"` |
 | Threat actor aliases    | `threat-actor-alias:{alias}`     | `threat-actor-alias:Cozy Bear`             |
