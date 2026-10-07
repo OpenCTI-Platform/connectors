@@ -1,0 +1,27 @@
+{
+  "title": "IPGeolocation.io",
+  "slug": "ipgeolocation",
+  "description": "IPGeolocation.io enriches IPv4 and IPv6 observables with IP intelligence from one API request: geolocation, autonomous system, company, threat intelligence and abuse contact.\n\nKey features:\n\n- Threat score and VPN, proxy, residential proxy, Tor, relay, bot, spam and known attacker signals, turned into an OpenCTI score and labels\n- Country and city with located-at relationships, autonomous system with belongs-to, operating organization and cloud provider\n- Hostname with a resolves-to relationship\n- Optional indicator for addresses whose risk score reaches a threshold\n- A note with the full enrichment report, including the abuse contact\n- TLP checked before any data leaves OpenCTI; works on free plans (location and ASN) and paid plans",
+  "short_description": "Enriches IPv4 and IPv6 observables with geolocation, ASN, company, threat score, VPN, proxy and Tor signals, and abuse contacts from IPGeolocation.io.",
+  "logo": "internal-enrichment/ipgeolocation/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@ipgeolocation.io",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://ipgeolocation.io/pricing.html",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipgeolocation",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ipgeolocation",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

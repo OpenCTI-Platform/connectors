@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-ipgeolocation:
+    image: opencti/connector-ipgeolocation:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=IPGeolocation.io
+      # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # Custom parameters for IPGeolocation.io
+      - IPGEOLOCATION_API_KEY=ChangeMe
+      # - IPGEOLOCATION_API_BASE_URL=https://api.ipgeolocation.io
+      # - IPGEOLOCATION_TIMEOUT=30
+      # - IPGEOLOCATION_INCLUDE_SECURITY=true
+      # - IPGEOLOCATION_INCLUDE_ABUSE=true
+      # - IPGEOLOCATION_INCLUDE_HOSTNAME=true
+      # - IPGEOLOCATION_MAX_TLP_LEVEL=amber+strict
+      # - IPGEOLOCATION_TLP_LEVEL=clear
+      # - IPGEOLOCATION_CREATE_LABELS=true
+      # - IPGEOLOCATION_CREATE_RELATIONSHIPS=true
+      # - IPGEOLOCATION_CREATE_INDICATOR=true
+      # - IPGEOLOCATION_INDICATOR_THRESHOLD=50
+      # - IPGEOLOCATION_CREATE_NOTE=true
+    restart: always
