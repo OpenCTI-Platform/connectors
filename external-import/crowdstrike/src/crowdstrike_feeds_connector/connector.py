@@ -19,6 +19,7 @@ from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookupError,
 )
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
+from crowdstrike_feeds_services.utils.errors import CrowdStrikeAPIError
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -367,6 +368,9 @@ class CrowdStrike:
         except (KeyboardInterrupt, SystemExit):
             self._info("CrowdStrike connector stopping...")
             sys.exit(0)
+
+        except CrowdStrikeAPIError as e:
+            return e.__str__()
 
         except Exception as e:  # noqa: B902
             self._error("CrowdStrike connector internal error: {0}", str(e))
