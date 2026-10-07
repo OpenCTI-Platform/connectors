@@ -33,7 +33,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "scope": "crtsh",
                     "log_level": "error",
                     "duration_period": "PT1H",
-                    "update_existing_data": True,
                 },
                 "crtsh": {
                     "domain": "example.com",
@@ -91,7 +90,6 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["crtsh"]
     assert settings.connector.log_level == "error"
     assert settings.connector.duration_period == timedelta(hours=1)
-    assert settings.connector.update_existing_data is False
     assert settings.crtsh.labels == "crtsh,osint"
     assert settings.crtsh.marking_refs == "TLP:WHITE"
     assert settings.crtsh.is_expired is False

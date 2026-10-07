@@ -55,10 +55,6 @@ class CrtshConnectorConfig(BaseExternalImportConnectorConfig):
         new_namespaced_var="duration_period",
         new_value_factory=run_every_to_timedelta,
     )
-    update_existing_data: bool = Field(
-        description="Whether to update existing data in OpenCTI.",
-        default=False,
-    )
 
 
 class CrtshConfig(BaseConfigModel):

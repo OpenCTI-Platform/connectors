@@ -60,11 +60,6 @@
       "type": "string",
       "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
-    "CONNECTOR_UPDATE_EXISTING_DATA": {
-      "default": false,
-      "description": "Whether to update existing data in OpenCTI.",
-      "type": "boolean"
-    },
     "CRTSH_DOMAIN": {
       "description": "Domain to search certificates for (e.g. 'google.com').",
       "type": "string"

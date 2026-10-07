@@ -16,7 +16,6 @@ class ExternalImportConnector:
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
         interval (int): The interval between two runs, in seconds (from `CONNECTOR_DURATION_PERIOD`).
-        update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
     def __init__(self):
@@ -25,8 +24,6 @@ class ExternalImportConnector:
 
         # Specific connector attributes for external import connectors
         self.interval = int(self.config.connector.duration_period.total_seconds())
-
-        self.update_existing_data = self.config.connector.update_existing_data
 
     def _collect_intelligence(self) -> list:
         """Collect intelligence from the source"""

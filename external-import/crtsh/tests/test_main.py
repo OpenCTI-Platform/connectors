@@ -94,7 +94,6 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.helper.connect_id == "connector-id"
     assert connector.interval == 3600
     assert connector._get_interval() == 3600
-    assert connector.update_existing_data is False
     assert connector.domain == "example.com"
     assert connector.labels == "crtsh,osint"
     assert connector.marking_refs == "TLP:WHITE"
