@@ -142,6 +142,20 @@ def test_base_connector_state_load_ignores_private_client_key(
     assert dummy_state.test_field is None
 
 
+def test_base_connector_state_to_json_includes_declared_and_extra_fields() -> None:
+    """Test that `to_json` returns JSON-serializable declared and extra fields only."""
+    state = DummyConnectorState(
+        last_run=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        extra_field="any value",
+    )
+
+    assert state.to_json() == {
+        "last_run": "2024-01-01T00:00:00+00:00",
+        "test_field": None,
+        "extra_field": "any value",
+    }
+
+
 def test_base_connector_state_save_writes_state_and_forces_ping(
     dummy_state: DummyConnectorState,
     mock_opencti_connector_helper,
