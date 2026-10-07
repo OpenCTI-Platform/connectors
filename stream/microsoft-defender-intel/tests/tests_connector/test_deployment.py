@@ -799,6 +799,37 @@ def test_adapter_confirms_an_absence_by_looking_each_value_up():
     ]
 
 
+def test_adapter_only_looks_the_pushed_values_up_to_confirm_an_absence():
+    """A Defender indicator holding a value the connector never pushes (an email
+    address, a SHA-512 hash) does not keep the deployment."""
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = [{"value": []}]
+    pattern = (
+        "[ipv4-addr:value = '198.51.100.7' OR email-addr:value = 'x@evil.example'"
+        f" OR file:hashes.'SHA-512' = '{'c' * 128}']"
+    )
+
+    assert adapter.confirm_absent(make_pattern_deployment(pattern)) is True
+    looked_up = [
+        entry.kwargs["params"] for entry in connector.api._send_request.call_args_list
+    ]
+    assert looked_up == ["$filter=indicatorValue%20eq%20%27198.51.100.7%27"]
+
+
+def test_adapter_confirms_the_absence_of_a_pattern_without_a_pushed_value():
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+
+    assert (
+        adapter.confirm_absent(
+            make_pattern_deployment("[email-addr:value = 'x@evil.example']")
+        )
+        is True
+    )
+    connector.api._send_request.assert_not_called()
+
+
 def test_adapter_confirms_an_absence_when_no_value_is_held_by_the_connector():
     """Indicators of another application holding the same value do not count."""
     connector = build_connector()

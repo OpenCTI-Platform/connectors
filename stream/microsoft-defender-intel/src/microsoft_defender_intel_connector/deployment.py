@@ -295,11 +295,15 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                 )
 
     def confirm_absent(self, deployment: IndicatorDeployment) -> bool:
-        """Look the observable values of a deployment up on Defender, one by one.
+        """Look the values the connector pushes for a deployment up on Defender, one
+        by one.
 
         An indicator the paged read-back missed (rows moving between two offset
-        pages) is found by its exact value, so it is never reported removed. Only
-        the Defender indicators the read-back would match to the deployment count:
+        pages) is found by its exact value, so it is never reported removed. The
+        other values of the pattern never have a Defender indicator of the
+        connector: they are not looked up, and a pattern holding none of the pushed
+        values is absent. Only the Defender indicators the read-back would match to
+        the deployment count:
         one pushed for another OpenCTI indicator holding the same value does not,
         so a withdrawal or a deletion in Defender is still reported. An expired
         indicator does not count either, as in the read-back: Defender computes
@@ -310,8 +314,9 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         :raises DefenderDeploymentError: On any API error.
         """
         now = self._clock()
+        values, file_hashes = _defender_values(deployment)
         with _readable_errors():
-            for value in sorted(deployment.values):
+            for value in sorted(values | file_hashes):
                 for indicator in self._api.find_indicators(value) or []:
                     if (
                         indicator.get("application") == APPLICATION_NAME
