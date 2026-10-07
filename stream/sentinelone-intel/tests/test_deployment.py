@@ -763,10 +763,15 @@ def test_adapter_lists_the_iocs_and_the_expired_ones_inactive(connector):
                 {
                     "uuid": "2",
                     "value": "evil.example",
-                    "externalId": "feed-42",
+                    "externalId": OTHER_STIX_ID,
                     "validUntil": future,
                 },
-                {"uuid": "3", "value": "old.example", "validUntil": past},
+                {
+                    "uuid": "3",
+                    "value": "old.example",
+                    "externalId": STIX_ID,
+                    "validUntil": past,
+                },
             ]
         }
     )
@@ -775,12 +780,32 @@ def test_adapter_lists_the_iocs_and_the_expired_ones_inactive(connector):
 
     assert indicators == [
         VendorIndicator(indicator_id=STIX_ID, external_id="1", value="198.51.100.7"),
-        VendorIndicator(indicator_id=None, external_id="2", value="evil.example"),
         VendorIndicator(
-            indicator_id=None, external_id="3", value="old.example", active=False
+            indicator_id=OTHER_STIX_ID, external_id="2", value="evil.example"
+        ),
+        VendorIndicator(
+            indicator_id=STIX_ID, external_id="3", value="old.example", active=False
         ),
     ]
-    assert indicators[1].raw == {"uuid": "2", "externalId": "feed-42"}
+    assert indicators[1].raw == {"uuid": "2", "externalId": OTHER_STIX_ID}
+
+
+@pytest.mark.parametrize(
+    "ioc",
+    [
+        {"uuid": "4", "value": "198.51.100.7", "externalId": "feed-42"},
+        {"uuid": "5", "value": "198.51.100.7", "externalId": None},
+        {"uuid": "6", "value": "198.51.100.7"},
+        {"externalId": "feed-42"},
+        {"uuid": "7", "value": "198.51.100.7", "validUntil": "next week"},
+    ],
+)
+def test_adapter_leaves_out_the_iocs_of_other_sources(connector, ioc):
+    """IOCs whose external id is not the STIX id of an indicator (not created by
+    the connector) are not listed, even malformed: they never match a deployment."""
+    connector.client.session.request.return_value = mock_response({"data": [ioc]})
+
+    assert list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators()) == []
 
 
 @pytest.mark.parametrize(
@@ -794,7 +819,9 @@ def test_adapter_lists_the_iocs_and_the_expired_ones_inactive(connector):
     ],
 )
 def test_adapter_rejects_an_ioc_without_uuid_or_value(connector, ioc):
-    connector.client.session.request.return_value = mock_response({"data": [ioc]})
+    connector.client.session.request.return_value = mock_response(
+        {"data": [{**ioc, "externalId": STIX_ID}]}
+    )
 
     with pytest.raises(SentinelOneDeploymentError, match="without uuid or value"):
         list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
@@ -803,7 +830,16 @@ def test_adapter_rejects_an_ioc_without_uuid_or_value(connector, ioc):
 @pytest.mark.parametrize("valid_until", ["next week", 1893456000000, True, {}])
 def test_adapter_rejects_an_ioc_with_an_unreadable_expiry(connector, valid_until):
     connector.client.session.request.return_value = mock_response(
-        {"data": [{"uuid": "7", "value": "evil.example", "validUntil": valid_until}]}
+        {
+            "data": [
+                {
+                    "uuid": "7",
+                    "value": "evil.example",
+                    "externalId": STIX_ID,
+                    "validUntil": valid_until,
+                }
+            ]
+        }
     )
 
     with pytest.raises(SentinelOneDeploymentError, match="unreadable validUntil"):
@@ -812,13 +848,22 @@ def test_adapter_rejects_an_ioc_with_an_unreadable_expiry(connector, valid_until
 
 def test_adapter_reads_a_blank_expiry_as_none(connector):
     connector.client.session.request.return_value = mock_response(
-        {"data": [{"uuid": "8", "value": "evil.example", "validUntil": " "}]}
+        {
+            "data": [
+                {
+                    "uuid": "8",
+                    "value": "evil.example",
+                    "externalId": STIX_ID,
+                    "validUntil": " ",
+                }
+            ]
+        }
     )
 
     indicators = list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
 
     assert indicators == [
-        VendorIndicator(indicator_id=None, external_id="8", value="evil.example")
+        VendorIndicator(indicator_id=STIX_ID, external_id="8", value="evil.example")
     ]
 
 
@@ -1074,6 +1119,42 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
     assert reports[INDICATOR_ID]["externalId"] == "u-1"
     assert reports[OTHER_ID]["status"] == "removed"
     assert reports["withdrawn-id"]["status"] == "removed"
+
+
+def test_ioc_of_another_source_neither_confirms_nor_blocks_a_withdrawal(
+    e2e_connector, router
+):
+    """An IOC another source created with the value of an indicator is not taken
+    for its IOC: the deployment is not confirmed, the withdrawal is not refused."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "active", "198.51.100.7", STIX_ID),
+        deployment_node(OTHER_ID, "active", "203.0.113.9", OTHER_STIX_ID, revoked=True),
+    ]
+
+    def request(method, url, params=None, json=None, timeout=None):
+        if method == "GET":
+            return mock_response(
+                {
+                    "data": [
+                        {"uuid": "u-1", "value": "198.51.100.7", "externalId": "f-1"},
+                        {"uuid": "u-2", "value": "203.0.113.9"},
+                    ],
+                    "pagination": {"nextCursor": None},
+                }
+            )
+        return mock_response({"data": {"affected": 1}})
+
+    e2e_connector.client.session.request.side_effect = request
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.skipped is False
+    assert summary.confirmed_active == 0
+    assert calls_of(e2e_connector.client.session, "DELETE") == []
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert sorted((r["indicatorId"], r["status"]) for r in batch["reports"]) == sorted(
+        [(INDICATOR_ID, "removed"), (OTHER_ID, "removed")]
+    )
 
 
 def test_reconciliation_pushes_again_an_indicator_left_with_an_earlier_value(

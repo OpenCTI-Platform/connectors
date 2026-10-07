@@ -217,8 +217,9 @@ exist).
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the connector's scope (account
   and/or site) are read back with the Threat Intelligence IOCs API (1,000 per page, `cursor` pagination); IOCs
   whose `validUntil` is in the past are not live: they never confirm a deployment, and the ones of a withdrawn or
-  expired indicator are deleted. Deployments are matched by the IOC external id when it is the STIX id of the
-  indicator, by IOC `uuid`, then by value. A read-back error, a cursor repeated by the API, malformed pagination
+  expired indicator are deleted. Only the IOCs whose external id is the STIX id of an indicator (the ones the
+  connector creates) are read back, and deployments are matched by that id or by IOC `uuid`, never by value: an IOC
+  of the same value created by another source neither confirms a deployment nor blocks its withdrawal. A read-back error, a cursor repeated by the API, malformed pagination
   metadata or a malformed IOC (without a non-empty `uuid` or value, or with a `validUntil` that is not an ISO 8601
   date) skips the run: indicators are never reported `removed` from a
   partial listing.
@@ -232,8 +233,7 @@ exist).
   none is found, the indicator is reported `removed` all the same, which is how a deployment whose IOCs were deleted in
   SentinelOne is repaired without read-back. The connector logs this mode when it starts.
 - **Withdrawal safety**: only the IOCs whose external id is the STIX id of the indicator are deleted; an IOC of the same
-  value created by another source is left in place (the removal is not reported and OpenCTI flags the deployment
-  `expired` once the indicator expires).
+  value created by another source is left in place.
 - **Hits**: not reported. The Threat Intelligence IOCs API exposes no detection or match count for the uploaded IOCs.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
   the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by

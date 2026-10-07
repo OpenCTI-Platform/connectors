@@ -4,11 +4,11 @@ The `SentinelOneDeploymentAdapter` gives the connectors SDK reconciliation acces
 the SentinelOne Threat Intelligence IOCs:
 
 - read-back: the IOCs of the scope of the connector (account or site,
-  `threat-intelligence/iocs`, paginated with `cursor`), matched with the deployments
-  by their external id when it is the STIX id of the indicator, else by value; the
-  expired IOCs SentinelOne retains are listed inactive;
-- removal: deletion of the IOCs whose external id is the STIX id of the indicator
-  (IOCs created by other sources are left in place);
+  `threat-intelligence/iocs`, paginated with `cursor`) whose external id is the STIX
+  id of an indicator, the ones the connector creates, matched with the deployments
+  by that id or by their uuid, never by value (the IOCs of other sources are left
+  out); the expired IOCs SentinelOne retains are listed inactive;
+- removal: deletion of the IOCs whose external id is the STIX id of the indicator;
 - re-push: the stream create path.
 
 A scope naming a group cannot be listed (the listing is scoped by account and site
@@ -72,7 +72,13 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         self._connector = connector
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the IOCs of the scope of the connector.
+        """Read back the IOCs of the scope of the connector created from indicators.
+
+        The connector creates its IOCs from the STIX indicators, with their STIX id
+        as external id: the other IOCs of the scope come from other sources and are
+        not listed. Listed without an OpenCTI id, they would match a deployment by
+        value, confirm it while it is not deployed, or block its withdrawal (the
+        connector does not delete them).
 
         IOCs whose `validUntil` is in the past are retained by SentinelOne but no
         longer enforced: they are listed inactive, so that a withdrawal removes them
@@ -84,6 +90,11 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         """
         now = datetime.now(UTC)
         for ioc in self._connector.client.iter_iocs():
+            external_id = ioc.get("externalId")
+            if not isinstance(external_id, str) or not external_id.startswith(
+                STIX_INDICATOR_PREFIX
+            ):
+                continue
             uuid = ioc.get("uuid")
             value = ioc.get("value")
             if (
@@ -97,15 +108,8 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
                     "the read-back is incomplete"
                 )
             valid_until = _valid_until(ioc)
-            external_id = ioc.get("externalId")
-            opencti_id = (
-                external_id
-                if isinstance(external_id, str)
-                and external_id.startswith(STIX_INDICATOR_PREFIX)
-                else None
-            )
             yield VendorIndicator(
-                indicator_id=opencti_id,
+                indicator_id=external_id,
                 external_id=str(uuid),
                 value=value,
                 raw={"uuid": str(uuid), "externalId": external_id},
