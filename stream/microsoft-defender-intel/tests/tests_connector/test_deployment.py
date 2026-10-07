@@ -500,13 +500,13 @@ def keep_former_value(connector, value=FORMER_VALUE):
     """Leave a former value an earlier update could not delete in the state."""
     connector.helper.get_state.return_value = {
         "start_from": "1-0",
-        PENDING_WITHDRAWALS_STATE_KEY: {make_indicator()["id"]: [value]},
+        PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR_ID: [value]},
     }
 
 
 def kept_former_values(connector):
     state = connector.helper.get_state.return_value
-    return state.get(PENDING_WITHDRAWALS_STATE_KEY, {}).get(make_indicator()["id"], [])
+    return state.get(PENDING_WITHDRAWALS_STATE_KEY, {}).get(INDICATOR_ID, [])
 
 
 def test_update_deletes_the_former_values_an_earlier_update_left(connector):
@@ -1130,13 +1130,51 @@ def test_connector_works_without_write_back():
     connector.api._send_request.assert_called_once()
 
 
-def test_run_starts_the_write_back(connector):
+def retried_withdrawal(connector):
+    """Run the connector and return the withdrawal its retries call."""
+    connector.pending_withdrawals.start_retries = MagicMock()
     connector.run()
+    return connector.pending_withdrawals.start_retries.call_args.args[0]
+
+
+def test_run_starts_the_write_back(connector):
+    retried_withdrawal(connector)
 
     connector.assurance.start.assert_called_once_with()
     connector.helper.listen_stream.assert_called_once_with(
         message_callback=connector.process_message
     )
+
+
+def test_a_former_value_a_delete_left_is_deleted_by_the_retries(connector):
+    """A deleted indicator gets no later event: the periodic retries delete the
+    Defender indicators of the former value, found by the OpenCTI id they carry."""
+    keep_former_value(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [own("1"), own("77", opencti_id="another-indicator")]},
+        None,
+    ]
+    retry = retried_withdrawal(connector)
+
+    connector.pending_withdrawals.retry_all(retry)
+
+    assert [entry for entry in _sent(connector) if entry[0] == "delete"] == [
+        ("delete", "/1")
+    ]
+    assert kept_former_values(connector) == []
+
+
+def test_a_retry_waits_for_an_update_in_progress(connector):
+    """A retry never deletes a value an update in progress makes current again."""
+    pending = connector.pending_withdrawals
+    in_update = []
+    connector._apply_update_event = lambda data, context: in_update.append(
+        pending.lock._is_owned()
+    )
+
+    connector._handle_update_event(make_indicator())
+
+    assert in_update == [True]
 
 
 def test_describe_error():

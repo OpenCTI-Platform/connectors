@@ -94,7 +94,8 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
   edited, the former pattern is read from the update event: the Defender indicators of the values the indicator no
   longer holds are deleted once its new values are live (a failed update keeps them). A former value whose deletion
   fails, or that a failed update keeps, is kept in the connector state: the next update or delete of the indicator
-  deletes it first, unless the pattern holds it again. Reconciliation confirms
+  deletes it first, unless the pattern holds it again, and the connector retries the deletion every 5 minutes, also
+  once the indicator is deleted (its Defender indicators are found by the OpenCTI id they carry). Reconciliation confirms
   `active` only when every observable has its Defender indicator (a file by any of its hashes), and never for a STIX
   pattern holding no value Defender takes (its Defender indicators are left from an earlier pattern); otherwise the
   indicator is pushed again, or stays `failed` until a new push is requested.

@@ -220,9 +220,29 @@ class MicrosoftDefenderIntelConnector:
             if (value := self._observable_value(observable))
         ]
 
+    def _delete_former_value(
+        self, opencti_id: str, value: str, indicators: list[dict] | None = None
+    ) -> None:
+        """
+        Delete the Defender indicators of a former value of an OpenCTI indicator.
+        :param opencti_id: OpenCTI id of the indicator (`externalId` of its Defender indicators)
+        :param value: The former value
+        :param indicators: Its Defender indicators, when already read
+        :raise Exception: When Defender cannot be read or refuses a deletion
+        """
+        if indicators is None:
+            indicators = self._own_defender_indicators(value, opencti_id)
+        for indicator in indicators:
+            defender_id = str(indicator["id"])
+            self.api.delete_indicator(defender_id)
+            self.helper.connector_logger.info(
+                "[UPDATE] Indicator of a former value deleted",
+                {"defender_id": defender_id, "opencti_id": opencti_id},
+            )
+            self._delete_external_reference(defender_id)
+
     def _withdraw_former_values(
         self,
-        data: dict,
         opencti_id: str | None,
         found: dict[str, list[dict]] | None = None,
         current_values: frozenset | set = frozenset(),
@@ -230,41 +250,31 @@ class MicrosoftDefenderIntelConnector:
         """
         Delete the Defender indicators of the values an updated indicator no longer holds,
         once its current values are live, and those earlier updates left (see
-        `PendingWithdrawals`). A failure is logged and the values left are kept for the
-        next update or delete of the indicator: the current values are live, and the
-        former ones keep detecting until then or until their `expirationTime`.
-        :param data: OpenCTI indicator (stream event shape)
+        `PendingWithdrawals`, keyed by the OpenCTI id the Defender indicators carry).
+        A failure is logged and the values left are kept: the next update or delete of
+        the indicator, or a periodic retry, deletes them.
         :param opencti_id: OpenCTI id of the indicator
         :param found: The Defender indicators of the former values of the update
             being processed, per value
         :param current_values: Normalized values of the current pattern, never deleted
         :return: True when no former value is left
         """
+        if opencti_id is None:
+            return True
         found = dict(found or {})
 
         def withdraw(value: str) -> None:
-            if normalize_value(value) in current_values:
-                return
-            indicators = found.pop(value, None)
-            if indicators is None:
-                indicators = self._own_defender_indicators(value, opencti_id)
-            for indicator in indicators:
-                defender_id = str(indicator["id"])
-                self.api.delete_indicator(defender_id)
-                self.helper.connector_logger.info(
-                    "[UPDATE] Indicator of a former value deleted",
-                    {"defender_id": defender_id, "opencti_id": opencti_id},
-                )
-                self._delete_external_reference(defender_id)
+            if normalize_value(value) not in current_values:
+                self._delete_former_value(opencti_id, value, found.pop(value, None))
 
         try:
-            self.pending_withdrawals.withdraw(data.get("id"), withdraw, list(found))
+            self.pending_withdrawals.withdraw(opencti_id, withdraw, list(found))
         except Exception as err:
             self.helper.connector_logger.warning(
                 "[UPDATE] Cannot delete the Defender indicator of a former value",
                 meta={
                     "opencti_id": opencti_id,
-                    "values": self.pending_withdrawals.values(data.get("id")),
+                    "values": self.pending_withdrawals.values(opencti_id),
                     "error": describe_error(err),
                 },
             )
@@ -397,6 +407,17 @@ class MicrosoftDefenderIntelConnector:
     def _handle_update_event(self, data, context: dict | None = None):
         """
         Handle update event by trying to update the corresponding Threat Intelligence Indicator on Defender.
+        The update holds the lock of the kept former values from its upsert to their
+        deletion: a retry never deletes a value the update makes current again.
+        :param data: Streamed data (representing either an observable or an indicator)
+        :param context: Context of the update event (its reverse patch holds the former pattern)
+        """
+        with self.pending_withdrawals.lock:
+            self._apply_update_event(data, context)
+
+    def _apply_update_event(self, data, context: dict | None = None):
+        """
+        Update the Defender indicators of an indicator or an observable (see `_handle_update_event`).
         :param data: Streamed data (representing either an observable or an indicator)
         :param context: Context of the update event (its reverse patch holds the former pattern)
         """
@@ -459,17 +480,18 @@ class MicrosoftDefenderIntelConnector:
                 # the next update or delete of the indicator deletes them.
                 self._restore_defender_indicators(updated)
                 self._roll_back_defender_indicators(created_ids)
-                self.pending_withdrawals.keep(
-                    data.get("id"),
-                    [value for value, found in former_found.items() if found],
-                )
+                if opencti_id is not None:
+                    self.pending_withdrawals.keep(
+                        opencti_id,
+                        [value for value, found in former_found.items() if found],
+                    )
                 self._report_failed(data, err)
                 raise
-            left_by_earlier_updates = bool(
-                self.pending_withdrawals.values(data.get("id"))
+            left_by_earlier_updates = opencti_id is not None and bool(
+                self.pending_withdrawals.values(opencti_id)
             )
             former_deleted = self._withdraw_former_values(
-                data, opencti_id, former_found, current_values
+                opencti_id, former_found, current_values
             )
             if (
                 (former or left_by_earlier_updates)
@@ -546,7 +568,7 @@ class MicrosoftDefenderIntelConnector:
         did_delete = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if is_stix_indicator(data):
-            former_left = not self._withdraw_former_values(data, opencti_id)
+            former_left = not self._withdraw_former_values(opencti_id)
             observables = self._convert_indicator_to_observables(data) or []
             deleted_ids = []
             for observable in observables:
@@ -646,4 +668,7 @@ class MicrosoftDefenderIntelConnector:
         """
         if self.assurance is not None:
             self.assurance.start()
+        # Former values whose Defender indicators could not be deleted are retried,
+        # also once the indicator is deleted.
+        self.pending_withdrawals.start_retries(self._delete_former_value)
         self.helper.listen_stream(message_callback=self.process_message)
