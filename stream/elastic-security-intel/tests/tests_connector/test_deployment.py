@@ -264,6 +264,26 @@ class TestAdapter:
         assert listed.external_id == "doc-indicator--expired"
         assert listed.raw == {"stix": expired}
 
+    @pytest.mark.parametrize("valid_until", ["next week", 1893456000, {}])
+    def test_a_document_with_an_unreadable_valid_until_raises(
+        self, connector, valid_until
+    ):
+        """Read as no expiry, an expired document would confirm its deployment."""
+        source = document(stix_indicator())["_source"]
+        source["threat"] = {"indicator": {"valid_until": valid_until}}
+        connector.api = MagicMock()
+        connector.api.iter_connector_documents.return_value = [source]
+        with pytest.raises(ElasticDeploymentError, match="unreadable valid_until"):
+            list(ElasticDeploymentAdapter(connector).list_vendor_indicators())
+
+    def test_a_blank_valid_until_is_no_expiry(self, connector):
+        connector.api = MagicMock()
+        connector.api.iter_connector_documents.return_value = [
+            document(stix_indicator(), " ")["_source"],
+        ]
+        [listed] = ElasticDeploymentAdapter(connector).list_vendor_indicators()
+        assert listed.active is True
+
     def test_listing_errors_are_readable(self, connector):
         connector.api = MagicMock()
         connector.api.iter_connector_documents.side_effect = ElasticApiHandlerError(

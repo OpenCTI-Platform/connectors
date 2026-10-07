@@ -1257,6 +1257,48 @@ def test_adapter_read_back_rejects_an_indicator_without_id():
         list(MicrosoftDefenderDeploymentAdapter(connector).list_vendor_indicators())
 
 
+@pytest.mark.parametrize("expiration", ["next week", 1893456000, {}])
+def test_adapter_read_back_rejects_an_unreadable_expiration(expiration):
+    """Read as no expiry, an expired indicator would confirm its deployment."""
+    connector = build_connector()
+    connector.api.iter_application_indicators = MagicMock(
+        return_value=iter([{"id": 1, "expirationTime": expiration}])
+    )
+
+    with pytest.raises(DefenderDeploymentError, match="unreadable expirationTime"):
+        list(MicrosoftDefenderDeploymentAdapter(connector).list_vendor_indicators())
+
+
+def test_adapter_read_back_reads_a_blank_expiration_as_none():
+    connector = build_connector()
+    connector.api.iter_application_indicators = MagicMock(
+        return_value=iter([{"id": 1, "expirationTime": " "}])
+    )
+
+    (listed,) = MicrosoftDefenderDeploymentAdapter(connector).list_vendor_indicators()
+
+    assert listed.active is True
+
+
+def test_adapter_does_not_confirm_an_absence_on_an_unreadable_expiration():
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {
+                    "id": "9",
+                    "application": APPLICATION_NAME,
+                    "expirationTime": "next week",
+                }
+            ]
+        },
+    ]
+
+    with pytest.raises(DefenderDeploymentError, match="unreadable expirationTime"):
+        adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN))
+
+
 def test_adapter_read_back_errors_are_readable():
     connector = build_connector()
     connector.api.iter_application_indicators = MagicMock(

@@ -31,6 +31,7 @@ from connectors_sdk.connectors.stream.deployment import (
     extract_pattern_values,
     normalize_value,
     parse_datetime,
+    parse_expiry,
 )
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.errors import ConnectorClientError, ConnectorError
@@ -171,7 +172,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         :return: The vendor indicator (inactive when revoked or expired), or `None`
             when it is not an indicator.
         :raises SentinelDeploymentError: For an indicator without its STIX id (never
-            skipped: its deployment would look absent).
+            skipped: its deployment would look absent) or with an unreadable
+            `valid_until` (it would read as no expiry and confirm an expired one).
         """
         properties = ti_object.get("properties") or {}
         data = properties.get("data") or {}
@@ -182,7 +184,13 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             raise SentinelDeploymentError(
                 "A Microsoft Sentinel indicator of the read-back carries no STIX id"
             )
-        valid_until = parse_datetime(data.get("valid_until"))
+        try:
+            valid_until = parse_expiry(data.get("valid_until"))
+        except ValueError as err:
+            raise SentinelDeploymentError(
+                "A Microsoft Sentinel indicator of the read-back carries an "
+                "unreadable valid_until"
+            ) from err
         expired = valid_until is not None and valid_until <= now
         resource_id = ti_object.get("id")
         resource_name = ti_object.get("name")

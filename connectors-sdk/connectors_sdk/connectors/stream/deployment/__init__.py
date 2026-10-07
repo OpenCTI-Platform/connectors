@@ -59,6 +59,7 @@ from connectors_sdk.connectors.stream.deployment.utils import (
     is_stix_indicator,
     normalize_value,
     parse_datetime,
+    parse_expiry,
     pattern_observable_values,
     to_stream_indicator,
 )
@@ -97,6 +98,7 @@ __all__ = [
     "is_stix_indicator",
     "normalize_value",
     "parse_datetime",
+    "parse_expiry",
     "pattern_observable_values",
     "to_stream_indicator",
 ]

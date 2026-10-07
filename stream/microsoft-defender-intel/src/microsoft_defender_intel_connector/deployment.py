@@ -33,6 +33,7 @@ from connectors_sdk.connectors.stream.deployment import (
     extract_pattern_values,
     normalize_value,
     parse_datetime,
+    parse_expiry,
 )
 from microsoft_defender_intel_connector.api_handler import (
     APPLICATION_NAME,
@@ -138,8 +139,17 @@ def _is_not_found(error: DefenderApiHandlerError) -> bool:
 
 
 def _is_live(indicator: dict[str, Any], now: datetime) -> bool:
-    """Tell whether a Defender indicator has not expired yet (Defender keeps expired ones)."""
-    expiration = parse_datetime(indicator.get("expirationTime"))
+    """Tell whether a Defender indicator has not expired yet (Defender keeps expired ones).
+
+    :raises DefenderDeploymentError: On an unreadable `expirationTime`, which would
+        otherwise read as no expiry and confirm an expired indicator.
+    """
+    try:
+        expiration = parse_expiry(indicator.get("expirationTime"))
+    except ValueError as err:
+        raise DefenderDeploymentError(
+            "A Microsoft Defender indicator carries an unreadable expirationTime"
+        ) from err
     return expiration is None or expiration > now
 
 

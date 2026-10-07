@@ -830,6 +830,26 @@ def test_adapter_lists_an_indicator_at_its_valid_until_as_inactive() -> None:
     assert before.active is True
 
 
+@pytest.mark.parametrize("valid_until", ["next week", 1893456000, {}])
+def test_adapter_rejects_an_indicator_with_an_unreadable_valid_until(
+    valid_until,
+) -> None:
+    """Read as no expiry, an expired indicator would confirm its deployment."""
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    with pytest.raises(SentinelDeploymentError, match="unreadable valid_until"):
+        MicrosoftSentinelIntelDeploymentAdapter._to_vendor_indicator(
+            ti_object(valid_until=valid_until), now
+        )
+
+
+def test_adapter_reads_a_blank_valid_until_as_no_expiry() -> None:
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    listed = MicrosoftSentinelIntelDeploymentAdapter._to_vendor_indicator(
+        ti_object(valid_until=" "), now
+    )
+    assert listed.active is True
+
+
 def test_adapter_lists_live_indicators_of_the_source_system(
     adapter, adapter_connector
 ) -> None:

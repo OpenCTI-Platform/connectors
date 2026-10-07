@@ -20,6 +20,7 @@ from connectors_sdk.connectors.stream.deployment import (
     deployment_failure_reason,
     normalize_value,
     parse_datetime,
+    parse_expiry,
 )
 from crowdstrike_services import (
     IOC_SOURCE,
@@ -135,12 +136,22 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
 
     @staticmethod
     def _is_live(ioc: dict[str, Any], now: datetime) -> bool:
-        """Tell whether an IOC read back from CrowdStrike is live and ours."""
+        """Tell whether an IOC read back from CrowdStrike is live and ours.
+
+        Raises:
+            CrowdstrikeApiError: On an unreadable `expiration`, which would otherwise
+                read as no expiry and confirm an expired IOC.
+        """
         if not CrowdstrikeDeploymentAdapter._is_retained(ioc):
             return False
         if ioc.get("expired") is True:
             return False
-        expiration = parse_datetime(ioc.get("expiration"))
+        try:
+            expiration = parse_expiry(ioc.get("expiration"))
+        except ValueError as err:
+            raise CrowdstrikeApiError(
+                "An IOC of the read-back carries an unreadable expiration"
+            ) from err
         if expiration is not None and expiration <= now:
             return False
         withdrawn = TO_DELETE_TAG in (ioc.get("tags") or [])

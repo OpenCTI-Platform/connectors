@@ -705,6 +705,27 @@ def test_adapter_lists_the_iocs_of_the_connector(adapter_client):
     assert vendor_indicators[0].raw["source"] == IOC_SOURCE
 
 
+@pytest.mark.parametrize("expiration", ["next week", 1893456000, {}])
+def test_adapter_rejects_an_ioc_with_an_unreadable_expiration(
+    adapter_client, expiration
+):
+    """Read as no expiry, an expired IOC would confirm its deployment."""
+    adapter_client.iter_connector_iocs.return_value = iter(
+        [make_ioc(expiration=expiration)]
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match="unreadable expiration"):
+        list(make_adapter(adapter_client).list_vendor_indicators())
+
+
+def test_adapter_reads_a_blank_expiration_as_none(adapter_client):
+    adapter_client.iter_connector_iocs.return_value = iter([make_ioc(expiration="")])
+
+    (listed,) = make_adapter(adapter_client).list_vendor_indicators()
+
+    assert listed.active is True
+
+
 def test_adapter_read_back_rejects_an_ioc_without_id(adapter_client):
     """A skipped IOC would make its deployment look absent."""
     adapter_client.iter_connector_iocs.return_value = iter(

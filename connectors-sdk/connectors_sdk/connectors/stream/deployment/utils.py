@@ -268,6 +268,30 @@ def parse_datetime(value: datetime | str | None) -> datetime | None:
     return parsed
 
 
+def parse_expiry(value: Any) -> datetime | None:
+    """Parse the expiry a security platform lists for an indicator.
+
+    Unlike ``parse_datetime``, an unreadable value is an error: read as no expiry,
+    it would make an expired indicator confirm a deployment as active.
+
+    Args:
+        value: The expiry of the vendor indicator.
+
+    Returns:
+        The timezone-aware expiry, or ``None`` when the value is missing or blank
+        (no expiry).
+
+    Raises:
+        ValueError: When the value is present but not an ISO 8601 date.
+    """
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    parsed = parse_datetime(value) if isinstance(value, (str, datetime)) else None
+    if parsed is None:
+        raise ValueError(f"Unreadable expiry: {value!r}")
+    return parsed
+
+
 def format_datetime(value: datetime | str | None) -> str | None:
     """Format a date for the OpenCTI GraphQL API.
 

@@ -30,7 +30,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
-from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from connectors_sdk.connectors.stream.deployment import normalize_value, parse_expiry
 from sentinelone_connector.connector import STIX_INDICATOR_PREFIX, failure_reason
 from sentinelone_services import SentinelOneApiError
 
@@ -52,16 +52,13 @@ def _valid_until(ioc: dict[str, Any]) -> datetime | None:
     :raises SentinelOneDeploymentError: On a `validUntil` that is not an ISO 8601
         date, which would otherwise read as no expiry and confirm an expired IOC.
     """
-    raw = ioc.get("validUntil")
-    if raw is None or (isinstance(raw, str) and not raw.strip()):
-        return None
-    valid_until = parse_datetime(raw) if isinstance(raw, str) else None
-    if valid_until is None:
+    try:
+        return parse_expiry(ioc.get("validUntil"))
+    except ValueError as err:
         raise SentinelOneDeploymentError(
             "SentinelOne listed an IOC with an unreadable validUntil, "
             "the read-back is incomplete"
-        )
-    return valid_until
+        ) from err
 
 
 class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):

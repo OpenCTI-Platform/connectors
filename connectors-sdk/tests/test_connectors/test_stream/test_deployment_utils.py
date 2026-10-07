@@ -16,6 +16,7 @@ from connectors_sdk.connectors.stream.deployment.utils import (
     is_stix_indicator,
     normalize_value,
     parse_datetime,
+    parse_expiry,
     pattern_observable_values,
     to_stream_indicator,
 )
@@ -200,6 +201,27 @@ def test_parse_datetime_accepts_datetimes_and_iso_strings():
 def test_parse_datetime_returns_none_for_empty_or_invalid_values(value):
     """Empty or invalid values give ``None``."""
     assert parse_datetime(value) is None
+
+
+@pytest.mark.parametrize("value", [None, "", "  "])
+def test_parse_expiry_reads_a_missing_or_blank_value_as_no_expiry(value):
+    assert parse_expiry(value) is None
+
+
+def test_parse_expiry_reads_datetimes_and_iso_strings():
+    assert parse_expiry("2026-10-03T10:00:00.1234567Z") == datetime(
+        2026, 10, 3, 10, 0, 0, 123456, tzinfo=UTC
+    )
+    assert parse_expiry(datetime(2026, 10, 3, 10, 0)) == datetime(
+        2026, 10, 3, 10, 0, tzinfo=UTC
+    )
+
+
+@pytest.mark.parametrize("value", ["not a date", 1759485600, True, {"date": "x"}])
+def test_parse_expiry_refuses_an_unreadable_value(value):
+    """Read as no expiry, it would confirm an expired indicator as active."""
+    with pytest.raises(ValueError, match="Unreadable expiry"):
+        parse_expiry(value)
 
 
 def test_format_datetime():

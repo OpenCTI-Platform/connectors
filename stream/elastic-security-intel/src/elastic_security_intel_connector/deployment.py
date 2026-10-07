@@ -23,7 +23,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
-from connectors_sdk.connectors.stream.deployment import parse_datetime
+from connectors_sdk.connectors.stream.deployment import parse_expiry
 from elastic_security_intel_connector.api_handler import ElasticApiHandlerError
 from pycti import OpenCTIConnectorHelper
 
@@ -75,7 +75,8 @@ class ElasticDeploymentAdapter(DeploymentVendorAdapter):
         the reconciliation to delete them. They carry no OpenCTI id: they only match
         a known deployment by document id, and never confirm or backfill it as active.
 
-        :raises ElasticDeploymentError: On any Elasticsearch error (never a partial listing).
+        :raises ElasticDeploymentError: On any Elasticsearch error (never a partial
+            listing), or a document with an unreadable `valid_until`.
         """
         now = datetime.now(UTC)
         try:
@@ -88,11 +89,17 @@ class ElasticDeploymentAdapter(DeploymentVendorAdapter):
                     )
                 if stix.get("type") != "indicator":
                     continue
-                valid_until = parse_datetime(
-                    ((document.get("threat") or {}).get("indicator") or {}).get(
-                        "valid_until"
+                try:
+                    valid_until = parse_expiry(
+                        ((document.get("threat") or {}).get("indicator") or {}).get(
+                            "valid_until"
+                        )
                     )
-                )
+                except ValueError as err:
+                    # Read as no expiry, it would confirm an expired document.
+                    raise ElasticDeploymentError(
+                        "A document of the connector carries an unreadable valid_until"
+                    ) from err
                 expired = valid_until is not None and valid_until <= now
                 opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                     "id", stix
