@@ -2,6 +2,7 @@ import json
 from collections.abc import Callable
 
 from connectors_sdk import DeploymentAssurance
+from connectors_sdk.connectors.stream.deployment import PendingWithdrawals
 from crowdstrike_connector.deployment import failure_reason
 from crowdstrike_connector.settings import ConnectorSettings
 from crowdstrike_services import (
@@ -33,6 +34,7 @@ class CrowdstrikeConnector:
         self.helper = helper
         self.client = CrowdstrikeClient(config.crowdstrike, helper)
         self.assurance = assurance
+        self.pending_withdrawals = PendingWithdrawals(helper)
         self.metrics_enabled = config.metrics.enable
         self.metrics = None
         if self.metrics_enabled:
@@ -91,17 +93,52 @@ class CrowdstrikeConnector:
                 )
         return result
 
+    def _withdraw_former_values(
+        self, data: dict, values: list[str] | None = None
+    ) -> Exception | None:
+        """
+        Withdraw the former IOC values of an indicator: those of the update being
+        processed and those earlier updates could not withdraw, kept in the
+        connector state (see `PendingWithdrawals`). A refusal is logged and the
+        values left are kept for the next update or delete of the indicator
+        :param data: Indicator of the stream event
+        :param values: Former IOC values of the update being processed
+        :return: The error of a refused withdrawal, None when no former value is left
+        """
+        indicator_id = data.get("id")
+        try:
+            self.pending_withdrawals.withdraw(
+                indicator_id, self.client.withdraw_value, values or []
+            )
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "IOC of a former pattern not withdrawn from Crowdstrike",
+                meta={
+                    "indicator_id": indicator_id,
+                    "ioc_values": self.pending_withdrawals.values(indicator_id),
+                    "error": str(err),
+                },
+            )
+            return err
+        return None
+
     def _delete(self, data: dict) -> IocOperationResult:
         """
-        Delete an IOC permanently and report `removed` once it is gone
-        (deleted, or already absent from CrowdStrike)
+        Delete an IOC permanently and report `removed` once it is gone (deleted, or
+        already absent from CrowdStrike) and no IOC of a former pattern is left
         :param data: Indicator of the stream event
         :return: Outcome of the operation
         """
+        former_left = self._withdraw_former_values(data) is not None
         result = self.client.delete_indicator(data)
-        if self.assurance is not None and result.status in (
-            IocOperationStatus.DELETED,
-            IocOperationStatus.ABSENT,
+        if (
+            self.assurance is not None
+            and not former_left
+            and result.status
+            in (
+                IocOperationStatus.DELETED,
+                IocOperationStatus.ABSENT,
+            )
         ):
             self.assurance.report_removed(data, external_id=result.ioc_id)
         elif result.status == IocOperationStatus.FAILED:
@@ -129,30 +166,28 @@ class CrowdstrikeConnector:
                 return former if former and former.lower() != current.lower() else None
         return None
 
-    def _replace(self, data: dict, former_value: str) -> None:
+    def _update(self, data: dict, former_value: str | None) -> None:
         """
-        Apply an update that changes the IOC value of an indicator and report it
-        IOCs are looked up by value, so the IOC of the former value would stay live:
-        it is withdrawn first (as by the reconciliation), then the IOC of the
-        current value is created and reported as for a create. A failed withdrawal
-        is reported `failed` and the current value is not pushed; a current value
-        CrowdStrike does not take is reported `removed`
+        Apply an update event and report it
+        IOCs are looked up by value: when the update changes the IOC value, the IOC
+        of the former value would stay live. It is withdrawn first (as by the
+        reconciliation), with the former values earlier updates could not withdraw,
+        then the IOC of the current value is created and reported as for a create.
+        A refused withdrawal is reported `failed` and the current value is not
+        pushed; a current value CrowdStrike does not take is reported `removed`
         :param data: Indicator of the stream event, after the update
-        :param former_value: IOC value of the pattern the update replaced
+        :param former_value: IOC value of the pattern the update replaced, None when
+            the update kept the value
         """
-        try:
-            self.client.withdraw_value(former_value)
-        except Exception as err:
-            self.helper.connector_logger.warning(
-                "[UPDATE] IOC of the former pattern not withdrawn from Crowdstrike",
-                meta={
-                    "indicator_id": data.get("id"),
-                    "ioc_value": former_value,
-                    "error": str(err),
-                },
-            )
+        error = self._withdraw_former_values(
+            data, [former_value] if former_value else []
+        )
+        if error is not None:
             if self.assurance is not None:
-                self.assurance.report_push_failed(data, failure_reason(err))
+                self.assurance.report_push_failed(data, failure_reason(error))
+            return
+        if former_value is None:
+            self._push(data, lambda: self.client.update_indicator(data))
             return
         result = self._push(data, lambda: self.client.create_indicator(data, "create"))
         if result.status == IocOperationStatus.SKIPPED and self.assurance is not None:
@@ -186,11 +221,7 @@ class CrowdstrikeConnector:
             # Handle update
             if msg.event == "update":
                 self.handle_logger_info("[UPDATE]", data)
-                former_value = self._former_value(data, message.get("context"))
-                if former_value is None:
-                    self._push(data, lambda: self.client.update_indicator(data))
-                else:
-                    self._replace(data, former_value)
+                self._update(data, self._former_value(data, message.get("context")))
 
             # Handle delete
             if msg.event == "delete":
@@ -201,6 +232,7 @@ class CrowdstrikeConnector:
                     # The IOC is only tagged TO_DELETE and keeps detecting: no
                     # removal is reported (the reconciliation keeps it active)
                     self.handle_logger_info("[DELETE ON OPENCTI ONLY]", data)
+                    self._withdraw_former_values(data)
                     self.client.update_indicator(data, msg.event)
 
     def run(self) -> None:

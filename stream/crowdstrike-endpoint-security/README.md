@@ -194,8 +194,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
 | IOC rejected by CrowdStrike               | `failed`, with a short reason such as "CrowdStrike refused the IOC push: invalid request" or "CrowdStrike could not be reached for the IOC push" (the CrowdStrike error and HTTP status are written to the connector log) |
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
-| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn; `failed` when CrowdStrike refuses the withdrawal (the new value is then not pushed), `removed` when CrowdStrike does not take the new value |
-| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value is deleted (or none is left)                 |
+| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn; `failed` when CrowdStrike refuses the withdrawal (the new value is then not pushed, and the former value is kept in the connector state until a later update or delete of the indicator withdraws it), `removed` when CrowdStrike does not take the new value |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value, and of any former value kept by a refused withdrawal, is deleted (or none is left) |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
 | Reconciliation, IOC present               | `active`                                                                                             |
 | Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |

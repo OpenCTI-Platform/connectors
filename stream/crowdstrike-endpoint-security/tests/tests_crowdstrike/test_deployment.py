@@ -14,6 +14,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
+from connectors_sdk.connectors.stream.deployment import PENDING_WITHDRAWALS_STATE_KEY
 from crowdstrike_connector import ConnectorSettings, CrowdstrikeConnector
 from crowdstrike_connector.deployment import (
     CrowdstrikeDeploymentAdapter,
@@ -331,7 +332,9 @@ def test_pattern_change_deletes_the_former_ioc_with_permanent_delete(
     ],
 )
 def test_pattern_change_whose_former_ioc_is_not_withdrawn_is_failed(connector, listing):
-    """The current value is not pushed: the former IOC would stay live with it."""
+    """The current value is not pushed: the former IOC would stay live with it. The
+    former value is kept in the connector state for the next update or delete."""
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
     connector.client.cs.indicator_combined.return_value = listing
     indicator = make_indicator()
 
@@ -344,13 +347,107 @@ def test_pattern_change_whose_former_ioc_is_not_withdrawn_is_failed(connector, l
     )
     connector.assurance.report_pushed.assert_not_called()
     connector.helper.connector_logger.warning.assert_any_call(
-        "[UPDATE] IOC of the former pattern not withdrawn from Crowdstrike",
+        "IOC of a former pattern not withdrawn from Crowdstrike",
         meta={
             "indicator_id": INDICATOR_STIX_ID,
-            "ioc_value": "203.0.113.9",
+            "ioc_values": ["203.0.113.9"],
             "error": ANY,
         },
     )
+    assert connector.helper.get_state.return_value == {
+        "start_from": "1-0",
+        PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR_STIX_ID: ["203.0.113.9"]},
+    }
+
+
+def keep_former_value(connector, value="203.0.113.9"):
+    """Leave a former value an earlier update could not withdraw in the state."""
+    connector.helper.get_state.return_value = {
+        "start_from": "1-0",
+        PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR_STIX_ID: [value]},
+    }
+
+
+def kept_former_values(connector):
+    state = connector.helper.get_state.return_value
+    return state[PENDING_WITHDRAWALS_STATE_KEY].get(INDICATOR_STIX_ID, [])
+
+
+def test_delete_after_a_refused_withdrawal_withdraws_the_former_ioc_first(
+    permanent_connector,
+):
+    """The delete carries the current pattern only: the kept former value is
+    withdrawn before the indicator is reported removed."""
+    cs = permanent_connector.client.cs
+    keep_former_value(permanent_connector)
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_delete.return_value = api_response(200)
+    cs.indicator_search.return_value = api_response(resources=[])
+    indicator = make_indicator()
+
+    permanent_connector._process_message(make_message("delete", indicator))
+
+    cs.indicator_delete.assert_called_once_with(ids=["old-ioc"])
+    permanent_connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=None
+    )
+    assert kept_former_values(permanent_connector) == []
+
+
+def test_delete_whose_former_ioc_is_still_refused_is_not_reported_removed(
+    permanent_connector,
+):
+    cs = permanent_connector.client.cs
+    keep_former_value(permanent_connector)
+    cs.indicator_combined.return_value = api_response(
+        500, errors=[{"message": "Internal error"}]
+    )
+    cs.indicator_search.return_value = api_response(resources=[IOC_ID])
+    cs.indicator_delete.return_value = api_response(200)
+
+    permanent_connector._process_message(make_message("delete", make_indicator()))
+
+    cs.indicator_delete.assert_called_once_with(IOC_ID)
+    permanent_connector.assurance.report_removed.assert_not_called()
+    assert kept_former_values(permanent_connector) == ["203.0.113.9"]
+
+
+def test_update_withdraws_the_former_iocs_an_earlier_update_left(connector):
+    cs = connector.client.cs
+    keep_former_value(connector)
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_search.return_value = api_response(resources=[IOC_ID])
+    cs.indicator_update.return_value = api_response(200)
+    indicator = make_indicator()
+
+    connector._process_message(make_message("update", indicator))
+
+    deactivated = cs.indicator_update.call_args_list[0].kwargs["body"]
+    assert deactivated["indicators"][0]["id"] == "old-ioc"
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+    assert kept_former_values(connector) == []
+
+
+def test_delete_without_permanent_delete_withdraws_the_kept_former_iocs(connector):
+    cs = connector.client.cs
+    keep_former_value(connector)
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_search.return_value = api_response(resources=[])
+    cs.indicator_update.return_value = api_response(200)
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    cs.indicator_combined.assert_called_once()
+    connector.assurance.report_removed.assert_not_called()
+    assert kept_former_values(connector) == []
 
 
 def test_pattern_change_to_a_value_crowdstrike_does_not_take_is_removed(connector):
