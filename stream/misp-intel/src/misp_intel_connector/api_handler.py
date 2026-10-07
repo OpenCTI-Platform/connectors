@@ -245,12 +245,19 @@ class MispApiHandler:
             )
             raise MispApiHandlerError(f"Event creation failed: {str(e)}")
 
-    def update_event(self, event_uuid: str, event_data: Dict) -> Optional[Dict]:
+    def update_event(
+        self,
+        event_uuid: str,
+        event_data: Dict,
+        tags_to_remove: Optional[List[str]] = None,
+    ) -> Optional[Dict]:
         """
         Update an existing MISP event
 
         :param event_uuid: UUID of the event to update
         :param event_data: Updated event data
+        :param tags_to_remove: Event tags of the markings/report types removed
+            from the container. A tag still present in event_data is kept.
         :return: Updated event data or None
         """
         try:
@@ -299,12 +306,28 @@ class MispApiHandler:
             existing_event.attributes = []
             existing_event.objects = []
 
+            new_tag_names = _tag_names(event_data.get("Tag"))
+
+            # Remove the tags of markings/report types removed from the container
+            stale_tag_names = set(tags_to_remove or []) - set(new_tag_names)
+            for tag in list(existing_event.tags):
+                tag_name = getattr(tag, "name", None)
+                if tag_name not in stale_tag_names:
+                    continue
+                try:
+                    self.misp.untag(existing_event.uuid, tag_name)
+                    existing_event.tags.remove(tag)
+                except Exception as e:
+                    self.helper.connector_logger.warning(
+                        f"Failed to remove MISP event tag: {str(e)}",
+                        {"event_uuid": event_uuid, "tag": tag_name},
+                    )
+
             # Add new tags (keeping existing ones)
-            if "Tag" in event_data:
-                existing_tags = set(_tag_names(existing_event.tags))
-                for tag_name in _tag_names(event_data["Tag"]):
-                    if tag_name not in existing_tags:
-                        existing_event.add_tag(tag_name)
+            existing_tags = set(_tag_names(existing_event.tags))
+            for tag_name in new_tag_names:
+                if tag_name not in existing_tags:
+                    existing_event.add_tag(tag_name)
 
             # Add new attributes
             if "Attribute" in event_data:
