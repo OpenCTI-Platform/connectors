@@ -45,6 +45,16 @@ PLATFORM_NAME = "CrowdStrike"
 PUSH_ACTION = "IOC push"
 """What CrowdStrike is asked to do when an indicator is created or updated."""
 
+SHARED_VALUE_LOOKUP_REASON = (
+    "The connector could not read the other OpenCTI indicators of the former IOC value"
+)
+"""Reason OpenCTI shows when the former IOC value of an updated indicator cannot be
+checked."""
+
+
+class SharedValueLookupError(Exception):
+    """The OpenCTI indicators pushing an IOC value cannot be read."""
+
 
 def failure_reason(failure: IocOperationResult | BaseException) -> str:
     """Return the reason OpenCTI shows for an indicator CrowdStrike did not take.
@@ -60,6 +70,8 @@ def failure_reason(failure: IocOperationResult | BaseException) -> str:
         return deployment_failure_reason(
             PLATFORM_NAME, PUSH_ACTION, failure.status_code
         )
+    if isinstance(failure, SharedValueLookupError):
+        return SHARED_VALUE_LOOKUP_REASON
     if isinstance(failure, OSError):
         # Transport errors (connection, timeout) are OSErrors.
         return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION)

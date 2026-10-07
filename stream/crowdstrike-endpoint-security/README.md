@@ -149,7 +149,7 @@ graph LR
 | Event Type | Action                                                        |
 |------------|---------------------------------------------------------------|
 | create     | Creates IOC in CrowdStrike (or updates if exists with soft delete) |
-| update     | Updates IOC in CrowdStrike; when the pattern changes the IOC value, the IOC of the former value is withdrawn (deleted, or deactivated without permanent delete) and the IOC of the new value is created |
+| update     | Updates IOC in CrowdStrike; when the pattern changes the IOC value, the IOC of the former value is withdrawn (deleted, or deactivated without permanent delete) unless another valid OpenCTI indicator pushes that value, and the IOC of the new value is created |
 | delete     | Permanently deletes or marks as `TO_DELETE` based on configuration |
 
 ### Entity Mapping
@@ -194,8 +194,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
 | IOC rejected by CrowdStrike               | `failed`, with a short reason such as "CrowdStrike refused the IOC push: invalid request" or "CrowdStrike could not be reached for the IOC push" (the CrowdStrike error and HTTP status are written to the connector log) |
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
-| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn; `failed` when CrowdStrike refuses the withdrawal (the new value is then not pushed, and the former value is kept in the connector state: a later update or delete of the indicator withdraws it, and so does the retry the connector runs every 5 minutes, also once the indicator is deleted), `removed` when CrowdStrike does not take the new value |
-| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value, and of any former value kept by a refused withdrawal, is deleted (or none is left) |
+| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn (it is kept when another valid OpenCTI indicator pushes the value); `failed` when CrowdStrike refuses the withdrawal or the other indicators of the former value cannot be read (the new value is then not pushed, and the former value is kept in the connector state: a later update or delete of the indicator withdraws it, and so does the retry the connector runs every 5 minutes, also once the indicator is deleted), `removed` when CrowdStrike does not take the new value |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value, and of any former value kept by a refused withdrawal, is deleted (or none is left); the IOC of a value another valid OpenCTI indicator (neither revoked nor expired) pushes is kept, and the indicator is reported `removed` all the same; nothing when the other indicators cannot be read |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting (a refused tagging is logged) |
 | Reconciliation, IOC present               | `active`                                                                                             |
 | Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |

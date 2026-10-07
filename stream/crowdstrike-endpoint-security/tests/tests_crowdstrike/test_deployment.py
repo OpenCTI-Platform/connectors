@@ -17,6 +17,7 @@ from connectors_sdk import (
 from connectors_sdk.connectors.stream.deployment import PENDING_WITHDRAWALS_STATE_KEY
 from crowdstrike_connector import ConnectorSettings, CrowdstrikeConnector
 from crowdstrike_connector.deployment import (
+    SHARED_VALUE_LOOKUP_REASON,
     CrowdstrikeDeploymentAdapter,
     build_deployment_assurance,
 )
@@ -361,6 +362,85 @@ def test_pattern_change_whose_former_ioc_is_not_withdrawn_is_failed(connector, l
     }
 
 
+def other_indicator(pattern="[ipv4-addr:value = '203.0.113.9']", **fields):
+    """An OpenCTI indicator as listed by the shared-value lookup."""
+    return {"id": OTHER_ID, "pattern_type": "stix", "pattern": pattern, **fields}
+
+
+def test_pattern_change_keeps_a_former_ioc_another_indicator_pushes(connector):
+    """CrowdStrike holds one IOC per value: withdrawing it would take the other
+    indicator offline."""
+    cs = connector.client.cs
+    connector.helper.api.indicator.list.return_value = [other_indicator()]
+    cs.indicator_search.return_value = api_response(resources=[])
+    cs.indicator_create.return_value = api_response(201, resources=[{"id": IOC_ID}])
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, pattern_change()))
+
+    filters = connector.helper.api.indicator.list.call_args.kwargs["filters"]
+    assert filters["filters"] == [
+        {
+            "key": "pattern",
+            "values": ["'203.0.113.9'"],
+            "operator": "contains",
+            "mode": "or",
+        },
+        {"key": "revoked", "values": ["false"]},
+    ]
+    cs.indicator_combined.assert_not_called()
+    cs.indicator_update.assert_not_called()
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+
+
+@pytest.mark.parametrize(
+    "other",
+    [
+        other_indicator(valid_until="2020-01-01T00:00:00Z"),
+        other_indicator(
+            "[ipv4-addr:value = '198.51.100.1'] OR [ipv4-addr:value = '203.0.113.9']"
+        ),
+        other_indicator("alert ip any any -> 203.0.113.9 any", pattern_type="snort"),
+        other_indicator("'203.0.113.9'"),
+        other_indicator(None),
+    ],
+    ids=["expired", "not-first-value", "not-stix", "malformed", "no-pattern"],
+)
+def test_pattern_change_withdraws_a_former_ioc_no_valid_indicator_pushes(
+    connector, other
+):
+    cs = connector.client.cs
+    connector.helper.api.indicator.list.return_value = [other]
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_update.return_value = api_response(200)
+    cs.indicator_search.return_value = api_response(resources=[])
+    cs.indicator_create.return_value = api_response(201, resources=[{"id": IOC_ID}])
+
+    connector._process_message(make_update_message(make_indicator(), pattern_change()))
+
+    (deactivation,) = cs.indicator_update.call_args_list
+    assert deactivation.kwargs["body"]["indicators"][0]["id"] == "old-ioc"
+
+
+def test_pattern_change_whose_former_value_cannot_be_checked_is_failed(connector):
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, pattern_change()))
+
+    connector.client.cs.indicator_combined.assert_not_called()
+    connector.client.cs.indicator_create.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, SHARED_VALUE_LOOKUP_REASON
+    )
+    assert kept_former_values(connector) == ["203.0.113.9"]
+
+
 def keep_former_value(connector, value="203.0.113.9"):
     """Leave a former value an earlier update could not withdraw in the state."""
     connector.helper.get_state.return_value = {
@@ -635,6 +715,43 @@ def test_ioc_left_by_a_failed_delete_is_not_reported_removed(permanent_connector
     )
 
 
+def test_delete_keeps_the_ioc_another_indicator_pushes(permanent_connector):
+    """The other indicator keeps its IOC, in whatever case it writes the hash; the
+    deleted indicator is no longer deployed."""
+    sha256 = "a" * 64
+    permanent_connector.helper.api.indicator.list.return_value = [
+        other_indicator(f"[file:hashes.'SHA-256' = '{sha256.upper()}']")
+    ]
+    indicator = make_indicator(pattern=f"[file:hashes.'SHA-256' = '{sha256}']")
+
+    permanent_connector._process_message(make_message("delete", indicator))
+
+    filters = permanent_connector.helper.api.indicator.list.call_args.kwargs["filters"]
+    assert filters["filters"][0]["values"] == [f"'{sha256}'", f"'{sha256.upper()}'"]
+    permanent_connector.client.cs.indicator_search.assert_not_called()
+    permanent_connector.client.cs.indicator_delete.assert_not_called()
+    permanent_connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_delete_whose_value_cannot_be_checked_deletes_and_reports_nothing(
+    permanent_connector,
+):
+    permanent_connector.helper.api.indicator.list.side_effect = RuntimeError(
+        "OpenCTI down"
+    )
+
+    permanent_connector._process_message(make_message("delete", make_indicator()))
+
+    permanent_connector.client.cs.indicator_delete.assert_not_called()
+    permanent_connector.assurance.report_removed.assert_not_called()
+    permanent_connector.helper.connector_logger.warning.assert_called_once_with(
+        "[DELETE] IOC not deleted from Crowdstrike",
+        meta={
+            "error": "Cannot read the OpenCTI indicators of the IOC value: OpenCTI down"
+        },
+    )
+
+
 def test_soft_delete_keeps_the_ioc_detecting_and_reports_nothing(connector):
     connector.client.cs.indicator_search.return_value = api_response(resources=[IOC_ID])
     connector.client.cs.indicator_update.return_value = api_response(200)
@@ -712,6 +829,18 @@ def test_a_former_ioc_a_delete_left_is_withdrawn_by_the_retries(permanent_connec
     permanent_connector.pending_withdrawals.retry_all(retry)
 
     cs.indicator_delete.assert_called_once_with(ids=["old-ioc"])
+    assert kept_former_values(permanent_connector) == []
+
+
+def test_a_retried_former_ioc_another_indicator_pushes_is_kept(permanent_connector):
+    keep_former_value(permanent_connector)
+    permanent_connector.helper.api.indicator.list.return_value = [other_indicator()]
+    retry = retried_withdrawal(permanent_connector)
+
+    permanent_connector.pending_withdrawals.retry_all(retry)
+
+    permanent_connector.client.cs.indicator_combined.assert_not_called()
+    permanent_connector.client.cs.indicator_delete.assert_not_called()
     assert kept_former_values(permanent_connector) == []
 
 

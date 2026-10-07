@@ -1,9 +1,13 @@
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 
 from connectors_sdk import DeploymentAssurance
-from connectors_sdk.connectors.stream.deployment import PendingWithdrawals
-from crowdstrike_connector.deployment import failure_reason
+from connectors_sdk.connectors.stream.deployment import (
+    PendingWithdrawals,
+    parse_datetime,
+)
+from crowdstrike_connector.deployment import SharedValueLookupError, failure_reason
 from crowdstrike_connector.settings import ConnectorSettings
 from crowdstrike_services import (
     CrowdstrikeClient,
@@ -93,14 +97,79 @@ class CrowdstrikeConnector:
                 )
         return result
 
+    def _value_pushed_by_a_valid_indicator(self, ioc_value: str) -> bool:
+        """
+        Tell whether a valid OpenCTI indicator (neither revoked nor expired) pushes
+        an IOC value, i.e. holds it as the first value of its STIX pattern.
+        CrowdStrike holds one IOC per value, shared by every indicator of the value:
+        withdrawing it would take that indicator offline as well
+        :param ioc_value: IOC value in string
+        :return: True when a valid indicator pushes the value
+        :raise SharedValueLookupError: When OpenCTI cannot be queried
+        """
+        # Hashes are written in either case in the patterns of other indicators.
+        spellings = dict.fromkeys((ioc_value, ioc_value.lower(), ioc_value.upper()))
+        try:
+            indicators = self.helper.api.indicator.list(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "pattern",
+                            "values": [f"'{spelling}'" for spelling in spellings],
+                            "operator": "contains",
+                            "mode": "or",
+                        },
+                        {"key": "revoked", "values": ["false"]},
+                    ],
+                    "filterGroups": [],
+                },
+                getAll=True,
+            )
+        except Exception as err:
+            raise SharedValueLookupError(
+                f"Cannot read the OpenCTI indicators of the IOC value: {err}"
+            ) from err
+        now = datetime.now(UTC)
+        for indicator in indicators or []:
+            if indicator.get("pattern_type", "stix") != "stix":
+                continue
+            valid_until = parse_datetime(indicator.get("valid_until"))
+            if valid_until is not None and valid_until <= now:
+                continue
+            try:
+                pushed = self.client._extract_indicator_value(indicator["pattern"])
+            except (AttributeError, IndexError, KeyError, TypeError):
+                continue
+            if pushed.lower() == ioc_value.lower():
+                return True
+        return False
+
+    def _withdraw_former_value(self, ioc_value: str) -> None:
+        """
+        Withdraw the IOC of a former value, unless a valid OpenCTI indicator still
+        pushes the value
+        :param ioc_value: IOC value in string
+        :raise SharedValueLookupError: When OpenCTI cannot be queried
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the withdrawal
+        """
+        if self._value_pushed_by_a_valid_indicator(ioc_value):
+            self.helper.connector_logger.info(
+                "IOC of a former value kept in Crowdstrike for other OpenCTI indicators",
+                {"ioc_value": ioc_value},
+            )
+            return
+        self.client.withdraw_value(ioc_value)
+
     def _withdraw_former_values(
         self, data: dict, values: list[str] | None = None
     ) -> Exception | None:
         """
         Withdraw the former IOC values of an indicator: those of the update being
         processed and those earlier updates could not withdraw, kept in the
-        connector state (see `PendingWithdrawals`). A refusal is logged and the
-        values left are kept for the next update or delete of the indicator
+        connector state (see `PendingWithdrawals`). A refusal, or a value whose
+        other OpenCTI indicators cannot be read, is logged and the values left are
+        kept for the next update or delete of the indicator and the retries
         :param data: Indicator of the stream event
         :param values: Former IOC values of the update being processed
         :return: The error of a refused withdrawal, None when no former value is left
@@ -108,7 +177,7 @@ class CrowdstrikeConnector:
         indicator_id = data.get("id")
         try:
             self.pending_withdrawals.withdraw(
-                indicator_id, self.client.withdraw_value, values or []
+                indicator_id, self._withdraw_former_value, values or []
             )
         except Exception as err:
             self.helper.connector_logger.warning(
@@ -125,11 +194,32 @@ class CrowdstrikeConnector:
     def _delete(self, data: dict) -> IocOperationResult:
         """
         Delete an IOC permanently and report `removed` once it is gone (deleted, or
-        already absent from CrowdStrike) and no IOC of a former pattern is left
+        already absent from CrowdStrike) and no IOC of a former pattern is left.
+        The IOC another valid OpenCTI indicator still pushes is kept, and the
+        deleted indicator is reported `removed` all the same; when the other
+        indicators cannot be read, nothing is deleted nor reported
         :param data: Indicator of the stream event
         :return: Outcome of the operation
         """
         former_left = self._withdraw_former_values(data) is not None
+        try:
+            shared = self._value_pushed_by_a_valid_indicator(
+                self.client._extract_indicator_value(data["pattern"])
+            )
+        except SharedValueLookupError as err:
+            self.helper.connector_logger.warning(
+                "[DELETE] IOC not deleted from Crowdstrike",
+                meta={"error": str(err)},
+            )
+            return IocOperationResult(IocOperationStatus.FAILED, error=str(err))
+        if shared:
+            self.helper.connector_logger.info(
+                "[DELETE] IOC kept in Crowdstrike for other OpenCTI indicators",
+                {"indicator_id": data.get("id")},
+            )
+            if self.assurance is not None and not former_left:
+                self.assurance.report_removed(data)
+            return IocOperationResult(IocOperationStatus.SKIPPED)
         result = self.client.delete_indicator(data)
         if (
             self.assurance is not None
@@ -268,7 +358,7 @@ class CrowdstrikeConnector:
         # Retry the withdrawals of former IOC values CrowdStrike refused, also after
         # the indicator is deleted
         self.pending_withdrawals.start_retries(
-            lambda _indicator_id, ioc_value: self.client.withdraw_value(ioc_value)
+            lambda _indicator_id, ioc_value: self._withdraw_former_value(ioc_value)
         )
 
         # Start listening to the stream
