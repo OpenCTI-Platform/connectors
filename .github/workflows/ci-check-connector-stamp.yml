@@ -3,43 +3,15 @@ name: Connector Image Stamp
 # Every image must carry .connector_version.json (version and catalog slug) where
 # pycti reads it at registration: the platform identifies the connector with it.
 
+# No path filter: GitHub matches one against the first 300 changed files only,
+# and any file of a connector can change its image or its start command.
 on:
   push:
     branches:
       - master
       - 'release/*'
       - 'lts/*'
-    paths:
-      # Every file of a connector can change the image or its start command.
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'templates/**'
-      - 'Dockerfile_ubi9'
-      - 'Dockerfile_ubi9.dockerignore'
-      - '.github/ubi9-connectors.json'
-      - '.github/actions/build-connector-image/**'
-      - '.github/scripts/check_connector_stamp.py'
-      - '.github/scripts/tests/test_check_connector_stamp.py'
-      - '.github/workflows/ci-check-connector-stamp.yml'
   pull_request:
-    paths:
-      # Every file of a connector can change the image or its start command.
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'templates/**'
-      - 'Dockerfile_ubi9'
-      - 'Dockerfile_ubi9.dockerignore'
-      - '.github/ubi9-connectors.json'
-      - '.github/actions/build-connector-image/**'
-      - '.github/scripts/check_connector_stamp.py'
-      - '.github/scripts/tests/test_check_connector_stamp.py'
-      - '.github/workflows/ci-check-connector-stamp.yml'
   merge_group:
     branches:
       - master
