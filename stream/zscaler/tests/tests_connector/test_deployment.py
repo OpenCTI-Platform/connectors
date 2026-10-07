@@ -13,7 +13,10 @@ from connectors_sdk import (
     DeploymentReconciler,
     IndicatorDeployment,
 )
-from connectors_sdk.connectors.stream.deployment import VendorIndicator
+from connectors_sdk.connectors.stream.deployment import (
+    PENDING_WITHDRAWALS_STATE_KEY,
+    VendorIndicator,
+)
 from pycti import OpenCTIConnectorHelper
 from requests.cookies import RequestsCookieJar
 from stream_connector import ZscalerConnector
@@ -714,7 +717,9 @@ def test_updated_pattern_keeps_a_former_domain_another_indicator_blocks(connecto
 def test_updated_pattern_whose_former_domain_cannot_be_removed_is_failed(
     connector, put_status, lookup_error, reason
 ):
-    """The new domain is not added: the update is applied by a new push."""
+    """The new domain is not added: the update is applied by a new push. The former
+    domain is kept in the connector state for the next update or delete."""
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
     zscaler = FakeZscaler(urls=["former.example"], put_status=put_status).install(
         connector
     )
@@ -729,8 +734,69 @@ def test_updated_pattern_whose_former_domain_cannot_be_removed_is_failed(
     connector.assurance.report_pushed.assert_not_called()
     connector.helper.connector_logger.warning.assert_any_call(
         "Former domain of an updated indicator not removed from the blacklist",
-        {"domain": "former.example", "error": ANY},
+        {"domains": ["former.example"], "error": ANY},
     )
+    assert kept_former_domains(connector) == ["former.example"]
+
+
+def keep_former_domain(connector, domain="former.example"):
+    """Leave a former domain an earlier update could not remove in the state."""
+    connector.helper.get_state.return_value = {
+        "start_from": "1-0",
+        PENDING_WITHDRAWALS_STATE_KEY: {make_indicator()["id"]: [domain]},
+    }
+
+
+def kept_former_domains(connector):
+    state = connector.helper.get_state.return_value
+    return state[PENDING_WITHDRAWALS_STATE_KEY].get(make_indicator()["id"], [])
+
+
+def test_delete_after_a_refused_removal_removes_the_former_domain_first(connector):
+    """The delete carries the current pattern only: the kept former domain is
+    removed before the indicator is reported removed."""
+    keep_former_domain(connector)
+    zscaler = FakeZscaler(urls=["former.example"]).install(connector)
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.urls == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    assert kept_former_domains(connector) == []
+
+
+def test_delete_whose_former_domain_is_still_refused_is_not_reported_removed(
+    connector,
+):
+    keep_former_domain(connector)
+    zscaler = FakeZscaler(urls=["former.example", "evil.example"]).install(connector)
+    connector.helper.api.indicator.list.side_effect = [
+        RuntimeError("OpenCTI down"),
+        indicator_page([]),
+    ]
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    assert zscaler.urls == ["former.example"]
+    connector.assurance.report_removed.assert_not_called()
+    assert kept_former_domains(connector) == ["former.example"]
+
+
+def test_update_after_a_refused_removal_completes_the_replacement(connector):
+    """An update keeping the pattern removes the kept former domain, then adds the
+    domain the failed update did not add."""
+    keep_former_domain(connector)
+    zscaler = FakeZscaler(urls=["former.example"]).install(connector)
+    indicator = make_indicator()
+
+    connector._process_message(
+        make_update_message(indicator, "evil.example", path="/name")
+    )
+
+    assert zscaler.urls == ["evil.example"]
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+    assert kept_former_domains(connector) == []
 
 
 def test_updated_pattern_without_a_domain_is_reported_removed(connector):

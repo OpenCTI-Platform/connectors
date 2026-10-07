@@ -9,6 +9,7 @@ import requests
 import urllib3
 import validators
 from connectors_sdk.connectors.stream.deployment import (
+    PendingWithdrawals,
     deployment_failure_reason,
     parse_datetime,
 )
@@ -187,6 +188,7 @@ class ZscalerConnector:
         self.retry_delay = 65  # Retry delay in seconds
         # Deployment write-back (dissemination assurance), set by `main.py`
         self.assurance: "DeploymentAssurance | None" = None
+        self.pending_withdrawals = PendingWithdrawals(helper)
 
     def authenticate_with_zscaler(self):
         """Authenticate with Zscaler and obtain a session token."""
@@ -644,12 +646,17 @@ class ZscalerConnector:
             raise ValueError("The pattern of the indicator is not a valid domain name")
         self.deploy_domain(domain)
 
-    def _apply_and_report(self, data: dict[str, Any], event_type: str) -> None:
+    def _apply_and_report(
+        self, data: dict[str, Any], event_type: str, report: bool = True
+    ) -> None:
         """Apply a create or delete event and report the outcome to OpenCTI.
 
         A create is reported `deployed` (or `failed` with the Zscaler error), a delete
         `removed` once the domain is out of the blacklist or only kept for another
         indicator; nothing is reported for an invalid domain pattern.
+
+        :param report: False to apply a delete without reporting it (a former domain
+            of the indicator is still in the blacklist).
         """
         try:
             domain = self.check_and_send_to_zscaler(
@@ -666,8 +673,41 @@ class ZscalerConnector:
             return
         if event_type == "create":
             self.assurance.report_pushed(data)
-        else:
+        elif report:
             self.assurance.report_removed(data)
+
+    def _withdraw_former_domains(
+        self, data: dict[str, Any], domains: list[str] | None = None
+    ) -> ZscalerApiError | SharedDomainLookupError | None:
+        """Remove the former domains of an indicator from the blacklist.
+
+        The domains of the update being processed and those earlier updates could
+        not remove, kept in the connector state (see `PendingWithdrawals`), are
+        removed unless another valid indicator blocks them. A refusal is logged and
+        the domains left are kept for the next update or delete of the indicator.
+
+        :param data: The indicator of the stream event.
+        :param domains: The former domains of the update being processed.
+        :return: The error of a refused removal, None when no former domain is left.
+        """
+        indicator_ids = self._indicator_ids(data)
+        try:
+            self.pending_withdrawals.withdraw(
+                data.get("id"),
+                lambda domain: self.withdraw_domain(domain, indicator_ids),
+                domains or [],
+            )
+        except (ZscalerApiError, SharedDomainLookupError) as err:
+            self.helper.connector_logger.warning(
+                "Former domain of an updated indicator not removed from the "
+                "blacklist",
+                {
+                    "domains": self.pending_withdrawals.values(data.get("id")),
+                    "error": str(err),
+                },
+            )
+            return err
+        return None
 
     def _indicator_ids(self, data: dict[str, Any]) -> list[str]:
         """Return the STIX and OpenCTI ids of an indicator of the stream."""
@@ -680,37 +720,38 @@ class ZscalerConnector:
             if indicator_id
         ]
 
-    def _replace_and_report(self, data: dict[str, Any], former_pattern: str) -> None:
+    def _replace_and_report(
+        self, data: dict[str, Any], former_pattern: str | None
+    ) -> None:
         """Apply an update that changes the pattern of an indicator and report it.
 
         The blacklist holds values only, so the domain of the former pattern would
-        stay blocked: it is removed first, unless another valid indicator blocks it
-        (as for a delete), then the domain of the new pattern is added and reported
-        as for a create. A failed removal is reported `failed` and the new domain is
-        not added; a new pattern without a valid domain is reported `removed`.
+        stay blocked: it is removed first, with the former domains earlier updates
+        could not remove, unless another valid indicator blocks it (as for a
+        delete), then the domain of the new pattern is added and reported as for a
+        create. A failed removal is reported `failed` and the new domain is not
+        added; a new pattern without a valid domain is reported `removed`.
 
         :param data: The indicator, after the update.
-        :param former_pattern: The pattern the update replaced.
+        :param former_pattern: The pattern the update replaced, None when the update
+            kept it (only the former domains of earlier updates are removed).
         """
-        former = self.extract_domain(former_pattern)
+        former = self.extract_domain(former_pattern or "")
         current = self.extract_domain(data.get("pattern") or "")
         if former and current and former.lower() == current.lower():
+            former_pattern = former = None
+        if former_pattern is None and not self.pending_withdrawals.values(
+            data.get("id")
+        ):
             return
-        if former:
-            try:
-                self.withdraw_domain(former, self._indicator_ids(data))
-            except (ZscalerApiError, SharedDomainLookupError) as err:
-                self.helper.connector_logger.warning(
-                    "Former domain of an updated indicator not removed from the "
-                    "blacklist",
-                    {"domain": former, "error": str(err)},
-                )
-                if self.assurance is not None:
-                    self.assurance.report_push_failed(data, failure_reason(err))
-                return
+        error = self._withdraw_former_domains(data, [former] if former else [])
+        if error is not None:
+            if self.assurance is not None:
+                self.assurance.report_push_failed(data, failure_reason(error))
+            return
         if current and validators.domain(current):
             self._apply_and_report(data, "create")
-        elif former and self.assurance is not None:
+        elif self.assurance is not None:
             self.assurance.report_removed(data)
 
     @retry(
@@ -792,14 +833,13 @@ class ZscalerConnector:
         # Only process indicators with pattern_type 'stix'
         if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
             # Each change of the blacklist is activated by `send_to_zscaler`.
-            if msg.event in ("create", "delete"):
+            if msg.event == "create":
                 self._apply_and_report(data, msg.event)
-            elif (
-                msg.event == "update"
-                and (former_pattern := _former_pattern(message.get("context")))
-                is not None
-            ):
-                self._replace_and_report(data, former_pattern)
+            elif msg.event == "delete":
+                former_left = self._withdraw_former_domains(data) is not None
+                self._apply_and_report(data, msg.event, report=not former_left)
+            elif msg.event == "update":
+                self._replace_and_report(data, _former_pattern(message.get("context")))
         else:
             msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)
