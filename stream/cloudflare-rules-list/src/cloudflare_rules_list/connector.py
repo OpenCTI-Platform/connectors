@@ -44,9 +44,10 @@ PLATFORM_NAME = "Cloudflare"
 UPLOAD_ACTION = "list update"
 """What Cloudflare is asked to do when the snapshot is uploaded."""
 
-FULL_SYNC_RETRY_MIN_DELAY = 60.0
-"""Seconds a failed full sync waits before its retry, at least: without a sync
-interval, a full sync that keeps failing would otherwise be retried at once, in a loop."""
+SYNC_RETRY_MIN_DELAY = 60.0
+"""Seconds a failed full sync or snapshot upload waits before its retry, at least:
+without a sync interval, a sync that keeps failing would otherwise be retried at once,
+in a loop."""
 
 
 def failure_reason(error: CloudflareAPIError) -> str:
@@ -316,19 +317,20 @@ class Connector:
             self._full_sync()
         except Exception as exc:  # noqa: BLE001 - retried after the next interval
             self.logger.error("Full sync retry failed", meta={"error": str(exc)})
-            self._schedule_full_sync_retry()
+            self._schedule_sync_retry()
             return
         if self.assurance is not None:
             self.assurance.start()
 
-    def _schedule_full_sync_retry(self) -> None:
-        """Retry a failed full sync at the end of the sync interval (after at least
-        `FULL_SYNC_RETRY_MIN_DELAY`), also when no stream event arrives: a quiet stream
-        would otherwise never upload nor start the deployment reconciliation."""
+    def _schedule_sync_retry(self) -> None:
+        """Retry a failed full sync or snapshot upload at the end of the sync interval
+        (after at least `SYNC_RETRY_MIN_DELAY`), also when no stream event arrives: a
+        quiet stream would otherwise leave Cloudflare stale, the indicators `failed`
+        and the deployment reconciliation not started."""
         with self._lock:
             self._sync_pending = True
             remaining = self.sync_interval - (time.monotonic() - self._last_sync_time)
-            self._schedule_deferred_sync(max(remaining, FULL_SYNC_RETRY_MIN_DELAY))
+            self._schedule_deferred_sync(max(remaining, SYNC_RETRY_MIN_DELAY))
 
     def _sync_to_cloudflare(self) -> None:
         """Push the full IPv4 snapshot to the Cloudflare Rules List."""
@@ -343,9 +345,11 @@ class Connector:
             try:
                 self._upload_snapshot()
             except CloudflareAPIError as exc:
-                self.logger.error(
-                    "Failed to sync to Cloudflare", meta={"error": str(exc)}
+                self.logger.warning(
+                    "Failed to sync to Cloudflare, retried later",
+                    meta={"error": str(exc)},
                 )
+                self._schedule_sync_retry()
 
     def _upload_snapshot(self) -> None:
         """Replace the Cloudflare Rules List with the snapshot, then report the
@@ -645,6 +649,6 @@ class Connector:
                 )
                 self.assurance.reporter.start()
         if not self._full_sync_done:
-            self._schedule_full_sync_retry()
+            self._schedule_sync_retry()
 
         self.helper.listen_stream(message_callback=self.process_message)

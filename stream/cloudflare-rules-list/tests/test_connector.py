@@ -249,14 +249,23 @@ def test_sync_to_cloudflare_without_operation_id_is_an_error(connector):
     )
     connector._sync_to_cloudflare()
     connector.client.wait_for_operation.assert_not_called()
-    connector.logger.error.assert_called_once()
+    connector.logger.warning.assert_called_once()
 
 
-def test_sync_to_cloudflare_handles_api_error(connector):
+def test_sync_to_cloudflare_handles_api_error(connector, monkeypatch, timers):
+    """A refused snapshot is uploaded again at the end of the sync interval."""
+    monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 10.0)
+    connector.sync_interval = 3600
     connector._indicator_cache = {"ind-1": "1.1.1.1"}
     connector.client.replace_list_items.side_effect = CloudflareAPIError("nope")
     connector._sync_to_cloudflare()
-    connector.logger.error.assert_called_once()
+    connector.logger.warning.assert_called_once_with(
+        "Failed to sync to Cloudflare, retried later", meta={"error": "nope"}
+    )
+    connector.logger.error.assert_not_called()
+    assert connector._sync_pending is True
+    (timer,) = timers
+    assert timer.interval == 3600.0
 
 
 # --------------------------------------------------------------------------- #

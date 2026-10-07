@@ -262,10 +262,10 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
     assert reports[OTHER_STIX_ID].error_message == (
         "Cloudflare refused the list update: permission denied"
     )
-    connector.logger.error.assert_called_once()
+    connector.logger.warning.assert_called_once()
     assert (
         "Authentication error"
-        in connector.logger.error.call_args.kwargs["meta"]["error"]
+        in connector.logger.warning.call_args.kwargs["meta"]["error"]
     )
 
     connector.client.replace_list_items.side_effect = None
@@ -667,6 +667,106 @@ def test_deferred_sync_does_nothing_once_an_upload_took_the_changes(
     timers[0].function()
 
     assert connector.client.replace_list_items.call_count == 2
+    assert len(timers) == 1
+
+
+def test_failed_deferred_upload_is_retried_on_a_quiet_stream(
+    connector, assurance, monkeypatch, timers
+):
+    """No stream event arrives: the snapshot Cloudflare refused is uploaded again at
+    the end of the next interval, and its indicators reported `deployed`."""
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector.sync_interval = 60
+    connector.process_message(make_message("create", make_indicator()))
+    now[0] = 110.0
+    connector.process_message(
+        make_message("create", make_indicator(OTHER_STIX_ID, OTHER_ID, "203.0.113.9"))
+    )
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "API request failed: 503 Service Unavailable", status_code=503
+    )
+    assurance.reporter.enqueue.reset_mock()
+
+    now[0] = 160.0
+    timers[0].function()
+
+    reports = enqueued(assurance)
+    assert set(reports) == {OTHER_STIX_ID}
+    assert reports[OTHER_STIX_ID].status == "failed"
+    assert reports[OTHER_STIX_ID].error_message == (
+        "Cloudflare refused the list update: server error"
+    )
+    connector.logger.warning.assert_called_once()
+    assert [timer.interval for timer in timers] == [50.0, 60.0]
+
+    connector.client.replace_list_items.side_effect = None
+    assurance.reporter.enqueue.reset_mock()
+    now[0] = 220.0
+    timers[1].function()
+
+    assert connector.client.replace_list_items.call_count == 3
+    reports = enqueued(assurance)
+    assert set(reports) == {OTHER_STIX_ID}
+    assert reports[OTHER_STIX_ID].status == "deployed"
+    assert len(timers) == 2
+
+
+def test_failed_upload_keeps_being_retried_a_minute_apart(
+    connector, assurance, monkeypatch, timers
+):
+    """Without a sync interval, a snapshot Cloudflare keeps refusing is retried a
+    minute apart, never in a loop."""
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "API request failed: 429 Too Many Requests", status_code=429
+    )
+
+    connector.process_message(make_message("create", make_indicator()))
+
+    assert [timer.interval for timer in timers] == [60.0]
+    now[0] = 160.0
+    timers[0].function()
+
+    assert connector.client.replace_list_items.call_count == 2
+    assert [timer.interval for timer in timers] == [60.0, 60.0]
+
+
+def test_stream_event_before_the_retry_does_not_upload_twice(
+    connector, assurance, monkeypatch, timers
+):
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector.sync_interval = 60
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "API request failed: 503 Service Unavailable", status_code=503
+    )
+    connector.process_message(make_message("create", make_indicator()))
+    connector.client.replace_list_items.side_effect = None
+
+    now[0] = 130.0
+    connector.process_message(
+        make_message("create", make_indicator(OTHER_STIX_ID, OTHER_ID, "203.0.113.9"))
+    )
+
+    assert connector.client.replace_list_items.call_count == 1
+    (timer,) = timers
+    assert timer.interval == 60.0
+
+    now[0] = 160.0
+    timer.function()
+
+    assert connector.client.replace_list_items.call_count == 2
+    assert {
+        item["ip"] for item in connector.client.replace_list_items.call_args.args[1]
+    } == {"198.51.100.7", "203.0.113.9"}
     assert len(timers) == 1
 
 
