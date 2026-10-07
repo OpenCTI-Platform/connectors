@@ -382,6 +382,24 @@ class ZscalerConnector:
             self.request_zscaler(self.session.get, url, action=READ_ACTION)
         )
 
+    def find_blocked_domain(self, domain: str) -> str | None:
+        """Return the blacklist entry of a domain as Zscaler stores it, whatever its case.
+
+        Domain names are case-insensitive: Example.COM is listed when the blacklist
+        holds example.com, and its removal names the stored entry.
+
+        :raises ZscalerApiError: When the blacklist cannot be read.
+        """
+        canonical = domain.lower()
+        return next(
+            (
+                entry
+                for entry in self.list_blocked_domains()
+                if entry.lower() == canonical
+            ),
+            None,
+        )
+
     def get_current_configured_name(self):
         """Return the configured name of the blacklist URL category.
 
@@ -435,7 +453,7 @@ class ZscalerConnector:
         :raises ZscalerApiError: When the blacklist cannot be read, or Zscaler refuses the
             change or the activation.
         """
-        if domain in self.list_blocked_domains():
+        if self.find_blocked_domain(domain) is not None:
             msg = f"The domain {domain} is already in the Blacklist."
             self.helper.connector_logger.info(msg)
             self.ensure_configuration_active()
@@ -451,18 +469,23 @@ class ZscalerConnector:
         :raises ZscalerApiError: When the blacklist cannot be read or Zscaler refuses the change.
         :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
         """
-        if domain not in self.list_blocked_domains():
+        listed = self.find_blocked_domain(domain)
+        if listed is None:
             msg = f"The domain {domain} is not in the Blacklist."
             self.helper.connector_logger.info(msg)
             return
-        self.remove_domain(domain, indicator_ids)
+        self.remove_domain(domain, listed, indicator_ids)
 
-    def remove_domain(self, domain: str, indicator_ids: Iterable[str]) -> None:
+    def remove_domain(
+        self, domain: str, listed: str, indicator_ids: Iterable[str]
+    ) -> None:
         """Remove a listed domain from the blacklist, unless another indicator blocks it.
 
         The blacklist only holds values: a domain shared by several OpenCTI indicators
         stays listed while one of them is valid (neither revoked nor expired).
 
+        :param domain: The domain of the indicator removed.
+        :param listed: The blacklist entry of the domain, as Zscaler stores it.
         :param indicator_ids: The OpenCTI ids of the indicator removed.
         :raises ZscalerApiError: When Zscaler refuses the change.
         :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
@@ -471,7 +494,7 @@ class ZscalerConnector:
             msg = f"The domain {domain} stays in the Blacklist: another OpenCTI indicator blocks it."
             self.helper.connector_logger.info(msg)
             return
-        self.send_to_zscaler(domain, "delete")
+        self.send_to_zscaler(listed, "delete")
 
     def is_blocked_by_another_indicator(
         self, domain: str, indicator_ids: Iterable[str]

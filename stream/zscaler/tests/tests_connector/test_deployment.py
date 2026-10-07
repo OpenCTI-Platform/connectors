@@ -223,6 +223,18 @@ def test_already_listed_domain_is_activated_then_reported_deployed(connector):
     connector.assurance.report_pushed.assert_called_once_with(indicator)
 
 
+def test_domain_listed_with_another_case_is_not_added_again(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    indicator = make_indicator(domain="Evil.EXAMPLE")
+
+    connector._process_message(make_message("create", indicator))
+
+    assert zscaler.puts == []
+    assert zscaler.urls == ["evil.example"]
+    connector.activate_zscaler_changes.assert_called_once()
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+
+
 def test_already_listed_domain_still_pending_is_reported_failed(connector):
     zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
     connector.activate_zscaler_changes.return_value = False
@@ -339,6 +351,22 @@ def test_unreadable_classification_does_not_block_the_create(connector, lookup):
 def test_deleted_domain_is_removed_and_reported(connector):
     zscaler = FakeZscaler(urls=["evil.example", "other.example"]).install(connector)
     indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.puts == [
+        (
+            f"{CATEGORY_URL}?action=REMOVE_FROM_LIST",
+            {"configuredName": "Blacklist", "urls": ["evil.example"]},
+        )
+    ]
+    assert zscaler.urls == ["other.example"]
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_deleted_domain_listed_with_another_case_removes_the_stored_entry(connector):
+    zscaler = FakeZscaler(urls=["evil.example", "other.example"]).install(connector)
+    indicator = make_indicator(domain="Evil.EXAMPLE")
 
     connector._process_message(make_message("delete", indicator))
 
