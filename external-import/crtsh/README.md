@@ -57,7 +57,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name       | name                 | `CONNECTOR_NAME`                 | crtsh   | Yes       | Name of the connector.                                                   |
 | Connector Scope      | scope                | `CONNECTOR_SCOPE`                | stix2   | Yes       | The scope or type of data the connector is importing.                    |
 | Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Run Every            | run_every            | `CONNECTOR_RUN_EVERY`            |         | Yes       | Polling interval (e.g., `30s`, `1h`, `1d`).                              |
+| Duration Period      | duration_period      | `CONNECTOR_DURATION_PERIOD`      | PT1H    | No        | Polling interval as an ISO-8601 duration (e.g., `PT30S`, `PT1H`, `P1D`). `CONNECTOR_RUN_EVERY` is deprecated. |
 | Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | false   | No        | Whether to update existing data in OpenCTI.                              |
 
 ### Connector extra parameters environment variables
@@ -92,7 +92,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=crtsh
       - CONNECTOR_SCOPE=stix2
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_RUN_EVERY=1d
+      - CONNECTOR_DURATION_PERIOD=P1D
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CRTSH_DOMAIN=example.com
       - CRTSH_LABELS=crtsh,certificate-transparency
@@ -126,7 +126,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_RUN_EVERY`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 
@@ -212,7 +212,7 @@ CONNECTOR_LOG_LEVEL=debug
 Common issues:
 - **Invalid domain**: Ensure `CRTSH_DOMAIN` is a valid domain format
 - **No results**: Domain may have no certificates logged in Certificate Transparency logs
-- **Rate limiting**: crt.sh may rate limit requests; increase `CONNECTOR_RUN_EVERY` interval
+- **Rate limiting**: crt.sh may rate limit requests; increase `CONNECTOR_DURATION_PERIOD` interval
 
 ## Additional information
 

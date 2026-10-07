@@ -15,7 +15,7 @@ class ExternalImportConnector:
 
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
-        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
+        interval (int): The interval between two runs, in seconds (from `CONNECTOR_DURATION_PERIOD`).
         update_existing_data (str): Whether to update existing data or not in OpenCTI.
     """
 
@@ -24,19 +24,7 @@ class ExternalImportConnector:
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Specific connector attributes for external import connectors
-        try:
-            self.interval = self.config.connector.run_every.lower()
-            self.helper.log_info(
-                f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
-            )
-            unit = self.interval[-1]
-            if unit not in ["d", "h", "m", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
-        except TypeError as _:
-            msg = f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively. "
-            self.helper.log_error(msg)
-            raise ValueError(msg)
+        self.interval = int(self.config.connector.duration_period.total_seconds())
 
         self.update_existing_data = self.config.connector.update_existing_data
 
@@ -45,33 +33,8 @@ class ExternalImportConnector:
         raise NotImplementedError
 
     def _get_interval(self) -> int:
-        """Returns the interval to use for the connector
-
-        This SHOULD return always the interval in seconds. If the connector is execting that the parameter is received as hoursUncomment as necessary.
-        """
-        unit = self.interval[-1:]
-        value = self.interval[:-1]
-
-        try:
-            if unit == "d":
-                # In days:
-                return int(value) * 60 * 60 * 24
-            elif unit == "h":
-                # In hours:
-                return int(value) * 60 * 60
-            elif unit == "m":
-                # In minutes:
-                return int(value) * 60
-            elif unit == "s":
-                # In seconds:
-                return int(value)
-        except Exception as e:
-            self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
-            raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
+        """Returns the interval to use for the connector, in seconds."""
+        return self.interval
 
     def run(self) -> None:
         # Main procedure

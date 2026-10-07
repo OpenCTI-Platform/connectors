@@ -1,13 +1,29 @@
+import re
+from datetime import timedelta
 from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field
-from pydantic.json_schema import SkipJsonSchema
+
+RUN_EVERY_UNITS = {"d": "days", "h": "hours", "m": "minutes", "s": "seconds"}
+
+
+def run_every_to_timedelta(run_every: str) -> timedelta:
+    """Convert a legacy `CONNECTOR_RUN_EVERY` value (e.g. '7d', '12h', '10m', '30s')."""
+    match = re.fullmatch(r"(\d+)([dhms])", str(run_every).strip().lower())
+    if match is None:
+        raise ValueError(
+            f"Invalid CONNECTOR_RUN_EVERY value '{run_every}': it SHOULD be a number "
+            "followed by a unit among 'd', 'h', 'm', 's' (e.g. '7d', '12h', '10m', '30s')."
+        )
+    value, unit = match.groups()
+    return timedelta(**{RUN_EVERY_UNITS[unit]: int(value)})
 
 
 class CrtshConnectorConfig(BaseExternalImportConnectorConfig):
@@ -30,20 +46,14 @@ class CrtshConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=["crtsh"],
     )
-    # Override `BaseExternalImportConnectorConfig.duration_period` as the connector
-    # still relies on its own scheduling loop driven by `run_every`.
-    duration_period: SkipJsonSchema[None] = Field(
-        description="Do not use. Not implemented in the connector yet, use `run_every` instead.",
-        default=None,
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+        default=timedelta(hours=1),
     )
-    run_every: str = Field(
-        description=(
-            "The period of time to await between two runs of the connector. "
-            "Format: a number followed by a unit among 'd', 'h', 'm', 's' "
-            "(e.g. '7d', '12h', '10m', '30s')."
-        ),
-        default="1h",
-        pattern=r"^\d+[dhmsDHMS]$",
+    run_every: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' instead.",
+        new_namespaced_var="duration_period",
+        new_value_factory=run_every_to_timedelta,
     )
     update_existing_data: bool = Field(
         description="Whether to update existing data in OpenCTI.",

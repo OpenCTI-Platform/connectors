@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -31,7 +32,7 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "name": "crt.sh",
                     "scope": "crtsh",
                     "log_level": "error",
-                    "run_every": "1h",
+                    "duration_period": "PT1H",
                     "update_existing_data": True,
                 },
                 "crtsh": {
@@ -89,8 +90,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.name == "crt.sh"
     assert settings.connector.scope == ["crtsh"]
     assert settings.connector.log_level == "error"
-    assert settings.connector.run_every == "1h"
-    assert settings.connector.duration_period is None
+    assert settings.connector.duration_period == timedelta(hours=1)
     assert settings.connector.update_existing_data is False
     assert settings.crtsh.labels == "crtsh,osint"
     assert settings.crtsh.marking_refs == "TLP:WHITE"
@@ -178,3 +178,50 @@ def test_settings_should_raise_when_invalid_input(settings_dict):
         FakeConnectorSettings()
 
     assert "Error validating configuration" in str(err.value)
+
+
+@pytest.mark.parametrize(
+    "run_every, expected",
+    [
+        ("30s", timedelta(seconds=30)),
+        ("10m", timedelta(minutes=10)),
+        ("12H", timedelta(hours=12)),
+        ("7d", timedelta(days=7)),
+    ],
+)
+def test_settings_should_migrate_deprecated_run_every(run_every, expected):
+    """`CONNECTOR_RUN_EVERY` MUST be migrated to `CONNECTOR_DURATION_PERIOD`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {"run_every": run_every},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="connector.run_every"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == expected
+
+
+def test_settings_should_prefer_duration_period_over_deprecated_run_every():
+    """`CONNECTOR_DURATION_PERIOD` MUST win when both variables are set."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {"run_every": "7d", "duration_period": "PT2H"},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="Using only 'connector.duration_period'"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=2)

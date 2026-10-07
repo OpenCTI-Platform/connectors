@@ -48,11 +48,17 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
-    "CONNECTOR_RUN_EVERY": {
-      "default": "1h",
-      "description": "The period of time to await between two runs of the connector. Format: a number followed by a unit among 'd', 'h', 'm', 's' (e.g. '7d', '12h', '10m', '30s').",
-      "pattern": "^\\d+[dhmsDHMS]$",
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
       "type": "string"
+    },
+    "CONNECTOR_RUN_EVERY": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "CONNECTOR_UPDATE_EXISTING_DATA": {
       "default": false,

@@ -7,7 +7,7 @@ connector:
   # name: 'crt.sh'
   # scope: 'crtsh'
   # log_level: 'error'
-  # run_every: '1h' # Format: 7d, 12h, 10m, 30s
+  # duration_period: 'PT1H' # ISO8601 format in String, start with 'P...' for Period
 
 crtsh:
   domain: 'ChangeMe'

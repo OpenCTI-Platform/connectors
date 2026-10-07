@@ -27,7 +27,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "crt.sh",
                     "scope": "crtsh",
                     "log_level": "error",
-                    "run_every": "1h",
+                    "duration_period": "PT1H",
                 },
                 "crtsh": {
                     "domain": "example.com",
@@ -92,7 +92,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert isinstance(connector.config, ConnectorSettings)
     assert isinstance(connector.helper, OpenCTIConnectorHelper)
     assert connector.helper.connect_id == "connector-id"
-    assert connector.interval == "1h"
+    assert connector.interval == 3600
     assert connector._get_interval() == 3600
     assert connector.update_existing_data is False
     assert connector.domain == "example.com"
