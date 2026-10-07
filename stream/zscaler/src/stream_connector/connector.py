@@ -81,6 +81,12 @@ class SharedDomainLookupError(Exception):
     """Error raised when OpenCTI cannot tell whether another indicator blocks a domain."""
 
 
+SHARED_DOMAIN_PAGE_SIZE = 100
+"""Number of OpenCTI indicators read per page when looking for another indicator of a domain."""
+
+MAX_SHARED_DOMAIN_PAGES = 10
+"""Pages read at most per lookup: past them, the domain is not removed from the blacklist."""
+
 ACTIVATION_POLL_SECONDS = 5
 """Seconds between two checks of a Zscaler configuration activation in progress."""
 
@@ -474,45 +480,67 @@ class ZscalerConnector:
         `[domain-name:value = '<domain>']` pattern.
 
         Revoked indicators and indicators whose `valid_until` is past do not block the
-        domain: their own removal is due as well.
+        domain: their own removal is due as well. The indicators are read page by page,
+        up to `MAX_SHARED_DOMAIN_PAGES` pages, until one blocks the domain.
 
         :param indicator_ids: The OpenCTI ids (internal or STIX) of the indicator removed.
-        :raises SharedDomainLookupError: When OpenCTI cannot be queried.
+        :raises SharedDomainLookupError: When OpenCTI cannot be queried, or more
+            indicators name the domain than the pages read hold.
         """
         now = datetime.now(UTC)
         # Domain names are case-insensitive: Example.COM blocks example.com too.
         canonical = domain.lower()
         excluded = {str(indicator_id).lower() for indicator_id in indicator_ids}
-        try:
-            indicators = self.helper.api.indicator.list(
-                filters={
-                    "mode": "and",
-                    "filters": [
-                        {
-                            "key": "pattern",
-                            "values": [f"'{domain}'"],
-                            "operator": "contains",
-                        },
-                        {"key": "revoked", "values": ["false"]},
-                    ],
-                    "filterGroups": [],
-                },
-                getAll=True,
-            )
-        except Exception as err:
-            raise SharedDomainLookupError(
-                f"Cannot read the OpenCTI indicators of {domain}: {err}"
-            ) from err
-        return any(
-            str(indicator.get("id")).lower() not in excluded
-            and str(indicator.get("standard_id")).lower() not in excluded
-            and (self.extract_domain(indicator.get("pattern") or "") or "").lower()
-            == canonical
-            and (
-                (valid_until := parse_datetime(indicator.get("valid_until"))) is None
-                or valid_until > now
-            )
-            for indicator in indicators or []
+        after = None
+        for _page in range(MAX_SHARED_DOMAIN_PAGES):
+            try:
+                page = self.helper.api.indicator.list(
+                    filters={
+                        "mode": "and",
+                        "filters": [
+                            {
+                                "key": "pattern",
+                                "values": [f"'{domain}'"],
+                                "operator": "contains",
+                            },
+                            {"key": "revoked", "values": ["false"]},
+                        ],
+                        "filterGroups": [],
+                    },
+                    first=SHARED_DOMAIN_PAGE_SIZE,
+                    after=after,
+                    withPagination=True,
+                    customAttributes="id standard_id pattern valid_until",
+                )
+            except Exception as err:
+                raise SharedDomainLookupError(
+                    f"Cannot read the OpenCTI indicators of {domain}: {err}"
+                ) from err
+            if any(
+                str(indicator.get("id")).lower() not in excluded
+                and str(indicator.get("standard_id")).lower() not in excluded
+                and (self.extract_domain(indicator.get("pattern") or "") or "").lower()
+                == canonical
+                and (
+                    (valid_until := parse_datetime(indicator.get("valid_until")))
+                    is None
+                    or valid_until > now
+                )
+                for indicator in (page or {}).get("entities") or []
+            ):
+                return True
+            pagination = (page or {}).get("pagination") or {}
+            if not pagination.get("hasNextPage"):
+                return False
+            after = pagination.get("endCursor")
+            if not after:
+                raise SharedDomainLookupError(
+                    f"Cannot read the next OpenCTI indicators of {domain}: "
+                    "the page carries no cursor"
+                )
+        raise SharedDomainLookupError(
+            f"More than {MAX_SHARED_DOMAIN_PAGES * SHARED_DOMAIN_PAGE_SIZE} OpenCTI "
+            f"indicators name {domain}, none of them read blocks it"
         )
 
     def send_to_zscaler(self, domain, event_type):

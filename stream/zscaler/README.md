@@ -261,7 +261,9 @@ Platform entity (created if it does not exist).
 - **Shared domains**: the category only holds values, so a domain shared by several OpenCTI indicators stays listed
   while one of them still needs it, and the removed indicator is reported `removed` all the same. On a delete event, the
   connector looks for another valid indicator (neither revoked nor expired) with the same
-  `[domain-name:value = '...']` pattern in OpenCTI. During the reconciliation, a domain is kept while a deployment that
+  `[domain-name:value = '...']` pattern in OpenCTI, reading 100 indicators per page and stopping at the first one that
+  keeps the domain; when more than 1 000 indicators name the domain and none of them keeps it, the domain is not
+  removed and the error is logged, as when OpenCTI cannot be queried. During the reconciliation, a domain is kept while a deployment that
   stays on Zscaler shares it, and a domain several withdrawn or expired deployments share is removed once.
 - **Hits**: not reported. The ZIA API exposes no hit of a URL category (web logs are exported through Nanolog Streaming
   Service feeds).
