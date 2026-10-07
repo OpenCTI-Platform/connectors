@@ -154,7 +154,7 @@ class SecOpsSIEMConnector:
         try:
             ingested = self._upsert_ioc_rule(indicator)
         except SecOpsApiError as err:
-            self.helper.connector_logger.error(
+            self.helper.connector_logger.warning(
                 "[API] Error while ingesting indicator",
                 meta={"indicator_id": indicator.get("id"), "error": str(err)},
             )

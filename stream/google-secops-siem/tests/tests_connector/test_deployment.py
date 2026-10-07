@@ -195,10 +195,11 @@ def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connecto
         indicator, "Google SecOps refused the entity ingestion: invalid request"
     )
     connector.assurance.report_pushed.assert_not_called()
-    connector.helper.connector_logger.error.assert_called_once_with(
+    connector.helper.connector_logger.warning.assert_called_once_with(
         "[API] Error while ingesting indicator",
         meta={"indicator_id": STIX_ID, "error": str(error)},
     )
+    connector.helper.connector_logger.error.assert_not_called()
 
 
 def test_indicator_without_supported_observable_is_not_reported(connector):
