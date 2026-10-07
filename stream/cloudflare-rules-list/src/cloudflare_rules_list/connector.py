@@ -569,38 +569,42 @@ class Connector:
         are cleared). The full sync only succeeds once Cloudflare accepted it: when a
         listing fails nothing is uploaded, and a rejected upload raises.
 
+        A retry runs while the stream is listened to: the lock is held from the
+        listings to the upload, so a stream event waits and applies on top of the
+        snapshot instead of being replaced by an older listing.
+
         Raises:
             CloudflareAPIError: When Cloudflare refuses the snapshot.
         """
-        self.logger.info("Starting full sync from OpenCTI")
-        cache: dict[str, str] = {}
-        indicator_keys: set[str] = set()
-
-        indicators = self.helper.api.indicator.list(getAll=True)
-        self.logger.info(
-            "Fetched indicators from OpenCTI", meta={"count": len(indicators)}
-        )
-        for indicator in indicators:
-            value = self._extract_ipv4(indicator)
-            indicator_id = self._api_object_id(indicator)
-            if value and indicator_id and self._is_live(indicator):
-                cache[indicator_id] = value
-                indicator_keys.add(indicator_id)
-
-        observables = self.helper.api.stix_cyber_observable.list(
-            types=["IPv4-Addr"], getAll=True
-        )
-        for observable in observables:
-            value = self._extract_ipv4(observable)
-            obs_id = self._api_object_id(observable)
-            if value and obs_id:
-                cache[obs_id] = value
-
-        self.logger.info(
-            "Loaded IPv4 indicators for sync",
-            meta={"count": len(cache)},
-        )
         with self._lock:
+            self.logger.info("Starting full sync from OpenCTI")
+            cache: dict[str, str] = {}
+            indicator_keys: set[str] = set()
+
+            indicators = self.helper.api.indicator.list(getAll=True)
+            self.logger.info(
+                "Fetched indicators from OpenCTI", meta={"count": len(indicators)}
+            )
+            for indicator in indicators:
+                value = self._extract_ipv4(indicator)
+                indicator_id = self._api_object_id(indicator)
+                if value and indicator_id and self._is_live(indicator):
+                    cache[indicator_id] = value
+                    indicator_keys.add(indicator_id)
+
+            observables = self.helper.api.stix_cyber_observable.list(
+                types=["IPv4-Addr"], getAll=True
+            )
+            for observable in observables:
+                value = self._extract_ipv4(observable)
+                obs_id = self._api_object_id(observable)
+                if value and obs_id:
+                    cache[obs_id] = value
+
+            self.logger.info(
+                "Loaded IPv4 indicators for sync",
+                meta={"count": len(cache)},
+            )
             self._indicator_cache = cache
             self._indicator_keys = indicator_keys
             self._upload_snapshot()

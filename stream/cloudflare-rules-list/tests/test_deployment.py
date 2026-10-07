@@ -1,6 +1,7 @@
 """Deployment write-back of the Cloudflare Rules List connector."""
 
 import json
+import threading
 from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
@@ -589,6 +590,53 @@ def test_failed_full_sync_is_retried_on_a_quiet_stream(
     assert connector._full_sync_done is True
     assurance.start.assert_called_once()
     assert len(timers) == 2
+
+
+@pytest.mark.parametrize("deferred", [True, False])
+def test_stream_event_during_a_full_sync_waits_and_applies_on_top_of_it(
+    connector, assurance, monkeypatch, timers, deferred
+):
+    """A retry lists OpenCTI while the stream is listened to: an event arriving
+    meanwhile is never undone by the listing."""
+    now = [100.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector._full_sync_done = False
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+    stream = threading.Thread(
+        target=connector.process_message,
+        args=(make_message("delete", make_indicator()),),
+    )
+    waited = []
+
+    def list_indicators(**_kwargs):
+        stream.start()
+        stream.join(timeout=0.2)
+        waited.append(stream.is_alive())
+        return [
+            {
+                "id": INDICATOR_ID,
+                "standard_id": STIX_ID,
+                "entity_type": "Indicator",
+                "pattern": "[ipv4-addr:value = '198.51.100.7']",
+            }
+        ]
+
+    connector.helper.api.indicator.list.side_effect = list_indicators
+
+    if deferred:
+        connector._schedule_sync_retry()
+        timers[0].function()
+    else:
+        connector._full_sync()
+    stream.join(timeout=5)
+
+    assert waited == [True]
+    assert not stream.is_alive()
+    assert connector._full_sync_done is True
+    assert STIX_ID not in connector._indicator_cache
+    assert connector.client.replace_list_items.call_args.args == ("list-123", [])
 
 
 def test_first_full_sync_retry_runs_on_a_host_booted_recently(
