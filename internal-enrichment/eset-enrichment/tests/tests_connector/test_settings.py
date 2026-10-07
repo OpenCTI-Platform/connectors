@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any
 from uuid import UUID
 
@@ -202,3 +203,51 @@ def test_settings_should_default_connector_id():
 
     assert settings.connector.id == "a4df8389-6ba4-4e2c-b09e-f8014f0d0af1"
     assert UUID(settings.connector.id).version == 4
+
+
+def _settings_from(settings_dict: dict[str, Any]) -> ConnectorSettings:
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            # The deprecation migration mutates the config dict in place
+            return handler(deepcopy(settings_dict))
+
+    return FakeConnectorSettings()
+
+
+def test_settings_should_migrate_deprecated_connector_template_max_tlp():
+    """`CONNECTOR_TEMPLATE_MAX_TLP` MUST be migrated to `ESET_MAX_TLP`."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "connector_template": {"max_tlp": "TLP:GREEN"},
+    }
+
+    with pytest.warns(UserWarning, match="Migrating to 'eset.max_tlp'"):
+        settings = _settings_from(settings_dict)
+
+    assert settings.eset.max_tlp == "TLP:GREEN"
+
+
+def test_settings_should_prefer_eset_max_tlp_over_deprecated_one():
+    """`ESET_MAX_TLP` MUST win when both variables are set."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "eset": {**MINIMAL_VALID_SETTINGS_DICT["eset"], "max_tlp": "TLP:RED"},
+        "connector_template": {"max_tlp": "TLP:GREEN"},
+    }
+
+    with pytest.warns(UserWarning, match="Using only 'eset.max_tlp'"):
+        settings = _settings_from(settings_dict)
+
+    assert settings.eset.max_tlp == "TLP:RED"
+
+
+def test_settings_should_reject_invalid_deprecated_connector_template_max_tlp():
+    """A migrated value MUST be validated like `ESET_MAX_TLP`."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "connector_template": {"max_tlp": "bogus"},
+    }
+
+    with pytest.warns(UserWarning), pytest.raises(ConfigValidationError):
+        _settings_from(settings_dict)
