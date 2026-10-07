@@ -2022,6 +2022,7 @@ class Shell:
         self.chain_variables = set()
         self.chain_directory = False
         self.chain_dirs = set()
+        self.chain_files = set()
         # The current list has a ||, a !, a pipeline or a background job: its
         # status does not tell that every command of it ran and succeeded.
         self.chain_partial = False
@@ -2029,6 +2030,9 @@ class Shell:
         # if that list ends the script of a RUN, whose build fails unless it
         # succeeds, and may be missing once another command runs.
         self.pending_dirs = set()
+        # The files those commands wrote with a content the model knows (an
+        # install): the same holds for them.
+        self.pending_files = set()
         # The script of a RUN instruction (see pending_dirs).
         self.build_step = False
         # This shell, or the command it runs, is a pipeline part or a background
@@ -2056,6 +2060,7 @@ class Shell:
             self._statements(tokens + ["\n"])
         if not self.build_step:
             self._uncertain(self.pending_dirs)
+            self._uncertain_files(self.pending_files)
         return self.processes
 
     def _uncertain(self, dirs):
@@ -2064,6 +2069,14 @@ class Shell:
             self.stage.dirs.discard(directory)
             self.stage.uncertain_dirs.add(directory)
         self.pending_dirs -= set(dirs)
+
+    def _uncertain_files(self, paths):
+        """``paths`` hold what a command that may not have run wrote there, or
+        what they held before it: a content the model does not know."""
+        for path in paths:
+            self.files.pop(path, None)
+            self.stage.replaced.add(path)
+        self.pending_files -= set(paths)
 
     def _expand(self, word, split=True):
         """Words of ``word`` once its variables are expanded with the current
@@ -2374,9 +2387,12 @@ class Shell:
         self._forget_chain_changes()
         if self.chain_partial:
             self._uncertain(self.chain_dirs)
+            self._uncertain_files(self.chain_files)
         else:
             self.pending_dirs |= self.chain_dirs
+            self.pending_files |= self.chain_files
         self.chain_dirs = set()
+        self.chain_files = set()
         self.chain_partial = False
 
     def _forget_chain_changes(self):
@@ -2401,6 +2417,7 @@ class Shell:
     def _command(self, words, writes, before, after, reads=()):
         # A command runs after the last list, which may have failed.
         self._uncertain(self.pending_dirs)
+        self._uncertain_files(self.pending_files)
         if before in ("||", "|") or after in ("||", "|", "&"):
             self.chain_partial = True
         if before == "||":
@@ -2411,7 +2428,11 @@ class Shell:
             return
         variables, cwd, dirs = dict(self.variables), self.cwd, set(self.stage.dirs)
         exported, allexport = set(self.exported), self.allexport
+        files = dict(self.files)
         self._simple_command(words, writes, before, after, reads)
+        self.chain_files |= {
+            path for path, origin in self.files.items() if files.get(path) != origin
+        }
         self.chain_variables |= {
             key
             for key in {*variables, *self.variables}
@@ -3559,9 +3580,10 @@ class Shell:
             return
         if self.start:
             raise Unsupported("pip install in the entry script")
+        editable_files = set()
         local = [
             *(p for p in (self._local_requirement(t) for t in targets) if p),
-            *self._requirement_files(args),
+            *self._requirement_files(args, editable=editable_files),
         ]
         for path in local:
             if self.stage.written(path):
@@ -3577,9 +3599,15 @@ class Shell:
                 raise Unsupported(f"pip install of the local archive {path}")
             # Whether pip installs it or not, it runs the packaging code.
             self.model.check_packaging(self.files, path)
+        if editable or editable_files:
+            # An editable install replaces a regular install of the same project
+            # by a link to its source; which one it replaces is not modelled.
+            remove_files(self.files, SITE_PACKAGES)
         if editable or conditional:
             return
         for path in local:
+            if path in editable_files:
+                continue
             if relocated:
                 raise Unsupported(
                     "pip install into another directory than site-packages"
@@ -3625,10 +3653,12 @@ class Shell:
             return None
         return self._path(value, "pip install path")
 
-    def _requirement_files(self, args, seen=None):
+    def _requirement_files(self, args, seen=None, editable=None):
         """Local directories the requirement files of ``args`` (-r, -c) name,
-        nested files included."""
+        nested files included; the editable ones are also added to
+        ``editable``."""
         seen = set() if seen is None else seen
+        editable = set() if editable is None else editable
         found = []
         for index, arg in enumerate(args):
             option, sep, attached = arg.partition("=")
@@ -3668,9 +3698,10 @@ class Shell:
                         if not words[1].startswith("/")
                         else words[1]
                     )
-                    found += self._requirement_files([words[0], nested], seen)
+                    found += self._requirement_files([words[0], nested], seen, editable)
                     continue
-                if words[0] in ("-e", "--editable") and len(words) > 1:
+                is_editable = words[0] in ("-e", "--editable") and len(words) > 1
+                if is_editable:
                     words = words[1:]
                 if words[0].startswith("-"):
                     continue
@@ -3679,6 +3710,8 @@ class Shell:
                 local = self._local_requirement(target)
                 if local:
                     found.append(local)
+                    if is_editable:
+                        editable.add(local)
         return found
 
 

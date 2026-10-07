@@ -1070,6 +1070,100 @@ def test_module_in_a_region_of_site_packages(tmp_path, step, region):
     )
 
 
+@pytest.mark.parametrize(
+    "steps, reason",
+    [
+        # Copilot review of 04:27 UTC: an install after && may be skipped when a
+        # later command runs; when the list ends the RUN, a skip fails the build.
+        (
+            "RUN false && pip install --force-reinstall /opt/build; true",
+            "pycti reads /<site-packages>/sample_connector/.connector_version.json"
+            " before any build stamp, and a build step put content the model does"
+            " not know there",
+        ),
+        (
+            "RUN true && pip install --force-reinstall /opt/build",
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+        (
+            "RUN pip install --force-reinstall /opt/build & wait",
+            "pycti reads /<site-packages>/sample_connector/.connector_version.json"
+            " before any build stamp, and a build step put content the model does"
+            " not know there",
+        ),
+    ],
+)
+def test_install_that_may_be_skipped(tmp_path, steps, reason):
+    # The package is first installed without its stamp, then reinstalled from
+    # a source that has it.
+    dockerfile = (
+        "FROM python:3.12-alpine\n"
+        "COPY --exclude=sample_connector/.connector_version.json . /opt/old\n"
+        "RUN pip install /opt/old && rm -rf /opt/old\nCOPY . /opt/build\n"
+        f"{steps}\nRUN rm -rf /opt/build\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile=dockerfile)
+    assert image.reason == reason
+
+
+@pytest.mark.parametrize(
+    "requirements",
+    [
+        # Copilot review of 04:27 UTC: an editable requirement stays a link to
+        # its source, in a nested requirement file as well.
+        {"requirements.txt": "-e /opt/build\n"},
+        {
+            "requirements.txt": "-r nested.txt\n",
+            "nested.txt": "--editable /opt/build\n",
+        },
+    ],
+)
+def test_editable_requirement_keeps_its_source(tmp_path, requirements):
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY . /opt/build\n"
+        "RUN pip install -r /opt/build/requirements.txt && rm -rf /opt/build\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(
+        tmp_path, {"pyproject.toml": data, **requirements}, dockerfile=dockerfile
+    )
+    assert image.reason == (
+        "not supported: module sample_connector is not a file of the image model"
+    )
+
+
+def test_editable_install_replaces_the_regular_one(tmp_path):
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY . /opt/build\n"
+        "RUN pip install /opt/build && pip install -e /opt/build"
+        " && rm -rf /opt/build\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile=dockerfile)
+    assert image.reason == (
+        "not supported: module sample_connector is not a file of the image model"
+    )
+
+
+def test_regular_requirement_is_installed(tmp_path):
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY . /opt/build\n"
+        "RUN pip install -r /opt/build/requirements.txt && rm -rf /opt/build\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(
+        tmp_path,
+        {"pyproject.toml": data, "requirements.txt": "/opt/build\n"},
+        dockerfile=dockerfile,
+    )
+    assert image.covered, image.reason
+
+
 def test_other_entry_of_site_packages_keeps_the_module(tmp_path):
     dockerfile = PACKAGED_DOCKERFILE.replace(
         "CMD",
@@ -3694,6 +3788,9 @@ def test_workflow_watches_every_file_the_check_reads():
     branches = re.findall(r"^      - '?([^'\n]+)'?$", triggers["push"], flags=re.M)
     assert branches == ["master", "release/*", "lts/*"]
     assert not re.search(r"^    branches", triggers["pull_request"], flags=re.M)
+    # Copilot review of 04:27 UTC: the merge queue of every pushed branch.
+    queued = re.findall(r"^      - '?([^'\n]+)'?$", triggers["merge_group"], flags=re.M)
+    assert {b.rstrip("*") for b in branches} <= {b.rstrip("*") for b in queued}
 
 
 def stamp_step_script():
