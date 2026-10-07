@@ -46,7 +46,7 @@ The connector reacts to the following live stream events on Indicator entities:
 
 | OpenCTI event | Cortex XDR action |
 | ------------- | ------------------ |
-| `create` / `update` | Upsert: insert the indicator's IOC(s), or update them if they already exist |
+| `create` / `update` | Upsert: insert the indicator's IOC(s), or update them if they already exist; when an update changes the pattern, the IOCs of the former values the new pattern no longer holds are deleted first (unless another valid indicator holds them) |
 | `delete` | Delete the indicator's IOC(s) |
 
 Any other event type (e.g. a custom event) is skipped with a `warning` log.
@@ -115,7 +115,8 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | Indicator upserted in Cortex XDR            | `deployed`, with the Cortex XDR `rule_id` of its first IOC as external id                                 |
 | Indicator rejected by Cortex XDR            | `failed`, with a short reason such as "Cortex XDR refused the IOC upsert: permission denied" (the Cortex XDR response is written to the connector log); a success reply listing `errors` for any IOC of the indicator is a rejection too ("Cortex XDR refused the IOC upsert: invalid request"), and the IOCs that upsert created are deleted again, so a `failed` indicator leaves only the IOCs that existed before it (a failed deletion is logged) |
 | Indicator without any supported observable  | Nothing: the indicator is never pushed                                                                    |
-| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) pushes too are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
+| Pattern updated                             | The IOCs of the former values the new pattern no longer holds are deleted as for a delete, then the indicator is reported as for a create; `failed` when Cortex XDR refuses the deletion or the other indicators cannot be read (the new values are not upserted, and the former values are kept in the connector state until a later update or delete of the indicator deletes them), `removed` when the new pattern holds no supported value |
+| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) pushes too are kept; a failed deletion, a deletion skipped because the other indicators cannot be read, or a former value kept by a refused deletion still in Cortex XDR, is not reported |
 | Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |
 | Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
 | Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |

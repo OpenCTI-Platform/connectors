@@ -110,14 +110,14 @@ def describe_error(error: BaseException) -> str:
     return message
 
 
-def pushed_values(pattern: str | None) -> frozenset[str]:
-    """Return the normalized values of a pattern the connector pushes, one Cortex XDR IOC each.
+def pattern_pushed_values(pattern: str | None) -> list[str]:
+    """Return the values of a pattern the connector pushes, as the pattern writes them.
 
     :param pattern: A STIX pattern.
     :return: Its hashes, domain names, IPv4 addresses, email addresses and URLs.
     """
-    return frozenset(
-        normalized
+    return [
+        pattern_value.value
         for pattern_value in extract_pattern_values(pattern)
         if (
             pattern_value.hash_algorithm is not None
@@ -126,7 +126,20 @@ def pushed_values(pattern: str | None) -> frozenset[str]:
                 and pattern_value.object_path == "value"
             )
         )
-        and (normalized := normalize_value(pattern_value.value))
+        and normalize_value(pattern_value.value)
+    ]
+
+
+def pushed_values(pattern: str | None) -> frozenset[str]:
+    """Return the normalized values of a pattern the connector pushes, one Cortex XDR IOC each.
+
+    :param pattern: A STIX pattern.
+    :return: Its hashes, domain names, IPv4 addresses, email addresses and URLs.
+    """
+    return frozenset(
+        normalized
+        for value in pattern_pushed_values(pattern)
+        if (normalized := normalize_value(value))
     )
 
 

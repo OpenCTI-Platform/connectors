@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from connector import Connector, ConnectorSettings
+from connector.connector import SHARED_VALUE_LOOKUP_REASON
 from connector.deployment import (
     NEVER_EXPIRES,
     CortexXdrDeploymentAdapter,
@@ -26,6 +27,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
+from connectors_sdk.connectors.stream.deployment import PENDING_WITHDRAWALS_STATE_KEY
 from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 from cortex_xdr_client.client import CortexXdrClient
 from pycti import OpenCTIConnectorHelper
@@ -463,6 +465,237 @@ def test_delete_without_the_other_indicators_is_skipped(connector):
     assert meta["error"] == (
         "Cannot read the OpenCTI indicators sharing its values: OpenCTI down"
     )
+
+
+# Pattern change of an indicator
+
+INDICATOR_STIX_ID = make_indicator()["id"]
+FORMER_VALUE = "203.0.113.9"
+
+
+def make_update_message(data, former_pattern):
+    reverse_patch = [{"op": "replace", "path": "/pattern", "value": former_pattern}]
+    return SimpleNamespace(
+        event="update",
+        data=json.dumps({"data": data, "context": {"reverse_patch": reverse_patch}}),
+        id="1-0",
+    )
+
+
+def deleted_values(connector):
+    return [
+        call.args[0][0]["value"] for call in connector.client.delete_iocs.call_args_list
+    ]
+
+
+def keep_former_value(connector, value=FORMER_VALUE):
+    """Leave a former value an earlier update could not delete in the state."""
+    connector.helper.get_state.return_value = {
+        "start_from": "1-0",
+        PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR_STIX_ID: [value]},
+    }
+
+
+def kept_former_values(connector):
+    state = connector.helper.get_state.return_value
+    return state[PENDING_WITHDRAWALS_STATE_KEY].get(INDICATOR_STIX_ID, [])
+
+
+def test_pattern_change_deletes_the_iocs_of_the_former_values_then_upserts(
+    connector,
+):
+    connector.client.insert_iocs.return_value = {
+        "added_objects": [{"id": 123, "status": "Created"}]
+    }
+    indicator = make_indicator()
+
+    connector._process_message(
+        make_update_message(
+            indicator,
+            f"[ipv4-addr:value = '{FORMER_VALUE}' OR "
+            "ipv4-addr:value = '198.51.100.7']",
+        )
+    )
+
+    calls = [
+        name
+        for name, *_ in connector.client.method_calls
+        if name in {"delete_iocs", "insert_iocs"}
+    ]
+    assert calls == ["delete_iocs", "insert_iocs"]
+    assert deleted_values(connector) == [[FORMER_VALUE]]
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="123"
+    )
+
+
+def test_pattern_change_keeps_the_ioc_of_a_former_value_another_indicator_holds(
+    connector,
+):
+    connector.helper.api.indicator.list.return_value = [
+        {"id": OTHER_ID, "pattern": f"[ipv4-addr:value = '{FORMER_VALUE}']"}
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(
+        make_update_message(indicator, f"[ipv4-addr:value = '{FORMER_VALUE}']")
+    )
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.client.insert_iocs.assert_called_once()
+    connector.assurance.report_pushed.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "indicator, former_pattern",
+    [
+        (make_indicator(), "[ipv4-addr:value = '198.51.100.7']"),
+        (file_indicator(), f"[file:hashes.'SHA-256' = '{SHA256.upper()}']"),
+        (make_indicator(), "[process:name = 'cmd.exe']"),
+    ],
+    ids=["same-value", "hash-case", "unpushed-value"],
+)
+def test_update_keeping_the_pushed_values_deletes_nothing(
+    connector, indicator, former_pattern
+):
+    connector._process_message(make_update_message(indicator, former_pattern))
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.client.insert_iocs.assert_called_once()
+    connector.assurance.report_pushed.assert_called_once()
+
+
+def test_refused_deletion_of_a_former_value_is_reported_failed_without_the_upsert(
+    connector,
+):
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
+    connector.client.delete_iocs.side_effect = api_error(
+        ApiClientError("Bad request", status_code=400)
+    )
+    indicator = make_indicator()
+
+    connector._process_message(
+        make_update_message(indicator, f"[ipv4-addr:value = '{FORMER_VALUE}']")
+    )
+
+    connector.client.insert_iocs.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, "Cortex XDR refused the IOC upsert: invalid request"
+    )
+    connector.assurance.report_pushed.assert_not_called()
+    warning = connector.helper.connector_logger.warning.call_args
+    assert warning.args[0] == "IOCs of a former pattern not deleted from Cortex XDR"
+    assert warning.args[1]["values"] == [FORMER_VALUE]
+    assert kept_former_values(connector) == [FORMER_VALUE]
+
+
+def test_former_value_whose_other_indicators_cannot_be_read_is_reported_failed(
+    connector,
+):
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+    indicator = make_indicator()
+
+    connector._process_message(
+        make_update_message(indicator, f"[ipv4-addr:value = '{FORMER_VALUE}']")
+    )
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.client.insert_iocs.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, SHARED_VALUE_LOOKUP_REASON
+    )
+
+
+def test_global_failure_deleting_a_former_value_stops_the_connector(connector):
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
+    connector.client.delete_iocs.side_effect = api_error(
+        ApiServerError("Server error", status_code=503)
+    )
+
+    with pytest.raises(CortexXdrApiError):
+        connector._process_message(
+            make_update_message(
+                make_indicator(), f"[ipv4-addr:value = '{FORMER_VALUE}']"
+            )
+        )
+
+    connector.client.insert_iocs.assert_not_called()
+    message = connector.assurance.report_push_failed.call_args.args[1]
+    assert message == "Cortex XDR refused the IOC upsert: server error"
+    assert kept_former_values(connector) == [FORMER_VALUE]
+
+
+def test_pattern_change_to_an_unsupported_pattern_deletes_the_former_iocs(
+    connector,
+):
+    indicator = make_indicator()
+    indicator["pattern"] = "[mutex:name = 'mutex']"
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "Mutex", "value": "mutex"}
+    ]
+
+    connector._process_message(
+        make_update_message(indicator, f"[ipv4-addr:value = '{FORMER_VALUE}']")
+    )
+
+    assert deleted_values(connector) == [[FORMER_VALUE]]
+    connector.client.insert_iocs.assert_not_called()
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_update_deletes_the_former_values_an_earlier_update_left(connector):
+    keep_former_value(connector)
+
+    connector._process_message(make_message("update", make_indicator()))
+
+    assert deleted_values(connector) == [[FORMER_VALUE]]
+    connector.client.insert_iocs.assert_called_once()
+    assert kept_former_values(connector) == []
+
+
+def test_delete_after_a_refused_deletion_deletes_the_former_value_first(connector):
+    """The delete carries the current pattern only: the kept former value is
+    deleted before the indicator is reported removed."""
+    keep_former_value(connector)
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert deleted_values(connector) == [[FORMER_VALUE], ["198.51.100.7"]]
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    assert kept_former_values(connector) == []
+
+
+def test_delete_whose_former_value_is_still_refused_is_not_reported_removed(
+    connector,
+):
+    keep_former_value(connector)
+    connector.client.delete_iocs.side_effect = [
+        api_error(ApiClientError("Bad request", status_code=400)),
+        None,
+    ]
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    assert deleted_values(connector) == [[FORMER_VALUE], ["198.51.100.7"]]
+    connector.assurance.report_removed.assert_not_called()
+    assert kept_former_values(connector) == [FORMER_VALUE]
+
+
+def test_delete_of_an_unsupported_indicator_deletes_the_kept_former_values(
+    connector,
+):
+    keep_former_value(connector)
+    indicator = make_indicator()
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "Mutex", "value": "mutex"}
+    ]
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert deleted_values(connector) == [[FORMER_VALUE]]
+    connector.assurance.report_removed.assert_called_once_with(indicator)
 
 
 def test_connector_works_without_write_back():
