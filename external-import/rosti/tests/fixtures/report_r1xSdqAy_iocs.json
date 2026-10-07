@@ -1,0 +1,201 @@
+{
+  "data": [
+    {
+      "category": "network_activity",
+      "value": "45.129.0.192",
+      "date": "2026-10-02",
+      "type": "ip",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.538581268Z",
+      "tags": [],
+      "id": "XsooGS3sZfUe6Rgbi2xLfT"
+    },
+    {
+      "category": "network_activity",
+      "value": "79.141.169.187",
+      "date": "2026-10-02",
+      "type": "ip",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.534873914Z",
+      "tags": [],
+      "id": "e4ey8BQ2FyYgSL6zvN8VMh"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "d6fe51c22b91776f4c961ea58bcac5917f15d560a619d7ce726d3d51795609d3",
+      "date": "2026-10-02",
+      "comment": "[MODIFIED] MD5 – SHA256, md5: 49a7156a7d043cc8f9f680579db22f86",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.530189287Z",
+      "tags": [],
+      "id": "dApRLNBiAxUphV372fFVHJ"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "49a7156a7d043cc8f9f680579db22f86",
+      "date": "2026-10-02",
+      "comment": "[MODIFIED] MD5 – SHA256, sha256: d6fe51c22b91776f4c961ea58bcac5917f15d560a619d7ce726d3d51795609d3",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.521992227Z",
+      "tags": [],
+      "id": "TDm7eyUApgR5Jcu4ZzTcNs"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "8953ec7960b09f544a880b072ad4e6cfda7a8303f486251d3478dcfdfbac23b6",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/etc/ld.so.preload MD5 – SHA256, md5: 8eb64f25d2a8e18e05aae058629473cf",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.512473103Z",
+      "tags": [],
+      "id": "9Hyq45uqJQ9huzqW4mnkyn"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "8eb64f25d2a8e18e05aae058629473cf",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/etc/ld.so.preload MD5 – SHA256, sha256: 8953ec7960b09f544a880b072ad4e6cfda7a8303f486251d3478dcfdfbac23b6",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.504283443Z",
+      "tags": [],
+      "id": "KeSfDsidB2jkfeuBGy8wr9"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "703e97c64e61e41dc3aaba580d82bb2aa7b6a11b54ee6fb467ed5d5a3bffdef5",
+      "date": "2026-10-02",
+      "comment": "md5: 61af1c4bce1c2eebc8ff689ca5337791",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.498991913Z",
+      "tags": [],
+      "id": "FHYYkvWE3KYg5qCGMbfsiB"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "61af1c4bce1c2eebc8ff689ca5337791",
+      "date": "2026-10-02",
+      "comment": "sha256: 703e97c64e61e41dc3aaba580d82bb2aa7b6a11b54ee6fb467ed5d5a3bffdef5",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.493573514Z",
+      "tags": [],
+      "id": "TTKzufNVwJUe9Mr4bQC55c"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "4000276a150a165d3c2537d1e19fb393c4de8333076a16655e28059cae82157b",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/bin/mailservice MD5 – SHA256, md5: f90fa81a5f521d785f2b2f765e3ab897",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.486713878Z",
+      "tags": [],
+      "id": "jMigCMKzi2uUUtsdZdCSq8"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "f90fa81a5f521d785f2b2f765e3ab897",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/bin/mailservice MD5 – SHA256, sha256: 4000276a150a165d3c2537d1e19fb393c4de8333076a16655e28059cae82157b",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.481310099Z",
+      "tags": [],
+      "id": "jbJZUxvTQJHHSrozP4NkGR"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "7a6cea9f5c9e2e9994d4e3c4da73f86cf5acd05ea5d312c066c9d1dafd69ee38",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/bin/webconsole MD5 – SHA256, md5: ae0ea6502d3fa5f0664bceb73189eb54",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.476573921Z",
+      "tags": [],
+      "id": "m8ByYyThonvJz6NcVGjMk4"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "ae0ea6502d3fa5f0664bceb73189eb54",
+      "date": "2026-10-02",
+      "comment": "[ADDED]/data/bin/webconsole MD5 – SHA256, sha256: 7a6cea9f5c9e2e9994d4e3c4da73f86cf5acd05ea5d312c066c9d1dafd69ee38",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.470954801Z",
+      "tags": [],
+      "id": "5DuuZwZSvhReraDfJCiwC5"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "77324ac428bde86d351fc5fc06f6d64a6bfe737dfb2743df1d4c5ac2418a5b6a",
+      "date": "2026-10-02",
+      "comment": "[MODIFIED]/bin/smit MD5 – SHA256, md5: 5241738a3e9988404239e12243f6d35b",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.466012534Z",
+      "tags": [],
+      "id": "2UtkRmMZd3gEahfFaRpNwF"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "5241738a3e9988404239e12243f6d35b",
+      "date": "2026-10-02",
+      "comment": "[MODIFIED]/bin/smit MD5 – SHA256, sha256: 77324ac428bde86d351fc5fc06f6d64a6bfe737dfb2743df1d4c5ac2418a5b6a",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.460192582Z",
+      "tags": [],
+      "id": "GiZZhf3do7QLcP8q4xZpBa"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "8015f34dc84922b03688399d7f9fe7a00361789f7e420c7e2a2cdb23e75cef84",
+      "date": "2026-10-02",
+      "comment": "md5: 64c90a00c7fda4d5c7973ed64c25783a",
+      "type": "sha256",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.453483218Z",
+      "tags": [],
+      "id": "Kd5BGPnhz4vbEP298LXxGf"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "64c90a00c7fda4d5c7973ed64c25783a",
+      "date": "2026-10-02",
+      "comment": "sha256: 8015f34dc84922b03688399d7f9fe7a00361789f7e420c7e2a2cdb23e75cef84",
+      "type": "md5",
+      "ids": true,
+      "report": "r1xSdqAy",
+      "timestamp": "2026-10-02T12:10:37.447771627Z",
+      "tags": [],
+      "id": "GLNPLBL2CY7KXJLWUrsD3W"
+    }
+  ],
+  "meta": {
+    "count": 16,
+    "paginated": true,
+    "has_more": false,
+    "limit": 1000,
+    "total": 16
+  }
+}

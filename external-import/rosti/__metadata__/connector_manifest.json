@@ -1,0 +1,27 @@
+{
+  "title": "Rösti",
+  "slug": "rosti",
+  "description": "Rösti (Repackaged Öpen Source Threat Intelligence) parses public threat reports from hundreds of security vendors, researchers and CERTs and turns them into machine-readable IOCs, YARA rules and MITRE ATT&CK references. Every IOC carries a false-positive risk score based on about 30 allowlists.\n\nThis connector imports Rösti reports into OpenCTI as STIX reports containing:\n- indicators and observables for IPs, CIDRs, domains, URLs, email addresses, file hashes (MD5, SHA-1, SHA-256, SHA-512, SSDEEP, SHA-224), file names and paths, mutexes, user agents and cryptocurrency wallets; the Rösti false-positive risk sets the score, Rösti tags become labels and the IDS flag sets detection,\n- YARA rules as indicators,\n- MITRE ATT&CK techniques, mitigations, groups, campaigns and software,\n- CVEs as vulnerabilities.\n\nThe connector imports reports created or updated since its last run and resumes from a checkpoint after interruptions.",
+  "short_description": "Import IOCs, YARA rules, MITRE ATT&CK references and CVEs extracted by Rösti from public threat reports.",
+  "logo": "external-import/rosti/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "rosti@bin.re",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://rosti.dev/api",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/rosti",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-rosti",
+  "container_type": "EXTERNAL_IMPORT"
+}

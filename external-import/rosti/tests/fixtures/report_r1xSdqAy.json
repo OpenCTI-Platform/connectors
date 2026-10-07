@@ -1,0 +1,40 @@
+{
+  "id": "r1xSdqAy",
+  "date": "2026-10-02",
+  "title": "CVE-2026-104286: FortiMail Path Traversal Vulnerability Actively Exploited",
+  "url": "https://www.truesec.com/hub/blog/cve-2026-104286-fortimail-path-traversal-vulnerability-actively-exploited",
+  "authors": [
+    "Hjalmar Desmond"
+  ],
+  "count": {
+    "iocs": 16,
+    "yara_rules": 0,
+    "mitre_ids": 0
+  },
+  "tags": [],
+  "source": {
+    "id": "truesec",
+    "name": "Truesec",
+    "url": "https://www.truesec.com/hub/blog",
+    "status": {
+      "active": true
+    }
+  },
+  "checksum": "944e089d7502ac89561db364fe60f63e",
+  "last_updated": "2026-10-02T12:10:39Z",
+  "yara_rules": [],
+  "mitre_ids": [],
+  "cve": [
+    {
+      "id": "CVE-2026-104286",
+      "description": "An improper limitation of a pathname to a restricted directory ('path traversal') vulnerability in Fortinet FortiMail 8.0.0 through 8.0.1, FortiMail 7.6.0 through 7.6.6, FortiMail 7.4.0 through 7.4.8, FortiMail 7.2.0 through 7.2.9 may allow an unauthenticated attacker to write arbitrary files on the underlying system via crafted HTTP or HTTPS requests.",
+      "timestamp": "2026-10-01T20:17:24Z"
+    },
+    {
+      "id": "CVE-2026-85706",
+      "description": "GitLab has remediated an issue in GitLab CE/EE affecting all versions from 18.7 before 19.1.8, 19.2 before 19.2.6, and 19.3 before 19.3.2 that, under certain conditions, an unauthenticated user could have read arbitrary files from the GitLab server due to improper path confinement and missing authentication enforcement in the repository commits API.",
+      "timestamp": "2026-09-12T03:16:30Z"
+    }
+  ],
+  "notes": []
+}
