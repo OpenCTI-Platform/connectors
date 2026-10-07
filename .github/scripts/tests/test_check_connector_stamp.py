@@ -1109,6 +1109,41 @@ def test_install_that_may_be_skipped(tmp_path, steps, reason):
 
 
 @pytest.mark.parametrize(
+    "steps, reason",
+    [
+        # Copilot review of 05:19 UTC: pip removes the files of the distribution
+        # a later install replaces, from a local source or from an index.
+        (
+            "RUN pip install --force-reinstall /opt/old",
+            "pycti reads /<site-packages>/sample_connector/.connector_version.json"
+            " before any build stamp, and a build step put content the model does"
+            " not know there",
+        ),
+        (
+            "RUN pip install --force-reinstall sample-connector",
+            "not supported: python -m sample_connector: /<site-packages>/sample_connector"
+            " holds what a build command wrote",
+        ),
+        (
+            "RUN pip install --force-reinstall /opt/build",
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+    ],
+)
+def test_reinstall_without_the_stamp(tmp_path, steps, reason):
+    # The package is first installed with its stamp, then reinstalled.
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY . /opt/build\nRUN pip install /opt/build\n"
+        "COPY --exclude=sample_connector/.connector_version.json . /opt/old\n"
+        f"{steps}\nRUN rm -rf /opt/build /opt/old\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile=dockerfile)
+    assert image.reason == reason
+
+
+@pytest.mark.parametrize(
     "requirements",
     [
         # Copilot review of 04:27 UTC: an editable requirement stays a link to
@@ -3196,6 +3231,76 @@ def test_tilde_prefixes(tmp_path, removal, covered):
     assert image.covered is covered, image.reason
     if removal.startswith("rm -f ~root") or removal.startswith("rm -f ~+"):
         assert "tilde prefix" in image.reason
+
+
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 05:19 UTC: only an unquoted ~ that starts a word is
+        # the home directory; a quoted, escaped or variable one, and any tilde
+        # of an exec form, is a name.
+        ("RUN rm -f '~/.connector_version.json'", False),
+        ('RUN rm -f "~"/.connector_version.json', False),
+        ("RUN rm -f \\~/.connector_version.json", False),
+        ("RUN T='~'; rm -f \"$T/.connector_version.json\"", False),
+        ("RUN rm -f ~/.connector_version.json", True),
+        ("RUN rm -f x~/.connector_version.json", True),
+    ],
+)
+def test_literal_tilde(tmp_path, steps, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/app/~\nWORKDIR /opt/app\n"
+        f'{steps}\nCMD ["python3", "~/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if covered:
+        assert image.reason == "stamp at /opt/app/~/.connector_version.json"
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 05:19 UTC: a # inside a word does not start a comment.
+        ("echo ready#now; rm -f .connector_version.json", False),
+        ("echo 'ready'#now; rm -f .connector_version.json", False),
+        ("echo ready #now; rm -f .connector_version.json", True),
+        ("echo ready;#now; rm -f .connector_version.json", True),
+    ],
+)
+def test_hash_inside_a_word(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\n"
+        f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "destination, covered",
+    [
+        # Copilot review of 05:19 UTC: a directory of the interpreter the base
+        # image has, which the model does not list, takes a copied file inside.
+        ("/usr/local/lib/python3.12/site-packages", False),
+        ("/usr/local/lib/python3.12", False),
+        ("/usr/local/lib/python3.12/json", False),
+        ("/usr/lib/python3.12/site-packages", False),
+        ("/usr/local/lib/python3.12/site-packages/hook.txt", True),
+        ("/opt/tools/hook.py", True),
+    ],
+)
+def test_copy_to_a_directory_of_the_interpreter(tmp_path, destination, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        f"COPY sitecustomize.py {destination}\nRUN python3 -m compileall -q /opt/src\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "sitecustomize.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "may be a directory of the interpreter" in image.reason
 
 
 @pytest.mark.parametrize(

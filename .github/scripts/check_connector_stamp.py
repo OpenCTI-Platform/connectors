@@ -251,6 +251,11 @@ PLAIN_GLOB = str.maketrans({v: k for k, v in QUOTED_GLOB.items()})
 LITERAL_GLOB = str.maketrans({v: f"[{k}]" for k, v in QUOTED_GLOB.items()})
 # A wildcard character taken literally, as LITERAL_GLOB writes it.
 LITERAL_WILDCARD = re.compile(r"\[[*?\[]\]")
+# An unquoted ~ that starts a word, or follows the = or a : of an assignment, is
+# carried as a private-use character until a path reads it: any other tilde
+# (quoted, escaped, from a variable, in an exec form) is literal.
+TILDE = "\ue040"
+ASSIGNMENT_PREFIX = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=(?:[^:'\"\\]*:)*")
 
 
 def literal_globs(text):
@@ -2193,9 +2198,20 @@ class Shell:
         and variable references as markers (none inside single quotes)."""
         out = []
         quote = None
+        word = 0
         i = 0
         while i < len(line):
             char = line[i]
+            if quote is None and (char.isspace() or char in PUNCTUATION):
+                word = i + 1
+            if (
+                quote is None
+                and char == "~"
+                and (i == word or ASSIGNMENT_PREFIX.fullmatch(line, word, i))
+            ):
+                out.append(TILDE)
+                i += 1
+                continue
             if (
                 quote is None
                 and char == "#"
@@ -2287,6 +2303,8 @@ class Shell:
     def _tokens(self, line):
         lexer = shlex.shlex(self._protect(line), posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
+        # _protect removed the comments: a # inside a word is part of it.
+        lexer.commenters = ""
         try:
             tokens = list(lexer)
         except ValueError as error:
@@ -3072,7 +3090,7 @@ class Shell:
                 f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
             )
         bare = (
-            not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate
+            not candidate.startswith(("/", TILDE, "./", "../")) and "/" not in candidate
         )
         if bare and not GLOB_CHARS.search(candidate):
             if self.cwd is None:
@@ -3251,15 +3269,16 @@ class Shell:
         return home
 
     def _tilde(self, value):
-        if value == "~" or value.startswith("~/"):
-            return self._home(f"path '{value}'") + value[1:]
-        if value.startswith("~"):
-            # ~NAME is the home directory of NAME in the account database of the
-            # image, ~+ and ~- the current and the previous directory.
-            raise Unsupported(
-                f"path '{value}' starts with a tilde prefix the image model does not resolve"
-            )
-        return value
+        if not value.startswith(TILDE):
+            return value
+        shown = "~" + value[1:]
+        if value == TILDE or value.startswith(TILDE + "/"):
+            return self._home(f"path '{shown}'") + value[1:]
+        # ~NAME is the home directory of NAME in the account database of the
+        # image, ~+ and ~- the current and the previous directory.
+        raise Unsupported(
+            f"path '{shown}' starts with a tilde prefix the image model does not resolve"
+        )
 
     def _operands(self, args):
         operands = []
@@ -3664,6 +3683,12 @@ class Shell:
             # An editable install replaces a regular install of the same project
             # by a link to its source; which one it replaces is not modelled.
             remove_files(self.files, SITE_PACKAGES)
+        # pip removes the files of an installed distribution it replaces; which
+        # project an install replaces is not modelled, so what earlier installs
+        # put in site-packages may be gone.
+        self._uncertain_files(
+            [p for p in self.files if p.startswith(SITE_PACKAGES + "/")]
+        )
         if editable or conditional:
             return
         for path in local:
@@ -3673,7 +3698,12 @@ class Shell:
                 raise Unsupported(
                     "pip install into another directory than site-packages"
                 )
+            before = dict(self.files)
             self.model.install_package(self.files, path, self.stage)
+            # What this install wrote is known again.
+            self.stage.replaced -= {
+                p for p, origin in self.files.items() if before.get(p) != origin
+            }
 
     def _check_pip_configuration(self, env):
         """pip also reads options from the environment (PIP_*) and from pip.conf:
@@ -4003,6 +4033,23 @@ class ImageModel:
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
         into_dir = dest_is_dir or stage.is_dir(dest_path)
+        if (
+            not into_dir
+            and dest_path.startswith("/usr/")
+            and any(kind != "dir" for kind, _, _ in entries)
+            and (
+                holds_library_directory(dest_path)
+                or in_standard_library(dest_path)
+                and "." not in posixpath.basename(dest_path)
+            )
+        ):
+            # The base image may have a directory there (site-packages of its
+            # interpreter, a package of the standard library), which the model
+            # does not list: a file copied to it would land inside.
+            raise Unsupported(
+                f"{instruction} to {dest_path}, which may be a directory of the"
+                " interpreter of the base image"
+            )
 
         def linked(target):
             """The link of the build ``target`` is, or lies below."""
