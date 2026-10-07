@@ -91,7 +91,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.log_level == "error"
     assert settings.connector.duration_period == timedelta(hours=1)
     assert settings.crtsh.labels == "crtsh,osint"
-    assert settings.crtsh.marking_refs == "TLP:WHITE"
+    assert settings.crtsh.marking_refs is None
     assert settings.crtsh.is_expired is False
     assert settings.crtsh.is_wildcard is False
 

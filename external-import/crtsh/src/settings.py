@@ -71,9 +71,14 @@ class CrtshConfig(BaseConfigModel):
         description="Comma-separated list of labels to add to the imported objects (e.g. 'crtsh,osint').",
         default="crtsh,osint",
     )
-    marking_refs: Literal["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"] = Field(
-        description="TLP marking to apply to the imported objects.",
-        default="TLP:WHITE",
+    marking_refs: Literal["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"] | None = (
+        Field(
+            description=(
+                "TLP marking to apply to the imported objects. "
+                "If not set, no marking is applied."
+            ),
+            default=None,
+        )
     )
     is_expired: bool = Field(
         description="Whether to exclude expired certificates from the search.",

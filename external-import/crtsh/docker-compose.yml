@@ -12,7 +12,7 @@ services:
       # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
       - CRTSH_DOMAIN=ChangeMe
       # - CRTSH_LABELS=crtsh,osint
-      # - CRTSH_MARKING_REFS=TLP:WHITE
+      # - CRTSH_MARKING_REFS=TLP:WHITE # No marking if not set
       # - CRTSH_IS_EXPIRED=false
       # - CRTSH_IS_WILDCARD=false
     restart: always

@@ -70,8 +70,8 @@
       "type": "string"
     },
     "CRTSH_MARKING_REFS": {
-      "default": "TLP:WHITE",
-      "description": "TLP marking to apply to the imported objects.",
+      "default": null,
+      "description": "TLP marking to apply to the imported objects. If not set, no marking is applied.",
       "enum": [
         "TLP:WHITE",
         "TLP:GREEN",

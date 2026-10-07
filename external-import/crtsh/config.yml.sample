@@ -12,6 +12,6 @@ connector:
 crtsh:
   domain: 'ChangeMe'
   # labels: 'crtsh,osint'
-  # marking_refs: 'TLP:WHITE'
+  # marking_refs: 'TLP:WHITE' # No marking if not set
   # is_expired: false
   # is_wildcard: false

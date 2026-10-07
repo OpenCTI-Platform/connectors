@@ -119,3 +119,28 @@ def test_main_should_print_the_startup_error_and_exit(monkeypatch, capsys):
     stderr = capsys.readouterr().err
     assert "Traceback" in stderr
     assert "Error validating configuration" in stderr
+
+
+def test_connector_should_not_mark_objects_when_marking_refs_is_unset(
+    mock_opencti_connector_helper, monkeypatch
+):
+    """Without `CRTSH_MARKING_REFS`, the imported objects MUST have no marking (as before)."""
+
+    class UnmarkedConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "crtsh": {"domain": "example.com"},
+                }
+            )
+
+    monkeypatch.setattr(
+        "lib.external_import.ConnectorSettings", UnmarkedConnectorSettings
+    )
+
+    connector = CrtshConnector()
+
+    assert connector.marking_refs is None
+    assert connector.api.marking_refs is None
