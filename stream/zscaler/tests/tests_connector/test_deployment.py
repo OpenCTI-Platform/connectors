@@ -261,9 +261,12 @@ def test_refused_domain_is_reported_failed(connector):
     assert reported == indicator
     assert error == "Zscaler refused the blacklist update: invalid request"
     connector.assurance.report_pushed.assert_not_called()
-    connector.helper.connector_logger.error.assert_any_call(
-        "Failed to send create event: "
-        "Request failed with status 400: INVALID_INPUT_ARGUMENT"
+    connector.helper.connector_logger.warning.assert_any_call(
+        "Event not applied to Zscaler",
+        {
+            "event_type": "create",
+            "error": "Request failed with status 400: INVALID_INPUT_ARGUMENT",
+        },
     )
 
 
@@ -346,8 +349,8 @@ def test_unreadable_classification_does_not_block_the_create(connector, lookup):
         f"{CATEGORY_URL}?action=ADD_TO_LIST"
     ]
     connector.assurance.report_pushed.assert_called_once_with(indicator)
-    connector.helper.connector_logger.error.assert_any_call(
-        "Failed to lookup domain evil.example in Zscaler."
+    connector.helper.connector_logger.warning.assert_any_call(
+        "Domain classification not read from Zscaler", {"domain": "evil.example"}
     )
 
 
@@ -480,9 +483,12 @@ def test_delete_without_the_other_indicators_is_not_applied(connector):
 
     assert zscaler.puts == []
     connector.assurance.report_removed.assert_not_called()
-    connector.helper.connector_logger.error.assert_called_with(
-        "Failed to send delete event: Cannot read the OpenCTI indicators of "
-        "evil.example: OpenCTI down"
+    connector.helper.connector_logger.warning.assert_called_with(
+        "Event not applied to Zscaler",
+        {
+            "event_type": "delete",
+            "error": "Cannot read the OpenCTI indicators of evil.example: OpenCTI down",
+        },
     )
 
 
@@ -576,10 +582,13 @@ def test_shared_domain_lookup_is_bounded(connector):
     assert zscaler.urls == ["evil.example"]
     connector.assurance.report_removed.assert_not_called()
     assert connector.helper.api.indicator.list.call_count == MAX_SHARED_DOMAIN_PAGES
-    connector.helper.connector_logger.error.assert_called_with(
-        "Failed to send delete event: More than "
-        f"{MAX_SHARED_DOMAIN_PAGES * SHARED_DOMAIN_PAGE_SIZE} OpenCTI indicators "
-        "name evil.example, none of them read blocks it"
+    connector.helper.connector_logger.warning.assert_called_with(
+        "Event not applied to Zscaler",
+        {
+            "event_type": "delete",
+            "error": f"More than {MAX_SHARED_DOMAIN_PAGES * SHARED_DOMAIN_PAGE_SIZE} "
+            "OpenCTI indicators name evil.example, none of them read blocks it",
+        },
     )
 
 
@@ -594,9 +603,13 @@ def test_shared_domain_page_without_cursor_does_not_remove_the_domain(connector)
 
     assert zscaler.urls == ["evil.example"]
     connector.assurance.report_removed.assert_not_called()
-    connector.helper.connector_logger.error.assert_called_with(
-        "Failed to send delete event: Cannot read the next OpenCTI indicators of "
-        "evil.example: the page carries no cursor"
+    connector.helper.connector_logger.warning.assert_called_with(
+        "Event not applied to Zscaler",
+        {
+            "event_type": "delete",
+            "error": "Cannot read the next OpenCTI indicators of evil.example: "
+            "the page carries no cursor",
+        },
     )
 
 
@@ -1019,7 +1032,8 @@ def test_rejected_credentials_do_not_recurse(connector, monkeypatch):
 
     assert connector.session.post.call_count == 1
     connector.helper.connector_logger.error.assert_any_call(
-        "Failed to authenticate with Zscaler: No response - No text"
+        "Failed to authenticate with Zscaler",
+        {"status_code": "No response", "response": "No text"},
     )
 
 

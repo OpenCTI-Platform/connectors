@@ -222,12 +222,12 @@ class ZscalerConnector:
 
         safe_payload = sanitize_payload(payload)
         self.helper.connector_logger.debug(
-            f"Payload sent (sanitized): {json.dumps(safe_payload, indent=4)}"
+            "Authentication payload sent (sanitized)", {"payload": safe_payload}
         )
 
         if response and response.status_code == 200:
             self.helper.connector_logger.debug(
-                f"Raw response from Zscaler: {response.text}"
+                "Authentication response from Zscaler", {"response": response.text}
             )
             # retrieve the JSESSIONID cookie
             if self.session.cookies.get("JSESSIONID"):
@@ -242,7 +242,8 @@ class ZscalerConnector:
             status_code = response.status_code if response else "No response"
             text = response.text if response else "No text"
             self.helper.connector_logger.error(
-                f"Failed to authenticate with Zscaler: {status_code} - {text}"
+                "Failed to authenticate with Zscaler",
+                {"status_code": status_code, "response": text},
             )
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
@@ -281,7 +282,9 @@ class ZscalerConnector:
             try:
                 response = request_func(*args, **kwargs)
             except requests.RequestException as err:
-                self.helper.connector_logger.error(f"Request failed: {err}")
+                self.helper.connector_logger.warning(
+                    "Zscaler request failed", {"error": str(err)}
+                )
                 raise ZscalerApiError(
                     f"Zscaler request failed: {err}", action=action
                 ) from err
@@ -299,8 +302,9 @@ class ZscalerConnector:
                 except (TypeError, ValueError):
                     # `Retry-After` may also be an HTTP date.
                     delay = retry_delay
-                msg = f"Rate limit exceeded. Retrying in {delay} seconds..."
-                self.helper.connector_logger.warning(msg)
+                self.helper.connector_logger.warning(
+                    "Zscaler rate limit exceeded, retrying", {"delay_seconds": delay}
+                )
                 time.sleep(delay)
                 continue
 
@@ -315,8 +319,9 @@ class ZscalerConnector:
                 )
 
             if response.status_code == 401:
-                msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
-                self.helper.connector_logger.warning(msg)
+                self.helper.connector_logger.warning(
+                    "Zscaler session expired (401), re-authenticating"
+                )
                 self.authenticate_with_zscaler()
                 if not self.session.cookies.get("JSESSIONID"):
                     self.helper.connector_logger.error(
@@ -329,8 +334,10 @@ class ZscalerConnector:
                     )
                 continue
 
-            msg = f"Request failed with status {response.status_code}: {response.text}"
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.warning(
+                "Zscaler request failed",
+                {"status_code": response.status_code, "response": response.text},
+            )
             detail = (response.text or "").strip()[:MAX_ERROR_DETAIL_LENGTH]
             raise ZscalerApiError(
                 f"Request failed with status {response.status_code}: {detail}",
@@ -355,7 +362,9 @@ class ZscalerConnector:
         domain = self.extract_domain(pattern)
         if domain and validators.domain(domain):
             return domain
-        self.helper.connector_logger.error(f"Invalid domain provided: {pattern}")
+        self.helper.connector_logger.warning(
+            "Invalid domain pattern, not sent to Zscaler", {"pattern": pattern}
+        )
         return None
 
     def get_domain_classification_in_zscaler(self, domain):
@@ -370,8 +379,9 @@ class ZscalerConnector:
 
         response = self.handle_rate_limit(self.session.post, lookup_url, data=payload)
 
-        msg = f"=== Checking domain {domain} ==="
-        self.helper.connector_logger.debug(msg)
+        self.helper.connector_logger.debug(
+            "Checking the domain classification in Zscaler", {"domain": domain}
+        )
         if response and response.status_code == 200:
             try:
                 lookup_data = response.json()
@@ -383,8 +393,8 @@ class ZscalerConnector:
                 and isinstance(lookup_data[0], dict)
             ):
                 return lookup_data[0].get("urlClassifications", [])
-        self.helper.connector_logger.error(
-            f"Failed to lookup domain {domain} in Zscaler."
+        self.helper.connector_logger.warning(
+            "Domain classification not read from Zscaler", {"domain": domain}
         )
         return None
 
@@ -443,14 +453,14 @@ class ZscalerConnector:
         """
         domain = self.is_valid_domain(data["pattern"])
         if not domain:
-            msg = f"Invalid domain pattern: {data['pattern']}"
-            self.helper.connector_logger.error(msg)
             return None
 
         classification = self.get_domain_classification_in_zscaler(domain)
         if classification:
-            msg = f"Classification found for {domain}: {classification}"
-            self.helper.connector_logger.info(msg)
+            self.helper.connector_logger.info(
+                "Domain classification found in Zscaler",
+                {"domain": domain, "classification": classification},
+            )
 
         if event_type == "create":
             self.deploy_domain(domain)
@@ -471,12 +481,14 @@ class ZscalerConnector:
             change or the activation.
         """
         if self.find_blocked_domain(domain) is not None:
-            msg = f"The domain {domain} is already in the Blacklist."
-            self.helper.connector_logger.info(msg)
+            self.helper.connector_logger.info(
+                "Domain already in the blacklist", {"domain": domain}
+            )
             self.ensure_configuration_active()
             return
-        msg = f"Sending domain {domain} to Zscaler..."
-        self.helper.connector_logger.info(msg)
+        self.helper.connector_logger.info(
+            "Sending the domain to Zscaler", {"domain": domain}
+        )
         self.send_to_zscaler(domain, "create")
 
     def withdraw_domain(self, domain: str, indicator_ids: Iterable[str]) -> None:
@@ -488,8 +500,9 @@ class ZscalerConnector:
         """
         listed = self.find_blocked_domain(domain)
         if listed is None:
-            msg = f"The domain {domain} is not in the Blacklist."
-            self.helper.connector_logger.info(msg)
+            self.helper.connector_logger.info(
+                "Domain not in the blacklist", {"domain": domain}
+            )
             return
         self.remove_domain(domain, listed, indicator_ids)
 
@@ -508,8 +521,10 @@ class ZscalerConnector:
         :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
         """
         if self.is_blocked_by_another_indicator(domain, indicator_ids):
-            msg = f"The domain {domain} stays in the Blacklist: another OpenCTI indicator blocks it."
-            self.helper.connector_logger.info(msg)
+            self.helper.connector_logger.info(
+                "Domain kept in the blacklist: another OpenCTI indicator blocks it",
+                {"domain": domain},
+            )
             return
         self.send_to_zscaler(listed, "delete")
 
@@ -595,8 +610,9 @@ class ZscalerConnector:
         elif event_type == "delete":
             base_url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
         else:
-            msg = "Unsupported event type."
-            self.helper.connector_logger.error(msg)
+            self.helper.connector_logger.error(
+                "Unsupported event type", {"event_type": event_type}
+            )
             return
 
         payload = {
@@ -605,8 +621,10 @@ class ZscalerConnector:
         }
 
         self.request_zscaler(self.session.put, base_url, json=payload)
-        msg = f"Successfully sent {event_type} for {domain}."
-        self.helper.connector_logger.info(msg)
+        self.helper.connector_logger.info(
+            "Blacklist change sent to Zscaler",
+            {"event_type": event_type, "domain": domain},
+        )
         self.ensure_configuration_active()
 
     def ensure_configuration_active(self) -> None:
@@ -663,8 +681,9 @@ class ZscalerConnector:
                 {"pattern": data.get("pattern")}, event_type, self._indicator_ids(data)
             )
         except (ZscalerApiError, SharedDomainLookupError) as err:
-            self.helper.connector_logger.error(
-                f"Failed to send {event_type} event: {err}"
+            self.helper.connector_logger.warning(
+                "Event not applied to Zscaler",
+                {"event_type": event_type, "error": str(err)},
             )
             if event_type == "create" and self.assurance is not None:
                 self.assurance.report_push_failed(data, failure_reason(err))
@@ -791,8 +810,12 @@ class ZscalerConnector:
                     return True
                 if status == "INPROGRESS":
                     self.helper.connector_logger.info(
-                        f"Zscaler activation in progress ({attempt}/{max_retries}), "
-                        f"checking again in {ACTIVATION_POLL_SECONDS}s..."
+                        "Zscaler activation in progress, checking again",
+                        {
+                            "attempt": attempt,
+                            "max_retries": max_retries,
+                            "delay_seconds": ACTIVATION_POLL_SECONDS,
+                        },
                     )
                     time.sleep(ACTIVATION_POLL_SECONDS)
                     continue
@@ -805,8 +828,13 @@ class ZscalerConnector:
                 if err.status_code != 503:
                     raise
                 self.helper.connector_logger.warning(
-                    f"Activation attempt {attempt}/{max_retries} failed ({err}). "
-                    f"Retrying in {delay}s..."
+                    "Zscaler activation attempt failed, retrying",
+                    {
+                        "attempt": attempt,
+                        "max_retries": max_retries,
+                        "error": str(err),
+                        "delay_seconds": delay,
+                    },
                 )
                 time.sleep(delay)
                 delay *= 2
@@ -841,14 +869,14 @@ class ZscalerConnector:
             elif msg.event == "update":
                 self._replace_and_report(data, _former_pattern(message.get("context")))
         else:
-            msg = "Ignoring non-STIX indicator."
-            self.helper.connector_logger.info(msg)
+            self.helper.connector_logger.info("Ignoring non-STIX indicator.")
 
     def start(self):
         """Start listening for OpenCTI events."""
 
-        msg = "Starting connector and listening for OpenCTI event..."
-        self.helper.connector_logger.info(msg)
+        self.helper.connector_logger.info(
+            "Starting connector and listening for OpenCTI event..."
+        )
         if self.assurance is not None:
             self.assurance.start()
         # Former domains Zscaler refused to remove are retried, also once the
