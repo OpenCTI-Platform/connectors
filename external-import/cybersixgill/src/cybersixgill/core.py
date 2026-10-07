@@ -118,7 +118,7 @@ class Cybersixgill:
                     self.helper.force_ping()
                     sys.exit(0)
 
-                self._sleep(delay_sec=run_interval)
+            self._sleep(delay_sec=run_interval)
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:

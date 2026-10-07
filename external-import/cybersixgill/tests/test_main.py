@@ -114,3 +114,50 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert importer.enable_relationships is True
     assert importer.update_existing_data is True
     assert importer.limit == 1000
+
+
+class _StopLoop(Exception):
+    """Raised by the patched `_sleep` to leave the connector's infinite loop."""
+
+
+@pytest.fixture
+def connector(mock_opencti_connector_helper, monkeypatch):
+    """Build a connector with a stubbed client, a fixed clock and a patched `_sleep`."""
+    monkeypatch.setattr("cybersixgill.core.ConnectorSettings", StubConnectorSettings)
+    monkeypatch.setattr("cybersixgill.core.CybersixgillClient", MagicMock())
+    connector = Cybersixgill()
+    monkeypatch.setattr(connector, "_current_unix_timestamp", lambda: 10_000)
+    monkeypatch.setattr(connector, "_sleep", MagicMock(side_effect=_StopLoop))
+    return connector
+
+
+def test_run_should_sleep_until_next_run_when_not_scheduled(connector, monkeypatch):
+    """The loop MUST wait for the next run instead of spinning when it is not due yet."""
+    monkeypatch.setattr(
+        connector.helper, "get_state", MagicMock(return_value={"last_run": 9_410})
+    )
+    monkeypatch.setattr(connector.indicator_importer, "run", MagicMock())
+
+    with pytest.raises(_StopLoop):
+        connector.run()
+
+    # interval is 600s and last run was 590s ago: next run in 10s
+    connector._sleep.assert_called_once_with(delay_sec=10)
+    connector.indicator_importer.run.assert_not_called()
+
+
+def test_run_should_sleep_after_a_successful_run(connector, monkeypatch):
+    """The loop MUST also wait after a successful run."""
+    monkeypatch.setattr(connector.helper, "get_state", MagicMock(return_value={}))
+    monkeypatch.setattr(connector.helper, "set_state", MagicMock())
+    monkeypatch.setattr(connector.helper.api.work, "initiate_work", MagicMock())
+    monkeypatch.setattr(connector.helper.api.work, "to_processed", MagicMock())
+    monkeypatch.setattr(connector.indicator_importer, "run", MagicMock(return_value={}))
+
+    with pytest.raises(_StopLoop):
+        connector.run()
+
+    connector.indicator_importer.run.assert_called_once()
+    connector._sleep.assert_called_once_with(
+        delay_sec=Cybersixgill._CONNECTOR_RUN_INTERVAL_SEC
+    )
