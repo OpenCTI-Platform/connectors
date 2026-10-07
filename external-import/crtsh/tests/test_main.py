@@ -1,3 +1,5 @@
+import runpy
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -101,3 +103,19 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.is_wildcard is False
     assert isinstance(connector.api, CrtSHClient)
     assert connector.api.url.endswith("&exclude=expired")
+
+
+def test_main_should_print_the_startup_error_and_exit(monkeypatch, capsys):
+    """A startup error MUST be printed with its traceback, and the process MUST exit with 1."""
+    for env_var in ("OPENCTI_URL", "OPENCTI_TOKEN", "CRTSH_DOMAIN"):
+        monkeypatch.delenv(env_var, raising=False)
+    monkeypatch.setattr("time.sleep", lambda _: None)
+
+    main_path = Path(__file__).parent.parent / "src" / "main.py"
+    with pytest.raises(SystemExit) as exit_info:
+        runpy.run_path(str(main_path), run_name="__main__")
+
+    assert exit_info.value.code == 1
+    stderr = capsys.readouterr().err
+    assert "Traceback" in stderr
+    assert "Error validating configuration" in stderr

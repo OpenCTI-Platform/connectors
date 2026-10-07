@@ -1,6 +1,7 @@
 # import os
 import sys
 import time
+import traceback
 from datetime import datetime
 
 from crtsh import CrtSHClient
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     try:
         connector = CrtshConnector()
         connector.run()
-    except Exception as e:
-        ExternalImportConnector.log_error(str(e))
+    except Exception:
+        traceback.print_exc()
         time.sleep(10)
         sys.exit(1)
