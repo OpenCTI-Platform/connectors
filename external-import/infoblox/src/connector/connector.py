@@ -113,9 +113,11 @@ class Infoblox:
             stix_objects.append(observable)
 
         elif object_type == "HOST":
-            pattern = f"[domain-name:value = '{threat['domain']}']"
+            # TIDE "host" is the full hostname, "domain" its registered domain
+            # (github.io for x.github.io): build the IOC from "host" when present.
+            name = threat.get("host") or threat["domain"]
+            pattern = f"[domain-name:value = '{name}']"
             observable_type = "Domain-Name"
-            name = threat["domain"]
             observable = stix2.DomainName(
                 value=name,
                 object_marking_refs=[self.marking],

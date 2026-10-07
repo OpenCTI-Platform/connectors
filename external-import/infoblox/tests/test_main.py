@@ -128,3 +128,57 @@ def test_infoblox_api_get_builds_url_from_httpurl(
     assert captured_urls[0].startswith(
         "https://csp.infoblox.com/tide/api/data/threats?type=ip"
     )
+
+
+def _tide_host_threat(**fields):
+    threat = {
+        "type": "HOST",
+        "class": "Phishing",
+        "property": "Phishing_Generic",
+        "threat_level": 80,
+        "confidence": 100,
+        "detected": "2026-07-20T10:00:00.000Z",
+        "imported": "2026-07-20T11:00:00.000Z",
+        "extended": {"notes": "Phishing page"},
+    }
+    threat.update(fields)
+    return threat
+
+
+@pytest.mark.parametrize(
+    "threat, expected_value",
+    [
+        pytest.param(
+            _tide_host_threat(
+                host="portal-cofig-manifest.github.io", domain="github.io"
+            ),
+            "portal-cofig-manifest.github.io",
+            id="host_on_shared_hosting_domain",
+        ),
+        pytest.param(
+            _tide_host_threat(domain="malicious.example"),
+            "malicious.example",
+            id="no_host_falls_back_to_domain",
+        ),
+    ],
+)
+def test_create_stix_object_host_uses_tide_host_field(
+    mock_opencti_connector_helper, threat, expected_value
+):
+    """A TIDE HOST threat must produce an IOC on `host`, not on the registered `domain`.
+    Otherwise `host=portal-cofig-manifest.github.io` flags the whole of github.io (#7058).
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = Infoblox(config=settings, helper=helper)
+
+    stix_objects = connector.create_stix_object(
+        threat, "identity--2998978f-8336-5dfc-93a2-2f3d2f79d0e3"
+    )
+
+    observable, indicator, _ = stix_objects
+    assert observable.type == "domain-name"
+    assert observable.value == expected_value
+    assert indicator.name == expected_value
+    assert indicator.pattern == f"[domain-name:value = '{expected_value}']"
+    assert indicator.x_opencti_main_observable_type == "Domain-Name"
