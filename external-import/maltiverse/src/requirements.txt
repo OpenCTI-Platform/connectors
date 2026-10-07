@@ -1,2 +1,2 @@
-pycti==7.260309.0.7
+pycti==7.260309.0.8
 taxii2-client
