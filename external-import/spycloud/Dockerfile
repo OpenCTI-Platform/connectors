@@ -1,5 +1,4 @@
 FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
 COPY spycloud_connector /opt/spycloud_connector
