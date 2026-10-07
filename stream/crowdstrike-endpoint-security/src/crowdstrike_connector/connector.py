@@ -247,5 +247,11 @@ class CrowdstrikeConnector:
         if self.assurance is not None:
             self.assurance.start()
 
+        # Retry the withdrawals of former IOC values CrowdStrike refused, also after
+        # the indicator is deleted
+        self.pending_withdrawals.start_retries(
+            lambda _indicator_id, ioc_value: self.client.withdraw_value(ioc_value)
+        )
+
         # Start listening to the stream
         self.helper.listen_stream(self._process_message)

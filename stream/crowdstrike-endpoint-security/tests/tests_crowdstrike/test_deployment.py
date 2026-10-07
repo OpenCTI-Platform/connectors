@@ -659,11 +659,35 @@ def test_connector_works_without_write_back():
     connector.client.cs.indicator_create.assert_called_once()
 
 
-def test_run_starts_the_write_back(connector):
+def retried_withdrawal(connector):
+    """Run the connector and return the withdrawal its retries call."""
+    connector.pending_withdrawals.start_retries = MagicMock()
     connector.run()
+    return connector.pending_withdrawals.start_retries.call_args.args[0]
+
+
+def test_run_starts_the_write_back(connector):
+    retried_withdrawal(connector)
 
     connector.assurance.start.assert_called_once_with()
     connector.helper.listen_stream.assert_called_once_with(connector._process_message)
+
+
+def test_a_former_ioc_a_delete_left_is_withdrawn_by_the_retries(permanent_connector):
+    """A deleted indicator gets no later event: the periodic retries withdraw the
+    former IOC its delete could not withdraw."""
+    cs = permanent_connector.client.cs
+    keep_former_value(permanent_connector)
+    retry = retried_withdrawal(permanent_connector)
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_delete.return_value = api_response(200)
+
+    permanent_connector.pending_withdrawals.retry_all(retry)
+
+    cs.indicator_delete.assert_called_once_with(ids=["old-ioc"])
+    assert kept_former_values(permanent_connector) == []
 
 
 # Settings and factory
