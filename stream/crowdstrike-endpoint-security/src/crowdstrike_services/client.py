@@ -149,22 +149,49 @@ class CrowdstrikeClient:
     ) -> tuple[list | None, str | None, int | None]:
         """
         Search for existing indicator into Crowdstrike
+        Every page of the search is read: a delete removes all the IOCs it returns
         :param ioc_value: IOC value in string
         :return: List of IOC ids (None on error), the error message and the HTTP
             status of the failed search (see `IocOperationResult.status_code`)
         """
         try:
             cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
+            ioc_ids: list = []
+            after: str | None = None
+            seen_tokens: set[str] = set()
+            for _ in range(MAX_IOC_PAGES):
+                parameters: dict[str, Any] = {"filter": cs_filter}
+                if after:
+                    parameters["after"] = after
+                response = self.cs.indicator_search(**parameters)
+                error_message = self._handle_api_error(response)
 
-            response = self.cs.indicator_search(filter=cs_filter)
-            error_message = self._handle_api_error(response)
-
-            if response["status_code"] == 200:
-                return response["body"]["resources"], None, None
+                if response["status_code"] != 200:
+                    return (
+                        None,
+                        error_message
+                        or f"Unexpected status code {response['status_code']}",
+                        response["status_code"],
+                    )
+                body = response["body"]
+                resources = body["resources"]
+                if not resources:
+                    return (ioc_ids or resources), None, None
+                ioc_ids.extend(resources)
+                after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
+                if not after:
+                    return ioc_ids, None, None
+                if after in seen_tokens:
+                    return (
+                        None,
+                        "The IOC API returned the same pagination token twice",
+                        200,
+                    )
+                seen_tokens.add(after)
             return (
                 None,
-                error_message or f"Unexpected status code {response['status_code']}",
-                response["status_code"],
+                f"IOC search stopped after {MAX_IOC_PAGES} pages without reaching the end",
+                200,
             )
 
         except Exception as err:
@@ -592,23 +619,27 @@ class CrowdstrikeClient:
         return resources
 
     def iter_connector_iocs(
-        self, page_size: int = IOC_PAGE_SIZE, max_pages: int = MAX_IOC_PAGES
+        self,
+        page_size: int = IOC_PAGE_SIZE,
+        max_pages: int = MAX_IOC_PAGES,
+        ioc_value: str | None = None,
     ) -> Iterator[dict[str, Any]]:
         """
         Iterate over the IOCs created by the connector's API client
         (`created_by` is the API client id, as for the stream searches)
         :param page_size: Number of IOCs per page
         :param max_pages: Safety bound of the number of pages
+        :param ioc_value: Only iterate over the IOCs of this value
         :return: IOC entities
         :raise CrowdstrikeApiError: On any API error, never yield a partial listing silently
         """
+        ioc_filter = f'created_by:"{self.config.client_id}"'
+        if ioc_value is not None:
+            ioc_filter = f'value:"{ioc_value}"+{ioc_filter}'
         after: str | None = None
         seen_tokens: set[str] = set()
         for _ in range(max_pages):
-            parameters: dict[str, Any] = {
-                "filter": f'created_by:"{self.config.client_id}"',
-                "limit": page_size,
-            }
+            parameters: dict[str, Any] = {"filter": ioc_filter, "limit": page_size}
             if after:
                 parameters["after"] = after
             body = self._raise_for_response(
@@ -667,18 +698,10 @@ class CrowdstrikeClient:
         but no longer detecting (see `deactivate_ioc`)
         :param ioc_value: IOC value in string
         :return: Number of IOCs withdrawn
-        :raise CrowdstrikeApiError: When CrowdStrike refuses the search or a withdrawal
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the search or a withdrawal,
+            or the IOCs of the value cannot all be listed (nothing is withdrawn then)
         """
-        body = self._raise_for_response(
-            self.cs.indicator_combined(
-                parameters={
-                    "filter": f'value:"{ioc_value}"+created_by:"{self.config.client_id}"',
-                    "limit": IOC_PAGE_SIZE,
-                }
-            ),
-            200,
-        )
-        iocs = self._resources_of(body, "IOC")
+        iocs = list(self.iter_connector_iocs(ioc_value=ioc_value))
         for ioc in iocs:
             if not ioc.get("id"):
                 raise CrowdstrikeApiError("An IOC of the value carries no id")

@@ -27,6 +27,7 @@ from crowdstrike_services import (
     IocOperationResult,
     IocOperationStatus,
 )
+from crowdstrike_services.client import IOC_PAGE_SIZE
 from pycti import OpenCTIConnectorHelper
 
 OPENCTI_EXTENSION_ID = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
@@ -804,6 +805,117 @@ def test_delete_ioc():
     connector.client.cs.indicator_delete.return_value = api_response(404)
     with pytest.raises(CrowdstrikeApiError, match="HTTP 404"):
         connector.client.delete_ioc(IOC_ID)
+
+
+def test_withdraw_value_lists_every_page_of_the_value_before_withdrawing(
+    permanent_connector,
+):
+    cs = permanent_connector.client.cs
+    value_filter = f'value:"203.0.113.9"+created_by:"{CLIENT_ID}"'
+    cs.indicator_combined.side_effect = [
+        api_response(resources=[make_ioc(value="203.0.113.9")], after="token-1"),
+        api_response(resources=[make_ioc(ioc_id="other", value="203.0.113.9")]),
+    ]
+    cs.indicator_delete.return_value = api_response(200)
+
+    assert permanent_connector.client.withdraw_value("203.0.113.9") == 2
+
+    assert cs.indicator_combined.call_args_list == [
+        call(parameters={"filter": value_filter, "limit": IOC_PAGE_SIZE}),
+        call(
+            parameters={
+                "filter": value_filter,
+                "limit": IOC_PAGE_SIZE,
+                "after": "token-1",
+            }
+        ),
+    ]
+    assert cs.indicator_delete.call_args_list == [
+        call(ids=[IOC_ID]),
+        call(ids=["other"]),
+    ]
+
+
+def test_withdraw_value_withdraws_nothing_from_an_incomplete_listing(
+    permanent_connector,
+):
+    cs = permanent_connector.client.cs
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(value="203.0.113.9")], after="same-token"
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match="same pagination token"):
+        permanent_connector.client.withdraw_value("203.0.113.9")
+
+    cs.indicator_delete.assert_not_called()
+
+
+def test_delete_removes_the_iocs_of_every_search_page(permanent_connector):
+    cs = permanent_connector.client.cs
+    value_filter = f'value:"198.51.100.7"+created_by:"{CLIENT_ID}"'
+    cs.indicator_search.side_effect = [
+        api_response(resources=[IOC_ID], after="token-1"),
+        api_response(resources=["other"], after="token-2"),
+        api_response(resources=[]),
+    ]
+    cs.indicator_delete.return_value = api_response(200)
+    indicator = make_indicator()
+
+    permanent_connector._process_message(make_message("delete", indicator))
+
+    assert cs.indicator_search.call_args_list == [
+        call(filter=value_filter),
+        call(filter=value_filter, after="token-1"),
+        call(filter=value_filter, after="token-2"),
+    ]
+    assert cs.indicator_delete.call_args_list == [call(IOC_ID), call("other")]
+    permanent_connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+
+
+@pytest.mark.parametrize(
+    "pages, error",
+    [
+        (
+            [api_response(resources=[IOC_ID], after="same-token")] * 2,
+            "The IOC API returned the same pagination token twice",
+        ),
+        (
+            [api_response(resources=[IOC_ID], after="token-1"), api_response(403)],
+            "HTTP 403",
+        ),
+    ],
+    ids=["repeated-token", "failed-page"],
+)
+def test_delete_with_an_incomplete_search_deletes_nothing(
+    permanent_connector, pages, error
+):
+    cs = permanent_connector.client.cs
+    cs.indicator_search.side_effect = pages
+
+    permanent_connector._process_message(make_message("delete", make_indicator()))
+
+    cs.indicator_delete.assert_not_called()
+    permanent_connector.assurance.report_removed.assert_not_called()
+    permanent_connector.helper.connector_logger.warning.assert_called_once_with(
+        "[DELETE] IOC not deleted from Crowdstrike", meta={"error": error}
+    )
+
+
+def test_search_stops_at_its_page_bound(permanent_connector, monkeypatch):
+    monkeypatch.setattr("crowdstrike_services.client.MAX_IOC_PAGES", 2)
+    cs = permanent_connector.client.cs
+    cs.indicator_search.side_effect = [
+        api_response(resources=[IOC_ID], after="token-1"),
+        api_response(resources=["other"], after="token-2"),
+    ]
+
+    assert permanent_connector.client._search_indicator_with_error("v") == (
+        None,
+        "IOC search stopped after 2 pages without reaching the end",
+        200,
+    )
 
 
 def test_deactivate_ioc_stops_the_detection_and_tags_it():
