@@ -63,9 +63,9 @@ class CoucouEnrichmentConnector:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
 
-        if not self.helper.check_max_tlp(
-            tlp, self.config.coucou_enrichment.max_tlp_level
-        ):
+        # `check_max_tlp` expects `TLP:`-prefixed upper case values, e.g. `TLP:AMBER+STRICT`
+        max_tlp = "TLP:" + self.config.coucou_enrichment.max_tlp_level.upper()
+        if not self.helper.check_max_tlp(tlp, max_tlp):
             raise ValueError(
                 "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
                 "the connector does not has access to this observable, please check the group of the connector user"

@@ -156,6 +156,16 @@ def test_enrichment_sends_back_all_received_objects(connector):
     assert sent_ids == [IPV4_ID, TLP_RED_ID]
 
 
+def test_enrichment_enriches_entity_within_max_tlp(connector):
+    tlp_green = {"definition_type": "TLP", "definition": "TLP:GREEN"}
+
+    connector.process_message(
+        _message(_ipv4_from_manual_trigger([]), object_marking=[tlp_green])
+    )
+
+    assert _sent_ipv4(connector)["labels"] == ["enriched"]
+
+
 def test_enrichment_skips_entity_above_max_tlp(connector):
     tlp_red = {"definition_type": "TLP", "definition": "TLP:RED"}
 
@@ -164,3 +174,6 @@ def test_enrichment_skips_entity_above_max_tlp(connector):
     )
 
     assert connector.helper.sent_bundles == []
+    # The connector logger comes from the mocked API client: the skip reason is read from its call
+    _, meta = connector.helper.connector_logger.error.call_args.args
+    assert "TLP of the observable is greater than MAX TLP" in meta["error_message"]
