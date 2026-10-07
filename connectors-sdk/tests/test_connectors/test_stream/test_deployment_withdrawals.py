@@ -1,7 +1,9 @@
 """Former values of indicators a stream connector could not withdraw yet."""
 
+import threading
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from connectors_sdk.connectors.stream.deployment import (
@@ -19,6 +21,7 @@ class StateHelper:
     def __init__(self, state: Any) -> None:
         self.state = state
         self.writes: list[Any] = []
+        self.connector_logger = MagicMock()
 
     def get_state(self) -> Any:
         return self.state
@@ -84,6 +87,68 @@ def test_kept_values_are_added_once_and_withdrawn_by_the_next_call():
     pending.withdraw(INDICATOR, withdrawn.append)
     assert withdrawn == ["a", "b", "c"]
     assert pending.values(INDICATOR) == []
+
+
+def test_a_retry_withdraws_the_kept_values_of_every_indicator():
+    """A deleted indicator gets no later event: the retries withdraw its values."""
+    helper = StateHelper(
+        {PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR: ["a", "b"], OTHER: ["z"]}}
+    )
+    pending = PendingWithdrawals(helper)
+    calls: list[tuple[str, str]] = []
+
+    def withdraw(indicator_id: str, value: str) -> None:
+        calls.append((indicator_id, value))
+        if value == "b":
+            raise ConnectionError("b not withdrawn")
+
+    pending.retry_all(withdraw)
+
+    assert calls == [(INDICATOR, "a"), (INDICATOR, "b"), (OTHER, "z")]
+    assert pending.values(INDICATOR) == ["b"]
+    assert pending.values(OTHER) == []
+    helper.connector_logger.warning.assert_called_once_with(
+        "[DEPLOYMENT] Former values of an indicator still not withdrawn from the "
+        "vendor, retried later.",
+        meta={"indicator_id": INDICATOR, "error": "b not withdrawn"},
+    )
+
+
+def test_a_retry_that_cannot_read_the_state_is_logged():
+    helper = StateHelper(None)
+    helper.get_state = MagicMock(side_effect=RuntimeError("state unavailable"))
+    withdraw = MagicMock()
+
+    PendingWithdrawals(helper).retry_all(withdraw)
+
+    withdraw.assert_not_called()
+    meta = helper.connector_logger.warning.call_args.kwargs["meta"]
+    assert meta == {"indicator_id": None, "error": "state unavailable"}
+
+
+def test_retries_run_periodically_until_stopped():
+    helper = StateHelper({PENDING_WITHDRAWALS_STATE_KEY: {INDICATOR: ["a"]}})
+    pending = PendingWithdrawals(helper, retry_interval=0.01)
+    withdrawn = threading.Event()
+
+    def withdraw(indicator_id: str, value: str) -> None:
+        withdrawn.set()
+
+    assert pending.start_retries(withdraw) is True
+    assert pending.start_retries(withdraw) is True
+    assert withdrawn.wait(5)
+    pending.stop_retries(timeout=5)
+
+    assert not pending._thread.is_alive()
+    assert pending.values(INDICATOR) == []
+
+
+def test_no_retries_without_a_retry_interval():
+    pending = PendingWithdrawals(StateHelper({}), retry_interval=0)
+
+    assert pending.start_retries(MagicMock()) is False
+    pending.stop_retries()
+    assert pending._thread is None
 
 
 def test_values_withdrawn_at_once_never_write_the_state():
