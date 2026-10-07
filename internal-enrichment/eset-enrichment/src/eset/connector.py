@@ -167,6 +167,18 @@ class EsetConnector:
                 return True
         return False
 
+    def send_original_bundle_to_playbook(self, data: dict) -> None:
+        """
+        A playbook waits for a bundle to continue: when the entity is skipped,
+        send the original bundle back unchanged. Does nothing outside a playbook.
+        :param data: Dictionary of data
+        """
+        if data.get("event_type"):
+            return
+
+        stix_objects_bundle = self.helper.stix2_create_bundle(data["stix_objects"])
+        self.helper.send_stix2_bundle(stix_objects_bundle)
+
     def process_message(self, data: dict) -> str:
         self.helper.log_debug("Processing", {"data": data})
 
@@ -174,6 +186,7 @@ class EsetConnector:
         entity_id = data["entity_id"]
 
         if not self.entity_in_scope(data):
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Skipping the following entity as it does not concern "
                 "the initial scope found in the config connector: ",
@@ -182,6 +195,7 @@ class EsetConnector:
 
         created_by = enrichment_entity.get("createdBy")
         if created_by is None or created_by.get("name", "").lower() != "eset":
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_debug(
                 "Skipping entity not created by ESET", {"entity_id": entity_id}
             )
@@ -198,6 +212,7 @@ class EsetConnector:
         report_name = f"{stix_object['name']}.pdf"
 
         if self.has_attachment(enrichment_entity.get("importFiles", []), report_name):
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Report already has attachment imported",
                 {"entity_id": entity_id, "name": report_name},
@@ -205,6 +220,7 @@ class EsetConnector:
 
         url = self._get_eti_api_url(enrichment_entity.get("objects", []))
         if url is None:
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Skipping report without ETI portal link", {"entity_id": entity_id}
             )
