@@ -206,7 +206,20 @@ Manifest rules (`__metadata__/connector_manifest.json`):
 - `short_description`: 250 characters or fewer.
 - Logo: square PNG or JPEG, at least 96x96.
 - Never change `verified`, `last_verified_date` or `manager_supported`:
-  maintainers own them.
+  maintainers own them. The one exception is the manager-supported migration
+  below, which sets `manager_supported` to `true`.
+
+## Migrating a connector to manager-supported mode
+
+Legacy connectors (`get_config_variable`, `config.yml` loading) are migrated
+in place by the procedure in
+`.claude/skills/connector-manager-supported-migration/references/procedure.md`:
+Pydantic settings wired into the existing code, manifest flag, generated
+schema and tests, one commit per step, no restructuring. Tools that load
+skills and agents from `.claude/` (Claude Code, GitHub Copilot) pick up the
+`connector-manager-supported-migration` skill and the
+`connector-manager-supported-migrator` agent. With other tools, follow the
+procedure file directly.
 
 ## Validation commands
 
