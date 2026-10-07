@@ -23,7 +23,7 @@ from connectors_sdk.connectors.stream.deployment import (
     normalize_value,
     parse_datetime,
 )
-from cortex_xdr_client import CortexXdrApiError
+from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 from pydantic import ValidationError
 
 if TYPE_CHECKING:
@@ -274,15 +274,47 @@ class Connector:
         )
 
         # Send the payloads to Cortex XDR as dicts, omitting any unset fields to let client default them.
-        response = self.client.insert_iocs(
-            [ioc.model_dump(exclude_none=True) for ioc in xdr_iocs]  # type: ignore[arg-type]
-        )
+        try:
+            response = self.client.insert_iocs(
+                [ioc.model_dump(exclude_none=True) for ioc in xdr_iocs]  # type: ignore[arg-type]
+            )
+        except CortexXdrRejectedIocsError:
+            self._roll_back_created_iocs(octi_indicator, xdr_iocs)
+            raise
 
         self.helper.connector_logger.info(
             "Successfully upserted IOC(s) into Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
         return rule_ids_of(response, xdr_iocs)
+
+    def _roll_back_created_iocs(
+        self, octi_indicator: OctiIndicator, xdr_iocs: Sequence[CortexXdrIoc]
+    ) -> None:
+        """Delete the IOCs an upsert Cortex XDR partly rejected created.
+
+        The indicator is reported `failed`, and a withdrawal only deletes the IOC
+        whose `rule_id` a `failed` deployment records (Cortex XDR stores no owner):
+        the IOCs the upsert created would stay live. They are the values Cortex XDR
+        held no IOC for before the upsert (no `rule_id`); the IOCs it updated existed
+        before it and are left in place. A failed deletion is logged.
+        """
+        values = [ioc.indicator for ioc in xdr_iocs if ioc.rule_id is None]
+        if not values:
+            return
+        try:
+            self.client.delete_iocs(
+                [{"field": "indicator", "operator": "IN", "value": values}]
+            )
+        except CortexXdrApiError as err:
+            self.helper.connector_logger.warning(
+                "IOCs created by a rejected upsert not deleted from Cortex XDR",
+                {
+                    "indicator_id": octi_indicator.id,
+                    "values": values,
+                    "error": describe_error(err),
+                },
+            )
 
     def push_indicator(self, data: dict[str, Any]) -> str | None:
         """Upsert an OpenCTI indicator into Cortex XDR (reconciliation re-push).

@@ -198,11 +198,78 @@ def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connecto
     assert reported == indicator
     assert message == "Cortex XDR refused the IOC upsert: invalid request"
     connector.assurance.report_pushed.assert_not_called()
+    connector.client.delete_iocs.assert_not_called()
     logged = connector.helper.connector_logger.error.call_args.args[1]["error"]
     assert logged == (
         'Error while fetching Cortex XDR API: Bad request (HTTP 400) - {"err_msg": '
         '"invalid IOC"}'
     )
+
+
+def make_two_value_indicator():
+    indicator = make_indicator()
+    indicator["pattern"] = (
+        "[ipv4-addr:value = '198.51.100.7' OR ipv4-addr:value = '203.0.113.9']"
+    )
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "IPv4-Addr", "value": "198.51.100.7"},
+        {"type": "IPv4-Addr", "value": "203.0.113.9"},
+    ]
+    return indicator
+
+
+def test_iocs_created_by_a_partly_rejected_upsert_are_deleted(connector):
+    """A `failed` push leaves only the IOCs that existed before it: a withdrawal
+    does not delete the IOCs of a failed deployment (Cortex XDR stores no owner)."""
+    connector.client.get_iocs.return_value = {
+        "objects": [{"rule_id": 42, "indicator": "198.51.100.7", "type": "IP"}]
+    }
+    connector.client.insert_iocs.side_effect = CortexXdrRejectedIocsError(
+        "Cortex XDR rejected 1 of the 2 IOC(s) sent", [{"index": 0}]
+    )
+    indicator = make_two_value_indicator()
+
+    connector._process_message(make_message("update", indicator))
+
+    connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": ["203.0.113.9"]}]
+    )
+    message = connector.assurance.report_push_failed.call_args.args[1]
+    assert message == "Cortex XDR refused the IOC upsert: invalid request"
+
+
+def test_rejected_upsert_of_existing_iocs_deletes_nothing(connector):
+    connector.client.get_iocs.return_value = {
+        "objects": [{"rule_id": 42, "indicator": "198.51.100.7", "type": "IP"}]
+    }
+    connector.client.insert_iocs.side_effect = CortexXdrRejectedIocsError(
+        "Cortex XDR rejected 1 of the 1 IOC(s) sent", [{"index": 0}]
+    )
+
+    connector._process_message(make_message("update", make_indicator()))
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once()
+
+
+def test_iocs_of_a_rejected_upsert_that_cannot_be_deleted_are_logged(connector):
+    connector.client.insert_iocs.side_effect = CortexXdrRejectedIocsError(
+        "Cortex XDR rejected 1 of the 2 IOC(s) sent", [{"index": 1}]
+    )
+    connector.client.delete_iocs.side_effect = api_error(
+        ApiClientError("Bad request", status_code=400)
+    )
+    indicator = make_two_value_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    warning = connector.helper.connector_logger.warning.call_args
+    assert warning.args[0] == (
+        "IOCs created by a rejected upsert not deleted from Cortex XDR"
+    )
+    assert warning.args[1]["values"] == ["198.51.100.7", "203.0.113.9"]
+    connector.assurance.report_push_failed.assert_called_once()
+    connector.assurance.report_pushed.assert_not_called()
 
 
 def test_iocs_refused_in_a_success_reply_are_reported_failed(connector):
