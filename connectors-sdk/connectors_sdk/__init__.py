@@ -12,7 +12,6 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit
-from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
@@ -77,5 +76,4 @@ __all__ = [
     "ExternalImportConnector",
     "ConnectorLogger",
     "BaseDataProcessor",
-    "WorkManager",
 ]
