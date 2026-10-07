@@ -93,8 +93,9 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
   indicator is reported `failed`. An update creates the Defender indicators that are missing. When the pattern is
   edited, the former pattern is read from the update event: the Defender indicators of the values the indicator no
   longer holds are deleted once its new values are live (a failed update keeps them). Reconciliation confirms
-  `active` only when every observable has its Defender indicator (a file by any of its hashes); otherwise the indicator
-  is pushed again, or stays `failed` until a new push is requested.
+  `active` only when every observable has its Defender indicator (a file by any of its hashes), and never for a STIX
+  pattern holding no value Defender takes (its Defender indicators are left from an earlier pattern); otherwise the
+  indicator is pushed again, or stays `failed` until a new push is requested.
 - **Hits**: during each reconciliation, the alerts created since the previous run are read with their evidence (alerts
   API, `$expand=evidence`, at most 10,000 per request). An alert counts one hit for every deployed indicator whose value
   is one of its evidence file hashes, IP addresses or URLs (domain indicators match the URL host); only the values the

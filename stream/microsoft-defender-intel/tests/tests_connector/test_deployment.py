@@ -737,6 +737,8 @@ MD5 = "b" * 32
             ("198.51.100.7",),
             True,
         ),
+        ("[email-addr:value = 'x@evil.example']", ("198.51.100.7",), False),
+        (f"[file:hashes.'SHA-512' = '{'c' * 128}']", ("198.51.100.7",), False),
     ],
     ids=[
         "every value",
@@ -745,6 +747,8 @@ MD5 = "b" * 32
         "a file missing",
         "a type Defender does not take",
         "a hash Defender does not take",
+        "only a type Defender does not take",
+        "only a hash Defender does not take",
     ],
 )
 def test_adapter_completeness_requires_every_observable(pattern, values, complete):
@@ -756,11 +760,16 @@ def test_adapter_completeness_requires_every_observable(pattern, values, complet
     )
 
 
-def test_adapter_completeness_of_a_non_stix_pattern():
+@pytest.mark.parametrize(
+    "pattern, pattern_type",
+    [("process.name = 'x'", "kql"), (None, "stix")],
+    ids=["not STIX", "missing"],
+)
+def test_adapter_completeness_of_a_pattern_it_cannot_read(pattern, pattern_type):
     adapter = MicrosoftDefenderDeploymentAdapter(build_connector())
 
     assert adapter.is_complete(
-        make_pattern_deployment("process.name = 'x'", "kql"), vendor_values("x")
+        make_pattern_deployment(pattern, pattern_type), vendor_values("x")
     )
 
 
@@ -1933,6 +1942,50 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+def test_ioc_left_from_an_earlier_pattern_does_not_confirm_the_indicator(
+    e2e_connector, router
+):
+    """The pattern no longer holds a value Defender takes: the Defender indicator
+    of its earlier value is not confirmed, the indicator is pushed again."""
+    email_pattern = "[email-addr:value = 'x@evil.example']"
+    node = deployment_node(INDICATOR_ID, "active", "198.51.100.7")
+    node["from"]["pattern"] = email_pattern
+    router.deployments = [node]
+    indicator = make_indicator()
+    indicator["pattern"] = email_pattern
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "Email-Addr", "value": "x@evil.example"}
+    ]
+    e2e_connector.helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = (
+        indicator
+    )
+    e2e_connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {
+                    "id": 6371,
+                    "indicatorValue": "198.51.100.7",
+                    "externalId": INDICATOR_ID,
+                }
+            ]
+        },
+        {"value": []},
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.confirmed_active == 0
+    assert summary.incomplete == 1
+    assert summary.repush_failed == 1
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    (report,) = batch["reports"]
+    assert report["indicatorId"] == INDICATOR_ID
+    assert report["status"] == "failed"
+    assert report["metadata"]["error_message"] == (
+        "No observable of the indicator can be pushed to Microsoft Defender"
+    )
 
 
 def test_withdrawal_deletes_every_ioc_of_the_indicator(e2e_connector, router):

@@ -345,20 +345,27 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         The connector creates one Defender indicator per IP address, domain, host
         name and URL of the pattern, and one per file (its SHA-256, SHA-1 or MD5).
         The pattern does not tell which hashes belong to the same file: the files
-        are covered when one of their hashes is on Defender.
+        are covered when one of their hashes is on Defender. A STIX pattern without
+        any value Defender takes is never complete: its Defender indicators are left
+        from an earlier pattern. A pattern the adapter cannot read (missing or not
+        STIX) trusts its Defender indicators.
 
         :param deployment: The deployment.
         :param vendor_matches: Its Defender indicators.
         :return: False when an observable has no Defender indicator.
         """
+        if not deployment.pattern or deployment.pattern_type not in (None, "stix"):
+            return True
         vendor_values = {
             normalized
             for vendor_indicator in vendor_matches
             if (normalized := normalize_value(vendor_indicator.value))
         }
         values, file_hashes = _defender_values(deployment)
-        return values <= vendor_values and (
-            not file_hashes or not file_hashes.isdisjoint(vendor_values)
+        return (
+            bool(values or file_hashes)
+            and values <= vendor_values
+            and (not file_hashes or not file_hashes.isdisjoint(vendor_values))
         )
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
