@@ -3,14 +3,14 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
-  name: 'ESET ETI Report Enrichment Connector'
-  scope: 'report'
-  log_level: 'info'
-  auto: true
+  # name: 'ESET ETI Report Enrichment Connector'
+  # scope: 'report'
+  # log_level: 'error'
+  # auto: false
 
 eset:
   api_key: 'ChangeMe'
   api_secret: 'ChangeMe'
-  api_host: 'https://eti.eset.com/'
+  # api_host: 'https://eti.eset.com/'
+  # max_tlp: 'TLP:AMBER'

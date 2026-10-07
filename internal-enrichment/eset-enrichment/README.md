@@ -14,9 +14,6 @@ The ESET ETI Report Enrichment connector automatically downloads PDF reports fro
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -45,33 +42,12 @@ For information on obtaining API credentials, visit the [ESET Threat Intelligenc
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml | Docker environment variable | Default             | Mandatory | Description                                                                 |
-|-----------------|------------|-----------------------------|---------------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              |                     | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name  | name       | `CONNECTOR_NAME`            | ESET ETI Report Enrichment Connector | No | Name of the connector.                                                      |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | report              | Yes       | Should be `report` for this connector.                                      |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                  |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info                | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Auto Mode       | auto       | `CONNECTOR_AUTO`            | true                | No        | Enables or disables automatic enrichment of reports.                        |
-
-### Connector extra parameters environment variables
-
-| Parameter  | config.yml     | Docker environment variable | Default              | Mandatory | Description                                               |
-|------------|----------------|----------------------------|----------------------|-----------|-----------------------------------------------------------|
-| API Key    | eset.api_key   | `ESET_API_KEY`             |                      | Yes       | ESET Threat Intelligence API key.                         |
-| API Secret | eset.api_secret| `ESET_API_SECRET`          |                      | Yes       | ESET Threat Intelligence API secret.                      |
-| API Host   | eset.api_host  | `ESET_API_HOST`            | https://eti.eset.com/ | No       | ESET Threat Intelligence API base URL.                    |
+`CONNECTOR_AUTO` defaults to `false`: ETI is a paid, quota-limited source, so reports are only enriched on demand unless you enable it.
 
 ## Deployment
 
@@ -91,14 +67,14 @@ Configure the connector in `docker-compose.yml`:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe_UUID4
-      - CONNECTOR_NAME=ESET ETI Report Enrichment Connector
-      - CONNECTOR_SCOPE=report
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_AUTO=true
+      - CONNECTOR_ID=ChangeMe
       - ESET_API_KEY=ChangeMe
       - ESET_API_SECRET=ChangeMe
-      - ESET_API_HOST=https://eti.eset.com/
+      # Optional
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_LOG_LEVEL=error
+      # - ESET_API_HOST=https://eti.eset.com/
+      # - ESET_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -169,7 +145,7 @@ graph LR
 |------|--------------------------------------------------|-------------------------------------------------------|
 | 1    | Scope Check                                      | Verify entity type is in connector scope              |
 | 2    | Creator Check                                    | Confirm report was created by ESET                    |
-| 3    | TLP Check                                        | Validate TLP against max_tlp setting                  |
+| 3    | TLP Check                                        | Validate TLP against `ESET_MAX_TLP`                   |
 | 4    | Attachment Check                                 | Skip if PDF already attached                          |
 | 5    | URL Extraction                                   | Find ETI portal download link                         |
 | 6    | PDF Download                                     | Download report via ETI API                           |
@@ -191,7 +167,7 @@ These URLs are converted to API calls:
 
 1. **Scope Validation**: Ensures the entity type matches the configured scope (`report`)
 2. **Creator Validation**: Only processes reports created by "ESET"
-3. **TLP Validation**: Respects TLP markings and max_tlp configuration
+3. **TLP Validation**: Respects TLP markings and the `ESET_MAX_TLP` setting (`CONNECTOR_TEMPLATE_MAX_TLP` is deprecated)
 4. **Duplicate Prevention**: Skips reports that already have the PDF attached
 5. **URL Discovery**: Searches report's related objects for ETI portal links
 6. **API Authentication**: Uses Bearer token with format `{api_key}|{api_secret}`
@@ -225,4 +201,4 @@ Log output includes:
 - **Duplicate Prevention**: Reports with existing PDF attachments are skipped
 - **API Documentation**: [ESET Threat Intelligence Portal Help](https://help.eset.com/eti_portal/en-US/)
 - **Credential Creation**: [ETI Access Credentials Guide](https://help.eset.com/eti_portal/en-US/access_credentials.html)
-- **Playbook Support**: This connector supports OpenCTI playbook automation
+- **Playbook Support**: This connector supports OpenCTI playbook automation. In a playbook, a report that is skipped (out of scope, not created by ESET, PDF already attached or no ETI portal link) is passed on unchanged.

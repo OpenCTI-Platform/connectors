@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 
 import requests
 import stix2
-from pycti import MarkingDefinition, OpenCTIConnectorHelper, get_config_variable
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
-from .config_variables import ConfigConnector
+from .settings import ConnectorSettings
 
 ALLOWED_TLPS = {
     "tlp:clear",
@@ -49,24 +49,15 @@ class EsetConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        config = ConfigConnector()
+        self.config = ConnectorSettings()
 
-        self.max_tlp = config.max_tlp
-        self.eset_api_key = get_config_variable(
-            "ESET_API_KEY", ["eset", "api_key"], config.load
-        )
-        self.eset_api_secret = get_config_variable(
-            "ESET_API_SECRET", ["eset", "api_secret"], config.load
-        )
-        self.host = get_config_variable(
-            "ESET_API_HOST",
-            ["eset", "api_host"],
-            config.load,
-            default="https://eti.eset.com/",
-        )
+        self.max_tlp = self.config.eset.max_tlp
+        self.eset_api_key = self.config.eset.api_key.get_secret_value()
+        self.eset_api_secret = self.config.eset.api_secret.get_secret_value()
+        self.host = str(self.config.eset.api_host)
         # playbook_compatible=True only if a bundle is sent !
         self.helper = OpenCTIConnectorHelper(
-            config=config.load, playbook_compatible=True
+            config=self.config.to_helper_config(), playbook_compatible=True
         )
 
     def entity_in_scope(self, data) -> bool:
@@ -176,6 +167,18 @@ class EsetConnector:
                 return True
         return False
 
+    def send_original_bundle_to_playbook(self, data: dict) -> None:
+        """
+        A playbook waits for a bundle to continue: when the entity is skipped,
+        send the original bundle back unchanged. Does nothing outside a playbook.
+        :param data: Dictionary of data
+        """
+        if data.get("event_type"):
+            return
+
+        stix_objects_bundle = self.helper.stix2_create_bundle(data["stix_objects"])
+        self.helper.send_stix2_bundle(stix_objects_bundle)
+
     def process_message(self, data: dict) -> str:
         self.helper.log_debug("Processing", {"data": data})
 
@@ -183,6 +186,7 @@ class EsetConnector:
         entity_id = data["entity_id"]
 
         if not self.entity_in_scope(data):
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Skipping the following entity as it does not concern "
                 "the initial scope found in the config connector: ",
@@ -191,6 +195,7 @@ class EsetConnector:
 
         created_by = enrichment_entity.get("createdBy")
         if created_by is None or created_by.get("name", "").lower() != "eset":
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_debug(
                 "Skipping entity not created by ESET", {"entity_id": entity_id}
             )
@@ -207,6 +212,7 @@ class EsetConnector:
         report_name = f"{stix_object['name']}.pdf"
 
         if self.has_attachment(enrichment_entity.get("importFiles", []), report_name):
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Report already has attachment imported",
                 {"entity_id": entity_id, "name": report_name},
@@ -214,6 +220,7 @@ class EsetConnector:
 
         url = self._get_eti_api_url(enrichment_entity.get("objects", []))
         if url is None:
+            self.send_original_bundle_to_playbook(data)
             return self.helper.log_info(
                 "Skipping report without ETI portal link", {"entity_id": entity_id}
             )
