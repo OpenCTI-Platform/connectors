@@ -63,7 +63,8 @@ looks. The model covers exactly this:
   stamp reached the package directory before ``pip install``, setuptools
   discovery installs the package (``packages``, ``packages.find`` with its
   ``where`` / ``include`` / ``exclude`` / ``namespaces``) and its package data
-  (``pyproject.toml`` or ``setup.cfg``, exclusions included) selects it.
+  (``pyproject.toml`` or ``setup.cfg``, exclusions included) selects it; a
+  manifest the package data ships is read before it, as in the source.
 * Start command: the python interpreter with its script, its ``-m`` module
   (looked up in the working directory, ``PYTHONPATH`` and the installed
   packages, as ``-I``, ``-P``, ``-E`` and ``-S`` allow) or ``-c``, started
@@ -1188,6 +1189,12 @@ NATIVE_SITE_PARENT = re.compile(
     r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)(?:/lib(?:64)?(?:/python3(?:\.\d+)?)?)?$"
 )
 NATIVE_SITE_ROOTS = ("/usr/local/lib/python3", "/usr/lib/python3", "/usr/lib64/python3")
+# A top-level entry of a library directory of the interpreter: the standard
+# library, lib-dynload, or a site-packages directory.
+NATIVE_LIBRARY_ENTRY = re.compile(
+    r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)/lib(?:64)?/python3(?:\.\d+)?"
+    r"(?:/(?P<area>site-packages|dist-packages|lib-dynload))?/(?P<top>[^/]+)"
+)
 
 
 def modelled_targets(target):
@@ -1430,32 +1437,52 @@ class PackagingConfig:
         return not any(fnmatch.fnmatchcase(package, p) for p in self.exclude)
 
     def ships(self, package, filename):
-        """The package data of ``package`` selects ``filename`` (at the package root)."""
+        """The package data of ``package`` selects ``filename`` (relative to the
+        package directory)."""
         if self.unsupported:
             raise Unsupported(self.unsupported)
 
-        def selected(declarations):
-            patterns = [
+        def patterns(declarations):
+            return [
                 *declarations.get(package, []),
                 *declarations.get("*", []),
                 *declarations.get("", []),
             ]
-            return any(package_data_matches(p, filename) for p in patterns)
 
-        return selected(self.package_data) and not selected(self.exclude_package_data)
+        # setuptools globs the package data patterns, then drops the files an
+        # exclusion pattern matches with fnmatch, on the whole relative path.
+        return any(
+            package_data_matches(p, filename) for p in patterns(self.package_data)
+        ) and not any(
+            fnmatch.fnmatchcase(filename, p.strip())
+            for p in patterns(self.exclude_package_data)
+        )
 
 
 def package_data_matches(pattern, filename):
-    """setuptools glob of a package data pattern, for a file at the package root."""
-    pattern = pattern.strip()
-    while pattern.startswith("**/"):
-        pattern = pattern[3:]
-    if "/" in pattern:
-        return False
-    # glob never lets a wildcard match the leading dot of a hidden file.
-    if filename.startswith(".") and not pattern.startswith("."):
-        return False
-    return fnmatch.fnmatchcase(filename, pattern)
+    """setuptools glob (recursive) of a package data pattern, for ``filename``
+    relative to the package directory."""
+    wanted = pattern.strip().split("/")
+    parts = filename.split("/")
+
+    def match(i, j):
+        if i == len(wanted):
+            return j == len(parts)
+        if wanted[i] == "**":
+            # Any number of directories, none of them hidden.
+            return any(
+                match(i + 1, k)
+                for k in range(j, len(parts) + 1)
+                if not any(part.startswith(".") for part in parts[j:k])
+            )
+        if j == len(parts):
+            return False
+        # glob never lets a wildcard match the leading dot of a hidden name.
+        if parts[j].startswith(".") and not wanted[i].startswith("."):
+            return False
+        return fnmatch.fnmatchcase(parts[j], wanted[i]) and match(i + 1, j + 1)
+
+    return match(0, 0)
 
 
 CHMOD_OPTIONS = frozenset(
@@ -1911,7 +1938,9 @@ class Shell:
     the container over or the script exits.
     """
 
-    def __init__(self, model, stage, files, cwd, variables, start, nesting=0):
+    def __init__(
+        self, model, stage, files, cwd, variables, start, nesting=0, process=True
+    ):
         self.model = model
         self.stage = stage
         self.files = files
@@ -1920,6 +1949,11 @@ class Shell:
         # The environment of the shell is exported; a plain assignment is not,
         # unless set -a is on.
         self.exported = set(variables)
+        if process:
+            # A new shell process (not a sourced file or a subshell) sets PWD to
+            # its working directory, whatever value it inherits, and exports it.
+            self.variables["PWD"] = UNKNOWN if cwd is None else cwd
+            self.exported.add("PWD")
         self.allexport = False
         self.start = start
         self.nesting = nesting
@@ -2015,7 +2049,7 @@ class Shell:
             return fields
         return [field for field, kept in zip(fields, quoted) if field or kept]
 
-    def _nested(self, files, cwd, variables, start, conditional):
+    def _nested(self, files, cwd, variables, start, conditional, process=True):
         """A shell run from this one; in a start script it adds its processes here."""
         nested = Shell(
             self.model,
@@ -2025,6 +2059,7 @@ class Shell:
             variables,
             start,
             self.nesting + 1,
+            process,
         )
         nested.stack = list(self.stack) + (["("] if conditional else [])
         nested.processes = self.processes
@@ -2359,6 +2394,7 @@ class Shell:
                         dict(self.variables),
                         self.start,
                         conditional,
+                        process=False,
                     )
                     nested.exported = set(self.exported)
                     nested.allexport = self.allexport
@@ -2598,8 +2634,40 @@ class Shell:
 
     def _module_shadow(self, name, env):
         """A file the build wrote that python -m ``name`` imports before the module
-        of the interpreter (the working directory and PYTHONPATH come first)."""
-        return self._written_module(name, [self.cwd, *self._python_path(env)])
+        of the interpreter (the working directory and PYTHONPATH come first), or
+        in place of it in a library directory of the interpreter."""
+        return self._written_module(
+            name, [self.cwd, *self._python_path(env)]
+        ) or self._library_module(name)
+
+    def _library_module(self, name):
+        """A path the build wrote in a library directory of the interpreter that
+        holds module ``name``; a region of unknown content holding such a
+        directory is reported. The standard library and lib-dynload come before
+        site-packages, which only adds what the standard library lacks."""
+        site_too = name not in sys.stdlib_module_names
+        for path in (*self.files, *self.stage.replaced, *self.stage.unknown_dirs):
+            match = NATIVE_LIBRARY_ENTRY.match(path)
+            if match is None:
+                continue
+            if match.group("area") in ("site-packages", "dist-packages") and not (
+                site_too
+            ):
+                continue
+            # A package, a module, its bytecode or an extension module.
+            if match.group("top").split(".", 1)[0] == name:
+                return path
+        for region in (*self.stage.replaced, *self.stage.unknown_dirs):
+            region = region.rstrip("/") or "/"
+            if (
+                region in ("/", "/opt")
+                or NATIVE_SITE_PARENT.match(region)
+                or (site_too and NATIVE_SITE_PACKAGES.fullmatch(region))
+            ):
+                raise Unsupported(
+                    f"python -m {name}: {region} holds what a build command wrote"
+                )
+        return None
 
     def _check_startup_hooks(self, env):
         """Before the code it is asked to run, python imports sitecustomize and
@@ -2952,6 +3020,7 @@ class Shell:
             self.variables,
             start=False,
             nesting=self.nesting + 1,
+            process=False,
         )
         nested.stack = list(self.stack)
         nested.exported = self.exported
@@ -3006,6 +3075,8 @@ class Shell:
         if self.start:
             raise Unsupported(f"working directory changed by {why} in the entry script")
         self.cwd = None
+        # A cd that may have run may have set them.
+        self.variables["PWD"] = self.variables["OLDPWD"] = UNKNOWN
 
     def _cd(self, args, conditional, in_pipeline, env, after):
         if in_pipeline:
@@ -3034,6 +3105,8 @@ class Shell:
             # shell may still be where it was.
             self.chain_directory = True
         self.cwd = target
+        self.variables["OLDPWD"] = self.variables.get("PWD", UNKNOWN)
+        self.variables["PWD"] = target
 
     def _path(self, value, what="path"):
         """Absolute image path of an operand (a ``..`` after a link the build
@@ -4281,14 +4354,22 @@ class ImageModel:
                 for path, origin in list(files.items()):
                     if path.startswith(package_dir + "/") and path.endswith(".py"):
                         files[SITE_PACKAGES + "/" + path[len(prefix) :]] = origin
-                stamp = f"{package_dir}/{STAMP}"
-                origin = files.get(stamp)
-                if (
-                    origin is not None
-                    and origin[0] == "stamp"
-                    and config.ships(package, STAMP)
-                ):
-                    files[f"{SITE_PACKAGES}/{package}/{STAMP}"] = origin
+                # pycti reads the identity files of the installed package as it
+                # reads those of the source: each one the package data ships
+                # keeps its origin, the manifest it reads first included.
+                for name in IDENTITY_FILES:
+                    path = f"{package_dir}/{name}"
+                    origin = files.get(path)
+                    if origin is None and not stage.written(path):
+                        continue
+                    if not config.ships(package, name):
+                        continue
+                    if origin is None:
+                        raise Unsupported(
+                            f"pip install {install_dir}: the package data of {package}"
+                            f" ships {path}, which a build command wrote"
+                        )
+                    files[f"{SITE_PACKAGES}/{package}/{name}"] = origin
 
     @staticmethod
     def _roots(texts):
