@@ -85,7 +85,7 @@ class CyfirmaConnector:
 
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
-
+                self.client.last_run = last_run
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector last run",
                     {"last_run_datetime": last_run},

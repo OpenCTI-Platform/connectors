@@ -43,15 +43,23 @@ def get_request_headers(api_key: str) -> dict:
     }
 
 
-def get_request_params(look_back_days: int) -> dict:
+def get_request_params(look_back_days: int, last_run: str) -> dict:
     """Generate request parameters for fetching indicators.
 
     Args:
          look_back_days (int): Number of days to look back for fetching IOCs.
+         last_run (str): The timestamp of the last run.
     """
-    return {
+
+    params = {
         "withRelationships": "true",
-        "delta": "true",
         "page": 0,
-        "lookBackDays": look_back_days,
     }
+
+    if last_run is None or last_run == "":
+        params["lookBackDays"] = look_back_days
+        params["delta"] = "false"
+    else:
+        params["delta"] = "true"
+
+    return params
