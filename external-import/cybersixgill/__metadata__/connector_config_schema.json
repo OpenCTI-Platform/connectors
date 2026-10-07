@@ -54,11 +54,6 @@
       "format": "duration",
       "type": "string"
     },
-    "CONNECTOR_UPDATE_EXISTING_DATA": {
-      "default": false,
-      "description": "Whether to update data already ingested into the platform.",
-      "type": "boolean"
-    },
     "CYBERSIXGILL_CLIENT_ID": {
       "description": "Cybersixgill API Client ID.",
       "type": "string"

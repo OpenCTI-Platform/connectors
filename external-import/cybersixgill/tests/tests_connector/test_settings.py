@@ -27,7 +27,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "update_existing_data": True,
                     "duration_period": "PT10M",
                 },
                 "cybersixgill": {
@@ -86,7 +85,6 @@ def test_settings_should_apply_defaults():
 
     assert settings.connector.name == "Cybersixgill Darkfeed"
     assert settings.connector.scope == ["cybersixgill"]
-    assert settings.connector.update_existing_data is False
     assert settings.connector.duration_period == timedelta(minutes=5)
     assert settings.cybersixgill.client_secret.get_secret_value() == (
         "test-client-secret"

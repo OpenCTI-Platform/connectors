@@ -40,7 +40,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "update_existing_data": True,
                     "duration_period": "PT10M",
                 },
                 "cybersixgill": {
@@ -112,7 +111,6 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert importer.create_observables is True
     assert importer.create_indicators is False
     assert importer.enable_relationships is True
-    assert importer.update_existing_data is True
     assert importer.limit == 1000
 
 

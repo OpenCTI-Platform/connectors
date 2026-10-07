@@ -33,8 +33,6 @@ class Cybersixgill:
 
         self.interval_sec = int(self.config.connector.duration_period.total_seconds())
 
-        update_existing_data = self.config.connector.update_existing_data
-
         # Create OpenCTI connector helper
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
@@ -51,7 +49,6 @@ class Cybersixgill:
             author=author,
             create_observables=create_observables,
             create_indicators=create_indicators,
-            update_existing_data=update_existing_data,
             enable_relationships=enable_relationships,
             fetch_size=fetch_size,
         )
