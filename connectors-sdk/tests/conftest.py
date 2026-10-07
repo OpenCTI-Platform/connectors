@@ -3,6 +3,7 @@
 # type: ignore
 """Provide fixtures and entrypoint script for pytest."""
 
+import logging
 import os
 import subprocess
 import sys
@@ -10,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from pycti.utils.opencti_logger import CustomJsonFormatter
 from connectors_sdk.models import (
     AssociatedFile,
     ExternalReference,
@@ -17,6 +19,35 @@ from connectors_sdk.models import (
     TLPMarking,
     Reference,
 )
+
+
+def _is_json_handler(handler: logging.Handler) -> bool:
+    """Whether `handler` writes records with pycti's JSON formatter (SDK's or pycti's)."""
+    return isinstance(handler.formatter, CustomJsonFormatter)
+
+
+@pytest.fixture(autouse=True)
+def restore_root_logger():
+    """Put the root logger's level and JSON handlers back after each test.
+
+    `connectors_sdk.logger` configures the root logger on purpose (at import time, and
+    when `BaseConnectorSettings` is validated), so tests must not leak that state.
+    Only JSON handlers are restored: pytest adds and removes its own capture handlers
+    around each test phase, and they must be left alone.
+    """
+    root_logger = logging.getLogger()
+    saved_level = root_logger.level
+    saved_json_handlers = [h for h in root_logger.handlers if _is_json_handler(h)]
+
+    yield
+
+    for handler in list(root_logger.handlers):
+        if _is_json_handler(handler) and handler not in saved_json_handlers:
+            root_logger.removeHandler(handler)
+    for handler in saved_json_handlers:
+        if handler not in root_logger.handlers:
+            root_logger.addHandler(handler)
+    root_logger.setLevel(saved_level)
 
 
 @pytest.fixture
