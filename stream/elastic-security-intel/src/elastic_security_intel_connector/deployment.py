@@ -71,9 +71,10 @@ class ElasticDeploymentAdapter(DeploymentVendorAdapter):
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
         """Read back the indicator documents written by the connector.
 
-        Expired documents stay in the index, so they are listed too, inactive, for
-        the reconciliation to delete them. They carry no OpenCTI id: they only match
-        a known deployment by document id, and never confirm or backfill it as active.
+        Each document is matched by the OpenCTI id of its stored STIX object. Expired
+        documents stay in the index, so they are listed too, inactive and without
+        that id, for the reconciliation to delete them: they only match a known
+        deployment by document id, and never confirm or backfill it as active.
 
         :raises ElasticDeploymentError: On any Elasticsearch error (never a partial
             listing), or a document with an unreadable `valid_until`.
