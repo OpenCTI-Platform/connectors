@@ -1,7 +1,7 @@
 version: '3'
 services:
-  connector-template:
-    image: opencti/eset-enrichment-connector:latest
+  connector-eset-enrichment:
+    image: opencti/connector-eset-enrichment:latest
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
