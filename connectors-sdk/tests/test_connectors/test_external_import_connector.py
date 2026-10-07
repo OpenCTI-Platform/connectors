@@ -1,6 +1,7 @@
 # pragma: no cover
 # type: ignore
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -139,7 +140,7 @@ class TestExternalImportConnector:
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
         state = _make_state_mock()
-        state.last_run = "2025-01-01T00:00:00+00:00"
+        state.last_run = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(

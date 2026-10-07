@@ -8,6 +8,7 @@ from connectors_sdk.logger import ConnectorLoggerAdapter
 # Every SDK class logging through `self.logger` / `cls.logger`
 CLASSES_WITH_LOGGER = [
     ("connectors_sdk.connectors.external_import._work_manager", "_Work"),
+    ("connectors_sdk.connectors.external_import._work_manager", "WorkManager"),
     (
         "connectors_sdk.connectors.external_import.base_data_processor",
         "BaseDataProcessor",
@@ -16,6 +17,10 @@ CLASSES_WITH_LOGGER = [
         "connectors_sdk.connectors.external_import.external_import_connector",
         "ExternalImportConnector",
     ),
+    ("connectors_sdk.settings._settings_loader", "_SettingsLoader"),
+    ("connectors_sdk.settings.base_settings", "BaseConnectorSettings"),
+    ("connectors_sdk.states._base_state", "_StateClient"),
+    ("connectors_sdk.states._base_state", "BaseConnectorState"),
 ]
 
 
