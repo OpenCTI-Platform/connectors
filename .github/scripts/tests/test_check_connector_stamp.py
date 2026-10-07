@@ -3819,9 +3819,16 @@ def test_package_installed_from_the_root(tmp_path, packaging):
         (
             "COPY remove.py /usr/local/lib/python3.12/compileall.py\n"
             "RUN python3 -m compileall -q /opt/src",
-            "not supported: python -m compileall may run"
+            "not supported: python run at build time may import"
             " /usr/local/lib/python3.12/compileall.py, a file the build wrote,"
-            " instead of the module of the interpreter",
+            " from its standard library",
+        ),
+        (
+            "COPY remove.py /usr/lib/python3.12/lib-dynload/_struct.py\n"
+            "RUN pip install requests",
+            "not supported: python run at build time may import"
+            " /usr/lib/python3.12/lib-dynload/_struct.py, a file the build wrote,"
+            " from its standard library",
         ),
         (
             "COPY remove.py /usr/local/lib/python3.12/site-packages/pip/__main__.py\n"
@@ -3833,8 +3840,15 @@ def test_package_installed_from_the_root(tmp_path, packaging):
         (
             "COPY --from=example/tools:1 /lib /usr/local/lib/python3.12\n"
             "RUN python3 -m compileall -q /opt/src",
-            "not supported: python -m compileall: /usr/local/lib/python3.12 holds"
-            " what a build command wrote",
+            "not supported: python run at build time: /usr/local/lib/python3.12"
+            " holds what a build command wrote, where python reads its startup files",
+        ),
+        (
+            "COPY --from=example/tools:1 /lib /usr/local/lib/python3.12/site-packages\n"
+            "RUN pip install requests",
+            "not supported: python run at build time:"
+            " /usr/local/lib/python3.12/site-packages holds what a build command"
+            " wrote, where python reads its startup files",
         ),
         (
             "COPY remove.py /usr/local/lib/python3.12/site-packages/compileall.py\n"

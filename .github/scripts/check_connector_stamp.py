@@ -1197,6 +1197,28 @@ NATIVE_LIBRARY_ENTRY = re.compile(
 )
 
 
+def holds_library_directory(region):
+    """``region`` is a library directory of the interpreter (the standard
+    library or a site-packages directory) or holds one."""
+    region = region.rstrip("/") or "/"
+    return (
+        region in ("/", "/opt")
+        or bool(NATIVE_SITE_PARENT.match(region))
+        or bool(NATIVE_SITE_PACKAGES.fullmatch(region))
+    )
+
+
+def in_standard_library(path):
+    """``path`` lies in the standard library or lib-dynload of an interpreter."""
+    match = NATIVE_LIBRARY_ENTRY.match(path)
+    return (
+        match is not None
+        and match.group("area") in (None, "lib-dynload")
+        and (match.group("area") or match.group("top"))
+        not in ("site-packages", "dist-packages")
+    )
+
+
 def modelled_targets(target):
     """``target`` and, when it is a native path of the installed packages, the
     place where the model keeps them."""
@@ -2641,32 +2663,17 @@ class Shell:
         ) or self._library_module(name)
 
     def _library_module(self, name):
-        """A path the build wrote in a library directory of the interpreter that
-        holds module ``name``; a region of unknown content holding such a
-        directory is reported. The standard library and lib-dynload come before
-        site-packages, which only adds what the standard library lacks."""
-        site_too = name not in sys.stdlib_module_names
+        """A path the build wrote in site-packages that holds module ``name``.
+        The standard library comes first: site-packages only adds the modules
+        it lacks (what the build wrote in the standard library is reported at
+        startup)."""
+        if name in sys.stdlib_module_names:
+            return None
         for path in (*self.files, *self.stage.replaced, *self.stage.unknown_dirs):
             match = NATIVE_LIBRARY_ENTRY.match(path)
-            if match is None:
-                continue
-            if match.group("area") in ("site-packages", "dist-packages") and not (
-                site_too
-            ):
-                continue
             # A package, a module, its bytecode or an extension module.
-            if match.group("top").split(".", 1)[0] == name:
+            if match is not None and match.group("top").split(".", 1)[0] == name:
                 return path
-        for region in (*self.stage.replaced, *self.stage.unknown_dirs):
-            region = region.rstrip("/") or "/"
-            if (
-                region in ("/", "/opt")
-                or NATIVE_SITE_PARENT.match(region)
-                or (site_too and NATIVE_SITE_PACKAGES.fullmatch(region))
-            ):
-                raise Unsupported(
-                    f"python -m {name}: {region} holds what a build command wrote"
-                )
         return None
 
     def _check_startup_hooks(self, env):
@@ -2685,6 +2692,20 @@ class Shell:
             if SITE_STARTUP_FILE.search(path):
                 raise Unsupported(
                     f"python run at build time runs {path}, a file the build wrote, at startup"
+                )
+        for path in (*self.files, *self.stage.replaced, *self.stage.unknown_dirs):
+            # The modules python imports to start and to run what it is asked
+            # to, site included.
+            if in_standard_library(path):
+                raise Unsupported(
+                    f"python run at build time may import {path}, a file the build"
+                    " wrote, from its standard library"
+                )
+        for region in (*self.stage.replaced, *self.stage.unknown_dirs):
+            if holds_library_directory(region):
+                raise Unsupported(
+                    f"python run at build time: {region} holds what a build command"
+                    " wrote, where python reads its startup files"
                 )
 
     def _python(self, words, env, conditional):
