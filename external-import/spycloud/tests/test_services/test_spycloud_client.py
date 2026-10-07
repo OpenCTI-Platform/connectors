@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import SecretStr
 from requests import Response
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from spycloud_connector.services import SpycloudClient
@@ -24,7 +25,7 @@ def mock_spycloud_client():
 
     config = Mock()
     config.spycloud.api_base_url = TEST_API_BASE_URL
-    config.spycloud.api_key = TEST_API_KEY
+    config.spycloud.api_key = SecretStr(TEST_API_KEY)
 
     return SpycloudClient(helper=helper, config=config)
 
