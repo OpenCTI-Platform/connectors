@@ -1,3 +1,4 @@
+import logging
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -328,6 +329,35 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["connector"]["name"] == "Test Connector"
     assert settings_dict["connector"]["scope"] == "scope1,scope2"
     assert settings_dict["connector"]["log_level"] == "error"
+
+
+@pytest.mark.parametrize(
+    "log_level,expected_level",
+    [
+        pytest.param("debug", logging.DEBUG, id="debug"),
+        pytest.param("info", logging.INFO, id="info"),
+        pytest.param("warn", logging.WARNING, id="warn"),
+        pytest.param("warning", logging.WARNING, id="warning"),
+        pytest.param("error", logging.ERROR, id="error"),
+    ],
+)
+def test_base_connector_settings_should_set_the_root_logger_level(
+    mock_environment, monkeypatch, log_level, expected_level
+):
+    """Test that the validated log level is set on the root logger.
+
+    Every allowed level is tested, because `logging.setLevel()` raises a `ValueError`
+    on a lower-cased level name, and the field holds lower-cased names.
+    """
+    # Given: A configured log level, and a root logger filtering on another one
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", log_level)
+    logging.getLogger().setLevel(logging.CRITICAL)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: The root logger filters on the configured level
+    assert logging.getLogger().level == expected_level
 
 
 def test_base_connector_settings_should_validate_settings_from_dot_env_file(
