@@ -1158,6 +1158,41 @@ def test_reinstall_without_the_stamp(tmp_path, steps, reason):
     ],
 )
 def test_deletion_that_may_be_skipped(tmp_path, steps, covered):
+    check_manifest_deletion(tmp_path, steps, covered)
+
+
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 06:28 UTC: a deletion in a branch, a loop or after
+        # || may not run.
+        (
+            "RUN if false; then rm -f /opt/src/__metadata__/connector_manifest.json; fi",
+            False,
+        ),
+        (
+            "RUN for f in; do rm -f /opt/src/__metadata__/connector_manifest.json; done",
+            False,
+        ),
+        (
+            "RUN while false; do rm -rf /opt/src/__metadata__; done",
+            False,
+        ),
+        ("RUN true || rm -f /opt/src/__metadata__/connector_manifest.json", False),
+        (
+            "RUN if true; then find /opt/src/__metadata__ -name '*.json' -delete; fi",
+            False,
+        ),
+        ("RUN (rm -f /opt/src/__metadata__/connector_manifest.json)", True),
+        ("RUN { rm -f /opt/src/__metadata__/connector_manifest.json; }", True),
+    ],
+)
+def test_deletion_in_a_branch(tmp_path, steps, covered):
+    check_manifest_deletion(tmp_path, steps, covered)
+
+
+def check_manifest_deletion(tmp_path, steps, covered):
+    """A manifest pycti reads before the stamp, which ``steps`` may delete."""
     files = {
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
         "COPY __metadata__ /opt/src/__metadata__\n"
@@ -1653,6 +1688,17 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN rpm -i --relocate /usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
+        # Copilot review of 06:28 UTC: umask changes the modes of what the build
+        # creates, which the model does not follow.
+        ("RUN umask 077 && mkdir -p /opt/private", False),
+        # Copilot review of 06:28 UTC: an install into the user site, a target or
+        # a root may come before site-packages, published packages included.
+        ("RUN pip install --user sample-connector", False),
+        ("RUN pip install --target /opt/src requests", False),
+        ("RUN pip install -t/opt/src requests", False),
+        ("ENV PYTHONPATH=/opt/lib\nRUN pip install --target /opt/lib requests", False),
+        ("RUN pip install --root=/opt/root requests", False),
+        ("RUN pip install --prefix=/python-libs requests", True),
         # Copilot review of 06:11 UTC: a package file or URL brings a payload and
         # installation scripts the model does not read.
         ("RUN rpm -i /tmp/sample.rpm", False),
