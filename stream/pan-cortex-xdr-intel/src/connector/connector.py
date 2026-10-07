@@ -759,4 +759,9 @@ class Connector:
         """Start the connector's main loop: listen to the OpenCTI stream and process each message."""
         if self.assurance is not None:
             self.assurance.start()
+        # Former values Cortex XDR refused to delete are retried, also once the
+        # indicator is deleted.
+        self.pending_withdrawals.start_retries(
+            lambda _indicator_id, value: self._withdraw_value(value, None)
+        )
         self.helper.listen_stream(self._process_message)

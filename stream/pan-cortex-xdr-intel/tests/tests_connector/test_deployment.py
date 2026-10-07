@@ -708,11 +708,43 @@ def test_connector_works_without_write_back():
     connector.client.delete_iocs.assert_called_once()
 
 
-def test_start_starts_the_write_back(connector):
+def retried_withdrawal(connector):
+    """Start the connector and return the withdrawal its retries call."""
+    connector.pending_withdrawals.start_retries = MagicMock()
     connector.start()
+    return connector.pending_withdrawals.start_retries.call_args.args[0]
+
+
+def test_start_starts_the_write_back(connector):
+    retried_withdrawal(connector)
 
     connector.assurance.start.assert_called_once_with()
     connector.helper.listen_stream.assert_called_once_with(connector._process_message)
+
+
+def test_a_former_value_a_delete_left_is_deleted_by_the_retries(connector):
+    """A deleted indicator gets no later event: the periodic retries delete the
+    IOC of the former value its delete could not delete."""
+    keep_former_value(connector)
+    retry = retried_withdrawal(connector)
+
+    connector.pending_withdrawals.retry_all(retry)
+
+    assert deleted_values(connector) == [[FORMER_VALUE]]
+    assert kept_former_values(connector) == []
+
+
+def test_a_retried_former_value_another_indicator_holds_is_kept(connector):
+    keep_former_value(connector)
+    connector.helper.api.indicator.list.return_value = [
+        {"id": OTHER_ID, "pattern": f"[ipv4-addr:value = '{FORMER_VALUE}']"}
+    ]
+    retry = retried_withdrawal(connector)
+
+    connector.pending_withdrawals.retry_all(retry)
+
+    connector.client.delete_iocs.assert_not_called()
+    assert kept_former_values(connector) == []
 
 
 def test_describe_error():
