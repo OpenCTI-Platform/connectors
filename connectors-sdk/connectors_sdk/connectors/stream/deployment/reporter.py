@@ -72,8 +72,6 @@ MAX_UNSENT_AGE = 24 * 3600.0
 MAX_RETRY_DELAY = 300.0
 """Longest delay between two sends of undelivered reports (doubled from the flush interval)."""
 
-_LOG_PREFIX = "[DEPLOYMENT]"
-
 REPORT_SENT = "sent"
 """Outcome of a report accepted by OpenCTI."""
 
@@ -403,7 +401,7 @@ class DeploymentReporter:
         """
         if not self.enabled:
             self._logger.info(
-                f"{_LOG_PREFIX} Deployment write-back disabled by configuration "
+                "[DEPLOYMENT] Deployment write-back disabled by configuration "
                 "(DEPLOYMENT_REPORTING_ENABLED=false)."
             )
             return False
@@ -417,7 +415,7 @@ class DeploymentReporter:
         if platform_id is None:
             return False
         self._logger.info(
-            f"{_LOG_PREFIX} Deployment write-back enabled.",
+            "[DEPLOYMENT] Deployment write-back enabled.",
             meta={
                 "security_platform_id": platform_id,
                 "security_platform_name": self.options.security_platform_name,
@@ -449,8 +447,8 @@ class DeploymentReporter:
             if mutation not in self._unsupported_logged:
                 self._unsupported_logged.add(mutation)
                 self._logger.info(
-                    f"{_LOG_PREFIX} The OpenCTI platform does not support '{mutation}', "
-                    "the related write-back is disabled.",
+                    "[DEPLOYMENT] The OpenCTI platform does not support a write-back "
+                    "mutation, the related write-back is disabled.",
                     meta={"mutation": mutation},
                 )
         return False
@@ -483,7 +481,7 @@ class DeploymentReporter:
         finally:
             self._resolution_lock.release()
         self._logger.info(
-            f"{_LOG_PREFIX} Security platform resolved.",
+            "[DEPLOYMENT] Security platform resolved.",
             meta={
                 "security_platform_id": platform_id,
                 "security_platform_name": self.options.security_platform_name,
@@ -570,7 +568,7 @@ class DeploymentReporter:
             # delete event no longer exists); transport errors are logged as warnings
             # where they happen.
             self._logger.info(
-                f"{_LOG_PREFIX} Some deployment reports were not applied by OpenCTI.",
+                "[DEPLOYMENT] Some deployment reports were not applied by OpenCTI.",
                 meta={
                     "rejected": len(result.errors),
                     "sample": [
@@ -684,7 +682,7 @@ class DeploymentReporter:
             return REPORT_SENT
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot report indicator hits.",
+                "[DEPLOYMENT] Cannot report indicator hits.",
                 meta={"indicator_id": indicator_id, "count": count, "error": str(err)},
             )
             return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
@@ -710,22 +708,20 @@ class DeploymentReporter:
         """
         meta = {"indicator_id": indicator_id, "count": count}
         if not indicator_id or count < 1:
-            self._logger.debug(
-                f"{_LOG_PREFIX} Ignoring an empty hit report.", meta=meta
-            )
+            self._logger.debug("[DEPLOYMENT] Ignoring an empty hit report.", meta=meta)
             return False
         if not last_hit:
             self._logger.warning(
-                f"{_LOG_PREFIX} Ignoring a hit report without the time of its last hit "
+                "[DEPLOYMENT] Ignoring a hit report without the time of its last hit "
                 "(OpenCTI refuses it: a retry could not be told from new hits).",
                 meta=meta,
             )
             return False
         if report_id is not None and not 0 < len(report_id) <= HIT_REPORT_ID_MAX_LENGTH:
             self._logger.warning(
-                f"{_LOG_PREFIX} Ignoring a hit report whose report id is empty or longer "
-                f"than {HIT_REPORT_ID_MAX_LENGTH} characters (OpenCTI refuses it).",
-                meta=meta,
+                "[DEPLOYMENT] Ignoring a hit report whose report id is empty or too "
+                "long (OpenCTI refuses it).",
+                meta={**meta, "report_id_max_length": HIT_REPORT_ID_MAX_LENGTH},
             )
             return False
         return True
@@ -848,7 +844,7 @@ class DeploymentReporter:
                 if not self._queue_overflow_logged:
                     self._queue_overflow_logged = True
                     self._logger.warning(
-                        f"{_LOG_PREFIX} Too many queued deployment reports, "
+                        "[DEPLOYMENT] Too many queued deployment reports, "
                         "dropping the oldest ones.",
                         meta={"queued": MAX_QUEUED_REPORTS},
                     )
@@ -974,7 +970,7 @@ class DeploymentReporter:
                 retried.append(report)
         if expired:
             self._logger.warning(
-                f"{_LOG_PREFIX} Dropping deployment reports undelivered for too long.",
+                "[DEPLOYMENT] Dropping deployment reports undelivered for too long.",
                 meta={"dropped": expired, "max_age_seconds": MAX_UNSENT_AGE},
             )
         self._unsent_retry_delay = min(
@@ -1028,7 +1024,7 @@ class DeploymentReporter:
                 for indicator_id in list(merged)[:overflow]:
                     del merged[indicator_id]
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Deployment write-back unavailable, dropping the "
+                    "[DEPLOYMENT] Deployment write-back unavailable, dropping the "
                     "oldest queued reports.",
                     meta={"dropped": overflow, "queued": MAX_QUEUED_REPORTS},
                 )
@@ -1059,7 +1055,7 @@ class DeploymentReporter:
             return
         if not self._send_lock.acquire(timeout=max(timeout, 0.0)):
             self._logger.warning(
-                f"{_LOG_PREFIX} Deployment reports held by a running reconciliation, "
+                "[DEPLOYMENT] Deployment reports held by a running reconciliation, "
                 "left for it to send.",
                 meta={"timeout_seconds": timeout},
             )
@@ -1196,7 +1192,7 @@ class DeploymentReporter:
                 self._send_lock.release()
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot flush the deployment reports.",
+                "[DEPLOYMENT] Cannot flush the deployment reports.",
                 meta={"error": str(err)},
             )
 
@@ -1220,7 +1216,7 @@ class DeploymentReporter:
             return DeploymentReport(**fields)
         except (TypeError, ValueError) as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Ignoring an invalid deployment report.",
+                "[DEPLOYMENT] Ignoring an invalid deployment report.",
                 meta={
                     "report": {k: str(v) for k, v in fields.items()},
                     "error": str(err),
@@ -1252,7 +1248,7 @@ class DeploymentReporter:
                 removed_at=report.get("removed_at"),
             )
         self._logger.warning(
-            f"{_LOG_PREFIX} Ignoring a deployment report of an unexpected type.",
+            "[DEPLOYMENT] Ignoring a deployment report of an unexpected type.",
             meta={"type": type(report).__name__},
         )
         return None
@@ -1299,7 +1295,7 @@ class DeploymentReporter:
                     self._detection_failure_logged = True
                 log = self._logger.debug if already_logged else self._logger.warning
                 log(
-                    f"{_LOG_PREFIX} Cannot detect the deployment write-back support of "
+                    "[DEPLOYMENT] Cannot detect the deployment write-back support of "
                     "the OpenCTI platform, retrying later.",
                     meta={"error": str(err), "retry_in_seconds": self._retry_delay},
                 )
@@ -1335,14 +1331,14 @@ class DeploymentReporter:
             platform_id = platform.get("id") if isinstance(platform, Mapping) else None
             if not platform_id:
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Cannot resolve the security platform, retrying later.",
+                    "[DEPLOYMENT] Cannot resolve the security platform, retrying later.",
                     meta={"security_platform_name": name},
                 )
                 return None
             return str(platform_id)
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot resolve the security platform, retrying later.",
+                "[DEPLOYMENT] Cannot resolve the security platform, retrying later.",
                 meta={"security_platform_name": name, "error": str(err)},
             )
             return None
@@ -1375,7 +1371,7 @@ class DeploymentReporter:
             return REPORT_SENT
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot report the deployment status.",
+                "[DEPLOYMENT] Cannot report the deployment status.",
                 meta={
                     "indicator_id": report.indicator_id,
                     "status": report.status.value,
@@ -1471,7 +1467,7 @@ class DeploymentReporter:
             return DeploymentBatchResult.from_graphql(payload)
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot report a batch of deployment statuses.",
+                "[DEPLOYMENT] Cannot report a batch of deployment statuses.",
                 meta={"reports": len(chunk), "error": str(err)},
             )
             failure = DeploymentBatchResult.failure(chunk, str(err))
@@ -1507,7 +1503,7 @@ class DeploymentReporter:
                 delay = self._retry_backoff * (2**attempt)
                 attempt += 1
                 self._logger.debug(
-                    f"{_LOG_PREFIX} OpenCTI rate limit reached, backing off.",
+                    "[DEPLOYMENT] OpenCTI rate limit reached, backing off.",
                     meta={"attempt": attempt, "delay_seconds": delay},
                 )
                 self._sleep(delay)

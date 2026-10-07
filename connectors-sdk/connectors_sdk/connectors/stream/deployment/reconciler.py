@@ -172,9 +172,6 @@ class _PendingHits:
     report_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
-_LOG_PREFIX = "[DEPLOYMENT]"
-
-
 def _pattern_key(pattern: Any) -> str | None:
     """Return a pattern with its whitespace runs collapsed, for comparison.
 
@@ -536,7 +533,7 @@ class DeploymentReconciler:
         """
         if not self._reporter.enabled or self.interval_seconds <= 0:
             self._logger.info(
-                f"{_LOG_PREFIX} Deployment reconciliation disabled by configuration."
+                "[DEPLOYMENT] Deployment reconciliation disabled by configuration."
             )
             return False
         if self._thread is not None and self._thread.is_alive():
@@ -549,7 +546,7 @@ class DeploymentReconciler:
         )
         self._thread.start()
         self._logger.info(
-            f"{_LOG_PREFIX} Deployment reconciliation scheduled.",
+            "[DEPLOYMENT] Deployment reconciliation scheduled.",
             meta={"interval_minutes": self._reporter.options.reconciliation_interval},
         )
         return True
@@ -578,7 +575,7 @@ class DeploymentReconciler:
             summary = self._reconcile()
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Deployment reconciliation failed.",
+                "[DEPLOYMENT] Deployment reconciliation failed.",
                 meta={"error": str(err)},
             )
             summary = ReconciliationSummary(skipped=True, reason=str(err))
@@ -586,7 +583,7 @@ class DeploymentReconciler:
             self._run_lock.release()
         log = self._logger.debug if summary.skipped else self._logger.info
         log(
-            f"{_LOG_PREFIX} Deployment reconciliation completed.",
+            "[DEPLOYMENT] Deployment reconciliation completed.",
             meta=summary.as_log_meta(),
         )
         return summary
@@ -624,7 +621,7 @@ class DeploymentReconciler:
         with reporter.holding_queued_reports() as delivered:
             if not delivered:
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Stream reports not delivered yet, reconciliation "
+                    "[DEPLOYMENT] Stream reports not delivered yet, reconciliation "
                     "skipped (sent again later, they would overwrite its reports)."
                 )
                 return ReconciliationSummary(
@@ -645,7 +642,7 @@ class DeploymentReconciler:
                     )
                 except Exception as err:
                     self._logger.warning(
-                        f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
+                        "[DEPLOYMENT] Cannot read the indicators back from the vendor, "
                         "reconciliation skipped.",
                         meta={"error": str(err)},
                     )
@@ -656,7 +653,7 @@ class DeploymentReconciler:
                 deployments = list(reporter.list_indicator_deployments(LISTED_STATUSES))
             except DeploymentListingError as err:
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Cannot list the deployments, reconciliation skipped.",
+                    "[DEPLOYMENT] Cannot list the deployments, reconciliation skipped.",
                     meta={"error": str(err)},
                 )
                 return ReconciliationSummary(skipped=True, reason=str(err))
@@ -824,7 +821,7 @@ class DeploymentReconciler:
             if len(vendor_indicators) >= self._max_vendor_indicators:
                 summary.vendor_listing_truncated = True
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Vendor read-back limit reached, absent indicators "
+                    "[DEPLOYMENT] Vendor read-back limit reached, absent indicators "
                     "are not reported removed during this run.",
                     meta={"limit": self._max_vendor_indicators},
                 )
@@ -933,7 +930,7 @@ class DeploymentReconciler:
             adapter.forget_indicator(deployment)
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot forget a withdrawn indicator.",
+                "[DEPLOYMENT] Cannot forget a withdrawn indicator.",
                 meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
 
@@ -967,7 +964,7 @@ class DeploymentReconciler:
             absent = adapter.confirm_absent(deployment)
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot confirm that an indicator left the vendor, "
+                "[DEPLOYMENT] Cannot confirm that an indicator left the vendor, "
                 "left to the next run.",
                 meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
@@ -975,7 +972,7 @@ class DeploymentReconciler:
             return False
         if not absent:
             self._logger.info(
-                f"{_LOG_PREFIX} Indicator missing from the listing found on the vendor, "
+                "[DEPLOYMENT] Indicator missing from the listing found on the vendor, "
                 "left as it is.",
                 meta={"indicator_id": deployment.indicator_id},
             )
@@ -1060,7 +1057,7 @@ class DeploymentReconciler:
                 continue
             if id(vendor_indicator) in kept:
                 self._logger.info(
-                    f"{_LOG_PREFIX} Vendor indicator kept, another deployment still "
+                    "[DEPLOYMENT] Vendor indicator kept, another deployment still "
                     "uses it.",
                     meta={
                         "indicator_id": deployment.indicator_id,
@@ -1073,7 +1070,7 @@ class DeploymentReconciler:
             except Exception as err:
                 summary.withdrawal_failed += 1
                 self._logger.warning(
-                    f"{_LOG_PREFIX} Cannot remove an indicator from the vendor.",
+                    "[DEPLOYMENT] Cannot remove an indicator from the vendor.",
                     meta={
                         "indicator_id": deployment.indicator_id,
                         "external_id": vendor_indicator.external_id,
@@ -1160,7 +1157,7 @@ class DeploymentReconciler:
             )
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot read an indicator to push it again.",
+                "[DEPLOYMENT] Cannot read an indicator to push it again.",
                 meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
             return None
@@ -1246,7 +1243,7 @@ class DeploymentReconciler:
             hits = list(collected.hits)
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Cannot read the detections from the vendor.",
+                "[DEPLOYMENT] Cannot read the detections from the vendor.",
                 meta={"error": str(err)},
             )
             # The continuation may be stale: the capped instant is read again from its start.
@@ -1259,7 +1256,7 @@ class DeploymentReconciler:
         if complete_until <= since:
             return self._continue_capped_instant(since, hits, collected.resume)
         self._logger.warning(
-            f"{_LOG_PREFIX} Detection read capped by the vendor, the next run "
+            "[DEPLOYMENT] Detection read capped by the vendor, the next run "
             "resumes where this one stopped.",
             meta={
                 "since": since.isoformat(),
@@ -1295,7 +1292,7 @@ class DeploymentReconciler:
         progressed = resume is not None and resume != self._hits_resume
         if progressed and len(self._held_hits) + len(hits) <= MAX_HELD_HITS:
             self._logger.info(
-                f"{_LOG_PREFIX} Detection read capped at the start of its window, the "
+                "[DEPLOYMENT] Detection read capped at the start of its window, the "
                 "next run continues reading the same instant.",
                 meta={
                     "since": since.isoformat(),
@@ -1306,7 +1303,7 @@ class DeploymentReconciler:
             self._held_hits.extend(hits)
             return [], since
         self._logger.warning(
-            f"{_LOG_PREFIX} Detection read capped at the start of its window and not "
+            "[DEPLOYMENT] Detection read capped at the start of its window and not "
             "continued, the detections of that instant are a lower bound.",
             meta={
                 "since": since.isoformat(),
@@ -1447,7 +1444,7 @@ class DeploymentReconciler:
             state = self._connector_state()
         except Exception as err:  # noqa: BLE001 - a start never fails on the state
             self._logger.warning(
-                f"{_LOG_PREFIX} The hit checkpoint could not be read, the hits are "
+                "[DEPLOYMENT] The hit checkpoint could not be read, the hits are "
                 "read from the lookback window.",
                 meta={"error": str(err)},
             )
@@ -1480,7 +1477,7 @@ class DeploymentReconciler:
             )
         except Exception as err:  # noqa: BLE001 - the hits are reported anyway
             self._logger.warning(
-                f"{_LOG_PREFIX} The hit checkpoint could not be saved, a restart reads "
+                "[DEPLOYMENT] The hit checkpoint could not be saved, a restart reads "
                 "the hits from the lookback window.",
                 meta={"error": str(err)},
             )
@@ -1561,7 +1558,7 @@ class DeploymentReconciler:
                 reported += 1
         if self._pending_hits or dropped:
             self._logger.warning(
-                f"{_LOG_PREFIX} Some hit reports were not delivered, they are sent "
+                "[DEPLOYMENT] Some hit reports were not delivered, they are sent "
                 "again with the next run.",
                 meta={"kept": len(self._pending_hits), "dropped": dropped},
             )
