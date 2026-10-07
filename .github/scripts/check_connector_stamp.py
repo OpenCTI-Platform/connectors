@@ -701,6 +701,8 @@ PIP_RELOCATING_OPTIONS = frozenset(
 PIP_WRITE_OPTIONS = frozenset({"--report", "--log", "--log-file"})
 # The archive names pip takes as a local file, slash or not (its ARCHIVE_EXTENSIONS).
 PIP_ARCHIVE = re.compile(r"\.(whl|zip|tar(\.\w+)?|tgz|tbz|txz|tlz)$", re.IGNORECASE)
+# What pip expands from its environment in a requirement file.
+PIP_ENVIRONMENT_REFERENCE = re.compile(r"\$\{[A-Z0-9_]+\}")
 # The setuptools backends whose discovery and package data the model reads.
 SETUPTOOLS_BACKENDS = frozenset(
     {"setuptools.build_meta", "setuptools.build_meta:__legacy__"}
@@ -3413,6 +3415,10 @@ class Shell:
             args = args[2:] if args[0] == "-D" else args[1:]
         if "-follow" in args and {"-delete", "-exec", "-execdir"} & set(args):
             raise Unsupported("find -follow acting on what it finds")
+        if any("$" in arg for arg in args):
+            # A root, a test or a command the model does not resolve: what
+            # find matches, deletes or runs is not known.
+            raise Unsupported("find with a value the model does not resolve")
         roots = []
         while args and not args[0].startswith("-") and args[0] not in ("(", "!", ")"):
             roots.append(args[0])
@@ -3779,6 +3785,11 @@ class Shell:
                 line = line.split(" #", 1)[0].strip()
                 if not line or line.startswith("#"):
                     continue
+                if PIP_ENVIRONMENT_REFERENCE.search(line):
+                    # pip replaces it with the value of its environment first.
+                    raise Unsupported(
+                        f"requirement file {path} uses an environment variable"
+                    )
                 words = split_option(line.split())
                 if (
                     words[0] in ("-r", "--requirement", "-c", "--constraint")
@@ -4114,6 +4125,25 @@ class ImageModel:
                     # A file the model does not know, under another name: it is
                     # not the program that name stands for (/bin/sh as python3).
                     stage.replaced.add(dest_path)
+        if from_values and source_stage is not None:
+            installed = any(
+                f.startswith(SITE_PACKAGES + "/") for f in source_stage.files
+            )
+            for source in sources:
+                path = image_path(source, "/", "COPY --from source")
+                if path in source_stage.files:
+                    continue
+                name = posixpath.basename(path.rstrip("/"))
+                if installed and modelled_targets(path)[1:]:
+                    # The packages pip installed there, which the model keeps
+                    # at SITE_PACKAGES only, land with what they hold.
+                    stage.unknown_dirs.add(dest_path)
+                elif name in IDENTITY_FILES:
+                    # An identity file the model does not know, whatever its
+                    # name: not the stamp of the build.
+                    stage.replaced.add(
+                        posixpath.join(dest_path, name) if into_dir else dest_path
+                    )
 
         chmod = flags.get("chmod", [])
         unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
