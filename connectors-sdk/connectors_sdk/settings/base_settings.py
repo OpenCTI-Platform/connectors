@@ -11,6 +11,7 @@ from datetime import timedelta
 from types import UnionType
 from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
+from connectors_sdk.logger import set_log_level
 from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
@@ -210,6 +211,11 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        # Until now, the level came from the `CONNECTOR_LOG_LEVEL` environment variable
+        # only (see `connectors_sdk.logger`). Apply the validated one, which may come
+        # from `config.yml`, `.env` or the field's default.
+        set_log_level(self.connector.log_level)
 
     @classmethod
     def config_json_schema(
