@@ -360,6 +360,23 @@ def test_base_connector_settings_should_set_the_root_logger_level(
     assert logging.getLogger().level == expected_level
 
 
+def test_base_connector_settings_should_never_log_settings_values(
+    mock_environment, monkeypatch, caplog
+):
+    """Test that settings values (possibly secrets) never end up in logs."""
+    # Given: Debug logs enabled
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    caplog.set_level(logging.DEBUG)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: Settings are logged as validated, without any value
+    assert "Settings validated" in caplog.messages
+    assert "changeme" not in caplog.text  # OPENCTI_TOKEN
+    assert not any(hasattr(record, "attributes") for record in caplog.records)
+
+
 def test_base_connector_settings_should_validate_settings_from_dot_env_file(
     mock_dot_env_file_presence,
 ):

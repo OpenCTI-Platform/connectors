@@ -83,6 +83,10 @@ class BaseDataProcessor(ABC):
         super().__init_subclass__(**kwargs)
         cls.logger = get_logger(cls.__module__)
 
+    def __init__(self) -> None:
+        """Initialize the processor."""
+        self.logger.debug("Data processor instantiated")
+
     def inject_dependencies(
         self,
         settings: BaseConnectorSettings,
@@ -103,6 +107,8 @@ class BaseDataProcessor(ABC):
         self.settings = settings
         self.work_manager = WorkManager(helper)
         self.state = state
+
+        self.logger.debug("Dependencies injected into data processor")
 
     def post_init(self) -> None:  # noqa: B027
         """Hook called after ``inject_dependencies()`` wires up dependencies.
