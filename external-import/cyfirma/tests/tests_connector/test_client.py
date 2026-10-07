@@ -67,8 +67,9 @@ def test_cyfirma_client_get_entities_does_not_return_partial_data_on_failure(cli
 
 
 def test_request_data_logs_and_reraises(client, mock_helper):
-    # Exercises _request_data itself, which the tests above bypass by patching it.
-    with patch("requests.get", side_effect=requests.RequestException("boom")):
+    with patch.object(
+        client.session, "get", side_effect=requests.RequestException("boom")
+    ):
         with pytest.raises(requests.RequestException):
             client._request_data(_IOC_TAILORED_PATH)
 
@@ -79,6 +80,6 @@ def test_request_data_raises_on_http_error_status(client):
     response = MagicMock()
     response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
 
-    with patch("requests.get", return_value=response):
+    with patch.object(client.session, "get", return_value=response):
         with pytest.raises(requests.HTTPError):
             client._request_data(_IOC_TAILORED_PATH)
