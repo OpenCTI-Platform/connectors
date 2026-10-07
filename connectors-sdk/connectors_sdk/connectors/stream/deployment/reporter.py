@@ -406,6 +406,19 @@ class DeploymentReporter:
         )
         return True
 
+    @property
+    def write_back_unsupported(self) -> bool:
+        """Tell whether the feature detection found no deployment write-back.
+
+        ``False`` while the detection has not succeeded yet: only a platform known to
+        lack the write-back is reported unsupported.
+        """
+        with self._lock:
+            return (
+                self._mutations is not None
+                and REPORT_DEPLOYMENT_MUTATION not in self._mutations
+            )
+
     def is_supported(self, mutation: str = REPORT_DEPLOYMENT_MUTATION) -> bool:
         """Tell whether the OpenCTI platform exposes a write-back mutation.
 
@@ -804,14 +817,7 @@ class DeploymentReporter:
         Returns:
             ``True`` when the report was queued.
         """
-        if not self.enabled or self._closed:
-            return False
-        with self._lock:
-            known_unsupported = (
-                self._mutations is not None
-                and REPORT_DEPLOYMENT_MUTATION not in self._mutations
-            )
-        if known_unsupported:
+        if not self.enabled or self._closed or self.write_back_unsupported:
             return False
         with self._buffer_lock:
             self._buffer.pop(report.indicator_id, None)

@@ -119,11 +119,19 @@ class DeploymentAssurance:
     def start(self) -> bool:
         """Start the write-back and the periodic reconciliation.
 
+        The reconciliation is not started on a platform known to lack the write-back.
+        It is started while the feature detection or the security platform resolution
+        is still pending: each run waits for them.
+
         Returns:
             ``True`` when the write-back is operational.
         """
         operational = self.reporter.start()
-        if self.reconciler is not None and self.reporter.enabled:
+        if (
+            self.reconciler is not None
+            and self.reporter.enabled
+            and not self.reporter.write_back_unsupported
+        ):
             self.reconciler.start()
         return operational
 

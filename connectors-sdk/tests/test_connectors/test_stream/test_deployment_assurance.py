@@ -97,6 +97,37 @@ def test_start_does_not_schedule_the_reconciliation_when_disabled(
     assert assurance.reconciler._thread is None
 
 
+def test_start_does_not_schedule_the_reconciliation_on_an_unsupported_platform(
+    graphql_helper, options, router, router_factory, no_atexit
+):
+    """A platform known to lack the write-back never gets a reconciliation thread:
+    no run could list or report a deployment."""
+    router.handlers.update(router_factory(write_back=False).handlers)
+    assurance = DeploymentAssurance.from_options(
+        graphql_helper, options, _Adapter(), initial_delay=3600.0
+    )
+
+    assert assurance.start() is False
+    assert assurance.reporter.write_back_unsupported is True
+    assert assurance.reconciler._thread is None
+
+
+def test_start_schedules_the_reconciliation_while_the_detection_is_pending(
+    graphql_helper, options, router, no_atexit
+):
+    """OpenCTI unreachable at startup: the detection is retried and each
+    reconciliation run waits for it."""
+    router.handlers["DeploymentWriteBackFeatures"] = RuntimeError("OpenCTI down")
+    assurance = DeploymentAssurance.from_options(
+        graphql_helper, options, _Adapter(), initial_delay=3600.0
+    )
+
+    assert assurance.start() is False
+    assert assurance.reporter.write_back_unsupported is False
+    assert assurance.reconciler._thread.is_alive()
+    assurance.stop(timeout=5)
+
+
 def test_stream_reports_are_delegated_to_the_reporter(indicator_factory):
     """Stream report helpers and flush delegate to the reporter."""
     reporter = MagicMock(spec=DeploymentReporter)
