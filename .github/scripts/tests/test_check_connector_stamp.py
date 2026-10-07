@@ -1024,6 +1024,64 @@ def test_module_also_in_the_user_site_packages(tmp_path):
     )
 
 
+@pytest.mark.parametrize(
+    "step, region",
+    [
+        # Copilot review of 03:32 UTC: what a clone, mv or a copy of unknown
+        # content puts in a site-packages directory may hold the module.
+        (
+            "RUN git clone https://example.com/x"
+            " /root/.local/lib/python3.12/site-packages/sample_connector",
+            "/root/.local/lib/python3.12/site-packages/sample_connector",
+        ),
+        (
+            "RUN touch /root/.local/lib/python3.12/site-packages/sample_connector.py",
+            "/root/.local/lib/python3.12/site-packages/sample_connector.py",
+        ),
+        (
+            "RUN mkdir -p /opt/other/sample_connector && mv -t"
+            " /root/.local/lib/python3.12/site-packages /opt/other/sample_connector",
+            "/root/.local/lib/python3.12/site-packages/sample_connector",
+        ),
+        (
+            "RUN mv -t /root/.local/lib/python3.12/site-packages /opt/other/*",
+            "/root/.local/lib/python3.12/site-packages/*",
+        ),
+        (
+            "COPY --from=example/tools:1 /lib /root/.local/lib/python3.12/site-packages",
+            "/root/.local/lib/python3.12/site-packages",
+        ),
+        (
+            "RUN echo 'import os' >"
+            " /root/.local/lib/python3.12/site-packages/sample_connector/__init__.py",
+            "/root/.local/lib/python3.12/site-packages/sample_connector/__init__.py",
+        ),
+    ],
+)
+def test_module_in_a_region_of_site_packages(tmp_path, step, region):
+    dockerfile = PACKAGED_DOCKERFILE.replace("CMD", f"{step}\nCMD")
+    pyproject = {
+        "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    }
+    image = packaged(tmp_path, pyproject, dockerfile)
+    assert image.reason == (
+        f"not supported: python -m sample_connector: {region} holds what a build"
+        " command wrote, where python finds site-packages"
+    )
+
+
+def test_other_entry_of_site_packages_keeps_the_module(tmp_path):
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD",
+        "RUN touch /root/.local/lib/python3.12/site-packages/other.txt\nCMD",
+    )
+    pyproject = {
+        "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    }
+    image = packaged(tmp_path, pyproject, dockerfile)
+    assert image.covered, image.reason
+
+
 def test_packaged_connector_ships_the_stamp_in_its_package(tmp_path):
     image = packaged(
         tmp_path,
