@@ -1,0 +1,25 @@
+services:
+  connector-rosti:
+    image: opencti/connector-rosti:latest
+    environment:
+      # Connection with OpenCTI
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for EXTERNAL_IMPORT connectors
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Rösti # optional
+      - CONNECTOR_LOG_LEVEL=error # optional
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, ISO 8601 duration between two runs
+      # Rösti parameters
+      - ROSTI_API_KEY=ChangeMe
+      - ROSTI_IMPORT_SINCE=P30D # optional, first run only
+      - ROSTI_IMPORT_IOCS=true # optional
+      - ROSTI_IMPORT_YARA=true # optional
+      - ROSTI_IMPORT_MITRE=true # optional
+      - ROSTI_IMPORT_CVE=true # optional
+      - ROSTI_IOC_TYPES= # optional, e.g. domain,ip,url,sha256 (default: all)
+      - ROSTI_IDS_ONLY=false # optional
+      - ROSTI_MAX_RISK_LEVEL=5 # optional, 0-5
+      - ROSTI_DEFAULT_SCORE=50 # optional
+      - ROSTI_TLP_LEVEL=clear # optional
+    restart: always

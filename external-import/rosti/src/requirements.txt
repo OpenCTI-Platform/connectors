@@ -1,0 +1,6 @@
+pycti==7.261002.0
+pydantic~=2.13.5
+stix2~=3.0.1
+# Same version OpenCTI uses to validate YARA indicators
+yara-python==4.5.4
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

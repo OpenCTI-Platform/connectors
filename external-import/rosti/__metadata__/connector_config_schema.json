@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/rosti_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "R\u00f6sti",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Report",
+        "Indicator",
+        "Stix-Cyber-Observable",
+        "Attack-Pattern",
+        "Intrusion-Set",
+        "Malware",
+        "Tool",
+        "Campaign",
+        "Course-Of-Action",
+        "Vulnerability"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour).",
+      "format": "duration",
+      "type": "string"
+    },
+    "ROSTI_API_KEY": {
+      "description": "R\u00f6sti API key (get one at https://rosti.dev/api).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ROSTI_API_BASE_URL": {
+      "default": "https://api.rosti.dev/v2",
+      "description": "Base URL of the R\u00f6sti API v2.",
+      "type": "string"
+    },
+    "ROSTI_IMPORT_SINCE": {
+      "description": "Where to start on the first run. Either an absolute date (e.g. '2026-01-01T00:00:00Z') or a duration relative to now (e.g. 'P30D'). Later runs resume from the connector state.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "ROSTI_IMPORT_IOCS": {
+      "default": true,
+      "description": "Import IOCs as indicators and observables.",
+      "type": "boolean"
+    },
+    "ROSTI_IMPORT_YARA": {
+      "default": true,
+      "description": "Import YARA rules as indicators (pattern type `yara`).",
+      "type": "boolean"
+    },
+    "ROSTI_IMPORT_MITRE": {
+      "default": true,
+      "description": "Link MITRE ATT&CK techniques, groups, software, campaigns and mitigations to reports.",
+      "type": "boolean"
+    },
+    "ROSTI_IMPORT_CVE": {
+      "default": true,
+      "description": "Import CVEs referenced by reports as vulnerabilities.",
+      "type": "boolean"
+    },
+    "ROSTI_IOC_TYPES": {
+      "default": [],
+      "description": "Comma-separated list of R\u00f6sti IOC types to import. Empty means all supported types.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "ROSTI_IDS_ONLY": {
+      "default": false,
+      "description": "Only import IOCs flagged as suitable for detection (`ids: true`).",
+      "type": "boolean"
+    },
+    "ROSTI_MAX_RISK_LEVEL": {
+      "default": 5,
+      "description": "Skip IOCs whose false-positive risk level is above this value (0 = nothing found ... 5 = very high). 5 imports everything.",
+      "maximum": 5,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ROSTI_DEFAULT_SCORE": {
+      "default": 50,
+      "description": "Score given to IOCs that have no false-positive risk information.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ROSTI_TLP_LEVEL": {
+      "description": "TLP marking applied to every object this connector creates.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ROSTI_API_KEY"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # a UUIDv4
+  name: 'Rösti' # optional
+  log_level: 'info' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, ISO 8601 duration between two runs (default: 'PT1H')
+
+rosti:
+  api_key: 'ChangeMe' # get one at https://rosti.dev/api
+  import_since: 'P30D' # optional, first run only: ISO date or duration (default: 30 days)
+  import_iocs: true # optional
+  import_yara: true # optional
+  import_mitre: true # optional
+  import_cve: true # optional
+  ioc_types: '' # optional, e.g. 'domain,ip,url,sha256' (default: all supported types)
+  ids_only: false # optional, only IOCs flagged for detection
+  max_risk_level: 5 # optional, 0-5, skip IOCs with a higher false-positive risk
+  default_score: 50 # optional, score for IOCs without risk information
+  tlp_level: 'clear' # optional: clear, green, amber, amber+strict, red
