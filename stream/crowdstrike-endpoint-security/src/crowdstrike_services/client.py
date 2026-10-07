@@ -660,6 +660,34 @@ class CrowdstrikeClient:
         }
         self._raise_for_response(self.cs.indicator_update(body=body), 200)
 
+    def withdraw_value(self, ioc_value: str) -> int:
+        """
+        Withdraw the IOCs of a value created by the connector's API client, as the
+        reconciliation does: deleted when permanent_delete is true, otherwise kept
+        but no longer detecting (see `deactivate_ioc`)
+        :param ioc_value: IOC value in string
+        :return: Number of IOCs withdrawn
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the search or a withdrawal
+        """
+        body = self._raise_for_response(
+            self.cs.indicator_combined(
+                parameters={
+                    "filter": f'value:"{ioc_value}"+created_by:"{self.config.client_id}"',
+                    "limit": IOC_PAGE_SIZE,
+                }
+            ),
+            200,
+        )
+        iocs = self._resources_of(body, "IOC")
+        for ioc in iocs:
+            if not ioc.get("id"):
+                raise CrowdstrikeApiError("An IOC of the value carries no id")
+            if self.config.permanent_delete:
+                self.delete_ioc(str(ioc["id"]))
+            else:
+                self.deactivate_ioc(ioc)
+        return len(iocs)
+
     def iter_alerts(
         self,
         since: datetime,

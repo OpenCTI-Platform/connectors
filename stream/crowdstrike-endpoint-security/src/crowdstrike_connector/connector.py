@@ -111,6 +111,53 @@ class CrowdstrikeConnector:
             )
         return result
 
+    def _former_value(self, data: dict, context: dict | None) -> str | None:
+        """
+        Return the IOC value an update event replaced, read from its reverse patch
+        :param data: Indicator of the stream event, after the update
+        :param context: Context of the update event
+        :return: The former IOC value, None when the update kept the value or its
+            former pattern holds none
+        """
+        for patch in (context or {}).get("reverse_patch") or []:
+            if isinstance(patch, dict) and patch.get("path") == "/pattern":
+                try:
+                    former = self.client._extract_indicator_value(patch["value"])
+                    current = self.client._extract_indicator_value(data["pattern"])
+                except (AttributeError, IndexError, KeyError):
+                    return None
+                return former if former and former.lower() != current.lower() else None
+        return None
+
+    def _replace(self, data: dict, former_value: str) -> None:
+        """
+        Apply an update that changes the IOC value of an indicator and report it
+        IOCs are looked up by value, so the IOC of the former value would stay live:
+        it is withdrawn first (as by the reconciliation), then the IOC of the
+        current value is created and reported as for a create. A failed withdrawal
+        is reported `failed` and the current value is not pushed; a current value
+        CrowdStrike does not take is reported `removed`
+        :param data: Indicator of the stream event, after the update
+        :param former_value: IOC value of the pattern the update replaced
+        """
+        try:
+            self.client.withdraw_value(former_value)
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "[UPDATE] IOC of the former pattern not withdrawn from Crowdstrike",
+                meta={
+                    "indicator_id": data.get("id"),
+                    "ioc_value": former_value,
+                    "error": str(err),
+                },
+            )
+            if self.assurance is not None:
+                self.assurance.report_push_failed(data, failure_reason(err))
+            return
+        result = self._push(data, lambda: self.client.create_indicator(data, "create"))
+        if result.status == IocOperationStatus.SKIPPED and self.assurance is not None:
+            self.assurance.report_removed(data)
+
     def _process_message(self, msg) -> None:
         """
         Main process if connector successfully works
@@ -120,7 +167,8 @@ class CrowdstrikeConnector:
         try:
             if self.metrics_enabled and self.metrics is not None:
                 self.metrics.handle_metrics(msg)
-            data = json.loads(msg.data)["data"]
+            message = json.loads(msg.data)
+            data = message["data"]
         except Exception:
             raise ValueError("Cannot process the message")
 
@@ -138,7 +186,11 @@ class CrowdstrikeConnector:
             # Handle update
             if msg.event == "update":
                 self.handle_logger_info("[UPDATE]", data)
-                self._push(data, lambda: self.client.update_indicator(data))
+                former_value = self._former_value(data, message.get("context"))
+                if former_value is None:
+                    self._push(data, lambda: self.client.update_indicator(data))
+                else:
+                    self._replace(data, former_value)
 
             # Handle delete
             if msg.event == "delete":

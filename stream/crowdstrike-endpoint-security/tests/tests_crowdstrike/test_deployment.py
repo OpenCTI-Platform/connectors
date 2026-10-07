@@ -5,7 +5,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, call
+from unittest.mock import ANY, MagicMock, call
 
 import pytest
 from connectors_sdk import (
@@ -249,6 +249,165 @@ def test_update_of_an_absent_ioc_is_not_reported(connector):
 
     connector.assurance.report_pushed.assert_not_called()
     connector.assurance.report_push_failed.assert_not_called()
+
+
+FORMER_PATTERN = "[ipv4-addr:value = '203.0.113.9']"
+
+
+def make_update_message(data, reverse_patch):
+    return SimpleNamespace(
+        event="update",
+        data=json.dumps({"data": data, "context": {"reverse_patch": reverse_patch}}),
+    )
+
+
+def pattern_change(former_pattern=FORMER_PATTERN):
+    return [{"op": "replace", "path": "/pattern", "value": former_pattern}]
+
+
+def test_pattern_change_deactivates_the_former_ioc_and_creates_the_current_one(
+    connector,
+):
+    cs = connector.client.cs
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9", tags=["keep"])]
+    )
+    cs.indicator_update.return_value = api_response(200)
+    cs.indicator_search.return_value = api_response(resources=[])
+    cs.indicator_create.return_value = api_response(201, resources=[{"id": IOC_ID}])
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, pattern_change()))
+
+    cs.indicator_combined.assert_called_once_with(
+        parameters={
+            "filter": f'value:"203.0.113.9"+created_by:"{CLIENT_ID}"',
+            "limit": 500,
+        }
+    )
+    (deactivation,) = cs.indicator_update.call_args_list
+    assert deactivation.kwargs["body"]["indicators"] == [
+        {
+            "id": "old-ioc",
+            "action": "no_action",
+            "mobile_action": "no_action",
+            "tags": ["keep", TO_DELETE_TAG],
+        }
+    ]
+    cs.indicator_create.assert_called_once()
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+
+
+def test_pattern_change_deletes_the_former_ioc_with_permanent_delete(
+    permanent_connector,
+):
+    cs = permanent_connector.client.cs
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_delete.return_value = api_response(200)
+    cs.indicator_search.return_value = api_response(resources=[])
+    cs.indicator_create.return_value = api_response(201, resources=[{"id": IOC_ID}])
+    indicator = make_indicator()
+
+    permanent_connector._process_message(
+        make_update_message(indicator, pattern_change())
+    )
+
+    cs.indicator_delete.assert_called_once_with(ids=["old-ioc"])
+    cs.indicator_update.assert_not_called()
+    permanent_connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+
+
+@pytest.mark.parametrize(
+    "listing",
+    [
+        api_response(500, errors=[{"message": "Internal error"}]),
+        api_response(resources=[{"value": "203.0.113.9"}]),
+    ],
+)
+def test_pattern_change_whose_former_ioc_is_not_withdrawn_is_failed(connector, listing):
+    """The current value is not pushed: the former IOC would stay live with it."""
+    connector.client.cs.indicator_combined.return_value = listing
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, pattern_change()))
+
+    connector.client.cs.indicator_create.assert_not_called()
+    connector.client.cs.indicator_update.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, "The connector could not complete the IOC push to CrowdStrike"
+    )
+    connector.assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[UPDATE] IOC of the former pattern not withdrawn from Crowdstrike",
+        meta={
+            "indicator_id": INDICATOR_STIX_ID,
+            "ioc_value": "203.0.113.9",
+            "error": ANY,
+        },
+    )
+
+
+def test_pattern_change_to_a_value_crowdstrike_does_not_take_is_removed(connector):
+    cs = connector.client.cs
+    cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="old-ioc", value="203.0.113.9")]
+    )
+    cs.indicator_update.return_value = api_response(200)
+    cs.indicator_search.return_value = api_response(resources=[])
+    indicator = make_indicator(pattern="[url:value = 'https://x.y']")
+
+    connector._process_message(make_update_message(indicator, pattern_change()))
+
+    cs.indicator_create.assert_not_called()
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    connector.assurance.report_pushed.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "pattern, reverse_patch",
+    [
+        ("[ipv4-addr:value = '198.51.100.7']", []),
+        (
+            "[ipv4-addr:value = '198.51.100.7']",
+            [{"op": "replace", "path": "/name", "value": "former name"}],
+        ),
+        (
+            "[ipv4-addr:value = '198.51.100.7']",
+            pattern_change("[ipv4-addr:value = '198.51.100.7']"),
+        ),
+        (
+            "[domain-name:value = 'example.com']",
+            pattern_change("[domain-name:value = 'EXAMPLE.com']"),
+        ),
+        (
+            "[ipv4-addr:value = '198.51.100.7']",
+            pattern_change("[ipv4-addr:value = '']"),
+        ),
+        ("[ipv4-addr:value = '198.51.100.7']", pattern_change("[unreadable]")),
+        ("[ipv4-addr:value = '198.51.100.7']", pattern_change(None)),
+    ],
+)
+def test_update_keeping_the_ioc_value_updates_it_in_place(
+    connector, pattern, reverse_patch
+):
+    cs = connector.client.cs
+    cs.indicator_search.return_value = api_response(resources=[IOC_ID])
+    cs.indicator_update.return_value = api_response(200)
+    indicator = make_indicator(pattern=pattern)
+
+    connector._process_message(make_update_message(indicator, reverse_patch))
+
+    cs.indicator_combined.assert_not_called()
+    cs.indicator_create.assert_not_called()
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
 
 
 def test_failed_search_is_reported_failed(connector):

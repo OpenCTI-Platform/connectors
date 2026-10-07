@@ -149,7 +149,7 @@ graph LR
 | Event Type | Action                                                        |
 |------------|---------------------------------------------------------------|
 | create     | Creates IOC in CrowdStrike (or updates if exists with soft delete) |
-| update     | Updates IOC in CrowdStrike                                    |
+| update     | Updates IOC in CrowdStrike; when the pattern changes the IOC value, the IOC of the former value is withdrawn (deleted, or deactivated without permanent delete) and the IOC of the new value is created |
 | delete     | Permanently deletes or marks as `TO_DELETE` based on configuration |
 
 ### Entity Mapping
@@ -194,6 +194,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
 | IOC rejected by CrowdStrike               | `failed`, with a short reason such as "CrowdStrike refused the IOC push: invalid request" or "CrowdStrike could not be reached for the IOC push" (the CrowdStrike error and HTTP status are written to the connector log) |
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
+| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn; `failed` when CrowdStrike refuses the withdrawal (the new value is then not pushed), `removed` when CrowdStrike does not take the new value |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value is deleted (or none is left)                 |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
 | Reconciliation, IOC present               | `active`                                                                                             |
