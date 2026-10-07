@@ -14,9 +14,6 @@ The Cybersixgill Darkfeed connector imports threat intelligence data from Cybers
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -46,34 +43,10 @@ This connector imports IOCs including file hashes, IP addresses, domains, and UR
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter        | config.yml | Docker environment variable | Default      | Mandatory | Description                                                              |
-|------------------|------------|-----------------------------|--------------|-----------|--------------------------------------------------------------------------|
-| Connector ID     | id         | `CONNECTOR_ID`              | (built-in)   | No        | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | cybersixgill | No        | The scope or type of data the connector is importing.                    |
-| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | error        | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-| Parameter            | config.yml                      | Docker environment variable          | Default | Mandatory | Description                                                    |
-|----------------------|---------------------------------|--------------------------------------|---------|-----------|----------------------------------------------------------------|
-| Client ID            | cybersixgill.client_id          | `CYBERSIXGILL_CLIENT_ID`             |         | Yes       | Cybersixgill API Client ID.                                    |
-| Client Secret        | cybersixgill.client_secret      | `CYBERSIXGILL_CLIENT_SECRET`         |         | Yes       | Cybersixgill API Client Secret.                                |
-| Create Observables   | cybersixgill.create_observables | `CYBERSIXGILL_CREATE_OBSERVABLES`    | true    | No        | Create observables from indicators.                            |
-| Create Indicators    | cybersixgill.create_indicators  | `CYBERSIXGILL_CREATE_INDICATORS`     | true    | No        | Create STIX indicators.                                        |
-| Fetch Size           | cybersixgill.fetch_size         | `CYBERSIXGILL_FETCH_SIZE`            | 2000    | No        | Number of indicators to fetch per run.                         |
-| Enable Relationships | cybersixgill.enable_relationships | `CYBERSIXGILL_ENABLE_RELATIONSHIPS` | true    | No        | Create relationships between SDOs.                             |
-| Interval             | cybersixgill.interval_sec       | `CYBERSIXGILL_INTERVAL_SEC`          | 300     | No        | Import interval in seconds.                                    |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
