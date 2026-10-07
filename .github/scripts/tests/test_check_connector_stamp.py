@@ -1191,6 +1191,27 @@ def test_deletion_in_a_branch(tmp_path, steps, covered):
     check_manifest_deletion(tmp_path, steps, covered)
 
 
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 06:45 UTC: noglob keeps the wildcard literal, and the
+        # other options outside errors and tracing change what commands do.
+        ("RUN set -f; rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN set -o noglob; rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN set -euf; rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN command set -f && rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN set -n; rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN set -o noclobber; rm -f /opt/src/__metadata__/*.json", False),
+        ("RUN set -eux; rm -f /opt/src/__metadata__/*.json", True),
+        ("RUN set -euo pipefail; rm -f /opt/src/__metadata__/*.json", True),
+        ("RUN set +e -o xtrace; rm -f /opt/src/__metadata__/*.json", True),
+        ("RUN set -- -f; rm -f /opt/src/__metadata__/*.json", True),
+    ],
+)
+def test_shell_options_of_set(tmp_path, steps, covered):
+    check_manifest_deletion(tmp_path, steps, covered)
+
+
 def check_manifest_deletion(tmp_path, steps, covered):
     """A manifest pycti reads before the stamp, which ``steps`` may delete."""
     files = {
@@ -1417,6 +1438,18 @@ def test_package_data_that_does_not_select_the_stamp(tmp_path, packaging):
                 '[tool.setuptools.package-data]\n"*" = [".connector_version.json"]\n'
             )
         },
+        # Copilot review of 06:45 UTC: the requirements, readme and license file
+        # the connectors use add no package file.
+        {
+            "pyproject.toml": (
+                '[build-system]\nrequires = ["setuptools>=64", "wheel"]\n'
+                '[project]\nname = "sample"\nreadme = "README.md"\n'
+                'license = {file = "LICENSE"}\n'
+                '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+            ),
+            "README.md": "",
+            "LICENSE": "",
+        },
     ],
 )
 def test_package_data_that_selects_the_stamp(tmp_path, packaging):
@@ -1469,7 +1502,69 @@ def test_local_project_of_another_build_backend_is_reported(tmp_path):
                 "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n',
                 "MANIFEST.in": "global-exclude *.json\n",
             },
-            "exclusions of MANIFEST.in",
+            "MANIFEST.in, whose files setuptools may install as package data",
+        ),
+        # Copilot review of 06:45 UTC: include-package-data installs the files of
+        # the project's file list that lie in a package, a conflicting manifest
+        # included.
+        (
+            {
+                "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n',
+                "MANIFEST.in": "recursive-include sample_connector/__metadata__ *.json\n",
+                "sample_connector/__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+            },
+            "MANIFEST.in, whose files setuptools may install as package data",
+        ),
+        (
+            {
+                "pyproject.toml": (
+                    '[build-system]\nrequires = ["setuptools>=64", "setuptools-scm"]\n'
+                    '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+                ),
+                "sample_connector/__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+            },
+            "the build requirement setuptools-scm, whose file finders may add package data",
+        ),
+        (
+            {
+                "setup.cfg": (
+                    "[options]\nsetup_requires = setuptools_scm\n"
+                    "[options.package_data]\nsample_connector = .connector_version.json\n"
+                ),
+            },
+            "the build requirement setuptools_scm, whose file finders may add package data",
+        ),
+        (
+            {
+                "pyproject.toml": (
+                    '[project]\nname = "sample"\n'
+                    'license-files = ["sample_connector/__metadata__/*.json"]\n'
+                    '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+                ),
+                "sample_connector/__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+            },
+            "license files, which setuptools may install as package data",
+        ),
+        (
+            {
+                "pyproject.toml": (
+                    '[project]\nname = "sample"\n'
+                    'readme = {file = "sample_connector/__metadata__/connector_manifest.json", content-type = "text/plain"}\n'
+                    '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+                ),
+                "sample_connector/__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+            },
+            "the file sample_connector/__metadata__/connector_manifest.json of the metadata,"
+            " which setuptools may install as package data",
+        ),
+        (
+            {
+                "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n',
+                "sample.egg-info/SOURCES.txt": "sample_connector/__metadata__/connector_manifest.json\n",
+                "sample_connector/__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+            },
+            "an egg-info directory in /opt/build, whose file list setuptools may"
+            " install as package data",
         ),
     ],
 )
