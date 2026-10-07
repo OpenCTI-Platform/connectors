@@ -7,7 +7,11 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 import requests
-from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
+from azure.core.exceptions import (
+    HttpResponseError,
+    ResourceNotFoundError,
+    ServiceRequestError,
+)
 from connectors_sdk import (
     DeploymentAssurance,
     HitCollection,
@@ -112,6 +116,20 @@ def ti_object(stix_id=INDICATOR_STIX_ID, resource_id=RESOURCE_ID, **data):
 def response(body, status_code=200):
     """Build an Azure HTTP response mock returning a JSON body."""
     return Mock(status_code=status_code, body=Mock(return_value=json.dumps(body)))
+
+
+def http_error(status_code, reason):
+    """Build the Azure error `raise_for_status` raises for an error response."""
+    return HttpResponseError(
+        message=f"{status_code} {reason}",
+        response=Mock(status_code=status_code, reason=reason),
+    )
+
+
+INVALID_REQUEST = "Microsoft Sentinel refused the indicator upload: invalid request"
+UNEXPECTED_RESPONSE = (
+    "Microsoft Sentinel returned an unexpected response to the indicator upload"
+)
 
 
 class GraphQLRouter:
@@ -271,7 +289,7 @@ def test_rejected_upload_is_reported_failed(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        side_effect=HttpResponseError(message="400 Invalid pattern"),
+        side_effect=http_error(400, "Invalid pattern"),
     )
     indicator = make_indicator()
 
@@ -281,8 +299,7 @@ def test_rejected_upload_is_reported_failed(
     connector.assurance.report_push_failed.assert_called_once()
     reported, message = connector.assurance.report_push_failed.call_args.args
     assert reported == indicator
-    assert message.startswith("[API] An error occurred during request: ")
-    assert "400 Invalid pattern" in message
+    assert message == INVALID_REQUEST
     connector.assurance.report_pushed.assert_not_called()
 
 
@@ -304,7 +321,7 @@ def test_upload_answered_with_the_object_in_its_errors_is_reported_failed(
 
     reported, message = connector.assurance.report_push_failed.call_args.args
     assert reported == indicator
-    assert message == "[API] Microsoft Sentinel rejected the object: Invalid pattern"
+    assert message == INVALID_REQUEST
     connector.assurance.report_pushed.assert_not_called()
 
 
@@ -344,7 +361,7 @@ def test_batch_upload_reports_the_objects_listed_in_its_errors_failed(
         indicators[index] for index in failed
     ]
     assert all(
-        call.args[1].startswith("[API] Microsoft Sentinel rejected the object: ")
+        call.args[1] == INVALID_REQUEST
         for call in assurance.report_push_failed.call_args_list
     )
 
@@ -383,7 +400,7 @@ def test_batch_upload_answered_with_an_unreadable_body_reports_every_object_fail
         indicators[index] for index in failed
     ]
     assert all(
-        "could not be read" in call.args[1]
+        call.args[1] == UNEXPECTED_RESPONSE
         for call in assurance.report_push_failed.call_args_list
     )
 
@@ -471,7 +488,7 @@ def test_rejected_batch_upload_reports_every_indicator_failed(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        side_effect=HttpResponseError(message="429 Too Many Requests"),
+        side_effect=http_error(429, "Too Many Requests"),
     )
     first = make_indicator()
     second = make_indicator(indicator_id=OTHER_ID, stix_id=OTHER_STIX_ID)
@@ -482,7 +499,11 @@ def test_rejected_batch_upload_reports_every_indicator_failed(
 
     failed = batch_connector.assurance.report_push_failed.call_args_list
     assert [call.args[0] for call in failed] == [first, second]
-    assert all("429 Too Many Requests" in call.args[1] for call in failed)
+    assert all(
+        call.args[1]
+        == "Microsoft Sentinel refused the indicator upload: rate limit reached"
+        for call in failed
+    )
     batch_connector.assurance.report_pushed.assert_not_called()
 
 
@@ -989,15 +1010,72 @@ def test_adapter_read_back_errors_are_raised_with_their_message(
         list(adapter.list_vendor_indicators())
 
 
-def test_adapter_rejected_push_is_raised_with_its_message(
-    adapter, adapter_connector
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (
+            ConnectorClientError(
+                "[API] An error occurred during request",
+                {"error": "400 Invalid pattern", "status_code": 400},
+            ),
+            INVALID_REQUEST,
+        ),
+        (
+            ConnectorClientError(
+                "[API] An error occurred during request",
+                {"error": "403 Forbidden", "status_code": 403},
+            ),
+            "Microsoft Sentinel refused the indicator upload: permission denied",
+        ),
+        (
+            ConnectorClientError(
+                "[API] An error occurred during request",
+                {"error": "503 Service Unavailable", "status_code": 503},
+            ),
+            "Microsoft Sentinel refused the indicator upload: server error",
+        ),
+        (
+            ConnectorClientError(
+                "[API] Failed to decode response body", {"error": "Expecting value"}
+            ),
+            UNEXPECTED_RESPONSE,
+        ),
+        (
+            ConnectorClientError(
+                "[API] An error occurred during request", {"status_code": True}
+            ),
+            UNEXPECTED_RESPONSE,
+        ),
+        (
+            ServiceRequestError("Connection refused"),
+            "Microsoft Sentinel could not be reached for the indicator upload",
+        ),
+        (
+            ConnectionResetError("Connection reset by peer"),
+            "Microsoft Sentinel could not be reached for the indicator upload",
+        ),
+        (
+            ValueError("Unexpected token"),
+            "The connector could not complete the indicator upload to "
+            "Microsoft Sentinel",
+        ),
+    ],
+)
+def test_adapter_failed_push_is_raised_with_a_short_reason(
+    adapter, adapter_connector, error, reason
 ) -> None:
-    adapter_connector.push_indicator.side_effect = ConnectorClientError(
-        "[API] An error occurred during request", {"error": "400 Invalid pattern"}
-    )
+    """OpenCTI stores the reason: the Azure response only goes to the logs."""
+    adapter_connector.push_indicator.side_effect = error
+    indicator = make_indicator()
 
-    with pytest.raises(SentinelDeploymentError, match="400 Invalid pattern"):
-        adapter.push_indicator(make_indicator())
+    with pytest.raises(SentinelDeploymentError) as raised:
+        adapter.push_indicator(indicator)
+
+    assert str(raised.value) == reason
+    assert raised.value.__cause__ is error
+    adapter_connector.helper.connector_logger.warning.assert_called_once()
+    meta = adapter_connector.helper.connector_logger.warning.call_args.kwargs["meta"]
+    assert meta == {"indicator_id": indicator["id"], "error": describe_error(error)}
 
 
 def test_adapter_removal_without_resource_id_uses_the_stix_id(
@@ -1517,7 +1595,7 @@ def test_stream_outcomes_are_reported_in_one_batch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
         side_effect=[
             Mock(status_code=200, body=Mock(return_value=UPLOADED)),
-            HttpResponseError(message="400 Invalid pattern"),
+            http_error(400, "Invalid pattern"),
         ],
     )
 
@@ -1546,7 +1624,7 @@ def test_stream_outcomes_are_reported_in_one_batch(
     assert deployed == {"indicatorId": INDICATOR_ID, "status": "deployed"}
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert "400 Invalid pattern" in failed["metadata"]["error_message"]
+    assert failed["metadata"]["error_message"] == INVALID_REQUEST
 
 
 def test_reconciliation_and_hits_are_reported(

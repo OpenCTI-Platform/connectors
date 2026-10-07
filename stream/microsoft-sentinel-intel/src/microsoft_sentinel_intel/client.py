@@ -78,7 +78,11 @@ class ConnectorClient:
         except HttpResponseError as err:
             raise ConnectorClientError(
                 message="[API] An error occurred during request",
-                metadata={"url_path": str(request), "error": str(err)},
+                metadata={
+                    "url_path": str(request),
+                    "error": str(err),
+                    "status_code": err.status_code,
+                },
             ) from err
 
     @staticmethod

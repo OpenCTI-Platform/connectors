@@ -34,6 +34,7 @@ from connectors_sdk.connectors.stream.deployment import (
     parse_expiry,
 )
 from microsoft_sentinel_intel.client import ConnectorClient
+from microsoft_sentinel_intel.connector import failure_reason
 from microsoft_sentinel_intel.errors import ConnectorClientError, ConnectorError
 from microsoft_sentinel_intel.utils import describe_error
 
@@ -232,10 +233,20 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         """Upload an indicator again, with the stream upload path.
 
         :return: `None`: the upload API returns no id (the indicator keeps its STIX id).
-        :raises SentinelDeploymentError: When the upload API rejects the indicator.
+        :raises SentinelDeploymentError: When the upload fails, with the short reason
+            OpenCTI stores (the Azure response is logged).
         """
-        with _readable_errors():
+        try:
             self._connector.push_indicator(stix_indicator)
+        except Exception as err:
+            self._logger.warning(
+                "[DEPLOYMENT] Microsoft Sentinel did not take an indicator pushed again.",
+                meta={
+                    "indicator_id": stix_indicator.get("id"),
+                    "error": describe_error(err),
+                },
+            )
+            raise SentinelDeploymentError(failure_reason(err)) from err
         return None
 
     def collect_hits(
