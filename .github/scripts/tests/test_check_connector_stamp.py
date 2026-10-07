@@ -1265,6 +1265,57 @@ def test_deletion_that_leaves_the_manifest(tmp_path, steps, covered):
     check_manifest_deletion(tmp_path, steps, covered)
 
 
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 07:38 UTC: exec replaces the shell of the build step,
+        # and an exit or exec that may run may leave what follows undone.
+        ("RUN exec true; rm -f /opt/src/__metadata__/connector_manifest.json", False),
+        (
+            "RUN if true; then exit 0; fi;"
+            " rm -f /opt/src/__metadata__/connector_manifest.json",
+            False,
+        ),
+        (
+            "RUN true && exit 0; rm -f /opt/src/__metadata__/connector_manifest.json",
+            False,
+        ),
+        (
+            "RUN true && exec true; rm -f /opt/src/__metadata__/connector_manifest.json",
+            False,
+        ),
+        ("RUN rm -f /opt/src/__metadata__/connector_manifest.json && exec true", True),
+        ("RUN rm -f /opt/src/__metadata__/connector_manifest.json; exit 0", True),
+        (
+            "RUN sh -c 'exit 0'; rm -f /opt/src/__metadata__/connector_manifest.json",
+            True,
+        ),
+    ],
+)
+def test_commands_after_an_exit(tmp_path, steps, covered):
+    check_manifest_deletion(tmp_path, steps, covered)
+
+
+@pytest.mark.parametrize(
+    "cmd, covered",
+    [
+        # Copilot review of 07:38 UTC: an exec-form start command has no shell, so
+        # Docker looks up exec, command or builtin as a program.
+        ('CMD ["exec", "python3", "/opt/src/main.py"]', False),
+        ('CMD ["command", "python3", "/opt/src/main.py"]', False),
+        ('CMD ["builtin", "python3", "/opt/src/main.py"]', False),
+        ("CMD exec python3 /opt/src/main.py", True),
+        ('CMD ["sh", "-c", "exec python3 /opt/src/main.py"]', True),
+        ('CMD ["nohup", "python3", "/opt/src/main.py"]', True),
+    ],
+)
+def test_exec_form_start_command(tmp_path, cmd, covered):
+    image = single(
+        tmp_path, {"Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\n{cmd}\n"}
+    )
+    assert image.covered is covered, image.reason
+
+
 def check_manifest_deletion(tmp_path, steps, covered):
     """A manifest pycti reads before the stamp, which ``steps`` may delete."""
     files = {
@@ -1836,6 +1887,24 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN rpm -i --relocate /usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
+        # Copilot review of 07:38 UTC: shells differ on whether the assignments
+        # before a special builtin persist.
+        (
+            'ENV APP=/tmp\nRUN APP=/opt/src export APP; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/tmp\nRUN APP=/opt/src :; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/tmp\nRUN APP=/opt/src exec; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/tmp\nRUN APP=/opt/src true; rm -f "$APP/.connector_version.json"',
+            True,
+        ),
         # Copilot review of 07:22 UTC: shells differ on whether an assignment
         # argument of export splits.
         (
