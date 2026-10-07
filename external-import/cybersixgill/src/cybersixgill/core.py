@@ -31,7 +31,7 @@ class Cybersixgill:
         enable_relationships = self.config.cybersixgill.enable_relationships
         fetch_size = self.config.cybersixgill.fetch_size
 
-        self.interval_sec = self.config.cybersixgill.interval_sec
+        self.interval_sec = int(self.config.connector.duration_period.total_seconds())
 
         update_existing_data = self.config.connector.update_existing_data
 

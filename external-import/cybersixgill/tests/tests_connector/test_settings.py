@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -27,6 +28,7 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "scope": "test, connector",
                     "log_level": "error",
                     "update_existing_data": True,
+                    "duration_period": "PT10M",
                 },
                 "cybersixgill": {
                     "client_id": "test-client-id",
@@ -35,7 +37,6 @@ MINIMAL_VALID_SETTINGS_DICT = {
                     "create_indicators": True,
                     "enable_relationships": True,
                     "fetch_size": 2000,
-                    "interval_sec": 300,
                 },
             },
             id="full_valid_settings_dict",
@@ -86,7 +87,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.name == "Cybersixgill Darkfeed"
     assert settings.connector.scope == ["cybersixgill"]
     assert settings.connector.update_existing_data is False
-    assert settings.connector.duration_period is None
+    assert settings.connector.duration_period == timedelta(minutes=5)
     assert settings.cybersixgill.client_secret.get_secret_value() == (
         "test-client-secret"
     )
@@ -94,7 +95,6 @@ def test_settings_should_apply_defaults():
     assert settings.cybersixgill.create_indicators is True
     assert settings.cybersixgill.enable_relationships is True
     assert settings.cybersixgill.fetch_size == 2000
-    assert settings.cybersixgill.interval_sec == 300
 
 
 def test_settings_should_default_connector_id():
@@ -109,6 +109,51 @@ def test_settings_should_default_connector_id():
 
     assert settings.connector.id == "4a843046-945d-4855-94ce-ead2bf5c8710"
     assert UUID(settings.connector.id).version == 4
+
+
+def test_settings_should_migrate_deprecated_interval_sec():
+    """`CYBERSIXGILL_INTERVAL_SEC` MUST be migrated to `CONNECTOR_DURATION_PERIOD`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "cybersixgill": {
+                        **MINIMAL_VALID_SETTINGS_DICT["cybersixgill"],
+                        "interval_sec": "600",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="cybersixgill.interval_sec"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(seconds=600)
+
+
+def test_settings_should_prefer_duration_period_over_deprecated_interval_sec():
+    """`CONNECTOR_DURATION_PERIOD` MUST win when both variables are set."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {"duration_period": "PT1H"},
+                    "cybersixgill": {
+                        **MINIMAL_VALID_SETTINGS_DICT["cybersixgill"],
+                        "interval_sec": 600,
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="Using only 'connector.duration_period'"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=1)
 
 
 @pytest.mark.parametrize(

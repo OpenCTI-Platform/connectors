@@ -7,6 +7,7 @@ connector:
   # name: 'Cybersixgill Darkfeed'
   # scope: 'cybersixgill' # MIME type or SCO
   # log_level: 'error'
+  # duration_period: 'PT5M' # ISO8601 format in String, start with 'P...' for Period
 
 cybersixgill:
   client_id: 'ChangeMe'
@@ -15,4 +16,3 @@ cybersixgill:
   # create_indicators: true
   # enable_relationships: true
   # fetch_size: 2000
-  # interval_sec: 300    # Seconds

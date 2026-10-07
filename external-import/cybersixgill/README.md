@@ -69,13 +69,13 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_SCOPE=cybersixgill
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT5M
       - CYBERSIXGILL_CLIENT_ID=ChangeMe
       - CYBERSIXGILL_CLIENT_SECRET=ChangeMe
       - CYBERSIXGILL_CREATE_OBSERVABLES=true
       - CYBERSIXGILL_CREATE_INDICATORS=true
       - CYBERSIXGILL_FETCH_SIZE=2000
       - CYBERSIXGILL_ENABLE_RELATIONSHIPS=true
-      - CYBERSIXGILL_INTERVAL_SEC=300
     restart: always
 ```
 
@@ -103,7 +103,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CYBERSIXGILL_INTERVAL_SEC`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 
@@ -191,7 +191,7 @@ CONNECTOR_LOG_LEVEL=debug
 
 Common issues:
 - **Authentication failures**: Verify Client ID and Client Secret
-- **API rate limits**: Increase `CYBERSIXGILL_INTERVAL_SEC` if hitting limits
+- **API rate limits**: Increase `CONNECTOR_DURATION_PERIOD` if hitting limits
 - **Large batch sizes**: Reduce `CYBERSIXGILL_FETCH_SIZE` if experiencing timeouts
 
 ### Support
