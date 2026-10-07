@@ -30,6 +30,9 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+# `src` is a thin re-export package used only by the config schema generator,
+# it must not be shipped as a top-level distribution package.
+include = ["spycloud_connector*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "spycloud_connector.__version__"}
