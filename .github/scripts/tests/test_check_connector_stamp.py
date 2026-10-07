@@ -496,6 +496,9 @@ def test_dockerfile_specific_ignore_file_wins(tmp_path):
         ("COPY --chmod=go-r src /opt/sample", False),
         ("COPY src /opt/sample\nVOLUME /opt/sample", False),
         ('COPY src /opt/sample\nVOLUME ["/data"]', True),
+        # Copilot review of 23:44 UTC: a volume at the stamp itself.
+        ("COPY src /opt/sample\nVOLUME /opt/sample/.connector_version.json", False),
+        ("COPY src /opt/sample\nVOLUME /opt/sample/.connector_version", True),
         # Copilot review of 00:11 UTC: an unreadable copy still replaces the destination.
         (
             "COPY src /opt/sample\nCOPY --chmod=000 src/.connector_version.json /opt/sample/.connector_version.json",
@@ -1707,6 +1710,28 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             "RUN ln -sf /opt/src/.connector_version.json /dev/stdout && echo x > /dev/stdout",
             False,
         ),
+        # Copilot review of 23:44 UTC: find puts the matched path in place of
+        # an embedded {} too.
+        (
+            "RUN mkdir /opt/src/sub && find /opt/src/sub -type d"
+            " -exec rm -f {}/../.connector_version.json \\;",
+            False,
+        ),
+        (
+            "RUN find /opt -maxdepth 1 -name src -exec unlink {}/.connector_version.json \\;",
+            False,
+        ),
+        # Copilot review of 23:44 UTC: the pip configuration below a HOME of /.
+        (
+            "ENV HOME=/\nCOPY --from=python:3.12-alpine /etc/ssl /.config/pip\n"
+            "RUN pip install requests",
+            False,
+        ),
+        (
+            "ENV HOME=/\nCOPY --from=python:3.12-alpine /etc/ssl /.config/other\n"
+            "RUN pip install requests",
+            True,
+        ),
     ],
 )
 def test_build_steps(tmp_path, instructions, covered):
@@ -2470,6 +2495,18 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
             "FROM python:3.12-alpine\nENV PATH=/opt/x/../tools:$PATH\nCOPY src /opt/sample\n"
             'COPY wrapper.sh /opt/tools/python3\nCMD ["python3", "/opt/sample/main.py"]\n',
             {"wrapper.sh": ENV_WRAPPER},
+        ),
+        # Copilot review of 23:44 UTC: a PATH entry built from a value the build
+        # does not define may hold any program of that name.
+        (
+            "FROM python:3.12-alpine\nARG TOOLS\nENV PATH=$TOOLS\nCOPY src /opt/sample\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        (
+            "FROM python:3.12-alpine\nARG TOOLS\nENV PATH=$TOOLS:$PATH\nCOPY src /opt/sample\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
         ),
     ],
 )
@@ -3664,6 +3701,96 @@ def test_build_action_writes_the_stamps_the_check_expects(tmp_path, files, code_
             "slug": "sample-slug",
             "build_mode": "release",
         }
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 23:44 UTC: only the value of an unquoted expansion
+        # is split, not the quoted or escaped blanks around it.
+        (
+            'APP="/opt/my app"; FILE=.connector_version.json; rm -f "$APP"/$FILE',
+            False,
+        ),
+        ("D=/opt/my; rm -f $D\\ app/.connector_version.json", False),
+        ('APP="/opt/my app"; rm -rf "$APP"', False),
+        ('APP="/opt/my app"; rm -rf $APP', True),
+        ('X=" app"; rm -rf "/opt/my"$X', True),
+        ("true", True),
+    ],
+)
+def test_field_splitting_keeps_quoted_blanks(tmp_path, run, covered):
+    files = {
+        "Dockerfile": 'FROM python:3.12-alpine\nCOPY ["src", "/opt/my app/"]\n'
+        f"RUN {run}\n"
+        'CMD ["python3", "/opt/my app/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "instructions, reason",
+    [
+        # Copilot review of 23:44 UTC: the default working directory of the
+        # build and a PYTHONPATH entry of / are searched like any other.
+        (
+            "COPY remove.py /compileall.py\nRUN python3 -m compileall -q /opt/src",
+            "not supported: python -m compileall may run /compileall.py, a file the"
+            " build wrote, instead of the module of the interpreter",
+        ),
+        (
+            "ENV PYTHONPATH=/\nCOPY remove.py /sitecustomize.py\n"
+            "RUN python3 -m compileall -q /opt/src",
+            "not supported: python run at build time imports /sitecustomize.py, a"
+            " file the build wrote, at startup",
+        ),
+        (
+            "COPY remove.py /compileall.py\nWORKDIR /tmp\n"
+            "RUN python3 -m compileall -q /opt/src",
+            "stamp at /opt/src/.connector_version.json",
+        ),
+    ],
+)
+def test_python_search_path_at_the_root(tmp_path, instructions, reason):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\n{instructions}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "remove.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    assert single(tmp_path, files).reason == reason
+
+
+def test_volume_at_the_stamp(tmp_path):
+    # Copilot review of 23:44 UTC: the mount replaces the stamp itself.
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "VOLUME /opt/sample/.connector_version.json\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n'
+        },
+    )
+    assert not image.covered
+    assert image.reason == (
+        "stamp at /opt/sample/.connector_version.json is the target of VOLUME"
+        " /opt/sample/.connector_version.json: a mount at run time hides it"
+    )
+
+
+def test_package_installed_from_the_root(tmp_path):
+    # Copilot review of 23:44 UTC: the packages of a project at / are found too.
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY . /\n"
+        "RUN pip install / && rm -rf /sample_connector\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile)
+    assert image.covered, image.reason
+    assert image.reason == (
+        "stamp at /<site-packages>/sample_connector/.connector_version.json"
+    )
 
 
 def test_main_reports_and_fails_on_an_uncovered_image(tmp_path, capsys):

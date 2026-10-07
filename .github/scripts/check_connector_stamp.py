@@ -44,8 +44,9 @@ looks. The model covers exactly this:
   ``unlink``, ``mv`` (sources and replaced destination), ``ln`` (literal and
   wildcard operands, a wildcard never matching a leading dot), ``touch`` (a
   file it creates is empty, a content the model does not know), ``find``
-  (``-delete``, ``-exec rm`` and its operands; a grouped expression deletes
-  everything below its roots), ``sh -c`` and shell scripts of the image,
+  (``-delete``, ``-exec rm`` and its operands, none built from the match; a
+  grouped expression deletes everything below its roots), ``sh -c`` and shell
+  scripts of the image,
   ``pip`` (``install <path>``, ``uninstall``, options writing a file),
   ``python -m venv`` (``--clear``), ``uv venv`` / ``uv pip``. Without effect
   on a connector file: commands that only read or create (``ls``, ``cat``,
@@ -263,6 +264,8 @@ PRINTF_CONVERSION = re.compile(
     r"%(?:%|[-+ #0']*(?:\*|[0-9]+)?(?:\.(?:\*|[0-9]+)?)?(?:\([^)]*\))?[hlLqjzt]*([a-zA-Z]))"
 )
 VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}{VAR_SUBST}])(\\d+){VAR_END}")
+# The blanks of the default IFS, on which an unquoted expansion is split.
+IFS_BLANKS = re.compile("[ \t\n]+")
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
 # read it, create something new, or change its owner. A command the model
 # neither interprets nor lists here is reported.
@@ -1976,23 +1979,35 @@ class Shell:
 
     def _expand(self, word, split=True):
         """Words of ``word`` once its variables are expanded with the current
-        values; an unquoted expansion is split on blanks."""
+        values. Only the value of an unquoted expansion is split on blanks: the
+        blanks of the rest of the word were quoted or escaped."""
+        fields = [""]
         unquoted = False
-
-        def substitute(match):
-            nonlocal unquoted
+        position = 0
+        for match in VAR_MARKER.finditer(word):
+            fields[-1] += word[position : match.start()]
+            position = match.end()
             if match.group(1) == VAR_SUBST:
                 # Unknown output: a "$" stays, so a path built from it is reported.
-                return UNKNOWN
-            unquoted = unquoted or match.group(1) == VAR_UNQUOTED
+                fields[-1] += UNKNOWN
+                continue
             value = expand(self.references[int(match.group(2))], self.variables)
-            # The wildcard characters of a quoted expansion are literal.
-            return value if match.group(1) == VAR_UNQUOTED else literal_globs(value)
-
-        value = VAR_MARKER.sub(substitute, word)
-        if split and unquoted and "IFS" in self.variables:
-            raise Unsupported("word splitting with IFS set")
-        return value.split() if split and unquoted else [value]
+            if match.group(1) != VAR_UNQUOTED:
+                # The wildcard characters of a quoted expansion are literal.
+                fields[-1] += literal_globs(value)
+                continue
+            unquoted = True
+            if not split:
+                fields[-1] += value
+                continue
+            if "IFS" in self.variables:
+                raise Unsupported("word splitting with IFS set")
+            # Blanks at either end of the value also end the field around it.
+            pieces = IFS_BLANKS.split(value)
+            fields[-1] += pieces[0]
+            fields += pieces[1:]
+        fields[-1] += word[position:]
+        return [field for field in fields if field] if split and unquoted else fields
 
     def _nested(self, files, cwd, variables, start, conditional):
         """A shell run from this one; in a start script it adds its processes here."""
@@ -2564,8 +2579,9 @@ class Shell:
                 continue
             # A module file or a regular package; a directory without
             # __init__.py loses to the module of the interpreter.
-            module, package = f"{directory}/{name}.py", f"{directory}/{name}"
-            initializer = f"{package}/__init__.py"
+            module = posixpath.join(directory, f"{name}.py")
+            package = posixpath.join(directory, name)
+            initializer = posixpath.join(package, "__init__.py")
             if module in self.files or initializer in self.files:
                 return module if module in self.files else package
             if self.stage.written(module):
@@ -2765,7 +2781,7 @@ class Shell:
             # The places the configuration is read from, in the home directory
             # or in /etc, including below a directory a COPY filled.
             places = [
-                f"{home}/{config}"
+                posixpath.join(home, config)
                 for home in ("/root", "/etc", self.variables.get("HOME", "/root"))
                 for config in names
             ]
@@ -2868,7 +2884,7 @@ class Shell:
             # working directory.
             if not created and (
                 path not in self.files
-                and not any(f.startswith(path + "/") for f in self.files)
+                and not any(f.startswith(path.rstrip("/") + "/") for f in self.files)
             ):
                 return
         path = self._path(candidate, "named path")
@@ -3190,6 +3206,13 @@ class Shell:
             if program in SHELLS or program == "xargs":
                 raise Unsupported("a shell or xargs started from find")
             explicit = [word for word in command[1:] if word != "{}"]
+            if program in ("rm", "unlink", "mkdir", "touch") and any(
+                "{}" in word for word in explicit
+            ):
+                # find puts the matched path in place of an embedded {} as well.
+                raise Unsupported(
+                    f"find {arg} {program} on a path built from the match"
+                )
             # mv is not one of them: what it puts at its destination, a match
             # through {} included, is not followed.
             if program in ("rm", "unlink"):
@@ -3205,10 +3228,6 @@ class Shell:
                     directories=program == "rm" and removes_directories(explicit),
                 )
             elif program in ("mkdir", "touch"):
-                if any("{}" in word for word in explicit):
-                    raise Unsupported(
-                        f"find {arg} {program} on a path built from the match"
-                    )
                 if arg in ("-execdir", "-okdir") and any(
                     not operand.startswith("/") for operand in self._operands(explicit)
                 ):
@@ -3436,13 +3455,13 @@ class Shell:
                 raise Unsupported(f"pip with {key} set")
         written = (*self.files, *self.stage.replaced)
         places = [
-            f"{home}/{name}"
+            posixpath.join(home, name)
             for home in (
                 "/etc",
                 "/etc/xdg/pip",
                 "/root/.pip",
                 "/root/.config/pip",
-                self.variables.get("HOME", "/root") + "/.config/pip",
+                posixpath.join(self.variables.get("HOME", "/root"), ".config/pip"),
             )
             for name in ("pip.conf", "pip.ini")
         ]
@@ -4035,7 +4054,9 @@ class ImageModel:
                 raise Unsupported(f"RUN {flag} without a target")
             target = image_path(target, stage.workdir, "mount target")
             for path in [
-                f for f in stage.files if f == target or f.startswith(target + "/")
+                f
+                for f in stage.files
+                if f == target or f.startswith(target.rstrip("/") + "/")
             ]:
                 hidden[path] = stage.files.pop(path)
             members = None
@@ -4231,18 +4252,19 @@ class ImageModel:
         )
         for root in roots:
             base = posixpath.normpath(posixpath.join(install_dir, root))
+            prefix = base.rstrip("/") + "/"
             names = sorted(
                 {
-                    f[len(base) + 1 :].split("/")[0]
+                    f[len(prefix) :].split("/")[0]
                     for f in files
-                    if f.startswith(base + "/")
-                    and f.count("/") == base.count("/") + 2
+                    if f.startswith(prefix)
+                    and f.count("/") == prefix.count("/") + 1
                     and posixpath.basename(f) in ("__init__.py", "__main__.py")
                 }
             )
             for package in names:
                 config = config or PackagingConfig(texts)
-                package_dir = f"{base}/{package}"
+                package_dir = prefix + package
                 has_init = f"{package_dir}/__init__.py" in files
                 if (
                     not src_layout and root not in config.package_roots
@@ -4250,7 +4272,7 @@ class ImageModel:
                     continue
                 for path, origin in list(files.items()):
                     if path.startswith(package_dir + "/") and path.endswith(".py"):
-                        files[SITE_PACKAGES + "/" + path[len(base) + 1 :]] = origin
+                        files[SITE_PACKAGES + "/" + path[len(prefix) :]] = origin
                 stamp = f"{package_dir}/{STAMP}"
                 origin = files.get(stamp)
                 if (
@@ -4394,13 +4416,20 @@ class ImageModel:
             value.split(":"), path_candidates(command, value, stage.links)
         ):
             if candidate is None:
-                # A relative PATH entry depends on the working directory; one
-                # built from an unknown value may be any directory.
-                if stage.unknown_dirs or any(
-                    posixpath.basename(p) == command for p in (*files, *stage.replaced)
+                # An entry built from an unknown value may be any directory, with
+                # any program of that name. A relative entry depends on the
+                # working directory.
+                unresolved = "$" in directory or "`" in directory
+                if (
+                    unresolved
+                    or stage.unknown_dirs
+                    or any(
+                        posixpath.basename(p) == command
+                        for p in (*files, *stage.replaced)
+                    )
                 ):
-                    kind = "relative" if not directory.startswith("/") else "unresolved"
-                    raise Unsupported(f"'{command}' looked up in a {kind} PATH entry")
+                    kind = "an unresolved" if unresolved else "a relative"
+                    raise Unsupported(f"'{command}' looked up in {kind} PATH entry")
                 continue
             if candidate in files or stage.written(candidate):
                 return candidate
@@ -4619,7 +4648,11 @@ def coverage(image, model, anchors, files):
 
     def volume_of(path):
         return next(
-            (v for v in model.final.volumes if path.startswith(v.rstrip("/") + "/")),
+            (
+                v
+                for v in model.final.volumes
+                if path == v or path.startswith(v.rstrip("/") + "/")
+            ),
             None,
         )
 
@@ -4633,10 +4666,11 @@ def coverage(image, model, anchors, files):
             if volume is not None:
                 # A mount decides what pycti reads there.
                 what = "stamp at" if origin and origin[0] == "stamp" else "pycti reads"
+                where = "the target of" if path == volume else "below"
                 return Result(
                     image,
                     False,
-                    f"{what} {path} is below VOLUME {volume}: a mount at run time hides it",
+                    f"{what} {path} is {where} VOLUME {volume}: a mount at run time hides it",
                 )
             if origin is None:
                 return Result(
