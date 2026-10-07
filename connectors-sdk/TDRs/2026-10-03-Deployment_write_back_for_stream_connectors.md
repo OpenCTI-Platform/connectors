@@ -42,7 +42,7 @@ OpenCTI platforms (no-op).
 | Decision | Rationale |
 | --- | --- |
 | Composable facade, not a stream connector base class | Stream connectors share no base class today (SDK-based and legacy ones coexist). A composable object is adopted with a few lines by any of them. |
-| Feature detection by introspecting the `Mutation` type once (cached) | Older platforms do not expose the mutations: the reporter logs once at info level and becomes a no-op. A failed detection is retried after a delay instead of disabling the feature forever. |
+| Feature detection by reading one field added with the write-back (`deployments_count` of an indicator) once (cached), as pycti does, without introspection | Introspection may be disabled on a platform. Older platforms refuse the query at schema validation: the reporter logs once at info level and becomes a no-op. Any other failed detection is retried after a delay instead of disabling the feature forever. The three mutations ship together, so one detection covers them. |
 | pycti helpers first, GraphQL fallback | The SDK must not require a pycti release shipping `report_indicator_deployment` and friends: they are called when present (`hasattr`), otherwise the documented GraphQL documents are sent through `helper.api.query`. |
 | No reporting method raises | Errors are warnings, rejections of individual reports are returned and logged at info level (for example the indicator of a stream delete event no longer exists). Dissemination never breaks because of the write-back. |
 | `Too many requests` retried with exponential backoff | The OpenCTI write-back API is rate limited per user. |

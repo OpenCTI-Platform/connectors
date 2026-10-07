@@ -148,7 +148,7 @@ def test_reconciliation_is_skipped_on_unsupported_platforms(
     graphql_helper, make_reporter, router, router_factory
 ):
     """Older platforms skip the reconciliation."""
-    router.handlers.update(router_factory(mutations=()).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     summary = make_reconciler(make_reporter(graphql_helper), FakeAdapter()).run_once()
     assert summary.skipped
     assert "not supported" in summary.reason

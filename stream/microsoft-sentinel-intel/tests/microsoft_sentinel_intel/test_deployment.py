@@ -124,12 +124,7 @@ class GraphQLRouter:
     def __call__(self, query, variables=None):
         self.calls.append((query, variables))
         if "DeploymentWriteBackFeatures" in query:
-            fields = [
-                {"name": "indicatorReportDeployment"},
-                {"name": "indicatorReportDeployments"},
-                {"name": "indicatorReportHits"},
-            ]
-            return {"data": {"__type": {"fields": fields}}}
+            return {"data": {"indicators": {"edges": []}}}
         if "DeploymentSecurityPlatformAdd" in query:
             return {"data": {"securityPlatformAdd": {"id": PLATFORM_ID}}}
         if "IndicatorReportDeployments(" in query:

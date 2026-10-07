@@ -12,11 +12,6 @@ from connectors_sdk.connectors.stream.deployment import (
     DeploymentReporter,
 )
 
-ALL_MUTATIONS = (
-    "indicatorReportDeployment",
-    "indicatorReportDeployments",
-    "indicatorReportHits",
-)
 PLATFORM_ID = "c5b8a3c4-1b2a-4a8e-9a55-5a0f7a1b2c3d"
 INDICATOR_ID = "0d8b4f0e-6a43-4f11-8f6c-1d2f5e6a7b8c"
 INDICATOR_STIX_ID = "indicator--5d4f2a3b-8c9d-4e1f-a2b3-c4d5e6f7a8b9"
@@ -32,15 +27,27 @@ PYCTI_HELPER_METHODS = [
 ]
 
 
+def schema_validation_error(field="deployments_count", type_name="Indicator"):
+    """Build the error pycti raises when OpenCTI refuses a query at validation."""
+    return ValueError(
+        {
+            "name": "GRAPHQL_VALIDATION_FAILED",
+            "error_message": f'Cannot query field "{field}" on type "{type_name}".',
+        }
+    )
+
+
 class GraphQLRouter:
     """Fake ``helper.api.query`` dispatching on the GraphQL operation name."""
 
-    def __init__(self, mutations=ALL_MUTATIONS, platform_id=PLATFORM_ID):
+    def __init__(self, write_back=True, platform_id=PLATFORM_ID):
         self.calls: list[tuple[str, dict]] = []
         self.handlers: dict[str, Any] = {
-            "DeploymentWriteBackFeatures": {
-                "data": {"__type": {"fields": [{"name": name} for name in mutations]}}
-            },
+            "DeploymentWriteBackFeatures": (
+                {"data": {"indicators": {"edges": []}}}
+                if write_back
+                else schema_validation_error()
+            ),
             "DeploymentSecurityPlatformAdd": {
                 "data": {
                     "securityPlatformAdd": {
@@ -152,7 +159,7 @@ def ids():
 
 @pytest.fixture
 def router_factory():
-    """Build GraphQL routers (custom mutations or platform id)."""
+    """Build GraphQL routers (platform with or without the write-back, platform id)."""
     return GraphQLRouter
 
 

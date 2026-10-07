@@ -4,11 +4,14 @@ These documents are sent through ``helper.api.query`` when the installed pycti
 release does not ship the deployment helpers yet.
 """
 
-MUTATION_FIELDS_QUERY = """
+FEATURE_DETECTION_QUERY = """
 query DeploymentWriteBackFeatures {
-  __type(name: "Mutation") {
-    fields {
-      name
+  indicators(first: 1) {
+    edges {
+      node {
+        id
+        deployments_count
+      }
     }
   }
 }

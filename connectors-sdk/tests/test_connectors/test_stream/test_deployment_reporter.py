@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from connectors_sdk.connectors.stream.deployment import _graphql
 from connectors_sdk.connectors.stream.deployment.models import (
     DeploymentBatchResult,
     DeploymentReport,
@@ -20,6 +21,9 @@ from connectors_sdk.connectors.stream.deployment.reporter import (
     MAX_BATCH_SIZE,
     MAX_ERROR_MESSAGE_LENGTH,
     MAX_UNSENT_AGE,
+    REPORT_DEPLOYMENT_MUTATION,
+    REPORT_DEPLOYMENTS_MUTATION,
+    REPORT_HITS_MUTATION,
     REPORT_REJECTED,
     REPORT_SENT,
     REPORT_UNSENT,
@@ -33,6 +37,13 @@ from connectors_sdk.connectors.stream.deployment.settings import (
 )
 
 RATE_LIMITED = ValueError({"name": "RATE_LIMIT", "error_message": "Too many requests"})
+# What pycti raises when OpenCTI has no write-back API (unknown deployments_count)
+SCHEMA_REFUSAL = ValueError(
+    {
+        "name": "GRAPHQL_VALIDATION_FAILED",
+        "error_message": 'Cannot query field "deployments_count" on type "Indicator".',
+    }
+)
 # Vendor time of the newest hit of a report: its replay watermark
 LAST_HIT = "2026-10-03T10:00:00Z"
 
@@ -151,7 +162,7 @@ def test_start_on_a_platform_without_the_write_back(
     graphql_helper, make_reporter, router, router_factory
 ):
     """Older platforms make the reporter a no-op, logged once at info level."""
-    router.handlers.update(router_factory(mutations=("stixCoreObjectEdit",)).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
 
     assert reporter.start() is False
@@ -202,28 +213,78 @@ def test_feature_detection_failure_is_retried_later(
     assert reporter.is_supported() is True
 
 
-MALFORMED_INTROSPECTIONS = [
-    None,
-    {"data": None},
-    {"data": {}},
-    {"data": {"__type": None}},
-    {"data": {"__type": {}}},
-    {"data": {"__type": {"fields": None}}},
-    {"data": {"__type": {"fields": {"name": "indicatorReportDeployment"}}}},
-    {"data": {"__type": {"fields": [None, {"name": "indicatorReportDeployment"}]}}},
-    {"data": {"__type": {"fields": [{"name": None}]}}},
-    {"data": {"__type": {"fields": [{"name": ""}]}}},
-]
+def test_feature_detection_reads_a_write_back_field_without_introspection():
+    """Introspection may be disabled on the platform: the detection never uses it."""
+    query = _graphql.FEATURE_DETECTION_QUERY
+    assert "__type" not in query
+    assert "__schema" not in query
+    assert "deployments_count" in query
 
 
-@pytest.mark.parametrize("response", MALFORMED_INTROSPECTIONS)
-def test_malformed_feature_detection_is_retried_later(
+@pytest.mark.parametrize(
+    "response", [{"data": {"indicators": {"edges": []}}}, {"data": None}, {}]
+)
+def test_any_answer_to_the_feature_detection_means_the_write_back(
     graphql_helper, make_reporter, router, response
 ):
-    """A malformed introspection is a failed detection, never a cached lack of support."""
+    """Only a platform with the write-back API accepts the query: its answer, even
+    without an indicator, enables every write-back mutation."""
+    router.handlers["DeploymentWriteBackFeatures"] = response
+    reporter = make_reporter(graphql_helper)
+
+    assert reporter.is_supported(REPORT_DEPLOYMENT_MUTATION) is True
+    assert reporter.is_supported(REPORT_DEPLOYMENTS_MUTATION) is True
+    assert reporter.is_supported(REPORT_HITS_MUTATION) is True
+    assert len(router.calls_of("DeploymentWriteBackFeatures")) == 1
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        SCHEMA_REFUSAL,
+        ValueError(
+            {
+                "name": 'Cannot query field "deployments_count" on type "Indicator".',
+                "error_message": (
+                    'Cannot query field "deployments_count" on type "Indicator".'
+                ),
+            }
+        ),
+    ],
+)
+def test_feature_detection_refused_at_schema_validation_is_cached(
+    graphql_helper, make_reporter, router, error
+):
+    """A platform without the write-back API refuses the query at validation: a
+    lasting answer, not detected again."""
+    clock = Clock()
+    router.handlers["DeploymentWriteBackFeatures"] = error
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+
+    assert reporter.is_supported() is False
+    clock.now += 61
+    assert reporter.is_supported(REPORT_HITS_MUTATION) is False
+    assert len(router.calls_of("DeploymentWriteBackFeatures")) == 1
+    graphql_helper.connector_logger.warning.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RATE_LIMITED,
+        ValueError({"name": "INTERNAL_ERROR", "error_message": "Search unavailable"}),
+        ValueError("<html>502 Bad Gateway</html>"),
+        TimeoutError("timed out"),
+    ],
+)
+def test_feature_detection_failing_otherwise_is_retried_later(
+    graphql_helper, make_reporter, router, error
+):
+    """Any other detection error is a failed detection, never a cached lack of
+    support."""
     clock = Clock()
     original = router.handlers["DeploymentWriteBackFeatures"]
-    router.handlers["DeploymentWriteBackFeatures"] = response
+    router.handlers["DeploymentWriteBackFeatures"] = error
     reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
 
     assert reporter.is_supported() is False
@@ -233,22 +294,6 @@ def test_malformed_feature_detection_is_retried_later(
     router.handlers["DeploymentWriteBackFeatures"] = original
     clock.now += 61
     assert reporter.is_supported() is True
-
-
-def test_feature_detection_with_an_empty_field_list(
-    graphql_helper, make_reporter, router
-):
-    """A valid empty field list means nothing is supported, without detecting again."""
-    clock = Clock()
-    router.handlers["DeploymentWriteBackFeatures"] = {
-        "data": {"__type": {"fields": []}}
-    }
-    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
-
-    assert reporter.is_supported() is False
-    clock.now += 61
-    assert reporter.is_supported() is False
-    assert len(router.calls_of("DeploymentWriteBackFeatures")) == 1
 
 
 # --- security platform ------------------------------------------------------------
@@ -505,40 +550,12 @@ def test_report_indicator_deployments_on_an_unsupported_platform(
     graphql_helper, make_reporter, router, router_factory
 ):
     """Unsupported platforms make batches a no-op."""
-    router.handlers.update(router_factory(mutations=()).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
     result = reporter.report_indicator_deployments(
         [DeploymentReport(indicator_id="a", status="active")]
     )
     assert result == DeploymentBatchResult()
-
-
-def test_report_indicator_deployments_one_by_one_without_the_batch_mutation(
-    graphql_helper, make_reporter, router, router_factory
-):
-    """Platforms without the batch mutation receive single reports."""
-    router.handlers.update(
-        router_factory(mutations=("indicatorReportDeployment",)).handlers
-    )
-    outcomes = iter(
-        [
-            {"data": {"indicatorReportDeployment": {"id": "relationship"}}},
-            ValueError("boom"),
-        ]
-    )
-    router.handlers["IndicatorReportDeployment("] = lambda _variables: next(outcomes)
-    reporter = make_reporter(graphql_helper)
-
-    result = reporter.report_indicator_deployments(
-        [
-            DeploymentReport(indicator_id="a", status="active"),
-            DeploymentReport(indicator_id="b", status="active"),
-        ]
-    )
-
-    assert result.processed == 1
-    assert [error.indicator_id for error in result.errors] == ["b"]
-    assert router.calls_of("IndicatorReportDeployments(") == []
 
 
 GRAPHQL_REJECTION = ValueError({"name": "VALIDATION_ERROR", "error_message": "bad"})
@@ -551,30 +568,6 @@ def test_rejection_errors_are_told_apart_from_undelivered_calls():
     )
     assert not is_rejection_error(ValueError("<html>502 Bad Gateway</html>"))
     assert not is_rejection_error(ConnectionError("unreachable"))
-
-
-def test_one_by_one_reports_separate_rejections_from_undelivered_ones(
-    graphql_helper, make_reporter, router, router_factory
-):
-    router.handlers.update(
-        router_factory(mutations=("indicatorReportDeployment",)).handlers
-    )
-    outcomes = iter([GRAPHQL_REJECTION, ConnectionError("unreachable")])
-    router.handlers["IndicatorReportDeployment("] = lambda _variables: next(outcomes)
-    reporter = make_reporter(graphql_helper)
-
-    result = reporter.report_indicator_deployments(
-        [
-            DeploymentReport(indicator_id="rejected", status="active"),
-            DeploymentReport(indicator_id="undelivered", status="active"),
-        ]
-    )
-
-    assert sorted(error.indicator_id for error in result.errors) == [
-        "rejected",
-        "undelivered",
-    ]
-    assert [report.indicator_id for report in result.unsent] == ["undelivered"]
 
 
 def test_undelivered_queued_reports_are_sent_again_with_a_growing_delay(
@@ -829,20 +822,14 @@ def test_a_batch_answered_without_its_result_is_sent_again(
 @pytest.mark.parametrize(
     "response", [{"data": None}, {"data": {"indicatorReportDeployment": None}}]
 )
-def test_a_single_report_answered_without_its_result_is_undelivered(
-    graphql_helper, make_reporter, router, router_factory, response
+def test_a_single_report_answered_without_its_result_is_not_accepted(
+    graphql_helper, make_reporter, router, response
 ):
-    router.handlers.update(
-        router_factory(mutations=("indicatorReportDeployment",)).handlers
-    )
     router.handlers["IndicatorReportDeployment("] = response
     reporter = make_reporter(graphql_helper)
 
-    result = reporter.report_indicator_deployments(
-        [DeploymentReport(indicator_id="a", status="active")]
-    )
-
-    assert [report.indicator_id for report in result.unsent] == ["a"]
+    assert reporter.report_indicator_deployment("a", "active") is False
+    graphql_helper.connector_logger.warning.assert_called_once()
 
 
 def test_a_hit_report_answered_without_its_result_is_undelivered(
@@ -973,15 +960,14 @@ def test_report_indicator_hits_requires_the_time_of_the_last_hit(
     graphql_helper.connector_logger.warning.assert_called_once()
 
 
-def test_report_indicator_hits_on_a_platform_without_hits(
+def test_report_indicator_hits_on_a_platform_without_the_write_back(
     graphql_helper, make_reporter, router, router_factory
 ):
-    """Platforms without ``indicatorReportHits`` make hits a no-op."""
-    router.handlers.update(
-        router_factory(mutations=("indicatorReportDeployment",)).handlers
-    )
+    """Platforms without the write-back API make hits a no-op."""
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
     assert reporter.report_indicator_hits("indicator-id", 1, last_hit=LAST_HIT) is False
+    assert router.calls_of("IndicatorReportHits(") == []
 
 
 def test_report_indicator_hits_errors_never_raise(
@@ -1042,9 +1028,7 @@ def test_report_indicator_hits_outcome(
         == REPORT_UNSENT
     )
 
-    router.handlers.update(
-        router_factory(mutations=("indicatorReportDeployment",)).handlers
-    )
+    router.handlers.update(router_factory(write_back=False).handlers)
     assert (
         make_reporter(graphql_helper).report_indicator_hits_outcome(
             "indicator-id", 1, last_hit=LAST_HIT
@@ -1215,7 +1199,7 @@ def test_list_indicator_deployments_when_unavailable(
     graphql_helper, make_reporter, router, router_factory
 ):
     """Nothing is listed on platforms without the write-back."""
-    router.handlers.update(router_factory(mutations=()).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
     assert list(reporter.list_indicator_deployments()) == []
 
@@ -1304,7 +1288,7 @@ def test_stream_reports_on_a_platform_known_to_be_unsupported(
     graphql_helper, make_reporter, router, router_factory, indicator_factory
 ):
     """Nothing is queued once the platform is known not to support the write-back."""
-    router.handlers.update(router_factory(mutations=()).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
     reporter.start()
     assert reporter.report_pushed(indicator_factory()) is False
@@ -1613,7 +1597,8 @@ def test_close_flushes_and_stops_queueing(graphql_helper, make_reporter, router)
 
 
 @pytest.mark.parametrize(
-    "failed_detection", [ConnectionError("unreachable"), {"data": None}]
+    "failed_detection",
+    [ConnectionError("unreachable"), ValueError("<html>502 Bad Gateway</html>")],
 )
 def test_queued_reports_wait_for_the_feature_detection(
     graphql_helper, make_reporter, router, failed_detection
@@ -1667,7 +1652,7 @@ def test_queued_reports_are_dropped_on_unsupported_platforms(
     graphql_helper, make_reporter, router, router_factory
 ):
     """Platforms without the write-back drop the queued reports."""
-    router.handlers.update(router_factory(mutations=()).handlers)
+    router.handlers.update(router_factory(write_back=False).handlers)
     reporter = make_reporter(graphql_helper)
     reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
 

@@ -7,9 +7,10 @@ the platform.
 
 Design rules:
 
-- Feature detection: the ``Mutation`` type is introspected once (cached). On an
-  OpenCTI platform without the write-back API, the reporter logs once at info level
-  and becomes a no-op.
+- Feature detection: one field added with the write-back API (``deployments_count``
+  of an indicator) is read once (cached), without introspection, which platforms
+  may disable. On an OpenCTI platform without the write-back API, the query fails
+  its schema validation: the reporter logs once at info level and becomes a no-op.
 - Graceful degradation: no reporting method raises. Errors are logged as warnings;
   dissemination never breaks because of the write-back.
 - pycti helpers (``helper.report_indicator_deployment``...) are used when the
@@ -47,6 +48,10 @@ from pycti import OpenCTIConnectorHelper
 REPORT_DEPLOYMENT_MUTATION = "indicatorReportDeployment"
 REPORT_DEPLOYMENTS_MUTATION = "indicatorReportDeployments"
 REPORT_HITS_MUTATION = "indicatorReportHits"
+WRITE_BACK_MUTATIONS = frozenset(
+    {REPORT_DEPLOYMENT_MUTATION, REPORT_DEPLOYMENTS_MUTATION, REPORT_HITS_MUTATION}
+)
+"""Mutations of the write-back API: they ship together, one detection covers them."""
 
 MAX_BATCH_SIZE = 500
 """Maximum number of reports per ``indicatorReportDeployments`` call."""
@@ -211,44 +216,21 @@ def _deployments_page(response: Any) -> tuple[list[Mapping[str, Any]], str | Non
     return nodes, str(end_cursor)
 
 
-class _MalformedIntrospectionError(Exception):
-    """The ``Mutation`` introspection answered without a complete field list."""
+def _is_schema_validation_error(error: BaseException) -> bool:
+    """Tell whether OpenCTI refused the feature detection at schema validation.
 
-
-def _mutation_names(response: Any) -> frozenset[str]:
-    """Return the mutation names of a ``Mutation`` introspection response.
-
-    The detection result is cached, so a response that is not a complete field
-    list is never read as a platform without the write-back API.
+    The detection reads a field added with the write-back API: a platform without
+    it refuses the query before running it, a lasting answer that is cached, unlike
+    a transport error, a rate limit or an unreadable response.
 
     Args:
-        response: The ``DeploymentWriteBackFeatures`` response.
+        error: The exception raised by ``helper.api.query``.
 
     Returns:
-        The mutation names (empty only for a valid empty field list).
-
-    Raises:
-        _MalformedIntrospectionError: When the response carries no ``Mutation``
-            type, no field list, or a field without its name.
+        ``True`` for a GraphQL validation error.
     """
-    data = response.get("data") if isinstance(response, Mapping) else None
-    mutation_type = data.get("__type") if isinstance(data, Mapping) else None
-    if not isinstance(mutation_type, Mapping):
-        raise _MalformedIntrospectionError("OpenCTI returned no Mutation type")
-    fields = mutation_type.get("fields")
-    if not isinstance(fields, list):
-        raise _MalformedIntrospectionError(
-            "OpenCTI returned the Mutation type without its fields"
-        )
-    names: set[str] = set()
-    for field in fields:
-        name = field.get("name") if isinstance(field, Mapping) else None
-        if not isinstance(name, str) or not name:
-            raise _MalformedIntrospectionError(
-                "OpenCTI returned a Mutation field without its name"
-            )
-        names.add(name)
-    return frozenset(names)
+    message = str(error)
+    return "GRAPHQL_VALIDATION_FAILED" in message or "Cannot query field" in message
 
 
 def _is_folded_call_failure(
@@ -419,9 +401,7 @@ class DeploymentReporter:
             meta={
                 "security_platform_id": platform_id,
                 "security_platform_name": self.options.security_platform_name,
-                "batch_reports": self.is_supported(REPORT_DEPLOYMENTS_MUTATION),
-                "hits_reports": self.hits_enabled
-                and self.is_supported(REPORT_HITS_MUTATION),
+                "hits_reports": self.hits_enabled,
             },
         )
         return True
@@ -536,8 +516,7 @@ class DeploymentReporter:
     ) -> DeploymentBatchResult:
         """Report the deployment statuses of several indicators.
 
-        Reports are sent in chunks of 500 with ``indicatorReportDeployments``, or one
-        by one when the platform only exposes ``indicatorReportDeployment``.
+        Reports are sent in chunks of 500 with ``indicatorReportDeployments``.
 
         Args:
             reports: ``DeploymentReport`` instances or mappings in the pycti helper
@@ -557,8 +536,6 @@ class DeploymentReporter:
         platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
         if platform_id is None:
             return DeploymentBatchResult()
-        if not self.is_supported(REPORT_DEPLOYMENTS_MUTATION):
-            return self._send_reports_one_by_one(platform_id, normalized)
         result = DeploymentBatchResult()
         for start in range(0, len(normalized), MAX_BATCH_SIZE):
             chunk = normalized[start : start + MAX_BATCH_SIZE]
@@ -1267,12 +1244,13 @@ class DeploymentReporter:
         return self.security_platform_id
 
     def _available_mutations(self) -> frozenset[str] | None:
-        """Return the mutations of the platform (introspected once, then cached).
+        """Return the write-back mutations of the platform (detected once, then cached).
 
         Returns:
-            The mutation names, or ``None`` when the detection failed or answered a
-            malformed introspection (retried after ``retry_delay`` seconds) or is
-            running in another thread.
+            ``WRITE_BACK_MUTATIONS``, no mutation when the platform refused the
+            detection at schema validation, or ``None`` when the detection failed
+            otherwise (retried after ``retry_delay`` seconds) or is running in
+            another thread.
         """
         if not self._detection_lock.acquire(blocking=False):
             with self._lock:
@@ -1284,22 +1262,23 @@ class DeploymentReporter:
                 now = self._monotonic()
                 if now < self._next_detection_at:
                     return None
+            mutations: frozenset[str] = WRITE_BACK_MUTATIONS
             try:
-                mutations = _mutation_names(
-                    self._helper.api.query(_graphql.MUTATION_FIELDS_QUERY)
-                )
+                self._helper.api.query(_graphql.FEATURE_DETECTION_QUERY)
             except Exception as err:
-                with self._lock:
-                    self._next_detection_at = now + self._retry_delay
-                    already_logged = self._detection_failure_logged
-                    self._detection_failure_logged = True
-                log = self._logger.debug if already_logged else self._logger.warning
-                log(
-                    "[DEPLOYMENT] Cannot detect the deployment write-back support of "
-                    "the OpenCTI platform, retrying later.",
-                    meta={"error": str(err), "retry_in_seconds": self._retry_delay},
-                )
-                return None
+                if not _is_schema_validation_error(err):
+                    with self._lock:
+                        self._next_detection_at = now + self._retry_delay
+                        already_logged = self._detection_failure_logged
+                        self._detection_failure_logged = True
+                    log = self._logger.debug if already_logged else self._logger.warning
+                    log(
+                        "[DEPLOYMENT] Cannot detect the deployment write-back support "
+                        "of the OpenCTI platform, retrying later.",
+                        meta={"error": str(err), "retry_in_seconds": self._retry_delay},
+                    )
+                    return None
+                mutations = frozenset()
             with self._lock:
                 self._mutations = mutations
             return mutations
@@ -1379,41 +1358,6 @@ class DeploymentReporter:
                 },
             )
             return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
-
-    def _send_reports_one_by_one(
-        self, platform_id: str, reports: Sequence[DeploymentReport]
-    ) -> DeploymentBatchResult:
-        """Send reports one by one (platforms without the batch mutation).
-
-        Args:
-            platform_id: The security platform id.
-            reports: The reports.
-
-        Returns:
-            The aggregated result.
-        """
-        processed = 0
-        rejected: list[DeploymentReport] = []
-        unsent: list[DeploymentReport] = []
-        for report in reports:
-            outcome = self._send_report(platform_id, report)
-            if outcome == REPORT_SENT:
-                processed += 1
-            elif outcome == REPORT_REJECTED:
-                rejected.append(report)
-            else:
-                unsent.append(report)
-        result = DeploymentBatchResult(processed=processed)
-        if rejected:
-            rejection = DeploymentBatchResult.failure(
-                rejected, "Report rejected by OpenCTI"
-            )
-            result = result.merge(DeploymentBatchResult(errors=rejection.errors))
-        if unsent:
-            result = result.merge(
-                DeploymentBatchResult.failure(unsent, "Report not accepted by OpenCTI")
-            )
-        return result
 
     def _send_chunk(
         self, platform_id: str, chunk: list[DeploymentReport]
