@@ -7,6 +7,8 @@ from connectors_sdk.logger import ConnectorLoggerAdapter
 
 # Every SDK class logging through `self.logger` / `cls.logger`
 CLASSES_WITH_LOGGER = [
+    ("connectors_sdk.client.base_client_api", "BaseClientApi"),
+    ("connectors_sdk.client.rate_limit", "_RateLimitAdapter"),
     ("connectors_sdk.connectors.external_import._work_manager", "_Work"),
     ("connectors_sdk.connectors.external_import._work_manager", "WorkManager"),
     (

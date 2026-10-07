@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 import requests
 from connectors_sdk.client.exceptions import ApiRateLimitError
+from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
 from limits import parse, storage, strategies
 from requests.adapters import HTTPAdapter
 
@@ -36,9 +36,6 @@ class RateLimit:
         return f"{self.limit}/{self.period}"
 
 
-logger = logging.getLogger(__name__)
-
-
 class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
     """HTTPAdapter that enforces a proactive rate limit before every send.
 
@@ -52,6 +49,13 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
             when the limit is exceeded. If False, sleep until the window resets.
         **kwargs: Passed to ``HTTPAdapter``.
     """
+
+    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger named after the module defining the subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = get_logger(cls.__module__)
 
     def __init__(
         self,
@@ -97,7 +101,7 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
         # Block mode: sleep until the window resets
         while True:
             sleep_for = max(wait_time, 0.01)
-            logger.debug("Rate limit reached, sleeping %.2f seconds", sleep_for)
+            self.logger.debug("Rate limit reached, sleeping %.2f seconds", sleep_for)
             time.sleep(sleep_for)
             if self._limiter.hit(self._rate_limit_item, self._rate_limit_key):
                 break
