@@ -7,8 +7,8 @@ Palo Alto Cortex XDR:
   deployments by `rule_id` and by value (Cortex XDR does not store the OpenCTI id); an
   indicator is only `active` when Cortex XDR holds an IOC for each of its values, and
   is upserted again otherwise;
-- removal: deletion of each IOC of the indicator, except the ones another live
-  indicator shares;
+- removal: deletion of each IOC of the indicator the connector wrote, except the ones
+  another live indicator shares;
 - re-push: the stream upsert path;
 - hits: the IOC alerts (`alert_source` "XDR IOC") whose events carry the value of a
   deployed indicator.
@@ -315,15 +315,46 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         """Delete an IOC from Cortex XDR (withdrawal, revocation or expiry).
 
         The reconciliation calls it for each IOC of the indicator (a file indicator has
-        one IOC per hash), except the IOCs another live indicator shares.
+        one IOC per hash), except the IOCs another live indicator shares. Cortex XDR
+        holds one IOC per value and records no owner: an IOC the connector did not
+        write (`_written_by_connector`) is left in Cortex XDR, so that a withdrawal
+        never deletes an IOC created by hand or by another integration.
 
         :raises CortexXdrDeploymentError: When Cortex XDR refuses the deletion.
         """
+        if not self._written_by_connector(vendor_indicator, deployment):
+            self._connector.helper.connector_logger.info(
+                "[DEPLOYMENT] IOC left in Cortex XDR, the connector did not write it.",
+                meta={
+                    "indicator_id": deployment.indicator_id,
+                    "rule_id": vendor_indicator.external_id,
+                },
+            )
+            return
         value = vendor_indicator.raw.get("indicator") or vendor_indicator.value
         with _readable_errors():
             self._client.delete_iocs(
                 [{"field": "indicator", "operator": "IN", "value": [value]}]
             )
+
+    @staticmethod
+    def _written_by_connector(
+        vendor_indicator: VendorIndicator, deployment: IndicatorDeployment
+    ) -> bool:
+        """Tell whether the connector wrote an IOC matched by a deployment.
+
+        The connector upserts the IOC of each value it pushes, taking over an IOC of
+        the same value: the IOCs of a deployment it reported `deployed` or `active` are
+        its own. Otherwise (`pending`, `failed` or `expired`), only the IOC whose
+        `rule_id` the deployment records is: Cortex XDR gives a new `rule_id` to an
+        IOC created again.
+        """
+        if deployment.is_live:
+            return True
+        return (
+            vendor_indicator.external_id is not None
+            and vendor_indicator.external_id == deployment.external_id
+        )
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Push an indicator again, with the stream upsert path.

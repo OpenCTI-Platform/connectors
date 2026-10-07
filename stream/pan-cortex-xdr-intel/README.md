@@ -120,7 +120,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
 | Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |
 | Reconciliation, `pending` (analyst retry)   | The indicator is upserted again and reported `deployed` or `failed`; an indicator whose IOCs are all still present is confirmed `active` instead |
-| Reconciliation, withdrawal or expiry        | The IOCs of revoked, expired or withdrawn indicators are deleted from Cortex XDR, except the ones another live indicator shares, and the indicator is reported `removed` |
+| Reconciliation, withdrawal or expiry        | The IOCs of revoked, expired or withdrawn indicators are deleted from Cortex XDR, except the ones another live indicator shares and the ones the connector did not write, and the indicator is reported `removed` |
 | Hits                                        | IOC alerts (`alert_source` `XDR IOC`) whose events carry the value of a deployed indicator                |
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the tenant are read back with the
@@ -129,7 +129,10 @@ does not exist), and detection hits are counted with a sighting of the indicator
   indicator are deleted. Cortex XDR does
   not store the OpenCTI id, so deployments are matched by `rule_id` and by value: the IOCs of an indicator are the ones
   holding the hashes, domain names, IPv4 addresses, email addresses and URLs of its pattern (the values the connector
-  pushes). A read-back error, a page repeated by the API or a malformed IOC (a row that is not an object, or an IOC
+  pushes). Cortex XDR records no owner for an IOC, so a withdrawal only deletes the IOCs the connector wrote: every IOC
+  of an indicator reported `deployed` or `active` (its upsert took over the IOC of each value), otherwise only the IOC
+  whose `rule_id` the deployment records. An IOC of the same value created by hand or by another integration for a
+  `pending` or `failed` indicator stays in Cortex XDR. A read-back error, a page repeated by the API or a malformed IOC (a row that is not an object, or an IOC
   without value or whose `expiration_date` is not a number of milliseconds) skips the run: indicators are never
   reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
@@ -162,8 +165,8 @@ of the last report and the hits counted from the IOC alerts.
   response are in the connector log.
 - **Deploy again** sets the deployment to `pending`: the next reconciliation upserts the indicator again and reports
   `deployed` or `failed` (an indicator whose IOCs are all still present is confirmed `active` without a new upsert).
-- **Remove from this platform** withdraws the indicator: the next reconciliation deletes its IOCs, except the ones
-  another live indicator shares, and reports it `removed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes the IOCs the connector wrote
+  for it, except the ones another live indicator shares, and reports it `removed`.
 
 | Environment variable                 | Default                | Description                                                           |
 |--------------------------------------|------------------------|-----------------------------------------------------------------------|

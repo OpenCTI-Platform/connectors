@@ -700,6 +700,41 @@ def test_adapter_removes_the_ioc_read_back():
         adapter.remove_vendor_indicator(vendor_indicator, deployment)
 
 
+@pytest.mark.parametrize("status", ["pending", "failed", "expired"])
+def test_adapter_leaves_an_ioc_the_connector_did_not_write(status):
+    connector = build_connector()
+    adapter = CortexXdrDeploymentAdapter(connector)
+    vendor_indicator = VendorIndicator(
+        external_id="9", value="198.51.100.7", raw={"indicator": "198.51.100.7"}
+    )
+
+    for external_id in (None, "8"):
+        adapter.remove_vendor_indicator(
+            vendor_indicator, make_deployment(status=status, external_id=external_id)
+        )
+
+    connector.client.delete_iocs.assert_not_called()
+    meta = connector.helper.connector_logger.info.call_args.kwargs["meta"]
+    assert meta == {"indicator_id": INDICATOR_ID, "rule_id": "9"}
+
+
+@pytest.mark.parametrize("status", ["pending", "failed", "expired"])
+def test_adapter_removes_the_ioc_a_deployment_records(status):
+    connector = build_connector()
+    adapter = CortexXdrDeploymentAdapter(connector)
+    vendor_indicator = VendorIndicator(
+        external_id="9", value="198.51.100.7", raw={"indicator": "198.51.100.7"}
+    )
+
+    adapter.remove_vendor_indicator(
+        vendor_indicator, make_deployment(status=status, external_id="9")
+    )
+
+    connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": ["198.51.100.7"]}]
+    )
+
+
 def test_adapter_push():
     connector = build_connector()
     adapter = CortexXdrDeploymentAdapter(connector)
@@ -1244,6 +1279,25 @@ def test_reconciliation_withdrawal_keeps_the_iocs_of_live_indicators(
     (batch,) = router.calls_of("IndicatorReportDeployments(")
     reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
     assert reports == {INDICATOR_ID: "removed", OTHER_ID: "active"}
+
+
+def test_reconciliation_withdrawal_leaves_an_ioc_written_by_another_source(
+    e2e_connector, router
+):
+    node = deployment_node(INDICATOR_ID, "failed", "198.51.100.7")
+    node["revoked"] = True
+    router.deployments = [node]
+    e2e_connector.client.iter_iocs.return_value = [
+        {"rule_id": 5, "indicator": "198.51.100.7", "type": "IP"}
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    e2e_connector.client.delete_iocs.assert_not_called()
+    assert summary.withdrawn == 1
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    (report,) = batch["reports"]
+    assert (report["indicatorId"], report["status"]) == (INDICATOR_ID, "removed")
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):
