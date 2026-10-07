@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 from pycti import OpenCTIConnectorHelper
 from spycloud_connector.models import opencti, spycloud
-from spycloud_connector.services import ConfigLoader
 from spycloud_connector.utils.decorators import handle_pydantic_validation_error
 from spycloud_connector.utils.helpers import dict_to_markdown_table
 
 if TYPE_CHECKING:
     from spycloud_connector.models.opencti import AuthorIdentityClass, IncidentSeverity
     from spycloud_connector.models.spycloud import BreachRecordSeverity
+    from spycloud_connector.settings import ConnectorSettings
 
 
 SEVERITY_LEVELS_BY_CODE: dict["BreachRecordSeverity", "IncidentSeverity"] = {
@@ -26,11 +26,11 @@ class ConverterToStix:
     Provides methods to convert SpyCloud objects into OCTI objects following STIX 2.1 specification.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: "ConnectorSettings"):
         """
         Initialize ConverterToStix with necessary injections.
         :param helper: OpenCTIConnectorHelper instance
-        :param config: ConfigLoader instance
+        :param config: ConnectorSettings instance
         """
         self.helper = helper
         self.config = config

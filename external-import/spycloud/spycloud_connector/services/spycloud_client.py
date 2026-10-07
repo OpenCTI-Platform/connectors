@@ -7,13 +7,13 @@ import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter, Retry
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
-from spycloud_connector.services import ConfigLoader
 
 if TYPE_CHECKING:
     from spycloud_connector.models.spycloud import (
         BreachRecordSeverity,
         BreachRecordWatchlistType,
     )
+    from spycloud_connector.settings import ConnectorSettings
 
 
 class SpycloudClient:
@@ -22,13 +22,13 @@ class SpycloudClient:
     """
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
+        self, helper: OpenCTIConnectorHelper = None, config: "ConnectorSettings" = None
     ):
         """
         Initialize the client with necessary configurations.
         Spycloud API documentation: https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started
         :param helper: OpenCTIConnectorHelper instance
-        :param config: ConfigLoader instance
+        :param config: ConnectorSettings instance
         """
         self.helper = helper
         self.config = config
@@ -36,7 +36,7 @@ class SpycloudClient:
         self.session = self._session(
             headers={
                 "Accept": "application/json",
-                "X-API-KEY": self.config.spycloud.api_key,
+                "X-API-KEY": self.config.spycloud.api_key.get_secret_value(),
             }
         )
 
