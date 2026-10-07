@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import ANY, MagicMock
 
 import pytest
 import requests
@@ -646,9 +646,127 @@ def test_non_stix_indicators_and_other_events_are_ignored(connector):
 
     connector._process_message(make_message("create", {"type": "malware"}))
     connector._process_message(make_message("update", make_indicator()))
+    connector._process_message(
+        make_update_message(make_indicator(), "evil.example", path="/name")
+    )
 
     assert zscaler.puts == []
     connector.assurance.report_pushed.assert_not_called()
+
+
+def make_update_message(data, former_domain, path="/pattern"):
+    """Build an update event whose reverse patch holds the former pattern."""
+    context = {
+        "reverse_patch": [
+            {
+                "op": "replace",
+                "path": path,
+                "value": f"[domain-name:value = '{former_domain}']",
+            }
+        ]
+    }
+    return SimpleNamespace(
+        event="update", data=json.dumps({"data": data, "context": context}), id="1-0"
+    )
+
+
+def test_updated_pattern_replaces_the_domain(connector):
+    """The blacklist holds values only: the former domain would stay blocked."""
+    zscaler = FakeZscaler(urls=["former.example", "other.example"]).install(connector)
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, "former.example"))
+
+    assert [url for url, _payload in zscaler.puts] == [
+        f"{CATEGORY_URL}?action=REMOVE_FROM_LIST",
+        f"{CATEGORY_URL}?action=ADD_TO_LIST",
+    ]
+    assert zscaler.urls == ["other.example", "evil.example"]
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+    connector.assurance.report_removed.assert_not_called()
+
+
+def test_updated_pattern_keeps_a_former_domain_another_indicator_blocks(connector):
+    zscaler = FakeZscaler(urls=["former.example"]).install(connector)
+    connector.helper.api.indicator.list.return_value = indicator_page(
+        [other_indicator("[domain-name:value = 'former.example']")]
+    )
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, "former.example"))
+
+    assert zscaler.urls == ["former.example", "evil.example"]
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+
+
+@pytest.mark.parametrize(
+    ("put_status", "lookup_error", "reason"),
+    [
+        (403, None, "Zscaler refused the blacklist update: permission denied"),
+        (
+            200,
+            RuntimeError("OpenCTI down"),
+            "The connector could not read the other OpenCTI indicators of the domain",
+        ),
+    ],
+    ids=["refused removal", "unreadable other indicators"],
+)
+def test_updated_pattern_whose_former_domain_cannot_be_removed_is_failed(
+    connector, put_status, lookup_error, reason
+):
+    """The new domain is not added: the update is applied by a new push."""
+    zscaler = FakeZscaler(urls=["former.example"], put_status=put_status).install(
+        connector
+    )
+    connector.helper.api.indicator.list.side_effect = lookup_error
+    indicator = make_indicator()
+
+    connector._process_message(make_update_message(indicator, "former.example"))
+
+    assert "evil.example" not in zscaler.urls
+    assert all(url.endswith("REMOVE_FROM_LIST") for url, _payload in zscaler.puts)
+    connector.assurance.report_push_failed.assert_called_once_with(indicator, reason)
+    connector.assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.warning.assert_any_call(
+        "Former domain of an updated indicator not removed from the blacklist",
+        {"domain": "former.example", "error": ANY},
+    )
+
+
+def test_updated_pattern_without_a_domain_is_reported_removed(connector):
+    zscaler = FakeZscaler(urls=["former.example"]).install(connector)
+    indicator = make_indicator()
+    indicator["pattern"] = "[ipv4-addr:value = '198.51.100.7']"
+
+    connector._process_message(make_update_message(indicator, "former.example"))
+
+    assert zscaler.urls == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_updated_pattern_without_a_former_domain_adds_the_new_one(connector):
+    zscaler = FakeZscaler().install(connector)
+    indicator = make_indicator()
+    message = make_update_message(indicator, "former.example")
+    message.data = message.data.replace(
+        "[domain-name:value = 'former.example']", "[ipv4-addr:value = '198.51.100.7']"
+    )
+
+    connector._process_message(message)
+
+    assert zscaler.urls == ["evil.example"]
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+
+
+def test_updated_pattern_keeping_its_domain_changes_nothing(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+
+    connector._process_message(make_update_message(make_indicator(), "Evil.EXAMPLE"))
+
+    assert zscaler.puts == []
+    connector.assurance.report_pushed.assert_not_called()
+    connector.assurance.report_removed.assert_not_called()
 
 
 def test_unsupported_event_type_is_not_applied(connector):

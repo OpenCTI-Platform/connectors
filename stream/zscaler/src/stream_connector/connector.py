@@ -74,11 +74,26 @@ def failure_reason(error: BaseException) -> str:
         return f"{PLATFORM_NAME} did not complete the {ACTIVATION_ACTION} in time"
     if isinstance(error, ZscalerApiError):
         return deployment_failure_reason(PLATFORM_NAME, error.action, error.status_code)
+    if isinstance(error, SharedDomainLookupError):
+        return "The connector could not read the other OpenCTI indicators of the domain"
     return str(error) or type(error).__name__
 
 
 class SharedDomainLookupError(Exception):
     """Error raised when OpenCTI cannot tell whether another indicator blocks a domain."""
+
+
+def _former_pattern(context: dict[str, Any] | None) -> str | None:
+    """Return the pattern an update event replaced, read from its reverse patch.
+
+    :param context: The context of the update event.
+    :return: The former pattern, None when the update did not change the pattern.
+    """
+    for patch in (context or {}).get("reverse_patch") or []:
+        if isinstance(patch, dict) and patch.get("path") == "/pattern":
+            value = patch.get("value")
+            return value if isinstance(value, str) else None
+    return None
 
 
 SHARED_DOMAIN_PAGE_SIZE = 100
@@ -636,17 +651,9 @@ class ZscalerConnector:
         `removed` once the domain is out of the blacklist or only kept for another
         indicator; nothing is reported for an invalid domain pattern.
         """
-        indicator_ids = [
-            indicator_id
-            for indicator_id in (
-                data.get("id"),
-                self.helper.get_attribute_in_extension("id", data),
-            )
-            if indicator_id
-        ]
         try:
             domain = self.check_and_send_to_zscaler(
-                {"pattern": data.get("pattern")}, event_type, indicator_ids
+                {"pattern": data.get("pattern")}, event_type, self._indicator_ids(data)
             )
         except (ZscalerApiError, SharedDomainLookupError) as err:
             self.helper.connector_logger.error(
@@ -660,6 +667,50 @@ class ZscalerConnector:
         if event_type == "create":
             self.assurance.report_pushed(data)
         else:
+            self.assurance.report_removed(data)
+
+    def _indicator_ids(self, data: dict[str, Any]) -> list[str]:
+        """Return the STIX and OpenCTI ids of an indicator of the stream."""
+        return [
+            indicator_id
+            for indicator_id in (
+                data.get("id"),
+                self.helper.get_attribute_in_extension("id", data),
+            )
+            if indicator_id
+        ]
+
+    def _replace_and_report(self, data: dict[str, Any], former_pattern: str) -> None:
+        """Apply an update that changes the pattern of an indicator and report it.
+
+        The blacklist holds values only, so the domain of the former pattern would
+        stay blocked: it is removed first, unless another valid indicator blocks it
+        (as for a delete), then the domain of the new pattern is added and reported
+        as for a create. A failed removal is reported `failed` and the new domain is
+        not added; a new pattern without a valid domain is reported `removed`.
+
+        :param data: The indicator, after the update.
+        :param former_pattern: The pattern the update replaced.
+        """
+        former = self.extract_domain(former_pattern)
+        current = self.extract_domain(data.get("pattern") or "")
+        if former and current and former.lower() == current.lower():
+            return
+        if former:
+            try:
+                self.withdraw_domain(former, self._indicator_ids(data))
+            except (ZscalerApiError, SharedDomainLookupError) as err:
+                self.helper.connector_logger.warning(
+                    "Former domain of an updated indicator not removed from the "
+                    "blacklist",
+                    {"domain": former, "error": str(err)},
+                )
+                if self.assurance is not None:
+                    self.assurance.report_push_failed(data, failure_reason(err))
+                return
+        if current and validators.domain(current):
+            self._apply_and_report(data, "create")
+        elif former and self.assurance is not None:
             self.assurance.report_removed(data)
 
     @retry(
@@ -733,14 +784,22 @@ class ZscalerConnector:
         return False
 
     def _process_message(self, msg):
-        """Process messages from the OpenCTI stream."""
-        data = json.loads(msg.data)["data"]
+        """Process messages from the OpenCTI stream: creates, deletes, and the updates
+        that change the pattern of an indicator."""
+        message = json.loads(msg.data)
+        data = message["data"]
 
         # Only process indicators with pattern_type 'stix'
         if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
             # Each change of the blacklist is activated by `send_to_zscaler`.
             if msg.event in ("create", "delete"):
                 self._apply_and_report(data, msg.event)
+            elif (
+                msg.event == "update"
+                and (former_pattern := _former_pattern(message.get("context")))
+                is not None
+            ):
+                self._replace_and_report(data, former_pattern)
         else:
             msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)

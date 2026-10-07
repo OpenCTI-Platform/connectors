@@ -171,7 +171,7 @@ python3 main.py
 
 The connector will:
 - Authenticate with Zscaler API on startup
-- Listen for domain indicator create/delete events
+- Listen for domain indicator create/delete events, and the updates that change their pattern
 - Add domains to the specified blacklist category
 - Automatically activate changes in Zscaler
 
@@ -217,6 +217,7 @@ graph LR
 | Event Type | Action                                       |
 |------------|----------------------------------------------|
 | create     | Adds domain to Zscaler blacklist category    |
+| update     | When the pattern changes: removes the former domain (unless another indicator keeps it), then adds the new one |
 | delete     | Removes domain from Zscaler blacklist        |
 
 ### Domain Processing Flow
@@ -244,6 +245,7 @@ Platform entity (created if it does not exist).
 | Domain rejected by Zscaler                | `failed`, with a short reason such as "Zscaler refused the blacklist update: permission denied" or "Zscaler did not complete the configuration activation in time" (the Zscaler response is written to the connector log); a malformed URL category read before the update is reported "Zscaler returned an unexpected response to the blacklist read" |
 | Invalid domain pattern                    | Nothing: the indicator is never pushed                                                                 |
 | Delete event processed                    | `removed` (also when the domain was already absent, or kept for another indicator); nothing when the blacklist or the other indicators cannot be read |
+| Pattern updated                           | The former domain leaves the blacklist as for a delete, then the new one is reported as for a create; `failed` when the former domain cannot be removed (the new one is not added), `removed` when the new pattern holds no valid domain |
 | Reconciliation, domain present            | `active`                                                                                               |
 | Reconciliation, domain absent             | `removed` (removed from the category outside of OpenCTI)                                               |
 | Reconciliation, `pending` (analyst retry) | The domain is added again (or, when already listed, its change activated again) and reported `deployed` or `failed` |
