@@ -19,7 +19,7 @@ class GreyNoiseVulnConnector:
         self.helper = helper
 
         self.greynoise_key = self.config.greynoise_vuln.key.get_secret_value()
-        self.max_tlp = self.config.greynoise_vuln.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
         self.greynoise_ent_name = self.config.greynoise_vuln.name
         self.greynoise_ent_desc = self.config.greynoise_vuln.description
 

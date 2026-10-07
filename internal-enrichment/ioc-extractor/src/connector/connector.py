@@ -37,7 +37,7 @@ class IOCExtractorConnector:
         for marking_definition in opencti_entity.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
-        max_tlp = self.config.ioc_extractor.max_tlp
+        max_tlp = self.config.connector.max_tlp
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp):
             raise ValueError(
                 f"Do not send any data, TLP of the observable ({tlp}) is greater "

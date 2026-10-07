@@ -1,11 +1,11 @@
 """Pydantic settings for the Shodan InternetDB connector."""
 
-from typing import Literal
-
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field
@@ -30,21 +30,23 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The scope of the connector, i.e. the observable types it enriches.",
         default=["IPv4-Addr"],
     )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.WHITE,
+    )
 
 
 class ShodanConfig(BaseConfigModel):
     """Config fields specific to the Shodan InternetDB connector."""
 
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:RED",
-        "TLP:CLEAR",
-        "TLP:AMBER+STRICT",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="The maximum TLP marking of observables the connector is allowed to process.",
-        default="TLP:WHITE",
     )
     ssl_verify: bool = Field(
         description="Whether to verify SSL connections to the Shodan InternetDB API.",

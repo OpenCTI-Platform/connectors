@@ -26,4 +26,4 @@ class ConfigMalbeacon:
 
         self.indicator_score_level = self.settings.malbeacon.indicator_score_level
 
-        self.max_tlp = self.settings.malbeacon.max_tlp
+        self.max_tlp = self.settings.connector.max_tlp

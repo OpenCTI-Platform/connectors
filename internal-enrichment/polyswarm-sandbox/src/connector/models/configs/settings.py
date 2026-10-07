@@ -3,12 +3,11 @@
 Uses connectors_sdk base classes (Criminal IP / upstream pattern).
 """
 
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from polyswarm_api import settings as ps_settings
@@ -41,15 +40,10 @@ class PolySwarmConfig(BaseConfigModel):
     )
 
     # TLP + score
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
-        default="TLP:AMBER",
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level of entities to enrich.",
     )
     replace_with_lower_score: bool = Field(

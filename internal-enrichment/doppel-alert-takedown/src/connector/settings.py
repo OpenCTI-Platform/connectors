@@ -1,9 +1,11 @@
 from typing import Literal
 
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr, model_validator
@@ -43,6 +45,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
             "updated. Must be false when CONNECTOR_SCOPE includes Incident."
         ),
         default=False,
+    )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.RED,
     )
 
 
@@ -123,15 +132,10 @@ class DoppelAlertTakedownConfig(BaseConfigModel):
         description="Comment sent to Doppel when requesting a takedown.",
         default="Confirmed by OpenCTI — requesting takedown.",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
-        default="TLP:RED",
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level of entities to enrich.",
     )
 

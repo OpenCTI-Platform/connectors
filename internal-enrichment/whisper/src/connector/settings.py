@@ -12,9 +12,11 @@ by ``OpenCTIConnectorHelper``.
 """
 
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -31,6 +33,13 @@ class _WhisperConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     scope: ListFromString = Field(
         default=_DEFAULT_SCOPE,
         description="Observable types this connector enriches.",
+    )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.AMBER_STRICT,
     )
 
 
@@ -49,13 +58,14 @@ class WhisperConfig(BaseConfigModel):
         description="Whisper API key, sent in the X-API-Key header. Never logged.",
         examples=["whisper-0123456789abcdef0123456789abcdef"],
     )
-    max_tlp: str = Field(
-        default="TLP:AMBER+STRICT",
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description=(
             "Maximum TLP marking the connector will enrich. Observables marked "
             "above this level are skipped. Set 'TLP:RED' to disable the gate."
         ),
-        examples=["TLP:AMBER+STRICT", "TLP:RED"],
     )
 
 

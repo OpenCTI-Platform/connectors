@@ -30,7 +30,7 @@ class GreyNoiseConnector:
 
         # Greynoise configuration
         self.greynoise_key = self.config.greynoise.key.get_secret_value()
-        self.max_tlp = self.config.greynoise.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
         self.sighting_not_seen = self.config.greynoise.sighting_not_seen
         self.no_sightings = self.config.greynoise.no_sightings
         self.greynoise_ent_name = self.config.greynoise.name

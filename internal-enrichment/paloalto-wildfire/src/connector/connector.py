@@ -88,7 +88,7 @@ class PaloaltoWildfireConnector:
             api_key=self.config.paloalto_wildfire.api_key.get_secret_value(),
             base_url=self.config.paloalto_wildfire.api_base_url,
         )
-        self.max_tlp = self.config.paloalto_wildfire.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
         self.max_file_size = self.config.paloalto_wildfire.max_file_size
 
         self.identity = stix2.Identity(

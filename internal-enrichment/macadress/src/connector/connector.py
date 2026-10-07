@@ -28,7 +28,7 @@ class MacadressConnector:
 
         macadress = config.macadress
         self.api_base_url = str(macadress.api_base_url)
-        self.max_tlp = macadress.max_tlp
+        self.max_tlp = config.connector.max_tlp
         self.default_score = int(macadress.default_score)
         self.create_note = bool(macadress.create_note)
         self.create_vendor_identity = bool(macadress.create_vendor_identity)

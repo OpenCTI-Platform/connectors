@@ -76,7 +76,7 @@ class WhisperConnector:
 
         ``main.py`` builds both the helper and the ``ConnectorSettings`` from
         the connectors-sdk; the connector consumes the typed ``whisper:`` block
-        (``api_url``, ``api_key``, ``max_tlp``). ``client`` is injectable for
+        (``api_url``, ``api_key``) and ``connector.max_tlp``. ``client`` is injectable for
         tests; production passes a freshly-built ``WhisperClient``.
         """
         self.helper = helper
@@ -125,14 +125,14 @@ class WhisperConnector:
 
     def _extract_and_check_markings(self, observable: dict) -> None:
         """Refuse to enrich if the observable's TLP marking exceeds
-        ``whisper.max_tlp``. Pulled from the shodan-internetdb pattern.
+        ``connector.max_tlp``. Pulled from the shodan-internetdb pattern.
 
         The connector's Whisper API key effectively grants access to
         whatever the OpenCTI user it impersonates can see; enriching past
         the TLP ceiling would leak intel to a less-trusted Whisper
         account. Raises ``WhisperTlpError`` on violation.
         """
-        max_tlp = self.config.whisper.max_tlp
+        max_tlp = self.config.connector.max_tlp
         for marking in observable.get("objectMarking", []) or []:
             if marking.get("definition_type") == "TLP" and not (
                 OpenCTIConnectorHelper.check_max_tlp(
@@ -141,7 +141,7 @@ class WhisperConnector:
             ):
                 raise WhisperTlpError(
                     f"observable TLP marking {marking['definition']!r} "
-                    f"exceeds whisper.max_tlp={max_tlp!r}"
+                    f"exceeds connector.max_tlp={max_tlp!r}"
                 )
 
     def _send_passthrough_bundle(self, stix_objects: list) -> str:
@@ -185,7 +185,7 @@ class WhisperConnector:
             self._extract_and_check_markings(observable)
         except WhisperTlpError as exc:
             self.helper.connector_logger.warning(
-                "Refusing to enrich — TLP exceeds whisper.max_tlp",
+                "Refusing to enrich — TLP exceeds connector.max_tlp",
                 {"entity_id": observable.get("id"), "error": str(exc)},
             )
             return str(exc)

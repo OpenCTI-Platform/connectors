@@ -14,7 +14,7 @@ class ScoutSearchConnectorConfig:
     def __init__(self, config):
         self.api_base_url = config.pure_signal_scout.api_url.rstrip("/")
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
-        self.max_tlp = config.pure_signal_scout.max_tlp
+        self.max_tlp = config.connector.max_tlp
         self.search_interval = config.pure_signal_scout.search_interval
         self.pattern_type = config.pure_signal_scout.indicator_pattern_type
 
@@ -60,7 +60,7 @@ class ScoutSearchConnectorConnector:
                 if marking_definition.get("definition_type") == "TLP":
                     self.tlp = marking_definition.get("definition")
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.pure_signal_scout.max_tlp
+            self.tlp, self.config.connector.max_tlp
         )
         if not valid_max_tlp:
             raise ValueError(

@@ -30,7 +30,7 @@ class HybridAnalysis:
             environment_id=self.config.hybrid_analysis_sandbox.environment_id,
         )
 
-        self.max_tlp = self.config.hybrid_analysis_sandbox.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
 
         # Author to add to ingested objects
         self.identity = stix2.Identity(

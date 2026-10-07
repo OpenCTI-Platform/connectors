@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
 )
 from connectors_sdk.settings.annotated_types import ListFromString
 from pydantic import Field, HttpUrl, SecretStr
@@ -46,16 +45,11 @@ class SilentpushConfig(BaseConfigModel):
         default="https://app.silentpush.com/api/v2/",
     )
     api_key: SecretStr = Field(description="API key for authentication.")
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level of the entities to enrich.",
-        default="TLP:AMBER",
     )
     verify_cert: bool = Field(
         description="Whether to verify SSL certificates when connecting to the API.",

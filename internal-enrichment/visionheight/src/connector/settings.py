@@ -1,23 +1,12 @@
-from typing import Literal
-
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
-
-# TLP levels accepted in configuration. Lowercase because this is the form the
-# connectors-sdk `TLPMarking` model expects; `pycti` uses the canonical
-# `TLP:XXX` form instead (see `connector.utils.to_canonical_tlp_marking`).
-TLPLevel = Literal[
-    "clear",
-    "green",
-    "amber",
-    "amber+strict",
-    "red",
-]
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -38,11 +27,18 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Comma-separated list of OpenCTI entity types this connector enriches.",
         default=["IPv4-Addr", "Domain-Name"],
     )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.AMBER_STRICT,
+    )
 
 
 class VisionHeightConfig(BaseConfigModel):
     """
-    VisionHeight-specific configuration: API credentials, URL, and TLP cap.
+    VisionHeight-specific configuration: API credentials and URL.
     """
 
     api_base_url: HttpUrl = Field(
@@ -52,9 +48,11 @@ class VisionHeightConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="VisionHeight API key used to authenticate requests (sent as the x-api-key header).",
     )
-    max_tlp_level: TLPLevel = Field(
+    max_tlp_level: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged.",
-        default="amber+strict",
     )
 
 

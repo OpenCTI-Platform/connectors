@@ -16,21 +16,21 @@ from pycti import OpenCTIConnectorHelper
 
 class MetrasEnrichmentConnector:
 
-    # TLP levels by restrictiveness (keyed on connectors_sdk TLPLevel values).
+    # TLP levels by restrictiveness (keyed on the `connector.max_tlp` values).
     _LEVEL_ORDER = {
-        "clear": 0,
-        "white": 0,
-        "green": 1,
-        "amber": 2,
-        "amber+strict": 3,
-        "red": 4,
+        "TLP:CLEAR": 0,
+        "TLP:WHITE": 0,
+        "TLP:GREEN": 1,
+        "TLP:AMBER": 2,
+        "TLP:AMBER+STRICT": 3,
+        "TLP:RED": 4,
     }
     _MARKING_TO_LEVEL = {
-        "marking-definition--613f2e26-407d-48c7-9eba-b56c171b6f0c": "white",
-        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da": "green",
-        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82": "amber",
-        "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37": "amber+strict",
-        "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed": "red",
+        "marking-definition--613f2e26-407d-48c7-9eba-b56c171b6f0c": "TLP:WHITE",
+        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da": "TLP:GREEN",
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82": "TLP:AMBER",
+        "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37": "TLP:AMBER+STRICT",
+        "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed": "TLP:RED",
     }
     # OpenCTI scope names vs STIX SCO type names that differ.
     _SCOPE_ALIASES = {"file": "stixfile"}
@@ -48,7 +48,7 @@ class MetrasEnrichmentConnector:
             verify_ssl=cfg.verify_ssl,
         )
         self.converter = ConverterToStix(helper)
-        self._max_tlp = cfg.max_tlp  # connectors_sdk TLPLevel enum
+        self._max_tlp = config.connector.max_tlp  # 'TLP:XXX' upper case
         self._errors = []
         self._successes = 0
 
@@ -75,7 +75,7 @@ class MetrasEnrichmentConnector:
         return entity_type in scopes
 
     def _get_tlp_level(self, stix_entity) -> str | None:
-        """Return the most restrictive TLP level (lowercase) on the entity, or None."""
+        """Return the most restrictive TLP level ('TLP:XXX') on the entity, or None."""
         markings = (stix_entity or {}).get("object_marking_refs") or []
         highest, result = -1, None
         for m in markings:
@@ -87,8 +87,9 @@ class MetrasEnrichmentConnector:
         return result
 
     def _tlp_allowed(self, level: str) -> bool:
-        max_level = self._max_tlp.value  # TLPLevel enum -> lowercase value
-        return self._LEVEL_ORDER.get(level, 0) <= self._LEVEL_ORDER.get(max_level, 4)
+        return self._LEVEL_ORDER.get(level, 0) <= self._LEVEL_ORDER.get(
+            self._max_tlp, 4
+        )
 
     def _safe(self, func: Callable, *args, **kwargs) -> Any:
         try:
@@ -139,12 +140,12 @@ class MetrasEnrichmentConnector:
             if level and not self._tlp_allowed(level):
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Skipped: TLP exceeds max",
-                    meta={"tlp": level, "max": self._max_tlp.value},
+                    meta={"tlp": level, "max": self._max_tlp},
                 )
                 self._send_bundle(stix_objects)
                 return (
                     f"[CONNECTOR] Skipped: TLP {level} exceeds max "
-                    f"{self._max_tlp.value}; original bundle returned"
+                    f"{self._max_tlp}; original bundle returned"
                 )
 
             if not self.entity_in_scope(obs_type):

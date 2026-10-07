@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr, field_validator
@@ -79,19 +80,14 @@ class LamisNetworkConfig(BaseConfigModel):
         description="Default TLP marking applied when observable carries no explicit marking.",
         default="TLP:CLEAR",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level of observables this connector will enrich. Observables with higher TLP are skipped.",
-        default="TLP:AMBER",
     )
 
-    @field_validator("default_tlp", "max_tlp", mode="before")
+    @field_validator("default_tlp", mode="before")
     @classmethod
     def _normalize_tlp_field(cls, value: Any) -> str:
         if not value or not isinstance(value, str):

@@ -154,13 +154,13 @@ class LamisNetworkConnector:
         self.add_relationships = self.config.lamis_network.add_relationships
 
         self.default_tlp = _normalize_tlp(self.config.lamis_network.default_tlp)
-        self.max_tlp = _normalize_tlp(self.config.lamis_network.max_tlp)
+        self.max_tlp = self.config.connector.max_tlp
         if self.default_tlp not in _TLP_MAP or self.max_tlp not in _TLP_MAP:
             raise ValueError(
-                "LAMIS_NETWORK_DEFAULT_TLP and MAX_TLP must be known TLP levels"
+                "LAMIS_NETWORK_DEFAULT_TLP and CONNECTOR_MAX_TLP must be known TLP levels"
             )
         if _TLP_RANK[self.default_tlp] > _TLP_RANK[self.max_tlp]:
-            raise ValueError("LAMIS_NETWORK_DEFAULT_TLP exceeds MAX_TLP")
+            raise ValueError("LAMIS_NETWORK_DEFAULT_TLP exceeds CONNECTOR_MAX_TLP")
 
         self.author = Identity(
             id=PyctiIdentity.generate_id("Lamis Network", "organization"),

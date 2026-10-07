@@ -39,7 +39,7 @@ class ShodanConnector:
         self.helper = helper
 
         self.token = self.config.shodan.token.get_secret_value()
-        self.max_tlp = self.config.shodan.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
