@@ -671,9 +671,7 @@ class MispIntelConnector:
                 if event_type == "update":
                     # The stream context is not available anymore when the
                     # worker processes the item, so compute removals now
-                    removed = get_removed_container_values(
-                        data, payload.get("context")
-                    )
+                    removed = get_removed_container_values(data, payload.get("context"))
                     if removed:
                         item += (removed,)
                 try:
