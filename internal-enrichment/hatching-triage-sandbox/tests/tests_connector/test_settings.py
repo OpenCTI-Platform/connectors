@@ -17,6 +17,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "Artifact, Url",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hatching_triage_sandbox": {
                     "token": "test-api-token",
@@ -26,7 +27,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "botnet_color": "#f79e00",
                     "campaign_color": "#7a01e5",
                     "tag_color": "#54483b",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -125,3 +125,32 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         f"Expected a validation error for field {field_name!r}, "
         f"got errors for: {error_fields}"
     )
+
+
+def test_settings_should_migrate_deprecated_hatching_triage_sandbox_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `hatching_triage_sandbox.max_tlp` (`HATCHING_TRIAGE_SANDBOX_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the hatching_triage_sandbox section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "hatching_triage_sandbox": {
+                        "token": "test-api-token",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="hatching_triage_sandbox.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

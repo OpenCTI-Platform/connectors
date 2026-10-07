@@ -46,7 +46,7 @@ def _make_settings() -> MagicMock:
     settings = MagicMock()
     settings.vulners.api_key = SecretStr("test-api-key")
     settings.vulners.api_base_url = "https://vulners.com"
-    settings.vulners.max_tlp_level = "TLP:AMBER"
+    settings.connector.max_tlp = "TLP:AMBER"
     return settings
 
 

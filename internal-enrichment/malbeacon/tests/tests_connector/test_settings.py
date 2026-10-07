@@ -17,12 +17,12 @@ from settings import ConnectorSettings
                     "scope": "IPv4-Addr,IPv6-Addr,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "malbeacon": {
                     "api_key": "test-api-key",
                     "api_base_url": "https://api.malbeacon.com/v1/",
                     "indicator_score_level": 50,
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -126,3 +126,28 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         f"Expected a validation error for field {field_name!r}, "
         f"got errors for: {error_fields}"
     )
+
+
+def test_settings_should_migrate_deprecated_malbeacon_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `malbeacon.max_tlp` (`MALBEACON_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the malbeacon section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "malbeacon": {"api_key": "test-api-key", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="malbeacon.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

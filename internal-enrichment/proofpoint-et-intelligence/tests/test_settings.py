@@ -26,11 +26,11 @@ class FakeConnectorSettings(ConnectorSettings):
                     "name": "ProofPoint ET Intelligence",
                     "scope": "IPv4-Addr,Domain-Name,StixFile",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER+STRICT",
                 },
                 "proofpoint_et_intelligence": {
                     "api_base_url": "https://api.emergingthreats.net/v1/",
                     "api_key": "my-secret-api-key",
-                    "max_tlp": "TLP:AMBER+STRICT",
                     "import_last_seen_time_window": "P30D",
                 },
             },
@@ -92,3 +92,31 @@ def test_settings_should_raise_when_invalid_input(config_id, config_dict):
     FakeConnectorSettings._test_config = config_dict
     with pytest.raises(ConfigValidationError, match="Error validating configuration"):
         FakeConnectorSettings()
+
+
+def test_settings_should_migrate_deprecated_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `proofpoint_et_intelligence.max_tlp` (`PROOFPOINT_ET_INTELLIGENCE_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+    FakeConnectorSettings._test_config = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "proofpoint_et_intelligence": {"api_key": "key", "max_tlp": "TLP:RED"},
+    }
+    with pytest.warns(UserWarning, match="proofpoint_et_intelligence.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:RED"
+
+
+def test_settings_should_default_connector_max_tlp_to_amber_strict():
+    """
+    Test that `connector.max_tlp` keeps the connector's historical default, `TLP:AMBER+STRICT`.
+    """
+    FakeConnectorSettings._test_config = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "proofpoint_et_intelligence": {"api_key": "key"},
+    }
+    settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:AMBER+STRICT"

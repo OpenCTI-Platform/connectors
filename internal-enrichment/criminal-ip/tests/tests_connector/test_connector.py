@@ -22,10 +22,10 @@ def _make_settings(overrides: dict = None):
             "scope": "IPv4-Addr, Domain-Name",
             "log_level": "error",
             "auto": True,
+            "max_tlp": "TLP:AMBER",
         },
         "criminal_ip": {
             "token": "my-secret-api-key",
-            "max_tlp": "TLP:AMBER",
         },
     }
     if overrides:

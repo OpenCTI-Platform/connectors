@@ -1,8 +1,8 @@
 from typing import Any
 
 import pytest
+from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
-from rflib import ConnectorSettings
 
 
 @pytest.mark.parametrize(
@@ -10,38 +10,37 @@ from rflib import ConnectorSettings
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "ipv4-addr, ipv6-addr, domain-name, url, stixfile, vulnerability",
+                    "scope": "Report",
                     "log_level": "error",
                     "auto": True,
                     "max_tlp": "TLP:CLEAR",
                 },
-                "recorded_future": {
-                    "token": "SecretStr",
-                    "create_indicator_threshold": 42,
-                    "vulnerability_enrichment_optional_fields": [
-                        "aiInsights",
-                        "cpe",
-                        "risk",
-                    ],
+                "ioc_extractor": {
+                    "extract_hashes": True,
+                    "extract_ipv4": True,
+                    "extract_ipv6": False,
+                    "extract_domains": True,
+                    "extract_urls": False,
+                    "skip_private_ips": True,
                 },
             },
             id="full_valid_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "recorded_future": {
-                    "token": "SecretStr",
-                    "create_indicator_threshold": 42,
-                    "vulnerability_enrichment_optional_fields": [
-                        "aiInsights",
-                        "cpe",
-                        "risk",
-                    ],
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -57,6 +56,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     :param settings_dict: The dict to use as `ConnectorSettings` input
     """
 
+    # Given: Valid input
     class FakeConnectorSettings(ConnectorSettings):
         """
         Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -67,61 +67,49 @@ def test_settings_should_accept_valid_input(settings_dict):
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
 
+    # When: We create an ConnectorSettings instance with valid input data
     settings = FakeConnectorSettings()
+
+    # Then: The ConnectorSettings instance should be created successfully
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.recorded_future, BaseConfigModel) is True
+    assert isinstance(settings.ioc_extractor, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
-            {
-                "opencti": {"url": "http://localhost:8080"},
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "ipv4-addr, ipv6-addr, domain-name, url, stixfile, vulnerability",
-                    "log_level": "error",
-                    "max_tlp": "TLP:CLEAR",
-                },
-                "recorded_future": {
-                    "token": "SecretStr",
-                    "create_indicator_threshold": 42,
-                    "vulnerability_enrichment_optional_fields": [
-                        "aiInsights",
-                        "cpe",
-                        "risk",
-                    ],
-                },
-            },
-            "opencti.token",
-            id="missing_opencti_token",
+            {},
+            "settings",
+            id="empty_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": 123456,
-                    "name": "Test Connector",
-                    "scope": "ipv4-addr, ipv6-addr, domain-name, url, stixfile, vulnerability",
-                    "log_level": "error",
-                    "max_tlp": "TLP:CLEAR",
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
                 },
-                "recorded_future": {
-                    "token": "SecretStr",
-                    "create_indicator_threshold": 42,
-                    "vulnerability_enrichment_optional_fields": [
-                        "aiInsights",
-                        "cpe",
-                        "risk",
-                    ],
+                "connector": {
+                    "id": "connector-id",
                 },
             },
-            "connector.id",
-            id="invalid_connector_id",
+            "opencti.url",
+            id="invalid_opencti_url",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "max_tlp": "TLP:PURPLE",
+                },
+            },
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -149,29 +137,26 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     assert str("Error validating configuration") in str(err)
 
 
-def test_settings_should_migrate_deprecated_info_max_tlp_to_connector_max_tlp():
+def test_settings_should_migrate_deprecated_ioc_extractor_max_tlp_to_connector_max_tlp():
     """
-    Test that the deprecated `recorded_future.info_max_tlp` (`RECORDED_FUTURE_INFO_MAX_TLP`)
-    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    Test that the deprecated `ioc_extractor.max_tlp` (`IOC_EXTRACTOR_MAX_TLP`) is migrated
+    to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
     """
 
-    # Given: A config dict that still sets info_max_tlp in the recorded_future section
+    # Given: A config dict that still sets max_tlp in the ioc_extractor section
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(
                 {
                     "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                    "connector": {},
-                    "recorded_future": {
-                        "token": "SecretStr",
-                        "info_max_tlp": "TLP:RED",
-                    },
+                    "connector": {"id": "connector-id"},
+                    "ioc_extractor": {"max_tlp": "TLP:RED"},
                 }
             )
 
     # When: The settings are loaded
-    with pytest.warns(UserWarning, match="recorded_future.info_max_tlp"):
+    with pytest.warns(UserWarning, match="ioc_extractor.max_tlp"):
         settings = FakeConnectorSettings()
 
     # Then: The value is used as connector.max_tlp

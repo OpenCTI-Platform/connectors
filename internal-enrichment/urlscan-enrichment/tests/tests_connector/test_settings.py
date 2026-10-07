@@ -20,13 +20,13 @@ from urlscan_enrichment_services import ConnectorSettings
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "urlscan_enrichment": {
                     "api_key": "test-api-key",
                     "import_screenshot": True,
                     "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "TLP:CLEAR",
                     "create_indicator": True,
                 },
             },
@@ -88,13 +88,13 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "urlscan_enrichment": {
                     "api_key": "test-api-key",
                     "import_screenshot": True,
                     "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "TLP:CLEAR",
                     "create_indicator": True,
                 },
             },
@@ -112,18 +112,18 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "any str",
                 },
                 "urlscan_enrichment": {
                     "api_key": "test-api-key",
                     "import_screenshot": True,
                     "visibility": "public",
                     "search_filtered_by_date": "str",
-                    "max_tlp": "any str",
                     "create_indicator": True,
                 },
             },
-            "urlscan_enrichment.max_tlp",
-            id="invalid_urlscan_enrichment_max_tlp",
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -149,3 +149,32 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_urlscan_enrichment_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `urlscan_enrichment.max_tlp` (`URLSCAN_ENRICHMENT_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the urlscan_enrichment section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "urlscan_enrichment": {
+                        "api_key": "test-api-key",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="urlscan_enrichment.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

@@ -287,7 +287,7 @@ def test_connector_check_max_tlp(mock_helper_cls):
         "TLP:AMBER",
     )
 
-    with patch.dict("os.environ", {"LAMIS_NETWORK_MAX_TLP": "TLP:AMBER"}):
+    with patch.dict("os.environ", {"CONNECTOR_MAX_TLP": "TLP:AMBER"}):
         connector = LamisNetworkConnector()
 
         obs_clear = {
@@ -2788,7 +2788,9 @@ def test_revoke_indicator_preserves_valid_from_from_opencti_api(mock_helper_cls)
 
 def test_description_asn_prefix_not_doubled():
     """[P3] R14: ASN description formatting strips 'AS' prefix and avoids 'ASAS13335'."""
-    connector = LamisNetworkConnector(config=MagicMock(), helper=MagicMock())
+    config = MagicMock()
+    config.connector.max_tlp = "TLP:AMBER"
+    connector = LamisNetworkConnector(config=config, helper=MagicMock())
 
     # Case 1: String with 'AS' prefix
     desc1 = connector._format_description(

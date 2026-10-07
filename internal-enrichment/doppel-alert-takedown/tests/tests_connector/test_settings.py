@@ -21,6 +21,7 @@ from pydantic import ValidationError
                     "scope": "Url,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
@@ -29,7 +30,6 @@ from pydantic import ValidationError
                     "organization_code": "ACM",
                     "tags": ["test", "poc"],
                     "takedown_comment": "Confirmed phishing.",
-                    "max_tlp": "TLP:CLEAR",
                 },
             },
             id="full_valid_settings_dict",
@@ -88,6 +88,66 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.doppel_alert_takedown, BaseConfigModel) is True
     if settings_dict["doppel_alert_takedown"].get("organization_code"):
         assert settings.doppel_alert_takedown.organization_code == "ACM"
+
+
+def test_settings_should_default_max_tlp_to_red():
+    """The connector keeps its historical `TLP:RED` default for `connector.max_tlp`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name",
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:RED"
+
+
+def test_settings_should_migrate_deprecated_doppel_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `doppel_alert_takedown.max_tlp` (`DOPPEL_ALERT_TAKEDOWN_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name",
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                        # Not the default (TLP:RED), so the migrated value is observable
+                        "max_tlp": "TLP:GREEN",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="doppel_alert_takedown.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:GREEN"
 
 
 def test_settings_should_split_comma_separated_tags():

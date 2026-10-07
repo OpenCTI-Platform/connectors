@@ -40,13 +40,13 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "urlscan_enrichment": {
                     "api_key": "test-api-key",
                     "import_screenshot": True,
                     "visibility": "public",
                     "search_filtered_by_date": ">now-1y",
-                    "max_tlp": "TLP:AMBER",
                     "create_indicator": True,
                 },
             }

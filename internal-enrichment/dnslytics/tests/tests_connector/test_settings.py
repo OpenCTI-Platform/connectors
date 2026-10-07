@@ -39,11 +39,11 @@ COMPOSER = {
                     "scope": "Indicator",
                     "log_level": "error",
                     "auto": False,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "dnslytics": {
                     "api_key": "test-api-key",
                     "resolve_hosting": False,
-                    "max_tlp_level": "amber",
                     "output_tlp_level": "green",
                 },
             },
@@ -68,9 +68,27 @@ def test_settings_defaults_follow_the_rfc():
     assert settings.connector.scope == ["Indicator"]
     assert settings.connector.auto is False
     assert settings.dnslytics.resolve_hosting is True
-    assert settings.dnslytics.max_tlp_level == "green"
+    assert settings.connector.max_tlp == "TLP:GREEN"
     assert settings.dnslytics.output_tlp_level == "clear"
     assert str(settings.dnslytics.api_base_url) == "https://api.dnslytics.net/"
+
+
+def test_max_tlp_default_is_green():
+    settings = fake_settings(MINIMAL)
+
+    assert settings.connector.max_tlp == "TLP:GREEN"
+
+
+def test_deprecated_dnslytics_max_tlp_level_is_migrated_to_connector_max_tlp():
+    settings_dict = {
+        **MINIMAL,
+        "dnslytics": {"api_key": "test-api-key", "max_tlp_level": "red"},
+    }
+
+    with pytest.warns(UserWarning, match="dnslytics.max_tlp_level"):
+        settings = fake_settings(settings_dict)
+
+    assert settings.connector.max_tlp == "TLP:RED"
 
 
 def test_connector_id_has_a_stable_uuid_default():
@@ -99,8 +117,8 @@ def test_api_key_is_never_shown():
             id="missing_api_key",
         ),
         pytest.param(
-            {**MINIMAL, "dnslytics": {"api_key": "k", "max_tlp_level": "purple"}},
-            id="invalid_max_tlp_level",
+            {**MINIMAL, "connector": {"id": "connector-id", "max_tlp": "purple"}},
+            id="invalid_max_tlp",
         ),
         pytest.param(
             {**MINIMAL, "opencti": {"url": "http://localhost:PORT", "token": "t"}},

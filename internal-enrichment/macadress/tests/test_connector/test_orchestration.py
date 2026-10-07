@@ -47,12 +47,11 @@ def _connector(max_tlp="TLP:AMBER", create_vendor_identity=True):
         macadress=SimpleNamespace(
             api_base_url="http://x",
             api_key=SecretStr("mk_k"),
-            max_tlp=max_tlp,
             default_score=30,
             create_note=True,
             create_vendor_identity=create_vendor_identity,
         ),
-        connector=SimpleNamespace(scope=["Mac-Addr"]),
+        connector=SimpleNamespace(scope=["Mac-Addr"], max_tlp=max_tlp),
     )
     helper = MagicMock()
     helper.stix2_create_bundle.return_value = "{}"

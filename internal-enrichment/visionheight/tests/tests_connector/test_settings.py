@@ -21,11 +21,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "visionheight": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             id="full_valid_settings_dict",
@@ -94,11 +94,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "visionheight": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "opencti.url",
@@ -151,14 +151,15 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
+                "connector": {
+                    "max_tlp": "purple",  # not a valid TLP level
+                },
                 "visionheight": {
                     "api_key": "test-api-key",
-                    "max_tlp_level": "purple",  # not a valid TLP level
                 },
             },
-            "visionheight.max_tlp_level",
-            id="invalid_visionheight_max_tlp_level",
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -289,3 +290,59 @@ def test_settings_should_keep_api_key_secret():
 
     assert settings.visionheight.api_key.get_secret_value() == "super-secret-api-key"
     assert "super-secret-api-key" not in str(settings.visionheight)
+
+
+def test_settings_should_default_connector_max_tlp_to_amber_strict():
+    """
+    Test that `connector.max_tlp` (`CONNECTOR_MAX_TLP`) keeps the connector's historical
+    default, `TLP:AMBER+STRICT`, instead of the `TLP:AMBER` default of `connectors-sdk`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:AMBER+STRICT"
+
+
+def test_settings_should_migrate_deprecated_visionheight_max_tlp_level_to_connector_max_tlp():
+    """
+    Test that the deprecated `visionheight.max_tlp_level` (`VISIONHEIGHT_MAX_TLP_LEVEL`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`), in its canonical form.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                        "max_tlp_level": "red",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="visionheight.max_tlp_level"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:RED"
