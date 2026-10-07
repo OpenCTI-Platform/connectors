@@ -9,8 +9,8 @@ connector:
   scope: 'IPv4-Addr,IPv6-Addr,Domain-Name'
   auto: true
   log_level: 'info'
+  max_tlp: 'TLP:AMBER'
 
 pure_signal_scout:
   api_url: 'https://taxii.cymru.com/api/scout/'
   api_token: 'Changeme'
-  max_tlp: 'TLP:AMBER'

@@ -8,8 +8,8 @@ opencti:
 #   scope: 'StixFile,Artifact,Url,Domain-Name,Hostname'
 #   auto: false # Enable/disable auto-enrichment of observables
 #   log_level: 'error'
+#   max_tlp: 'TLP:AMBER'
 
 hybrid_analysis_sandbox:
   token: 'ChangeMe'
 #  environment_id: '110'
-#  max_tlp: 'TLP:AMBER'

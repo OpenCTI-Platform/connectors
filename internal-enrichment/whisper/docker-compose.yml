@@ -9,7 +9,7 @@ services:
       #- CONNECTOR_NAME=Whisper
       #- CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Autonomous-System
       #- CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
+      #- CONNECTOR_MAX_TLP=TLP:AMBER+STRICT
       - WHISPER_API_URL=ChangeMe
       - WHISPER_API_KEY=ChangeMe
-      #- WHISPER_MAX_TLP=TLP:AMBER
     restart: always

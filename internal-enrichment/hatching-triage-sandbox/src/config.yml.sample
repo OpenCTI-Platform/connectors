@@ -8,6 +8,7 @@ connector:
   scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables
   log_level: 'info'
+  max_tlp: 'TLP:AMBER'
 
 hatching_triage_sandbox:
   token: 'ChangeMe' # See https://tria.ge/account
@@ -17,4 +18,3 @@ hatching_triage_sandbox:
   botnet_color: '#f79e00' # Label color for botnet
   campaign_color: '#7a01e5' # Label color for campaign
   tag_color: '#54483b' # Label color for all other labels
-  max_tlp: 'TLP:AMBER'

@@ -9,6 +9,7 @@ services:
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_MAX_TLP=TLP:AMBER
       - HATCHING_TRIAGE_SANDBOX_TOKEN=ChangeMe # See https://tria.ge/account
       #- HATCHING_TRIAGE_SANDBOX_BASE_URL=https://tria.ge/api # Public URL, see https://tria.ge/docs/
       #- HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS=true # If true, get existing analysis if any
@@ -16,5 +17,4 @@ services:
       #- HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR=#f79e00 # Label color for botnet
       #- HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR=#7a01e5 # Label color for campaign
       #- HATCHING_TRIAGE_SANDBOX_TAG_COLOR=#54483b # Label color for all other labels
-      #- HATCHING_TRIAGE_SANDBOX_MAX_TLP=TLP:AMBER
     restart: always

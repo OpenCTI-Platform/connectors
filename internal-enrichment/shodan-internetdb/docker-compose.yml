@@ -12,6 +12,6 @@ services:
       #- CONNECTOR_SCOPE=IPv4-Addr # Optional (default: 'IPv4-Addr')
       #- CONNECTOR_AUTO=true # Optional (default: false)
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
-      #- SHODAN_MAX_TLP=TLP:CLEAR # Optional (default: 'TLP:WHITE')
+      #- CONNECTOR_MAX_TLP=TLP:WHITE # Optional (default: 'TLP:WHITE')
       #- SHODAN_SSL_VERIFY=true # Optional (default: true)
     restart: always

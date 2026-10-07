@@ -9,11 +9,11 @@ connector:
   scope: 'ipv4-addr'
   log_level: 'info'
   auto: false
+  max_tlp: 'TLP:AMBER'
 
 modat:
   api_base_url: 'https://api.magnify.modat.io'
   api_key: 'ChangeMe'
-  max_tlp: 'TLP:AMBER'
   default_score: 50
   create_note: true
   include_cves: false
