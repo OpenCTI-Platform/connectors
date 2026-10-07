@@ -29,6 +29,48 @@ class Connector:
         )
         return stix_objects
 
+    @staticmethod
+    def _score_stix_object(stix_object: dict[str, Any]) -> tuple[int, str]:
+        meaningful_values = [
+            value
+            for key, value in stix_object.items()
+            if key not in {"id", "type", "spec_version"}
+            and value not in (None, "", [], {})
+        ]
+        return (len(meaningful_values), stix_object.get("modified", ""))
+
+    # Labels are not unioned by the generic scoring above: the same indicator
+    # can be reported by ThreatMatch through both a profile export (carrying
+    # rich context labels, e.g. TTPs/countries/malware family) and the TAXII
+    # IOC feed (carrying different, e.g. alert-context, labels). Picking a
+    # single "best" object by field count would silently drop the other
+    # source's labels, so they are merged across all occurrences instead.
+    @staticmethod
+    def _merge_labels(stix_objects: list[dict[str, Any]]) -> list[str]:
+        merged: list[str] = []
+        for stix_object in stix_objects:
+            for label in stix_object.get("labels") or []:
+                if label not in merged:
+                    merged.append(label)
+        return merged
+
+    def _deduplicate_processed_objects(
+        self, processed_objects: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for stix_object in processed_objects:
+            grouped.setdefault(stix_object["id"], []).append(stix_object)
+
+        deduplicated = []
+        for stix_objects in grouped.values():
+            best = max(stix_objects, key=self._score_stix_object)
+            if len(stix_objects) > 1:
+                merged_labels = self._merge_labels(stix_objects)
+                if merged_labels:
+                    best = {**best, "labels": merged_labels}
+            deduplicated.append(best)
+        return deduplicated
+
     def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
         id_by_group = {group["name"]: group["id"] for group in taxii_groups}
         if all_content_group_id := id_by_group.get("All content"):
@@ -142,11 +184,13 @@ class Connector:
                 "ThreatMatch run @ "
                 + self.start_datetime.isoformat(timespec="seconds"),
             )
-            processed_stix_object = [
-                processed_stix_object
-                for stix_object in stix_objects
-                for processed_stix_object in self.converter.process(stix_object)
-            ]
+            processed_stix_object = self._deduplicate_processed_objects(
+                [
+                    processed_stix_object
+                    for stix_object in stix_objects
+                    for processed_stix_object in self.converter.process(stix_object)
+                ]
+            )
             bundle = self.helper.stix2_create_bundle(
                 items=[self.converter.author, self.converter.tlp_marking]
                 + processed_stix_object
