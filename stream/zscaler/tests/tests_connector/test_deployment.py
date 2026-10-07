@@ -866,10 +866,28 @@ def test_start_starts_the_write_back_before_listening(connector):
     order = []
     connector.assurance.start.side_effect = lambda: order.append("assurance")
     connector.helper.listen_stream.side_effect = lambda _: order.append("stream")
+    connector.pending_withdrawals.start_retries = MagicMock(
+        side_effect=lambda _withdraw: order.append("retries")
+    )
 
     connector.start()
 
-    assert order == ["assurance", "stream"]
+    assert order == ["assurance", "retries", "stream"]
+
+
+def test_a_former_domain_a_delete_left_is_removed_by_the_retries(connector):
+    """A deleted indicator gets no later event: the periodic retries remove the
+    former domain its delete could not remove."""
+    keep_former_domain(connector)
+    zscaler = FakeZscaler(urls=["former.example"]).install(connector)
+    connector.pending_withdrawals.start_retries = MagicMock()
+    connector.start()
+    retry = connector.pending_withdrawals.start_retries.call_args.args[0]
+
+    connector.pending_withdrawals.retry_all(retry)
+
+    assert zscaler.urls == []
+    assert kept_former_domains(connector) == []
 
 
 def test_push_indicator(connector):

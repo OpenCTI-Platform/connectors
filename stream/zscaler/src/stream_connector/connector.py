@@ -851,4 +851,9 @@ class ZscalerConnector:
         self.helper.connector_logger.info(msg)
         if self.assurance is not None:
             self.assurance.start()
+        # Former domains Zscaler refused to remove are retried, also once the
+        # indicator is deleted.
+        self.pending_withdrawals.start_retries(
+            lambda indicator_id, domain: self.withdraw_domain(domain, [indicator_id])
+        )
         self.helper.listen_stream(self._process_message)
