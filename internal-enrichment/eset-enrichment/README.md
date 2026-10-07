@@ -201,4 +201,4 @@ Log output includes:
 - **Duplicate Prevention**: Reports with existing PDF attachments are skipped
 - **API Documentation**: [ESET Threat Intelligence Portal Help](https://help.eset.com/eti_portal/en-US/)
 - **Credential Creation**: [ETI Access Credentials Guide](https://help.eset.com/eti_portal/en-US/access_credentials.html)
-- **Playbook Support**: This connector supports OpenCTI playbook automation
+- **Playbook Support**: This connector supports OpenCTI playbook automation. In a playbook, a report that is skipped (out of scope, not created by ESET, PDF already attached or no ETI portal link) is passed on unchanged.
