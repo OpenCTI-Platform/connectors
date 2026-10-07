@@ -25,7 +25,6 @@ def test_root_public_api_is_valid():
         "ExternalImportConnector",
         "ConnectorLogger",
         "BaseDataProcessor",
-        "WorkManager",
         "ListFromString",
         "BaseClientApi",
         "RateLimit",
