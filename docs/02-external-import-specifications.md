@@ -246,7 +246,7 @@ def collect(self) -> list:
         self.logger.info("First run of connector")
         since = self.settings.my_connector.import_since
     else:
-        self.logger.info("Connector last run", {"last_run": str(self.state.last_run)})
+        self.logger.info("Connector last run", meta={"last_run": str(self.state.last_run)})
         since = self.state.last_run
 
     return self.client.get_reports(since=since)
@@ -376,7 +376,7 @@ produce STIX, and `transform()` must not fetch from the network.
 def collect(self) -> list:
     """Fetch raw data from the external source. No STIX conversion here."""
     since = self.state.last_run or self.settings.my_connector.import_since
-    self.logger.info("Collecting intelligence", {"since": str(since)})
+    self.logger.info("Collecting intelligence", meta={"since": str(since)})
     return self.client.get_threat_data(since=since)
 
 
@@ -389,7 +389,7 @@ def transform(self, data: list) -> list[BaseIdentifiedObject]:
         except Exception as e:
             self.logger.warning(
                 "Failed to convert item, skipping",
-                {"item_id": item.get("id"), "error": str(e)},
+                meta={"item_id": item.get("id"), "error": str(e)},
             )
     if stix_objects:
         # Author and marking must be part of every bundle.
@@ -427,7 +427,7 @@ def transform(self, pages: Generator[list, None, None]) -> Generator[list, None,
         self.state.vulnerabilities_current_page = None
     except Exception as e:
         # Keep the last completed page so the next run resumes here.
-        self.logger.error("Pagination interrupted", {"error": str(e)})
+        self.logger.error("Pagination interrupted", meta={"error": str(e)})
         self.state.vulnerabilities_current_page = current_page
 ```
 
@@ -510,7 +510,7 @@ def transform(self, pages: Generator[list, None, None]) -> Generator[list, None,
         # Import finished cleanly — clear the resume marker.
         self.state.import_current_page = None
     except Exception as e:
-        self.logger.error("Import interrupted", {"page": current_page, "error": str(e)})
+        self.logger.error("Import interrupted", meta={"page": current_page, "error": str(e)})
         raise
 ```
 
@@ -956,7 +956,7 @@ def transform(self, data: list) -> list[BaseIdentifiedObject]:
             last_processed = item
         except Exception as e:
             # One bad item must not fail the whole run.
-            self.logger.warning("Failed to convert item, skipping", {"error": str(e)})
+            self.logger.warning("Failed to convert item, skipping", meta={"error": str(e)})
 
     if stix_objects and last_processed:
         # Checkpoint only from the last successfully converted item, so a failure
@@ -976,12 +976,12 @@ def collect(self) -> dict:
     try:
         data["primary"] = self.client.get_primary_feed()
     except Exception as e:
-        self.logger.error("Primary feed failed", {"error": str(e)})  # continue
+        self.logger.error("Primary feed failed", meta={"error": str(e)})  # continue
 
     try:
         data["secondary"] = self.client.get_secondary_feed()
     except Exception as e:
-        self.logger.error("Secondary feed failed", {"error": str(e)})
+        self.logger.error("Secondary feed failed", meta={"error": str(e)})
 
     return data
 
@@ -1035,14 +1035,14 @@ import time
 
 
 def transform(self, data: list) -> list[BaseIdentifiedObject]:
-    self.logger.info("Starting conversion", {"items": len(data)})
+    self.logger.info("Starting conversion", meta={"items": len(data)})
     start_time = time.time()
 
     stix_objects = [self._convert_item(item) for item in data]
 
     self.logger.info(
         "Conversion completed",
-        {
+        meta={
             "objects_collected": len(stix_objects),
             "duration_seconds": round(time.time() - start_time, 2),
         },
@@ -1207,7 +1207,7 @@ class ThreatsProcessor(BaseDataProcessor):
             or self.state.last_run
             or self.settings.my_connector.import_since
         )
-        self.logger.info("Collecting intelligence", {"since": str(since)})
+        self.logger.info("Collecting intelligence", meta={"since": str(since)})
         return self.client.get_threat_data(since=since)
 
     def transform(self, data: list) -> list[BaseIdentifiedObject]:
@@ -1221,7 +1221,7 @@ class ThreatsProcessor(BaseDataProcessor):
             except ThreatConversionError as e:
                 self.logger.warning(
                     "Failed to convert item, skipping",
-                    {"item_id": item.get("id"), "error": str(e)},
+                    meta={"item_id": item.get("id"), "error": str(e)},
                 )
 
         if stix_objects and last:
