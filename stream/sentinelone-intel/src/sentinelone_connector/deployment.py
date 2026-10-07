@@ -119,8 +119,8 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
     ) -> bool:
         """Tell whether SentinelOne holds the current value of the indicator.
 
-        The stream ignores updates: after the pattern of an indicator changed, the
-        IOCs created from it still hold the previous value. They never confirm the
+        When the stream could not replace the IOCs of an indicator whose pattern
+        changed, they still hold the previous value. They never confirm the
         deployment, which is pushed again with the current value (a `failed` one
         stays `failed`).
 

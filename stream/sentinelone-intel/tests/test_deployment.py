@@ -237,10 +237,118 @@ def test_unsupported_pattern_is_not_pushed_nor_reported(connector):
     connector.assurance.report_push_failed.assert_not_called()
 
 
-def test_update_and_foreign_events_are_ignored(connector):
-    connector.process_message(make_message("update", make_indicator()))
+def make_update_message(data, reverse_patch):
+    return SimpleNamespace(
+        event="update",
+        data=json.dumps({"data": data, "context": {"reverse_patch": reverse_patch}}),
+        id="1-0",
+    )
+
+
+FORMER_PATTERN = [
+    {"op": "replace", "path": "/pattern", "value": "[ipv4-addr:value = '192.0.2.1']"}
+]
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        make_message("update", make_indicator()),
+        make_update_message(
+            make_indicator(), [{"op": "replace", "path": "/name", "value": "x"}]
+        ),
+        make_message("create", {"type": "malware", "pattern_type": None}),
+    ],
+)
+def test_updates_keeping_the_pattern_and_foreign_events_are_ignored(connector, message):
+    connector.process_message(message)
+
+    connector.client.session.request.assert_not_called()
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_update_of_the_pattern_replaces_the_iocs_of_the_indicator(connector):
+    """SentinelOne only holds the former value: with a group in the scope, no
+    read-back repairs it, so the update replaces the IOCs and reports the push."""
+    connector.client.session.request.side_effect = [
+        mock_response(
+            {
+                "data": [
+                    {"uuid": "uuid-old", "externalId": STIX_ID},
+                    {"uuid": "uuid-other", "externalId": "other-source"},
+                ]
+            }
+        ),
+        mock_response({"data": {"affected": 1}}),
+        mock_response({"data": [{"uuid": "uuid-new"}]}),
+    ]
+    indicator = make_indicator()
+
+    connector.process_message(make_update_message(indicator, FORMER_PATTERN))
+
+    (deletion,) = calls_of(connector.client.session, "DELETE")
+    assert deletion.kwargs["json"]["filter"]["uuids"] == ["uuid-old"]
+    (creation,) = calls_of(connector.client.session, "POST")
+    assert creation.kwargs["json"]["bundle"] == {"objects": [indicator]}
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="uuid-new"
+    )
+
+
+def test_update_of_the_pattern_without_former_ioc_creates_the_indicator(connector):
+    connector.client.session.request.side_effect = [
+        mock_response({"data": []}),
+        mock_response({"data": [{"uuid": "uuid-new"}]}),
+    ]
+    indicator = make_indicator()
+
+    connector.process_message(make_update_message(indicator, FORMER_PATTERN))
+
+    assert calls_of(connector.client.session, "DELETE") == []
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="uuid-new"
+    )
+
+
+def test_update_whose_former_iocs_cannot_be_deleted_is_reported_failed(connector):
+    connector.client.session.request.return_value = mock_response(
+        status_code=500, text="boom"
+    )
+    indicator = make_indicator()
+
+    connector.process_message(make_update_message(indicator, FORMER_PATTERN))
+
+    assert calls_of(connector.client.session, "POST") == []
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, "SentinelOne refused the IOC update: server error"
+    )
+    connector.helper.connector_logger.warning.assert_called()
+
+
+@pytest.mark.parametrize(("former_iocs", "reported"), [(1, True), (0, False)])
+def test_update_to_an_unsupported_pattern_removes_the_former_iocs(
+    connector, former_iocs, reported
+):
+    """Removed once its former IOCs are deleted; never pushed without any."""
+    connector.client.session.request.side_effect = [
+        mock_response(
+            {"data": [{"uuid": "uuid-old", "externalId": STIX_ID}][:former_iocs]}
+        ),
+        mock_response({"data": {"affected": 1}}),
+    ]
+    indicator = make_indicator()
+    indicator["pattern"] = "[process:name = 'evil.exe']"
+
+    connector.process_message(make_update_message(indicator, FORMER_PATTERN))
+
+    assert calls_of(connector.client.session, "POST") == []
+    assert connector.assurance.report_removed.called is reported
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_update_of_an_indicator_without_stix_id_reads_nothing(connector):
     connector.process_message(
-        make_message("create", {"type": "malware", "pattern_type": None})
+        make_update_message(make_indicator(stix_id="not-a-stix-id"), FORMER_PATTERN)
     )
 
     connector.client.session.request.assert_not_called()
@@ -715,7 +823,7 @@ def test_adapter_reads_a_blank_expiry_as_none(connector):
 
 
 def test_adapter_completeness_requires_the_current_value(connector):
-    """The stream ignores updates: an IOC of an earlier pattern never confirms."""
+    """An IOC of an earlier pattern (replacement failed) never confirms."""
     adapter = SentinelOneDeploymentAdapter(connector)
     current = VendorIndicator(
         indicator_id=STIX_ID, external_id="uuid-2", value="198.51.100.7"

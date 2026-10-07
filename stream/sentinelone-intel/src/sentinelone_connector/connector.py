@@ -18,6 +18,9 @@ PLATFORM_NAME = "SentinelOne"
 PUSH_ACTION = "IOC creation"
 """What SentinelOne is asked to do when an indicator is pushed."""
 
+UPDATE_ACTION = "IOC update"
+"""What SentinelOne is asked to do when the pattern of an indicator changes."""
+
 
 def failure_reason(error: SentinelOneApiError) -> str:
     """Return the reason OpenCTI shows for an indicator SentinelOne did not take.
@@ -32,6 +35,19 @@ def failure_reason(error: SentinelOneApiError) -> str:
 def _is_stix_indicator_id(value: Any) -> bool:
     """Whether a value is the STIX id of an indicator (the external id of its IOCs)."""
     return isinstance(value, str) and value.startswith(STIX_INDICATOR_PREFIX)
+
+
+def _pattern_changed(context: Any) -> bool:
+    """Whether an update event changed the pattern of the indicator.
+
+    :param context: The context of the update event: its reverse patch holds the
+        former value of every field the update changed.
+    """
+    reverse_patch = context.get("reverse_patch") if isinstance(context, dict) else None
+    return isinstance(reverse_patch, list) and any(
+        isinstance(patch, dict) and patch.get("path") == "/pattern"
+        for patch in reverse_patch
+    )
 
 
 class SentinelOneIntelConnector:
@@ -51,14 +67,16 @@ class SentinelOneIntelConnector:
         """
         Main process if connector successfully works.
         Processes incoming steam messages and filters for the creation
-        of Stix Indicators and creates them in SentinelOne, and for their
-        deletion to delete the IOCs created from them
+        of Stix Indicators and creates them in SentinelOne, for the update
+        of their pattern to replace the IOCs created from them, and for their
+        deletion to delete these IOCs
 
         :param msg: Message event from stream containing event data
         :return: None
         """
         try:
-            data = json.loads(msg.data)["data"]
+            message = json.loads(msg.data)
+            data = message["data"]
         except Exception as e:
             raise ValueError(f"Cannot process the message: {e}")
 
@@ -74,6 +92,8 @@ class SentinelOneIntelConnector:
                         {"Indicator ID": indicator_id},
                     )
                 self._create_and_report(data)
+            elif msg.event == "update" and _pattern_changed(message.get("context")):
+                self._replace_and_report(data)
             elif msg.event == "delete":
                 self._delete_and_report(data)
 
@@ -183,6 +203,47 @@ class SentinelOneIntelConnector:
             return
         if self.assurance is not None:
             self.assurance.report_removed(data)
+
+    def _replace_and_report(self, data: dict[str, Any]) -> None:
+        """
+        Replace the IOCs of an indicator whose pattern changed: SentinelOne IOCs hold
+        one value each, and no read-back repairs a scope with a group. The IOCs of the
+        indicator are deleted, then the current pattern is created and reported like a
+        create (`deployed` or `failed`).
+
+        A failed deletion is reported `failed` (the former IOCs may remain). A pattern
+        SentinelOne does not support is reported `removed` once the former IOCs are
+        deleted, and not reported when none existed (never pushed, so it has no
+        deployment). Nothing is done for an id that is not a STIX indicator id.
+        """
+        if not _is_stix_indicator_id(data.get("id")):
+            return
+        try:
+            deleted = self.delete_indicator(data)
+        except SentinelOneApiError as err:
+            self.helper.connector_logger.warning(
+                "[UPDATE] Failed to delete the former IOCs of the Indicator from "
+                "SentinelOne",
+                meta={"indicator_id": data.get("id"), "error": str(err)},
+            )
+            if self.assurance is not None:
+                self.assurance.report_push_failed(
+                    data,
+                    deployment_failure_reason(
+                        PLATFORM_NAME, UPDATE_ACTION, err.status_code
+                    ),
+                )
+            return
+        if not self.client.supports_pattern(data.get("pattern")):
+            if deleted:
+                self.helper.connector_logger.info(
+                    "[UPDATE] Pattern no longer supported by SentinelOne, IOCs removed",
+                    meta={"indicator_id": data.get("id")},
+                )
+                if self.assurance is not None:
+                    self.assurance.report_removed(data)
+            return
+        self._create_and_report(data)
 
     def run(self) -> None:
         """

@@ -190,8 +190,9 @@ Alongside this, the connector is only able to consume basic **single-expression*
 Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
 
 When an Indicator is deleted from the stream (deleted in OpenCTI or no longer matching the stream filters), the IOCs of
-the connector's scope whose external id is the STIX id of the Indicator are deleted from SentinelOne. Update events are
-not pushed again.
+the connector's scope whose external id is the STIX id of the Indicator are deleted from SentinelOne. An update event
+that changes the pattern replaces these IOCs: they are deleted, then the current pattern is created. Other update events
+change nothing in SentinelOne.
 
 ### Dissemination assurance (deployment write-back)
 
@@ -204,9 +205,10 @@ exist).
 | Indicator created in SentinelOne          | `deployed`, with the `uuid` of the first IOC returned by SentinelOne as external id (when returned)           |
 | Indicator rejected by SentinelOne         | `failed`, with a short reason such as "SentinelOne refused the IOC creation: permission denied" (the SentinelOne response is written to the connector log) |
 | Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
+| Update event changing the pattern         | The former IOCs are deleted, then the indicator is created and reported like a create (`deployed` or `failed`); `failed` when the former IOCs cannot be deleted; `removed` when the new pattern is not supported and former IOCs were deleted |
 | Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when one of them has no `uuid` or the lookup fails) |
 | Delete event, no IOC of the indicator     | `removed`: the lookup completed and no IOC carries the STIX id of the indicator, so it is already absent (nothing is reported for an unsupported pattern, never pushed) |
-| Reconciliation, indicator present         | `active` when an IOC holds the value of the current pattern; IOCs of an earlier pattern (the stream ignores updates) do not confirm it: the indicator is pushed again, a `failed` one stays `failed` |
+| Reconciliation, indicator present         | `active` when an IOC holds the value of the current pattern; IOCs of an earlier pattern (an update whose replacement failed) do not confirm it: the indicator is pushed again, a `failed` one stays `failed` |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator the read-back still finds in SentinelOne is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from SentinelOne and reported `removed`    |
@@ -222,7 +224,8 @@ exist).
   partial listing.
 - **Scope with a group**: the Threat Intelligence IOCs API lists IOCs by account or site only, so the IOCs of a group
   cannot be read back apart from those of the other groups of its site or account. When `SENTINELONE_INTEL_GROUP_ID`
-  is set, the deployments come from the pushes and deletions of the stream (`deployed`, `failed`, `removed`), and the
+  is set, the deployments come from the pushes, pattern updates and deletions of the stream (`deployed`, `failed`,
+  `removed`), and the
   reconciliation only pushes the `pending` ones again (analyst retry): presence, absence, withdrawal and backfill need
   a scope without group. A delete event looks the IOCs of the indicator up by external id in the site or account of
   the group (the whole API token scope for a group alone) and deletes them with the group in the deletion filter; when
