@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import connector
 import pytest
 import requests
 from cyfirma_client import CyfirmaClient
@@ -23,6 +24,9 @@ def client(mock_helper):
         helper=mock_helper,
         base_url=HttpUrl("https://api.cyfirma.com"),
         api_key="test_key",
+        tailored_iocs=True,
+        tailored_vulnerabilities=True,
+        last_run="2023-01-01T00:00:00Z",
     )
 
 

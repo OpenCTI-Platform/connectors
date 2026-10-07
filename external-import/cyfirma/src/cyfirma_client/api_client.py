@@ -27,8 +27,9 @@ _PAGE_DELAY = 1.0  # pause between pages and feeds
 
 
 class CyfirmaClient:
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
+        *,
         helper: OpenCTIConnectorHelper,
         base_url: HttpUrl,
         api_key: str,
@@ -57,7 +58,7 @@ class CyfirmaClient:
         self.tailored_vulnerabilities = tailored_vulnerabilities
         self.last_run = last_run
         self.session = requests.Session()
-        # self.session.headers.update(self.headers)
+        self.headers: dict[str, str] = {}
 
     def _request_data(self, api_url: str, params=None, headers=None) -> dict[str, Any]:
 
@@ -258,9 +259,10 @@ class CyfirmaClient:
             cvss_version = ext_props.get("cvss_version", "")
 
             if "3" in cvss_version:
-                new_extension_props["cvss_base_score"] = float(
-                    ext_props.get("cvss_base_score", 0.0)
-                )
+                if "cvss_base_score" in ext_props:
+                    new_extension_props["cvss_base_score"] = float(
+                        ext_props.get("cvss_base_score")
+                    )
                 new_extension_props["cvss_base_severity"] = ext_props.get(
                     "severity", ""
                 )
@@ -291,9 +293,10 @@ class CyfirmaClient:
                 )
 
             elif "2" in cvss_version:
-                new_extension_props["cvss_v2_base_score"] = float(
-                    ext_props.get("cvss_base_score")
-                )
+                if "cvss_base_score" in ext_props:
+                    new_extension_props["cvss_v2_base_score"] = float(
+                        ext_props.get("cvss_base_score")
+                    )
                 new_extension_props["cvss_v2_base_severity"] = ext_props.get(
                     "severity", ""
                 )
