@@ -15,6 +15,8 @@ vendor, and report detection hits as sightings.
   of ``pending`` deployments and hits only).
 - ``DeploymentConfig``, ``HitsConfig``, ``SecurityPlatformConfig``: settings
   namespaces (``DEPLOYMENT_*``, ``HITS_*``, ``SECURITY_PLATFORM_*`` variables).
+- ``PendingWithdrawals``: former values of updated indicators the vendor refused
+  to withdraw, kept in the connector state for the next update or delete.
 """
 
 from connectors_sdk.connectors.stream.deployment.assurance import DeploymentAssurance
@@ -63,12 +65,17 @@ from connectors_sdk.connectors.stream.deployment.utils import (
     pattern_observable_values,
     to_stream_indicator,
 )
+from connectors_sdk.connectors.stream.deployment.withdrawals import (
+    PENDING_WITHDRAWALS_STATE_KEY,
+    PendingWithdrawals,
+)
 
 __all__ = [
     "LISTED_STATUSES",
     "LIVE_STATUSES",
     "MAX_BATCH_SIZE",
     "OPENCTI_EXTENSION_ID",
+    "PENDING_WITHDRAWALS_STATE_KEY",
     "RECONCILED_STATUSES",
     "REPORTABLE_STATUSES",
     "DeploymentAssurance",
@@ -87,6 +94,7 @@ __all__ = [
     "HitsConfig",
     "IndicatorDeployment",
     "PatternValue",
+    "PendingWithdrawals",
     "ReconciliationSummary",
     "SecurityPlatformConfig",
     "VendorHit",
