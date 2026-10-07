@@ -110,9 +110,7 @@ def test_create_event_with_converter_output(api_handler, helper, config):
     assert "report-type:threat-report" in sent_tags
 
 
-def test_update_event_with_converter_output_does_not_crash(
-    api_handler, helper, config
-):
+def test_update_event_with_converter_output(api_handler, helper, config):
     """Updating an already tagged event must not raise on MISPTag entries."""
     event_data = _event_data(helper, config)
     existing_event = MISPEvent()
