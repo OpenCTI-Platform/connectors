@@ -1,0 +1,16 @@
+services:
+  connector-coucou-enrichment:
+    image: opencti/connector-coucou-enrichment:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Coucou Enrichment # optional (default: 'Coucou Enrichment')
+      - CONNECTOR_SCOPE=IPv4-Addr # optional (default: 'IPv4-Addr')
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-coucou-enrichment
+      - COUCOU_ENRICHMENT_MAX_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+    restart: always

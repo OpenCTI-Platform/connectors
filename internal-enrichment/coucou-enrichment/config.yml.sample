@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Coucou Enrichment' # optional (default: 'Coucou Enrichment')
+  scope: 'IPv4-Addr' # optional (default: 'IPv4-Addr')
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+
+coucou_enrichment:
+  max_tlp_level: 'amber+strict'  # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

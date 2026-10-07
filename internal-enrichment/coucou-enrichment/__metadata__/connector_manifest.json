@@ -1,0 +1,26 @@
+{
+  "title": "Coucou Enrichment",
+  "slug": "coucou-enrichment",
+  "description": "Reference enrichment connector: sets the description of an IPv4 observable to \"coucou from enrichment\" and adds the label \"enriched\". Calls no external API.",
+  "short_description": "Reference enrichment connector for IPv4 observables",
+  "logo": null,
+  "use_cases": [
+    "Cloud, SaaS & Platform Security"
+  ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": "support@example.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/coucou-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-coucou-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
