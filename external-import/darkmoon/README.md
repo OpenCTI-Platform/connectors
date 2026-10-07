@@ -119,8 +119,11 @@ Mount that host directory into the connector container (read-only is enough) and
 
 ### Docker Deployment
 
-Before building the Docker container, set the version of `pycti` in `src/requirements.txt`
-to match the version of OpenCTI you are running.
+The connector's Python dependencies are declared in `src/requirements.txt`. `pycti`
+is not listed there directly: it is pulled in transitively by `connectors-sdk`, which
+pins the compatible `pycti` version, so there is nothing to edit for it here. Run the
+connector against an OpenCTI platform of a compatible version by aligning the
+`opencti/connector-darkmoon` image tag with your OpenCTI release.
 
 Build a Docker image using the provided `Dockerfile`:
 
@@ -160,8 +163,10 @@ On each run the connector:
 4. Converts the campaign to STIX 2.1 objects and sends them to OpenCTI.
 5. Persists the date of the most recent imported campaign as the new checkpoint.
 
-A finding with no evidence directory, a malformed campaign or a single malformed finding
-is logged and skipped rather than aborting the whole run.
+A malformed campaign, a single malformed finding, or a campaign with no parseable date
+is logged and skipped rather than aborting the whole run. A finding whose optional
+`evidence` object is missing or empty is still imported; its evidence note simply falls
+back to a short placeholder when nothing was recorded.
 
 ### STIX mapping
 

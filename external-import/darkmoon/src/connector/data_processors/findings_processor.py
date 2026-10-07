@@ -97,11 +97,12 @@ class FindingsProcessor(BaseDataProcessor):
 
     def collect(self) -> list[CampaignBundle]:
         """Fetch Darkmoon campaign bundles newer than the last checkpoint."""
-        since = (
-            self.state.last_campaign_date
-            or self.state.last_run
-            or self.settings.darkmoon.import_since
-        )
+        # Only the campaign-specific checkpoint is used here. The SDK advances
+        # the generic ``last_run`` after every successful callback, including
+        # runs where findings import is disabled and this processor produces
+        # nothing; relying on it would let a later run permanently skip
+        # campaigns between ``import_since`` and that empty run.
+        since = self.state.last_campaign_date or self.settings.darkmoon.import_since
         return self.client.collect(since=since)
 
     def transform(
@@ -237,7 +238,9 @@ class FindingsProcessor(BaseDataProcessor):
         name = cve if is_cve else finding.title
         aliases = [finding.title] if is_cve else None
 
-        if finding.cvss_score:
+        if finding.cvss_score is not None:
+            # CVSS 0.0 is a valid score; only fall back to the severity-derived
+            # score when no CVSS score is present at all.
             score = max(0, min(100, int(round(finding.cvss_score * 10))))
         else:
             score = _SEVERITY_TO_SCORE.get(severity)
@@ -280,7 +283,7 @@ class FindingsProcessor(BaseDataProcessor):
             aliases=aliases,
             cwe_ids=cwe_ids,
             score=score,
-            cvss_v3_base_score=finding.cvss_score or None,
+            cvss_v3_base_score=finding.cvss_score,
             cvss_v3_vector_string=finding.cvss_vector or None,
             cvss_v3_base_severity=_SEVERITY_TO_CVSS_SEVERITY.get(severity),
             labels=labels,
@@ -349,7 +352,7 @@ class FindingsProcessor(BaseDataProcessor):
             meta.append(f"- **Category:** {finding.category}")
         meta.append(f"- **Severity:** {severity}")
         meta.append(f"- **Status:** {status}")
-        if finding.cvss_score:
+        if finding.cvss_score is not None:
             meta.append(f"- **CVSS score:** {finding.cvss_score}")
         if finding.cvss_vector:
             meta.append(f"- **CVSS vector:** `{finding.cvss_vector}`")
@@ -412,7 +415,10 @@ class FindingsProcessor(BaseDataProcessor):
             labels=["darkmoon", "evidence"],
             author=self.author,
             markings=[self.tlp_marking],
-            created=parse_darkmoon_datetime(finding.discovered_at),
+            # The SDK folds ``created`` into the Note's deterministic id, so a
+            # discovery timestamp would mint a new Note (and flood the queue)
+            # whenever the source timestamp changes. The discovery time is kept
+            # in the note content above; the id must stay timestamp-independent.
         )
 
     @staticmethod

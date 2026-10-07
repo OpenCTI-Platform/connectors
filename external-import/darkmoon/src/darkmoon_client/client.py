@@ -78,17 +78,47 @@ class DarkmoonClient:
     def targets_file(self) -> Path:
         return self._base / "targets.json"
 
+    def _resolve_within_base(self, candidate: Path) -> Path | None:
+        """Resolve ``candidate`` and confirm it stays inside the export root.
+
+        Paths handed to :meth:`_read_json` are partly derived from the export
+        JSON (e.g. a campaign id becomes a ``vulnerabilities/<id>.json`` path)
+        and the export directory may contain symlinks. Resolving both the base
+        and the candidate (following ``..`` and symlinks) and rejecting anything
+        that escapes the base prevents reading arbitrary files outside the
+        mounted export directory.
+
+        Returns the resolved path, or ``None`` when it escapes the export root.
+        """
+        try:
+            base = self._base.resolve(strict=False)
+            resolved = candidate.resolve(strict=False)
+        except (OSError, RuntimeError) as err:
+            self._logger.warning(
+                "[Darkmoon] Could not resolve path, skipping it",
+                {"path": str(candidate), "error": str(err)},
+            )
+            return None
+        if resolved != base and base not in resolved.parents:
+            self._logger.warning(
+                "[Darkmoon] Refusing to read a path outside the export directory",
+                {"path": str(candidate), "export_path": str(base)},
+            )
+            return None
+        return resolved
+
     def _read_json(self, path: Path) -> Any:
-        """Read a JSON file, returning ``None`` on a missing/invalid file."""
-        if not path.exists():
+        """Read a JSON file, returning ``None`` on a missing/invalid/unsafe file."""
+        resolved = self._resolve_within_base(path)
+        if resolved is None or not resolved.is_file():
             return None
         try:
-            with path.open("r", encoding="utf-8") as handle:
+            with resolved.open("r", encoding="utf-8") as handle:
                 return json.load(handle)
         except (OSError, json.JSONDecodeError) as err:
             self._logger.warning(
                 "[Darkmoon] Could not read JSON file, skipping it",
-                {"path": str(path), "error": str(err)},
+                {"path": str(resolved), "error": str(err)},
             )
             return None
 
@@ -169,11 +199,18 @@ class DarkmoonClient:
                 continue
 
             campaign_date = parse_darkmoon_datetime(campaign.date)
-            if (
-                since is not None
-                and campaign_date is not None
-                and campaign_date <= since
-            ):
+            if campaign_date is None:
+                # Without a usable date the campaign cannot be filtered by
+                # ``since`` nor checkpointed, and the processor would fall back
+                # to ``datetime.now()`` for the Report publication date, which
+                # the SDK uses to derive the Report id. That would emit a brand
+                # new Report on every run, so skip undated campaigns instead.
+                self._logger.warning(
+                    "[Darkmoon] Campaign has no parseable date, skipping it",
+                    {"campaign_id": campaign.id, "date": campaign.date},
+                )
+                continue
+            if since is not None and campaign_date <= since:
                 continue
 
             findings = self._load_findings(campaign.id)

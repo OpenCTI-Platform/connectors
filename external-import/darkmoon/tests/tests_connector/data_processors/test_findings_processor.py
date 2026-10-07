@@ -140,3 +140,56 @@ def test_since_filter_excludes_old_campaigns(settings_for_export, fake_logger):
     processor = _build_processor(settings_for_export, state, fake_logger)
 
     assert processor.collect() == []
+
+
+def test_collect_ignores_generic_last_run(settings_for_export, fake_logger):
+    """`collect` must checkpoint on `last_campaign_date`/`import_since` only.
+
+    The SDK advances the generic `last_run` after every successful callback
+    (including empty runs when findings import is disabled). Using it as the
+    checkpoint would skip campaigns dated between `import_since` and that run, so
+    `collect` must ignore `last_run` entirely.
+    """
+    from datetime import datetime, timezone
+
+    # last_run is after the fixture campaign (2026-03-01) but there is no
+    # campaign checkpoint yet; import_since (2026-01-01) must win and the
+    # campaign must still be collected.
+    state = ConnectorState(last_run=datetime(2026, 9, 1, tzinfo=timezone.utc))
+    processor = _build_processor(settings_for_export, state, fake_logger)
+
+    assert len(processor.collect()) == 1
+
+
+def test_cvss_zero_score_is_preserved(settings_for_export, fake_logger):
+    """A CVSS score of 0.0 is valid and must not fall back to severity scoring."""
+    from darkmoon_client.models import DarkmoonFinding
+
+    processor = _build_processor(settings_for_export, ConnectorState(), fake_logger)
+    finding = DarkmoonFinding(
+        title="Informational", severity="critical", cvss_score=0.0
+    )
+
+    vuln = processor._build_vulnerability(finding)
+
+    # Without the fix, score would become the severity-derived 90.
+    assert vuln.cvss_v3_base_score == 0.0
+    assert vuln.score == 0
+
+
+def test_note_id_is_not_derived_from_timestamp(settings_for_export, fake_logger):
+    """Evidence notes must not set `created` (it feeds the deterministic id)."""
+    from darkmoon_client.models import DarkmoonFinding
+
+    processor = _build_processor(settings_for_export, ConnectorState(), fake_logger)
+    finding = DarkmoonFinding(
+        title="SQLi", severity="high", discovered_at="2026-03-01T10:12:00Z"
+    )
+    vuln = processor._build_vulnerability(finding)
+
+    note = processor._build_note(finding, vuln)
+
+    assert note.created is None
+    assert note.publication_date is None
+    # The discovery timestamp is kept in the human-readable content.
+    assert "2026-03-01T10:12:00Z" in note.content
