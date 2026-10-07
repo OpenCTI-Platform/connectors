@@ -1648,6 +1648,64 @@ def test_queued_reports_wait_for_the_security_platform(
     assert reporter.flush().processed == 1
 
 
+def test_close_retries_a_feature_detection_waiting_for_its_delay(
+    graphql_helper, make_reporter, router
+):
+    """The final flush is the last attempt: it does not wait for the retry delay."""
+    clock = Clock()
+    detection = router.handlers["DeploymentWriteBackFeatures"]
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.flush()
+    router.handlers["DeploymentWriteBackFeatures"] = detection
+
+    reporter.close()
+
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"] == [{"indicatorId": "a", "status": "deployed"}]
+
+
+def test_close_retries_a_security_platform_resolution_waiting_for_its_delay(
+    graphql_helper, make_reporter, router, ids
+):
+    clock = Clock()
+    router.handlers["DeploymentSecurityPlatformAdd"] = {"data": None}
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.flush()
+    router.handlers["DeploymentSecurityPlatformAdd"] = {
+        "data": {"securityPlatformAdd": {"id": ids.platform}}
+    }
+
+    reporter.close(timeout=5)
+
+    assert len(router.calls_of("IndicatorReportDeployments(")) == 1
+
+
+def test_close_drops_the_reports_with_a_warning_when_the_write_back_stays_unavailable(
+    graphql_helper, make_reporter, router
+):
+    clock = Clock()
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.enqueue(DeploymentReport(indicator_id="b", status="deployed"))
+    reporter.flush()
+
+    reporter.close()
+
+    assert len(router.calls_of("DeploymentWriteBackFeatures")) == 2
+    assert router.calls_of("IndicatorReportDeployments(") == []
+    assert reporter._buffer == {}
+    assert reporter._flush_timer is None
+    graphql_helper.connector_logger.warning.assert_any_call(
+        "[DEPLOYMENT] Deployment write-back still unavailable at shutdown, "
+        "dropping the queued reports.",
+        meta={"dropped": 2},
+    )
+
+
 def test_queued_reports_are_dropped_on_unsupported_platforms(
     graphql_helper, make_reporter, router, router_factory
 ):

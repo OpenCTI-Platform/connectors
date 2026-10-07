@@ -902,8 +902,15 @@ class DeploymentReporter:
             self._queue_overflow_logged = False
         if not reports:
             return DeploymentBatchResult()
-        if self._awaiting_write_back():
-            self._requeue(reports, write_back_unavailable=True)
+        if self._write_back_pending():
+            if not self._closed:
+                self._requeue(reports, write_back_unavailable=True)
+                return DeploymentBatchResult()
+            self._logger.warning(
+                "[DEPLOYMENT] Deployment write-back still unavailable at shutdown, "
+                "dropping the queued reports.",
+                meta={"dropped": len(reports)},
+            )
             return DeploymentBatchResult()
         self._waiting_for_write_back = False
         result = self.report_indicator_deployments(reports)
@@ -960,10 +967,17 @@ class DeploymentReporter:
 
         Returns:
             ``True`` when the feature detection or the security platform resolution
-            failed and will be retried.
+            failed and will be retried, ``False`` once the reporter is closed.
         """
-        if not self.enabled or self._closed:
-            return False
+        return not self._closed and self._write_back_pending()
+
+    def _write_back_pending(self) -> bool:
+        """Tell whether the write-back is not available yet but may become so.
+
+        Returns:
+            ``True`` when the feature detection or the security platform resolution
+            failed and is retried after its delay.
+        """
         mutations = self._available_mutations()
         if mutations is None:
             return True
@@ -1020,12 +1034,20 @@ class DeploymentReporter:
     def close(self, timeout: float | None = None) -> None:
         """Flush the queued reports and stop accepting new ones.
 
+        The final flush is the last attempt: a feature detection or a security
+        platform resolution waiting for its retry delay is tried again at once, and
+        the reports are dropped with a warning when the write-back is still
+        unavailable.
+
         Args:
             timeout: Seconds to wait for the sends held by a running reconciliation
                 (``None`` waits until they are released). When they are still held,
                 the queued reports are left to the reconciliation, which sends them
                 when it releases the sends.
         """
+        with self._lock:
+            self._next_detection_at = 0.0
+            self._next_resolution_at = 0.0
         self._closed = True
         if timeout is None:
             self.flush()
