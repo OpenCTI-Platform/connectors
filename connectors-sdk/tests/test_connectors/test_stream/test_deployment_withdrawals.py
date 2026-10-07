@@ -70,6 +70,22 @@ def test_only_the_values_not_withdrawn_yet_are_kept():
     assert pending.values(OTHER) == ["z"]
 
 
+def test_kept_values_are_added_once_and_withdrawn_by_the_next_call():
+    helper = StateHelper({"start_from": "1-0"})
+    pending = PendingWithdrawals(helper)
+
+    pending.keep(INDICATOR, ["a", "b", "a"])
+    pending.keep(INDICATOR, ["b", "c"])
+    pending.keep(INDICATOR, ["c"])
+
+    assert pending.values(INDICATOR) == ["a", "b", "c"]
+    assert len(helper.writes) == 2
+    withdrawn: list[str] = []
+    pending.withdraw(INDICATOR, withdrawn.append)
+    assert withdrawn == ["a", "b", "c"]
+    assert pending.values(INDICATOR) == []
+
+
 def test_values_withdrawn_at_once_never_write_the_state():
     helper = StateHelper({"start_from": "1-0"})
     withdrawn: list[str] = []

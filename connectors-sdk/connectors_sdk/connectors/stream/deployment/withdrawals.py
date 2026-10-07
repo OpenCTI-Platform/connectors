@@ -77,6 +77,21 @@ class PendingWithdrawals:
         """
         return self._all().get(indicator_id, [])
 
+    def keep(self, indicator_id: str, values: Iterable[str]) -> None:
+        """Keep former values of an indicator for its next update or delete.
+
+        Used when the former values stay live on purpose, for instance while a
+        failed update leaves the previous version of the indicator on the vendor.
+
+        Args:
+            indicator_id: The STIX id of the indicator.
+            values: The former values to withdraw later.
+        """
+        kept = self.values(indicator_id)
+        added = [value for value in dict.fromkeys(values) if value not in kept]
+        if added:
+            self._set(indicator_id, kept + added)
+
     def withdraw(
         self,
         indicator_id: str,
