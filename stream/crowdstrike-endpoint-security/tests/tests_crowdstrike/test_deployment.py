@@ -643,8 +643,33 @@ def test_soft_delete_keeps_the_ioc_detecting_and_reports_nothing(connector):
 
     body = connector.client.cs.indicator_update.call_args.kwargs["body"]
     assert TO_DELETE_TAG in body["indicators"][0]["tags"]
+    assert body["indicators"][0]["action"] == "detect"
     connector.assurance.report_removed.assert_not_called()
     connector.assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.warning.assert_not_called()
+
+
+def test_refused_soft_delete_is_logged_and_reports_nothing(connector):
+    """The IOC CrowdStrike refused to tag keeps detecting as before: its deployment
+    stays live, so neither `removed` nor `failed` is reported."""
+    connector.client.cs.indicator_search.return_value = api_response(resources=[IOC_ID])
+    connector.client.cs.indicator_update.return_value = api_response(
+        403, errors=[{"message": "access denied"}]
+    )
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "[DELETE ON OPENCTI ONLY] IOC not tagged TO_DELETE in Crowdstrike",
+        meta={
+            "indicator_id": indicator["id"],
+            "error": "access denied",
+            "status_code": 403,
+        },
+    )
+    connector.assurance.report_removed.assert_not_called()
+    connector.assurance.report_push_failed.assert_not_called()
 
 
 def test_connector_works_without_write_back():

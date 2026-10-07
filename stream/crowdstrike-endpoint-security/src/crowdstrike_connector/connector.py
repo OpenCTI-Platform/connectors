@@ -148,6 +148,27 @@ class CrowdstrikeConnector:
             )
         return result
 
+    def _soft_delete(self, data: dict) -> IocOperationResult:
+        """
+        Tag the IOC `TO_DELETE` without permanent delete. The IOC keeps its action
+        and keeps detecting, so its deployment stays live and nothing is reported;
+        a refused tagging is logged
+        :param data: Indicator of the stream event
+        :return: Outcome of the operation
+        """
+        self._withdraw_former_values(data)
+        result = self.client.update_indicator(data, "delete")
+        if result.status == IocOperationStatus.FAILED:
+            self.helper.connector_logger.warning(
+                "[DELETE ON OPENCTI ONLY] IOC not tagged TO_DELETE in Crowdstrike",
+                meta={
+                    "indicator_id": data.get("id"),
+                    "error": result.error,
+                    "status_code": result.status_code,
+                },
+            )
+        return result
+
     def _former_value(self, data: dict, context: dict | None) -> str | None:
         """
         Return the IOC value an update event replaced, read from its reverse patch
@@ -229,11 +250,8 @@ class CrowdstrikeConnector:
                     self.handle_logger_info("[DELETE]", data)
                     self._delete(data)
                 else:
-                    # The IOC is only tagged TO_DELETE and keeps detecting: no
-                    # removal is reported (the reconciliation keeps it active)
                     self.handle_logger_info("[DELETE ON OPENCTI ONLY]", data)
-                    self._withdraw_former_values(data)
-                    self.client.update_indicator(data, msg.event)
+                    self._soft_delete(data)
 
     def run(self) -> None:
         """

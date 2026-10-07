@@ -196,7 +196,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
 | Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn; `failed` when CrowdStrike refuses the withdrawal (the new value is then not pushed, and the former value is kept in the connector state: a later update or delete of the indicator withdraws it, and so does the retry the connector runs every 5 minutes, also once the indicator is deleted), `removed` when CrowdStrike does not take the new value |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value, and of any former value kept by a refused withdrawal, is deleted (or none is left) |
-| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting (a refused tagging is logged) |
 | Reconciliation, IOC present               | `active`                                                                                             |
 | Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an IOC still present is confirmed `active` instead |
