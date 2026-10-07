@@ -213,6 +213,8 @@ SET_OPTION_NAMES = frozenset(
 # Prefixes that are programs found on PATH, not shell builtins (time is a
 # keyword of bash, a program for sh).
 EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo", "time"})
+# Builtins whose assignment arguments some shells expand as assignments.
+DECLARATIONS = frozenset({"export", "readonly", "local", "declare", "typeset"})
 REDIRECTIONS = frozenset({">", ">>", "<", ">&", "<&", "&>", "&>>", ">|", "<>"})
 # Longest first: shlex returns a run of punctuation such as ");" as one token.
 OPERATORS = (
@@ -2538,11 +2540,14 @@ class Shell:
 
     def exec_form(self, argv):
         """A command of the exec form: no shell reads it, so each word is an
-        argument as written, wildcard characters and operators included."""
-        self._command([literal_globs(word) for word in argv], [], None, None)
+        argument as written, wildcard characters and operators included, and the
+        first one names a program, never an assignment or a shell builtin."""
+        self._command(
+            [literal_globs(word) for word in argv], [], None, None, exec_form=True
+        )
         self._end_chain()
 
-    def _command(self, words, writes, before, after, reads=()):
+    def _command(self, words, writes, before, after, reads=(), exec_form=False):
         # A command runs after the last list, which may have failed.
         self._uncertain(self.pending_dirs)
         self._uncertain_files(self.pending_files)
@@ -2554,7 +2559,7 @@ class Shell:
         variables, cwd, dirs = dict(self.variables), self.cwd, set(self.stage.dirs)
         exported, allexport = set(self.exported), self.allexport
         files = dict(self.files)
-        self._simple_command(words, writes, before, after, reads)
+        self._simple_command(words, writes, before, after, reads, exec_form)
         if any(t not in ("(", "{") for t in self.stack) or before == "||":
             # In a branch or a loop, or after ||, it may not have run: what it
             # deleted may still be there.
@@ -2629,7 +2634,7 @@ class Shell:
                     nested.allexport = self.allexport
                     nested.run(script)
 
-    def _simple_command(self, words, writes, before, after, reads=()):
+    def _simple_command(self, words, writes, before, after, reads=(), exec_form=False):
         conditional = bool(self.stack) or before == "||"
         self.command_alongside = "|" in (before, after) or after == "&"
         self._substitute((*words, *writes, *reads), conditional)
@@ -2644,7 +2649,7 @@ class Shell:
             remove_files(self.files, path)
             self.stage.replaced.add(path)
         assigned = {}
-        while words and ASSIGNMENT.match(words[0]):
+        while not exec_form and words and ASSIGNMENT.match(words[0]):
             key, _, value = words[0].partition("=")
             [assigned[key]] = self._expand(value, split=False)
             assigned[key] = assigned[key].translate(PLAIN_GLOB)
@@ -2660,7 +2665,17 @@ class Shell:
             words = words[1:]
         if not words:
             return
-        words = [part for word in words for part in self._expand(word)]
+        expanded = []
+        # Whether an argument written as an assignment splits into fields.
+        split_assignment = False
+        for word in words:
+            parts = self._expand(word)
+            split_assignment = split_assignment or (
+                bool(ASSIGNMENT.match(word))
+                and parts != self._expand(word, split=False)
+            )
+            expanded += parts
+        words = expanded
         if not words:
             return
         if "GLOBIGNORE" in {**self.variables, **assigned} and any(
@@ -2682,6 +2697,9 @@ class Shell:
                 self.cwd,
             ):
                 # A wrapper the build wrote under this name runs instead.
+                break
+            if exec_form and name not in EXTERNAL_PREFIXES:
+                # Without a shell, exec, command and builtin are programs too.
                 break
             if name == "command" and words[1:2] and words[1] in ("-v", "-V"):
                 # command -v: a lookup, nothing runs.
@@ -2711,7 +2729,7 @@ class Shell:
         args = words[1:]
         # Only a name the shell runs itself can be one of its builtins: a path,
         # or a command env, nohup or time start, is a program of the image.
-        shell_command = "/" not in words[0] and not external_prefix
+        shell_command = "/" not in words[0] and not external_prefix and not exec_form
         # The shell looks the command up with all its variables; the command
         # receives the exported ones and its own assignments.
         lookup = {
@@ -2735,6 +2753,12 @@ class Shell:
             self._launch(words, env, conditional)
             self.ended = ends_script
             return
+        if shell_command and name in DECLARATIONS and split_assignment:
+            # Shells differ: some read such an argument as an assignment,
+            # without field splitting, others split it.
+            raise Unsupported(
+                f"'{name}' of an assignment whose unquoted expansion holds blanks"
+            )
         if shell_command and name == "export":
             for arg in args:
                 if arg.startswith("-"):
