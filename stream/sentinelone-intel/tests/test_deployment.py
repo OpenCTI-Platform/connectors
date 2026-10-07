@@ -325,11 +325,27 @@ def test_update_whose_former_iocs_cannot_be_deleted_is_reported_failed(connector
     connector.helper.connector_logger.warning.assert_called()
 
 
-@pytest.mark.parametrize(("former_iocs", "reported"), [(1, True), (0, False)])
+UNSUPPORTED_FORMER_PATTERN = [
+    {"op": "replace", "path": "/pattern", "value": "[process:name = 'old.exe']"}
+]
+
+
+@pytest.mark.parametrize(
+    ("former_iocs", "former_pattern", "reported"),
+    [
+        (1, FORMER_PATTERN, True),
+        (0, FORMER_PATTERN, True),
+        (1, UNSUPPORTED_FORMER_PATTERN, True),
+        (0, UNSUPPORTED_FORMER_PATTERN, False),
+        (0, [{"op": "replace", "path": "/pattern"}], False),
+    ],
+)
 def test_update_to_an_unsupported_pattern_removes_the_former_iocs(
-    connector, former_iocs, reported
+    connector, former_iocs, former_pattern, reported
 ):
-    """Removed once its former IOCs are deleted; never pushed without any."""
+    """Removed once no IOC is left, also when none was found for a supported former
+    pattern (a `failed` push, or IOCs deleted in SentinelOne: no read-back repairs a
+    scope with a group); never reported for an indicator that was never pushed."""
     connector.client.session.request.side_effect = [
         mock_response(
             {"data": [{"uuid": "uuid-old", "externalId": STIX_ID}][:former_iocs]}
@@ -339,7 +355,7 @@ def test_update_to_an_unsupported_pattern_removes_the_former_iocs(
     indicator = make_indicator()
     indicator["pattern"] = "[process:name = 'evil.exe']"
 
-    connector.process_message(make_update_message(indicator, FORMER_PATTERN))
+    connector.process_message(make_update_message(indicator, former_pattern))
 
     assert calls_of(connector.client.session, "POST") == []
     assert connector.assurance.report_removed.called is reported

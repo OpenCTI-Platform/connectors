@@ -37,16 +37,24 @@ def _is_stix_indicator_id(value: Any) -> bool:
     return isinstance(value, str) and value.startswith(STIX_INDICATOR_PREFIX)
 
 
-def _pattern_changed(context: Any) -> bool:
-    """Whether an update event changed the pattern of the indicator.
+def _pattern_patch(context: Any) -> dict[str, Any] | None:
+    """Return the reverse patch of the pattern when an update event changed it.
 
     :param context: The context of the update event: its reverse patch holds the
         former value of every field the update changed.
+    :return: The patch, whose `value` is the former pattern, None when the update
+        kept the pattern.
     """
     reverse_patch = context.get("reverse_patch") if isinstance(context, dict) else None
-    return isinstance(reverse_patch, list) and any(
-        isinstance(patch, dict) and patch.get("path") == "/pattern"
-        for patch in reverse_patch
+    if not isinstance(reverse_patch, list):
+        return None
+    return next(
+        (
+            patch
+            for patch in reverse_patch
+            if isinstance(patch, dict) and patch.get("path") == "/pattern"
+        ),
+        None,
     )
 
 
@@ -92,8 +100,10 @@ class SentinelOneIntelConnector:
                         {"Indicator ID": indicator_id},
                     )
                 self._create_and_report(data)
-            elif msg.event == "update" and _pattern_changed(message.get("context")):
-                self._replace_and_report(data)
+            elif msg.event == "update" and (
+                pattern_patch := _pattern_patch(message.get("context"))
+            ):
+                self._replace_and_report(data, pattern_patch.get("value"))
             elif msg.event == "delete":
                 self._delete_and_report(data)
 
@@ -204,7 +214,7 @@ class SentinelOneIntelConnector:
         if self.assurance is not None:
             self.assurance.report_removed(data)
 
-    def _replace_and_report(self, data: dict[str, Any]) -> None:
+    def _replace_and_report(self, data: dict[str, Any], former_pattern: Any) -> None:
         """
         Replace the IOCs of an indicator whose pattern changed: SentinelOne IOCs hold
         one value each, and no read-back repairs a scope with a group. The IOCs of the
@@ -212,9 +222,15 @@ class SentinelOneIntelConnector:
         create (`deployed` or `failed`).
 
         A failed deletion is reported `failed` (the former IOCs may remain). A pattern
-        SentinelOne does not support is reported `removed` once the former IOCs are
-        deleted, and not reported when none existed (never pushed, so it has no
-        deployment). Nothing is done for an id that is not a STIX indicator id.
+        SentinelOne does not support is reported `removed` once no IOC of the
+        indicator is left, when former IOCs were deleted or when the former pattern
+        is one SentinelOne supports (the indicator has a deployment, `failed` or
+        whose IOCs were deleted in SentinelOne); it is not reported when neither
+        pattern is supported (never pushed, so it has no deployment). Nothing is done
+        for an id that is not a STIX indicator id.
+
+        :param data: The indicator, after the update.
+        :param former_pattern: The pattern the update replaced (from its reverse patch).
         """
         if not _is_stix_indicator_id(data.get("id")):
             return
@@ -235,10 +251,11 @@ class SentinelOneIntelConnector:
                 )
             return
         if not self.client.supports_pattern(data.get("pattern")):
-            if deleted:
+            if deleted or self.client.supports_pattern(former_pattern):
                 self.helper.connector_logger.info(
-                    "[UPDATE] Pattern no longer supported by SentinelOne, IOCs removed",
-                    meta={"indicator_id": data.get("id")},
+                    "[UPDATE] Pattern no longer supported by SentinelOne, "
+                    "no IOC of the indicator left",
+                    meta={"indicator_id": data.get("id"), "deleted": deleted},
                 )
                 if self.assurance is not None:
                     self.assurance.report_removed(data)
