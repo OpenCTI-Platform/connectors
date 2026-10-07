@@ -3499,6 +3499,177 @@ def test_downloader_configuration_set_for_one_command(tmp_path, run, covered):
 @pytest.mark.parametrize(
     "run, covered",
     [
+        # Copilot review of 05:00 UTC: curl expands the globs of a URL into
+        # several transfers and #N of an output name, unless -g turns it off.
+        (
+            "cd /opt/src && curl -o '#1.json' 'https://example.com/{.connector_version,x}'",
+            False,
+        ),
+        (
+            "cd /opt/src && curl -O 'https://example.com/{.connector_version.json,x}'",
+            False,
+        ),
+        ("curl --output-dir /opt/src -O 'https://example.com/[1-2].json'", False),
+        ("curl --remote-name-all 'https://example.com/[1-2].json'", False),
+        ("curl -o '/tmp/x#1' https://example.com/x", False),
+        ("curl -g -o /tmp/x 'https://example.com/{a,b}'", True),
+        ("curl -sgo /tmp/x 'https://example.com/[1-2]'", True),
+        ("curl --globoff -o '/tmp/x#1' https://example.com/x", True),
+        ("curl 'https://example.com/{a,b}'", True),
+        ("curl -o - 'https://example.com/{a,b}'", True),
+    ],
+)
+def test_curl_url_glob(tmp_path, run, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\nRUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "URL glob" in image.reason
+
+
+GIT_HOOK = "#!/bin/sh\nrm -f /opt/src/.connector_version.json\n"
+
+
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 05:00 UTC: the post-checkout hook of a clone runs,
+        # from a template or a hooks path of the build.
+        ("RUN git clone --template=/tmp/tpl https://example.com/x.git /tmp/x", False),
+        ("RUN git clone --templ /tmp/tpl https://example.com/x.git /tmp/x", False),
+        (
+            "RUN git clone -c core.hooksPath=/tmp/tpl/hooks https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "RUN git clone --config=core.hooksPath=/tmp/tpl/hooks"
+            " https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "RUN git clone -qccore.hooksPath=/tmp/tpl/hooks https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "RUN GIT_TEMPLATE_DIR=/tmp/tpl git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "ENV GIT_CONFIG_GLOBAL=/tmp/gitconfig\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "COPY gitconfig /root/.gitconfig\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "COPY gitconfig /etc/gitconfig\nRUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "COPY tpl /usr/share/git-core/templates\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "COPY tpl/hooks/post-checkout /usr/share/git-core/templates/hooks/post-checkout\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "COPY gitconfig /root/.config/git/config\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        (
+            "ENV HOME=/opt/home\nCOPY gitconfig /opt/home/.gitconfig\n"
+            "RUN git clone https://example.com/x.git /tmp/x",
+            False,
+        ),
+        ("RUN git clone --depth 1 -b main https://example.com/x.git /tmp/x", True),
+    ],
+)
+def test_git_clone_hooks(tmp_path, steps, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        f"COPY gitconfig /tmp/gitconfig\nCOPY tpl /tmp/tpl\n{steps}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "gitconfig": "[core]\n\thooksPath = /tmp/tpl/hooks\n",
+        "tpl/hooks/post-checkout": GIT_HOOK,
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "dockerfile, covered",
+    [
+        # Copilot review of 05:00 UTC: Docker takes HOME from the account of a
+        # user other than root, which the model does not read.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\n"
+            "CMD cd ~ && exec python3 /opt/src/main.py\n",
+            False,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\n"
+            "RUN rm -f ~/.connector_version.json\nUSER root\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER 1000:1000\n"
+            "RUN rm -f ~/.connector_version.json\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\nUSER root\n"
+            "RUN rm -f ~/.connector_version.json\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            True,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\n"
+            "RUN curl -o /tmp/x https://example.com/x\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        (
+            "FROM python:3.12-alpine AS base\nUSER nobody\nFROM base\nCOPY src /opt/src\n"
+            "CMD cd ~ && exec python3 /opt/src/main.py\n",
+            False,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\nUSER root\n"
+            "CMD cd ~ && exec python3 /opt/src/main.py\n",
+            True,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nENV HOME=/opt/src\nUSER nobody\n"
+            "CMD cd ~ && exec python3 /opt/src/main.py\n",
+            True,
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nUSER nobody\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            True,
+        ),
+    ],
+)
+def test_home_of_another_user(tmp_path, dockerfile, covered):
+    image = single(tmp_path, {"Dockerfile": dockerfile})
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
         # Copilot review of 18:58 UTC: a PYTHONPATH the model does not resolve
         # may put any module first.
         (
