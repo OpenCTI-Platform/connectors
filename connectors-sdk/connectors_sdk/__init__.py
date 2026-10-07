@@ -21,6 +21,7 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from connectors_sdk.settings.annotated_types import (
+    TLP,
     DatetimeFromIsoString,
     ListFromString,
 )
@@ -68,6 +69,7 @@ __all__ = [
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
+    "TLP",
     # Deprecations
     "Deprecate",
     "DeprecatedField",

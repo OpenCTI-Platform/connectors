@@ -3,12 +3,13 @@ from datetime import datetime, timedelta, timezone
 import freezegun
 import pytest
 from connectors_sdk.settings.annotated_types import (
+    TLP,
     DatetimeFromIsoString,
     ListFromString,
     parse_comma_separated_list,
     parse_iso_string,
 )
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 # ListFromString
 
@@ -168,3 +169,44 @@ def test_datetime_from_iso_string_dumps_valid_json_in_pycti_mode(
         input, mode="json", context={"mode": "pycti"}
     )
     assert value == expected
+
+
+# TLP
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    [
+        pytest.param("TLP:RED", TLP.RED, id="canonical"),
+        pytest.param("amber+strict", TLP.AMBER_STRICT, id="lowercase_without_prefix"),
+        pytest.param(" TLP:Amber+Strict ", TLP.AMBER_STRICT, id="mixed_case_padded"),
+        pytest.param("clear", TLP.CLEAR, id="clear"),
+        pytest.param("WHITE", TLP.WHITE, id="uppercase_without_prefix"),
+        pytest.param(TLP.GREEN, TLP.GREEN, id="member"),
+    ],
+)
+def test_tlp_normalizes_valid_levels(input: str, expected: TLP) -> None:
+    value = TypeAdapter(TLP).validate_python(input)
+    assert value is expected
+
+
+@pytest.mark.parametrize("input", ["purple", "TLP:PURPLE", "", 3])
+def test_tlp_rejects_unknown_levels(input: object) -> None:
+    with pytest.raises(ValidationError):
+        TypeAdapter(TLP).validate_python(input)
+
+
+def test_tlp_member_compares_equal_to_its_definition_string() -> None:
+    assert TLP.AMBER_STRICT == "TLP:AMBER+STRICT"
+
+
+def test_tlp_json_schema_lists_definition_strings() -> None:
+    schema = TypeAdapter(TLP).json_schema()
+    assert schema["enum"] == [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ]
