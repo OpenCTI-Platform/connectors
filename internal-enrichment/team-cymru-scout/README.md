@@ -66,6 +66,7 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,IPv6-Addr,Domain-Name` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment (default: false) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `PURE_SIGNAL_SCOUT_MAX_TLP` |
 
 ### Scout API Configuration
 
@@ -73,7 +74,6 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 |-----------|---------------|-----------|-------------|
 | `pure_signal_scout_api_url` | `PURE_SIGNAL_SCOUT_API_URL` | Yes | Base URL of the Scout API |
 | `pure_signal_scout_api_token` | `PURE_SIGNAL_SCOUT_API_TOKEN` | Yes | Bearer token for the Scout API |
-| `pure_signal_scout_max_tlp` | `PURE_SIGNAL_SCOUT_MAX_TLP` | Yes | Max TLP level for enrichment (default: TLP:AMBER) |
 
 ---
 
@@ -98,9 +98,9 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
-      - PURE_SIGNAL_SCOUT_MAX_TLP=TLP:AMBER
     restart: always
 ```
 

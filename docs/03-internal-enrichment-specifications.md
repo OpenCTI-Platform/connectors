@@ -351,18 +351,18 @@ def extract_and_check_markings(self, opencti_entity: dict) -> None:
     # Validate against max TLP
     valid_max_tlp = self.helper.check_max_tlp(
         entity_tlp,
-        self.config.my_connector.max_tlp_level
+        self.config.connector.max_tlp
     )
 
     if not valid_max_tlp:
         raise ValueError(
             f"Entity TLP ({entity_tlp}) exceeds maximum allowed "
-            f"TLP ({self.config.my_connector.max_tlp_level})"
+            f"TLP ({self.config.connector.max_tlp})"
         )
 
     self.helper.connector_logger.debug(
         "TLP validation passed",
-        {"entity_tlp": entity_tlp, "max_tlp": self.config.my_connector.max_tlp_level}
+        {"entity_tlp": entity_tlp, "max_tlp": self.config.connector.max_tlp}
     )
 ```
 
@@ -374,10 +374,15 @@ The helper's `check_max_tlp()` method understands TLP hierarchy:
 TLP:CLEAR (lowest) → TLP:WHITE → TLP:GREEN → TLP:AMBER → TLP:AMBER+STRICT → TLP:RED (highest)
 ```
 
+The maximum TLP is set with `connector.max_tlp` (`CONNECTOR_MAX_TLP`), defined by
+`BaseInternalEnrichmentConnectorConfig` in `connectors-sdk`. It defaults to `TLP:AMBER` and is
+normalized to the `TLP:XXX` form `check_max_tlp()` expects, so `amber+strict` also works. Do not
+add a max TLP setting to the connector's own section.
+
 **Configuration examples:**
-- `max_tlp_level: "green"` - Process CLEAR, WHITE, and GREEN entities
-- `max_tlp_level: "amber"` - Process up to and including AMBER
-- `max_tlp_level: "red"` - Process all TLP levels
+- `CONNECTOR_MAX_TLP=TLP:GREEN` - Process CLEAR, WHITE, and GREEN entities
+- `CONNECTOR_MAX_TLP=TLP:AMBER` - Process up to and including AMBER
+- `CONNECTOR_MAX_TLP=TLP:RED` - Process all TLP levels
 
 ---
 
@@ -786,13 +791,13 @@ class MyEnrichmentConnector:
 
         valid_max_tlp = self.helper.check_max_tlp(
             entity_tlp,
-            self.config.my_connector.max_tlp_level
+            self.config.connector.max_tlp
         )
 
         if not valid_max_tlp:
             raise ValueError(
                 f"Entity TLP ({entity_tlp}) exceeds maximum allowed "
-                f"TLP ({self.config.my_connector.max_tlp_level})"
+                f"TLP ({self.config.connector.max_tlp})"
             )
 
     def _collect_intelligence(self, value: str, entity_id: str) -> list:

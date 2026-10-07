@@ -82,9 +82,9 @@ services:
       - CONNECTOR_NAME=Scout Search Connector
       - CONNECTOR_SCOPE=Indicator
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
-      - PURE_SIGNAL_SCOUT_MAX_TLP=TLP:AMBER
       - PURE_SIGNAL_SCOUT_SEARCH_INTERVAL=1
       - PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE=pure-signal-scout
       - PURE_SIGNAL_SCOUT_PATTERN_DESCRIPTION=Scout Search Query Pattern

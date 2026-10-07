@@ -68,6 +68,7 @@ Key features:
 | `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `StixFile`, `IPv4-Addr`, `Domain-Name`, `Hostname` |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `KASPERSKY_MAX_TLP` |
 
 ### Kaspersky Configuration
 
@@ -75,7 +76,6 @@ Key features:
 |-----------|---------------|-----------|-------------|
 | `kaspersky_api_key` | `KASPERSKY_API_KEY` | Yes | Kaspersky TIP API key |
 | `kaspersky_api_base_url` | `KASPERSKY_API_BASE_URL` | No | API base URL (default: https://tip.kaspersky.com) |
-| `kaspersky_max_tlp` | `KASPERSKY_MAX_TLP` | No | Maximum TLP for processing |
 | `kaspersky_zone_octi_score_mapping` | `KASPERSKY_ZONE_OCTI_SCORE_MAPPING` | No | Zone to score mapping |
 | `kaspersky_file_sections` | `KASPERSKY_FILE_SECTIONS` | No | File API sections to retrieve |
 | `kaspersky_ipv4_sections` | `KASPERSKY_IPV4_SECTIONS` | No | IPv4 API sections to retrieve |

@@ -63,6 +63,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           | `IPv4-Addr,Domain-Name`                | No        | Comma-separated list of the observable types this connector enriches, parsed into a list of strings.                                                                                                     |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`                                | No        | Verbosity of logs. Options: `debug`, `info`, `warn`, `warning`, or `error`.                                                                                                                              |
 | Connector Auto  | auto       | `CONNECTOR_AUTO`            | `false`                                | No        | If `true`, every newly created IP/domain in OpenCTI is automatically enriched.                                                                                                                           |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | `TLP:AMBER+STRICT`                     | No        | Maximum TLP of the observables the connector will enrich. Observables with a marking above this cause the enrichment to abort with an error logged. One of `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED` (case and `TLP:` prefix optional). Replaces the deprecated `VISIONHEIGHT_MAX_TLP_LEVEL`. |
 
 ### Connector extra parameters environment variables
 
@@ -72,7 +73,6 @@ Below are the VisionHeight-specific parameters:
 | ------------------ | ---------------- | ------------------------------- | -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
 | API Base URL       | `api_base_url`   | `VISIONHEIGHT_API_BASE_URL`     | `https://api.visionheight.com`   | No        | VisionHeight API base URL. Override for staging or white-label endpoints.                                         |
 | API Key            | `api_key`        | `VISIONHEIGHT_API_KEY`          | /                                | Yes       | VisionHeight API key, sent as the `x-api-key` header on every request.                                            |
-| Max TLP Level      | `max_tlp_level`  | `VISIONHEIGHT_MAX_TLP_LEVEL`    | `amber+strict`                   | No        | Maximum TLP level the connector will enrich. Observables with a marking above this cause the enrichment to abort with an error logged. One of `clear`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
@@ -165,4 +165,4 @@ Internally, all log messages use structured logging via `self.helper.connector_l
 
 - The VisionHeight API returns HTTP 400 for invalid input (bogons, malformed IPs/domains). Be aware that, depending on the customer's plan, these requests may count against API quota.
 - On non-2xx API responses, the connector logs the error and returns the original bundle unchanged so playbook chains are preserved.
-- The `max_tlp_level` setting hard-limits which observables the connector will process; observables with a marking above this level cause the enrichment to abort with an error logged.
+- The `CONNECTOR_MAX_TLP` setting hard-limits which observables the connector will process; observables with a marking above this level cause the enrichment to abort with an error logged.

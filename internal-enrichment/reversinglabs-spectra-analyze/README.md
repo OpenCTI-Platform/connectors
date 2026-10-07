@@ -68,6 +68,7 @@ Key features:
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Artifact,IPv4-Addr,Domain-Name` |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: false) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP` (and the older `REVERSINGLABS_MAX_TLP`) |
 
 ### ReversingLabs Spectra Analyze Configuration
 
@@ -75,7 +76,6 @@ Key features:
 |-----------|---------------|-----------|-------------|
 | `reversinglabs_spectra_analyze_url` | `REVERSINGLABS_SPECTRA_ANALYZE_URL` | Yes | Spectra Analyze appliance URL |
 | `reversinglabs_spectra_analyze_token` | `REVERSINGLABS_SPECTRA_ANALYZE_TOKEN` | Yes | API authentication token |
-| `reversinglabs_spectra_analyze_max_tlp` | `REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP` | No | Maximum TLP for enrichment (default: TLP:AMBER) |
 | `reversinglabs_spectra_analyze_sandbox_os` | `REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS` | No | Sandbox OS (windows11, windows10, windows7, macos11, linux) |
 | `reversinglabs_spectra_analyze_cloud_analysis` | `REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS` | No | Use cloud analysis (default: true) |
 
@@ -101,9 +101,9 @@ services:
       - CONNECTOR_NAME=ReversingLabs Spectra Analyze
       - CONNECTOR_SCOPE=Artifact,IPv4-Addr,Domain-Name
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - REVERSINGLABS_SPECTRA_ANALYZE_URL=ChangeMe
       - REVERSINGLABS_SPECTRA_ANALYZE_TOKEN=ChangeMe
-      - REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP=TLP:AMBER
       - REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS=windows10
       - REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS=true
     restart: always
