@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/spycloud_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "SpyCloud",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "spycloud"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "debug",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SPYCLOUD_API_BASE_URL": {
+      "description": "SpyCloud API base URL (a trailing slash is added if missing).",
+      "type": "string"
+    },
+    "SPYCLOUD_API_KEY": {
+      "description": "SpyCloud API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPYCLOUD_SEVERITY_LEVELS": {
+      "default": [],
+      "description": "Comma-separated list of severities to filter breach records (allowed values are 2, 5, 20, 25). Leave empty to import all severities.",
+      "items": {
+        "enum": [
+          2,
+          5,
+          20,
+          25
+        ],
+        "type": "integer"
+      },
+      "type": "array"
+    },
+    "SPYCLOUD_WATCHLIST_TYPES": {
+      "default": [],
+      "description": "Comma-separated list of watchlist types to filter breach records (allowed values are 'email', 'domain', 'subdomain', 'ip'). Leave empty to import all watchlist types.",
+      "items": {
+        "enum": [
+          "email",
+          "domain",
+          "subdomain",
+          "ip"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "SPYCLOUD_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "TLP level to set on imported entities.",
+      "enum": [
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "SPYCLOUD_IMPORT_START_DATE": {
+      "description": "The date to start importing breach records from, used only if the connector's state is not set. Can be either absolute (ISO 8601 date, e.g. '2024-01-01T00:00:00Z') or relative (ISO 8601 duration, e.g. 'P30D' for 30 days ago).",
+      "format": "date-time",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SPYCLOUD_API_BASE_URL",
+    "SPYCLOUD_API_KEY"
+  ],
+  "additionalProperties": true
+}
