@@ -1,8 +1,10 @@
+import stix2
 from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from pycti import Malware, OpenCTIConnectorHelper, StixCoreRelationship
 
 ENRICHED_DESCRIPTION = "coucou from enrichment"
 ENRICHED_LABEL = "enriched"
+LINKED_MALWARE_NAME = "supra coucou"
 
 
 class CoucouEnrichmentConnector:
@@ -10,7 +12,8 @@ class CoucouEnrichmentConnector:
     Minimal internal enrichment connector, meant as a reference.
 
     When triggered on an IPv4 observable, it sends back the received bundle with the observable
-    description set to `coucou from enrichment` and the label `enriched` added.
+    description set to `coucou from enrichment` and the label `enriched` added, plus the malware
+    `supra coucou` and a `communicates-with` relationship from that malware to the observable.
     No external API is called.
     To be compatible with the "playbook automation" feature, it always sends back a STIX bundle
     containing the entity to enrich.
@@ -42,6 +45,27 @@ class CoucouEnrichmentConnector:
             stix_object["labels"] = labels
             stix_object["x_opencti_description"] = ENRICHED_DESCRIPTION
         return stix_objects
+
+    @staticmethod
+    def _link_to_malware(entity_id: str) -> list:
+        """
+        Create the malware and a `communicates-with` relationship from it to the entity.
+        Ids are deterministic, so re-runs upsert the same objects instead of creating new ones.
+        """
+        malware = stix2.Malware(
+            id=Malware.generate_id(LINKED_MALWARE_NAME),
+            name=LINKED_MALWARE_NAME,
+            is_family=True,
+        )
+        relationship = stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                "communicates-with", malware.id, entity_id
+            ),
+            relationship_type="communicates-with",
+            source_ref=malware.id,
+            target_ref=entity_id,
+        )
+        return [malware, relationship]
 
     def entity_in_scope(self, data: dict) -> bool:
         """
@@ -85,8 +109,10 @@ class CoucouEnrichmentConnector:
 
             stix_objects = data["stix_objects"]
             if self.entity_in_scope(data):
+                entity_id = data["stix_entity"]["id"]
                 return self._send_bundle(
-                    self._enrich(stix_objects, data["stix_entity"]["id"])
+                    self._enrich(stix_objects, entity_id)
+                    + self._link_to_malware(entity_id)
                 )
             if not data.get("event_type"):
                 # Not in scope AND bundle passed through playbook: return the original bundle unchanged

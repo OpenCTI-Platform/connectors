@@ -10,6 +10,9 @@ IPV4_ID = "ipv4-addr--5853f6a4-638f-5b4e-9b0f-ded361ae3812"
 TLP_RED_ID = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
 OCTI_EXT = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 OCTI_SCO_EXT = "extension-definition--f93e2c80-4231-4f9a-af8b-95c9bd566a82"
+# Deterministic ids as computed by OpenCTI, so re-runs upsert the same objects
+MALWARE_ID = "malware--40936d01-ea50-5e6d-b845-28ea0df425bb"
+RELATIONSHIP_ID = "relationship--9a4950dc-4af5-5a83-b54c-779efd843b43"
 
 
 @pytest.fixture
@@ -153,7 +156,21 @@ def test_enrichment_sends_back_all_received_objects(connector):
     )
 
     sent_ids = [o["id"] for o in connector.helper.sent_bundles[0]["objects"]]
-    assert sent_ids == [IPV4_ID, TLP_RED_ID]
+    assert sent_ids == [IPV4_ID, TLP_RED_ID, MALWARE_ID, RELATIONSHIP_ID]
+
+
+def test_enrichment_links_ip_to_supra_coucou_malware(connector):
+    connector.process_message(_message(_ipv4_from_manual_trigger([])))
+
+    objects = {o["id"]: o for o in connector.helper.sent_bundles[0]["objects"]}
+    malware = objects[MALWARE_ID]
+    assert malware["type"] == "malware"
+    assert malware["name"] == "supra coucou"
+    assert malware["is_family"] is True
+    relationship = objects[RELATIONSHIP_ID]
+    assert relationship["relationship_type"] == "communicates-with"
+    assert relationship["source_ref"] == MALWARE_ID
+    assert relationship["target_ref"] == IPV4_ID
 
 
 def test_enrichment_enriches_entity_within_max_tlp(connector):

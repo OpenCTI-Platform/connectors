@@ -5,7 +5,9 @@ Reference internal enrichment connector, not meant for release. It calls no exte
 When triggered on an IPv4 observable, it:
 
 - sets the observable description to `coucou from enrichment`;
-- adds the label `enriched` (existing labels are kept, the label is not duplicated on re-run).
+- adds the label `enriched` (existing labels are kept, the label is not duplicated on re-run);
+- links it to the malware `supra coucou` with a `communicates-with` relationship (malware → IP).
+  The malware and relationship ids are deterministic, so a re-run updates them instead of creating duplicates.
 
 It works by modifying the observable in the received bundle and sending the bundle back, so it is
 also usable as a playbook step.
@@ -32,6 +34,8 @@ python src/main.py
 ```
 
 Then in OpenCTI, open an IPv4 observable, click **Enrichment** and run **Coucou Enrichment**.
+The IP gets the description and the label, and its **Knowledge** tab shows the `supra coucou` malware
+linked with "communicates with".
 
 ## Tests
 
