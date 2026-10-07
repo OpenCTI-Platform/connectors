@@ -22,6 +22,7 @@ from __future__ import annotations
 import datetime as dt
 import ipaddress
 import re
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,6 +52,22 @@ from rosti_client.models import Yara
 
 ROSTI_URL = "https://rosti.dev"
 ROSTI_REPORT_URL = ROSTI_URL + "/reports/{id}"
+
+# Namespace of the report STIX IDs, which are derived from the Rösti report ID
+# (see report_stix_id).
+ROSTI_REPORT_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "https://rosti.dev/reports/")
+
+
+def report_stix_id(rosti_report_id: str) -> str:
+    """Deterministic STIX ID of a Rösti report, based only on its Rösti ID.
+
+    The usual report ID (name + publication date) changes when Rösti corrects
+    a title or date, which would create a second report in OpenCTI. OpenCTI
+    keeps this ID in the report's ``x_opencti_stix_ids`` and finds the report
+    by it on every later import, so title and date are updated in place.
+    """
+    return f"report--{uuid.uuid5(ROSTI_REPORT_NAMESPACE, rosti_report_id)}"
+
 
 # Score (0-100) per Rösti false-positive risk level. A higher false-positive
 # risk means OpenCTI should trust the indicator less.
@@ -748,6 +765,8 @@ class RostiConverter:
     ) -> ReportStix:
         """Convert a report.
 
+        Its STIX ID depends only on the Rösti report ID (``report_stix_id``),
+        so a corrected title or date updates the same report in OpenCTI.
         The report carries an OpenCTI upsert operation that *replaces* its
         contained objects. Without it, OpenCTI only adds references when a
         report is updated, so IOCs removed from a Rösti report would stay in
@@ -782,9 +801,9 @@ class RostiConverter:
             markings=[self.tlp_marking],
             external_references=external_references,
         ).to_stix2_object()
-        # Same deterministic ID as the SDK Report (name + published date).
+        # Stable ID from the Rösti report ID instead of the SDK's name + date ID.
         return ReportStix(
-            id=stix_report["id"],
+            id=report_stix_id(report.id),
             **{key: stix_report[key] for key in stix_report if key != "id"},
             allow_custom=True,
             opencti_upsert_operations=[

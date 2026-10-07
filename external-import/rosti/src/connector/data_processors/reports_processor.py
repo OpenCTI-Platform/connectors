@@ -1,15 +1,21 @@
 """Import Rösti reports, with their IOCs, YARA rules, MITRE IDs and CVEs.
 
 Each run asks the API for reports created or updated since the last
-checkpoint (oldest change first) and sends one STIX bundle per report.
-The checkpoint advances after every report, so an interrupted run (API
-error, used-up quota, restart) resumes where it stopped.
+checkpoint (oldest change first). The IOCs of a report are converted while
+their pages arrive and sent in bundles of at most ``MAX_BUNDLE_OBJECTS``
+objects; the report itself goes last, with references to all of them.
+
+The checkpoint advances after every complete report. When the API key's
+quota is used up, the run ends early and keeps that checkpoint, so the next
+run continues there. Any other error fails the run; the SDK then discards
+the run's checkpoint and the next run retries from the previous one.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from connector.converter import RostiConverter
@@ -20,7 +26,7 @@ from pycti import Malware as PyctiMalware
 from pycti import Tool as PyctiTool
 from rosti_client import RostiClient
 from rosti_client.api_client import quota_exceeded
-from rosti_client.models import Mitre, ReportBundle
+from rosti_client.models import IOC, Mitre, Report, ReportBundle, Yara
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
@@ -30,6 +36,23 @@ if TYPE_CHECKING:
 # Rösti report timestamps have one-second resolution: query one second
 # earlier than the checkpoint and skip the reports already sent.
 CHECKPOINT_OVERLAP = dt.timedelta(seconds=1)
+
+# Largest number of IOC objects per bundle. The repository's guidance is to
+# keep bundles under about 10,000 objects; one IOC group adds a few objects
+# at most, and the last bundle of a report adds YARA, MITRE, CVEs and the report.
+MAX_BUNDLE_OBJECTS = 5000
+
+
+@dataclass
+class ReportData:
+    """One report as collected; its IOC groups are fetched page by page."""
+
+    report: Report
+    # `last_updated` of the report in the list response, used as checkpoint.
+    listed_last_updated: dt.datetime | None
+    # Lazy: IOC pages are requested while the groups are converted.
+    ioc_groups: Iterable[list[IOC]] = field(default_factory=list)
+    yara_rules: list[Yara] = field(default_factory=list)
 
 
 class ReportsProcessor(BaseDataProcessor):
@@ -123,8 +146,14 @@ class ReportsProcessor(BaseDataProcessor):
             self.state.last_report_ids or []
         )
 
-    def collect(self) -> Generator[ReportBundle, None, None]:
-        """Yield every new or updated report with its IOCs and YARA rules."""
+    def collect(self) -> Generator[ReportData, None, None]:
+        """Yield every new or updated report with its YARA rules and IOC groups.
+
+        The IOC groups are a generator: their pages are only requested while
+        ``transform`` converts them, so a large report is never held in memory.
+        """
+        # MITRE software may have been added to OpenCTI since the last run.
+        self._software_cache = {}
         config = self.settings.rosti
         since = self._query_start()
         self.logger.info(
@@ -136,11 +165,6 @@ class ReportsProcessor(BaseDataProcessor):
                 if self._already_sent(summary.id, summary.last_updated):
                     continue
                 report = self.client.get_report(summary.id)
-                ioc_groups = (
-                    self.client.get_report_ioc_groups(report.id)
-                    if config.import_iocs and report.count.iocs > 0
-                    else []
-                )
                 yara_rules = (
                     self.client.get_report_yara_rules(report.id)
                     if config.import_yara
@@ -148,7 +172,12 @@ class ReportsProcessor(BaseDataProcessor):
                     and not report.hide_yara
                     else []
                 )
-                yield ReportBundle(
+                ioc_groups = (
+                    self.client.iter_report_ioc_groups(report.id)
+                    if config.import_iocs and report.count.iocs > 0
+                    else []
+                )
+                yield ReportData(
                     report=report,
                     listed_last_updated=summary.last_updated,
                     ioc_groups=ioc_groups,
@@ -169,10 +198,11 @@ class ReportsProcessor(BaseDataProcessor):
             return False
         return True
 
-    def _convert_iocs(self, bundle: ReportBundle) -> list[Any]:
-        """Convert the IOCs of a report, combining the IOCs of each entity_ref group."""
+    def _iter_ioc_objects(
+        self, bundle: ReportData | ReportBundle
+    ) -> Generator[list[Any], None, None]:
+        """Convert the IOCs of a report group by group (entity_ref groups combined)."""
         report = bundle.report
-        objects: list[Any] = []
         skipped: dict[str, int] = {}
         combined: dict[str, int] = {}
         seen_refs: set[str] = set()
@@ -200,7 +230,8 @@ class ReportsProcessor(BaseDataProcessor):
                 )
             for kind in result.combined:
                 combined[kind] = combined.get(kind, 0) + 1
-            objects.extend(result.objects)
+            if result.objects:
+                yield result.objects
         if skipped:
             self.logger.info(
                 "IOCs not imported", {"report_id": report.id, "by_type": skipped}
@@ -209,19 +240,16 @@ class ReportsProcessor(BaseDataProcessor):
             self.logger.debug(
                 "IOC groups combined", {"report_id": report.id, "groups": combined}
             )
-        return objects
 
-    def convert_bundle(self, bundle: ReportBundle) -> list[Any]:
-        """Convert one report and its related data into a list of STIX objects."""
+    def _other_objects(
+        self, bundle: ReportData | ReportBundle
+    ) -> tuple[list[Any], list[BaseIdentifiedEntity | Reference]]:
+        """YARA rules, MITRE entries and CVEs of a report, with their references."""
         config = self.settings.rosti
         report = bundle.report
         converter = self.converter
         objects: list[Any] = []
         refs: list[BaseIdentifiedEntity | Reference] = []
-
-        ioc_objects = self._convert_iocs(bundle)
-        objects.extend(ioc_objects)
-        refs.extend(Reference(id=obj.id) for obj in ioc_objects)
 
         accepted, rejected = prepare_yara_patterns(bundle.yara_rules)
         for skipped_rule in rejected:
@@ -252,9 +280,40 @@ class ReportsProcessor(BaseDataProcessor):
                 vulnerability = converter.convert_cve(cve)
                 objects.append(vulnerability)
                 refs.append(vulnerability)
+        return objects, refs
 
-        stix_report = converter.convert_report(report, refs)
-        return [converter.author, converter.tlp_marking, *objects, stix_report]
+    def convert_report_chunks(
+        self, bundle: ReportData | ReportBundle
+    ) -> Generator[list[Any], None, None]:
+        """Convert one report into bundles of at most ``MAX_BUNDLE_OBJECTS`` IOC objects.
+
+        Every bundle carries the author and the marking. The last one holds
+        the YARA rules, MITRE entries, CVEs and the report, which references
+        everything sent for it (including the earlier bundles).
+        """
+        converter = self.converter
+        meta = [converter.author, converter.tlp_marking]
+        refs: list[BaseIdentifiedEntity | Reference] = []
+        chunk: list[Any] = []
+        for objects in self._iter_ioc_objects(bundle):
+            chunk.extend(objects)
+            refs.extend(Reference(id=obj.id) for obj in objects)
+            if len(chunk) >= MAX_BUNDLE_OBJECTS:
+                yield [*meta, *chunk]
+                chunk = []
+        others, other_refs = self._other_objects(bundle)
+        refs.extend(other_refs)
+        stix_report = converter.convert_report(bundle.report, refs)
+        yield [*meta, *chunk, *others, stix_report]
+
+    def convert_bundle(self, bundle: ReportData | ReportBundle) -> list[Any]:
+        """Convert one report into a single list of STIX objects (all chunks merged)."""
+        converter = self.converter
+        meta = [converter.author, converter.tlp_marking]
+        objects: list[Any] = []
+        for chunk in self.convert_report_chunks(bundle):
+            objects.extend(chunk[len(meta) :])
+        return [*meta, *objects]
 
     def _advance_checkpoint(
         self, report_id: str, last_updated: dt.datetime | None
@@ -274,42 +333,40 @@ class ReportsProcessor(BaseDataProcessor):
             self.state.last_report_ids = [report_id]
 
     def transform(
-        self, data: Generator[ReportBundle, None, None]
+        self, data: Generator[ReportData, None, None]
     ) -> Generator[list[Any], None, None]:
-        """Yield one STIX object list per report and move the checkpoint forward."""
+        """Yield the bundles of each report and move the checkpoint after each report.
+
+        A used-up quota ends the run quietly: the checkpoint of the reports
+        sent so far is kept and the next run continues there. Any other error
+        (API, conversion) is logged and raised, so the run is marked as failed
+        and its checkpoint is not saved; nothing is skipped.
+        """
         sent = 0
+        report_id = None
         try:
             for bundle in data:
-                report = bundle.report
-                try:
-                    stix_objects = self.convert_bundle(bundle)
-                except Exception as e:  # pylint: disable=broad-exception-caught
-                    self.logger.error(
-                        "Failed to convert report, skipping it",
-                        {"report_id": report.id, "error": str(e)},
-                    )
-                    self._advance_checkpoint(report.id, bundle.listed_last_updated)
-                    continue
-                yield stix_objects
-                # The bundle has been sent once the generator resumes here.
-                self._advance_checkpoint(report.id, bundle.listed_last_updated)
+                report_id = bundle.report.id
+                yield from self.convert_report_chunks(bundle)
+                # All bundles of the report have been sent once the generator resumes here.
+                self._advance_checkpoint(report_id, bundle.listed_last_updated)
                 sent += 1
+                report_id = None
         except Exception as e:  # pylint: disable=broad-exception-caught
-            # API error or rate limit: keep the checkpoint, the next run resumes from it.
             quota = quota_exceeded(e)
-            if quota is not None:
-                self.logger.warning(
-                    "Rösti API quota exceeded, the import continues from the last "
-                    "checkpoint on the first run after the quota resets",
-                    {
-                        "detail": quota.get("detail") or quota.get("title"),
-                        "reset": quota.get("reset"),
-                        "reports_sent": sent,
-                    },
-                )
-            else:
+            if quota is None:
                 self.logger.error(
-                    "Import interrupted, will resume from the last checkpoint on the next run",
-                    {"error": str(e), "reports_sent": sent},
+                    "Import failed, the next run retries from the last saved checkpoint",
+                    {"report_id": report_id, "error": str(e), "reports_sent": sent},
                 )
+                raise
+            self.logger.warning(
+                "Rösti API quota exceeded, the import continues from the last "
+                "checkpoint on the first run after the quota resets",
+                {
+                    "detail": quota.get("detail") or quota.get("title"),
+                    "reset": quota.get("reset"),
+                    "reports_sent": sent,
+                },
+            )
         self.logger.info("Rösti import finished", {"reports_sent": sent})

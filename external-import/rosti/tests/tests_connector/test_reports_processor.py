@@ -2,9 +2,10 @@
 
 import datetime as dt
 
+import pytest
 from conftest import load_fixture, make_settings
 from connector import ConnectorState
-from connector.data_processors import ReportsProcessor
+from connector.data_processors import ReportsProcessor, reports_processor
 from connectors_sdk.client.exceptions import ApiRateLimitError, ApiServerError
 from rosti_client.models import IOC, Report, ReportBundle, Yara
 
@@ -58,20 +59,18 @@ class FakeClient:
                     return report.model_copy()
         raise KeyError(report_id)
 
-    def get_report_ioc_groups(self, report_id):
-        return [
-            [
-                IOC.model_validate(
-                    {
-                        "id": f"ioc-{report_id}",
-                        "type": "domain",
-                        "value": f"{report_id.lower()}.evil.example",
-                        "date": "2026-10-01",
-                        "ids": True,
-                        "report": report_id,
-                    }
-                )
-            ]
+    def iter_report_ioc_groups(self, report_id):
+        yield [
+            IOC.model_validate(
+                {
+                    "id": f"ioc-{report_id}",
+                    "type": "domain",
+                    "value": f"{report_id.lower()}.evil.example",
+                    "date": "2026-10-01",
+                    "ids": True,
+                    "report": report_id,
+                }
+            )
         ]
 
     def get_report_yara_rules(self, report_id):
@@ -334,18 +333,109 @@ def test_entity_ref_split_in_the_response_is_logged(fake_logger):
     )
 
 
-def test_other_api_errors_are_logged_as_errors(fake_logger):
+def test_other_api_errors_fail_the_run(fake_logger):
+    """Not swallowed: the SDK marks the work as failed and keeps the old checkpoint."""
+
     class BrokenClient(FakeClient):
         def get_report(self, report_id):
-            raise ApiServerError(
-                "Server error (502) on GET /reports/A", status_code=502
-            )
+            if report_id == "B":
+                raise ApiServerError(
+                    "Server error (502) on GET /reports/B", status_code=502
+                )
+            return super().get_report(report_id)
 
-    client = BrokenClient([[summary("A", "2026-10-01T10:00:00Z")]])
+    client = BrokenClient(
+        [[summary("A", "2026-10-01T10:00:00Z"), summary("B", "2026-10-01T11:00:00Z")]]
+    )
     processor = make_processor(client, fake_logger=fake_logger)
-    assert run(processor) == []
-    assert processor.state.last_report_updated is None
+    bundles = []
+    with pytest.raises(ApiServerError):
+        for bundle in processor.transform(processor.collect()):
+            bundles.append(bundle)
+    assert len(bundles) == 1
     assert (
         "error",
-        "Import interrupted, will resume from the last checkpoint on the next run",
+        "Import failed, the next run retries from the last saved checkpoint",
     ) in fake_logger.messages
+
+
+def test_conversion_failure_stops_the_run_without_skipping_the_report(
+    fake_logger, monkeypatch
+):
+    client = FakeClient(
+        [[summary("A", "2026-10-01T10:00:00Z"), summary("B", "2026-10-01T11:00:00Z")]]
+    )
+    processor = make_processor(client, fake_logger=fake_logger)
+    original = processor.converter.convert_report
+
+    def broken(report, refs):
+        if report.id == "A":
+            raise ValueError("unexpected data")
+        return original(report, refs)
+
+    monkeypatch.setattr(processor.converter, "convert_report", broken)
+    with pytest.raises(ValueError):
+        run(processor)
+    # B was not processed and the checkpoint did not move past A
+    assert client.detail_calls == ["A"]
+    assert processor.state.last_report_updated is None
+
+
+def test_software_lookup_cache_is_reset_every_run(fake_logger):
+    processor = make_processor(FakeClient([]), fake_logger=fake_logger)
+    processor._software_cache = {"S0002": None}
+    run(processor)
+    assert processor._software_cache == {}
+
+
+def _many_iocs(report_id, count):
+    return [
+        IOC.model_validate(
+            {
+                "id": f"{report_id}-{i}",
+                "type": "domain",
+                "value": f"host{i}.{report_id.lower()}.example",
+                "date": "2026-10-01",
+                "ids": True,
+                "report": report_id,
+            }
+        )
+        for i in range(count)
+    ]
+
+
+def test_large_reports_are_sent_in_bounded_bundles(fake_logger, monkeypatch):
+    monkeypatch.setattr(reports_processor, "MAX_BUNDLE_OBJECTS", 30)
+    pulled = []
+
+    class LargeClient(FakeClient):
+        def iter_report_ioc_groups(self, report_id):
+            for ioc in _many_iocs(report_id, 25):  # 25 IOCs -> 75 objects
+                pulled.append(ioc.id)
+                yield [ioc]
+
+    client = LargeClient([[summary("A", "2026-10-01T10:00:00Z")]])
+    processor = make_processor(client, fake_logger=fake_logger)
+    chunks = processor.transform(processor.collect())
+
+    first = next(chunks)
+    # streamed: only the IOCs needed for the first bundle have been fetched
+    assert len(pulled) == 10
+    assert processor.state.last_report_updated is None
+    rest = list(chunks)
+    bundles = [first, *rest]
+
+    assert len(bundles) == 3
+    for bundle in bundles:
+        assert bundle[0] is processor.converter.author
+        assert bundle[1] is processor.converter.tlp_marking
+        assert len(bundle) - 2 <= 30 + 1
+    reports = [o for b in bundles for o in b if getattr(o, "type", None) == "report"]
+    assert len(reports) == 1 and reports[0] is bundles[-1][-1]
+    sent_ids = {o.id for b in bundles for o in b[2:]} - {reports[0].id}
+    assert set(reports[0]["object_refs"]) == sent_ids
+    assert len(reports[0]["object_refs"]) == 75
+    # the checkpoint moves only after the last bundle of the report
+    assert processor.state.last_report_updated == dt.datetime(
+        2026, 10, 1, 10, tzinfo=UTC
+    )

@@ -4,7 +4,7 @@ import datetime as dt
 
 import pytest
 from conftest import load_fixture
-from connector.converter import ConversionError, RostiConverter
+from connector.converter import ConversionError, RostiConverter, report_stix_id
 from connectors_sdk.models import Reference
 from pycti import Indicator as PyctiIndicator
 from rosti_client.models import IOC, Mitre, Report, Yara
@@ -287,6 +287,22 @@ def test_report_conversion_from_sample(converter):
     assert report.url in urls
     assert "https://rosti.dev/reports/r1xSdqAy" in urls
     assert "Truesec" in stix_report["description"]
+
+
+def test_report_id_depends_only_on_the_rosti_id(converter):
+    """A corrected title or date must update the same OpenCTI report."""
+    report = Report.model_validate(load_fixture("report_r1xSdqAy.json"))
+    first = converter.convert_report(report, [])
+    corrected = report.model_copy(
+        update={"title": "Corrected title", "date": dt.date(2026, 9, 30)}
+    )
+    second = converter.convert_report(corrected, [])
+    other = converter.convert_report(report.model_copy(update={"id": "other123"}), [])
+
+    assert first["id"] == second["id"] == report_stix_id("r1xSdqAy")
+    assert second["name"] == "Corrected title"
+    assert other["id"] != first["id"]
+    assert first["id"].startswith("report--")
 
 
 def test_report_replaces_its_objects_on_update(converter):
