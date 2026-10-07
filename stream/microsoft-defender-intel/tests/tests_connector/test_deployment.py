@@ -14,6 +14,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
+from connectors_sdk.connectors.stream.deployment import PENDING_WITHDRAWALS_STATE_KEY
 from microsoft_defender_intel_connector import (
     ConnectorSettings,
     MicrosoftDefenderIntelConnector,
@@ -438,6 +439,9 @@ def test_a_pattern_edit_without_a_value_defender_takes_is_reported_removed(
 def test_a_failed_pattern_edit_keeps_the_defender_indicator_of_the_former_value(
     connector,
 ):
+    """The former value stays live with the previous version: it is kept for the
+    next update or delete of the indicator to delete it."""
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
     connector.api._send_request.side_effect = [
         {"value": []},
         {"value": [own("1")]},
@@ -455,9 +459,11 @@ def test_a_failed_pattern_edit_keeps_the_defender_indicator_of_the_former_value(
     assert [entry for entry in _sent(connector) if entry[0] == "delete"] == []
     connector.assurance.report_push_failed.assert_called_once()
     connector.assurance.report_pushed.assert_not_called()
+    assert kept_former_values(connector) == ["198.51.100.7"]
 
 
-def test_a_failed_deletion_of_a_former_value_is_logged(connector):
+def test_a_failed_deletion_of_a_former_value_is_logged_and_kept(connector):
+    connector.helper.get_state.return_value = {"start_from": "1-0"}
     connector.api._send_request.side_effect = [
         {"value": []},
         {"value": [own("1")]},
@@ -474,12 +480,114 @@ def test_a_failed_deletion_of_a_former_value_is_logged(connector):
 
     connector.helper.connector_logger.warning.assert_any_call(
         "[UPDATE] Cannot delete the Defender indicator of a former value",
-        meta={"defender_id": "1", "opencti_id": INDICATOR_ID, "error": ANY},
+        meta={
+            "opencti_id": INDICATOR_ID,
+            "values": ["198.51.100.7"],
+            "error": ANY,
+        },
     )
     connector.helper.api.external_reference.delete.assert_not_called()
     connector.assurance.report_pushed.assert_called_once_with(
         indicator, external_id="2"
     )
+    assert kept_former_values(connector) == ["198.51.100.7"]
+
+
+FORMER_VALUE = "203.0.113.9"
+
+
+def keep_former_value(connector, value=FORMER_VALUE):
+    """Leave a former value an earlier update could not delete in the state."""
+    connector.helper.get_state.return_value = {
+        "start_from": "1-0",
+        PENDING_WITHDRAWALS_STATE_KEY: {make_indicator()["id"]: [value]},
+    }
+
+
+def kept_former_values(connector):
+    state = connector.helper.get_state.return_value
+    return state.get(PENDING_WITHDRAWALS_STATE_KEY, {}).get(make_indicator()["id"], [])
+
+
+def test_update_deletes_the_former_values_an_earlier_update_left(connector):
+    keep_former_value(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [own(DEFENDER_ID)]},
+        {"id": DEFENDER_ID},
+        {"value": [own("1")]},
+        None,
+    ]
+    indicator = make_indicator()
+
+    connector.process_message(make_message("update", indicator))
+
+    assert _sent(connector) == [
+        ("get", ""),
+        ("post", ""),
+        ("get", ""),
+        ("delete", "/1"),
+    ]
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=DEFENDER_ID
+    )
+    assert kept_former_values(connector) == []
+
+
+def test_a_kept_former_value_back_in_the_pattern_is_never_deleted(connector):
+    keep_former_value(connector, "198.51.100.7")
+    connector.api._send_request.side_effect = [
+        {"value": [own(DEFENDER_ID)]},
+        {"id": DEFENDER_ID},
+    ]
+
+    connector.process_message(make_message("update", make_indicator()))
+
+    assert _sent(connector) == [("get", ""), ("post", "")]
+    assert kept_former_values(connector) == []
+
+
+def test_delete_after_a_failed_deletion_deletes_the_former_indicator_first(
+    connector,
+):
+    """The delete carries the current pattern only: the kept former value is
+    deleted before the indicator is reported removed."""
+    keep_former_value(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [own("1")]},
+        None,
+        {"value": [own(DEFENDER_ID)]},
+        None,
+    ]
+    indicator = make_indicator()
+
+    connector.process_message(make_message("delete", indicator))
+
+    assert [entry for entry in _sent(connector) if entry[0] == "delete"] == [
+        ("delete", "/1"),
+        ("delete", f"/{DEFENDER_ID}"),
+    ]
+    connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=DEFENDER_ID
+    )
+    assert kept_former_values(connector) == []
+
+
+def test_delete_whose_former_indicator_is_still_refused_is_not_reported_removed(
+    connector,
+):
+    keep_former_value(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [own("1")]},
+        http_error(503, "Unavailable"),
+        {"value": [own(DEFENDER_ID)]},
+        None,
+    ]
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    assert ("delete", f"/{DEFENDER_ID}") in _sent(connector)
+    connector.assurance.report_removed.assert_not_called()
+    assert kept_former_values(connector) == [FORMER_VALUE]
 
 
 def test_a_failed_deletion_leaves_an_edited_indicator_unreported(connector):

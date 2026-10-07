@@ -73,7 +73,7 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 | Indicator rejected by Defender            | `failed`, with a short reason such as "Microsoft Defender refused the indicator submission: invalid request" (the Defender response is written to the connector log) |
 | Update of an indicator absent from Defender | Nothing: the indicator was never pushed (neither its current nor its former pattern)             |
 | Pattern edited to values Defender does not take | `removed`, once the Defender indicators of the former values are deleted                       |
-| Delete event processed                    | `removed` (also when the indicator was already absent from Defender)                                 |
+| Delete event processed                    | `removed` (also when the indicator was already absent from Defender); nothing while a former value kept by a failed deletion or a failed update is still in Defender |
 | Reconciliation, indicator present         | `active`                                                                                             |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in Defender), once a lookup by value confirms the absence: only the values the connector pushes are looked up, and a Defender indicator pushed for another OpenCTI indicator with the same value does not count |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator Defender still holds in full is confirmed `active` instead |
@@ -92,7 +92,9 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
   not pushed. A push is all or nothing: when Defender refuses one of them, the ones created are deleted again and the
   indicator is reported `failed`. An update creates the Defender indicators that are missing. When the pattern is
   edited, the former pattern is read from the update event: the Defender indicators of the values the indicator no
-  longer holds are deleted once its new values are live (a failed update keeps them). Reconciliation confirms
+  longer holds are deleted once its new values are live (a failed update keeps them). A former value whose deletion
+  fails, or that a failed update keeps, is kept in the connector state: the next update or delete of the indicator
+  deletes it first, unless the pattern holds it again. Reconciliation confirms
   `active` only when every observable has its Defender indicator (a file by any of its hashes), and never for a STIX
   pattern holding no value Defender takes (its Defender indicators are left from an earlier pattern); otherwise the
   indicator is pushed again, or stays `failed` until a new push is requested.

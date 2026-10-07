@@ -3,6 +3,7 @@ from json import JSONDecodeError
 
 from connectors_sdk import DeploymentAssurance
 from connectors_sdk.connectors.stream.deployment import (
+    PendingWithdrawals,
     normalize_value,
     pattern_observable_values,
 )
@@ -64,6 +65,7 @@ class MicrosoftDefenderIntelConnector:
         self.config = config
         self.helper = helper
         self.assurance = assurance
+        self.pending_withdrawals = PendingWithdrawals(helper)
         self.api = DefenderApiHandler(
             self.helper,
             base_url=self.config.microsoft_defender_intel.base_url,
@@ -218,39 +220,56 @@ class MicrosoftDefenderIntelConnector:
             if (value := self._observable_value(observable))
         ]
 
-    def _delete_former_defender_indicators(
-        self, former_indicators: list[dict], opencti_id: str | None
+    def _withdraw_former_values(
+        self,
+        data: dict,
+        opencti_id: str | None,
+        found: dict[str, list[dict]] | None = None,
+        current_values: frozenset | set = frozenset(),
     ) -> bool:
         """
         Delete the Defender indicators of the values an updated indicator no longer holds,
-        once its current values are live. A failure is logged: the current values are
-        live, and the former ones stop at their `expirationTime`.
-        :param former_indicators: The Defender indicators of the former values
+        once its current values are live, and those earlier updates left (see
+        `PendingWithdrawals`). A failure is logged and the values left are kept for the
+        next update or delete of the indicator: the current values are live, and the
+        former ones keep detecting until then or until their `expirationTime`.
+        :param data: OpenCTI indicator (stream event shape)
         :param opencti_id: OpenCTI id of the indicator
-        :return: True when every one of them is deleted
+        :param found: The Defender indicators of the former values of the update
+            being processed, per value
+        :param current_values: Normalized values of the current pattern, never deleted
+        :return: True when no former value is left
         """
-        deleted_all = True
-        for indicator in former_indicators:
-            defender_id = str(indicator["id"])
-            try:
+        found = dict(found or {})
+
+        def withdraw(value: str) -> None:
+            if normalize_value(value) in current_values:
+                return
+            indicators = found.pop(value, None)
+            if indicators is None:
+                indicators = self._own_defender_indicators(value, opencti_id)
+            for indicator in indicators:
+                defender_id = str(indicator["id"])
                 self.api.delete_indicator(defender_id)
-            except Exception as err:
-                deleted_all = False
-                self.helper.connector_logger.warning(
-                    "[UPDATE] Cannot delete the Defender indicator of a former value",
-                    meta={
-                        "defender_id": defender_id,
-                        "opencti_id": opencti_id,
-                        "error": describe_error(err),
-                    },
+                self.helper.connector_logger.info(
+                    "[UPDATE] Indicator of a former value deleted",
+                    {"defender_id": defender_id, "opencti_id": opencti_id},
                 )
-                continue
-            self.helper.connector_logger.info(
-                "[UPDATE] Indicator of a former value deleted",
-                {"defender_id": defender_id, "opencti_id": opencti_id},
+                self._delete_external_reference(defender_id)
+
+        try:
+            self.pending_withdrawals.withdraw(data.get("id"), withdraw, list(found))
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "[UPDATE] Cannot delete the Defender indicator of a former value",
+                meta={
+                    "opencti_id": opencti_id,
+                    "values": self.pending_withdrawals.values(data.get("id")),
+                    "error": describe_error(err),
+                },
             )
-            self._delete_external_reference(defender_id)
-        return deleted_all
+            return False
+        return True
 
     @staticmethod
     def _observable_value(observable: dict) -> str | None:
@@ -388,6 +407,8 @@ class MicrosoftDefenderIntelConnector:
             created_ids: list[str] = []
             updated: list[dict] = []
             former: dict[str, dict] = {}
+            former_found: dict[str, list[dict]] = {}
+            current_values: set = set()
             try:
                 observables = self._supported_observables(data)
                 existing = [
@@ -406,9 +427,10 @@ class MicrosoftDefenderIntelConnector:
                 # The Defender indicators of the values the edited pattern no longer holds.
                 for value in self._former_values(data, context):
                     if normalize_value(value) not in current_values:
-                        for indicator in self._own_defender_indicators(
+                        former_found[value] = self._own_defender_indicators(
                             value, opencti_id
-                        ):
+                        )
+                        for indicator in former_found[value]:
                             former[str(indicator["id"])] = indicator
                 # An indicator with at least one Defender indicator, for its current or
                 # its former pattern, is deployed: every observable must have its own,
@@ -433,15 +455,27 @@ class MicrosoftDefenderIntelConnector:
                         )
                     did_update = True
             except Exception as err:
-                # The former values stay on Defender with the previous version.
+                # The former values stay on Defender with the previous version, until
+                # the next update or delete of the indicator deletes them.
                 self._restore_defender_indicators(updated)
                 self._roll_back_defender_indicators(created_ids)
+                self.pending_withdrawals.keep(
+                    data.get("id"),
+                    [value for value, found in former_found.items() if found],
+                )
                 self._report_failed(data, err)
                 raise
-            former_deleted = self._delete_former_defender_indicators(
-                list(former.values()), opencti_id
+            left_by_earlier_updates = bool(
+                self.pending_withdrawals.values(data.get("id"))
             )
-            if former and former_deleted and not deployed_ids:
+            former_deleted = self._withdraw_former_values(
+                data, opencti_id, former_found, current_values
+            )
+            if (
+                (former or left_by_earlier_updates)
+                and former_deleted
+                and not deployed_ids
+            ):
                 # No value of the edited pattern is taken by Defender: none is left.
                 if self.assurance is not None:
                     self.assurance.report_removed(data, external_id=None)
@@ -512,6 +546,7 @@ class MicrosoftDefenderIntelConnector:
         did_delete = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if is_stix_indicator(data):
+            former_left = not self._withdraw_former_values(data, opencti_id)
             observables = self._convert_indicator_to_observables(data) or []
             deleted_ids = []
             for observable in observables:
@@ -538,7 +573,7 @@ class MicrosoftDefenderIntelConnector:
                         },
                     )
                     self._delete_external_reference(indicator_result["id"])
-            if self.assurance is not None:
+            if self.assurance is not None and not former_left:
                 # Also when no Defender indicator was found: it is absent from Defender
                 self.assurance.report_removed(
                     data, external_id=deleted_ids[0] if deleted_ids else None
