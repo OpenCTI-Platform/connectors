@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -63,6 +64,18 @@ class EsetConfig(BaseConfigModel):
     )
 
 
+class LegacyConnectorTemplateConfig(BaseConfigModel):
+    """
+    Legacy `connector_template` section, left over from the connector template.
+    Its variables are migrated to the `eset` section.
+    """
+
+    max_tlp: str | None = Field(
+        description="Deprecated, use `ESET_MAX_TLP` instead.",
+        default=None,
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
     Override `BaseConnectorSettings` to include `EsetConnectorConfig` and `EsetConfig`.
@@ -70,3 +83,9 @@ class ConnectorSettings(BaseConnectorSettings):
 
     connector: EsetConnectorConfig = Field(default_factory=EsetConnectorConfig)
     eset: EsetConfig = Field(default_factory=EsetConfig)
+
+    # Legacy `CONNECTOR_TEMPLATE_*` env vars prefix
+    connector_template: LegacyConnectorTemplateConfig = DeprecatedField(
+        deprecated="Use the 'eset' section instead (e.g. 'ESET_MAX_TLP').",
+        new_namespace="eset",
+    )

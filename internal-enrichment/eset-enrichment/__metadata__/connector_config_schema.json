@@ -85,6 +85,12 @@
         "TLP:RED"
       ],
       "type": "string"
+    },
+    "CONNECTOR_TEMPLATE_MAX_TLP": {
+      "default": null,
+      "description": "Use ESET_MAX_TLP instead.",
+      "type": "string",
+      "deprecated": true
     }
   },
   "required": [
