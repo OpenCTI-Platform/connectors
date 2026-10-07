@@ -143,7 +143,7 @@
     },
     "MISP_MARKING_TYPES_TO_CONVERT": {
       "default": "TLP,PAP",
-      "description": "Comma-separated allow-list of marking-definition `definition_type` values (case-insensitive, e.g. TLP, PAP) that are converted to MISP tags, at both the event level (container's object_marking_refs, plus report_types) and the attribute/object level (indicator's and observable's object_marking_refs). Any marking whose definition_type is not in this list (e.g. custom/internal distribution-control markings) is skipped and never reaches MISP.",
+      "description": "Comma-separated list of marking definition types (case-insensitive, e.g. TLP, PAP) whose container markings are converted to MISP event tags. This only controls tag conversion, it does not filter which containers or objects are exported.",
       "type": "string"
     },
     "MISP_HARD_DELETE": {

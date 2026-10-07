@@ -86,14 +86,10 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         default="TLP,PAP",
         alias="MISP_MARKING_TYPES_TO_CONVERT",
         description=(
-            "Comma-separated allow-list of marking-definition `definition_type` values "
-            "(case-insensitive, e.g. TLP, PAP) that are converted to MISP tags, at both "
-            "the event level (container's object_marking_refs, plus report_types) and "
-            "the attribute/object level (indicator's and observable's object_marking_refs). "
-            "Any marking whose definition_type is not in this list (e.g. custom/internal "
-            "distribution-control markings) is skipped and never reaches MISP. This is an "
-            "allow-list (fails closed): newly created custom marking types are NOT converted "
-            "by default, unlike a deny-list which would leak them until explicitly excluded."
+            "Comma-separated list of marking definition types (case-insensitive, "
+            "e.g. TLP, PAP) whose container markings are converted to MISP event tags. "
+            "This only controls tag conversion, it does not filter which containers "
+            "or objects are exported."
         ),
     )
 

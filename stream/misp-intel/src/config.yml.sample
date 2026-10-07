@@ -33,14 +33,8 @@ misp:
   # Tagging configuration
   tag_opencti: true  # Add OpenCTI-specific tags to MISP events
   tag_prefix: 'opencti:'  # Prefix for OpenCTI tags
-
-  # Marking conversion configuration
-  # Comma-separated allow-list of marking-definition `definition_type` values
-  # (case-insensitive) converted to MISP tags, at both the event level
-  # (container's object_marking_refs, plus report_types) and the
-  # attribute/object level (indicator's and observable's object_marking_refs).
-  # This is an allow-list (fails closed): types not listed here (e.g. custom
-  # internal distribution-control markings) are never converted to MISP tags.
+  # Marking definition types whose container markings are converted to MISP event tags
+  # (only controls tag conversion, does not filter exported objects)
   marking_types_to_convert: 'TLP,PAP'
 
   # Round-trip configuration
