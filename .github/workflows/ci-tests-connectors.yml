@@ -2,26 +2,12 @@ name: Tests Connectors
 
 on:
   pull_request:
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
-      - 'templates/**'
-      - 'run_test.sh'
   merge_group:
     branches:
       - master
       - lts/**
     types: [checks_requested]
   workflow_call:
-
-concurrency:
-  group: tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -38,7 +24,28 @@ jobs:
         with:
           fetch-depth: 0  # needed for git merge-base in build_test_matrix.py
 
+      # build_test_matrix.py runs every connector for any change outside the
+      # connector directories, so on pull_request a PR touching only docs or
+      # unrelated CI is cut off here and no matrix is built. Changes to the test
+      # infrastructure itself still run it. Other events always build it.
+      - name: Check if relevant paths changed
+        id: filter
+        if: github.event_name == 'pull_request'
+        run: |
+          relevant='^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/'
+          relevant+='|^(run_test\.sh|\.github/workflows/ci-tests-connectors\.yml|\.github/scripts/(build_test_matrix|_matrix_common)\.py)$'
+          # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
+          # Captured first so a git failure fails the step instead of being
+          # hidden by a pipe. quotePath=false keeps non-ASCII paths unquoted.
+          changed_files=$(git -c core.quotePath=false diff --name-only --no-renames HEAD^1 HEAD)
+          if grep -qE "$relevant" <<< "$changed_files"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve RELEASE_REF
+        if: steps.filter.outputs.relevant != 'false'
         run: |
           if [ "${{ github.event_name }}" = "merge_group" ]; then
             PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
@@ -66,6 +73,7 @@ jobs:
 
       - id: set-matrix
         name: Build test matrix from test-requirements.txt files
+        if: steps.filter.outputs.relevant != 'false'
         run: python .github/scripts/build_test_matrix.py
 
   test:
@@ -140,3 +148,36 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
+
+  # Single, stable job name to set as a required status check. Matrix entries
+  # can't be required (their names change with the matrix content) and `test`
+  # is skipped when there is nothing to run, so this job always runs and gives
+  # one go/no-go.
+  tests-summary:
+    name: Tests Summary
+    needs:
+      - detect-test-files
+      - test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        env:
+          DETECT_RESULT: ${{ needs.detect-test-files.result }}
+          HAS_TESTS: ${{ needs.detect-test-files.outputs.has_tests }}
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          # A failed detection leaves has_tests empty: not a clean "no tests".
+          if [ "$DETECT_RESULT" != "success" ]; then
+            echo "::error::Test detection did not succeed (result: $DETECT_RESULT)."
+            exit 1
+          fi
+          if [ "$HAS_TESTS" != "true" ]; then
+            echo "No relevant test files changed, nothing to run."
+            exit 0
+          fi
+          if [ "$TEST_RESULT" != "success" ]; then
+            echo "::error::Connector tests did not succeed (result: $TEST_RESULT)."
+            exit 1
+          fi
+          echo "All connector tests passed."
