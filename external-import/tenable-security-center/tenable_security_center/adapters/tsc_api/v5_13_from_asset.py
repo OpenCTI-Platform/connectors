@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 class _CVEAPI(CVEPort):
     """Represent a CVE from the Tenable Security Center API."""
 
-    def __init__(self, **data: dict[str, Any]):
+    def __init__(self, **data: Any):
         try:
             self._pydantic_model = CVEPydanticModel.model_validate(data)
         except ValidationError as e:
@@ -70,15 +70,15 @@ class _CVEAPI(CVEPort):
         return self._pydantic_model.name
 
     @property
-    def description(self) -> str:
+    def description(self) -> Optional[str]:
         return self._pydantic_model.description
 
     @property
-    def publication_datetime(self) -> datetime.datetime:
+    def publication_datetime(self) -> Optional[datetime.datetime]:
         return self._pydantic_model.publication_datetime
 
     @property
-    def last_modified_datetime(self) -> datetime.datetime:
+    def last_modified_datetime(self) -> Optional[datetime.datetime]:
         return self._pydantic_model.last_modified_datetime
 
     @property
@@ -127,15 +127,36 @@ class _CVEAPI(CVEPort):
         epss_score = raw_response.get("epss_metrics", [{}])[0].get("epss")
         epss_percentile = raw_response.get("epss_metrics", [{}])[0].get("percentile")
         return cls(
-            name=name,  # type: ignore[arg-type]
+            name=name,
             description=description,
             publication_datetime=publication_datetime,
             last_modified_datetime=last_modified_datetime,
-            cpes=cpes,  # type: ignore[arg-type]
+            cpes=cpes,
             cvss_v3_score=cvss_v3_score,
             cvss_v3_vector=cvss_v3_vector,
             epss_score=epss_score,
             epss_percentile=epss_percentile,
+        )
+
+    @classmethod
+    def from_id_only(cls, cve_id: str) -> "_CVEAPI":
+        """Create a degraded CVE with only its id.
+
+        Used when Tenable Security Center has no details for this CVE id
+        (e.g. an empty response from the CVE endpoint). The relationship to
+        the system/software is still created, just without description,
+        dates or CVSS metrics.
+        """
+        return cls(
+            name=cve_id,
+            description=None,
+            publication_datetime=None,
+            last_modified_datetime=None,
+            cpes=None,
+            cvss_v3_score=None,
+            cvss_v3_vector=None,
+            epss_score=None,
+            epss_percentile=None,
         )
 
 
@@ -151,7 +172,7 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
         return f"cve/{cve_id}"
 
     @lru_cache(maxsize=65536)  # noqa: B019 # response as dict ~500Bytes => ~32MB
-    def __fetch(self, cve_id: str) -> dict[str, Any]:
+    def __fetch(self, cve_id: str) -> Optional[dict[str, Any]]:
         """Fetch a CVE from the API."""
         try:
             self.logger.debug(f"Fetching CVE {cve_id} from Tenable Security Center.")
@@ -161,6 +182,14 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
                 f"{self.client._url}/rest/{self._build_url(cve_id)}"
             )
             raw_response.raise_for_status()
+            if not raw_response.content:
+                # Tenable Security Center returns HTTP 200 with an empty body
+                # when it has no data for this CVE id (e.g. unknown/withdrawn CVE).
+                self.logger.warning(
+                    f"Empty response received while fetching CVE {cve_id} "
+                    "from Tenable Security Center; skipping it."
+                )
+                return None
             cve_response: dict[str, Any] = raw_response.json()
             return cve_response
         except HTTPError as e:
@@ -171,13 +200,15 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
                 "Error while fetching data from Tenable Security Center."
             ) from e
 
-    def _fetch(self, cve_id: str) -> dict[str, Any]:
+    def _fetch(self, cve_id: str) -> Optional[dict[str, Any]]:
         """Fetch a CVE from the API (thread safe)."""
         with self.lock:
             self.logger.debug(f"Fetching CVE {cve_id}.")
             return self.__fetch(cve_id)
 
-    def _fetch_data_chunk(self, cve_ids: list[str]) -> Iterable[dict[str, Any]]:
+    def _fetch_data_chunk(
+        self, cve_ids: list[str]
+    ) -> Iterable[Optional[dict[str, Any]]]:
         """Fetch a chunk of data from the API."""
         # we must disable pylint which thinks we are calling the self.__fetch method
         cache_stats = (
@@ -190,8 +221,13 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
 
     def fetch_cves(self, cve_ids: list[str]) -> Iterable[_CVEAPI]:
         """Fetch and process the CVEs."""
-        for raw_cve in self._fetch_data_chunk(cve_ids):
-            yield _CVEAPI.from_raw_response(raw_cve)
+        for cve_id, raw_cve in zip(
+            cve_ids, self._fetch_data_chunk(cve_ids), strict=True
+        ):
+            if raw_cve is not None:
+                yield _CVEAPI.from_raw_response(raw_cve)
+            else:
+                yield _CVEAPI.from_id_only(cve_id)
 
 
 class _FindingAPI(FindingPort):

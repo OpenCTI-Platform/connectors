@@ -194,9 +194,9 @@ class CVEPydanticModel(_BaseModelWithoutExtra):
     """Pydantic model for a CVE from the Tenable Security Center API."""
 
     name: str = Field(...)
-    description: str = Field(...)
-    publication_datetime: AwareDatetime = Field(...)
-    last_modified_datetime: AwareDatetime = Field(...)
+    description: Optional[str] = Field(None)
+    publication_datetime: Optional[AwareDatetime] = Field(None)
+    last_modified_datetime: Optional[AwareDatetime] = Field(None)
     cpes: Optional[list[str]] = Field(None)
     cvss_v3_score: Optional[float] = Field(None)
     cvss_v3_vector: Optional[str] = Field(None)
