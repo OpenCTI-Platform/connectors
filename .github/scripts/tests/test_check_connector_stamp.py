@@ -1212,6 +1212,59 @@ def test_shell_options_of_set(tmp_path, steps, covered):
     check_manifest_deletion(tmp_path, steps, covered)
 
 
+@pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 07:04 UTC: a plain rm or unlink fails on a directory
+        # and leaves what it holds; rm -d removes an empty one only.
+        ("RUN rm -f /opt/src/__metadata__; true", False),
+        ("RUN rm -f /opt/src/__meta*; true", False),
+        ("RUN unlink /opt/src/__metadata__; true", False),
+        ("RUN rm -d /opt/src/__metadata__; true", False),
+        ("RUN rm -rf /opt/src/__metadata__", True),
+        ("RUN rm -fR /opt/src/__meta*", True),
+        ("RUN rm -f /opt/src/__metadata__/*", True),
+        (
+            "RUN rm /opt/src/__metadata__/connector_manifest.json"
+            " && rm -d /opt/src/__metadata__",
+            True,
+        ),
+        # Copilot review of 07:04 UTC: -exec runs once per match, so maybe
+        # never, and only a command given {} acts on the matches.
+        (
+            "RUN mkdir -p /tmp/empty && find /tmp/empty -name '*.pyc'"
+            " -exec rm -f /opt/src/__metadata__/connector_manifest.json \\;",
+            False,
+        ),
+        (
+            "RUN find /opt/src/__metadata__ -name '*.json' -exec rm -f /tmp/other \\;",
+            False,
+        ),
+        ("RUN find /opt/src/__metadata__ -name '*.json' -exec rm -f {} +", True),
+        # Copilot review of 07:04 UTC: the tests of find select each entry it
+        # visits; -delete and a plain rm leave a directory that is not empty.
+        ("RUN find /opt/src/__metadata__ -maxdepth 0 -type f -delete", False),
+        ("RUN find /opt/src/__metadata__ -type d -delete; true", False),
+        ("RUN find /opt/src -name __metadata__ -delete; true", False),
+        ("RUN find /opt/src -name __metadata__ -exec rm -f {} +; true", False),
+        (
+            "RUN cd /opt/src/__metadata__ && find . -name __metadata__"
+            " -exec rm -rf {} +",
+            False,
+        ),
+        ("RUN find /opt/src/__metadata__ -path '*x*' -delete", False),
+        ("RUN find /opt/src/__metadata__ -exec test -s {} \\; -delete", False),
+        ("RUN find /opt/src/__metadata__ -ok rm {} \\;", False),
+        ("RUN find /opt/src/__metadata__ -delete", True),
+        ("RUN find /opt/src/__metadata__ -maxdepth 1 -type f -delete", True),
+        ("RUN find /opt/src -name __metadata__ -exec rm -rf {} +", True),
+        ("RUN find /opt/src -type f -name connector_manifest.json -delete", True),
+    ],
+)
+def test_deletion_that_leaves_the_manifest(tmp_path, steps, covered):
+    check_manifest_deletion(tmp_path, steps, covered)
+
+
 def check_manifest_deletion(tmp_path, steps, covered):
     """A manifest pycti reads before the stamp, which ``steps`` may delete."""
     files = {
