@@ -181,21 +181,41 @@ def test_rejected_ioc_is_reported_failed(connector):
     connector._process_message(make_message("create", indicator))
 
     connector.assurance.report_push_failed.assert_called_once_with(
-        indicator, "Invalid expiration", external_id=None
+        indicator, "CrowdStrike refused the IOC push: invalid request", external_id=None
     )
     connector.assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[PUSH] IOC not pushed to Crowdstrike",
+        meta={
+            "indicator_id": INDICATOR_STIX_ID,
+            "error": "Invalid expiration",
+            "status_code": 400,
+        },
+    )
 
 
-def test_api_exception_is_reported_failed_and_raised(connector):
-    error = ConnectionError("Connection reset by peer")
+@pytest.mark.parametrize(
+    "error, expected",
+    [
+        (
+            ConnectionError("Connection reset by peer"),
+            "CrowdStrike could not be reached for the IOC push",
+        ),
+        (
+            KeyError("resources"),
+            "The connector could not complete the IOC push to CrowdStrike",
+        ),
+    ],
+)
+def test_api_exception_is_reported_failed_and_raised(connector, error, expected):
     connector.client.cs.indicator_search.return_value = api_response(resources=[])
     connector.client.cs.indicator_create.side_effect = error
     indicator = make_indicator()
 
-    with pytest.raises(ConnectionError):
+    with pytest.raises(type(error)):
         connector._process_message(make_message("create", indicator))
 
-    connector.assurance.report_push_failed.assert_called_once_with(indicator, error)
+    connector.assurance.report_push_failed.assert_called_once_with(indicator, expected)
 
 
 def test_unsupported_ioc_type_is_not_reported(connector):
@@ -240,7 +260,41 @@ def test_failed_search_is_reported_failed(connector):
     connector._process_message(make_message("update", indicator))
 
     connector.assurance.report_push_failed.assert_called_once_with(
-        indicator, "Internal error", external_id=None
+        indicator, "CrowdStrike refused the IOC push: server error", external_id=None
+    )
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[PUSH] IOC not pushed to Crowdstrike",
+        meta={
+            "indicator_id": INDICATOR_STIX_ID,
+            "error": "Internal error",
+            "status_code": 500,
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "error, expected",
+    [
+        (
+            TimeoutError("timed out"),
+            "CrowdStrike could not be reached for the IOC push",
+        ),
+        (
+            TypeError("'NoneType' object is not subscriptable"),
+            "CrowdStrike returned an unexpected response to the IOC push",
+        ),
+    ],
+)
+def test_search_exception_is_reported_failed_without_its_message(
+    connector, error, expected
+):
+    connector.client.cs.indicator_search.side_effect = error
+    indicator = make_indicator()
+
+    connector._process_message(make_message("update", indicator))
+
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, expected, external_id=None
     )
 
 
@@ -701,10 +755,19 @@ def test_adapter_push_errors(adapter_client):
         adapter.push_indicator(make_indicator())
 
     adapter_client.create_indicator.return_value = IocOperationResult(
-        IocOperationStatus.FAILED, error="Invalid value"
+        IocOperationStatus.FAILED, error="Invalid value", status_code=400
     )
-    with pytest.raises(CrowdstrikeApiError, match="Invalid value"):
+    with pytest.raises(CrowdstrikeApiError) as raised:
         adapter.push_indicator(make_indicator())
+    assert str(raised.value) == "CrowdStrike refused the IOC push: invalid request"
+    adapter_client.helper.connector_logger.warning.assert_called_once_with(
+        "[DEPLOYMENT] CrowdStrike did not take an indicator pushed again.",
+        meta={
+            "indicator_id": INDICATOR_STIX_ID,
+            "error": "Invalid value",
+            "status_code": 400,
+        },
+    )
 
     adapter_client.create_indicator.return_value = IocOperationResult(
         IocOperationStatus.ABSENT
@@ -1078,7 +1141,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
         {
             "indicatorId": OTHER_ID,
             "status": "failed",
-            "metadata": {"error_message": "Invalid severity"},
+            "metadata": {
+                "error_message": "CrowdStrike refused the IOC push: invalid request"
+            },
         },
     ]
 

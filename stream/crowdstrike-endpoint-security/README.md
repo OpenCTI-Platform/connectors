@@ -192,7 +192,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | When                                      | Reported to OpenCTI                                                                                  |
 |-------------------------------------------|------------------------------------------------------------------------------------------------------|
 | IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
-| IOC rejected by CrowdStrike               | `failed`, with the CrowdStrike error message                                                         |
+| IOC rejected by CrowdStrike               | `failed`, with a short reason such as "CrowdStrike refused the IOC push: invalid request" or "CrowdStrike could not be reached for the IOC push" (the CrowdStrike error and HTTP status are written to the connector log) |
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value is deleted (or none is left)                 |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |

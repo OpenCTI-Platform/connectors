@@ -2,6 +2,7 @@ import json
 from collections.abc import Callable
 
 from connectors_sdk import DeploymentAssurance
+from crowdstrike_connector.deployment import failure_reason
 from crowdstrike_connector.settings import ConnectorSettings
 from crowdstrike_services import (
     CrowdstrikeClient,
@@ -59,7 +60,8 @@ class CrowdstrikeConnector:
         """
         Run a create or update operation and report its deployment outcome
         - live IOC (created, updated, already existing): `deployed` with the IOC id
-        - rejected by CrowdStrike: `failed` with the CrowdStrike error
+        - rejected by CrowdStrike: `failed` with the reason (the CrowdStrike error
+          is logged)
         - unsupported IOC type or IOC absent from CrowdStrike (update): no report
         :param data: Indicator of the stream event
         :param operation: Client call
@@ -69,16 +71,23 @@ class CrowdstrikeConnector:
             result = operation()
         except Exception as err:
             if self.assurance is not None:
-                self.assurance.report_push_failed(data, err)
+                self.assurance.report_push_failed(data, failure_reason(err))
             raise
+        if result.status == IocOperationStatus.FAILED:
+            self.helper.connector_logger.warning(
+                "[PUSH] IOC not pushed to Crowdstrike",
+                meta={
+                    "indicator_id": data.get("id"),
+                    "error": result.error,
+                    "status_code": result.status_code,
+                },
+            )
         if self.assurance is not None:
             if result.is_live:
                 self.assurance.report_pushed(data, external_id=result.ioc_id)
             elif result.status == IocOperationStatus.FAILED:
                 self.assurance.report_push_failed(
-                    data,
-                    result.error or "The CrowdStrike API rejected the IOC",
-                    external_id=result.ioc_id,
+                    data, failure_reason(result), external_id=result.ioc_id
                 )
         return result
 

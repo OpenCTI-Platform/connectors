@@ -16,12 +16,17 @@ from connectors_sdk import (
     VendorHit,
     VendorIndicator,
 )
-from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from connectors_sdk.connectors.stream.deployment import (
+    deployment_failure_reason,
+    normalize_value,
+    parse_datetime,
+)
 from crowdstrike_services import (
     IOC_SOURCE,
     TO_DELETE_TAG,
     CrowdstrikeApiError,
     CrowdstrikeClient,
+    IocOperationResult,
     IocOperationStatus,
     alert_id,
 )
@@ -32,6 +37,32 @@ if TYPE_CHECKING:
 
 DEFAULT_MAX_ALERTS = 10_000
 """Maximum number of alerts read by one hit collection."""
+
+PLATFORM_NAME = "CrowdStrike"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "IOC push"
+"""What CrowdStrike is asked to do when an indicator is created or updated."""
+
+
+def failure_reason(failure: IocOperationResult | BaseException) -> str:
+    """Return the reason OpenCTI shows for an indicator CrowdStrike did not take.
+
+    Args:
+        failure: The failed operation, or the error it raised.
+
+    Returns:
+        One short sentence naming CrowdStrike and the cause; the CrowdStrike error
+        is left to the connector logs.
+    """
+    if isinstance(failure, IocOperationResult):
+        return deployment_failure_reason(
+            PLATFORM_NAME, PUSH_ACTION, failure.status_code
+        )
+    if isinstance(failure, OSError):
+        # Transport errors (connection, timeout) are OSErrors.
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION)
+    return f"The connector could not complete the {PUSH_ACTION} to {PLATFORM_NAME}"
 
 
 class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
@@ -143,14 +174,25 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
 
         Raises:
             ValueError: When the indicator type is not supported by CrowdStrike.
-            CrowdstrikeApiError: When CrowdStrike rejects the push.
+            CrowdstrikeApiError: When CrowdStrike rejects the push, with the reason
+                OpenCTI shows (the CrowdStrike error is logged).
         """
         result = self._client.create_indicator(stix_indicator, "create")
         if result.is_live:
             return result.ioc_id
         if result.status == IocOperationStatus.SKIPPED:
             raise ValueError("The indicator type is not supported by CrowdStrike")
-        raise CrowdstrikeApiError(result.error or f"IOC push {result.status}")
+        if result.status == IocOperationStatus.FAILED:
+            self._client.helper.connector_logger.warning(
+                "[DEPLOYMENT] CrowdStrike did not take an indicator pushed again.",
+                meta={
+                    "indicator_id": stix_indicator.get("id"),
+                    "error": result.error,
+                    "status_code": result.status_code,
+                },
+            )
+            raise CrowdstrikeApiError(failure_reason(result))
+        raise CrowdstrikeApiError(f"IOC push {result.status}")
 
     def collect_hits(
         self,

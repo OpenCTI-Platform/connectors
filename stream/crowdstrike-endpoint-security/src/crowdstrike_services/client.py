@@ -69,12 +69,17 @@ class IocOperationResult:
         status: What happened (created, updated, already existing, deleted, absent
             from CrowdStrike, skipped because the IOC type is not supported, failed).
         ioc_id: The CrowdStrike IOC id, when known.
-        error: The CrowdStrike error message, when the operation failed.
+        error: The CrowdStrike error message, when the operation failed (for the
+            connector logs only).
+        status_code: The HTTP status of the CrowdStrike response that failed the
+            operation (a success status when the response could not be read), None
+            when CrowdStrike could not be reached.
     """
 
     status: IocOperationStatus
     ioc_id: str | None = None
     error: str | None = None
+    status_code: int | None = None
 
     @property
     def is_live(self) -> bool:
@@ -141,11 +146,12 @@ class CrowdstrikeClient:
 
     def _search_indicator_with_error(
         self, ioc_value: str
-    ) -> tuple[list | None, str | None]:
+    ) -> tuple[list | None, str | None, int | None]:
         """
         Search for existing indicator into Crowdstrike
         :param ioc_value: IOC value in string
-        :return: List of IOC ids (None on error) and the error message
+        :return: List of IOC ids (None on error), the error message and the HTTP
+            status of the failed search (see `IocOperationResult.status_code`)
         """
         try:
             cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
@@ -154,16 +160,22 @@ class CrowdstrikeClient:
             error_message = self._handle_api_error(response)
 
             if response["status_code"] == 200:
-                return response["body"]["resources"], None
-            return None, error_message or (
-                f"Unexpected status code {response['status_code']}"
+                return response["body"]["resources"], None, None
+            return (
+                None,
+                error_message or f"Unexpected status code {response['status_code']}",
+                response["status_code"],
             )
 
         except Exception as err:
             self.helper.connector_logger.error(
                 "[API] Error while searching indicator", {"error_message": err}
             )
-            return None, str(err) or type(err).__name__
+            return (
+                None,
+                str(err) or type(err).__name__,
+                None if isinstance(err, OSError) else 200,
+            )
 
     def _search_indicator(self, ioc_value: str) -> list | None:
         """
@@ -376,7 +388,9 @@ class CrowdstrikeClient:
         :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs, search_error = self._search_indicator_with_error(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC doesn't exist, create the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) == 0:
@@ -399,6 +413,7 @@ class CrowdstrikeClient:
                     IocOperationStatus.FAILED,
                     error=error_message
                     or f"Unexpected status code {response['status_code']}",
+                    status_code=response["status_code"],
                 )
             else:
                 self.helper.connector_logger.info(
@@ -421,7 +436,11 @@ class CrowdstrikeClient:
                 {"ioc_value": ioc_value},
             )
             if ioc_cs is None:
-                return IocOperationResult(IocOperationStatus.FAILED, error=search_error)
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
             return IocOperationResult(IocOperationStatus.EXISTS, ioc_id=ioc_cs[0])
 
     def update_indicator(
@@ -434,7 +453,9 @@ class CrowdstrikeClient:
         :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs, search_error = self._search_indicator_with_error(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC exists, update the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
@@ -461,6 +482,7 @@ class CrowdstrikeClient:
                     ioc_id=ioc_id,
                     error=error_message
                     or f"Unexpected status code {response['status_code']}",
+                    status_code=response["status_code"],
                 )
             else:
                 self.helper.connector_logger.info(
@@ -475,7 +497,11 @@ class CrowdstrikeClient:
                 {"ioc_value": ioc_value},
             )
             if ioc_cs is None:
-                return IocOperationResult(IocOperationStatus.FAILED, error=search_error)
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
             return IocOperationResult(IocOperationStatus.ABSENT)
 
     def delete_indicator(self, data: dict) -> IocOperationResult:
@@ -487,7 +513,9 @@ class CrowdstrikeClient:
         :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs, search_error = self._search_indicator_with_error(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
@@ -501,6 +529,7 @@ class CrowdstrikeClient:
                         ioc_id=ioc_id,
                         error=error_message
                         or f"Unexpected status code {response['status_code']}",
+                        status_code=response["status_code"],
                     )
             self.helper.connector_logger.info(
                 "[API] IOC successfully deleted in Crowdstrike",
@@ -514,7 +543,11 @@ class CrowdstrikeClient:
                 {"ioc_value": ioc_value},
             )
             if ioc_cs is None:
-                return IocOperationResult(IocOperationStatus.FAILED, error=search_error)
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
             return IocOperationResult(IocOperationStatus.ABSENT)
 
     def _raise_for_response(self, response: dict, expected_status: int) -> dict:
