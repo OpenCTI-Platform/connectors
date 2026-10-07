@@ -11,7 +11,9 @@ if __name__ == "__main__":
         config = ConnectorSettings()
 
         # Initialize OpenCTI helper
-        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+        helper = OpenCTIConnectorHelper(
+            config=config.to_helper_config(), playbook_compatible=True
+        )
 
         # Create and run connector
         connector = IsMaliciousConnector(config, helper)

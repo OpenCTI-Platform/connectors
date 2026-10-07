@@ -4,6 +4,8 @@ Configuration is loaded through Pydantic ``ConnectorSettings`` and handed to
 ``OpenCTIConnectorHelper`` via ``to_helper_config()``.
 """
 
+import runpy
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -96,3 +98,18 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector.helper is helper
     assert connector.api_url == "https://api.ismalicious.com"
     assert connector.api_key == "test-api-key"
+
+
+def test_main_builds_a_playbook_compatible_helper(monkeypatch):
+    """The manifest declares playbook support: the helper MUST be playbook compatible."""
+    helper_cls = MagicMock()
+    connector_cls = MagicMock()
+    monkeypatch.setattr("pycti.OpenCTIConnectorHelper", helper_cls)
+    monkeypatch.setattr("connector.IsMaliciousConnector", connector_cls)
+    monkeypatch.setattr("connector.ConnectorSettings", MagicMock())
+
+    main_path = Path(__file__).parent.parent / "src" / "main.py"
+    runpy.run_path(str(main_path), run_name="__main__")
+
+    assert helper_cls.call_args.kwargs["playbook_compatible"] is True
+    connector_cls.return_value.run.assert_called_once()
