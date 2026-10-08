@@ -243,12 +243,32 @@ class DnsTwistConnector:
                     continue
         return "Success"
 
+    @staticmethod
+    def _extract_tlp(entity: dict) -> str | None:
+        """Return the TLP marking definition of the entity, or None if it has none."""
+        for marking in entity.get("objectMarking") or []:
+            if marking.get("definition_type") == "TLP":
+                return marking.get("definition")
+        return None
+
     def process_message(self, data):
         """Processing the DNS enrichment request"""
         self.helper.log_info("process data: " + str(data))
         self.entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
         if observable["entity_type"] == "Domain-Name":
+            entity_tlp = self._extract_tlp(observable)
+            if not OpenCTIConnectorHelper.check_max_tlp(
+                entity_tlp, self.config.connector.max_tlp
+            ):
+                self.helper.connector_logger.info(
+                    "Skipping enrichment: entity TLP is above the max TLP",
+                    {
+                        "entity_tlp": entity_tlp,
+                        "max_tlp": self.config.connector.max_tlp,
+                    },
+                )
+                return "Skipping enrichment: entity TLP is above the max TLP"
             self.helper.log_info(f"Processing observable: {observable}")
             return self.dns_twist_enrichment(observable)
 

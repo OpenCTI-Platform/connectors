@@ -1,6 +1,7 @@
 import warnings
 
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
@@ -26,6 +27,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     scope: ListFromString = Field(
         description="The scope of observables the connector will enrich. Currently, only 'Domain-Name' is supported.",
         default=["Domain-Name"],
+    )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.RED,
     )
 
 

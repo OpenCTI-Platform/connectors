@@ -69,6 +69,7 @@ Key features:
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Max TLP of the observables submitted to Joe Sandbox (default: `TLP:RED`, no limit). Observables above it are skipped |
 
 ### Joe Sandbox Configuration
 
