@@ -3,8 +3,11 @@ from unittest.mock import Mock
 import pytest
 from connectors_sdk.models import (
     URL,
+    DomainName,
+    File,
     Indicator,
     IPV4Address,
+    IPV6Address,
     Malware,
     Note,
     Organization,
@@ -85,6 +88,53 @@ def test_enrichment_above_threshold_creates_indicator():
     for note in (obj for obj in octi_objects if isinstance(obj, Note)):
         assert observable.id in [obj.id for obj in note.objects]
     # every object must convert to STIX
+    for obj in octi_objects:
+        obj.to_stix2_object()
+
+
+@pytest.mark.parametrize(
+    "entity_type,value,observable_type,pattern_prefix",
+    [
+        (
+            "Hash",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            File,
+            "[file:hashes.",
+        ),
+        ("InternetDomainName", "example.org", DomainName, "[domain-name:value"),
+        ("IpAddress", "2001:db8::1", IPV6Address, "[ipv6-addr:value"),
+        ("URL", "https://example.org/malicious", URL, "[url:value"),
+    ],
+)
+@pytest.mark.parametrize("threshold,creates_indicator", [(0, True), (50, False)])
+def test_enrichment_of_entity_types(
+    entity_type, value, observable_type, pattern_prefix, threshold, creates_indicator
+):
+    enricher = make_enricher(threshold=threshold)
+
+    octi_objects = enricher.process_observable_enrichment(
+        make_enrichment(value=value, entity_type=entity_type)
+    )
+
+    observable = next(
+        obj
+        for obj in octi_objects
+        if isinstance(obj, observable_type)
+        and value in (obj.hashes.values() if isinstance(obj, File) else [obj.value])
+    )
+    indicator = next(
+        (
+            obj
+            for obj in octi_objects
+            if isinstance(obj, Indicator) and obj.name == value
+        ),
+        None,
+    )
+    if creates_indicator:
+        assert indicator.pattern.startswith(pattern_prefix)
+        assert get_relationship(octi_objects, "based-on", indicator, observable)
+    else:
+        assert indicator is None
     for obj in octi_objects:
         obj.to_stix2_object()
 
