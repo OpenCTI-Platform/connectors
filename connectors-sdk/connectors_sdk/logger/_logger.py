@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import warnings
 from collections.abc import MutableMapping
 from typing import Any
 
@@ -106,6 +107,8 @@ def configure_logging() -> None:
     The level is read from the `CONNECTOR_LOG_LEVEL` environment variable. The
     connector's settings are not validated yet when this function is called, so a level
     set in `config.yml` or `.env` only applies once `BaseConnectorSettings` is created.
+    When the variable is not set, a Python warning (`warnings.warn`, not a log record)
+    says that the default level applies until then.
 
     The handler is added only when the root logger has no handler with pycti's JSON
     formatter yet, so this function is idempotent. It also prevents duplicate records:
@@ -121,7 +124,18 @@ def configure_logging() -> None:
         handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
         root_logger.addHandler(handler)
 
-    set_log_level(os.environ.get(_LOG_LEVEL_ENV_VAR) or _DEFAULT_LOG_LEVEL)
+    env_log_level = os.environ.get(_LOG_LEVEL_ENV_VAR)
+    if not env_log_level:
+        # Development only: deployed connectors always receive `CONNECTOR_LOG_LEVEL`
+        warnings.warn(
+            f"{_LOG_LEVEL_ENV_VAR} is not set: the default log level "
+            f"('{_DEFAULT_LOG_LEVEL.lower()}') applies until the connector's settings "
+            "are validated.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    set_log_level(env_log_level or _DEFAULT_LOG_LEVEL)
 
 
 def set_log_level(level: str) -> None:
