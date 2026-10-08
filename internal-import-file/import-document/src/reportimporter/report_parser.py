@@ -3,6 +3,7 @@ import ipaddress
 import logging
 import os
 import re
+import traceback
 from typing import IO, Dict, Iterable, List, Pattern, Tuple
 
 import chardet
@@ -85,6 +86,46 @@ class ReportParser(object):
             return True
         return False
 
+    def _ipv4_address_spans(self, data: str) -> List[Tuple[int, int]]:
+        spans = []
+        for match in self._IPV4_CANDIDATE_REGEX.finditer(data):
+            try:
+                ipaddress.IPv4Address(match.group())
+            except ValueError:
+                continue
+            spans.append(match.span())
+        return spans
+
+    def _drop_phone_numbers_overlapping_ip_addresses(
+        self, list_matches: Dict[str, Dict], data: str
+    ) -> Dict[str, Dict]:
+        # Compute IPv4 spans from the text so every occurrence is covered; a
+        # value keyed in list_matches only retains a single span. IPv6 spans
+        # come from list_matches since IPv6 never overlaps a digit-only match.
+        ip_ranges = self._ipv4_address_spans(data)
+        ip_ranges += [
+            info[RESULT_FORMAT_RANGE]
+            for info in list_matches.values()
+            if info[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value"
+        ]
+        if not ip_ranges:
+            return list_matches
+
+        filtered_matches = {}
+        for match, info in list_matches.items():
+            if info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value":
+                phone_start, phone_end = info[RESULT_FORMAT_RANGE]
+                if any(
+                    phone_start < ip_end and ip_start < phone_end
+                    for ip_start, ip_end in ip_ranges
+                ):
+                    self.helper.log_debug(
+                        f"Discarding phone number match '{match}' overlapping an IP address"
+                    )
+                    continue
+            filtered_matches[match] = info
+        return filtered_matches
+
     def _post_parse_observables(
         self, ind_match: str, observable: Observable, match_range: Tuple
     ) -> Dict:
@@ -114,6 +155,10 @@ class ReportParser(object):
 
         for observable in self.observable_list:
             list_matches.update(self._extract_observable(observable, data))
+
+        list_matches = self._drop_phone_numbers_overlapping_ip_addresses(
+            list_matches, data
+        )
 
         for entity in self.entity_list:
             list_matches = self._extract_entity(entity, list_matches, data)
@@ -147,7 +192,9 @@ class ReportParser(object):
                 parse_info.update(self.parse(no_newline_text))
 
         except Exception as e:
-            logging.exception(f"Pdf Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Pdf Parsing Error", {"error": str(e), "trace": traceback.format_exc()}
+            )
 
         return parse_info
 
@@ -176,7 +223,9 @@ class ReportParser(object):
                         if text:
                             parse_info.update(self.parse(text))
         except Exception as e:
-            logging.exception(f"Docx Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Docx Parsing Error", {"error": str(e), "trace": traceback.format_exc()}
+            )
         return parse_info
 
     def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
@@ -203,7 +252,14 @@ class ReportParser(object):
             with open(file_path, "rb") as file_data:
                 parsing_results = file_parser(file_data)
         except Exception as e:
-            logging.exception(f"Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Parsing Error",
+                {
+                    "file_path": file_path,
+                    "error": str(e),
+                    "trace": traceback.format_exc(),
+                },
+            )
 
         return parsing_results
 

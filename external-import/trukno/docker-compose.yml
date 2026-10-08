@@ -3,15 +3,15 @@ services:
     build: .
     image: opencti/connector-trukno:latest
     environment:
+      # SDK-managed configuration. Environment variables override config.yml.
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=00000000-0000-4000-8000-000000000000
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=TruKno
-      - CONNECTOR_SCOPE=report,attack-pattern,malware
-      - CONNECTOR_LOG_LEVEL=info
-      - TRUKNO_API_BASE_URL=https://api.trukno.com/v2
+      - CONNECTOR_DURATION_PERIOD=PT1H
       - TRUKNO_API_KEY=ChangeMe
-      - TRUKNO_INTERVAL_MINUTES=60
-      - TRUKNO_INITIAL_LOOKBACK_DAYS=30
+      #- CONNECTOR_NAME=TruKno # optional (default: TruKno)
+      #- CONNECTOR_SCOPE=report,attack-pattern,malware # optional (default: report,attack-pattern,malware)
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: error)
+      #- TRUKNO_API_BASE_URL=https://api.trukno.com/v2 # optional (default: https://api.trukno.com/v2)
+      #- TRUKNO_INITIAL_LOOKBACK=P30D # optional (default: P30D)
     restart: always

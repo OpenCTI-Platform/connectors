@@ -1,18 +1,21 @@
 {
-  "id": "breach-1",
+  "_id": "breach-1",
   "title": "Example breach",
-  "publishedAt": "2026-04-20T12:00:00Z",
-  "summary": "Summary",
+  "date": "2026-04-20T12:00:00Z",
+  "description": "Summary",
   "relatedTTPs": [
     {
-      "id": "ttp-1",
-      "title": "Credential Access"
+      "_id": "ttp-1",
+      "name": "Credential Access",
+      "TTPNumber": "T1003"
     }
   ],
-  "relatedMalwares": [
+  "relatedMalware": [
     {
-      "id": "mw-1",
-      "title": "ExampleRAT"
+      "_id": "mw-1",
+      "name": "ExampleRAT (RAT)",
+      "malwareName": "ExampleRAT",
+      "malwareType": "RAT"
     }
   ]
 }

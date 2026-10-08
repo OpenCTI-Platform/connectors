@@ -5,10 +5,10 @@ opencti:
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'Accenture ACTI'
-  scope: 'accenture'
-  log_level: 'info'
-  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+  #name: 'Accenture ACTI'
+  #scope: 'accenture'
+  #log_level: 'error'
+  #duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
   #============================================#
   # Optional connector's definition parameters #
   #============================================#
@@ -24,10 +24,10 @@ accenture_acti:
   password: 'ChangeMe'
   user_pool_id: 'ChangeMe'
   client_id: 'ChangeMe'
-  s3_bucket_name: ''
-  s3_bucket_region: ''
-  s3_bucket_access_key: ''
-  s3_bucket_secret_key: ''
-  tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber+strict'
-  relative_import_start_date: 'P30D'
-  threat_actor_as_intrusion_set: true # Convert threat actors to intrusion sets - Default: true
+  s3_bucket_name: 'ChangeMe'
+  s3_bucket_region: 'ChangeMe'
+  s3_bucket_access_key: 'ChangeMe'
+  s3_bucket_secret_key: 'ChangeMe'
+  #tlp_level: 'amber+strict' # available values are: clear, white, green, amber, amber+strict, red
+  #relative_import_start_date: 'P30D' # ISO-8601 duration
+  #threat_actor_as_intrusion_set: true # Convert threat actors to intrusion sets

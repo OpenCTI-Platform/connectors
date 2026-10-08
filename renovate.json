@@ -27,6 +27,8 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": [
+      "dependencies",
+      "filigran team",
       "security"
     ]
   },
@@ -45,6 +47,14 @@
       "description": "Disable updates to pinned Python interpreter versions (e.g. .python-version files); connectors intentionally pin specific Python versions and should not be bumped automatically",
       "matchDatasources": [
         "python-version"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Disable updates to pinned Python interpreter versions",
+      "matchPackageNames": [
+        "python",
+        "cimg/python"
       ],
       "enabled": false
     },

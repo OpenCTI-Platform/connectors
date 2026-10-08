@@ -111,7 +111,7 @@ class ConverterToStix:
 
     def build_note(
         self,
-        observable_ref: str,
+        object_ref: str,
         alert: dict,
         takedown_requested: bool,
         takedown_comment: str,
@@ -120,7 +120,7 @@ class ConverterToStix:
         """
         Build a Note summarizing the Doppel alert and the takedown request.
 
-        :param observable_ref: The STIX id of the enriched observable.
+        :param object_ref: The STIX id of the enriched observable or Incident.
         :param alert: The alert payload returned by the Doppel API.
         :param takedown_requested: Whether the takedown request succeeded.
         :param takedown_comment: The comment used for the takedown request.
@@ -148,5 +148,5 @@ class ConverterToStix:
             abstract=f"Doppel alert {alert.get('id')}",
             author=self.author,
             markings=[marking] if marking is not None else None,
-            objects=[Reference(id=observable_ref)],
+            objects=[Reference(id=object_ref)],
         )

@@ -69,3 +69,4 @@ azure-identity=azure
 pdfminer.six=pdfminer
 pyjwt=jwt
 python-dotenv=dotenv
+python-magic=magic

@@ -28,3 +28,7 @@ external-import/loaderinsightagency
 .mise/config.local.toml
 .mise/tasks/local/**
 *.egg-info
+
+# Connector version stamp, generated at build time by the CI (see
+# .github/actions/build-connector-image). Never committed.
+**/.connector_version.json

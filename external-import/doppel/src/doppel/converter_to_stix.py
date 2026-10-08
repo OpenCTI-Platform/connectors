@@ -9,6 +9,7 @@ from doppel.stix_helpers import (
     build_description,
     build_external_references,
     build_labels,
+    calculate_opencti_score,
     calculate_priority,
     in_takedown_state,
 )
@@ -16,6 +17,7 @@ from doppel.utils import parse_iso_datetime
 from pycti import CaseRft as PyctiCaseRft
 from pycti import Grouping as PyctiGrouping
 from pycti import Identity as PyctiIdentity
+from pycti import Incident as PyctiIncident
 from pycti import Indicator as PyctiIndicator
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
@@ -32,6 +34,9 @@ from stix2 import (
     EmailAddress,
     Grouping,
     Identity,
+)
+from stix2 import Incident as Stix2Incident
+from stix2 import (
     Indicator,
     IPv4Address,
 )
@@ -51,6 +56,7 @@ class ConverterToStix:
         self,
         helper: OpenCTIConnectorHelper,
         tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        enable_incidents: bool = False,
         enable_grouping_case: bool = False,
         enable_rft_case: bool = False,
     ):
@@ -60,12 +66,14 @@ class ConverterToStix:
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             tlp_level (str): The TLP level to add to the created STIX entities.
+            enable_incidents (bool): Whether to create Incidents. Defaults to False.
             enable_grouping_case (bool): Whether to create grouping cases. Defaults to False.
             enable_rft_case (bool): Whether to create RFT cases for takedown alerts. Defaults to False.
         """
         self.helper = helper
         self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.enable_incidents = enable_incidents
         self.enable_grouping_case = enable_grouping_case
         self.enable_rft_case = enable_rft_case
 
@@ -184,6 +192,56 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
         )
+
+    def _incident_name(self, alert: dict) -> str:
+        """Build an Incident name from the normalized primary entity value."""
+        entity = alert.get("entity") or "Unknown entity"
+        if alert.get("product") == "domains":
+            entity = self._domain_value(entity) or entity
+        return f"Doppel Alert - {entity} ({alert.get('id')})"
+
+    def _create_incident(self, alert: dict) -> dict:
+        """Create a deterministic OpenCTI Incident for a Doppel alert."""
+        alert_id = alert.get("id")
+        incident_name = self._incident_name(alert)
+        created_at = parse_iso_datetime(alert.get("created_at"))
+        modified_at = parse_iso_datetime(alert.get("last_activity_timestamp"))
+        identity_timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        # Alert creation time may be absent and later backfilled. Keep it out of
+        # the identity seed so the same Doppel alert always maps to one Incident.
+        created_at = created_at or identity_timestamp
+        modified_at = modified_at or created_at
+
+        labels = build_labels(alert)
+        labels.append(f"priority:{calculate_priority(alert.get('score', 0))}")
+        external_references = build_external_references(alert)
+        custom_properties = {
+            "incident_type": f"doppel_{alert.get('product') or 'alert'}",
+            "source": "Doppel",
+            "first_seen": created_at,
+        }
+        if alert.get("severity") is not None:
+            custom_properties["severity"] = alert["severity"]
+
+        incident = Stix2Incident(
+            # The source alert id and a fixed timestamp form the stable seed.
+            # Optional or mutable alert fields cannot create replay duplicates.
+            id=PyctiIncident.generate_id(
+                name=f"Doppel Alert {alert_id}",
+                created=identity_timestamp,
+            ),
+            name=incident_name,
+            description=build_description(alert),
+            created=created_at,
+            modified=modified_at,
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
+            labels=labels or None,
+            external_references=external_references or None,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+        return json.loads(incident.serialize())
 
     def _create_relationship(
         self, source_id: str, target_id: str, relationship_type: str
@@ -346,7 +404,7 @@ class ConverterToStix:
     def _find_rft_cases_by_alert_id(self, alert_id: str, entity_value: str) -> list:
         """
         Find RFT cases by alert_id stored in x_opencti_workflow_id.
-        Used for revocation during reversion workflow.
+        Used to refresh existing cases across queue-state transitions.
 
         :param alert_id: Doppel alert ID
         :return: List of RFT case objects or empty list
@@ -467,12 +525,17 @@ class ConverterToStix:
             a. If enabled by user - Create Grouping case for each alert and relate observables to it.
             b. If not enabled by user - Skip grouping case creation.
 
-        3. Create Indicators
+        3. Create Incident
+            a. If enabled by user - Create one Incident for each alert.
+            b. Relate the Incident to its observables.
+            c. If the Incident already exists - Refresh mutable Doppel-owned data.
+
+        4. Create Indicators
             a. Check if indicator already exists for given alert.
             b. If indicator exists - Update it based on alert data and status (Actioned/Taken down or not)
             c. If indicator does not exist - Create new indicator if alert is in actioned/taken down state. If not in actioned/taken down state - Skip indicator creation.
 
-        4. Create RFT Cases
+        5. Create RFT Cases
             a. Check if RFT case creation is enabled by user or not. If not enabled - Skip entire RFT case creation process.
             b. If enabled - Check if RFT case already exists for given alert.
             c. If RFT case exists - Update it based on alert data and status (Actioned/Taken down or not)
@@ -483,6 +546,7 @@ class ConverterToStix:
         2. If grouping case is created - Create related-to relationship between grouping case and observables
         3. If indicators are created - Create based-on relationship between indicators and observables (with primary observable if multiple)
         4. If RFT case is created - Create related-to relationship between RFT case and observables
+        5. If an Incident is created - Create related-to relationships to observables
         """
         stix_objects = [self.author, self.tlp_marking]
 
@@ -500,6 +564,11 @@ class ConverterToStix:
                 _ = self._handle_domain_ip_relationship(observables, stix_objects)
 
             _ = self._handle_update_observables_labels(alert, observables)
+
+            # #######- --------- Incidents ------------#######
+            incident = self._handle_incident(alert, stix_objects)
+            if incident:
+                self._handle_incident_relationships(incident, observables, stix_objects)
 
             # #######- --------- Grouping Case ------------#######
             grouping_case = self._handle_grouping_case_creation(
@@ -633,6 +702,131 @@ class ConverterToStix:
             if existing:
                 self._handle_labels(alert, "Observable", existing)
 
+    def _source_owned_field_updates(
+        self,
+        alert: dict,
+        include_score: bool = True,
+        include_case_fields: bool = False,
+    ) -> list[dict]:
+        """Build patches for mutable fields sourced from the Doppel alert."""
+        updates = [
+            # Queue state is workflow metadata, not a STIX validity verdict.
+            # Keep connector-managed objects active and repair objects that older
+            # connector versions revoked during normal lifecycle transitions.
+            {"key": "revoked", "value": False},
+            {"key": "description", "value": build_description(alert)},
+        ]
+        if include_score:
+            updates.append(
+                {
+                    "key": "x_opencti_score",
+                    "value": calculate_opencti_score(alert.get("score")),
+                }
+            )
+
+        if include_case_fields:
+            updates.append(
+                {
+                    "key": "priority",
+                    "value": calculate_priority(alert.get("score", 0)),
+                }
+            )
+            updates.append({"key": "severity", "value": alert.get("severity") or ""})
+
+        return updates
+
+    def _refresh_external_references(self, object_id: str, alert: dict) -> None:
+        """Upsert Doppel references and attach them without removing user references."""
+        for reference in build_external_references(alert):
+            try:
+                external_reference = self.helper.api.external_reference.create(
+                    **reference, update=True
+                )
+                external_reference_id = (
+                    external_reference.get("id")
+                    if isinstance(external_reference, dict)
+                    else None
+                )
+                if not external_reference_id:
+                    raise RuntimeError(
+                        "OpenCTI external reference upsert returned no id "
+                        f"for Doppel alert {alert.get('id')}"
+                    )
+                self.helper.api.stix_domain_object.add_external_reference(
+                    id=object_id,
+                    external_reference_id=external_reference_id,
+                )
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "[DoppelConverter] Failed to refresh external reference",
+                    meta={
+                        "alert_id": alert.get("id"),
+                        "object_id": object_id,
+                        "error": str(e),
+                    },
+                )
+                raise
+
+    def _incident_source_owned_field_updates(self, alert: dict) -> list[dict]:
+        """Build patches for mutable Incident fields sourced from Doppel."""
+        updates = [
+            {
+                "key": "name",
+                "value": self._incident_name(alert),
+            },
+            {"key": "description", "value": build_description(alert)},
+            {
+                "key": "incident_type",
+                "value": f"doppel_{alert.get('product') or 'alert'}",
+            },
+            {"key": "severity", "value": alert.get("severity") or ""},
+        ]
+        return updates
+
+    def _handle_incident(self, alert: dict, stix_objects: list) -> dict | None:
+        """Create an Incident or refresh the existing deterministic object."""
+        if not self.enable_incidents:
+            return None
+
+        incident = self._create_incident(alert)
+        existing = self.helper.api.stix_domain_object.read(id=incident["id"])
+        if not existing:
+            stix_objects.append(incident)
+            return incident
+
+        self.helper.api.stix_domain_object.update_field(
+            id=existing["id"],
+            input=self._incident_source_owned_field_updates(alert),
+        )
+        self._refresh_external_references(existing["id"], alert)
+        self._handle_labels(alert, "Incident", existing)
+        # Keep the current Incident in the outgoing bundle. The splitter's
+        # consistency cleanup otherwise removes relationships whose source is
+        # an existing object outside the bundle, preventing newly discovered
+        # observables from being linked on replay.
+        stix_objects.append(incident)
+        return incident
+
+    def _handle_incident_relationships(
+        self, incident: dict, related_objects: list[dict], stix_objects: list
+    ) -> None:
+        """Relate an Incident to its current Observables."""
+        incident_ref = incident.get("standard_id") or incident.get("id")
+        if not incident_ref or "--" not in str(incident_ref):
+            return
+
+        for related_object in related_objects:
+            target_ref = related_object.get("standard_id") or related_object.get("id")
+            if not target_ref or "--" not in str(target_ref):
+                continue
+            stix_objects.append(
+                self._create_relationship(
+                    source_id=incident_ref,
+                    target_id=target_ref,
+                    relationship_type="related-to",
+                )
+            )
+
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
         Handle creation of grouping case and relationships with observables
@@ -708,35 +902,24 @@ class ConverterToStix:
     def _handle_indicators_existing(
         self, existing_indicators, alert, observables, stix_objects
     ):
-        """When an indicator for given alert data already exists.
-
-        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
-            If actioned - Update indicator with latest data.
-            If non-actioned - Revoke the indicator as part of reversion workflow and update indicator with latest data.
-        """
+        """Refresh an existing indicator without treating queue state as revocation."""
 
         alert_id = alert.get("id")
         for indicator in existing_indicators:
-
-            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-
-            # If taken_down/actioned = False
-            # If any other state = True
-            revoke_indicator = not in_taken_down_state
-
             self.helper.connector_logger.info(
-                "[DoppelConverter] Updating indicator revoke status",
+                "[DoppelConverter] Refreshing existing indicator",
                 meta={
                     "alert_id": alert_id,
                     "indicator_standard_id": indicator["standard_id"],
-                    "revoked": revoke_indicator,
+                    "queue_state": alert.get("queue_state"),
                 },
             )
 
             self.helper.api.indicator.update_field(
                 id=indicator["id"],
-                input={"key": "revoked", "value": revoke_indicator},
+                input=self._source_owned_field_updates(alert),
             )
+            self._refresh_external_references(indicator["id"], alert)
             # Add Note.
             _ = self._handle_note_addition(indicator, alert, observables, stix_objects)
 
@@ -898,34 +1081,30 @@ class ConverterToStix:
     def _handle_rft_cases_existing(
         self, existing_rft_cases, alert, observables, stix_objects
     ):
-        """When an RFT case for given alert data already exists.
-
-        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
-            If actioned - Update RFT case with latest data.
-            If non-actioned - Revoke the RFT case as part of reversion workflow and update RFT case with latest data.
-        """
+        """Refresh an existing RFT case across Doppel queue transitions."""
 
         alert_id = alert.get("id")
         for rft_case in existing_rft_cases:
-            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-
-            # If taken_down/actioned => Revoke = False
-            # If any other state => Revoke = True
-            revoke_rft_case = not in_taken_down_state
-
             self.helper.connector_logger.info(
-                "[DoppelConverter] Updating RFT case revoke status",
+                "[DoppelConverter] Refreshing existing RFT case",
                 meta={
                     "alert_id": alert_id,
                     "case_ref": rft_case.get("standard_id") or rft_case.get("id"),
-                    "revoked": revoke_rft_case,
+                    "queue_state": alert.get("queue_state"),
                 },
             )
 
             self.helper.api.stix_domain_object.update_field(
                 id=rft_case["id"],
-                input={"key": "revoked", "value": revoke_rft_case},
+                input=self._source_owned_field_updates(
+                    alert,
+                    # Case-RFT rejects x_opencti_score as an incompatible
+                    # attribute; its score-derived mutable field is priority.
+                    include_score=False,
+                    include_case_fields=True,
+                ),
             )
+            self._refresh_external_references(rft_case["id"], alert)
 
             # Add Note.
             _ = self._handle_note_addition(rft_case, alert, observables, stix_objects)
@@ -994,10 +1173,7 @@ class ConverterToStix:
             )
 
     def _handle_note_addition(self, obj, alert, observables, stix_objects):
-        """Handle update of note content when indicator already exists.
-
-        Whenever we have an indicator already present for given alert data and if we find that the indicator is revoked but alert is in actioned/taken down state - we will update the note content to reflect the current status of the alert.
-        """
+        """Add a note describing the current Doppel queue state."""
         ### Adding Note with details about update in Doppel queue state.
         self.helper.connector_logger.info(
             "[DoppelConverter] Note addition",
@@ -1007,7 +1183,7 @@ class ConverterToStix:
         alert_id = alert.get("id")
         queue_state = alert.get("queue_state")
         observable_id = observables[0].get("id")
-        note_content = f"Doppel alert queue state updated to {alert.get('queue_state')}. Setting revoked to {not in_takedown_state(queue_state)}."
+        note_content = f"Doppel alert queue state updated to {queue_state}."
 
         # API-returned objects expose their STIX id as "standard_id"; newly-created
         # serialized dicts expose it as "id". Prefer standard_id so the ref is always
@@ -1068,16 +1244,10 @@ class ConverterToStix:
                 indicator_id = target_object.get("id")
                 if indicator_id:
                     labels_to_remove = self._get_labels_to_remove(
-                        target_obj_type, target_object
+                        target_obj_type,
+                        target_object,
+                        remove_legacy_revoked_false_positive=True,
                     )
-                    # When the alert is no longer in takedown state the entity is
-                    # revoked as a false positive, so it should gain the
-                    # "revoked-false-positive" label; an actioned/taken-down
-                    # entity should have it removed.
-                    if not in_takedown_state(alert.get("queue_state")):
-                        new_labels.append("revoked-false-positive")
-                    else:
-                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1088,37 +1258,30 @@ class ConverterToStix:
                             self.helper.api.stix_domain_object.add_label(
                                 id=indicator_id, label_name=label_name
                             )
-            elif target_obj_type == "GroupingCase":
-                grouping_case_id = target_object.get("id")
-                if grouping_case_id:
+            elif target_obj_type in ("GroupingCase", "Incident"):
+                domain_object_id = target_object.get("id")
+                if domain_object_id:
                     labels_to_remove = self._get_labels_to_remove(
                         target_obj_type, target_object
                     )
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
-                            id=grouping_case_id, label_name=label_name
+                            id=domain_object_id, label_name=label_name
                         )
                     if new_labels:
                         for label_name in new_labels:
                             self.helper.api.stix_domain_object.add_label(
-                                id=grouping_case_id, label_name=label_name
+                                id=domain_object_id, label_name=label_name
                             )
             elif target_obj_type == "RFTCase":
                 RFT_case_id = target_object.get("id")
                 if RFT_case_id:
                     labels_to_remove = self._get_labels_to_remove(
-                        target_obj_type, target_object
+                        target_obj_type,
+                        target_object,
+                        remove_legacy_revoked_false_positive=True,
                     )
-
-                    # When the alert is no longer in takedown state the entity is
-                    # revoked as a false positive, so it should gain the
-                    # "revoked-false-positive" label; an actioned/taken-down
-                    # entity should have it removed.
-                    if not in_takedown_state(alert.get("queue_state")):
-                        new_labels.append("revoked-false-positive")
-                    else:
-                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1135,7 +1298,9 @@ class ConverterToStix:
                 meta={"alert_id": alert.get("id"), "error": str(e)},
             )
 
-    def _get_labels_to_remove(self, target_obj_type, obj):
+    def _get_labels_to_remove(
+        self, target_obj_type, obj, remove_legacy_revoked_false_positive=False
+    ):
         """Return labels added by Doppel Alert."""
         managed_prefixes = (
             "queue_state:",
@@ -1156,13 +1321,22 @@ class ConverterToStix:
         if obj is not None and "objectLabel" not in obj:
             if target_obj_type == "Observable":
                 obj = self.helper.api.stix_cyber_observable.read(id=obj.get("id"))
-            elif target_obj_type in ("GroupingCase", "Indicator", "RFTCase"):
+            elif target_obj_type in (
+                "GroupingCase",
+                "Incident",
+                "Indicator",
+                "RFTCase",
+            ):
                 obj = self.helper.api.stix_domain_object.read(id=obj.get("id"))
 
         labels = [
             label["value"]
             for label in (obj or {}).get("objectLabel", [])
             if label.get("value", "").startswith(managed_prefixes)
+            or (
+                remove_legacy_revoked_false_positive
+                and label.get("value") == "revoked-false-positive"
+            )
         ]
 
         return labels

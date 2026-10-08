@@ -9,7 +9,7 @@ These models can be extended to create specific configurations for different typ
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
@@ -23,6 +23,7 @@ from connectors_sdk.settings.json_schema_generator import (
     ConnectorConfigJsonSchemaGenerator,
 )
 from pydantic import (
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -33,6 +34,7 @@ from pydantic import (
     SerializerFunctionWrapHandler,
     ValidationError,
     field_serializer,
+    field_validator,
     model_validator,
 )
 from pydantic.fields import FieldInfo
@@ -67,7 +69,8 @@ class BaseConfigModel(BaseModel, ABC):
                         field.annotation = annotation | None  # type: ignore[assignment]
                     elif annotation is not None and get_origin(annotation) is not None:
                         # Handle typing wrappers (e.g. SkipJsonSchema[X], Annotated[X, ...])
-                        field.annotation = annotation | None
+                        # cast: annotation type differs across pydantic versions
+                        field.annotation = cast(Any, annotation | None)
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False
@@ -444,6 +447,9 @@ class BaseStreamConnectorConfig(_BaseConnectorConfig):
         live_stream_id (str): The ID of the live stream to connect to.
         live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
         live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
+        live_stream_start_timestamp (int | None): Stream position to start from, as epoch milliseconds.
+        live_stream_recover (bool): Whether to replay historical events from the database on first start.
+        live_stream_recover_iso_date (AwareDatetime | None): ISO 8601 date up to which historical events are replayed.
     """
 
     type: Literal["STREAM"] = "STREAM"
@@ -458,6 +464,56 @@ class BaseStreamConnectorConfig(_BaseConnectorConfig):
         default=True,
         description="Whether to ignore dependencies when processing events from the live stream.",
     )
+    live_stream_start_timestamp: int | None = Field(
+        default=None,
+        description=(
+            "Stream position to start from, as epoch milliseconds (13 digits). "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+    live_stream_recover: bool = Field(
+        default=True,
+        description=(
+            "Whether to replay historical events from the database on first start (recover/backfill). "
+            "Enabled by default: on its first run the connector replays all existing data "
+            "(up to 'live_stream_recover_iso_date' if set) before switching to live events. "
+            "Set to false to only process new events from now on. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+    live_stream_recover_iso_date: AwareDatetime | None = Field(
+        default=None,
+        description=(
+            "ISO 8601 date up to which historical events are replayed when recover is enabled. "
+            "Leave empty to replay all existing data. Ignored when recover is disabled. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+
+    @field_validator("live_stream_start_timestamp")
+    @classmethod
+    def _validate_start_timestamp_is_milliseconds(cls, value: int | None) -> int | None:
+        """Ensure the start timestamp is an epoch in milliseconds (13 digits) and not seconds."""
+        if value is not None and not (10**12 <= value < 10**13):
+            raise ValueError(
+                "live_stream_start_timestamp must be an epoch timestamp in milliseconds (13 digits)"
+            )
+        return value
+
+    @field_serializer("live_stream_recover_iso_date", mode="wrap", when_used="json")
+    def _serialize_recover_iso_date(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> Any:
+        """Map recovery to the value pycti expects when serializing for the helper.
+        A disabled recovery becomes the "none" keyword; otherwise the date (or nothing) is passed through.
+        """
+        mode = info.context.get("mode") if info.context else None
+        if mode == "pycti" and self.live_stream_recover is False:
+            return "none"
+        return handler(value)
 
 
 class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):

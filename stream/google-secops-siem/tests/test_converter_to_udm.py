@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 
 from .common_fixtures import (  # noqa: F401 pylint:disable=unused-import
@@ -211,3 +213,26 @@ class TestCTIConverterChronicle(object):
 
         # Assert
         assert metadata == expected_metadata_result
+
+    def test_correct_metadata_generation_missing_valid_until(self) -> None:
+        """
+        Check that metadata interval has no end_time when indicator has no valid_until
+        :return: None
+        """
+        # Arrange
+        ioc_data_no_valid_until = copy.deepcopy(self.fake_ioc_data)
+        del ioc_data_no_valid_until["valid_until"]
+
+        # Mock get_attribute_in_extension method to return a specific value for score
+        self.mock_helper.get_attribute_in_extension.side_effect = [
+            35,
+            self.fake_opencti_ioc_id,
+        ]
+
+        # Mock helper method to return a specific value for opencti_url
+        self.mock_helper.opencti_url = "http://localhost:8080"
+
+        metadata = self.CTIConverter.generate_entity_metadata(ioc_data_no_valid_until)
+
+        # Assert
+        assert metadata["interval"] == {"start_time": "2024-12-10T09:19:46.528Z"}

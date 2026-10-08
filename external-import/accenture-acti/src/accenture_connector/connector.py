@@ -13,8 +13,8 @@ from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_loader import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 # Constants
 INTERVAL_MINUTES = 30
@@ -32,7 +32,9 @@ BASE64_IMAGE_PATTERN = re.compile(
 
 
 class ConnectorAccenture:
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
@@ -48,9 +50,9 @@ class ConnectorAccenture:
         if self._s3_client is None:
             self._s3_client = boto3.client(
                 "s3",
-                aws_access_key_id=self.config.acti_s3_bucket_access_key,
-                aws_secret_access_key=self.config.acti_s3_bucket_secret_key,
-                region_name=self.config.acti_s3_bucket_region,
+                aws_access_key_id=self.config.accenture_acti.s3_bucket_access_key.get_secret_value(),
+                aws_secret_access_key=self.config.accenture_acti.s3_bucket_secret_key.get_secret_value(),
+                region_name=self.config.accenture_acti.s3_bucket_region,
             )
         return self._s3_client
 
@@ -104,7 +106,7 @@ class ConnectorAccenture:
             file_key = f"document-images/{hash_value}{ext}"
             try:
                 response = self.s3_client.get_object(
-                    Bucket=self.config.acti_s3_bucket_name, Key=file_key
+                    Bucket=self.config.accenture_acti.s3_bucket_name, Key=file_key
                 )
                 data = response["Body"].read()
                 mime_type = response.get(
@@ -289,7 +291,9 @@ class ConnectorAccenture:
         stix_objects = stix_bundle.get("objects")
         author = self.converter_to_stix.create_author()
         stix_objects.append(json.loads(author.serialize()))
-        marking = self.converter_to_stix.create_tlp_marking(self.config.tlp_level)
+        marking = self.converter_to_stix.create_tlp_marking(
+            self.config.accenture_acti.tlp_level
+        )
         stix_objects.append(json.loads(marking.serialize()))
 
         new_entities_for_bundle = []
@@ -373,7 +377,7 @@ class ConnectorAccenture:
                     stix_objects.remove(item)
         stix_objects.extend(new_entities_for_bundle)
 
-        if self.config.threat_actor_as_intrusion_set:
+        if self.config.accenture_acti.threat_actor_as_intrusion_set:
             self.helper.connector_logger.info(
                 "[PROCESS] Converting threat-actor objects to intrusion-set"
             )
@@ -439,7 +443,7 @@ class ConnectorAccenture:
                 )
                 last_run = (
                     datetime.datetime.now(tz=datetime.UTC)
-                    - self.config.relative_import_start_date
+                    - self.config.accenture_acti.relative_import_start_date
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
 
             self.helper.connector_logger.info(
@@ -530,5 +534,5 @@ class ConnectorAccenture:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )

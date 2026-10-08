@@ -29,6 +29,12 @@ virustotal:
 #  ip_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
 #  ip_indicator_detect: true # Whether or not to set detection for the indicator to true
 #  ip_add_relationships: false # Whether or not to add ASN and location resolution relationships
+#  ip_add_resolutions: false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
+#  ip_resolutions_since: P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
+#  ip_resolutions_max_entries: 3 # Stop after this many resolutions fetched (unset: no entry cap)
+#  ip_resolutions_max_pages: 25 # Maximum pages (40 entries, one lookup each) per enrichment
+#  ip_resolutions_keywords_regex: news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
+#  api_requests_per_minute: 4 # Spacing between resolutions pages; 4 fits a free key, 0 disables the wait
 
   # Domain specific config settings
 #  domain_indicator_create_positives: 10 # Create an indicator for Domain based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
@@ -44,3 +50,11 @@ virustotal:
 
   # Generic config settings for File, IP, Domain, URL
 #  include_attributes_in_note: false # Whether or not to include the attributes info in Note
+
+  # GTI collection enrichment settings (applies to File, IP, Domain, URL)
+#  gti_enrichment_enabled: false # Master switch for all GTI-driven behavior (score/verdict logic and the gti_include_* relationships below). Requires a VirusTotal account with GTI access.
+#  gti_include_malware_families: false # Whether or not to enrich with related GTI malware families (created as Malware entities)
+#  gti_include_threat_actors: false # Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities)
+#  gti_include_campaigns: false # Whether or not to enrich with related GTI campaigns (created as Campaign entities)
+#  gti_include_reports: false # Whether or not to enrich with related GTI reports (created as Report entities)
+#  gti_relationship_limit: 10 # Maximum number of related objects to pull per GTI relationship, per observable
