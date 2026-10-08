@@ -405,6 +405,7 @@ class ObservableEnricher:
     ) -> list[Relationship]:
         """Build relationships between enriched observable/indicator and the other OCTI objects created from Recorded Future data.
         :param enriched_observable: OCTI observable being enriched
+        :param enriched_indicator: Indicator of the enriched observable, if its risk score reached the threshold
         :param octi_objects: OCTI objects to link to enriched observable/indicator
         :return: A list of OCTI relationships
         """
@@ -413,41 +414,49 @@ class ObservableEnricher:
         for octi_object in octi_objects:
             relationship = None
             match octi_object:
-                case Organization() | Individual():
-                    relationship = self._create_relationship(
-                        relationship_type="related-to",
-                        source=octi_object,
-                        target=enriched_observable,
-                    )
-                case Vulnerability():
-                    relationship = self._create_relationship(
-                        relationship_type="related-to",
-                        source=octi_object,
-                        target=enriched_observable,
-                    )
+                case Organization() | Individual() | Vulnerability():
+                    if enriched_observable:
+                        relationship = self._create_relationship(
+                            relationship_type="related-to",
+                            source=octi_object,
+                            target=enriched_observable,
+                        )
                 case AttackPattern() | Malware() | ThreatActorGroup() | IntrusionSet():
-                    relationship = self._create_relationship(
-                        relationship_type="indicates",
-                        source=enriched_indicator,
-                        target=octi_object,
-                    )
+                    if enriched_indicator:
+                        relationship = self._create_relationship(
+                            relationship_type="indicates",
+                            source=enriched_indicator,
+                            target=octi_object,
+                        )
+                    elif enriched_observable:
+                        relationship = self._create_relationship(
+                            relationship_type="related-to",
+                            source=enriched_observable,
+                            target=octi_object,
+                        )
                 case Indicator():
                     if octi_object.main_observable_type == "StixFile":
                         observable = next(
-                            obj
-                            for obj in octi_objects
-                            if isinstance(obj, File)
-                            and octi_object.name in obj.hashes.values()
+                            (
+                                obj
+                                for obj in octi_objects
+                                if isinstance(obj, File)
+                                and octi_object.name in obj.hashes.values()
+                            ),
+                            None,
                         )
                     else:
                         observable = next(
-                            obj
-                            for obj in octi_objects
-                            if isinstance(
-                                obj,
-                                (DomainName, IPV4Address, IPV6Address, URL),
-                            )
-                            and obj.value == octi_object.name
+                            (
+                                obj
+                                for obj in octi_objects
+                                if isinstance(
+                                    obj,
+                                    (DomainName, IPV4Address, IPV6Address, URL),
+                                )
+                                and obj.value == octi_object.name
+                            ),
+                            None,
                         )
                     if observable:
                         relationship = self._create_relationship(
@@ -473,14 +482,24 @@ class ObservableEnricher:
         try:
             octi_objects: list[BaseIdentifiedEntity] = []
 
-            # Extract observable and indicator
+            # Extract observable, and its indicator if the risk score reaches the threshold
+            risk_score = (
+                observable_enrichment.risk.score if observable_enrichment.risk else None
+            )
+            create_indicator = (
+                risk_score is not None
+                and risk_score >= self.indicator_creation_threshold
+            )
             observable = None
             indicator = None
-            if observable_enrichment.risk.score >= self.indicator_creation_threshold:
-                observable, indicator = self._process_observable_entity(
-                    observable_enrichment
-                )
-                octi_objects.extend([observable, indicator])
+            for octi_object in self._process_observable_entity(observable_enrichment):
+                if isinstance(octi_object, Indicator):
+                    if create_indicator:
+                        indicator = octi_object
+                        octi_objects.append(indicator)
+                else:
+                    observable = octi_object
+                    octi_objects.append(observable)
 
             # Extract other SCOs and SDOs
             octi_objects.extend(self._process_observable_links(observable_enrichment))
