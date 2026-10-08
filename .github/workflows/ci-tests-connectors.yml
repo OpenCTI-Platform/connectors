@@ -132,8 +132,11 @@ jobs:
             bash run_test.sh "$req_file"
           done <<< "${{ matrix.test_requirements }}"
 
+      # merge_group too: codecov/patch is a required check, so the merge queue
+      # waits for it on the merge-group commit. Not on push: patch coverage
+      # only means something against a single PR's diff.
       - name: Upload coverage to Codecov
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('coverage.xml') != '' }}
+        if: ${{ !cancelled() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && hashFiles('coverage.xml') != '' }}
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
