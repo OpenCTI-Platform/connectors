@@ -187,8 +187,9 @@ def test_logger_json_output_should_match_pycti(caplog):
     }
 
 
-def test_configure_logging_should_add_a_single_json_handler():
+def test_configure_logging_should_add_a_single_json_handler(monkeypatch):
     """Test that `configure_logging` is idempotent."""
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
     for handler in _json_handlers():
         logging.getLogger().removeHandler(handler)
 
@@ -199,8 +200,9 @@ def test_configure_logging_should_add_a_single_json_handler():
     assert isinstance(handler, logging.StreamHandler)
 
 
-def test_configure_logging_should_not_duplicate_pycti_handler():
+def test_configure_logging_should_not_duplicate_pycti_handler(monkeypatch):
     """Test that no handler is added once pycti has configured the root logger."""
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
     third_party_levels = {
         name: logging.getLogger(name).level for name in ("urllib3", "pika")
     }
@@ -225,7 +227,6 @@ def test_configure_logging_should_not_duplicate_pycti_handler():
         ("warn", logging.WARNING),
         ("warning", logging.WARNING),
         ("error", logging.ERROR),
-        ("", logging.ERROR),
         ("not-a-level", logging.ERROR),
     ],
 )
@@ -244,9 +245,41 @@ def test_configure_logging_should_default_to_error_without_env(monkeypatch):
     """Test that the level defaults to pycti's default when nothing configures it."""
     monkeypatch.delenv("CONNECTOR_LOG_LEVEL", raising=False)
 
-    configure_logging()
+    with pytest.warns(UserWarning, match="CONNECTOR_LOG_LEVEL is not set"):
+        configure_logging()
 
     assert logging.getLogger().level == logging.ERROR
+
+
+@pytest.mark.parametrize("env_value", [None, ""])
+def test_configure_logging_should_warn_when_env_var_is_missing(
+    monkeypatch, caplog, env_value
+):
+    """Test that a missing level is reported with a Python warning, not a log record."""
+    if env_value is None:
+        monkeypatch.delenv("CONNECTOR_LOG_LEVEL", raising=False)
+    else:
+        monkeypatch.setenv("CONNECTOR_LOG_LEVEL", env_value)
+
+    with pytest.warns(UserWarning) as warning_records:
+        configure_logging()
+
+    [warning] = warning_records
+    assert str(warning.message) == (
+        "CONNECTOR_LOG_LEVEL is not set: the default log level ('error') applies "
+        "until the connector's settings are validated."
+    )
+    assert caplog.records == []
+    assert logging.getLogger().level == logging.ERROR
+
+
+def test_configure_logging_should_not_warn_when_env_var_is_set(monkeypatch, recwarn):
+    """Test that no warning is emitted when `CONNECTOR_LOG_LEVEL` is set."""
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+
+    configure_logging()
+
+    assert [w for w in recwarn if w.category is UserWarning] == []
 
 
 def test_importing_the_module_should_configure_logging(monkeypatch):
