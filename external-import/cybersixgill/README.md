@@ -41,7 +41,7 @@ This connector imports IOCs including file hashes, IP addresses, domains, and UR
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261002.0
+- OpenCTI Platform >= 7.261008.0
 - Cybersixgill Client ID and Client Secret (contact Cybersixgill for access)
 
 ## Configuration variables
