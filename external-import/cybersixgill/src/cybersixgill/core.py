@@ -2,36 +2,18 @@
 
 import sys
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional
 
 import stix2
-import yaml
 from cybersixgill.client import CybersixgillClient
 from cybersixgill.importer import IndicatorImporter, IndicatorImporterConfig
+from cybersixgill.settings import ConnectorSettings
 from cybersixgill.utils import create_organization, timestamp_to_datetime
 from pycti import OpenCTIConnectorHelper  # type: ignore
-from pycti.connector.opencti_connector_helper import get_config_variable  # type: ignore
 
 
 class Cybersixgill:
     """Cybersixgill Darkfeed connector."""
-
-    _CONFIG_NAMESPACE = "cybersixgill"
-
-    _CONFIG_CLIENT_ID = f"{_CONFIG_NAMESPACE}.client_id"
-    _CONFIG_CLIENT_SECRET = f"{_CONFIG_NAMESPACE}.client_secret"
-    _CONFIG_CREATE_OBSERVABLES = f"{_CONFIG_NAMESPACE}.create_observables"
-    _CONFIG_CREATE_INDICATORS = f"{_CONFIG_NAMESPACE}.create_indicators"
-    _CONFIG_FETCH_SIZE = f"{_CONFIG_NAMESPACE}.fetch_size"
-    _CONFIG_INTERVAL_SEC = f"{_CONFIG_NAMESPACE}.interval_sec"
-    _CONFIG_ENABLE_RELATIONSHIPS = f"{_CONFIG_NAMESPACE}.enable_relationships"
-
-    _CONFIG_UPDATE_EXISTING_DATA = "connector.update_existing_data"
-
-    _DEFAULT_CREATE_OBSERVABLES = True
-    _DEFAULT_CREATE_INDICATORS = True
-    _DEFAULT_ENABLE_RELATIONSHIPS = True
 
     _CONNECTOR_RUN_INTERVAL_SEC = 60
 
@@ -39,48 +21,20 @@ class Cybersixgill:
 
     def __init__(self) -> None:
         """Initialize Cybersixgill Darkfeed connector."""
-        config = self._read_configuration()
+        self.config = ConnectorSettings()
 
         # Cybersixgill connector configuration
-        client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
-        client_secret = self._get_configuration(config, self._CONFIG_CLIENT_SECRET)
+        client_id = self.config.cybersixgill.client_id
+        client_secret = self.config.cybersixgill.client_secret.get_secret_value()
+        create_observables = self.config.cybersixgill.create_observables
+        create_indicators = self.config.cybersixgill.create_indicators
+        enable_relationships = self.config.cybersixgill.enable_relationships
+        fetch_size = self.config.cybersixgill.fetch_size
 
-        create_observables = self._get_configuration(
-            config, self._CONFIG_CREATE_OBSERVABLES
-        )
-        if create_observables is None:
-            create_observables = self._DEFAULT_CREATE_OBSERVABLES
-        else:
-            create_observables = bool(create_observables)
-
-        create_indicators = self._get_configuration(
-            config, self._CONFIG_CREATE_INDICATORS
-        )
-        if create_indicators is None:
-            create_indicators = self._DEFAULT_CREATE_INDICATORS
-        else:
-            create_indicators = bool(create_indicators)
-
-        enable_relationships = self._get_configuration(
-            config, self._CONFIG_ENABLE_RELATIONSHIPS
-        )
-        if enable_relationships is None:
-            enable_relationships = self._DEFAULT_ENABLE_RELATIONSHIPS
-        else:
-            enable_relationships = bool(enable_relationships)
-
-        fetch_size = self._get_configuration(config, self._CONFIG_FETCH_SIZE)
-
-        self.interval_sec = self._get_configuration(
-            config, self._CONFIG_INTERVAL_SEC, is_number=True
-        )
-
-        update_existing_data = bool(
-            self._get_configuration(config, self._CONFIG_UPDATE_EXISTING_DATA)
-        )
+        self.interval_sec = int(self.config.connector.duration_period.total_seconds())
 
         # Create OpenCTI connector helper
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Create Cybersixgill author
         author = self._create_author()
@@ -95,7 +49,6 @@ class Cybersixgill:
             author=author,
             create_observables=create_observables,
             create_indicators=create_indicators,
-            update_existing_data=update_existing_data,
             enable_relationships=enable_relationships,
             fetch_size=fetch_size,
         )
@@ -105,33 +58,6 @@ class Cybersixgill:
     @staticmethod
     def _create_author() -> stix2.Identity:
         return create_organization("Cybersixgill")
-
-    @staticmethod
-    def _read_configuration() -> Dict[str, str]:
-        config_file_path = Path(__file__).resolve().parent.parent / "config.yml"
-
-        if not config_file_path.is_file():
-            return {}
-        return yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-
-    @classmethod
-    def _get_configuration(
-        cls, config: Dict[str, Any], config_name: str, is_number: bool = False
-    ) -> Any:
-        yaml_path = cls._get_yaml_path(config_name)
-        env_var_name = cls._get_environment_variable_name(yaml_path)
-        config_value = get_config_variable(
-            env_var_name, yaml_path, config, isNumber=is_number
-        )
-        return config_value
-
-    @staticmethod
-    def _get_yaml_path(config_name: str) -> List[str]:
-        return config_name.split(".")
-
-    @staticmethod
-    def _get_environment_variable_name(yaml_path: List[str]) -> str:
-        return "_".join(yaml_path).upper()
 
     def run(self):
         """Run Cybersixgill Darkfeed connector."""
@@ -189,7 +115,7 @@ class Cybersixgill:
                     self.helper.force_ping()
                     sys.exit(0)
 
-                self._sleep(delay_sec=run_interval)
+            self._sleep(delay_sec=run_interval)
 
     @classmethod
     def _sleep(cls, delay_sec: Optional[int] = None) -> None:

@@ -14,9 +14,6 @@ The Cybersixgill Darkfeed connector imports threat intelligence data from Cybers
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -46,34 +43,10 @@ This connector imports IOCs including file hashes, IP addresses, domains, and UR
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter        | config.yml | Docker environment variable | Default      | Mandatory | Description                                                              |
-|------------------|------------|-----------------------------|--------------|-----------|--------------------------------------------------------------------------|
-| Connector ID     | id         | `CONNECTOR_ID`              |              | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | cybersixgill | Yes       | The scope or type of data the connector is importing.                    |
-| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | info         | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-| Parameter            | config.yml                      | Docker environment variable          | Default | Mandatory | Description                                                    |
-|----------------------|---------------------------------|--------------------------------------|---------|-----------|----------------------------------------------------------------|
-| Client ID            | cybersixgill.client_id          | `CYBERSIXGILL_CLIENT_ID`             |         | Yes       | Cybersixgill API Client ID.                                    |
-| Client Secret        | cybersixgill.client_secret      | `CYBERSIXGILL_CLIENT_SECRET`         |         | Yes       | Cybersixgill API Client Secret.                                |
-| Create Observables   | cybersixgill.create_observables | `CYBERSIXGILL_CREATE_OBSERVABLES`    | true    | No        | Create observables from indicators.                            |
-| Create Indicators    | cybersixgill.create_indicators  | `CYBERSIXGILL_CREATE_INDICATORS`     | true    | No        | Create STIX indicators.                                        |
-| Fetch Size           | cybersixgill.fetch_size         | `CYBERSIXGILL_FETCH_SIZE`            | 2000    | No        | Number of indicators to fetch per run.                         |
-| Enable Relationships | cybersixgill.enable_relationships | `CYBERSIXGILL_ENABLE_RELATIONSHIPS` | true    | No        | Create relationships between SDOs.                             |
-| Interval             | cybersixgill.interval_sec       | `CYBERSIXGILL_INTERVAL_SEC`          | 300     | No        | Import interval in seconds.                                    |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -96,13 +69,13 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_SCOPE=cybersixgill
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT5M
       - CYBERSIXGILL_CLIENT_ID=ChangeMe
       - CYBERSIXGILL_CLIENT_SECRET=ChangeMe
       - CYBERSIXGILL_CREATE_OBSERVABLES=true
       - CYBERSIXGILL_CREATE_INDICATORS=true
       - CYBERSIXGILL_FETCH_SIZE=2000
       - CYBERSIXGILL_ENABLE_RELATIONSHIPS=true
-      - CYBERSIXGILL_INTERVAL_SEC=300
     restart: always
 ```
 
@@ -130,7 +103,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CYBERSIXGILL_INTERVAL_SEC`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 
@@ -218,7 +191,7 @@ CONNECTOR_LOG_LEVEL=debug
 
 Common issues:
 - **Authentication failures**: Verify Client ID and Client Secret
-- **API rate limits**: Increase `CYBERSIXGILL_INTERVAL_SEC` if hitting limits
+- **API rate limits**: Increase `CONNECTOR_DURATION_PERIOD` if hitting limits
 - **Large batch sizes**: Reduce `CYBERSIXGILL_FETCH_SIZE` if experiencing timeouts
 
 ### Support
