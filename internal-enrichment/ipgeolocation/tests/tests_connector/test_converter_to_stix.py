@@ -56,7 +56,10 @@ def test_same_input_gives_the_same_objects(high_risk_intel, scorer, converter):
 
 def test_relationships_point_the_right_way(high_risk_intel, scorer, converter):
     objects = converter.build(
-        high_risk_intel, scorer.assess(high_risk_intel), _entity()
+        high_risk_intel,
+        scorer.assess(high_risk_intel),
+        _entity(),
+        create_indicator=True,
     )
     country = Location.generate_id("United States", "Country")
     city = Location.generate_id("Dallas", "City")
@@ -110,7 +113,9 @@ def test_indicator_for_risky_ipv6(scorer, converter):
         "2001:db8::1", "ipv6-addr", "ipv6-addr--0d4c5a4e-1f2b-5c3d-8e9f-0a1b2c3d4e5f"
     )
 
-    objects = converter.build(intel, scorer.assess(intel), entity)
+    objects = converter.build(
+        intel, scorer.assess(intel), entity, create_indicator=True
+    )
 
     indicator = _by_type(objects, "indicator")[0]
     assert indicator["pattern"] == "[ipv6-addr:value = '2001:db8::1']"
@@ -121,7 +126,11 @@ def test_indicator_for_risky_ipv6(scorer, converter):
 def test_no_indicator_below_threshold(clean_intel, scorer, converter):
     risk = scorer.assess(clean_intel)
     objects = converter.build(
-        clean_intel, risk, _entity("8.8.8.8"), indicator_threshold=50
+        clean_intel,
+        risk,
+        _entity("8.8.8.8"),
+        indicator_threshold=50,
+        create_indicator=True,
     )
 
     assert risk.unified_score < 50

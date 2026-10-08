@@ -1,9 +1,10 @@
-version: '3'
 services:
   connector-ipgeolocation:
     image: opencti/connector-ipgeolocation:latest
     environment:
       # Generic parameters (connection with OpenCTI)
+      # From inside Docker, localhost is the container itself: use the URL OpenCTI is
+      # reachable at, e.g. http://opencti:8080 when both run in the same compose project.
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type INTERNAL_ENRICHMENT
@@ -23,7 +24,7 @@ services:
       # - IPGEOLOCATION_TLP_LEVEL=clear
       # - IPGEOLOCATION_CREATE_LABELS=true
       # - IPGEOLOCATION_CREATE_RELATIONSHIPS=true
-      # - IPGEOLOCATION_CREATE_INDICATOR=true
+      # - IPGEOLOCATION_CREATE_INDICATOR=false
       # - IPGEOLOCATION_INDICATOR_THRESHOLD=50
       # - IPGEOLOCATION_CREATE_NOTE=true
     restart: always

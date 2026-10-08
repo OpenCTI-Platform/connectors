@@ -79,8 +79,11 @@ class IPGeolocationConfig(BaseConfigModel):
         default=True,
     )
     create_indicator: bool = Field(
-        description="Create a STIX indicator when the risk score reaches `indicator_threshold`.",
-        default=True,
+        description=(
+            "Create a STIX indicator when the risk score reaches `indicator_threshold`. "
+            "Off by default: indicators often feed detection tools."
+        ),
+        default=False,
     )
     indicator_threshold: int = Field(
         description="Risk score (0-100) from which an indicator is created.",

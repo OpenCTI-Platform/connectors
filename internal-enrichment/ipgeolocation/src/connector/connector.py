@@ -9,6 +9,10 @@ from ipgeolocation_client import IPGeolocationClient
 from pycti import OpenCTIConnectorHelper
 
 
+class ObservableTLPTooHighError(ValueError):
+    """The observable's TLP is above `max_tlp_level`: it must not leave OpenCTI."""
+
+
 class IPGeolocationConnector:
     """Enrich IPv4 and IPv6 observables with IPGeolocation.io.
 
@@ -55,7 +59,7 @@ class IPGeolocationConnector:
             if marking.get("definition_type") != "TLP":
                 continue
             if not self.helper.check_max_tlp(marking["definition"], max_tlp):
-                raise ValueError(
+                raise ObservableTLPTooHighError(
                     f"Observable is {marking['definition']}, above the maximum "
                     f"{max_tlp}: not sent to IPGeolocation.io"
                 )
@@ -86,7 +90,17 @@ class IPGeolocationConnector:
                 return "Entity type not in scope: original bundle sent back"
             return "Entity type not in scope: nothing to do"
 
-        self._check_tlp(data["enrichment_entity"])
+        try:
+            self._check_tlp(data["enrichment_entity"])
+        except ObservableTLPTooHighError as err:
+            # An expected case, not a failure: report it and end the work normally.
+            self.helper.connector_logger.warning(
+                "Observable TLP is above the maximum: not sent to IPGeolocation.io",
+                {"entity_id": data["entity_id"]},
+            )
+            if from_playbook:
+                self._send_bundle(stix_objects)
+            return str(err)
 
         ip = stix_entity["value"]
         if not ipaddress.ip_address(ip).is_global:

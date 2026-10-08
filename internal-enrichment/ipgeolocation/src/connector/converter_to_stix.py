@@ -78,7 +78,7 @@ class ConverterToStix:
         *,
         create_labels: bool = True,
         create_relationships: bool = True,
-        create_indicator: bool = True,
+        create_indicator: bool = False,
         indicator_threshold: int = 50,
         create_note: bool = True,
     ) -> list:

@@ -77,11 +77,25 @@ def test_enrichment_sends_the_original_bundle_and_the_new_objects(connector):
     connector.client.lookup.assert_called_once_with("2.56.188.34")
     sent = _sent_objects(connector)
     assert sent[0] is data["stix_entity"]  # the original bundle comes first
-    assert {"location", "indicator", "note", "relationship"} <= {
-        o["type"] for o in sent
-    }
+    assert {"location", "note", "relationship"} <= {o["type"] for o in sent}
+    assert "indicator" not in {o["type"] for o in sent}  # off by default
     assert "score" in str(data["stix_entity"]["extensions"])
     assert result.startswith("Sent 1 bundle(s)")
+
+
+def test_indicator_when_enabled(connector):
+    class WithIndicator(StubConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            config = super()._load_config_dict(_, lambda d: d)
+            config["ipgeolocation"]["create_indicator"] = True
+            return handler(config)
+
+    connector.config = WithIndicator()
+
+    connector.process_message(_message())
+
+    assert "indicator" in {o["type"] for o in _sent_objects(connector)}
 
 
 def test_out_of_scope_playbook_gets_its_bundle_back(connector):
@@ -105,18 +119,19 @@ def test_out_of_scope_manual_enrichment_does_nothing(connector):
 
 
 def test_tlp_above_the_maximum_is_never_sent_to_the_api(connector):
-    with pytest.raises(ValueError, match="above the maximum TLP:AMBER"):
-        connector.process_message(_message(tlp="TLP:RED"))
+    """An expected case: the work ends normally with a message, not an error."""
+    result = connector.process_message(_message(tlp="TLP:RED"))
 
+    assert "above the maximum TLP:AMBER" in result
     connector.client.lookup.assert_not_called()
     connector.helper.check_max_tlp.assert_called_with("TLP:RED", "TLP:AMBER")
+    connector.helper.send_stix2_bundle.assert_not_called()
 
 
 def test_tlp_above_the_maximum_in_a_playbook_returns_the_bundle(connector):
     data = _message(tlp="TLP:RED", event_type=None)
 
-    with pytest.raises(ValueError):
-        connector.process_message(data)
+    connector.process_message(data)
 
     connector.client.lookup.assert_not_called()
     assert _sent_objects(connector) == data["stix_objects"]

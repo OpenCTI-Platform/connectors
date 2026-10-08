@@ -2,33 +2,14 @@
 IPGeolocation.io OpenCTI Connector — Risk Scorer
 ==================================================
 
-Normalises the heterogeneous risk signals from IPGeolocation.io into:
+Turns the IPGeolocation.io security data into:
 
-* **unified_score** (0–100): single number for OpenCTI ``x_opencti_score``
-* **risk_level**: Low / Medium / High / Critical
-* **explanation**: human-readable analyst paragraph
-
-Algorithm
----------
-1. Start with ``threat_score`` from the Security API (0-100).
-2. Apply additive modifiers for binary risk flags:
-   - TOR exit:           +15
-   - Known attacker:     +15
-   - Spam source:        +10
-   - Bot:                +10
-   - VPN (non-residential): +5
-   - Proxy (non-residential): +5
-   - Residential proxy:  +8  (harder to detect = higher risk)
-   - Relay:              +3
-   - Anonymous:          +3  (only if not already captured above)
-   - Cloud provider:     +2  (infrastructure, not inherently malicious)
-3. Cap at 100.
-4. Map to risk level:
-   - 0-20:  Low
-   - 21-50: Medium
-   - 51-80: High
-   - 81+:   Critical
-5. Build an English explanation listing every contributing factor.
+* **unified_score** (0-100): the IPGeolocation.io ``threat_score`` as is, used as the
+  OpenCTI ``x_opencti_score``. It already accounts for the security flags, so they are
+  not weighted again.
+* **risk_level**: Low (0-20), Medium (21-50), High (51-80) or Critical (81-100)
+* **contributing_factors**: the security flags that are set, in words
+* **explanation**: a human-readable paragraph for analysts
 """
 
 from __future__ import annotations
@@ -62,21 +43,7 @@ class RiskAssessment:
 class RiskScorer:
     """Stateless scorer: call ``assess`` with an ``IPIntelligence``."""
 
-    # Additive weights
-    _WEIGHTS = {
-        "is_tor": 15,
-        "is_known_attacker": 15,
-        "is_spam": 10,
-        "is_bot": 10,
-        "is_residential_proxy": 8,
-        "is_vpn": 5,
-        "is_proxy": 5,
-        "is_relay": 3,
-        "is_anonymous": 3,
-        "is_cloud_provider": 2,
-    }
-
-    # Human labels for each flag
+    # Security flags in the order they are reported, with their description.
     _LABELS = {
         "is_tor": "TOR exit node",
         "is_known_attacker": "known attacker infrastructure",
@@ -92,19 +59,15 @@ class RiskScorer:
 
     def assess(self, intel: IPIntelligence) -> RiskAssessment:
         sec = intel.security
-        base = sec.threat_score
         factors: list[str] = []
-        bonus = 0
         already_anon = False
 
-        for flag, weight in self._WEIGHTS.items():
-            val = getattr(sec, flag, False)
-            if not val:
+        for flag in self._LABELS:
+            if not getattr(sec, flag, False):
                 continue
-            # Avoid double-counting anonymous if VPN/proxy/TOR already on
-            if flag == "is_anonymous":
-                if already_anon:
-                    continue
+            # "anonymous" adds nothing when a VPN, proxy, Tor or relay flag explains it
+            if flag == "is_anonymous" and already_anon:
+                continue
             if flag in (
                 "is_vpn",
                 "is_proxy",
@@ -113,7 +76,6 @@ class RiskScorer:
                 "is_residential_proxy",
             ):
                 already_anon = True
-            bonus += weight
             label = self._LABELS[flag]
             # Add provider detail where available
             if flag == "is_vpn" and sec.vpn_provider_names:
@@ -124,8 +86,7 @@ class RiskScorer:
                 label += f" ({sec.cloud_provider_name})"
             factors.append(label)
 
-        raw = base + bonus
-        score = min(raw, 100)
+        score = max(0, min(int(sec.threat_score or 0), 100))
 
         level = self._level(score)
         confidence = self._derive_confidence(sec)
@@ -185,20 +146,12 @@ class RiskScorer:
     ) -> str:
         if not factors:
             return (
-                f"**{ip}** received a threat score of {sec.threat_score}/100 "
-                f"from IPGeolocation.io with no specific threat flags raised. "
-                f"Unified risk: **{level}** ({score}/100)."
+                f"**{ip}** has an IPGeolocation.io threat score of {score}/100 "
+                f"(**{level}** risk) with no specific threat flags raised."
             )
-        factor_str = ", ".join(factors)
         parts = [
-            f"**{ip}** is assessed as **{level} Risk** "
-            f"(unified score {score}/100) based on the following signals: "
-            f"{factor_str}.",
+            f"**{ip}** has an IPGeolocation.io threat score of {score}/100 "
+            f"(**{level}** risk), with these signals: {', '.join(factors)}.",
         ]
-        if sec.threat_score:
-            parts.append(
-                f"The upstream threat score from IPGeolocation.io is "
-                f"{sec.threat_score}/100."
-            )
         parts.append(f"Assessment confidence: {confidence}/100.")
         return " ".join(parts)

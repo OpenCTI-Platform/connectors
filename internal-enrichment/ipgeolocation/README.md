@@ -30,7 +30,7 @@ For each observable, the connector makes one request to the IPGeolocation.io [IP
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.261002.0
 - An IPGeolocation.io API key ([sign up](https://app.ipgeolocation.io/signup)). Free plans return location and ASN; the threat intelligence, abuse contact and hostname modules need a [paid plan](https://ipgeolocation.io/pricing.html).
 
 ## Configuration variables
@@ -68,7 +68,7 @@ Configuration comes from environment variables or from `config.yml` (see `config
 | TLP level            | `ipgeolocation.tlp_level`            | `IPGEOLOCATION_TLP_LEVEL`              | `clear`                         | No        | TLP marking of the objects the connector creates.                                                 |
 | Create labels        | `ipgeolocation.create_labels`        | `IPGEOLOCATION_CREATE_LABELS`          | `true`                          | No        | Add labels to the observable.                                                                     |
 | Create relationships | `ipgeolocation.create_relationships` | `IPGEOLOCATION_CREATE_RELATIONSHIPS`   | `true`                          | No        | Link the observable to its country, city, autonomous system, organizations and hostname.          |
-| Create indicator     | `ipgeolocation.create_indicator`     | `IPGEOLOCATION_CREATE_INDICATOR`       | `true`                          | No        | Create an indicator when the risk score reaches the threshold.                                    |
+| Create indicator     | `ipgeolocation.create_indicator`     | `IPGEOLOCATION_CREATE_INDICATOR`       | `false`                         | No        | Create an indicator when the risk score reaches the threshold. Off by default: indicators often feed detection tools. |
 | Indicator threshold  | `ipgeolocation.indicator_threshold`  | `IPGEOLOCATION_INDICATOR_THRESHOLD`    | `50`                            | No        | Risk score (0-100) from which an indicator is created.                                            |
 | Create note          | `ipgeolocation.create_note`          | `IPGEOLOCATION_CREATE_NOTE`            | `true`                          | No        | Attach a note with the full enrichment report.                                                    |
 
@@ -113,14 +113,14 @@ In OpenCTI, open an IPv4 or IPv6 observable, click the enrichment button and cho
 | ASN organization or company       | Organization; autonomous system `related-to` it                            |
 | Cloud provider                    | Organization; observable `related-to` it                                   |
 | Hostname                          | Hostname; hostname `resolves-to` the observable                            |
-| Threat score and security flags   | Observable score and labels; an Indicator `based-on` the observable from the threshold |
+| Threat score and security flags   | Observable score and labels; optionally an Indicator `based-on` the observable from the threshold |
 | Everything, including abuse contact | Note attached to the observable                                          |
 
 All new objects carry the IPGeolocation.io author and the configured TLP marking, and use the deterministic IDs of the connectors SDK, so enriching the same observable again updates the same entities. The observable keeps its own markings and author.
 
 ### Risk score
 
-The score set on the observable starts from the IPGeolocation.io threat score (0-100) and adds a weight for each security flag: Tor exit +15, known attacker +15, spam +10, bot +10, residential proxy +8, VPN +5, proxy +5, relay +3, anonymous +3 (when no other anonymity flag is set), cloud provider +2. The result is capped at 100 and mapped to a risk level used in the `risk:` label: low (0-20), medium (21-50), high (51-80), critical (81-100).
+The score set on the observable is the IPGeolocation.io threat score (0-100) as is: it already takes the security flags into account, so the connector does not weight them again. The score gives the risk level used in the `risk:` label: low (0-20), medium (21-50), high (51-80), critical (81-100). The flags that are set (Tor, VPN, proxy, known attacker, ...) become labels and are listed in the note and in the indicator description.
 
 Without the security module (free plan, or `include_security=false`), the connector sets no score, no risk label and no indicator, and the note says the threat intelligence was not part of the lookup.
 

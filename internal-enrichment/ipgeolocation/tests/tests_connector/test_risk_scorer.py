@@ -2,6 +2,7 @@
 
 from connector.risk_scorer import (
     RISK_CRITICAL,
+    RISK_HIGH,
     RISK_LOW,
     RISK_MEDIUM,
 )
@@ -15,14 +16,20 @@ class TestRiskScorer:
         assert result.risk_level == RISK_LOW
         assert result.unified_score <= 20
 
-    def test_high_threat_ip_is_critical(self, high_risk_intel, scorer):
-        """IP with threat_score=80 + VPN + proxy + known attacker."""
+    def test_score_is_the_upstream_threat_score(self, high_risk_intel, scorer):
+        """threat_score=80 with VPN, proxy and known attacker: the flags add nothing."""
         result = scorer.assess(high_risk_intel)
-        assert result.risk_level == RISK_CRITICAL
-        assert result.unified_score >= 81
+        assert result.unified_score == 80
+        assert result.opencti_score == 80
+        assert result.risk_level == RISK_HIGH
 
-    def test_score_capped_at_100(self, scorer):
-        """Even with all flags, score should not exceed 100."""
+    def test_critical_from_81(self, scorer):
+        intel = IPIntelligence(ip="10.0.0.3")
+        intel.security = SecurityData(threat_score=81)
+        assert scorer.assess(intel).risk_level == RISK_CRITICAL
+
+    def test_flags_do_not_change_the_score(self, scorer):
+        """All flags set: the score stays the upstream threat score."""
         intel = IPIntelligence(ip="10.0.0.1")
         intel.security = SecurityData(
             threat_score=90,
@@ -38,7 +45,8 @@ class TestRiskScorer:
             is_relay=True,
         )
         result = scorer.assess(intel)
-        assert result.unified_score == 100
+        assert result.unified_score == 90
+        assert "anonymous traffic" not in result.contributing_factors
 
     def test_explanation_contains_factors(self, high_risk_intel, scorer):
         result = scorer.assess(high_risk_intel)

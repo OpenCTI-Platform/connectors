@@ -34,7 +34,7 @@ def test_minimal_settings_use_the_documented_defaults():
     assert config.include_security and config.include_abuse and config.include_hostname
     assert config.max_tlp_level == "amber+strict"
     assert config.tlp_level == "clear"
-    assert config.create_indicator is True
+    assert config.create_indicator is False  # indicators often feed detection tools
     assert config.indicator_threshold == 50
 
 
@@ -47,7 +47,7 @@ def test_booleans_and_numbers_are_parsed_from_strings():
             "ipgeolocation": {
                 "api_key": "test-api-key",
                 "include_security": "false",
-                "create_indicator": "false",
+                "create_indicator": "true",
                 "indicator_threshold": "80",
                 "max_tlp_level": "green",
             },
@@ -56,7 +56,7 @@ def test_booleans_and_numbers_are_parsed_from_strings():
 
     assert settings.connector.auto is False
     assert settings.ipgeolocation.include_security is False
-    assert settings.ipgeolocation.create_indicator is False
+    assert settings.ipgeolocation.create_indicator is True
     assert settings.ipgeolocation.indicator_threshold == 80
     assert settings.ipgeolocation.max_tlp_level == "green"
 

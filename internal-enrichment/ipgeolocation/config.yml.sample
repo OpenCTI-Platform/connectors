@@ -20,6 +20,6 @@ ipgeolocation:
   # tlp_level: 'clear' # marking of the objects the connector creates
   # create_labels: true
   # create_relationships: true
-  # create_indicator: true
+  # create_indicator: false # indicators often feed detection tools: enable on purpose
   # indicator_threshold: 50
   # create_note: true
