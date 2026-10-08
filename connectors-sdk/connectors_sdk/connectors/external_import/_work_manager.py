@@ -10,7 +10,7 @@ at a time.
 
 Architecture::
 
-    with WorkManager(helper, logger) as wm:
+    with WorkManager(helper) as wm:
         wm.send(objects, "Import indicators")  # creates work
         wm.send(objects, "Import indicators")  # same work, another bundle
         wm.send(reports, "Import reports")     # closes previous, opens new work
@@ -19,9 +19,9 @@ Architecture::
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
 from pycti import OpenCTIConnectorHelper
 
 
@@ -37,12 +37,18 @@ class _Work:
         name: The human-readable name of the work, displayed in the OpenCTI UI.
     """
 
+    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger named after the module defining the subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = get_logger(cls.__module__)
+
     def __init__(
         self,
         work_id: str,
         work_name: str,
         helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
     ) -> None:
         """Initialize the work context.
 
@@ -50,22 +56,19 @@ class _Work:
             work_id: The work ID returned by OpenCTI.
             work_name: The human-readable name of the work, displayed in the OpenCTI UI.
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance for logging.
         """
         self.id = work_id
         self.name = work_name
         self._helper = helper
-        self._logger = logger
         self._closed = False
         self._has_sent_bundles = False
 
+        self.logger.debug(
+            "Work instantiated", meta={"work_name": self.name, "work_id": self.id}
+        )
+
     @classmethod
-    def create(
-        cls,
-        helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
-        work_name: str,
-    ) -> _Work:
+    def create(cls, helper: OpenCTIConnectorHelper, work_name: str) -> _Work:
         """Create a new work in OpenCTI and return a ``_Work`` instance.
 
         This classmethod encapsulates the OpenCTI API call to initiate a work,
@@ -73,18 +76,17 @@ class _Work:
 
         Args:
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance for logging.
             work_name: The name of the work, displayed in the OpenCTI UI.
 
         Returns:
             A new ``_Work`` instance wrapping the created work.
         """
         work_id: str = helper.api.work.initiate_work(helper.connect_id, work_name)
-        logger.info(
-            f"Work '{work_id}' initiated",
-            {"work_name": work_name},
+        cls.logger.debug(
+            "Work created",
+            meta={"work_name": work_name, "work_id": work_id},
         )
-        return cls(work_id, work_name, helper, logger)
+        return cls(work_id, work_name, helper)
 
     def send_bundle(self, bundle_objects: list[Any], **kwargs: Any) -> None:
         """Create a STIX bundle from objects and send it to OpenCTI.
@@ -98,9 +100,13 @@ class _Work:
         bundle = self._helper.stix2_create_bundle(stix_objects)
         bundles_sent = self._helper.send_stix2_bundle(bundle, work_id=self.id, **kwargs)
         self._has_sent_bundles = True
-        self._logger.info(
+        self.logger.info(
             "Sent STIX objects to OpenCTI",
-            {"bundles_sent": str(len(bundles_sent))},
+            meta={
+                "bundles_sent": len(bundles_sent),
+                "work_name": self.name,
+                "work_id": self.id,
+            },
         )
 
     def success(self, message: str) -> None:
@@ -110,7 +116,10 @@ class _Work:
             message: A completion message stored alongside the work.
         """
         self._helper.api.work.to_processed(self.id, message)
-        self._logger.info(message)
+        self.logger.debug(
+            "Work marked as completed on OpenCTI",
+            meta={"work_name": self.name, "work_id": self.id, "message": message},
+        )
         self._closed = True
 
     def fail(self, message: str) -> None:
@@ -120,7 +129,10 @@ class _Work:
             message: An error message stored alongside the work.
         """
         self._helper.api.work.to_processed(self.id, message, in_error=True)
-        self._logger.error(message)
+        self.logger.debug(
+            "Work marked as failed on OpenCTI",
+            meta={"work_name": self.name, "work_id": self.id, "message": message},
+        )
         self._closed = True
 
     def _delete(self) -> None:
@@ -131,9 +143,9 @@ class _Work:
             the ``WorkManager`` to clean up orphaned or invalid works.
         """
         self._helper.api.work.delete(id=self.id)
-        self._logger.info(
-            "Work deleted",
-            {"work_id": self.id},
+        self.logger.debug(
+            "Work deleted on OpenCTI",
+            meta={"work_name": self.name, "work_id": self.id},
         )
         self._closed = True
 
@@ -168,7 +180,7 @@ class WorkManager:
 
     Example::
 
-        work_manager = WorkManager(helper, logger)
+        work_manager = WorkManager(helper)
         with work_manager:
             work_manager.send(stix_objects, "Import indicators")
             work_manager.send(more_objects, "Import indicators")  # same work
@@ -176,20 +188,24 @@ class WorkManager:
         # work auto-closed
     """
 
-    def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-    ) -> None:
+    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger named after the module defining the subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = get_logger(cls.__module__)
+
+    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
         """Initialize the work manager.
 
         Args:
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance.
         """
         self._helper = helper
-        self._logger = ConnectorLogger(helper)
         self._current_work: _Work | None = None
         self._active = False
+
+        self.logger.debug("WorkManager instantiated")
 
     def __enter__(self) -> WorkManager:
         """Enter the context manager."""
@@ -211,11 +227,34 @@ class WorkManager:
         """
         if self._current_work is not None and not self._current_work._closed:
             if not self._current_work._has_sent_bundles:
+                self.logger.info(
+                    "Zero bundles were sent, deleting work",
+                    meta={
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
                 self._current_work._delete()
             elif exc_type is not None:
+                self.logger.error(
+                    "Work failed",
+                    meta={
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                        "error": str(exc_val),
+                    },
+                )
                 self._current_work.fail(f"Work failed with error: {exc_val}")
             else:
-                self._current_work.success("Work completed successfully")
+                message = "Work completed successfully"
+                self.logger.info(
+                    message,
+                    meta={
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
+                self._current_work.success(message)
         self._current_work = None
         self._active = False
 
@@ -237,19 +276,53 @@ class WorkManager:
                 (e.g. ``cleanup_inconsistent_bundle``, ``update``, ``entities_types``).
         """
         if not bundle_objects:
+            self.logger.info(
+                "No objects to send",
+                meta={"work_name": work_name},
+            )
             return
+
         if not self._active:
             msg = "WorkManager.send() must be called inside a 'with' block."
             raise RuntimeError(msg)
+
         if self._current_work is None or self._current_work.name != work_name:
             self._close_current_work()
-            self._current_work = _Work.create(self._helper, self._logger, work_name)
+
+            self.logger.info(
+                "Creating a new work",
+                meta={
+                    "new_work_name": work_name,
+                    "previous_work_name": (
+                        self._current_work.name
+                        if self._current_work is not None
+                        else None
+                    ),
+                },
+            )
+            self._current_work = _Work.create(self._helper, work_name)
+
         self._current_work.send_bundle(bundle_objects, **kwargs)
 
     def _close_current_work(self) -> None:
         """Close the current work if it exists and is not already closed."""
         if self._current_work is not None and not self._current_work._closed:
             if not self._current_work._has_sent_bundles:
+                self.logger.info(
+                    "Zero bundles were sent, deleting work",
+                    meta={
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
                 self._current_work._delete()
             else:
-                self._current_work.success("Work completed successfully")
+                message = "Work completed successfully"
+                self.logger.info(
+                    message,
+                    meta={
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
+                self._current_work.success(message)

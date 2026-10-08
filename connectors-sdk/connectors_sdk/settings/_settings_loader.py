@@ -4,8 +4,9 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 from types import UnionType
-from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, ClassVar, Union, get_args, get_origin
 
+from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
 from pydantic import BaseModel, create_model
 from pydantic_settings import (
     BaseSettings,
@@ -27,6 +28,13 @@ class _SettingsLoader(BaseSettings):
         env_nested_max_split=1,
         enable_decoding=False,
     )
+
+    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger named after the module defining the subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = get_logger(cls.__module__)
 
     @classmethod
     def _get_connector_main_path(cls) -> Path:
@@ -93,6 +101,10 @@ class _SettingsLoader(BaseSettings):
         """
         config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from config.yml file",
+                meta={"config_yml_file_path": str(config_yml_file_path)},
+            )
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
@@ -100,10 +112,16 @@ class _SettingsLoader(BaseSettings):
 
         dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from .env file",
+                meta={"dot_env_file_path": str(dot_env_file_path)},
+            )
             return (
                 env_settings,
                 DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
             )
+
+        cls.logger.debug("Parsing connector's settings from environment variables")
 
         return (env_settings,)
 

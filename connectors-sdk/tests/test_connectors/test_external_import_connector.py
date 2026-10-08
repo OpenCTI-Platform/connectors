@@ -1,5 +1,7 @@
 # pragma: no cover
 # type: ignore
+import logging
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -37,7 +39,6 @@ class FailingProcessor(BaseDataProcessor):
 def _make_helper_mock() -> MagicMock:
     helper = MagicMock()
     helper.connect_id = "test-connector-id"
-    helper.connector_logger = MagicMock()
     helper.api.work.initiate_work.return_value = "w-1"
     helper.api.work.to_processed.return_value = None
     helper.api.work.delete.return_value = None
@@ -57,6 +58,15 @@ def _make_state_mock() -> MagicMock:
 
 
 class TestExternalImportConnector:
+    def test_logger_is_named_after_the_module(self):
+        class MyConnector(ExternalImportConnector):
+            pass
+
+        assert ExternalImportConnector.logger.name == (
+            "connectors_sdk.connectors.external_import.external_import_connector"
+        )
+        assert MyConnector.logger.name == __name__
+
     def test_init(self, mock_settings: MagicMock):
         proc = DummyProcessor()
         connector = ExternalImportConnector(
@@ -130,7 +140,7 @@ class TestExternalImportConnector:
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
         state = _make_state_mock()
-        state.last_run = "2025-01-01T00:00:00+00:00"
+        state.last_run = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
@@ -143,7 +153,7 @@ class TestExternalImportConnector:
 
     @patch(PATCH_HELPER)
     def test_callback_exception_is_logged(
-        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock, caplog
     ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
@@ -156,7 +166,10 @@ class TestExternalImportConnector:
         connector._init_dependencies()
         connector.callback()
 
-        helper.connector_logger.error.assert_called()
+        [record] = [r for r in caplog.records if r.levelno == logging.ERROR]
+        assert record.getMessage() == "Unexpected error during connector run"
+        assert "error" in record.attributes
+        assert record.exc_info is not None
 
     @patch(PATCH_HELPER)
     def test_callback_keyboard_interrupt(

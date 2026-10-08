@@ -11,6 +11,7 @@ from datetime import timedelta
 from types import UnionType
 from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
 
+from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger, set_log_level
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -202,12 +203,27 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         description="Connector configurations.",
     )
 
+    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger named after the module defining the subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = get_logger(cls.__module__)
+
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""
         try:
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        # Until now, the level came from the `CONNECTOR_LOG_LEVEL` environment variable
+        # only (see `connectors_sdk.logger`). Apply the validated one, which may come
+        # from `config.yml`, `.env` or the field's default.
+        set_log_level(self.connector.log_level)
+
+        # Never log the settings' values: some connectors store secrets in plain `str`
+        self.logger.debug("Settings validated")
 
     @classmethod
     def config_json_schema(
