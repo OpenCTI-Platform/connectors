@@ -62,9 +62,10 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector ID                   | id                        | `CONNECTOR_ID`                          |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
 | Connector Name                 | name                      | `CONNECTOR_NAME`                        |                 | Yes       | Name of the connector.                                                         |
 | Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | stream-exporter | Yes       | The scope of the connector.                                                    |
+| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                 | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Start Timestamp    | live_stream_start_timestamp| `CONNECTOR_LIVE_STREAM_START_TIMESTAMP`|                 | No        | Start timestamp on first start (default: all data).                            |
 | Consumer Count                 | consumer_count            | `CONNECTOR_CONSUMER_COUNT`              | 10              | No        | Number of consumer/worker threads.                                             |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                 | Yes       | Default confidence level (1-4).                                                |
+| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                 | Yes       | Default confidence level (0 = Unknown, 100 = Fully trusted).                  |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info            | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
@@ -104,6 +105,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=stream-exporter
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - MINIO_ENDPOINT=minio.example.com
       - MINIO_PORT=9000
       - MINIO_BUCKET=opencti-export
