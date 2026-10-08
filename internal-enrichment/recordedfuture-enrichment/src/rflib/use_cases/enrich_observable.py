@@ -72,11 +72,12 @@ class ObservableEnricher:
         )
 
     def _process_observable_entity(
-        self, observable_enrichment: ObservableEnrichment
+        self, observable_enrichment: ObservableEnrichment, create_indicator: bool
     ) -> list[IPV4Address | IPV6Address | DomainName | URL | File | Indicator]:
         """Create OCTI observable and indicator from Recorded Future entity.
         :param observable_enrichment: Observable enrichment data from Recorded Future
-        :return: A list of an OCTI observable and its indicator
+        :param create_indicator: Whether to create the indicator of the observable
+        :return: A list of an OCTI observable and its indicator, if created
         """
         octi_objects = []
 
@@ -96,16 +97,17 @@ class ObservableEnricher:
                         author=self.author,
                     )
                 )
-                octi_objects.append(
-                    Indicator(
-                        name=entity_value,
-                        score=risk_score,
-                        pattern=f"[file:hashes.'{hash_algorithm}' = '{entity_value}']",
-                        pattern_type="stix",
-                        main_observable_type="StixFile",
-                        author=self.author,
+                if create_indicator:
+                    octi_objects.append(
+                        Indicator(
+                            name=entity_value,
+                            score=risk_score,
+                            pattern=f"[file:hashes.'{hash_algorithm}' = '{entity_value}']",
+                            pattern_type="stix",
+                            main_observable_type="StixFile",
+                            author=self.author,
+                        )
                     )
-                )
             case "InternetDomainName":
                 octi_objects.append(
                     DomainName(
@@ -113,16 +115,17 @@ class ObservableEnricher:
                         author=self.author,
                     )
                 )
-                octi_objects.append(
-                    Indicator(
-                        name=entity_value,
-                        score=risk_score,
-                        pattern=f"[domain-name:value = '{entity_value}']",
-                        pattern_type="stix",
-                        main_observable_type="Domain-Name",
-                        author=self.author,
+                if create_indicator:
+                    octi_objects.append(
+                        Indicator(
+                            name=entity_value,
+                            score=risk_score,
+                            pattern=f"[domain-name:value = '{entity_value}']",
+                            pattern_type="stix",
+                            main_observable_type="Domain-Name",
+                            author=self.author,
+                        )
                     )
-                )
             case "IpAddress":
                 ip_version = validate_ip_or_cidr(entity_value)
                 if ip_version.startswith("IPv4"):
@@ -132,16 +135,17 @@ class ObservableEnricher:
                             author=self.author,
                         )
                     )
-                    octi_objects.append(
-                        Indicator(
-                            name=entity_value,
-                            score=risk_score,
-                            pattern=f"[ipv4-addr:value = '{entity_value}']",
-                            pattern_type="stix",
-                            main_observable_type="IPv4-Addr",
-                            author=self.author,
+                    if create_indicator:
+                        octi_objects.append(
+                            Indicator(
+                                name=entity_value,
+                                score=risk_score,
+                                pattern=f"[ipv4-addr:value = '{entity_value}']",
+                                pattern_type="stix",
+                                main_observable_type="IPv4-Addr",
+                                author=self.author,
+                            )
                         )
-                    )
                 if ip_version.startswith("IPv6"):
                     octi_objects.append(
                         IPV6Address(
@@ -149,16 +153,17 @@ class ObservableEnricher:
                             author=self.author,
                         )
                     )
-                    octi_objects.append(
-                        Indicator(
-                            name=entity_value,
-                            score=risk_score,
-                            pattern=f"[ipv6-addr:value = '{entity_value}']",
-                            pattern_type="stix",
-                            main_observable_type="IPv4-Addr",
-                            author=self.author,
+                    if create_indicator:
+                        octi_objects.append(
+                            Indicator(
+                                name=entity_value,
+                                score=risk_score,
+                                pattern=f"[ipv6-addr:value = '{entity_value}']",
+                                pattern_type="stix",
+                                main_observable_type="IPv4-Addr",
+                                author=self.author,
+                            )
                         )
-                    )
             case "URL":
                 octi_objects.append(
                     URL(
@@ -166,16 +171,17 @@ class ObservableEnricher:
                         author=self.author,
                     )
                 )
-                octi_objects.append(
-                    Indicator(
-                        name=entity_value,
-                        score=risk_score,
-                        pattern=f"[url:value = '{entity_value}']",
-                        pattern_type="stix",
-                        main_observable_type="Url",
-                        author=self.author,
+                if create_indicator:
+                    octi_objects.append(
+                        Indicator(
+                            name=entity_value,
+                            score=risk_score,
+                            pattern=f"[url:value = '{entity_value}']",
+                            pattern_type="stix",
+                            main_observable_type="Url",
+                            author=self.author,
+                        )
                     )
-                )
             case _:
                 self.helper.connector_logger.warning(
                     f"Unsupported Recorded Future entity type '{entity_type}'. "
@@ -492,14 +498,14 @@ class ObservableEnricher:
             )
             observable = None
             indicator = None
-            for octi_object in self._process_observable_entity(observable_enrichment):
+            for octi_object in self._process_observable_entity(
+                observable_enrichment, create_indicator
+            ):
                 if isinstance(octi_object, Indicator):
-                    if create_indicator:
-                        indicator = octi_object
-                        octi_objects.append(indicator)
+                    indicator = octi_object
                 else:
                     observable = octi_object
-                    octi_objects.append(observable)
+                octi_objects.append(octi_object)
 
             # Extract other SCOs and SDOs
             octi_objects.extend(self._process_observable_links(observable_enrichment))

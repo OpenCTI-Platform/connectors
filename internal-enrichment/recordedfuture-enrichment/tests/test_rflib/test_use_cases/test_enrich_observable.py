@@ -158,3 +158,25 @@ def test_enrichment_of_unsupported_entity_type(threshold):
     )
     for obj in octi_objects:
         obj.to_stix2_object()
+
+
+@pytest.mark.parametrize("risk_score", [5, None])
+def test_enrichment_without_indicator_ignores_invalid_indicator_pattern(risk_score):
+    """An indicator that is not created must not abort the enrichment."""
+    enricher = make_enricher(threshold=50)
+
+    octi_objects = enricher.process_observable_enrichment(
+        make_enrichment(
+            value="https://example.com/o'reilly",
+            entity_type="URL",
+            risk_score=risk_score,
+        )
+    )
+
+    assert any(
+        isinstance(obj, URL) and obj.value == "https://example.com/o'reilly"
+        for obj in octi_objects
+    )
+    assert not any(
+        isinstance(obj, Indicator) and "reilly" in obj.name for obj in octi_objects
+    )
