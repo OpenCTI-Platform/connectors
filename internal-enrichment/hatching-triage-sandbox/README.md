@@ -126,12 +126,12 @@ flowchart LR
     C -->|Artifact or URL| D{Existing Analysis?}
     D -->|Yes| F[Fetch Report]
     D -->|No| E[Submit Sample]
-    E --> G[Wait for Analysis]
-    G --> F
-    C -->|File SCO| H[Search by supported hash]
-    H -->|Match| F
-    H -->|No match| I[Return informational message]
-    D --> G[Process Overview Report]
+    E --> W[Wait for Analysis]
+    W --> F
+    C -->|File SCO| S[Search by supported hash]
+    S -->|Match| F
+    S -->|No match| X[Return informational message]
+    F --> G[Process Overview Report]
     G --> H[External Reference]
     G --> I[Labels/Tags]
     G --> J[C2 Servers]
