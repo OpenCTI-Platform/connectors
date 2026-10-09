@@ -14,6 +14,7 @@ from connectors_sdk import (
     BaseDataProcessor,
     ExternalImportConnectorState,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
 
@@ -81,8 +82,11 @@ class CollectionsProcessor(BaseDataProcessor):
 
         A failure while fetching one collection's assets (e.g. a persistent
         network timeout) is logged and skipped rather than aborting the
-        remaining collections in this run.
+        remaining collections in this run. If *every* collection fails (e.g.
+        an invalid API token), a ``DataRetrievalError`` is raised so the run
+        is reported as failed and the connector state is not advanced.
         """
+        failed_collections = 0
         for collection in data:
             self.work_name = f"Censys Collections — {collection.name}"
             self.logger.info(
@@ -99,6 +103,7 @@ class CollectionsProcessor(BaseDataProcessor):
                     f"collection '{collection.name}' (id={collection.id}): "
                     f"{error}. Skipping this collection for this run."
                 )
+                failed_collections += 1
                 continue
 
             if objects:
@@ -120,6 +125,12 @@ class CollectionsProcessor(BaseDataProcessor):
                     f"Censys Collections: no objects generated for "
                     f"collection '{collection.name}' — skipping."
                 )
+
+        if data and failed_collections == len(data):
+            raise DataRetrievalError(
+                f"Censys Collections: failed to fetch assets for all "
+                f"{failed_collections} collection(s); marking this run as failed."
+            )
 
     # ------------------------------------------------------------------
     # Grouping maintenance

@@ -12,6 +12,7 @@ from censys_collections.converter import Converter
 from censys_collections.processor import CollectionsProcessor
 from censys_platform import Collection, CollectionStatus, Host, SearchQueryHit
 from censys_platform.models import HostAssetWithMatchedServices
+from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import IPV4Address
 
 
@@ -202,6 +203,51 @@ def test_transform_skips_failing_collection_and_continues() -> None:
     assert len(bundles) == 1
     assert any(isinstance(o, IPV4Address) for o in bundles[0])
     processor.logger.error.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_transform_raises_when_every_collection_fails() -> None:
+    """If every collection's asset fetch fails (e.g. invalid token), the run must fail."""
+    c1 = _make_collection("c1", "Broken 1")
+    c2 = _make_collection("c2", "Broken 2")
+    processor = _make_processor([c1, c2], [])
+    client = cast(MagicMock, processor.client)
+    client.fetch_collection_hits.side_effect = PermissionError("401 Unauthorized")
+
+    with pytest.raises(DataRetrievalError):
+        list(processor.transform([c1, c2]))
+
+    assert cast(MagicMock, processor.logger).error.call_count == 2
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_transform_does_not_raise_when_no_collections() -> None:
+    processor = _make_processor([], [])
+    assert list(processor.transform([])) == []
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_process_propagates_total_failure_to_work_manager() -> None:
+    """The total-failure error must reach the WorkManager context and the caller.
+
+    ``ExternalImportConnector.callback`` only advances ``last_run`` when
+    ``process()`` returns normally, so propagating the error keeps the
+    connector state untouched.
+    """
+    c1 = _make_collection("c1", "Broken")
+    processor = _make_processor([c1], [])
+    client = cast(MagicMock, processor.client)
+    client.fetch_collection_hits.side_effect = PermissionError("401 Unauthorized")
+    work_manager = cast(MagicMock, processor.work_manager)
+    # Like the real WorkManager, do not swallow exceptions on exit.
+    work_manager.__exit__.return_value = False
+
+    with pytest.raises(DataRetrievalError):
+        processor.process()
+
+    exit_args = work_manager.__exit__.call_args.args
+    assert exit_args[0] is DataRetrievalError
+    work_manager.send.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

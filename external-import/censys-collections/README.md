@@ -41,7 +41,7 @@ For every asset in a collection, the connector creates:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.11
+- OpenCTI Platform >= 7.261008.0
 - Censys account with API access (Organisation ID and Token) and at least one existing [Collection](https://docs.censys.com/docs/platform-collections)
 
 ## Configuration variables
@@ -272,7 +272,7 @@ Log output includes:
 
 ### Handling read timeouts on large collections
 
-Very large collections can occasionally trigger `httpx.ReadTimeout` / "The read operation timed out" errors while paging through assets. The connector automatically retries transient network errors and 429/5xx responses with exponential backoff before giving up. If a collection still fails after retries are exhausted, that collection is logged as an error and skipped for the current run — it does **not** abort ingestion of the other collections, and it will be retried again on the next scheduled run.
+Very large collections can occasionally trigger `httpx.ReadTimeout` / "The read operation timed out" errors while paging through assets. The connector automatically retries transient network errors and 429/5xx responses with exponential backoff before giving up. If a collection still fails after retries are exhausted, that collection is logged as an error and skipped for the current run — it does **not** abort ingestion of the other collections, and it will be retried again on the next scheduled run. If **every** selected collection fails in the same run (for example because the Censys token is invalid or expired), the run is reported as failed with an error and the connector state (`last_run`) is not advanced.
 
 If timeouts persist for a specific collection, increase `CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS` (default `60`).
 
