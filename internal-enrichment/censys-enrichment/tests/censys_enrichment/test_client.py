@@ -3,7 +3,11 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from censys_enrichment.client import Client, EntityHasNoUsableHashError
+from censys_enrichment.client import (
+    Client,
+    EntityHasNoUsableHashError,
+    NVDLookupError,
+)
 from censys_platform import (
     CertificateAsset,
     ResponseEnvelopeSearchQueryResponse,
@@ -214,20 +218,31 @@ def test_fetch_nvd_data_version_range_start_excluding_end_including() -> None:
     assert result.affected_software[0].version_info == "> 1.0, <= 2.0"
 
 
-def test_fetch_nvd_data_swallows_unexpected_errors() -> None:
-    """Test that an unexpected error while fetching NVD data returns None."""
+def test_fetch_nvd_data_raises_lookup_error_on_unexpected_errors() -> None:
+    """Test that an unexpected error while fetching NVD data raises NVDLookupError."""
     client = Client(organisation_id="org", token="tok")
     with patch("requests.get", side_effect=RuntimeError("network down")):
-        result = client.fetch_nvd_data("CVE-2024-0001")
-    assert result is None
+        with pytest.raises(NVDLookupError, match="network down"):
+            client.fetch_nvd_data("CVE-2024-0001")
 
 
-def test_fetch_nvd_data_raises_for_status_on_non_403_errors() -> None:
-    """Test that a non-403 HTTP error is swallowed via the outer exception handler."""
+def test_fetch_nvd_data_raises_lookup_error_on_http_errors() -> None:
+    """Test that a non-403 HTTP error raises NVDLookupError."""
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.raise_for_status.side_effect = RuntimeError("server error")
     client = Client(organisation_id="org", token="tok")
     with patch("requests.get", return_value=mock_response):
-        result = client.fetch_nvd_data("CVE-2024-0001")
-    assert result is None
+        with pytest.raises(NVDLookupError, match="server error"):
+            client.fetch_nvd_data("CVE-2024-0001")
+
+
+def test_fetch_nvd_data_raises_lookup_error_on_rate_limit() -> None:
+    """Test that HTTP 403 (rate limit) raises NVDLookupError without leaking the API key."""
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    client = Client(organisation_id="org", token="tok", nvd_api_key="secret-key")
+    with patch("requests.get", return_value=mock_response):
+        with pytest.raises(NVDLookupError, match="HTTP 403") as exc_info:
+            client.fetch_nvd_data("CVE-2024-0001")
+    assert "secret-key" not in str(exc_info.value)

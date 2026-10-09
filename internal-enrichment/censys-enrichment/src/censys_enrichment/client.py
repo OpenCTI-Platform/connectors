@@ -60,6 +60,10 @@ class EntityHasNoUsableHashError(Exception):
     """Custom exception for entity having no usable hash"""
 
 
+class NVDLookupError(Exception):
+    """Raised when a CVE lookup against the NVD API fails (network, HTTP or parsing error)."""
+
+
 class Client:
     def __init__(
         self, organisation_id: str, token: str, nvd_api_key: str | None = None
@@ -188,8 +192,11 @@ class Client:
         Returns:
             NVDData | None: An NVDData instance populated with description, CVSS
             v2/v3 severity, and external references, or ``None`` if the CVE is
-            not found, the API is unavailable, or the response contains no
-            useful data.
+            not found or the response contains no useful data.
+        Raises:
+            NVDLookupError: If the NVD API is unreachable, rate-limits the
+            request (HTTP 403), returns an HTTP error, or returns an
+            unparseable response.
         """
         try:
             headers = {"apiKey": self._nvd_api_key} if self._nvd_api_key else {}
@@ -200,11 +207,13 @@ class Client:
                 timeout=10,
             )
             if response.status_code == 403:
-                # NVD returns 403 when the rate limit is exhausted. Skip NVD
-                # enrichment for this CVE rather than blocking the worker
-                # thread with a hard sleep; enrichment continues without
-                # NVD-sourced data for this pass.
-                return None
+                # NVD returns 403 when the rate limit is exhausted. Fail this
+                # lookup rather than blocking the worker thread with a hard
+                # sleep; the connector skips NVD data for this CVE and reports
+                # the failure.
+                raise NVDLookupError(
+                    f"NVD lookup for {cve_id} was rejected (HTTP 403, rate limit exhausted)"
+                )
             response.raise_for_status()
             data = response.json()
             vulns = data.get("vulnerabilities", [])
@@ -318,6 +327,7 @@ class Client:
                 return None
 
             return result
-        except Exception:
-            pass
-        return None
+        except NVDLookupError:
+            raise
+        except Exception as e:
+            raise NVDLookupError(f"NVD lookup for {cve_id} failed: {e}") from e

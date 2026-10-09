@@ -1,6 +1,6 @@
 from typing import Any, Generator
 
-from censys_enrichment.client import Client, NVDData
+from censys_enrichment.client import Client, NVDData, NVDLookupError
 from censys_enrichment.converter import Converter
 from censys_enrichment.settings import ConfigLoader
 from censys_platform import Host, Service
@@ -72,6 +72,11 @@ class Connector:
         already holds a non-empty description for a given CVE, we clear the
         ``description`` field on the returned :class:`NVDData` to avoid
         overwriting it — all other enrichment fields are still applied.
+
+        NVD is a secondary source: a failed lookup is logged as a warning and
+        the CVE is enriched from Censys data only. If every lookup fails
+        (e.g. NVD unreachable or rate limited) an error is logged so the
+        problem is visible, but the Censys enrichment itself is still sent.
         """
         cve_ids: set[str] = set()
         for service in data.services if isinstance(data.services, list) else []:
@@ -82,8 +87,14 @@ class Connector:
                     cve_ids.add(vuln.id)
 
         nvd_data_map: dict[str, NVDData] = {}
+        failed_lookups = 0
         for cve_id in cve_ids:
-            nvd_data = self.client.fetch_nvd_data(cve_id)
+            try:
+                nvd_data = self.client.fetch_nvd_data(cve_id)
+            except NVDLookupError as e:
+                failed_lookups += 1
+                self.helper.connector_logger.warning(str(e))
+                continue
             if nvd_data is None:
                 continue
             try:
@@ -100,6 +111,13 @@ class Connector:
             except Exception:
                 pass
             nvd_data_map[cve_id] = nvd_data
+
+        if cve_ids and failed_lookups == len(cve_ids):
+            self.helper.connector_logger.error(
+                f"All {failed_lookups} NVD lookup(s) failed; vulnerabilities were "
+                "enriched from Censys data only. Check NVD connectivity and "
+                "CENSYS_ENRICHMENT_NVD_API_KEY."
+            )
 
         return nvd_data_map
 

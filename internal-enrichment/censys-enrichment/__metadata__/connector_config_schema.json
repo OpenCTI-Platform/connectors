@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Censys Enrichment",
@@ -26,7 +28,7 @@
         "X509-Certificate",
         "Domain-Name"
       ],
-      "description": "The scope of the connector.",
+      "description": "The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate'].",
       "items": {
         "type": "string"
       },
@@ -78,6 +80,18 @@
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "CENSYS_ENRICHMENT_NVD_API_KEY": {
+      "default": null,
+      "description": "Optional NVD API key.  Without a key requests are limited to 5 per 30 seconds; with a key the limit rises to 50 per 30 seconds.  Register at https://nvd.nist.gov/developers/request-an-api-key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CENSYS_ENRICHMENT_NVD_ENABLED": {
+      "default": true,
+      "description": "Set to false to disable NVD CVE enrichment entirely.  Useful when another connector (e.g. OpenCTI's own CVE connector) already handles vulnerability data and you want to avoid duplication.",
+      "type": "boolean"
     }
   },
   "required": [

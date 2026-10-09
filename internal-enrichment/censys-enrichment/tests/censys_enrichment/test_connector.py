@@ -3,7 +3,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
-from censys_enrichment.client import Client
+from censys_enrichment.client import Client, NVDData, NVDLookupError
 from censys_enrichment.connector import (
     Connector,
     EntityNotInScopeError,
@@ -153,11 +153,85 @@ def test__build_nvd_data_map_skips_cve_with_no_nvd_data(mocked_helper: Mock) -> 
 
 
 @pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_logs_error_when_all_lookups_fail(
+    mocked_helper: Mock,
+) -> None:
+    """When every NVD lookup fails, each failure is warned and an error is logged."""
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock()
+    client.fetch_nvd_data.side_effect = NVDLookupError("NVD down")
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[
+            Service(
+                port=443,
+                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
+            )
+        ],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result == {}
+    assert mocked_helper.connector_logger.warning.call_count == 2
+    mocked_helper.connector_logger.error.assert_called_once()
+    assert "All 2 NVD lookup(s) failed" in (
+        mocked_helper.connector_logger.error.call_args.args[0]
+    )
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_partial_failure_keeps_successful_lookups(
+    mocked_helper: Mock,
+) -> None:
+    """A partial NVD failure keeps successful results and does not log an error."""
+    from censys_platform import Host, Service, Vuln
+
+    nvd_data = NVDData(description="from NVD")
+
+    def _fetch(cve_id: str) -> NVDData:
+        if cve_id == "CVE-2024-0001":
+            raise NVDLookupError("NVD down")
+        return nvd_data
+
+    client = Mock()
+    client.fetch_nvd_data.side_effect = _fetch
+    mocked_helper.api.vulnerability.read.return_value = None
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[
+            Service(
+                port=443,
+                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
+            )
+        ],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result == {"CVE-2024-0002": nvd_data}
+    mocked_helper.connector_logger.warning.assert_called_once()
+    mocked_helper.connector_logger.error.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_config")
 def test__build_nvd_data_map_clears_description_when_opencti_already_has_one(
     mocked_helper: Mock,
 ) -> None:
     """An existing OpenCTI vulnerability description is not overwritten."""
-    from censys_enrichment.client import NVDData
     from censys_platform import Host, Service, Vuln
 
     client = Mock()
@@ -187,7 +261,6 @@ def test__build_nvd_data_map_keeps_description_without_existing_entity(
     mocked_helper: Mock,
 ) -> None:
     """The NVD description is kept when OpenCTI has no existing description."""
-    from censys_enrichment.client import NVDData
     from censys_platform import Host, Service, Vuln
 
     client = Mock()
@@ -215,7 +288,6 @@ def test__build_nvd_data_map_swallows_opencti_lookup_error(
     mocked_helper: Mock,
 ) -> None:
     """A failure reading the existing OpenCTI vulnerability does not abort enrichment."""
-    from censys_enrichment.client import NVDData
     from censys_platform import Host, Service, Vuln
 
     client = Mock()
