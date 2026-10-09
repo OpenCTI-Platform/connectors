@@ -13,21 +13,106 @@ name: Build Manifest
 #
 # Nothing is committed when the caller ref is a tag: there is no branch to push
 # to in that case, the manifest is already built on the branch the tag came from.
+#
+# Schema generation is parallelized: one matrix job per manager-supported
+# connector, all of them regenerated unconditionally (not just the ones that
+# changed) since the global manifest must stay complete even for untouched
+# connectors. A single sequential job used to loop over every connector,
+# which is what made this workflow slow.
 
 on:
   workflow_call:
   workflow_dispatch:
 
-concurrency:
-  group: build-manifest-global-${{ github.ref_name }}
-  cancel-in-progress: true
+# No concurrency group: groups order by job arrival, not commit order, so an
+# older run could cancel a newer one and then skip its own commit as stale,
+# leaving no manifest. The freshness check before the commit makes sure only
+# the newest commit's run writes.
 
 permissions:
   contents: read
 
 jobs:
+  detect_connectors:
+    name: Detect manager-supported connectors
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: set-matrix
+        name: Build manifest matrix from connector manifests
+        run: python .github/scripts/build_manifest_matrix.py
+
+  generate_config_schema:
+    name: Generate schema ${{ matrix.name }}
+    needs: detect_connectors
+    if: needs.detect_connectors.outputs.has_connectors == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect_connectors.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+
+      - name: Remove existing generated schema/doc files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f */*/__metadata__/connector_config_schema.json */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+
+      - name: Generate config schema
+        shell: bash
+        env:
+          # Release/LTS branches generate their schemas against their own
+          # connectors-sdk rather than master's. Tags have no branch to track,
+          # so the task falls back to master.
+          RELEASE_REF: ${{ github.ref_type == 'branch' && github.ref_name || '' }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r connector_path; do
+            [ -z "$connector_path" ] && continue
+            echo "::group::Generating schema for ${connector_path}"
+            mise run generate_config_schema "$connector_path"
+            echo "::endgroup::"
+          done <<< "${{ matrix.connector_paths }}"
+
+      # Uploaded to be collected by the build_manifest job below: each matrix
+      # job only checks out/regenerates its own connector(s), so the schemas
+      # need to be handed off rather than committed from here directly.
+      - name: Upload generated schema
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manifest-schema-${{ strategy.job-index }}
+          path: |
+            */*/__metadata__/connector_config_schema.json
+            */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+          if-no-files-found: ignore
+          retention-days: 1
+
   build_manifest:
     name: Build and Commit Manifest
+    needs:
+      - detect_connectors
+      - generate_config_schema
+    # Runs even if there were no manager-supported connectors (generate_config_schema
+    # skipped) or if some individual schema jobs failed — the global manifest
+    # still needs to be rebuilt from whatever schemas are available.
+    if: |
+      always() &&
+      needs.detect_connectors.result == 'success' &&
+      needs.generate_config_schema.result != 'cancelled'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,40 +123,6 @@ jobs:
           # No git push is performed: the commit is created through the GitHub
           # API, so the checkout token does not need to be persisted.
           persist-credentials: false
-          # Full history: the schema generation script diffs against the base
-          # branch to decide which connectors to regenerate.
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.12"
-
-      # The generation script still uses the legacy `$CIRCLE_BRANCH` /
-      # `$RELEASE_REF` variable names to decide which connectors changed.
-      # Both are unset by default under GitHub Actions, which sends the script
-      # down its pull-request path (`git merge-base origin/master HEAD`). On a
-      # push to master that merge base *is* HEAD, so every connector is
-      # reported as unchanged and nothing is ever regenerated. Setting both to
-      # the current ref yields the intended behaviour: diff the last commit
-      # (HEAD~1..HEAD).
-      #
-      # TODO: rename these variables to CI-agnostic names inside the script
-      # itself (see #7677).
-      - name: Build connectors schemas
-        shell: bash
-        env:
-          CIRCLE_BRANCH: ${{ github.ref_name }}
-          RELEASE_REF: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
-
-      - name: Build global manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-          bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
       - name: Resolve target branch
         id: target
@@ -90,24 +141,22 @@ jobs:
 
           echo "branch=${REF_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Check branch is still at the expected commit
-        id: freshness
+      - name: Download generated schemas
         if: steps.target.outputs.branch != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        
+        with:
+          pattern: manifest-schema-*
+          path: .
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Build global manifest
         shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ steps.target.outputs.branch }}
-          EXPECTED_SHA: ${{ github.sha }}
+        if: steps.target.outputs.branch != ''
         run: |
           set -euo pipefail
-          current_sha=$(gh api "repos/${REPO}/git/refs/heads/${BRANCH}" --jq '.object.sha')
-          if [ "$current_sha" != "$EXPECTED_SHA" ]; then
-            echo "::warning::Branch '${BRANCH}' moved from ${EXPECTED_SHA} to ${current_sha} while this workflow was running. Skipping manifest commit to avoid committing on top of newer changes."
-            echo "still_head=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "still_head=true" >> "$GITHUB_OUTPUT"
-          fi
+          bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
       # GITHUB_TOKEN cannot push to the default branch: the `filigran`
       # enterprise ruleset requires a pull request there, and `github-actions`
@@ -124,6 +173,30 @@ jobs:
         with:
           app-id: ${{ vars.RELEASE_COMMIT_GITHUB_APP_ID }}
           private-key: ${{ secrets.RELEASE_COMMIT_GITHUB_APP_PRIVATE_KEY }}
+
+      # The matrix takes long enough that the branch may have moved. Committing
+      # on top of a tip we didn't build from would mix stale and fresh content,
+      # so skip when a newer non-manifest commit exists: its own run regenerates
+      # everything. Manifest bot commits are ignored so overlapping runs don't
+      # discard each other. Runs right before the commit to keep the
+      # check-to-commit window small.
+      - name: Check branch has no newer commits
+        id: freshness
+        if: steps.target.outputs.branch != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$(bash .github/scripts/branch_has_newer_commits.sh)" = "true" ]; then
+            echo "::warning::Branch '${BRANCH}' has newer commits than ${EXPECTED_SHA}. Skipping manifest commit: the run for the newer commit regenerates it."
+            echo "still_head=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "still_head=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
       # commit is GPG-signed by GitHub (required by this repo's branch
