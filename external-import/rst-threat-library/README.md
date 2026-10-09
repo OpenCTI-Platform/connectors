@@ -10,7 +10,7 @@ The connector polls `GET /threat-objects/<type>` for each configured type and up
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.12 with a working worker
+- OpenCTI Platform >= 7.261008.0 with a working worker
 - Python >= 3.11 (for manual deployment)
 - An RST Cloud Threat Library API key
 - Docker / Docker Compose
@@ -36,11 +36,8 @@ Configuration is set either in `docker-compose.yml` (Docker) or in `config.yml` 
 | Connector Name                 | `name`                                       | `CONNECTOR_NAME`                                         | `RST Threat Library`| No        | `RST Threat Library`                         | Display name in OpenCTI.                                                    |
 | Connector Scope                | `scope`                                      | `CONNECTOR_SCOPE`                                        | /                   | Yes       | `intrusion-set,malware,tool,campaign`        | STIX domain types emitted.                                                  |
 | Log Level                      | `log_level`                                  | `CONNECTOR_LOG_LEVEL`                                    | `error`             | No        | `info`                                       | `debug`, `info`, `warn`, or `error`.                                        |
-| Duration Period                | `duration_period`                            | `CONNECTOR_DURATION_PERIOD`                              | `PT1H`              | No        | `PT1H`                                       | ISO-8601 interval between runs.                                                         |
-| Queue Threshold                | `queue_threshold`                            | `CONNECTOR_QUEUE_THRESHOLD`                              | `500`               | No        | `500`                                        | Max RabbitMQ queue size (MB) before pausing ingestion.                      |
-| Update Existing Data           | `update_existing_data`                       | `CONNECTOR_UPDATE_EXISTING_DATA`                       | `true`              | No        | `true`                                       | Upsert existing STIX objects when `true`.                                   |
-| Auto-create Service Account    | `auto_create_service_account`                | `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT`                  | `false`             | No        | `true`                                       | Create a Connectors-group service account on first start.                   |
-| Service Account Confidence     | `auto_create_service_account_confidence_level` | `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL` | `50`                | No        | `50`                                         | Max confidence for the auto-created service account.                        |
+| Duration Period                | `duration_period`                            | `CONNECTOR_DURATION_PERIOD`                              | `PT1H`              | No        | `PT1H`                                       | ISO-8601 interval between runs.                                             |
+| TLP Level                      | `tlp_level`                                  | `CONNECTOR_TLP_LEVEL`                                    | `clear`             | No        | `amber`                                      | TLP applied to imported objects. The marking definition is sent with each bundle. |
 
 #### Connector extra parameters
 

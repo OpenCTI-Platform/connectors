@@ -57,7 +57,10 @@ class RSTThreatLibrary:
     ) -> None:
         self.config = config
         self.helper = helper
-        self.converter = ConverterToStix(helper=self.helper)
+        self.converter = ConverterToStix(
+            helper=self.helper,
+            tlp_level=str(self.config.connector.tlp_level),
+        )
 
         tl = self.config.rst_threat_library
 
@@ -90,8 +93,6 @@ class RSTThreatLibrary:
         self._reconcile_allow_created_by = [
             str(x).strip() for x in tl.reconcile_allow_created_by if str(x).strip()
         ]
-
-        self.update_existing_data = bool(self.config.connector.update_existing_data)
 
         self.merge_split_enabled = bool(tl.merge_split)
         self.respect_user_edits = bool(tl.respect_user_edits)
@@ -152,7 +153,7 @@ class RSTThreatLibrary:
         self.helper.connector_logger.info(
             f"OpenCTI push: send_stix2_bundle "
             f"(batch_size={self._opencti_batch_size}, "
-            f"CONNECTOR_UPDATE_EXISTING_DATA={self.update_existing_data})"
+            f"tlp_level={self.config.connector.tlp_level})"
         )
         if self._sync_labels:
             self.helper.connector_logger.info(
@@ -1296,6 +1297,7 @@ class RSTThreatLibrary:
         friendly_name = (
             f"RST Threat Library [{obj_type}] @ " f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
         )
+        stix_objects = self._with_tlp_marking(stix_objects)
         self.helper.connector_logger.debug(
             f"[{obj_type}] start uploading {len(stix_objects)} object(s) "
             f"(mode=bundle)"
@@ -1312,7 +1314,6 @@ class RSTThreatLibrary:
                 )
                 self.helper.send_stix2_bundle(
                     self.helper.stix2_create_bundle(stix_objects),
-                    update=self.update_existing_data,
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
@@ -1346,6 +1347,14 @@ class RSTThreatLibrary:
                 raise
 
         return False
+
+    def _with_tlp_marking(self, stix_objects: List[Any]) -> List[Any]:
+        """Include the configured TLP marking definition in the bundle."""
+        marking = self.converter.tlp_marking
+        marking_id = getattr(marking, "id", None)
+        if any(self._stix_type_and_id(obj)[1] == marking_id for obj in stix_objects):
+            return stix_objects
+        return [marking, *stix_objects]
 
     @staticmethod
     def _stix_type_and_id(obj: Any) -> Tuple[Optional[str], Optional[str]]:

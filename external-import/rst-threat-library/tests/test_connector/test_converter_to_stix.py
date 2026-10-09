@@ -12,6 +12,30 @@ def converter():
     return ConverterToStix(helper=helper)
 
 
+def test_item_to_sdo_applies_configured_tlp_and_ignores_source_markings():
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    converter = ConverterToStix(helper=helper, tlp_level="amber")
+    item = {
+        "standard_id": "intrusion-set--c8d782e1-6566-4c2b-a9f8-87a757c379a4",
+        "entity_type": "Intrusion-Set",
+        "name": "APT Example",
+        "objectMarking": [
+            {"standard_id": "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168"}
+        ],
+    }
+
+    sdo = converter.item_to_sdo(item, "intrusion-sets", [])
+
+    payload = json.loads(sdo.serialize())
+    assert payload["object_marking_refs"] == [converter.tlp_marking.id]
+    assert converter.tlp_marking.type == "marking-definition"
+    assert (
+        "marking-definition--fa42a846-8d90-4e51-bc29-71d5b4802168"
+        not in payload["object_marking_refs"]
+    )
+
+
 def test_item_to_sdo_builds_intrusion_set_with_upstream_id(converter):
     item = {
         "standard_id": "intrusion-set--c8d782e1-6566-4c2b-a9f8-87a757c379a4",

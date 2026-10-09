@@ -9,10 +9,8 @@ connector:
   scope: 'intrusion-set,malware,tool,campaign' # STIX domain types emitted
   log_level: 'error' # optional: 'debug', 'info', 'warn', 'error' (default: 'error')
   duration_period: 'PT1H' # optional, ISO-8601 interval between runs (default: 'PT1H')
-  queue_threshold: 500 # optional (default: 500)
-  update_existing_data: true # optional (default: true)
-  auto_create_service_account: true # optional (default: false in settings; true in compose)
-  auto_create_service_account_confidence_level: 50 # optional (default: 50)
+  tlp_level: 'clear' # optional: clear, white, green, amber, amber+strict, red (default: 'clear')
+  # queue_threshold is the OpenCTI helper setting (CONNECTOR_QUEUE_THRESHOLD, default 500).
 
 rst_threat_library:
   baseurl: 'https://api.rstcloud.net/v1' # optional (default: 'https://api.rstcloud.net/v1')

@@ -83,32 +83,6 @@ def connector():
     return RSTThreatLibrary(config=settings, helper=helper)
 
 
-def test_connector_honors_update_existing_data_false_from_settings():
-    class StubUpdateExistingFalse(ConnectorSettings):
-        @classmethod
-        def _load_config_dict(cls, _, handler):
-            return handler(
-                {
-                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                    "connector": {
-                        "id": "connector-id",
-                        "scope": "intrusion-set",
-                        "update_existing_data": "false",
-                    },
-                    "rst_threat_library": {
-                        "baseurl": "http://test.com",
-                        "apikey": "test-api-key",
-                    },
-                }
-            )
-
-    helper = MagicMock()
-    helper.connector_logger = MagicMock()
-    connector = RSTThreatLibrary(config=StubUpdateExistingFalse(), helper=helper)
-
-    assert connector.update_existing_data is False
-
-
 def test_batch_send_stix_bundle_uses_helper_bundle_pattern(connector):
     stix_object = MagicMock()
     stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
@@ -118,9 +92,12 @@ def test_batch_send_stix_bundle_uses_helper_bundle_pattern(connector):
     )
 
     assert ok is True
-    connector.helper.stix2_create_bundle.assert_called_once_with([stix_object])
+    bundle_objects = connector.helper.stix2_create_bundle.call_args.args[0]
+    assert bundle_objects[0] is connector.converter.tlp_marking
+    assert bundle_objects[1] is stix_object
     connector.helper.send_stix2_bundle.assert_called_once()
     kwargs = connector.helper.send_stix2_bundle.call_args.kwargs
+    assert "update" not in kwargs
     assert kwargs["cleanup_inconsistent_bundle"] is True
     assert kwargs["work_id"] == "work-1"
 
@@ -493,16 +470,15 @@ def test_batch_send_puts_identities_in_first_chunk_only(connector):
 
     assert ok is True
     assert connector.helper.stix2_create_bundle.call_count == 2
+    marking = connector.converter.tlp_marking
     first_chunk = connector.helper.stix2_create_bundle.call_args_list[0].args[0]
     second_chunk = connector.helper.stix2_create_bundle.call_args_list[1].args[0]
-    assert first_chunk[0] is identity
-    assert len(first_chunk) == 2
+    assert first_chunk[0] is marking
+    assert first_chunk[1] is identity
+    assert len(first_chunk) == 3
     assert identity not in second_chunk
-    assert len(second_chunk) == 2
-    assert all(
-        len(call.args[0]) <= connector._opencti_batch_size
-        for call in connector.helper.stix2_create_bundle.call_args_list
-    )
+    assert second_chunk[0] is marking
+    assert len(second_chunk) == 3
 
 
 def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
@@ -521,14 +497,16 @@ def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
     ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
 
     assert ok is True
+    marking = connector.converter.tlp_marking
     chunks = [
         call.args[0] for call in connector.helper.stix2_create_bundle.call_args_list
     ]
     assert len(chunks) == 2
-    assert chunks[0] == identities[:2]
-    assert chunks[1][0] is identities[2]
-    assert chunks[1][1] is malware
-    assert all(len(chunk) <= 2 for chunk in chunks)
+    assert chunks[0][0] is marking
+    assert chunks[0][1:] == identities[:2]
+    assert chunks[1][0] is marking
+    assert chunks[1][1] is identities[2]
+    assert chunks[1][2] is malware
 
 
 def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):

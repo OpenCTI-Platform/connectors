@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import stix2
 from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE, with_sync_labels
+from connectors_sdk.models import TLPMarking
 from pycti import OpenCTIConnectorHelper
 
 _STIX_IDENTITY_CLASSES = frozenset(
@@ -56,8 +57,9 @@ def copy_seen_dates(item: Dict[str, Any], kwargs: Dict[str, Any]) -> None:
 class ConverterToStix:
     """Build STIX 2.1 objects from Threat Library API payloads."""
 
-    def __init__(self, helper: OpenCTIConnectorHelper):
+    def __init__(self, helper: OpenCTIConnectorHelper, *, tlp_level: str = "clear"):
         self.helper = helper
+        self.tlp_marking = TLPMarking(level=tlp_level).to_stix2_object()
 
     def item_to_sdo(
         self,
@@ -146,14 +148,7 @@ class ConverterToStix:
         if identity is not None:
             kwargs["created_by_ref"] = identity.id
 
-        marking_refs = [
-            marking["standard_id"]
-            for marking in (item.get("objectMarking") or [])
-            if marking.get("standard_id")
-        ]
-        if marking_refs:
-            kwargs["object_marking_refs"] = marking_refs
-
+        kwargs["object_marking_refs"] = [self.tlp_marking.id]
         return kwargs
 
     def build_identity(self, created_by: Dict[str, Any]) -> Optional[Any]:
@@ -175,7 +170,12 @@ class ConverterToStix:
             )
             return None
         try:
-            return stix2.v21.Identity(id=sid, name=name, identity_class=identity_class)
+            return stix2.v21.Identity(
+                id=sid,
+                name=name,
+                identity_class=identity_class,
+                object_marking_refs=[self.tlp_marking.id],
+            )
         except Exception as exc:
             self.helper.connector_logger.warning(
                 "Skipping invalid createdBy identity",

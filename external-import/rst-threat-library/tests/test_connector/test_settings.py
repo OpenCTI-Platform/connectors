@@ -51,39 +51,7 @@ def test_settings_should_accept_valid_input(settings_dict: dict[str, Any]):
     assert settings.rst_threat_library is not None
 
 
-def test_settings_passes_auto_create_service_account_to_helper_config():
-    class FakeConnectorSettings(ConnectorSettings):
-        @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-            return handler(
-                {
-                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                    "connector": {
-                        "id": "connector-id",
-                        "name": "RST Threat Library",
-                        "scope": "intrusion-set",
-                        "log_level": "error",
-                        "duration_period": "PT5M",
-                        "auto_create_service_account": True,
-                        "auto_create_service_account_confidence_level": 80,
-                    },
-                    "rst_threat_library": {
-                        "baseurl": "http://test.com",
-                        "apikey": "test-api-key",
-                    },
-                }
-            )
-
-    settings = FakeConnectorSettings()
-    helper_config = settings.to_helper_config()
-
-    assert helper_config["connector"]["auto_create_service_account"] is True
-    assert (
-        helper_config["connector"]["auto_create_service_account_confidence_level"] == 80
-    )
-
-
-def test_settings_coerces_update_existing_data_string_false():
+def test_settings_accepts_tlp_level():
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
@@ -93,7 +61,7 @@ def test_settings_coerces_update_existing_data_string_false():
                     "connector": {
                         "id": "connector-id",
                         "scope": "intrusion-set",
-                        "update_existing_data": "false",
+                        "tlp_level": "amber+strict",
                     },
                     "rst_threat_library": {
                         "baseurl": "http://test.com",
@@ -104,7 +72,31 @@ def test_settings_coerces_update_existing_data_string_false():
 
     settings = FakeConnectorSettings()
 
-    assert settings.connector.update_existing_data is False
+    assert settings.connector.tlp_level == "amber+strict"
+    assert settings.to_helper_config()["connector"]["tlp_level"] == "amber+strict"
+
+
+def test_settings_rejects_unknown_tlp_level():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                        "tlp_level": "black",
+                    },
+                    "rst_threat_library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "test-api-key",
+                    },
+                }
+            )
+
+    with pytest.raises(ConfigValidationError):
+        FakeConnectorSettings()
 
 
 @pytest.mark.parametrize(

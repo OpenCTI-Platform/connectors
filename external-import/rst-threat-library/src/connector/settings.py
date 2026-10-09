@@ -6,6 +6,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
+from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import migrate_deprecated_namespace
 from pydantic import Field, HttpUrl, SecretStr, model_validator
@@ -32,36 +33,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default=timedelta(hours=1),
         examples=["PT1H", "PT30M"],
     )
-    queue_threshold: float = Field(
+    tlp_level: TLPLevel = Field(
         description=(
-            "Server capacity: max RabbitMQ queue size (in MB) before the "
-            "connector pauses ingestion. Surfaced in the OpenCTI UI."
+            "TLP marking applied to imported objects. The marking definition "
+            "is included in each bundle sent to OpenCTI."
         ),
-        default=500.0,
-        gt=0,
-        examples=[500.0],
-    )
-    update_existing_data: bool = Field(
-        description="Whether to update existing STIX objects in OpenCTI.",
-        default=True,
-        examples=[True, False],
-    )
-    auto_create_service_account: bool = Field(
-        description=(
-            "Create a dedicated Connectors-group service account for this "
-            "connector on first start and run subsequent API calls as that user."
-        ),
-        default=False,
-        examples=[True, False],
-    )
-    auto_create_service_account_confidence_level: int = Field(
-        description=(
-            "Max confidence level for the auto-created connector service account."
-        ),
-        default=50,
-        ge=0,
-        le=100,
-        examples=[50, 80],
+        default=TLPLevel.CLEAR,
+        examples=["clear", "amber"],
     )
 
 

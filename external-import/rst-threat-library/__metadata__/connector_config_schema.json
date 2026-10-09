@@ -72,43 +72,22 @@
       "format": "duration",
       "type": "string"
     },
-    "CONNECTOR_QUEUE_THRESHOLD": {
-      "default": 500.0,
-      "description": "Server capacity: max RabbitMQ queue size (in MB) before the connector pauses ingestion. Surfaced in the OpenCTI UI.",
-      "examples": [
-        500.0
+    "CONNECTOR_TLP_LEVEL": {
+      "default": "clear",
+      "description": "TLP marking applied to imported objects. The marking definition is included in each bundle sent to OpenCTI.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
       ],
-      "exclusiveMinimum": 0,
-      "type": "number"
-    },
-    "CONNECTOR_UPDATE_EXISTING_DATA": {
-      "default": true,
-      "description": "Whether to update existing STIX objects in OpenCTI.",
       "examples": [
-        true,
-        false
+        "clear",
+        "amber"
       ],
-      "type": "boolean"
-    },
-    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT": {
-      "default": false,
-      "description": "Create a dedicated Connectors-group service account for this connector on first start and run subsequent API calls as that user.",
-      "examples": [
-        true,
-        false
-      ],
-      "type": "boolean"
-    },
-    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL": {
-      "default": 50,
-      "description": "Max confidence level for the auto-created connector service account.",
-      "examples": [
-        50,
-        80
-      ],
-      "maximum": 100,
-      "minimum": 0,
-      "type": "integer"
+      "type": "string"
     },
     "RST_THREAT_LIBRARY_BASEURL": {
       "default": "https://api.rstcloud.net/v1",
