@@ -165,7 +165,7 @@ Tests use `pytest` with `pytest-cov` for 95%+ code coverage.
 
 ```bash
 # From the project root:
-pip install -r src/requirements.txt -r tests/test-requirements.txt
+pip install -r src/requirements.txt -r tests/test-requirements.txt pytest-cov
 pytest --cov --cov-report=term-missing
 ```
 
