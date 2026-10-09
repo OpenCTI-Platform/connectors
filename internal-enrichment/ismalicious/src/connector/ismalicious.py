@@ -17,7 +17,7 @@ from pycti import (
     StixSightingRelationship,
 )
 
-from .models import ConfigLoader
+from .settings import ConnectorSettings
 
 # Identifies the connector to the isMalicious API, which attributes usage by
 # User-Agent prefix (the requests default would read as a generic script).
@@ -69,7 +69,7 @@ def threat_sources(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 class IsMaliciousConnector:
     """OpenCTI connector for isMalicious threat intelligence."""
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
         self.api_url = config.ismalicious.api_url.rstrip("/")
@@ -236,11 +236,32 @@ class IsMaliciousConnector:
         )
         stix_objects.append(sighting)
 
+    def _entity_in_scope(self, data: Dict) -> bool:
+        """Check the entity type, taken from its STIX id, against the connector scope."""
+        scopes = [scope.lower() for scope in self.config.connector.scope]
+        entity_type = data["entity_id"].split("--")[0].lower()
+        return entity_type in scopes
+
+    def _skip(self, data: Dict, reason: str) -> str:
+        """
+        Skip the entity. A playbook waits for a bundle to continue: when the
+        message comes from a playbook (no `event_type`), send the original
+        bundle back unchanged.
+        """
+        if not data.get("event_type"):
+            self.helper.send_stix2_bundle(
+                self.helper.stix2_create_bundle(data["stix_objects"])
+            )
+        return reason
+
     def _process_message(self, data: Dict) -> str:
         """Process enrichment request from OpenCTI."""
         opencti_entity = data["enrichment_entity"]
         stix_entity = data["stix_entity"]
         stix_objects = data["stix_objects"]
+
+        if not self._entity_in_scope(data):
+            return self._skip(data, "Entity not in connector scope, skipping")
 
         # Check TLP
         tlp = "TLP:CLEAR"
@@ -251,38 +272,40 @@ class IsMaliciousConnector:
         if not OpenCTIConnectorHelper.check_max_tlp(
             tlp, self.config.ismalicious.max_tlp
         ):
-            return "TLP too high, skipping enrichment"
+            return self._skip(data, "TLP too high, skipping enrichment")
 
         # Get observable value and type
         observable_value = stix_entity.get("value")
         entity_type = opencti_entity.get("entity_type", "").lower()
 
         if not observable_value:
-            return "No observable value found"
+            return self._skip(data, "No observable value found")
 
         # Check if we should enrich this type
         if "ipv4" in entity_type and not self.config.ismalicious.enrich_ipv4:
-            return "IPv4 enrichment disabled"
+            return self._skip(data, "IPv4 enrichment disabled")
         if "ipv6" in entity_type and not self.config.ismalicious.enrich_ipv6:
-            return "IPv6 enrichment disabled"
+            return self._skip(data, "IPv6 enrichment disabled")
         if "domain" in entity_type and not self.config.ismalicious.enrich_domain:
-            return "Domain enrichment disabled"
+            return self._skip(data, "Domain enrichment disabled")
 
         self.helper.log_info(f"Enriching {entity_type}: {observable_value}")
 
         # Call isMalicious API
         api_data = self._call_api(observable_value)
         if api_data is None:
-            return f"API call failed for {observable_value}"
+            return self._skip(data, f"API call failed for {observable_value}")
 
         # Calculate and set score
         score = self._calculate_score(api_data)
-        threshold = self.config.ismalicious.min_score_to_report
+        threshold = self.config.ismalicious.min_score
         if score is None and threshold > 0:
-            return "Risk score unavailable; cannot evaluate minimum score, skipping"
+            return self._skip(
+                data, "Risk score unavailable; cannot evaluate minimum score, skipping"
+            )
         if score is not None:
             if score < threshold:
-                return f"Score {score} below threshold, skipping"
+                return self._skip(data, f"Score {score} below threshold, skipping")
             OpenCTIStix2.put_attribute_in_extension(
                 stix_entity, STIX_EXT_OCTI_SCO, "score", score
             )
