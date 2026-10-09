@@ -12,8 +12,9 @@ connector:
   # live_stream_no_dependencies: true # optional (default: true)
 
 zscaler:
-  username: 'ChangeMe'
-  password: 'ChangeMe'
-  api_key: 'ChangeMe'
-  # blacklist_name: 'BLACK_LIST_DYNDNS' # optional (default: 'BLACK_LIST_DYNDNS')
-  # ssl_verify: false # optional (default: false)
+  client_id: 'ChangeMe' # ZIdentity API client ID
+  client_secret: 'ChangeMe' # ZIdentity API client secret
+  vanity_domain: 'ChangeMe' # <vanity_domain> in https://<vanity_domain>.zslogin.net
+  # cloud: 'beta' # optional (default: production cloud, api.zsapi.net)
+  # blacklist_name: 'BLACK_LIST_DYNDNS' # optional, URL category ID such as CUSTOM_01 (default: 'BLACK_LIST_DYNDNS')
+  # ssl_verify: true # optional (default: true)

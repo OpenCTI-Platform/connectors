@@ -4,7 +4,10 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from stream_connector import ZscalerConnector
+from stream_connector.client import ZscalerClient
 from stream_connector.settings import ConnectorSettings
+
+LEGACY_CREDENTIAL_FIELDS = {"username", "password", "api_key"}
 
 if __name__ == "__main__":
     try:
@@ -14,17 +17,29 @@ if __name__ == "__main__":
         # Initialize the helper
         helper = OpenCTIConnectorHelper(config=config.to_helper_config())
 
-        # Initialize the connector with the validated settings
+        legacy_fields = LEGACY_CREDENTIAL_FIELDS & config.zscaler.model_fields_set
+        if legacy_fields:
+            helper.connector_logger.warning(
+                "Legacy Zscaler API credentials are ignored, the connector uses Zscaler OneAPI",
+                {"fields": sorted(legacy_fields)},
+            )
+
+        client = ZscalerClient(
+            logger=helper.connector_logger,
+            client_id=config.zscaler.client_id,
+            client_secret=config.zscaler.client_secret.get_secret_value(),
+            vanity_domain=config.zscaler.vanity_domain,
+            cloud=config.zscaler.cloud,
+            ssl_verify=config.zscaler.ssl_verify,
+        )
+        # Fail fast on invalid OneAPI credentials
+        client.authenticate()
+
         connector = ZscalerConnector(
             helper=helper,
-            ssl_verify=config.zscaler.ssl_verify,
-            zscaler_username=config.zscaler.username,
-            zscaler_password=config.zscaler.password.get_secret_value(),
-            zscaler_api_key=config.zscaler.api_key.get_secret_value(),
+            client=client,
             zscaler_blacklist_name=config.zscaler.blacklist_name,
         )
-
-        connector.authenticate_with_zscaler()
         connector.start()
 
     except Exception:
