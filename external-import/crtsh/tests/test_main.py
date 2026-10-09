@@ -97,7 +97,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert connector.interval == 3600
     assert connector._get_interval() == 3600
     assert connector.domain == "example.com"
-    assert connector.labels == "crtsh,osint"
+    assert connector.labels == ["crtsh", "osint"]
     assert connector.marking_refs == "TLP:WHITE"
     assert connector.is_expired is True
     assert connector.is_wildcard is False

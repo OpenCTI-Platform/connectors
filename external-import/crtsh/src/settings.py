@@ -67,9 +67,9 @@ class CrtshConfig(BaseConfigModel):
     domain: str = Field(
         description="Domain to search certificates for (e.g. 'google.com').",
     )
-    labels: str = Field(
+    labels: ListFromString = Field(
         description="Comma-separated list of labels to add to the imported objects (e.g. 'crtsh,osint').",
-        default="crtsh,osint",
+        default=["crtsh", "osint"],
     )
     marking_refs: Literal["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"] | None = (
         Field(
