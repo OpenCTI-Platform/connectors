@@ -15,11 +15,33 @@ class _Model(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
+def _clean_string(value: Any) -> Any:
+    """Strip strings and turn blank ones into ``None``."""
+    if isinstance(value, str):
+        return value.strip() or None
+    return value
+
+
+def _clean_string_list(value: Any) -> Any:
+    """Coalesce ``null`` to ``[]`` and drop blank or ``null`` items."""
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return value
+    cleaned = (_clean_string(item) for item in value)
+    return [item for item in cleaned if item is not None]
+
+
 class AlertUser(_Model):
     """A user account involved in the alert (``users[]``)."""
 
     user_name: str | None = None
     sid: str | None = None
+
+    @field_validator("user_name", "sid", mode="before")
+    @classmethod
+    def _clean(cls, value: Any) -> Any:
+        return _clean_string(value)
 
 
 class MitreAttack(_Model):
@@ -29,6 +51,11 @@ class MitreAttack(_Model):
     tactic: str | None = None
     technique_id: str | None = None
     technique: str | None = None
+
+    @field_validator("tactic_id", "tactic", "technique_id", "technique", mode="before")
+    @classmethod
+    def _clean(cls, value: Any) -> Any:
+        return _clean_string(value)
 
 
 class CrowdstrikeAlert(_Model):
@@ -51,7 +78,7 @@ class CrowdstrikeAlert(_Model):
     falcon_host_link: str | None = None
     detection_id: str | None = None
     event_ids: list[str] = Field(default_factory=list)
-    priority_value: int | None = None
+    priority_value: int | float | None = None
     priority_explanation: list[str] = Field(default_factory=list)
     host_names: list[str] = Field(default_factory=list)
     source_ips: list[str] = Field(default_factory=list)
@@ -63,21 +90,33 @@ class CrowdstrikeAlert(_Model):
         "host_names",
         "source_ips",
         "user_names",
-        "users",
-        "mitre_attack",
         "priority_explanation",
         mode="before",
     )
     @classmethod
+    def _clean_list(cls, value: Any) -> Any:
+        return _clean_string_list(value)
+
+    @field_validator("users", "mitre_attack", mode="before")
+    @classmethod
     def _coalesce_null_list(cls, value: Any) -> Any:
-        return [] if value is None else value
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [item for item in value if item is not None]
+        return value
+
+    @field_validator(
+        "name", "display_name", "description", "falcon_host_link", mode="before"
+    )
+    @classmethod
+    def _clean(cls, value: Any) -> Any:
+        return _clean_string(value)
 
     @field_validator("event_ids", mode="before")
     @classmethod
     def _event_ids_as_list(cls, value: Any) -> Any:
         """The API returns ``event_ids`` as a single string on NG-SIEM alerts."""
-        if not value:
-            return []
         if isinstance(value, str):
-            return [value]
-        return value
+            value = [value]
+        return _clean_string_list(value)
