@@ -27,6 +27,12 @@ services:
 #      - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
 #      - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
 #      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=false # Whether or not to add ASN and location resolution relationships
+#      - VIRUSTOTAL_IP_ADD_RESOLUTIONS=false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
+#      - VIRUSTOTAL_IP_RESOLUTIONS_SINCE=P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
+#      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES=3 # Stop after this many resolutions fetched (unset: no entry cap)
+#      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES=25 # Maximum pages (40 entries, one lookup each) per enrichment
+#      - VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX=news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
+#      - VIRUSTOTAL_API_REQUESTS_PER_MINUTE=4 # Spacing between resolutions pages; 4 fits a free key, 0 disables the wait
 #      # Domain specific config settings
 #      - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
 #      - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
@@ -39,6 +45,13 @@ services:
 #      - VIRUSTOTAL_URL_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
 #      # Generic config settings for File, IP, Domain, URL
 #      - VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE=false # Whether or not to include the attributes info in Note
+#      # Google Threat Intelligence enrichment settings
+#      - VIRUSTOTAL_GTI_ENRICHMENT_ENABLED=false # Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access.
+#      - VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES=false # Whether or not to enrich with related GTI malware families (created as Malware entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS=false # Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS=false # Whether or not to enrich with related GTI campaigns (created as Campaign entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_REPORTS=false # Whether or not to enrich with related GTI reports (created as Report entities).
+#      - VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT=10 # Maximum number of related objects to pull per GTI relationship, per observable.
     deploy:
       mode: replicated
       replicas: 1

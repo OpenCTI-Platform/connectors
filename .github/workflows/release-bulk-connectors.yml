@@ -31,6 +31,12 @@ run-name: >-
 #   - One run per connector is not bound by the 256-job matrix limit, so "all"
 #     (250+ connectors) works in a single orchestration.
 #
+# NOTE (#7811): GitHub Release creation is currently disabled in
+# release-connector.yml, so a bulk run only produces the per-connector tags (and
+# manifest fragments), not 300+ GitHub Releases. The mentions of "GitHub Release"
+# below describe the behaviour to restore once the decoupling process is
+# officialized.
+#
 # Use cases: shared-dependency security fix, pycti bump, connectors-sdk breaking
 # change, LTS alignment.
 #
@@ -88,8 +94,8 @@ on:
       force:
         description: >
           Force — for every dispatched connector, delete any existing GitHub
-          Release for this version before recreating it. If the tag already
-          exists, it is reused as-is (it is not deleted/recreated).
+          Release and tag for this version before recreating them (the tag is
+          recreated on the commit this run was dispatched from).
         required: false
         type: boolean
         default: false
@@ -221,7 +227,7 @@ jobs:
             echo "## Bulk release — version \`$VERSION\`"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (handled by the build workflow for this version). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
+              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (handled by the build workflow for this version). Tag and manifest fragment are still produced for each connector. GitHub Release creation is currently disabled (#7811)."
               echo ""
             fi
             if [ "$FORCE" = "true" ]; then

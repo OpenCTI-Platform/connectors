@@ -24,6 +24,7 @@
     "CONNECTOR_SCOPE": {
       "default": [
         "Artifact",
+        "StixFile",
         "Url"
       ],
       "description": "The scope of the connector.",

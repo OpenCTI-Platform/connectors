@@ -19,5 +19,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` |  |
 | EMAIL_INTEL_MICROSOFT_TLP_LEVEL | `string` |  | `white` `clear` `green` `amber` `amber+strict` `red` | `"amber+strict"` |  |
 | EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` |  |
+| EMAIL_INTEL_MICROSOFT_REPORT_TYPE | `string` |  | `attack-pattern` `campaign` `identity` `indicator` `intrusion-set` `malware` `observed-data` `threat-actor` `threat-report` `tool` `vulnerability` | `"threat-report"` | The report type to assign to imported reports (a value from the report_type_ov vocabulary). |
 | EMAIL_INTEL_MICROSOFT_MAILBOX | `string` |  | string | `"INBOX"` |  |
 | EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES | `array` |  | string | `["application/pdf", "text/csv", "text/plain"]` |  |

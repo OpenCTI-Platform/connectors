@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "threat-actor--8211bc17-9216-5e83-b54d-d1b04add12f3",
+      "type": "collection",
+      "attributes": {
+        "name": "APT28",
+        "collection_type": "threat-actor",
+        "aliases": ["Fancy Bear", "Sofacy"],
+        "description": "Russia-nexus espionage and attack/destruction actor."
+      },
+      "links": {
+        "self": "https://www.virustotal.com/api/v3/collections/threat-actor--8211bc17-9216-5e83-b54d-d1b04add12f3"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://www.virustotal.com/api/v3/ip_addresses/101.255.119.42/threat_actors?limit=40"
+  }
+}
