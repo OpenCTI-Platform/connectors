@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/crowdstrike-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "CrowdStrike Incidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "crowdstrike-incidents"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector (e.g. 'PT5M' for 5 minutes).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INCIDENTS_API_BASE_URL": {
+      "default": "https://api.crowdstrike.com",
+      "description": "Base URL of the CrowdStrike API for the tenant's cloud region (e.g. 'https://api.us-2.crowdstrike.com', 'https://api.eu-1.crowdstrike.com').",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CROWDSTRIKE_INCIDENTS_CLIENT_ID": {
+      "description": "CrowdStrike API client ID. The API client needs the 'Alerts: Read' scope.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INCIDENTS_CLIENT_SECRET": {
+      "description": "CrowdStrike API client secret.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_INCIDENTS_IMPORT_START_DATE": {
+      "default": "P7D",
+      "description": "How far back to look on the first import (e.g. 'P7D' for 7 days, 'P30D' for 30 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INCIDENTS_PRODUCTS": {
+      "default": [
+        "ngsiem"
+      ],
+      "description": "Comma-separated list of CrowdStrike alert products to import. Only 'ngsiem' (Next-Gen SIEM) is supported for now; other values are ignored.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INCIDENTS_SEVERITY_MIN": {
+      "description": "Minimum severity of the alerts to import: 'informational', 'low', 'medium', 'high' or 'critical'. All alerts are imported when unset.",
+      "enum": [
+        "informational",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "type": "string",
+      "default": null
+    },
+    "CROWDSTRIKE_INCIDENTS_INCLUDE_HIDDEN": {
+      "default": false,
+      "description": "Whether to also import alerts hidden in the Falcon console.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_INCIDENTS_TLP_LEVEL": {
+      "description": "TLP marking level applied to every created STIX object.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CROWDSTRIKE_INCIDENTS_CLIENT_ID",
+    "CROWDSTRIKE_INCIDENTS_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}
