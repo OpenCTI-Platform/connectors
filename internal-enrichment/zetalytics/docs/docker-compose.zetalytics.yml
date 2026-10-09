@@ -84,8 +84,6 @@ services:
       ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
       # Pivot from each discovered MX domain to the domains it serves - deep mode only (default false)
       ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
-      # Enrich via registration email pivots - high noise potential, disabled by default (default false)
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 
       # --- STIX output controls (all optional) ---
       # Confidence score applied to created STIX objects, 0-100 (default 60)
@@ -129,7 +127,6 @@ services:
       ZETALYTICS_INCLUDE_NS_GLUE: "false"
       ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
       ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
       ZETALYTICS_CONFIDENCE: "50"
       ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
 
@@ -170,7 +167,6 @@ services:
       ZETALYTICS_INCLUDE_NS_GLUE: "false"
       ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
       ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
       ZETALYTICS_CONFIDENCE: "40"
       ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
 
@@ -211,8 +207,6 @@ services:
       ZETALYTICS_INCLUDE_NS_GLUE: "true"
       ZETALYTICS_INCLUDE_NS2DOMAIN: "true"
       ZETALYTICS_INCLUDE_MX2DOMAIN: "true"
-      # Enable if registration email pivoting is required for this investigation
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
       ZETALYTICS_CONFIDENCE: "60"
       ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
       ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS: "false"

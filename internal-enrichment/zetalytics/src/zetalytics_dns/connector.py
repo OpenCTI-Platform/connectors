@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
@@ -23,6 +24,10 @@ class UnsupportedEntityTypeError(Exception):
     """Raised when the observable type is not handled by this connector."""
 
 
+class ZetalyticsLookupError(Exception):
+    """Raised when every Zetalytics query for an observable failed."""
+
+
 class Connector:
     """Zetalytics DNS enrichment connector.
 
@@ -40,6 +45,8 @@ class Connector:
         self.config = config
         self.helper = helper
         self.client = client
+        self._lookups_attempted = 0
+        self._lookups_failed = 0
 
     # ------------------------------------------------------------------
     # OpenCTI connector lifecycle
@@ -78,24 +85,27 @@ class Connector:
                 source_tlp=source_tlp,
             )
 
+            self._lookups_attempted = 0
+            self._lookups_failed = 0
             if obs_type in _DOMAIN_TYPES:
                 enrichment = self._enrich_domain(obs_value, obs_stix_id, converter)
             else:
                 enrichment = self._enrich_ip(obs_value, obs_stix_id, converter)
 
+            # Surface total failure (e.g. an invalid token or the API being
+            # down) as a failed work rather than an empty successful one.
+            if self._lookups_attempted and (
+                self._lookups_failed == self._lookups_attempted
+            ):
+                raise ZetalyticsLookupError(
+                    f"All {self._lookups_attempted} Zetalytics queries failed "
+                    f"for {obs_value}; check the API token and connectivity."
+                )
+
             stix_objects.extend(converter.base_objects())
             stix_objects.extend(enrichment)
 
-            anchor = converter.anchor_object(
-                obs_type,
-                obs_value,
-                obs_stix_id,
-                (
-                    self.config.zetalytics.token.get_secret_value()
-                    if self.config.zetalytics.include_portal_link
-                    else None
-                ),
-            )
+            anchor = converter.anchor_object(obs_type, obs_value, obs_stix_id)
             if anchor:
                 stix_objects.append(anchor)
 
@@ -121,6 +131,12 @@ class Connector:
                 "[CONNECTOR] Skipping observable", {"reason": str(exc)}
             )
             return self._send_bundle(list(data.get("stix_objects") or []))
+        except ZetalyticsLookupError as exc:
+            # Re-raise so the helper marks the work as failed in OpenCTI.
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Enrichment failed", {"error": str(exc)}
+            )
+            raise
         except Exception as exc:
             # Same playbook-compatibility rationale as above: forward the
             # original bundle unchanged rather than swallowing it on error.
@@ -129,6 +145,33 @@ class Connector:
                 {"error": str(exc)},
             )
             return self._send_bundle(list(data.get("stix_objects") or []))
+
+    # ------------------------------------------------------------------
+    # Lookup helper
+    # ------------------------------------------------------------------
+
+    def _lookup(
+        self,
+        label: str,
+        context: dict[str, Any],
+        fetch: Callable[[], Any],
+        convert: Callable[[Any], list],
+    ) -> list:
+        """Run one Zetalytics query and convert its response.
+
+        A failing query is logged and yields no objects so the remaining
+        queries still run; attempts and failures are counted so
+        process_message can fail the work when every query failed.
+        """
+        self._lookups_attempted += 1
+        try:
+            return convert(fetch())
+        except Exception as exc:
+            self._lookups_failed += 1
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] {label} query failed", {**context, "error": str(exc)}
+            )
+            return []
 
     # ------------------------------------------------------------------
     # Domain / hostname enrichment
@@ -141,80 +184,78 @@ class Connector:
         converter: Converter,
     ) -> list:
         cfg = self.config.zetalytics
+        ctx = {"value": value}
         objects: list = []
 
         # Passive DNS is always performed for domains
         self.helper.connector_logger.debug(
-            "[CONNECTOR] Querying passive DNS for domain", {"value": value}
+            "[CONNECTOR] Querying passive DNS for domain", ctx
         )
-        try:
-            passive_resp = self.client.passive_dns_for_domain(
-                value=value,
-                size=cfg.max_results,
-                lookback_days=cfg.lookback_days,
-                tsfield=cfg.tsfield,
+        objects.extend(
+            self._lookup(
+                "domain2rrtypes",
+                ctx,
+                lambda: self.client.passive_dns_for_domain(
+                    value=value,
+                    size=cfg.max_results,
+                    lookback_days=cfg.lookback_days,
+                    tsfield=cfg.tsfield,
+                ),
+                lambda resp: converter.from_domain_passive_dns(value, stix_id, resp),
             )
-            objects.extend(
-                converter.from_domain_passive_dns(value, stix_id, passive_resp)
-            )
-        except Exception as exc:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] domain2rrtypes query failed",
-                {"value": value, "error": str(exc)},
-            )
+        )
 
         if cfg.include_live_dns:
-            try:
-                live_resp = self.client.live_dns(value)
-                objects.extend(converter.from_live_dns(value, stix_id, live_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] liveDNS query failed",
-                    {"value": value, "error": str(exc)},
+            objects.extend(
+                self._lookup(
+                    "liveDNS",
+                    ctx,
+                    lambda: self.client.live_dns(value),
+                    lambda resp: converter.from_live_dns(value, stix_id, resp),
                 )
+            )
 
         if cfg.include_subdomains and cfg.max_subdomains > 0:
-            try:
-                subs_resp = self.client.subdomains(
-                    value=value,
-                    max_results=cfg.max_subdomains,
+            objects.extend(
+                self._lookup(
+                    "subdomains",
+                    ctx,
+                    lambda: self.client.subdomains(
+                        value=value, max_results=cfg.max_subdomains
+                    ),
+                    lambda resp: converter.from_subdomains(value, stix_id, resp),
                 )
-                objects.extend(converter.from_subdomains(value, stix_id, subs_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] subdomains query failed",
-                    {"value": value, "error": str(exc)},
-                )
+            )
 
         if cfg.include_d8s:
-            try:
-                d8s_resp = self.client.domain_d8s(value)
-                objects.extend(converter.from_d8s(value, stix_id, d8s_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] domain2d8s query failed",
-                    {"value": value, "error": str(exc)},
+            objects.extend(
+                self._lookup(
+                    "domain2d8s",
+                    ctx,
+                    lambda: self.client.domain_d8s(value),
+                    lambda resp: converter.from_d8s(value, stix_id, resp),
                 )
+            )
 
         if cfg.include_ns_glue:
-            try:
-                ns_resp = self.client.domain_ns_glue(value)
-                objects.extend(converter.from_ns_glue(value, stix_id, ns_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] domain2nsglue query failed",
-                    {"value": value, "error": str(exc)},
+            objects.extend(
+                self._lookup(
+                    "domain2nsglue",
+                    ctx,
+                    lambda: self.client.domain_ns_glue(value),
+                    lambda resp: converter.from_ns_glue(value, stix_id, resp),
                 )
+            )
 
         if cfg.include_historical_whois and cfg.max_whois_results > 0:
-            try:
-                whois_resp = self.client.domain_whois(value, size=cfg.max_whois_results)
-                objects.extend(converter.from_whois(value, stix_id, whois_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] domain2whois query failed",
-                    {"value": value, "error": str(exc)},
+            objects.extend(
+                self._lookup(
+                    "domain2whois",
+                    ctx,
+                    lambda: self.client.domain_whois(value, size=cfg.max_whois_results),
+                    lambda resp: converter.from_whois(value, stix_id, resp),
                 )
+            )
 
         if cfg.include_ns2domain and cfg.max_ns_pivot_results > 0:
             # Pivot: for each NS we found, look up what domains they serve
@@ -236,20 +277,18 @@ class Connector:
         # mutating a set while iterating it raises RuntimeError. This also
         # bounds the pivot to one level instead of recursing indefinitely.
         for ns_value in list(converter.nameserver_domains):
-            try:
-                resp = self.client.ns_to_domains(
-                    ns_value, size=cfg.max_ns_pivot_results
+            pivot_objects.extend(
+                self._lookup(
+                    "ns2domain pivot",
+                    {"ns": ns_value},
+                    lambda ns=ns_value: self.client.ns_to_domains(
+                        ns, size=cfg.max_ns_pivot_results
+                    ),
+                    lambda resp, ns=ns_value: converter.from_domain_passive_dns(
+                        ns, converter.domain_id(ns), resp
+                    ),
                 )
-                pivot_objects.extend(
-                    converter.from_domain_passive_dns(
-                        ns_value, converter.domain_id(ns_value), resp
-                    )
-                )
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] ns2domain pivot failed",
-                    {"ns": ns_value, "error": str(exc)},
-                )
+            )
         return pivot_objects
 
     def _pivot_mx_to_domains(self, converter: Converter) -> list:
@@ -261,20 +300,18 @@ class Connector:
         # of converter.mx_domains would be mutated by from_domain_passive_dns()
         # below if the pivot response itself contains MX records.
         for mx_value in list(converter.mx_domains):
-            try:
-                resp = self.client.mx_to_domains(
-                    mx_value, size=cfg.max_mx_pivot_results
+            pivot_objects.extend(
+                self._lookup(
+                    "mx2domain pivot",
+                    {"mx": mx_value},
+                    lambda mx=mx_value: self.client.mx_to_domains(
+                        mx, size=cfg.max_mx_pivot_results
+                    ),
+                    lambda resp, mx=mx_value: converter.from_domain_passive_dns(
+                        mx, converter.domain_id(mx), resp
+                    ),
                 )
-                pivot_objects.extend(
-                    converter.from_domain_passive_dns(
-                        mx_value, converter.domain_id(mx_value), resp
-                    )
-                )
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] mx2domain pivot failed",
-                    {"mx": mx_value, "error": str(exc)},
-                )
+            )
         return pivot_objects
 
     # ------------------------------------------------------------------
@@ -288,45 +325,46 @@ class Connector:
         converter: Converter,
     ) -> list:
         cfg = self.config.zetalytics
+        ctx = {"value": value}
         objects: list = []
 
         # Passive DNS is always performed for IPs
         self.helper.connector_logger.debug(
-            "[CONNECTOR] Querying passive DNS for IP", {"value": value}
+            "[CONNECTOR] Querying passive DNS for IP", ctx
         )
-        try:
-            passive_resp = self.client.passive_dns_for_ip(
-                value=value,
-                size=cfg.max_results,
-                lookback_days=cfg.lookback_days,
-                tsfield=cfg.tsfield,
+        objects.extend(
+            self._lookup(
+                "ip passive DNS",
+                ctx,
+                lambda: self.client.passive_dns_for_ip(
+                    value=value,
+                    size=cfg.max_results,
+                    lookback_days=cfg.lookback_days,
+                    tsfield=cfg.tsfield,
+                ),
+                lambda resp: converter.from_ip_passive_dns(value, stix_id, resp),
             )
-            objects.extend(converter.from_ip_passive_dns(value, stix_id, passive_resp))
-        except Exception as exc:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] ip passive DNS query failed",
-                {"value": value, "error": str(exc)},
-            )
+        )
 
         # ip2pwhois is always performed for IPs
-        try:
-            ctx_resp = self.client.ip_context(value)
-            objects.extend(converter.from_ip_context(value, stix_id, ctx_resp))
-        except Exception as exc:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] ip2pwhois query failed",
-                {"value": value, "error": str(exc)},
+        objects.extend(
+            self._lookup(
+                "ip2pwhois",
+                ctx,
+                lambda: self.client.ip_context(value),
+                lambda resp: converter.from_ip_context(value, stix_id, resp),
             )
+        )
 
         if cfg.include_ns_glue:
-            try:
-                ns_resp = self.client.ip_ns_glue(value)
-                objects.extend(converter.from_ns_glue(value, stix_id, ns_resp))
-            except Exception as exc:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] ip2nsglue query failed",
-                    {"value": value, "error": str(exc)},
+            objects.extend(
+                self._lookup(
+                    "ip2nsglue",
+                    ctx,
+                    lambda: self.client.ip_ns_glue(value),
+                    lambda resp: converter.from_ns_glue(value, stix_id, resp),
                 )
+            )
 
         return objects
 

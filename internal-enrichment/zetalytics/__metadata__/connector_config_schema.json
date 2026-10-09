@@ -168,11 +168,6 @@
       "description": "Pivot from MX domain to hosted domains (deep mode only).",
       "type": "boolean"
     },
-    "ZETALYTICS_INCLUDE_EMAIL_PIVOTS": {
-      "default": false,
-      "description": "Reserved for a future registration-email pivot (disabled by default). Not yet actioned by the connector.",
-      "type": "boolean"
-    },
     "ZETALYTICS_CONFIDENCE": {
       "default": 60,
       "description": "Confidence score applied to created STIX objects.",
@@ -183,16 +178,19 @@
     "ZETALYTICS_MARKING_DEFINITION": {
       "default": "TLP:AMBER",
       "description": "TLP marking definition to apply to created objects.",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS": {
       "default": false,
       "description": "Create an OpenCTI note on the observable when no results are found.",
-      "type": "boolean"
-    },
-    "ZETALYTICS_INCLUDE_PORTAL_LINK": {
-      "default": false,
-      "description": "Add an external reference linking to the observable in the ZoneCruncher web portal. The link includes the API token as part of the URL path, which is visible to any OpenCTI user who can view the observable. Disabled by default to avoid exposing the token; set to true to opt in.",
       "type": "boolean"
     }
   },

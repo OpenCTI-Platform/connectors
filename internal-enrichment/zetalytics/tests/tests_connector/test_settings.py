@@ -91,6 +91,18 @@ def test_config_loader_rejects_fractional_lookback_days():
         _make_loader(config_dict)
 
 
+def test_config_loader_rejects_unknown_marking_definition():
+    """A mistyped TLP (e.g. TLP:AMBR) must be rejected rather than silently
+    producing objects without a marking."""
+    config_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "tok"},
+        "connector": {"id": "abc", "scope": "Domain-Name"},
+        "zetalytics": {"token": "zt", "marking_definition": "TLP:AMBR"},
+    }
+    with pytest.raises(Exception):
+        _make_loader(config_dict)
+
+
 def test_config_defaults_applied():
     """Verify sensible defaults are applied when optional fields are omitted."""
     config = _make_loader(
@@ -108,9 +120,6 @@ def test_config_defaults_applied():
     assert config.zetalytics.include_historical_whois is False
     assert config.zetalytics.confidence == 60
     assert config.zetalytics.max_mx_pivot_results == 100
-    # The ZoneCruncher portal link embeds the API token in the URL, so it must
-    # default to disabled rather than silently exposing the token.
-    assert config.zetalytics.include_portal_link is False
 
 
 def test_light_mode_config():

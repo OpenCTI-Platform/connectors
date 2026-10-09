@@ -420,48 +420,18 @@ class Converter:
             objects.append(self._marking)
         return objects
 
-    def anchor_object(
-        self, obs_type: str, obs_value: str, obs_stix_id: str, token: str | None = None
-    ) -> Any:
+    def anchor_object(self, obs_type: str, obs_value: str, obs_stix_id: str) -> Any:
         """Return the anchor observable with Zetalytics set as the created_by_ref.
 
         Including this in the bundle causes OpenCTI to register Zetalytics in
         the observable's Authors field, matching behaviour of other enrichment
-        connectors.  When ``token`` is supplied, an external reference linking
-        to the ZoneCruncher portal is also added.
+        connectors.
         """
-        custom: dict[str, Any] = {"x_opencti_created_by_ref": self.author["id"]}
-        ext_refs: list[stix2.ExternalReference] = []
-        if token:
-            if obs_type in ("domain-name", "hostname"):
-                portal_url = (
-                    f"https://zonecruncher.com/{token}/?d={obs_value}&isns=false##top"
-                )
-            elif obs_type == "ipv4-addr":
-                portal_url = (
-                    f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=32##top"
-                )
-            elif obs_type == "ipv6-addr":
-                portal_url = (
-                    f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=128##top"
-                )
-            else:
-                portal_url = None
-            if portal_url:
-                ext_refs.append(
-                    stix2.ExternalReference(
-                        source_name="Zetalytics ZoneCruncher",
-                        url=portal_url,
-                        description=f"View {obs_value} in Zetalytics ZoneCruncher",
-                    )
-                )
         kwargs: dict[str, Any] = {
             "id": obs_stix_id,
             "value": obs_value,
-            "custom_properties": custom,
+            "custom_properties": {"x_opencti_created_by_ref": self.author["id"]},
         }
-        if ext_refs:
-            kwargs["external_references"] = ext_refs
         if obs_type == "domain-name":
             return stix2.DomainName(**kwargs, allow_custom=True)
         if obs_type == "hostname":

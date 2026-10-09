@@ -4,8 +4,9 @@ import os
 from typing import Any
 from unittest.mock import MagicMock
 
+import pytest
 from pycti import OpenCTIConnectorHelper
-from zetalytics_dns.connector import Connector
+from zetalytics_dns.connector import Connector, ZetalyticsLookupError
 from zetalytics_dns.settings import ConfigLoader
 
 
@@ -360,11 +361,13 @@ def test_process_message_creates_note_when_no_results(
     assert any(o.get("type") == "note" for o in sent_objects)
 
 
-def test_enrich_domain_survives_every_endpoint_failing(
+def test_enrich_domain_fails_work_when_every_endpoint_fails(
     mock_opencti_helper, stub_config_dict
 ):
-    """A failure in any single Zetalytics endpoint must not abort enrichment as a
-    whole -- each is caught, logged, and the connector moves on to the rest."""
+    """A failure in any single Zetalytics endpoint must not abort the remaining
+    queries -- each is caught, logged, and the connector moves on to the rest.
+    Once every query has failed, the work is failed rather than reported as an
+    empty success."""
     stub_config_dict["zetalytics"]["include_historical_whois"] = True
     stub_config_dict["zetalytics"]["max_whois_results"] = 5
     stub_config_dict["zetalytics"]["include_ns2domain"] = True
@@ -396,12 +399,12 @@ def test_enrich_domain_survives_every_endpoint_failing(
         },
         "stix_objects": [],
     }
-    result = connector.process_message(data)
+    with pytest.raises(ZetalyticsLookupError):
+        connector.process_message(data)
 
-    # process_message's own try/except only catches TlpError/UnsupportedEntityTypeError
-    # specially; anything else still resolves to a result string, not a raised exception.
-    assert result != "Error"
     assert helper.connector_logger.warning.call_count >= 6
+    mock_client.domain_whois.assert_called_once()
+    helper.send_stix2_bundle.assert_not_called()
     # No NS/MX records were discovered (passive DNS and ns_glue both failed), so
     # the pivots have nothing to iterate over and should not call out at all.
     mock_client.ns_to_domains.assert_not_called()
@@ -484,10 +487,10 @@ def test_process_message_forwards_original_bundle_on_unexpected_error(
     helper.stix2_create_bundle.assert_called_once_with(original_objects)
 
 
-def test_enrich_ip_survives_every_endpoint_failing(
+def test_enrich_ip_fails_work_when_every_endpoint_fails(
     mock_opencti_helper, stub_config_dict
 ):
-    """Same resilience guarantee as domains, for the IP enrichment path."""
+    """Same behaviour as domains, for the IP enrichment path."""
     config = make_stub_config(stub_config_dict)
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     helper.check_max_tlp = MagicMock(return_value=True)
@@ -512,10 +515,45 @@ def test_enrich_ip_survives_every_endpoint_failing(
         },
         "stix_objects": [],
     }
+    with pytest.raises(ZetalyticsLookupError):
+        connector.process_message(data)
+
+    assert helper.connector_logger.warning.call_count >= 3
+    mock_client.ip_ns_glue.assert_called_once()
+
+
+def test_partial_endpoint_failure_does_not_fail_work(
+    mock_opencti_helper, stub_config_dict
+):
+    """If at least one query succeeds, the work completes normally even when
+    other queries failed."""
+    config = make_stub_config(stub_config_dict)
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    helper.check_max_tlp = MagicMock(return_value=True)
+    helper.connector_logger = MagicMock()
+    helper.stix2_create_bundle = MagicMock(
+        return_value={"type": "bundle", "objects": []}
+    )
+    helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
+
+    mock_client = MagicMock()
+    mock_client.passive_dns_for_ip.return_value = {"results": []}
+    mock_client.ip_context.side_effect = RuntimeError("ip2pwhois down")
+    mock_client.ip_ns_glue.side_effect = RuntimeError("ip2nsglue down")
+    connector = Connector(config=config, helper=helper, client=mock_client)
+
+    data = {
+        "enrichment_entity": {"objectMarking": []},
+        "stix_entity": {
+            "type": "ipv4-addr",
+            "value": "1.2.3.4",
+            "id": "ipv4-addr--00000000-0000-4000-8000-000000000012",
+        },
+        "stix_objects": [],
+    }
     result = connector.process_message(data)
 
-    assert result != "Error"
-    assert helper.connector_logger.warning.call_count >= 3
+    assert "1 bundle(s) sent" in result
 
 
 def test_historical_whois_uses_dedicated_converter(

@@ -55,7 +55,6 @@ def stub_config_dict() -> dict[str, Any]:
             "include_ns_glue": True,
             "include_ns2domain": False,
             "include_mx2domain": False,
-            "include_email_pivots": False,
             "confidence": 60,
             "marking_definition": "TLP:AMBER",
         },

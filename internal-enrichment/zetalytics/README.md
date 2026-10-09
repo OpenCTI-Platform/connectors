@@ -109,7 +109,7 @@ Recommended behaviour:
 - Add D8S / registration context.
 - Add nameserver glue where enabled.
 - Avoid raw historical WHOIS unless explicitly enabled.
-- Avoid broad pivots such as `ns2domain`, `mx2domain`, or email pivots by default.
+- Avoid broad pivots such as `ns2domain` or `mx2domain` by default.
 
 Use this mode when:
 
@@ -137,7 +137,6 @@ ZETALYTICS_INCLUDE_SUBDOMAINS: "true"
 ZETALYTICS_INCLUDE_D8S: "true"
 ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
 ZETALYTICS_INCLUDE_NS_GLUE: "true"
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 ```
 
 ---
@@ -167,7 +166,7 @@ Recommended behaviour:
 - Enrich IPs with passive DNS and ASN / routing context.
 - Disable subdomain expansion.
 - Disable raw WHOIS.
-- Disable nameserver, MX, and email pivots.
+- Disable nameserver and MX pivots.
 
 Use this mode when:
 
@@ -194,7 +193,6 @@ ZETALYTICS_INCLUDE_SUBDOMAINS: "false"
 ZETALYTICS_INCLUDE_D8S: "false"
 ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
 ZETALYTICS_INCLUDE_NS_GLUE: "false"
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 ```
 
 ---
@@ -222,7 +220,7 @@ Recommended behaviour:
 - Return a very small number of recent passive DNS results.
 - Use a shorter lookback window.
 - Disable live DNS unless explicitly required.
-- Disable subdomains, D8S, WHOIS, NS glue, MX pivots, and email pivots.
+- Disable subdomains, D8S, WHOIS, NS glue, and MX pivots.
 
 Use this mode when:
 
@@ -251,7 +249,6 @@ ZETALYTICS_INCLUDE_SUBDOMAINS: "false"
 ZETALYTICS_INCLUDE_D8S: "false"
 ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
 ZETALYTICS_INCLUDE_NS_GLUE: "false"
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 ```
 
 ---
@@ -281,7 +278,7 @@ Recommended behaviour:
 - Include subdomains.
 - Include D8S and optionally historical WHOIS.
 - Include NS glue and nameserver pivots where needed.
-- Optionally include MX and registration email pivots if approved.
+- Optionally include MX pivots if approved.
 
 Use this mode when:
 
@@ -310,7 +307,6 @@ ZETALYTICS_INCLUDE_SUBDOMAINS: "true"
 ZETALYTICS_INCLUDE_D8S: "true"
 ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "true"
 ZETALYTICS_INCLUDE_NS_GLUE: "true"
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 ```
 
 ---
@@ -425,7 +421,6 @@ ZETALYTICS_LOOKBACK_DAYS: "365"
 ZETALYTICS_TSFIELD: "all"
 ZETALYTICS_MAX_TLP: "TLP:AMBER"
 ZETALYTICS_CONFIDENCE: "60"
-ZETALYTICS_INCLUDE_PORTAL_LINK: "false" # optional (default: false) — adds a ZoneCruncher link to each enriched observable. WARNING: the API token is visible in the URL, so this is opt-in.
 ```
 
 Endpoint flags:
@@ -440,7 +435,6 @@ ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
 ZETALYTICS_MAX_NS_PIVOT_RESULTS: "100" # optional (default: 100) — only used when ZETALYTICS_INCLUDE_NS2DOMAIN=true
 ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
 ZETALYTICS_MAX_MX_PIVOT_RESULTS: "100" # optional (default: 100) — only used when ZETALYTICS_INCLUDE_MX2DOMAIN=true
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false" # reserved for a future registration-email pivot; not yet actioned by the connector
 ```
 
 ---
@@ -500,8 +494,6 @@ services:
       ZETALYTICS_INCLUDE_D8S: "true"
       ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
       ZETALYTICS_INCLUDE_NS_GLUE: "true"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
-      ZETALYTICS_INCLUDE_PORTAL_LINK: "true"
 
   connector-zetalytics-playbook:
     image: zetalytics-dns-connector:latest
@@ -520,8 +512,6 @@ services:
       ZETALYTICS_INCLUDE_D8S: "false"
       ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
       ZETALYTICS_INCLUDE_NS_GLUE: "false"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
-      ZETALYTICS_INCLUDE_PORTAL_LINK: "false"
 
   connector-zetalytics-deep-investigation:
     image: zetalytics-dns-connector:latest
@@ -541,8 +531,6 @@ services:
       ZETALYTICS_INCLUDE_D8S: "true"
       ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "true"
       ZETALYTICS_INCLUDE_NS_GLUE: "true"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
-      ZETALYTICS_INCLUDE_PORTAL_LINK: "true"
 
   connector-zetalytics-auto-light:
     image: zetalytics-dns-connector:latest
@@ -562,7 +550,6 @@ services:
       ZETALYTICS_INCLUDE_D8S: "false"
       ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
       ZETALYTICS_INCLUDE_NS_GLUE: "false"
-      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
 ```
 
 ---
@@ -605,7 +592,6 @@ Recommended defaults:
 
 - Keep `CONNECTOR_AUTO=false` unless using the `light` mode deployment.
 - Keep `ZETALYTICS_INCLUDE_HISTORICAL_WHOIS=false` by default.
-- Keep `ZETALYTICS_INCLUDE_EMAIL_PIVOTS=false` by default.
 - Keep broad pivots such as `ns2domain` and `mx2domain` disabled unless using deep investigation mode.
 - Use separate OpenCTI connector users/tokens per deployment where possible.
 - Monitor returned object counts, relationship counts, and API failures.
@@ -633,7 +619,7 @@ This makes the connector more resilient during partial API outages or endpoint-s
 - Do not commit real OpenCTI or Zetalytics tokens.
 - Do not log tokens.
 - Respect TLP and connector scope checks before sending observables to Zetalytics.
-- Treat registration email pivots and WHOIS-derived data carefully, especially in automated workflows.
+- Treat WHOIS-derived data carefully, especially in automated workflows.
 
 ---
 

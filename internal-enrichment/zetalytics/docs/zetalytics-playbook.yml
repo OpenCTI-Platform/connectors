@@ -28,8 +28,6 @@ zetalytics:
   include_ns_glue: false
   include_ns2domain: false
   include_mx2domain: false
-  include_email_pivots: false
   confidence: 50
   marking_definition: "TLP:AMBER"
   create_note_when_no_results: false
-  include_portal_link: false

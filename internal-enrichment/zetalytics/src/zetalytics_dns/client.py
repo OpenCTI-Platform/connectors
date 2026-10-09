@@ -134,15 +134,3 @@ class ZetalyticsClient:
     def ip_ns_glue(self, value: str) -> dict[str, Any] | None:
         """Retrieve nameserver glue records by IP or CIDR."""
         return self._client.ip2nsglue(q=value)
-
-    # ------------------------------------------------------------------
-    # Email pivot endpoints
-    # ------------------------------------------------------------------
-
-    def email_address_pivot(self, value: str, size: int) -> dict[str, Any] | None:
-        """Pivot on a full registration email address."""
-        return self._client.email_address(q=value, size=size)
-
-    def email_domain_pivot(self, value: str, size: int) -> dict[str, Any] | None:
-        """Pivot on an email domain."""
-        return self._client.email_domain(q=value, size=size)

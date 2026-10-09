@@ -219,13 +219,6 @@ class _ZetalyticsConfig(BaseConfigModel):
         default=False,
         description="Pivot from MX domain to hosted domains (deep mode only).",
     )
-    include_email_pivots: bool = Field(
-        default=False,
-        description=(
-            "Reserved for a future registration-email pivot (disabled by "
-            "default). Not yet actioned by the connector."
-        ),
-    )
 
     # --- STIX output controls ---
     confidence: int = Field(
@@ -234,22 +227,20 @@ class _ZetalyticsConfig(BaseConfigModel):
         le=100,
         description="Confidence score applied to created STIX objects.",
     )
-    marking_definition: str = Field(
+    marking_definition: Literal[
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
         default="TLP:AMBER",
         description="TLP marking definition to apply to created objects.",
     )
     create_note_when_no_results: bool = Field(
         default=False,
         description="Create an OpenCTI note on the observable when no results are found.",
-    )
-    include_portal_link: bool = Field(
-        default=False,
-        description=(
-            "Add an external reference linking to the observable in the ZoneCruncher web "
-            "portal. The link includes the API token as part of the URL path, which is "
-            "visible to any OpenCTI user who can view the observable. Disabled by default "
-            "to avoid exposing the token; set to true to opt in."
-        ),
     )
 
     @model_validator(mode="before")

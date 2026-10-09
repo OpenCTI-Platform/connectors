@@ -31,8 +31,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ZETALYTICS_INCLUDE_NS_GLUE | `boolean` |  | boolean | `true` | Retrieve nameserver glue records. |
 | ZETALYTICS_INCLUDE_NS2DOMAIN | `boolean` |  | boolean | `false` | Pivot from nameserver to hosted domains (deep mode only). |
 | ZETALYTICS_INCLUDE_MX2DOMAIN | `boolean` |  | boolean | `false` | Pivot from MX domain to hosted domains (deep mode only). |
-| ZETALYTICS_INCLUDE_EMAIL_PIVOTS | `boolean` |  | boolean | `false` | Reserved for a future registration-email pivot (disabled by default). Not yet actioned by the connector. |
 | ZETALYTICS_CONFIDENCE | `integer` |  | `0 <= x <= 100` | `60` | Confidence score applied to created STIX objects. |
-| ZETALYTICS_MARKING_DEFINITION | `string` |  | string | `"TLP:AMBER"` | TLP marking definition to apply to created objects. |
+| ZETALYTICS_MARKING_DEFINITION | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | TLP marking definition to apply to created objects. |
 | ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS | `boolean` |  | boolean | `false` | Create an OpenCTI note on the observable when no results are found. |
-| ZETALYTICS_INCLUDE_PORTAL_LINK | `boolean` |  | boolean | `false` | Add an external reference linking to the observable in the ZoneCruncher web portal. The link includes the API token as part of the URL path, which is visible to any OpenCTI user who can view the observable. Disabled by default to avoid exposing the token; set to true to opt in. |
