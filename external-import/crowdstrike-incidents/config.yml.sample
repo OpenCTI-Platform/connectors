@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+#connector:
+  #id: '53e6bf2e-48bb-4ce0-8d2d-537b3343576b'
+  #name: 'CrowdStrike Incidents'
+  #scope: 'crowdstrike-incidents'
+  #log_level: 'error'
+  #duration_period: 'PT5M'
+
+crowdstrike_incidents:
+  #api_base_url: 'https://api.crowdstrike.com'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  #import_start_date: 'P7D'
+  #products: 'ngsiem'
+  #severity_min: 'low'
+  #include_hidden: false
+  #tlp_level: 'amber+strict'

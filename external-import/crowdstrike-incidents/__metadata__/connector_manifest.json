@@ -1,0 +1,26 @@
+{
+  "title": "CrowdStrike Incidents",
+  "slug": "crowdstrike-incidents",
+  "description": "CrowdStrike Falcon Next-Gen SIEM raises alerts when its correlation rules match the logs ingested in the platform.\n\nThe OpenCTI CrowdStrike Incidents connector retrieves these Next-Gen SIEM alerts through the CrowdStrike Falcon Alerts API v2 and imports each of them as an Incident, with the involved hosts, IP addresses and user accounts as observables, and the MITRE ATT&CK techniques declared by the correlation rule as Attack Patterns linked to the existing ATT&CK dataset.",
+  "short_description": "Imports CrowdStrike Falcon Next-Gen SIEM alerts into OpenCTI as Incidents, with the involved hosts, IP addresses, user accounts and MITRE ATT&CK techniques.",
+  "logo": "external-import/crowdstrike-incidents/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261008.0",
+  "subscription_link": "https://www.crowdstrike.com/platform/next-gen-siem/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike-incidents",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdstrike-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}
