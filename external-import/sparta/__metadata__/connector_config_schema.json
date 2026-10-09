@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Aerospace SPARTA",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -28,6 +30,7 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -59,6 +62,7 @@
     "SPARTA_BASE_URL": {
       "default": "https://sparta.aerospace.org/download/STIX?f=latest",
       "description": "SPARTA base url used for retrieving SPARTA STIX",
+      "minLength": 1,
       "type": "string"
     }
   },
