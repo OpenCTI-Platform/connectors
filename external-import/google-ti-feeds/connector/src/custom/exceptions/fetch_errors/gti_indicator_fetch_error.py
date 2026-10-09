@@ -26,3 +26,12 @@ class GTIIndicatorFetchError(GTIApiError):
             self.structured_data = {}
             if package_id:
                 self.structured_data["package_id"] = package_id
+
+
+class GTIIndicatorPackageUnavailableError(GTIIndicatorFetchError):
+    """IOC delta package cannot be fetched yet but may be on a later run.
+
+    Raised when the package is not published yet (HTTP 400), the API is rate
+    limiting or failing (429, 5xx), or the request never completed. The caller
+    must not mark the package as processed, so it is retried on the next run.
+    """
