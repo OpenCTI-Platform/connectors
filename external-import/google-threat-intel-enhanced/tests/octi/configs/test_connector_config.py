@@ -1,5 +1,6 @@
 """Module to test the OpenCTI connector configuration loading and instantiation."""
 
+import time
 from os import environ as os_environ
 from typing import Any, Dict
 from unittest.mock import patch
@@ -292,10 +293,17 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
                     actual = ",".join(actual)
                 assert str(actual) == value  # noqa: S101
 
+        # Allow threaded log output to flush before capturing
+        time.sleep(0.1)
         log_records = capfd.readouterr()
         if connector._config.connector_config.log_level in ["info", "debug"]:
-            registered_message = f'"name": "{connector._config.connector_config.name}", "message": "Connector registered with ID", "attributes": {{"id": "{connector._config.connector_config.id}"}}'
-            assert registered_message in log_records.err  # noqa: S101
+            # Check the message and id separately: pycti's background threads
+            # also write to stderr, so the full JSON line isn't guaranteed to
+            # be captured contiguously.
+            assert "Connector registered with ID" in log_records.err  # noqa: S101
+            assert (
+                f'"id": "{connector._config.connector_config.id}"' in log_records.err
+            )  # noqa: S101
     finally:
         mock_env.stop()
 

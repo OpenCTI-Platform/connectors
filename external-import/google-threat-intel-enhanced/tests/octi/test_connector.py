@@ -28,6 +28,10 @@ def fake_gti_config() -> Any:
     """Fixture for a fake GTI configuration with reports import enabled."""
     gti_config = MagicMock()
     gti_config.import_reports = True
+    gti_config.import_campaigns = False
+    gti_config.import_threat_actors = False
+    gti_config.import_malware_families = False
+    gti_config.import_vulnerabilities = False
     return gti_config
 
 
@@ -81,15 +85,38 @@ def test_process_callback_success(connector: Connector) -> None:
     m_cleanup.assert_called_once_with(error_flag=False, error_message=None)
 
 
-# Scenario: The callback skips processing when reports import is disabled
-def test_process_callback_reports_disabled(
+# Scenario: The callback skips processing when every import is disabled
+def test_process_callback_all_imports_disabled(
     connector: Connector, fake_gti_config: Any
 ) -> None:
-    """Test that _process_callback does not process reports when import_reports is False."""
+    """Test that _process_callback does not run the orchestrator when every import_* flag is False."""
     fake_gti_config.import_reports = False
     with patch.object(Connector, "_process_gti_reports") as m_process:
         connector._process_callback()
     m_process.assert_not_called()
+
+
+# Scenario: The callback still runs when reports are disabled but another import is enabled
+@pytest.mark.parametrize(
+    "flag",
+    [
+        "import_campaigns",
+        "import_threat_actors",
+        "import_malware_families",
+        "import_vulnerabilities",
+    ],
+)
+def test_process_callback_runs_without_reports_when_other_import_enabled(
+    connector: Connector, fake_gti_config: Any, flag: str
+) -> None:
+    """Test that disabling reports doesn't stop other enabled entity types from being imported."""
+    fake_gti_config.import_reports = False
+    setattr(fake_gti_config, flag, True)
+    with patch.object(
+        Connector, "_process_gti_reports", new=AsyncMock(return_value=None)
+    ) as m_process:
+        connector._process_callback()
+    m_process.assert_called_once_with(fake_gti_config)
 
 
 # Scenario: The callback reports an error message returned by report processing

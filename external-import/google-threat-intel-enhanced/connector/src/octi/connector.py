@@ -84,15 +84,26 @@ class Connector:
                     f"Failed to load GTI configuration: {str(config_err)}"
                 ) from config_err
 
-            if gti_config.import_reports:
-                self._logger.info(f"{LOG_PREFIX} Starting GTI reports processing...")
+            # The orchestrator handles every entity type and checks each
+            # import_* flag itself, so run it whenever any of them is enabled
+            # rather than only when reports are.
+            if any(
+                (
+                    gti_config.import_reports,
+                    gti_config.import_campaigns,
+                    gti_config.import_threat_actors,
+                    gti_config.import_malware_families,
+                    gti_config.import_vulnerabilities,
+                )
+            ):
+                self._logger.info(f"{LOG_PREFIX} Starting GTI processing...")
                 error_message = asyncio.run(self._process_gti_reports(gti_config))
                 if error_message:
                     error_flag = True
                     report_failure = True
             else:
                 self._logger.info(
-                    f"{LOG_PREFIX} GTI reports import is disabled in configuration"
+                    f"{LOG_PREFIX} All GTI imports are disabled in configuration"
                 )
 
         except (KeyboardInterrupt, SystemExit):
