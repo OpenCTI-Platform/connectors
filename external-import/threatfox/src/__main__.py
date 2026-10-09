@@ -42,9 +42,21 @@ ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
+class PostPassError(Exception):
+    """Raised when the post-ingestion API pass fails for every pending observable."""
+
+
 # pylint:disable=too-many-instance-attributes
 class ThreatFox:
     """ThreatFox connector (STIX bundle ingestion with post-attach of refs to SCOs)"""
+
+    # OpenCTI API lookup calls made by the post-pass helpers during the current
+    # post-pass that raised / returned normally (even with no match). Some
+    # lookups deliberately try alternative filter shapes, so an individual
+    # error is expected; only "errors and no call ever returned" means the API
+    # itself is failing rather than the observable not being ingested yet.
+    _lookup_errors: int = 0
+    _lookup_ok: int = 0
 
     def __init__(self):
         """Initializer"""
@@ -171,16 +183,24 @@ class ThreatFox:
         next_dt = datetime.fromtimestamp(now_ts + self.get_interval(), UTC)
         if (now_ts - last_run_ts) >= self.get_interval():
             self.helper.log_info("Connector will run!")
-            self.import_data(state, now_dt, now_ts)
-            self.helper.log_info(f"Last_run stored, next run in: {next_dt - now_dt}")
+            if self.import_data(state, now_dt, now_ts):
+                self.helper.log_info(
+                    f"Last_run stored, next run in: {next_dt - now_dt}"
+                )
         else:
             self.helper.log_info(
                 f"Connector will not run, next run in: {next_dt - now_dt}"
             )
 
     # -------------------------- Import pipeline ----------------------- #
-    def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> None:
-        """Pull and import ThreatFox data via STIX; then post-attach external refs to SCOs."""
+    def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> bool:
+        """Pull and import ThreatFox data via STIX; then post-attach external refs to SCOs.
+
+        Returns True when the run succeeded and state was advanced. On failure
+        (download, bundle send, or a post-pass in which every observable
+        failed) the work is marked in error and state is left untouched so the
+        next run retries the same window.
+        """
 
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
@@ -276,6 +296,9 @@ class ThreatFox:
 
         except Exception:  # pylint:disable=broad-exception-caught
             self.helper.log_error(traceback.format_exc())
+            message = "Connector run failed, state not updated"
+            self.helper.api.work.to_processed(work_id, message, in_error=True)
+            return False
 
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"
@@ -287,6 +310,7 @@ class ThreatFox:
             }
         )
         self.helper.api.work.to_processed(work_id, message)
+        return True
 
     def download_csv(self) -> Iterable[str]:
         """
@@ -626,6 +650,7 @@ class ThreatFox:
                 )
                 or []
             )
+            self._lookup_ok += 1
             if rels:
                 rel = rels[0]
                 to_obj = rel.get("to") or {}
@@ -642,6 +667,7 @@ class ThreatFox:
                 )
                 or []
             )
+            self._lookup_ok += 1
             if rels:
                 rel = rels[0]
                 to_obj = rel.get("to") or {}
@@ -650,17 +676,18 @@ class ThreatFox:
                     return to_id
         except Exception:
             # swallow and fallback to value-based lookup
-            pass
+            self._lookup_errors += 1
         return None
 
     def _read_observable_by_stix_id(self, stix_id: str) -> Optional[str]:
         """Return the OpenCTI internal id for a SCO given its STIX (standard) id."""
         try:
             obj = self.helper.api.stix_cyber_observable.read(id=stix_id)
+            self._lookup_ok += 1
             if obj:
                 return obj["id"]  # OpenCTI internal id
         except Exception:
-            pass
+            self._lookup_errors += 1
         return None
 
     def _find_observable_id(
@@ -683,18 +710,20 @@ class ThreatFox:
                 oid_obj = self.helper.api.stix_cyber_observable.read(
                     filters=filters_dict
                 )
+                self._lookup_ok += 1
                 if oid_obj:
                     return oid_obj["id"]
             except Exception:
-                pass
+                self._lookup_errors += 1
             try:
                 oid_obj = self.helper.api.stix_cyber_observable.read(
                     filters=filters_dict.get("filters", filters_dict)
                 )
+                self._lookup_ok += 1
                 if oid_obj:
                     return oid_obj["id"]
             except Exception:
-                pass
+                self._lookup_errors += 1
             try:
                 items = (
                     self.helper.api.stix_cyber_observable.list(
@@ -702,10 +731,11 @@ class ThreatFox:
                     )
                     or []
                 )
+                self._lookup_ok += 1
                 if items:
                     return items[0]["id"]
             except Exception:
-                pass
+                self._lookup_errors += 1
             try:
                 items = (
                     self.helper.api.stix_cyber_observable.list(
@@ -713,10 +743,11 @@ class ThreatFox:
                     )
                     or []
                 )
+                self._lookup_ok += 1
                 if items:
                     return items[0]["id"]
             except Exception:
-                pass
+                self._lookup_errors += 1
             return None
 
         # Candidates to try (ordered)
@@ -806,7 +837,12 @@ class ThreatFox:
         return None
 
     def _attach_external_refs_to_observables(self) -> None:
-        """Attach ThreatFox external refs and relationships to SCOs via API (post-ingestion)."""
+        """Attach ThreatFox external refs and relationships to SCOs via API (post-ingestion).
+
+        Individual failures are logged and skipped. If no pending observable
+        could be processed successfully and OpenCTI API calls raised errors,
+        PostPassError is raised so the run is marked as failed.
+        """
         total = len(self._pending_observables or [])
         if total == 0:
             self.helper.log_info(
@@ -818,10 +854,13 @@ class ThreatFox:
             f"[ThreatFox] post-pass starting with {total} pending observable(s)"
         )
 
+        self._lookup_errors = 0
+        self._lookup_ok = 0
         refs_attached = 0
         rels_created = 0
         not_found = 0
         errors = 0
+        entries_ok = 0
 
         for entry in self._pending_observables:
             entity_type: str = entry[
@@ -858,6 +897,8 @@ class ThreatFox:
                 )
                 continue
 
+            entry_errors = 0
+
             # --- Create/attach external references ---
             for url in urls:
                 try:
@@ -887,7 +928,7 @@ class ThreatFox:
                     )
 
                 except Exception:  # pylint:disable=broad-exception-caught
-                    errors += 1
+                    entry_errors += 1
                     self.helper.log_error(
                         f"[ThreatFox] Failed attaching external ref '{url}' to observable {obs_id}:\n{traceback.format_exc()}"
                     )
@@ -919,14 +960,30 @@ class ThreatFox:
                             f"[ThreatFox] Malware not found for relationship: {malware_stix_id}"
                         )
                 except Exception:  # pylint:disable=broad-exception-caught
-                    errors += 1
+                    entry_errors += 1
                     self.helper.log_error(
                         f"[ThreatFox] Failed creating relationship for observable {obs_id} to malware {malware_stix_id}:\n{traceback.format_exc()}"
                     )
 
+            errors += entry_errors
+            entry_operations = len(urls) + (1 if malware_stix_id else 0)
+            if entry_errors < entry_operations or entry_operations == 0:
+                entries_ok += 1
+
         self.helper.log_info(
-            f"[ThreatFox] post-pass finished: refs_attached={refs_attached} rels_created={rels_created} not_found={not_found} errors={errors}"
+            f"[ThreatFox] post-pass finished: refs_attached={refs_attached} rels_created={rels_created} not_found={not_found} errors={errors} lookup_errors={self._lookup_errors}"
         )
+
+        # Total failure: nothing could be processed and the OpenCTI API raised,
+        # either on attach/relationship calls or on every lookup call. "Not
+        # found" while lookups return normally (e.g. ingestion still in
+        # progress) is only logged, as before.
+        api_failing = errors > 0 or (self._lookup_errors > 0 and self._lookup_ok == 0)
+        if entries_ok == 0 and api_failing:
+            raise PostPassError(
+                f"[ThreatFox] post-pass failed for all {total} pending observable(s) "
+                f"(not_found={not_found}, errors={errors}, lookup_errors={self._lookup_errors})"
+            )
 
     # ----------------------------- Utilities -----------------------------
     def _normalize_family_name(self, ioc: "FeedRow") -> Optional[str]:
