@@ -13,6 +13,9 @@ import pycti  # type: ignore
 from connector.src.custom.client_api import ClientAPI
 from connector.src.custom.configs import BATCH_PROCESSOR_CONFIG, GTIConfig
 from connector.src.custom.convert_to_stix import ConvertToSTIX
+from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
+    GTIWorkProcessingError,
+)
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
 )
@@ -954,7 +957,12 @@ class Orchestrator:
         Args:
             initial_state: Initial state for the orchestrator
 
+        Raises:
+            GTIWorkProcessingError: If every primary GTI API fetch failed, so the
+                run is reported as failed and the last-run state is not advanced.
+
         """
+        completed = False
         try:
             # Process reports if enabled
             if getattr(self.config, "import_reports", True):
@@ -976,8 +984,17 @@ class Orchestrator:
             if getattr(self.config, "import_vulnerabilities", False):
                 await self._process_vulnerabilities(initial_state)
 
+            completed = True
         finally:
-            self._flush_batch_processor()
+            all_failed = self.client_api.all_primary_fetches_failed()
+            self._flush_batch_processor(update_state=completed and not all_failed)
+
+        if all_failed:
+            raise GTIWorkProcessingError(
+                "All GTI API requests failed; no data was retrieved and the "
+                "connector state was not updated. Check GTI_API_KEY, GTI_API_URL "
+                "and network connectivity."
+            )
 
     async def _process_campaigns(self, initial_state: Optional[Dict[str, Any]]) -> None:
         """Process campaigns from the API.
@@ -1425,14 +1442,25 @@ class Orchestrator:
             pattern, replacer, template
         )
 
-    def _flush_batch_processor(self) -> None:
-        """Flush any remaining items in the batch processor."""
+    def _flush_batch_processor(self, update_state: bool = True) -> None:
+        """Flush any remaining items in the batch processor.
+
+        Args:
+            update_state: Whether to advance the final connector state after flushing.
+                Set to False when the run failed so the next run retries the same window.
+
+        """
         try:
             work_id = self.batch_processor.flush()
             if work_id:
                 self.logger.info(
                     f"{LOG_PREFIX} Batch processor: Flushed remaining items"
                 )
-            self.batch_processor.update_final_state()
+            if update_state:
+                self.batch_processor.update_final_state()
+            else:
+                self.logger.warning(
+                    f"{LOG_PREFIX} Run did not complete successfully, final state not updated"
+                )
         except Exception as e:
             self.logger.error(f"{LOG_PREFIX} Failed to flush batch processor: {str(e)}")

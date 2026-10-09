@@ -16,7 +16,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT2H"` | The period of time to await between two runs of the connector. |
 | CONNECTOR_QUEUE_THRESHOLD | `integer` |  | integer | `500` | Maximum number of messages in the connector queue before throttling. |
 | CONNECTOR_TLP_LEVEL | `string` |  | `WHITE` `GREEN` `AMBER` `RED` `WHITE+STRICT` `GREEN+STRICT` `AMBER+STRICT` `RED+STRICT` | `"AMBER+STRICT"` | Traffic Light Protocol (TLP) marking for imported data. |
-| CONNECTOR_ENRICHMENT_RESOLUTION | `string` |  | string | `"PT1M"` | ISO 8601 duration between enrichment scheduler checks. |
 | CONNECTOR_RUN_AND_TERMINATE | `boolean` |  | boolean | `null` |  |
 | CONNECTOR_SEND_TO_QUEUE | `boolean` |  | boolean | `null` |  |
 | CONNECTOR_SEND_TO_DIRECTORY | `boolean` |  | boolean | `null` |  |
@@ -36,6 +35,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | GTI_THREAT_ACTOR_ORIGINS | `array` |  | string | `["google threat intelligence"]` |  |
 | GTI_MALWARE_FAMILY_ORIGINS | `array` |  | string | `["google threat intelligence"]` |  |
 | GTI_VULNERABILITY_ORIGINS | `array` |  | string | `["google threat intelligence"]` |  |
-| GTI_INDICATOR_SCORING | `string` |  | string | `"gti_derived"` |  |
+| GTI_INDICATOR_SCORING | `string` |  | `gti_derived` `average_detection` | `"gti_derived"` |  |
 | GTI_ENRICH_IOCS_WITH_THREAT_ACTORS_AND_MALWARE | `boolean` |  | boolean | `false` |  |
 | GTI_IOC_ENRICHMENT_THRESHOLD | `integer` |  | integer | `250` |  |

@@ -1,7 +1,6 @@
 FROM python:3.12-alpine
 
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
-ENV CONNECTOR_ENRICHMENT_RESOLUTION=PT1M
 
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \

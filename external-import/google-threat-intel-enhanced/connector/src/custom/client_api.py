@@ -25,6 +25,20 @@ class ClientAPI:
         self.logger = logger
         self.api_client = self._create_api_client()
         self.fetcher_factory = self._create_fetcher_factory()
+        self.primary_fetch_attempts = 0
+        self.primary_fetch_failures = 0
+
+    def all_primary_fetches_failed(self) -> bool:
+        """Return True when at least one primary list fetch ran and every one failed without data.
+
+        Primary fetches are the top-level list queries (reports, campaigns, threat actors,
+        malware families, vulnerabilities). Sub-entity lookups are not counted, so a run
+        where only some enrichment calls fail is still treated as a (partial) success.
+        """
+        return (
+            self.primary_fetch_attempts > 0
+            and self.primary_fetch_failures == self.primary_fetch_attempts
+        )
 
     def _build_filter_configurations(
         self, initial_state: Optional[Dict[str, Any]] = None
@@ -266,6 +280,7 @@ class ClientAPI:
         fetcher: Any,
         initial_params: Dict[str, Any],
         entity_description: str = "items",
+        primary: bool = False,
     ) -> AsyncGenerator[Any, None]:
         """Paginate helper that handles cursor-based pagination.
 
@@ -273,6 +288,7 @@ class ClientAPI:
             fetcher: The fetcher instance to use for API calls
             initial_params: Initial parameters for the API call
             entity_description: Description of what's being fetched for logging
+            primary: Whether this is a top-level list fetch whose failure is tracked
 
         Yields:
             Data from each page of results
@@ -282,6 +298,9 @@ class ClientAPI:
         page_nb = 1
         total_items = None
         total_pages = None
+        yielded_any = False
+        if primary:
+            self.primary_fetch_attempts += 1
 
         try:
             while True:
@@ -315,6 +334,7 @@ class ClientAPI:
                 )
                 self.logger.info(log_message)
 
+                yielded_any = True
                 yield data
 
                 if cursor:
@@ -324,6 +344,8 @@ class ClientAPI:
                     break
 
         except Exception as e:
+            if primary and not yielded_any:
+                self.primary_fetch_failures += 1
             self.logger.error(
                 f"{LOG_PREFIX} Failed to fetch {entity_description} page: {str(e)}"
             )
@@ -355,7 +377,10 @@ class ClientAPI:
             )
 
             async for report_data in self._paginate_with_cursor(
-                report_fetcher, endpoint_params, "reports"
+                report_fetcher,
+                endpoint_params,
+                "reports",
+                primary=True,
             ):
                 yield report_data
 
@@ -478,7 +503,10 @@ class ClientAPI:
             )
 
             async for campaign_data in self._paginate_with_cursor(
-                campaign_fetcher, endpoint_params, "campaigns"
+                campaign_fetcher,
+                endpoint_params,
+                "campaigns",
+                primary=True,
             ):
                 yield campaign_data
 
@@ -746,7 +774,10 @@ class ClientAPI:
             )
 
             async for threat_actor_data in self._paginate_with_cursor(
-                threat_actor_fetcher, endpoint_params, "threat_actors"
+                threat_actor_fetcher,
+                endpoint_params,
+                "threat_actors",
+                primary=True,
             ):
                 yield threat_actor_data
 
@@ -869,7 +900,10 @@ class ClientAPI:
             )
 
             async for malware_data in self._paginate_with_cursor(
-                malware_fetcher, endpoint_params, "malware_families"
+                malware_fetcher,
+                endpoint_params,
+                "malware_families",
+                primary=True,
             ):
                 yield malware_data
 
@@ -998,7 +1032,10 @@ class ClientAPI:
             )
 
             async for vulnerability_data in self._paginate_with_cursor(
-                vulnerability_fetcher, endpoint_params, "vulnerabilities"
+                vulnerability_fetcher,
+                endpoint_params,
+                "vulnerabilities",
+                primary=True,
             ):
                 yield vulnerability_data
 
@@ -1133,138 +1170,3 @@ class ClientAPI:
                 self.logger.info(f"{LOG_PREFIX} Fetched details {{{fetched_summary}}}")
 
         return subentities
-
-    async def fetch_observable_threat_actors(
-        self, observable_type: str, observable_id: str
-    ) -> List[str]:
-        """Fetch threat actor names associated with an observable.
-
-        Args:
-            observable_type: Type of observable ('domains', 'files', 'urls', 'ip_addresses')
-            observable_id: The observable ID (domain name, hash, URL hash, IP address)
-
-        Returns:
-            List of threat actor names associated with this observable (used for STIX ID generation)
-
-        """
-        fetcher_name = f"{observable_type.rstrip('s')}_threat_actors"
-        if observable_type == "ip_addresses":
-            fetcher_name = "ip_threat_actors"
-
-        try:
-            fetcher = self.fetcher_factory.create_fetcher_by_name(
-                fetcher_name, base_url=self.config.api_url
-            )
-            params = {"entity_id": observable_id}
-
-            threat_actor_names = []
-            async for page_data in self._paginate_with_cursor(
-                fetcher, params, f"{observable_type} threat actors"
-            ):
-                if isinstance(page_data, list):
-                    for item in page_data:
-                        if isinstance(item, dict):
-                            # Try to get name from attributes, fall back to id
-                            name = None
-                            if "attributes" in item and isinstance(
-                                item["attributes"], dict
-                            ):
-                                name = item["attributes"].get("name")
-                            if not name and "id" in item:
-                                # Use id as fallback (often the lowercase name)
-                                name = item["id"]
-                            if name:
-                                threat_actor_names.append(name)
-                elif isinstance(page_data, dict) and "data" in page_data:
-                    data = page_data["data"]
-                    if isinstance(data, list):
-                        for item in data:
-                            if isinstance(item, dict):
-                                name = None
-                                if "attributes" in item and isinstance(
-                                    item["attributes"], dict
-                                ):
-                                    name = item["attributes"].get("name")
-                                if not name and "id" in item:
-                                    name = item["id"]
-                                if name:
-                                    threat_actor_names.append(name)
-
-            if threat_actor_names:
-                self.logger.debug(
-                    f"{LOG_PREFIX} Found {len(threat_actor_names)} threat actors for {observable_type} {observable_id}"
-                )
-            return threat_actor_names
-
-        except Exception as e:
-            self.logger.debug(
-                f"{LOG_PREFIX} No threat actors found for {observable_type} {observable_id}: {str(e)}"
-            )
-            return []
-
-    async def fetch_observable_malware(
-        self, observable_type: str, observable_id: str
-    ) -> List[str]:
-        """Fetch malware family names associated with an observable.
-
-        Args:
-            observable_type: Type of observable ('domains', 'files', 'urls', 'ip_addresses')
-            observable_id: The observable ID (domain name, hash, URL hash, IP address)
-
-        Returns:
-            List of malware family names associated with this observable (used for STIX ID generation)
-
-        """
-        fetcher_name = f"{observable_type.rstrip('s')}_collections"
-        if observable_type == "ip_addresses":
-            fetcher_name = "ip_collections"
-
-        try:
-            fetcher = self.fetcher_factory.create_fetcher_by_name(
-                fetcher_name, base_url=self.config.api_url
-            )
-            params = {"entity_id": observable_id}
-
-            malware_names = []
-            async for page_data in self._paginate_with_cursor(
-                fetcher, params, f"{observable_type} malware collections"
-            ):
-                if isinstance(page_data, list):
-                    for item in page_data:
-                        if isinstance(item, dict):
-                            # Try to get name from attributes, fall back to id
-                            name = None
-                            if "attributes" in item and isinstance(
-                                item["attributes"], dict
-                            ):
-                                name = item["attributes"].get("name")
-                            if not name and "id" in item:
-                                name = item["id"]
-                            if name:
-                                malware_names.append(name)
-                elif isinstance(page_data, dict) and "data" in page_data:
-                    data = page_data["data"]
-                    if isinstance(data, list):
-                        for item in data:
-                            if isinstance(item, dict):
-                                name = None
-                                if "attributes" in item and isinstance(
-                                    item["attributes"], dict
-                                ):
-                                    name = item["attributes"].get("name")
-                                if not name and "id" in item:
-                                    name = item["id"]
-                                if name:
-                                    malware_names.append(name)
-
-            if malware_names:
-                self.logger.debug(
-                    f"{LOG_PREFIX} Found {len(malware_names)} malware families for {observable_type} {observable_id}"
-                )
-            return malware_names
-
-        except Exception as e:
-            self.logger.debug(
-                f"{LOG_PREFIX} No malware families found for {observable_type} {observable_id}: {str(e)}"
-            )
-            return []

@@ -59,10 +59,6 @@ class _ConnectorFrameworkConfig(BaseExternalImportConnectorConfig):
         default="AMBER+STRICT",
         description="Traffic Light Protocol (TLP) marking for imported data.",
     )
-    enrichment_resolution: str = Field(
-        default="PT1M",
-        description="ISO 8601 duration between enrichment scheduler checks.",
-    )
     run_and_terminate: Optional[bool] = Field(default=None)
     send_to_queue: Optional[bool] = Field(default=None)
     send_to_directory: Optional[bool] = Field(default=None)

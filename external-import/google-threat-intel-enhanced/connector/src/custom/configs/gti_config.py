@@ -1,6 +1,6 @@
 """GTI feed connector configuration—defines environment-based settings and validators."""
 
-from typing import ClassVar, List
+from typing import ClassVar, List, Literal
 
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
@@ -64,7 +64,7 @@ class GTIConfig(BaseConfig):
     threat_actor_origins: List[str] = ["google threat intelligence"]
     malware_family_origins: List[str] = ["google threat intelligence"]
     vulnerability_origins: List[str] = ["google threat intelligence"]
-    indicator_scoring: str = "gti_derived"
+    indicator_scoring: Literal["gti_derived", "average_detection"] = "gti_derived"
     enrich_iocs_with_threat_actors_and_malware: bool = False
     ioc_enrichment_threshold: int = 250
 

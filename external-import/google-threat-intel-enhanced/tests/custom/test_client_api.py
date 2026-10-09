@@ -666,101 +666,73 @@ async def test_fetch_subentity_details_handles_factory_error(
 
 
 # =====================
-# Test Cases: observable enrichment lookups
+# Test Cases: primary fetch failure tracking
 # =====================
 
 
-@pytest.mark.asyncio
-async def test_fetch_observable_threat_actors_from_list_pages(
+def test_all_primary_fetches_failed_false_before_any_fetch(
     client_api: ClientAPI,
 ) -> None:
-    """Test extraction of threat actor names from list-shaped observable pages."""
-    fetcher = _make_fetcher([[{"attributes": {"name": "APT1"}}, {"id": "apt2"}]])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    result = await client_api.fetch_observable_threat_actors("domains", "example.com")
-    assert result == ["APT1", "apt2"]  # noqa: S101
-    client_api.fetcher_factory.create_fetcher_by_name.assert_called_with(
-        "domain_threat_actors", base_url=client_api.config.api_url
-    )
+    """Test that no primary fetch attempted is not reported as a total failure."""
+    assert client_api.all_primary_fetches_failed() is False  # noqa: S101
 
 
 @pytest.mark.asyncio
-async def test_fetch_observable_threat_actors_ip_uses_ip_fetcher(
+async def test_all_primary_fetches_failed_when_every_fetch_errors(
     client_api: ClientAPI,
 ) -> None:
-    """Test that the ip_addresses observable type maps to the ip_threat_actors fetcher."""
-    fetcher = _make_fetcher([None])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    await client_api.fetch_observable_threat_actors("ip_addresses", "1.2.3.4")
-    client_api.fetcher_factory.create_fetcher_by_name.assert_called_with(
-        "ip_threat_actors", base_url=client_api.config.api_url
-    )
-
-
-@pytest.mark.asyncio
-async def test_fetch_observable_threat_actors_dict_wrapped_page(
-    client_api: ClientAPI,
-) -> None:
-    """Test extraction of threat actor names from dict-wrapped observable pages."""
-    fetcher = _make_fetcher([{"data": [{"attributes": {"name": "APT2"}}]}])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    result = await client_api.fetch_observable_threat_actors("files", "hash123")
-    assert result == ["APT2"]  # noqa: S101
-
-
-@pytest.mark.asyncio
-async def test_fetch_observable_threat_actors_swallows_error(
-    client_api: ClientAPI,
-) -> None:
-    """Test that observable threat actor lookup returns an empty list on error."""
+    """Test that a total failure is reported when every primary list fetch errors."""
     client_api.fetcher_factory.create_fetcher_by_name = MagicMock(
-        side_effect=RuntimeError("boom")
+        side_effect=lambda *a, **k: _make_fetcher([RuntimeError("401 Unauthorized")])
     )
-    result = await client_api.fetch_observable_threat_actors("urls", "url-1")
-    assert result == []  # noqa: S101
+    assert await _collect(client_api.fetch_reports(None)) == []  # noqa: S101
+    assert await _collect(client_api.fetch_campaigns(None)) == []  # noqa: S101
+    assert client_api.all_primary_fetches_failed() is True  # noqa: S101
 
 
 @pytest.mark.asyncio
-async def test_fetch_observable_malware_from_list_pages(client_api: ClientAPI) -> None:
-    """Test extraction of malware family names from list-shaped observable pages."""
-    fetcher = _make_fetcher([[{"attributes": {"name": "Emotet"}}, {"id": "trickbot"}]])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    result = await client_api.fetch_observable_malware("domains", "example.com")
-    assert result == ["Emotet", "trickbot"]  # noqa: S101
-    client_api.fetcher_factory.create_fetcher_by_name.assert_called_with(
-        "domain_collections", base_url=client_api.config.api_url
-    )
-
-
-@pytest.mark.asyncio
-async def test_fetch_observable_malware_ip_uses_ip_fetcher(
+async def test_all_primary_fetches_failed_false_on_partial_failure(
     client_api: ClientAPI,
 ) -> None:
-    """Test that the ip_addresses observable type maps to the ip_collections fetcher."""
-    fetcher = _make_fetcher([None])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    await client_api.fetch_observable_malware("ip_addresses", "1.2.3.4")
-    client_api.fetcher_factory.create_fetcher_by_name.assert_called_with(
-        "ip_collections", base_url=client_api.config.api_url
+    """Test that a single successful primary fetch keeps the run a partial success."""
+    fetchers = iter(
+        [
+            _make_fetcher([RuntimeError("boom")]),
+            _make_fetcher([{"data": [{"id": "c1"}], "meta": {}}]),
+        ]
     )
-
-
-@pytest.mark.asyncio
-async def test_fetch_observable_malware_dict_wrapped_page(
-    client_api: ClientAPI,
-) -> None:
-    """Test extraction of malware family names from dict-wrapped observable pages."""
-    fetcher = _make_fetcher([{"data": [{"id": "qakbot"}]}])
-    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(return_value=fetcher)
-    result = await client_api.fetch_observable_malware("files", "hash123")
-    assert result == ["qakbot"]  # noqa: S101
-
-
-@pytest.mark.asyncio
-async def test_fetch_observable_malware_swallows_error(client_api: ClientAPI) -> None:
-    """Test that observable malware lookup returns an empty list on error."""
     client_api.fetcher_factory.create_fetcher_by_name = MagicMock(
-        side_effect=RuntimeError("boom")
+        side_effect=lambda *a, **k: next(fetchers)
     )
-    result = await client_api.fetch_observable_malware("urls", "url-1")
-    assert result == []  # noqa: S101
+    await _collect(client_api.fetch_reports(None))
+    await _collect(client_api.fetch_campaigns(None))
+    assert client_api.all_primary_fetches_failed() is False  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_primary_fetch_failing_after_data_is_not_total_failure(
+    client_api: ClientAPI,
+) -> None:
+    """Test that a primary fetch erroring after yielding a page is not a total failure."""
+    client_api.fetcher_factory.create_fetcher_by_name = MagicMock(
+        return_value=_make_fetcher(
+            [
+                {"data": [{"id": "r1"}], "meta": {"cursor": "next"}},
+                RuntimeError("boom"),
+            ]
+        )
+    )
+    pages = await _collect(client_api.fetch_reports(None))
+    assert len(pages) == 1  # noqa: S101
+    assert client_api.all_primary_fetches_failed() is False  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_subentity_fetch_failures_are_not_primary(
+    client_api: ClientAPI,
+) -> None:
+    """Test that non-primary pagination failures do not count towards total failure."""
+    fetcher = _make_fetcher([RuntimeError("boom")])
+    await _collect(client_api._paginate_with_cursor(fetcher, {}, "items"))
+    assert client_api.primary_fetch_attempts == 0  # noqa: S101
+    assert client_api.all_primary_fetches_failed() is False  # noqa: S101

@@ -73,11 +73,6 @@
       ],
       "type": "string"
     },
-    "CONNECTOR_ENRICHMENT_RESOLUTION": {
-      "default": "PT1M",
-      "description": "ISO 8601 duration between enrichment scheduler checks.",
-      "type": "string"
-    },
     "CONNECTOR_RUN_AND_TERMINATE": {
       "default": null,
       "type": "boolean"
@@ -202,6 +197,10 @@
     },
     "GTI_INDICATOR_SCORING": {
       "default": "gti_derived",
+      "enum": [
+        "gti_derived",
+        "average_detection"
+      ],
       "type": "string"
     },
     "GTI_ENRICH_IOCS_WITH_THREAT_ACTORS_AND_MALWARE": {

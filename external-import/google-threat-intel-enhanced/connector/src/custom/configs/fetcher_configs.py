@@ -255,104 +255,6 @@ GTI_IP_FETCHER_CONFIG = GenericFetcherConfig(
     response_key="data",
 )
 
-# Observable-to-threat-actor relationship fetchers
-GTI_DOMAIN_THREAT_ACTORS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="domain_threat_actors",
-    endpoint="/domains/{entity_id}/threat_actors",
-    display_name="domain threat actors",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_FILE_THREAT_ACTORS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="file_threat_actors",
-    endpoint="/files/{entity_id}/threat_actors",
-    display_name="file threat actors",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_URL_THREAT_ACTORS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="url_threat_actors",
-    endpoint="/urls/{entity_id}/threat_actors",
-    display_name="URL threat actors",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_IP_THREAT_ACTORS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="ip_threat_actors",
-    endpoint="/ip_addresses/{entity_id}/threat_actors",
-    display_name="IP threat actors",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-# Observable-to-malware relationship fetchers (collections = malware families)
-GTI_DOMAIN_COLLECTIONS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="domain_collections",
-    endpoint="/domains/{entity_id}/collections",
-    display_name="domain malware collections",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_FILE_COLLECTIONS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="file_collections",
-    endpoint="/files/{entity_id}/collections",
-    display_name="file malware collections",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_URL_COLLECTIONS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="url_collections",
-    endpoint="/urls/{entity_id}/collections",
-    display_name="URL malware collections",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
-GTI_IP_COLLECTIONS_FETCHER_CONFIG = GenericFetcherConfig(
-    entity_type="ip_collections",
-    endpoint="/ip_addresses/{entity_id}/collections",
-    display_name="IP malware collections",
-    exception_class=GTIRelationshipFetchError,
-    response_model=None,
-    method="GET",
-    headers={"accept": "application/json"},
-    timeout=60.0,
-    response_key=None,
-)
-
 FETCHER_CONFIGS = {
     "reports": GTI_REPORT_FETCHER_CONFIG,
     "campaigns": GTI_CAMPAIGN_FETCHER_CONFIG,
@@ -370,12 +272,4 @@ FETCHER_CONFIGS = {
     "files": GTI_FILE_FETCHER_CONFIG,
     "urls": GTI_URL_FETCHER_CONFIG,
     "ip_addresses": GTI_IP_FETCHER_CONFIG,
-    "domain_threat_actors": GTI_DOMAIN_THREAT_ACTORS_FETCHER_CONFIG,
-    "file_threat_actors": GTI_FILE_THREAT_ACTORS_FETCHER_CONFIG,
-    "url_threat_actors": GTI_URL_THREAT_ACTORS_FETCHER_CONFIG,
-    "ip_threat_actors": GTI_IP_THREAT_ACTORS_FETCHER_CONFIG,
-    "domain_collections": GTI_DOMAIN_COLLECTIONS_FETCHER_CONFIG,
-    "file_collections": GTI_FILE_COLLECTIONS_FETCHER_CONFIG,
-    "url_collections": GTI_URL_COLLECTIONS_FETCHER_CONFIG,
-    "ip_collections": GTI_IP_COLLECTIONS_FETCHER_CONFIG,
 }

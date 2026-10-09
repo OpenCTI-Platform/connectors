@@ -12,6 +12,9 @@ from typing import Any, AsyncGenerator, List, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
+    GTIWorkProcessingError,
+)
 from connector.src.custom.orchestrators.orchestrator import Orchestrator
 
 # =====================
@@ -75,6 +78,7 @@ def orchestrator() -> Orchestrator:
     )
     orch.client_api = MagicMock()
     orch.client_api.real_total_reports = 0
+    orch.client_api.all_primary_fetches_failed.return_value = False
     orch.converter = MagicMock()
     orch.converter.organization.id = "identity--fixture-org"
     orch.converter.tlp_marking.id = "marking-definition--fixture-tlp"
@@ -584,3 +588,33 @@ async def test_run_flushes_batch_processor_even_on_error(
         await orchestrator.run(initial_state=None)
 
     orchestrator.batch_processor.flush.assert_called_once()
+    orchestrator.batch_processor.update_final_state.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_run_updates_final_state_on_success(
+    orchestrator: Orchestrator,
+) -> None:
+    """Test that run() advances the final state when processing completes."""
+    orchestrator.config.import_reports = True
+    orchestrator._process_reports = AsyncMock()  # type: ignore
+
+    await orchestrator.run(initial_state=None)
+
+    orchestrator.batch_processor.update_final_state.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_raises_and_keeps_state_when_all_fetches_fail(
+    orchestrator: Orchestrator,
+) -> None:
+    """Test that run() raises and does not advance state when every primary fetch failed."""
+    orchestrator.config.import_reports = True
+    orchestrator._process_reports = AsyncMock()  # type: ignore
+    orchestrator.client_api.all_primary_fetches_failed.return_value = True
+
+    with pytest.raises(GTIWorkProcessingError, match="All GTI API requests failed"):
+        await orchestrator.run(initial_state=None)
+
+    orchestrator.batch_processor.flush.assert_called_once()
+    orchestrator.batch_processor.update_final_state.assert_not_called()

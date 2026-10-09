@@ -200,15 +200,75 @@ async def test_process_gti_reports_runs_orchestrator(
     )
 
 
-# Scenario: GTI report processing fails and the error is logged, not raised
+# Scenario: GTI report processing fails and the error message is returned
 @pytest.mark.asyncio
 async def test_process_gti_reports_handles_failure(
     connector: Connector, fake_helper: Any, fake_gti_config: Any
 ) -> None:
-    """Test that _process_gti_reports logs and swallows errors raised while orchestrating."""
+    """Test that _process_gti_reports logs errors and returns them as an error message."""
     fake_helper.get_state.return_value = {}
     with patch(
         "connector.src.custom.orchestrators.orchestrator.Orchestrator",
         side_effect=RuntimeError("orchestrator init failed"),
     ):
-        await connector._process_gti_reports(fake_gti_config)
+        result = await connector._process_gti_reports(fake_gti_config)
+    assert result is not None  # noqa: S101
+    assert "orchestrator init failed" in result  # noqa: S101
+
+
+# Scenario: A failed run with no open work still produces a work marked in error
+def test_process_callback_failure_creates_error_work_when_none_open(
+    connector: Connector,
+) -> None:
+    """Test that a total failure opens a work so it can be marked in error in OpenCTI."""
+    message = "GTI processing failed: All GTI API requests failed"
+    with patch.object(
+        Connector, "_process_gti_reports", new=AsyncMock(return_value=message)
+    ):
+        with patch.object(connector.work_manager, "initiate_work") as m_initiate:
+            with patch.object(
+                connector.work_manager, "process_all_remaining_works"
+            ) as m_cleanup:
+                connector._process_callback()
+    m_initiate.assert_called_once()
+    m_cleanup.assert_called_once_with(error_flag=True, error_message=message)
+
+
+# Scenario: A successful run does not open an extra work
+def test_process_callback_success_does_not_create_error_work(
+    connector: Connector,
+) -> None:
+    """Test that a successful run does not open an extra failure work."""
+    with patch.object(
+        Connector, "_process_gti_reports", new=AsyncMock(return_value=None)
+    ):
+        with patch.object(connector.work_manager, "initiate_work") as m_initiate:
+            with patch.object(connector.work_manager, "process_all_remaining_works"):
+                connector._process_callback()
+    m_initiate.assert_not_called()
+
+
+# Scenario: An end-to-end run where the orchestrator reports total failure
+def test_process_callback_marks_work_in_error_on_total_failure(
+    connector: Connector, fake_helper: Any
+) -> None:
+    """Test that an orchestrator total-failure error marks the run's work as in error."""
+    fake_helper.get_state.return_value = {}
+    fake_helper.api.work.initiate_work.return_value = "work--failed"
+    fake_helper.api.work.get_connector_works.return_value = [
+        {"id": "work--failed", "status": "wait"}
+    ]
+    fake_orchestrator = MagicMock()
+    fake_orchestrator.run = AsyncMock(
+        side_effect=GTIWorkProcessingError("All GTI API requests failed")
+    )
+    with patch(
+        "connector.src.custom.orchestrators.orchestrator.Orchestrator",
+        return_value=fake_orchestrator,
+    ):
+        connector._process_callback()
+    fake_helper.api.work.to_processed.assert_called_once()
+    kwargs = fake_helper.api.work.to_processed.call_args.kwargs
+    assert kwargs["work_id"] == "work--failed"  # noqa: S101
+    assert kwargs["in_error"] is True  # noqa: S101
+    assert "All GTI API requests failed" in kwargs["message"]  # noqa: S101

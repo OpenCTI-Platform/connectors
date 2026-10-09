@@ -1,7 +1,7 @@
 """Core connector as defined in the OpenCTI connector template."""
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from connector.src.custom.configs.gti_config import GTIConfig
 from connector.src.custom.exceptions.connector_errors.gti_work_processing_error import (
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 
 LOG_PREFIX = "[Connector]"
+FAILED_RUN_WORK_NAME = "Google Threat Intel Enhanced - failed run"
 
 
 class Connector:
@@ -73,6 +74,7 @@ class Connector:
         """Connector main process to collect intelligence using GTI orchestrator."""
         error_flag = False
         error_message = None
+        report_failure = False
 
         try:
             try:
@@ -87,6 +89,7 @@ class Connector:
                 error_message = asyncio.run(self._process_gti_reports(gti_config))
                 if error_message:
                     error_flag = True
+                    report_failure = True
             else:
                 self._logger.info(
                     f"{LOG_PREFIX} GTI reports import is disabled in configuration"
@@ -116,6 +119,7 @@ class Connector:
                 meta={"error": str(config_err)},
             )
             error_flag = True
+            report_failure = True
 
         except GTIWorkProcessingError as work_err:
             error_message = f"Work processing error: {str(work_err)}"
@@ -130,6 +134,7 @@ class Connector:
                 },
             )
             error_flag = True
+            report_failure = True
 
         except Exception as err:
             error_message = f"Unexpected error: {str(err)}"
@@ -137,6 +142,7 @@ class Connector:
                 f"{LOG_PREFIX} {error_message}", meta={"error": str(err)}
             )
             error_flag = True
+            report_failure = True
 
         finally:
             self._logger.info(
@@ -144,6 +150,10 @@ class Connector:
                 {"connector_name": self._helper.connect_name},
             )
             try:
+                if report_failure and self.work_manager.get_current_work_id() is None:
+                    # Make sure a failed run is visible in OpenCTI even when no work
+                    # was opened before the failure (e.g. every API call failed).
+                    self.work_manager.initiate_work(FAILED_RUN_WORK_NAME)
                 self.work_manager.process_all_remaining_works(
                     error_flag=error_flag, error_message=error_message
                 )
@@ -156,8 +166,13 @@ class Connector:
                     meta={"error": str(cleanup_err)},
                 )
 
-    async def _process_gti_reports(self, gti_config: GTIConfig) -> None:
-        """Process GTI reports using the orchestrator."""
+    async def _process_gti_reports(self, gti_config: GTIConfig) -> Optional[str]:
+        """Process GTI reports using the orchestrator.
+
+        Returns:
+            None on success, otherwise an error message describing the failure.
+
+        """
         try:
             from connector.src.custom.orchestrators.orchestrator import (
                 Orchestrator,
@@ -178,6 +193,9 @@ class Connector:
 
         except Exception as e:
             self._logger.error(f"{LOG_PREFIX} GTI reports processing failed: {str(e)}")
+            return f"GTI processing failed: {str(e)}"
+
+        return None
 
     def run(self) -> None:
         """Run the main process encapsulated in a scheduler.
