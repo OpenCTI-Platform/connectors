@@ -115,3 +115,23 @@ def test_required_fields(ngsiem_alert_data, field):
 
     with pytest.raises(ValidationError):
         CrowdstrikeAlert.model_validate(ngsiem_alert_data)
+
+
+def test_lenient_values(ngsiem_alert_data):
+    ngsiem_alert_data.update(
+        {
+            "priority_value": 1.5,
+            "host_names": [None, " host-b.example.org ", ""],
+            "users": [None, {"user_name": " synthetic-user ", "sid": " "}],
+            "mitre_attack": [None, {"technique_id": " T1059 ", "tactic": " "}],
+        }
+    )
+
+    alert = CrowdstrikeAlert.model_validate(ngsiem_alert_data)
+
+    assert alert.priority_value == 1.5
+    assert alert.host_names == ["host-b.example.org"]
+    assert alert.users[0].user_name == "synthetic-user"
+    assert alert.users[0].sid is None
+    assert alert.mitre_attack[0].technique_id == "T1059"
+    assert alert.mitre_attack[0].tactic is None
