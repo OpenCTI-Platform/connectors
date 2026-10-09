@@ -10,7 +10,7 @@ from censys_enrichment.__main__ import main
 # =====================
 
 
-# Scenario: main() wires config, helper, client, converter and connector together
+# Scenario: main() wires config, helper, client and connector together
 def test_main_happy_path() -> None:
     """Test that main() builds all collaborators and runs the connector."""
     fake_config = MagicMock()
@@ -21,7 +21,6 @@ def test_main_happy_path() -> None:
     fake_config.censys_enrichment.nvd_api_key = None
     fake_helper = MagicMock()
     fake_client = MagicMock()
-    fake_converter = MagicMock()
     fake_connector = MagicMock()
 
     with patch(
@@ -31,8 +30,6 @@ def test_main_happy_path() -> None:
     ) as m_helper, patch(
         "censys_enrichment.client.Client", return_value=fake_client
     ) as m_client, patch(
-        "censys_enrichment.converter.Converter", return_value=fake_converter
-    ), patch(
         "censys_enrichment.connector.Connector", return_value=fake_connector
     ) as m_connector:
         main()
@@ -47,7 +44,6 @@ def test_main_happy_path() -> None:
         config=fake_config,
         helper=fake_helper,
         client=fake_client,
-        converter=fake_converter,
     )
     fake_connector.run.assert_called_once()
 
@@ -67,8 +63,6 @@ def test_main_passes_nvd_api_key_when_set() -> None:
     ), patch("pycti.OpenCTIConnectorHelper"), patch(
         "censys_enrichment.client.Client"
     ) as m_client, patch(
-        "censys_enrichment.converter.Converter"
-    ), patch(
         "censys_enrichment.connector.Connector"
     ):
         main()

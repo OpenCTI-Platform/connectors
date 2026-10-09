@@ -3,7 +3,7 @@ from typing import Any
 from censys_enrichment.converters.base import CensysConverter, ObservableLike
 from censys_enrichment.converters.host import HostConverter
 from censys_platform import Certificate, Host
-from connectors_sdk.models import Reference, Relationship
+from connectors_sdk.models import IPV4Address, IPV6Address, Reference, Relationship
 from connectors_sdk.models.enums import RelationshipType
 
 
@@ -22,13 +22,25 @@ class DomainConverter(CensysConverter):
     def _append_hosts(self, stix_entity: ObservableLike, hosts: list[Host]) -> None:
         host_converter = HostConverter()
         host_converter.builder = self.builder
+        host_converter.client = self.client
+        host_converter.helper = self.helper
+        host_converter.nvd_enabled = self.nvd_enabled
 
+        ip_addresses: list[IPV4Address | IPV6Address] = []
         for host in hosts:
+            if not host.ip:
+                continue
             ip_stix = self.builder.add_ip(
                 observable=Reference(id=stix_entity.get("id")),
                 ip=host.ip,
             )
+            ip_addresses.append(ip_stix)
             host_converter._convert(observable=ip_stix.to_stix2_object(), data=host)
+
+        self.builder.add_domain_name(
+            value=stix_entity.get("value"),
+            resolves_to=ip_addresses,
+        )
 
     def _append_domain_certs(
         self, stix_entity: ObservableLike, certs: list[Certificate]
@@ -55,7 +67,6 @@ class DomainConverter(CensysConverter):
                         source=certificate,
                         target=observable,
                         type=RelationshipType.RELATED_TO,
-                        author=self.builder.author,
-                        markings=[self.builder.marking],
+                        **self.builder.common_props,
                     )
                 )

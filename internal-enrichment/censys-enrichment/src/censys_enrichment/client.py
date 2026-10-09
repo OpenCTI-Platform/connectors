@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Generator
+from typing import Dict, Generator
 from urllib.parse import urlparse
 
 import requests
+from censys_enrichment.errors import EntityHasNoUsableHashError, NVDLookupError
 from censys_platform import (
     SDK,
     Certificate,
@@ -56,14 +57,6 @@ class NVDData:
     affected_software: list[NVDAffectedSoftware] = field(default_factory=list)
 
 
-class EntityHasNoUsableHashError(Exception):
-    """Custom exception for entity having no usable hash"""
-
-
-class NVDLookupError(Exception):
-    """Raised when a CVE lookup against the NVD API fails (network, HTTP or parsing error)."""
-
-
 class Client:
     def __init__(
         self, organisation_id: str, token: str, nvd_api_key: str | None = None
@@ -90,11 +83,11 @@ class Client:
                 return host_asset.resource
             raise ValueError(f"No data found for IP {ip}")
 
-    def fetch_certs(self, hashes: dict[str, str]) -> Generator[Certificate, None, None]:
+    def fetch_certs(self, hashes: Dict[str, str]) -> Generator[Certificate, None, None]:
         """Fetch certificates by their hashes
 
         Args:
-            hashes (dict[str, str]): A dictionary containing one or more of the following keys
+            hashes (Dict[str, str]): A dictionary containing one or more of the following keys
                 with their corresponding hash values:
                     - "MD5"
                     - "SHA-1"

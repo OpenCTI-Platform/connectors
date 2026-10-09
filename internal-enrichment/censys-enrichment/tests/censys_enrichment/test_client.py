@@ -3,11 +3,8 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from censys_enrichment.client import (
-    Client,
-    EntityHasNoUsableHashError,
-    NVDLookupError,
-)
+from censys_enrichment.client import Client
+from censys_enrichment.errors import EntityHasNoUsableHashError, NVDLookupError
 from censys_platform import (
     CertificateAsset,
     ResponseEnvelopeSearchQueryResponse,

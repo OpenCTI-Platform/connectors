@@ -1,6 +1,12 @@
+from unittest.mock import Mock
+
 import stix2
+from censys_enrichment.builder import CensysStixBuilder
 from censys_enrichment.client import NVDAffectedSoftware, NVDData, NVDReference
-from censys_enrichment.converter import Converter
+from censys_enrichment.converters.certificate import CertificateConverter
+from censys_enrichment.converters.domain import DomainConverter
+from censys_enrichment.converters.host import HostConverter
+from censys_enrichment.errors import NVDLookupError
 from censys_platform import (
     SSH,
     TLS,
@@ -38,13 +44,25 @@ from censys_platform import (
 )
 
 
+def _nvd_host_converter(nvd_data_map: dict[str, NVDData]) -> HostConverter:
+    """Return a HostConverter with NVD enabled whose lookups are served from
+    *nvd_data_map* (no existing OpenCTI vulnerability descriptions)."""
+    converter = HostConverter()
+    converter.nvd_enabled = True
+    converter.client = Mock()
+    converter.client.fetch_nvd_data.side_effect = nvd_data_map.get
+    converter.helper = Mock()
+    converter.helper.api.vulnerability.read.return_value = None
+    return converter
+
+
 def test_converter_ipv4(host_ipv4: Host) -> None:
-    converter = Converter()
+    converter = HostConverter()
 
     stix_objects = [
         octi_object.to_stix2_object()
-        for octi_object in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="1.1.1.1"),
+        for octi_object in converter.to_stix(
+            observable=stix2.IPv4Address(value="1.1.1.1"),
             data=host_ipv4,
         )
     ]
@@ -377,7 +395,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
 def test_converter_vulnerability_enrichment() -> None:
     """A service with a CVE produces a Vulnerability and a related-to relationship."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.1",
         services=[
@@ -400,8 +418,8 @@ def test_converter_vulnerability_enrichment() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.1"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.1"),
             data=host,
         )
     ]
@@ -425,7 +443,7 @@ def test_converter_vulnerability_enrichment() -> None:
 
 def test_converter_malware_enrichment() -> None:
     """A service with a threat detection produces a Malware and a related-to relationship."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.2",
         services=[
@@ -444,8 +462,8 @@ def test_converter_malware_enrichment() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.2"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.2"),
             data=host,
         )
     ]
@@ -467,7 +485,7 @@ def test_converter_malware_enrichment() -> None:
 
 def test_converter_jarm_note() -> None:
     """A service with JARM data produces a fingerprints Note attached to the observable."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.3",
         services=[
@@ -485,8 +503,8 @@ def test_converter_jarm_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.3"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.3"),
             data=host,
         )
     ]
@@ -502,7 +520,7 @@ def test_converter_jarm_note() -> None:
 
 def test_converter_operating_system_enrichment() -> None:
     """A host with operating_system data produces a Software observable."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.4",
         operating_system=Attribute(
@@ -515,8 +533,8 @@ def test_converter_operating_system_enrichment() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.4"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.4"),
             data=host,
         )
     ]
@@ -532,7 +550,7 @@ def test_converter_operating_system_enrichment() -> None:
 
 def test_converter_software_version() -> None:
     """Service software with a version populates the Software version field."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.5",
         services=[
@@ -553,8 +571,8 @@ def test_converter_software_version() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.5"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.5"),
             data=host,
         )
     ]
@@ -566,13 +584,13 @@ def test_converter_software_version() -> None:
 
 def test_converter_external_reference_ipv6() -> None:
     """External reference is also added when enriching an IPv6 address."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(ip="2606:4700:4700::1111")
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv6Address(value="2606:4700:4700::1111"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv6Address(value="2606:4700:4700::1111"),
             data=host,
         )
     ]
@@ -588,7 +606,7 @@ def test_converter_external_reference_ipv6() -> None:
 
 def test_converter_service_fingerprints_note() -> None:
     """TLS handshake data, JA4TScan, and JARM are captured in a single fingerprints note."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.6",
         services=[
@@ -611,8 +629,8 @@ def test_converter_service_fingerprints_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.6"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.6"),
             data=host,
         )
     ]
@@ -631,7 +649,7 @@ def test_converter_service_fingerprints_note() -> None:
 
 def test_converter_reverse_dns_hostnames() -> None:
     """Reverse DNS PTR records produce Hostname observables, deduplicating against dns.names."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.7",
         dns=HostDNS(
@@ -645,8 +663,8 @@ def test_converter_reverse_dns_hostnames() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.7"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.7"),
             data=host,
         )
     ]
@@ -658,7 +676,7 @@ def test_converter_reverse_dns_hostnames() -> None:
 
 def test_converter_labels() -> None:
     """Censys host labels are applied as OpenCTI labels on the IP observable."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.8",
         labels=[Label(value="cloud-provider"), Label(value="cdn")],
@@ -666,8 +684,8 @@ def test_converter_labels() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.8"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.8"),
             data=host,
         )
     ]
@@ -679,7 +697,7 @@ def test_converter_labels() -> None:
 
 def test_converter_cobalt_strike_note() -> None:
     """A service with Cobalt Strike beacon data produces a dedicated configuration note."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="185.92.190.213",
         services=[
@@ -726,8 +744,8 @@ def test_converter_cobalt_strike_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="185.92.190.213"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="185.92.190.213"),
             data=host,
         )
     ]
@@ -754,7 +772,7 @@ def test_converter_cobalt_strike_note() -> None:
 
 def test_converter_dcerpc_note() -> None:
     """DCERPC endpoint data produces a note with executable/protocol rows and rpc labels."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.20",
         services=[
@@ -780,8 +798,8 @@ def test_converter_dcerpc_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.20"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.20"),
             data=host,
         )
     ]
@@ -801,7 +819,7 @@ def test_converter_dcerpc_note() -> None:
 
 def test_converter_ssh_note() -> None:
     """SSH service produces a note with banner, HASSH, and host key fingerprint."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.21",
         services=[
@@ -821,8 +839,8 @@ def test_converter_ssh_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.21"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.21"),
             data=host,
         )
     ]
@@ -840,7 +858,7 @@ def test_converter_ssh_note() -> None:
 
 def test_converter_smb_note() -> None:
     """SMB service produces a note with OS, workgroup, and dialect information."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.22",
         services=[
@@ -862,8 +880,8 @@ def test_converter_smb_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.22"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.22"),
             data=host,
         )
     ]
@@ -882,7 +900,7 @@ def test_converter_smb_note() -> None:
 
 def test_converter_winrm_note() -> None:
     """WinRM service surfaces NTLM domain, forest, and OS version from NTLM challenge."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.23",
         services=[
@@ -904,8 +922,8 @@ def test_converter_winrm_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.23"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.23"),
             data=host,
         )
     ]
@@ -924,7 +942,7 @@ def test_converter_winrm_note() -> None:
 
 def test_converter_service_risks_note() -> None:
     """Services with exposures/misconfigs/compromises produce a risks note with labels."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.24",
         services=[
@@ -943,8 +961,8 @@ def test_converter_service_risks_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.24"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.24"),
             data=host,
         )
     ]
@@ -972,7 +990,7 @@ def test_converter_vulnerability_kev_epss() -> None:
     """Vulnerabilities with KEV/EPSS data populate is_cisa_kev, epss_score, epss_percentile."""
     from censys_platform import Epss
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.30",
         services=[
@@ -997,8 +1015,8 @@ def test_converter_vulnerability_kev_epss() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.30"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.30"),
             data=host,
         )
     ]
@@ -1012,7 +1030,7 @@ def test_converter_vulnerability_kev_epss() -> None:
 
 def test_converter_malware_malpedia_external_reference() -> None:
     """Threats with Malpedia IDs produce Malware with an external reference URL."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.31",
         services=[
@@ -1035,8 +1053,8 @@ def test_converter_malware_malpedia_external_reference() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.31"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.31"),
             data=host,
         )
     ]
@@ -1055,7 +1073,7 @@ def test_converter_malware_malpedia_external_reference() -> None:
 
 def test_converter_service_risks_note_with_compromises() -> None:
     """Services with compromises produce a risks note that includes the compromise section and label."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.32",
         services=[
@@ -1074,8 +1092,8 @@ def test_converter_service_risks_note_with_compromises() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.32"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.32"),
             data=host,
         )
     ]
@@ -1095,7 +1113,7 @@ def test_converter_smtp_note() -> None:
     """A service with SMTP data produces a note with EHLO response."""
     from censys_platform import SMTP
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.33",
         services=[
@@ -1112,8 +1130,8 @@ def test_converter_smtp_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.33"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.33"),
             data=host,
         )
     ]
@@ -1131,7 +1149,7 @@ def test_converter_ftp_note() -> None:
     """A service with FTP data produces a note with status and TLS support."""
     from censys_platform import Ftp
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.34",
         services=[
@@ -1150,8 +1168,8 @@ def test_converter_ftp_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.34"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.34"),
             data=host,
         )
     ]
@@ -1170,7 +1188,7 @@ def test_converter_telnet_note() -> None:
     """An exposed Telnet service produces a note flagging its plaintext nature."""
     from censys_platform import Telnet
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.35",
         services=[
@@ -1187,8 +1205,8 @@ def test_converter_telnet_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.35"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.35"),
             data=host,
         )
     ]
@@ -1205,7 +1223,7 @@ def test_converter_redis_note() -> None:
     """A service with Redis data produces a note with version, mode, and auth status."""
     from censys_platform import Redis
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.36",
         services=[
@@ -1226,8 +1244,8 @@ def test_converter_redis_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.36"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.36"),
             data=host,
         )
     ]
@@ -1246,7 +1264,7 @@ def test_converter_mongodb_note() -> None:
     """A service with MongoDB data produces a note with version and server role."""
     from censys_platform import Mongodb, MongodbBuildInfo, MongodbIsMaster
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.37",
         services=[
@@ -1267,8 +1285,8 @@ def test_converter_mongodb_note() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.37"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.37"),
             data=host,
         )
     ]
@@ -1286,7 +1304,7 @@ def test_converter_cvss4_invalid_vector_is_silently_dropped() -> None:
     """A malformed CVSS 4.0 vector string is dropped rather than forwarded to OpenCTI."""
     from censys_platform import CVSSv4, Metrics
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.40",
         services=[
@@ -1311,8 +1329,8 @@ def test_converter_cvss4_invalid_vector_is_silently_dropped() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.40"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.40"),
             data=host,
         )
     ]
@@ -1330,7 +1348,7 @@ def test_converter_cvss4_score_is_preserved() -> None:
     """
     from censys_platform import CVSSv4, Metrics
 
-    converter = Converter()
+    converter = HostConverter()
     valid_vector = "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"
     host = Host(
         ip="203.0.113.41",
@@ -1352,8 +1370,8 @@ def test_converter_cvss4_score_is_preserved() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.41"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.41"),
             data=host,
         )
     ]
@@ -1366,7 +1384,6 @@ def test_converter_cvss4_score_is_preserved() -> None:
 
 def test_converter_vulnerability_description_from_cve_descriptions() -> None:
     """An explicit nvd_data_map entry overrides the vuln.name fallback."""
-    converter = Converter()
     host = Host(
         ip="203.0.113.42",
         services=[
@@ -1383,12 +1400,12 @@ def test_converter_vulnerability_description_from_cve_descriptions() -> None:
         "configuration, log messages, and parameters do not protect against "
         "attacker controlled LDAP and other JNDI related endpoints."
     )
+    converter = _nvd_host_converter({"CVE-2021-44228": NVDData(description=nvd_text)})
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.42"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.42"),
             data=host,
-            nvd_data_map={"CVE-2021-44228": NVDData(description=nvd_text)},
         )
     ]
 
@@ -1400,7 +1417,7 @@ def test_converter_vulnerability_description_from_cve_descriptions() -> None:
 
 def test_converter_vulnerability_description_fallback_to_vuln_name() -> None:
     """When no nvd_data_map entry is supplied vuln.name is used as the fallback."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.43",
         services=[
@@ -1414,8 +1431,8 @@ def test_converter_vulnerability_description_fallback_to_vuln_name() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.43"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.43"),
             data=host,
         )
     ]
@@ -1427,7 +1444,7 @@ def test_converter_vulnerability_description_fallback_to_vuln_name() -> None:
 
 def test_converter_vulnerability_cwe_labels() -> None:
     """CWE entries on a Censys vuln are propagated as labels on the Vulnerability."""
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.50",
         services=[
@@ -1446,8 +1463,8 @@ def test_converter_vulnerability_cwe_labels() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.50"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.50"),
             data=host,
         )
     ]
@@ -1477,7 +1494,7 @@ def test_converter_vulnerability_cvss3_components() -> None:
         UserInteraction,
     )
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.51",
         services=[
@@ -1511,8 +1528,8 @@ def test_converter_vulnerability_cvss3_components() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.51"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.51"),
             data=host,
         )
     ]
@@ -1532,7 +1549,10 @@ def test_converter_vulnerability_cvss3_severity_from_nvd() -> None:
     """NVD-provided v3 base severity takes priority over the Censys severity field."""
     from censys_platform.models.vuln import VulnSeverity
 
-    converter = Converter()
+    # NVD says CRITICAL — should win
+    converter = _nvd_host_converter(
+        {"CVE-2021-44228": NVDData(cvss_v3_base_severity="CRITICAL")}
+    )
     host = Host(
         ip="203.0.113.52",
         services=[
@@ -1551,11 +1571,9 @@ def test_converter_vulnerability_cvss3_severity_from_nvd() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.52"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.52"),
             data=host,
-            # NVD says CRITICAL — should win
-            nvd_data_map={"CVE-2021-44228": NVDData(cvss_v3_base_severity="CRITICAL")},
         )
     ]
 
@@ -1567,7 +1585,7 @@ def test_converter_vulnerability_cvss3_severity_fallback_to_censys() -> None:
     """When NVD has no severity, Censys vuln.severity is used as fallback."""
     from censys_platform.models.vuln import VulnSeverity
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="203.0.113.53",
         services=[
@@ -1586,8 +1604,8 @@ def test_converter_vulnerability_cvss3_severity_fallback_to_censys() -> None:
 
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.53"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.53"),
             data=host,
         )
     ]
@@ -1598,7 +1616,6 @@ def test_converter_vulnerability_cvss3_severity_fallback_to_censys() -> None:
 
 def test_converter_vulnerability_nvd_cvss_v2() -> None:
     """CVSS v2 fields from NVDData are propagated onto the Vulnerability object."""
-    converter = Converter()
     host = Host(
         ip="203.0.113.54",
         services=[
@@ -1620,12 +1637,12 @@ def test_converter_vulnerability_nvd_cvss_v2() -> None:
         cvss_v2_integrity_impact="COMPLETE",
         cvss_v2_availability_impact="COMPLETE",
     )
+    converter = _nvd_host_converter({"CVE-2008-4250": nvd})
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.54"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.54"),
             data=host,
-            nvd_data_map={"CVE-2008-4250": nvd},
         )
     ]
 
@@ -1642,7 +1659,6 @@ def test_converter_vulnerability_nvd_cvss_v2() -> None:
 
 def test_converter_vulnerability_nvd_external_references() -> None:
     """NVD external references are surfaced as ExternalReference objects on the Vulnerability."""
-    converter = Converter()
     host = Host(
         ip="203.0.113.55",
         services=[
@@ -1666,12 +1682,12 @@ def test_converter_vulnerability_nvd_external_references() -> None:
             ),
         ]
     )
+    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.55"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.55"),
             data=host,
-            nvd_data_map={"CVE-2021-44228": nvd},
         )
     ]
 
@@ -1691,7 +1707,6 @@ def test_converter_vulnerability_affected_software_yields_software_and_has_rel()
 ):
     """Software observables are created for each NVD affected_software entry and
     linked to the Vulnerability via a HAS relationship."""
-    converter = Converter()
     host = Host(
         ip="203.0.113.60",
         services=[
@@ -1712,12 +1727,12 @@ def test_converter_vulnerability_affected_software_yields_software_and_has_rel()
             )
         ]
     )
+    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.60"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.60"),
             data=host,
-            nvd_data_map={"CVE-2021-44228": nvd},
         )
     ]
 
@@ -1743,7 +1758,6 @@ def test_converter_vulnerability_affected_software_yields_software_and_has_rel()
 
 def test_converter_vulnerability_no_software_when_affected_software_empty() -> None:
     """No Software objects are yielded when NVDData.affected_software is empty."""
-    converter = Converter()
     host = Host(
         ip="203.0.113.61",
         services=[
@@ -1755,12 +1769,12 @@ def test_converter_vulnerability_no_software_when_affected_software_empty() -> N
         ],
     )
     nvd = NVDData()  # affected_software defaults to []
+    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="203.0.113.61"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="203.0.113.61"),
             data=host,
-            nvd_data_map={"CVE-2021-44228": nvd},
         )
     ]
     assert not any(o.type == "software" for o in stix_objects)
@@ -1841,7 +1855,7 @@ def test_converter_whois_abuse_email_invalid_values_are_dropped() -> None:
     from censys_platform.models.organization import Organization as CensysOrg
     from censys_platform.models.whois import Whois
 
-    converter = Converter()
+    converter = HostConverter()
     host = Host(
         ip="198.51.100.1",
         whois=Whois(
@@ -1860,8 +1874,8 @@ def test_converter_whois_abuse_email_invalid_values_are_dropped() -> None:
     )
     stix_objects = [
         obj.to_stix2_object()
-        for obj in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="198.51.100.1"),
+        for obj in converter.to_stix(
+            observable=stix2.IPv4Address(value="198.51.100.1"),
             data=host,
         )
     ]
@@ -1889,10 +1903,9 @@ def test_converter_cert_san_ip_addresses_not_emitted_as_hostnames() -> None:
             "sub.example.org",  # valid hostname — should produce Hostname
         ]
     )
-    converter = Converter()
+    converter = CertificateConverter()
     stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.generate_octi_objects_from_certs(certs=[cert])
+        obj.to_stix2_object() for obj in converter.to_stix(observable={}, data=[cert])
     ]
 
     hostname_values = {o.value for o in stix_objects if o.type == "hostname"}
@@ -1904,8 +1917,8 @@ def test_converter_cert_san_ip_addresses_not_emitted_as_hostnames() -> None:
     assert not any(v.startswith("*") for v in hostname_values)
 
 
-def test_generate_service_note_covers_all_protocol_sections() -> None:
-    """_generate_service_note builds a combined Note covering every protocol section
+def test_builder_add_note_covers_all_protocol_sections() -> None:
+    """add_note builds a combined Note covering every protocol section
     when the underlying service data is present (VNC, LDAP, WinRM, SNMP, DarkComet,
     DarkGate, RedLine, security risks, and UPnP devices)."""
     from uuid import uuid4
@@ -1956,9 +1969,10 @@ def test_generate_service_note_covers_all_protocol_sections() -> None:
         ),
     )
 
-    converter = Converter()
+    builder = CensysStixBuilder()
     observable = Reference(id=f"ipv4-addr--{uuid4()}")
-    notes = list(converter._generate_service_note(observable, service))
+    builder.add_note(observable=observable, service=service)
+    notes = builder.bundle
 
     assert len(notes) == 1
     note = notes[0]
@@ -1978,18 +1992,234 @@ def test_generate_service_note_covers_all_protocol_sections() -> None:
     assert "redline" in note.labels
 
 
-def test_generate_service_note_skips_without_port_or_scan_time() -> None:
-    """_generate_service_note yields nothing when port or scan_time is missing."""
+def test_builder_add_note_skips_without_port_or_scan_time() -> None:
+    """add_note adds nothing when port or scan_time is missing."""
     from uuid import uuid4
 
     from connectors_sdk.models import Reference
 
     from .factories import ServiceFactory
 
-    converter = Converter()
+    builder = CensysStixBuilder()
     observable = Reference(id=f"ipv4-addr--{uuid4()}")
     service = ServiceFactory(port=None)
 
-    notes = list(converter._generate_service_note(observable, service))
+    builder.add_note(observable=observable, service=service)
+    notes = builder.bundle
 
     assert notes == []
+
+
+def _nvd_converter(client: Mock, helper: Mock) -> HostConverter:
+    converter = HostConverter()
+    converter.nvd_enabled = True
+    converter.client = client
+    converter.helper = helper
+    return converter
+
+
+def test_build_nvd_data_map_disabled_returns_none() -> None:
+    """NVD lookups are skipped entirely when NVD enrichment is disabled."""
+    converter = HostConverter()
+    converter.client = Mock()
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    assert converter._build_nvd_data_map(host) is None
+    converter.client.fetch_nvd_data.assert_not_called()
+
+
+def test_build_nvd_data_map_no_cves_returns_empty() -> None:
+    """No vulns on any service means no NVD lookups and an empty map."""
+    converter = _nvd_converter(client=Mock(), helper=Mock())
+    host = Host(ip="1.2.3.4", services=[Service(port=443)])
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result == {}
+    converter.client.fetch_nvd_data.assert_not_called()
+
+
+def test_build_nvd_data_map_skips_cve_with_no_nvd_data() -> None:
+    """A CVE for which fetch_nvd_data returns None is skipped entirely."""
+    client = Mock()
+    client.fetch_nvd_data.return_value = None
+    converter = _nvd_converter(client=client, helper=Mock())
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result == {}
+
+
+def test_build_nvd_data_map_all_lookups_failing_is_not_an_error() -> None:
+    """When every NVD lookup fails, each CVE is noted as not enriched and the
+    enrichment carries on without warnings or errors."""
+    client = Mock()
+    client.fetch_nvd_data.side_effect = NVDLookupError("NVD down")
+    helper = Mock()
+    converter = _nvd_converter(client=client, helper=helper)
+    host = Host(
+        ip="1.2.3.4",
+        services=[
+            Service(
+                port=443,
+                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
+            )
+        ],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result == {}
+    assert helper.connector_logger.info.call_count == 2
+    helper.connector_logger.info.assert_any_call(
+        "CVE-2024-0001 not enriched from NVD, continuing without it: NVD down"
+    )
+    helper.connector_logger.warning.assert_not_called()
+    helper.connector_logger.error.assert_not_called()
+
+
+def test_build_nvd_data_map_partial_failure_keeps_successful_lookups() -> None:
+    """A partial NVD failure keeps successful results without warnings or errors."""
+    nvd_data = NVDData(description="from NVD")
+
+    def _fetch(cve_id: str) -> NVDData:
+        if cve_id == "CVE-2024-0001":
+            raise NVDLookupError("NVD down")
+        return nvd_data
+
+    client = Mock()
+    client.fetch_nvd_data.side_effect = _fetch
+    helper = Mock()
+    helper.api.vulnerability.read.return_value = None
+    converter = _nvd_converter(client=client, helper=helper)
+    host = Host(
+        ip="1.2.3.4",
+        services=[
+            Service(
+                port=443,
+                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
+            )
+        ],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result == {"CVE-2024-0002": nvd_data}
+    helper.connector_logger.info.assert_called_once()
+    helper.connector_logger.warning.assert_not_called()
+    helper.connector_logger.error.assert_not_called()
+
+
+def test_build_nvd_data_map_clears_description_when_opencti_already_has_one() -> None:
+    """An existing OpenCTI vulnerability description is not overwritten."""
+    client = Mock()
+    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
+    helper = Mock()
+    helper.api.vulnerability.read.return_value = {
+        "description": "already documented in OpenCTI"
+    }
+    converter = _nvd_converter(client=client, helper=helper)
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description is None
+    helper.api.vulnerability.read.assert_called_once_with(
+        filters={
+            "mode": "and",
+            "filters": [{"key": "name", "values": ["CVE-2024-1234"]}],
+            "filterGroups": [],
+        }
+    )
+
+
+def test_build_nvd_data_map_keeps_description_without_existing_entity() -> None:
+    """The NVD description is kept when OpenCTI has no existing description."""
+    client = Mock()
+    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
+    helper = Mock()
+    helper.api.vulnerability.read.return_value = None
+    converter = _nvd_converter(client=client, helper=helper)
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description == "from NVD"
+
+
+def test_build_nvd_data_map_swallows_opencti_lookup_error() -> None:
+    """A failure reading the existing OpenCTI vulnerability does not abort enrichment."""
+    client = Mock()
+    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
+    helper = Mock()
+    helper.api.vulnerability.read.side_effect = RuntimeError("boom")
+    converter = _nvd_converter(client=client, helper=helper)
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = converter._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description == "from NVD"
+
+
+def test_domain_converter_reemits_domain_and_propagates_nvd() -> None:
+    """Domain enrichment skips hosts without an IP, enriches each host (with NVD
+    lookups) and re-emits the domain with resolves-to refs and a Censys link."""
+    client = Mock()
+    client.fetch_nvd_data.return_value = NVDData(cvss_v3_base_severity="CRITICAL")
+    helper = Mock()
+    helper.api.vulnerability.read.return_value = None
+    converter = DomainConverter()
+    converter.nvd_enabled = True
+    converter.client = client
+    converter.helper = helper
+    domain = stix2.DomainName(value="example.com")
+
+    stix_objects = [
+        obj.to_stix2_object()
+        for obj in converter.to_stix(
+            observable=domain,
+            data={
+                "hosts": [
+                    Host(ip=None),
+                    Host(
+                        ip="203.0.113.10",
+                        services=[Service(port=443, vulns=[Vuln(id="CVE-2021-44228")])],
+                    ),
+                ],
+                "certs": [],
+            },
+        )
+    ]
+
+    client.fetch_nvd_data.assert_called_once_with("CVE-2021-44228")
+    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
+    assert vuln_obj.x_opencti_cvss_base_severity.value == "CRITICAL"
+
+    ips = [o for o in stix_objects if o.type == "ipv4-addr"]
+    assert {ip.value for ip in ips} == {"203.0.113.10"}
+
+    domain_obj = next(o for o in stix_objects if o.type == "domain-name")
+    assert domain_obj.id == domain.id
+    assert domain_obj.resolves_to_refs == [ips[0].id]
+    ext_ref = domain_obj.x_opencti_external_references[0]
+    assert ext_ref.source_name == "Censys"
+    assert (
+        ext_ref.url
+        == "https://platform.censys.io/search?resource=hosts&q=dns.names%3Dexample.com"
+    )

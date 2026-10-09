@@ -8,7 +8,6 @@ def main() -> None:
     try:
         from censys_enrichment.client import Client
         from censys_enrichment.connector import Connector
-        from censys_enrichment.converter import Converter
         from censys_enrichment.settings import ConfigLoader
         from pycti import OpenCTIConnectorHelper
 
@@ -26,12 +25,10 @@ def main() -> None:
                 else None
             ),
         )
-        converter = Converter()
         connector = Connector(
             config=config,
             helper=helper,
             client=client,
-            converter=converter,
         )
         connector.run()
     except Exception:

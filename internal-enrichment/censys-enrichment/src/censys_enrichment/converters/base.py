@@ -4,6 +4,7 @@ from typing import Any, Mapping
 from censys_enrichment.builder import CensysStixBuilder
 from censys_enrichment.client import Client
 from connectors_sdk.models import BaseObject
+from pycti import OpenCTIConnectorHelper
 
 # ``observable`` arrives at the converters in two shapes: a plain
 # ``dict`` from the OpenCTI enrichment payload (see
@@ -24,6 +25,10 @@ class CensysConverter(ABC):
     def __init__(self) -> None:
         self.builder = CensysStixBuilder()
         self.client: Client | None = None
+        # Used by host enrichment for NVD CVE lookups (logging and the OpenCTI
+        # "description already known" check); set by ``Connector._get_converter``.
+        self.helper: OpenCTIConnectorHelper | None = None
+        self.nvd_enabled: bool = False
 
     def to_stix(
         self, observable: ObservableLike, data: Any | None = None
@@ -43,6 +48,11 @@ class CensysConverter(ABC):
         if self.client is None:
             raise ValueError("Client is required")
         return self.client
+
+    def _require_helper(self) -> OpenCTIConnectorHelper:
+        if self.helper is None:
+            raise ValueError("Helper is required")
+        return self.helper
 
     @abstractmethod
     def _fetch_data(self, observable: ObservableLike) -> Any:
