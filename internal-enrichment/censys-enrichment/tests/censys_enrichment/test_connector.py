@@ -153,10 +153,11 @@ def test__build_nvd_data_map_skips_cve_with_no_nvd_data(mocked_helper: Mock) -> 
 
 
 @pytest.mark.usefixtures("mock_config")
-def test__build_nvd_data_map_logs_error_when_all_lookups_fail(
+def test__build_nvd_data_map_all_lookups_failing_is_not_an_error(
     mocked_helper: Mock,
 ) -> None:
-    """When every NVD lookup fails, each failure is warned and an error is logged."""
+    """When every NVD lookup fails, each CVE is noted as not enriched and the
+    enrichment carries on without warnings or errors."""
     from censys_platform import Host, Service, Vuln
 
     client = Mock()
@@ -180,18 +181,16 @@ def test__build_nvd_data_map_logs_error_when_all_lookups_fail(
     result = connector._build_nvd_data_map(host)
 
     assert result == {}
-    assert mocked_helper.connector_logger.warning.call_count == 2
-    mocked_helper.connector_logger.error.assert_called_once()
-    assert "All 2 NVD lookup(s) failed" in (
-        mocked_helper.connector_logger.error.call_args.args[0]
-    )
+    assert mocked_helper.connector_logger.info.call_count == 2
+    mocked_helper.connector_logger.warning.assert_not_called()
+    mocked_helper.connector_logger.error.assert_not_called()
 
 
 @pytest.mark.usefixtures("mock_config")
 def test__build_nvd_data_map_partial_failure_keeps_successful_lookups(
     mocked_helper: Mock,
 ) -> None:
-    """A partial NVD failure keeps successful results and does not log an error."""
+    """A partial NVD failure keeps successful results without warnings or errors."""
     from censys_platform import Host, Service, Vuln
 
     nvd_data = NVDData(description="from NVD")
@@ -223,7 +222,8 @@ def test__build_nvd_data_map_partial_failure_keeps_successful_lookups(
     result = connector._build_nvd_data_map(host)
 
     assert result == {"CVE-2024-0002": nvd_data}
-    mocked_helper.connector_logger.warning.assert_called_once()
+    mocked_helper.connector_logger.info.assert_called_once()
+    mocked_helper.connector_logger.warning.assert_not_called()
     mocked_helper.connector_logger.error.assert_not_called()
 
 

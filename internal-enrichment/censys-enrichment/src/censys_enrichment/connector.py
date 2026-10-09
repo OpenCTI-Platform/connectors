@@ -73,10 +73,9 @@ class Connector:
         ``description`` field on the returned :class:`NVDData` to avoid
         overwriting it — all other enrichment fields are still applied.
 
-        NVD is a secondary source: a failed lookup is logged as a warning and
-        the CVE is enriched from Censys data only. If every lookup fails
-        (e.g. NVD unreachable or rate limited) an error is logged so the
-        problem is visible, but the Censys enrichment itself is still sent.
+        NVD is a secondary source: a failed lookup is noted at info level and
+        the CVE is simply left without NVD data, so it never blocks or fails
+        an otherwise valid Censys enrichment.
         """
         cve_ids: set[str] = set()
         for service in data.services if isinstance(data.services, list) else []:
@@ -87,13 +86,13 @@ class Connector:
                     cve_ids.add(vuln.id)
 
         nvd_data_map: dict[str, NVDData] = {}
-        failed_lookups = 0
         for cve_id in cve_ids:
             try:
                 nvd_data = self.client.fetch_nvd_data(cve_id)
             except NVDLookupError as e:
-                failed_lookups += 1
-                self.helper.connector_logger.warning(str(e))
+                self.helper.connector_logger.info(
+                    f"{cve_id} not enriched from NVD, continuing without it: {e}"
+                )
                 continue
             if nvd_data is None:
                 continue
@@ -111,13 +110,6 @@ class Connector:
             except Exception:
                 pass
             nvd_data_map[cve_id] = nvd_data
-
-        if cve_ids and failed_lookups == len(cve_ids):
-            self.helper.connector_logger.error(
-                f"All {failed_lookups} NVD lookup(s) failed; vulnerabilities were "
-                "enriched from Censys data only. Check NVD connectivity and "
-                "CENSYS_ENRICHMENT_NVD_API_KEY."
-            )
 
         return nvd_data_map
 
