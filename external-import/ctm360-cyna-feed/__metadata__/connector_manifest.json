@@ -21,6 +21,6 @@
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ctm360-cyna-feed",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/connector-ctm360-cyna",
+  "container_image": "opencti/connector-ctm360-cyna-feed",
   "container_type": "EXTERNAL_IMPORT"
 }

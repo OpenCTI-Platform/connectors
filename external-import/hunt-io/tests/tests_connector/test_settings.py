@@ -45,6 +45,59 @@ from external_import_connector.settings import ConnectorSettings
             },
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Hunt IO",
+                },
+                "hunt_io": {
+                    "api_version": "v3",
+                    "api_base_url": "https://a.hunt.io/feeds/c2",
+                    "api_key": "ak_test-api-key",
+                },
+            },
+            id="valid_v3_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Hunt IO",
+                },
+                "hunt_io": {
+                    "api_version": "",
+                    "api_key": "test-api-key",
+                },
+            },
+            id="blank_api_version_falls_back_to_default",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Hunt IO",
+                },
+                "hunt_io": {
+                    "api_version": "V3",
+                    "api_base_url": "https://a.hunt.io/feeds/c2",
+                    "api_key": "ak_test-api-key",
+                },
+            },
+            id="uppercase_api_version_is_normalized",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -113,6 +166,43 @@ def test_settings_should_accept_valid_input(settings_dict):
             "hunt_io.api_key",
             id="missing_hunt_io_api_key",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Hunt IO",
+                },
+                "hunt_io": {
+                    "api_version": "v4",
+                    "api_key": "test-api-key",
+                },
+            },
+            "hunt_io.api_version",
+            id="unknown_hunt_io_api_version",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Hunt IO",
+                },
+                "hunt_io": {
+                    "api_version": "v3",
+                    "api_base_url": "https://a.hunt.io/feeds/c2",
+                    "api_key": "test-api-key",
+                },
+            },
+            "hunt_io.api_key",
+            id="v3_api_key_missing_ak_prefix",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
@@ -138,3 +228,36 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "raw_api_version, expected",
+    [
+        pytest.param("", "v2", id="blank_falls_back_to_default"),
+        pytest.param("  ", "v2", id="whitespace_falls_back_to_default"),
+        pytest.param("V3", "v3", id="uppercase_is_normalized"),
+        pytest.param(" v2 ", "v2", id="surrounding_whitespace_is_stripped"),
+    ],
+)
+def test_api_version_normalization(raw_api_version, expected):
+    """
+    A compose passthrough like `HUNT_IO_API_VERSION=${HUNT_IO_API_VERSION}` sets the
+    variable to an empty string when it is undefined, which must fall back to the
+    default rather than fail validation.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {"id": "connector-id", "scope": "Hunt IO"},
+        "hunt_io": {
+            "api_version": raw_api_version,
+            "api_base_url": "https://a.hunt.io/feeds/c2",
+            "api_key": "ak_test-api-key",
+        },
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    assert FakeConnectorSettings().hunt_io.api_version == expected

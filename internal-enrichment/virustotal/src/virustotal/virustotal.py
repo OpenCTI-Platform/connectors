@@ -1,5 +1,6 @@
 """VirusTotal enrichment connector."""
 
+import re
 from typing import TYPE_CHECKING, Dict
 
 import stix2
@@ -85,6 +86,17 @@ class VirusTotalConnector:
         self.ip_indicator_config = self.config.virustotal.model_extra.get(
             "ip_indicator_config"
         )
+        self.ip_add_resolutions = self.config.virustotal.ip_add_resolutions
+        self.ip_resolutions_since = self.config.virustotal.ip_resolutions_since
+        self.ip_resolutions_max_entries = (
+            self.config.virustotal.ip_resolutions_max_entries
+        )
+        self.ip_resolutions_max_pages = self.config.virustotal.ip_resolutions_max_pages
+        keywords = self.config.virustotal.ip_resolutions_keywords_regex
+        self.ip_resolutions_keywords_regex = (
+            re.compile(keywords, re.IGNORECASE) if keywords else None
+        )
+        self.api_requests_per_minute = self.config.virustotal.api_requests_per_minute
 
         # Domain specific settings
         self.domain_add_relationships = self.config.virustotal.domain_add_relationships
@@ -102,6 +114,28 @@ class VirusTotalConnector:
         self.include_attributes_in_note = (
             self.config.virustotal.include_attributes_in_note
         )
+
+        # GTI collection enrichment settings
+        self.gti_enrichment_enabled = self.config.virustotal.gti_enrichment_enabled
+        self.gti_include_malware_families = (
+            self.config.virustotal.gti_include_malware_families
+        )
+        self.gti_include_threat_actors = (
+            self.config.virustotal.gti_include_threat_actors
+        )
+        self.gti_include_campaigns = self.config.virustotal.gti_include_campaigns
+        self.gti_include_reports = self.config.virustotal.gti_include_reports
+        self.gti_relationship_limit = self.config.virustotal.gti_relationship_limit
+
+        if (
+            self.gti_include_malware_families
+            or self.gti_include_threat_actors
+            or self.gti_include_campaigns
+            or self.gti_include_reports
+        ) and not self.gti_enrichment_enabled:
+            self.helper.log_warning(
+                "[VirusTotal] Connector configured to include GTI relationships, but GTI enrichment is not enabled"
+            )
 
     # ------------------------------------------------------------------
     # YARA cache (shared across processor instances)

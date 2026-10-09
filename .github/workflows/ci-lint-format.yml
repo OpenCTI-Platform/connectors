@@ -1,14 +1,10 @@
 name: Lint & Format
 
 on:
+  # No paths filter and no change detection: these checks lint the whole repo
+  # (including .github/scripts, shared/ and the tool configs) in about two
+  # minutes, so they always run and can be required status checks.
   pull_request:
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
   merge_group:
     branches:
       - master
@@ -18,11 +14,6 @@ on:
 
 env:
   UV_SYSTEM_PYTHON: 1
-  
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
