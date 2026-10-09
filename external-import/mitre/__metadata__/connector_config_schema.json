@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "MITRE ATT&CK",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -38,6 +40,7 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -74,21 +77,25 @@
     "MITRE_ENTERPRISE_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
       "description": "URL to the MITRE ATT&CK Enterprise JSON file. This dataset includes tactics, techniques, and procedures (TTPs) for enterprise IT environments.",
+      "minLength": 1,
       "type": "string"
     },
     "MITRE_MOBILE_ATTACK_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
       "description": "URL to the MITRE Mobile ATT&CK JSON file. Contains mobile-specific attack techniques and mappings.",
+      "minLength": 1,
       "type": "string"
     },
     "MITRE_ICS_ATTACK_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
       "description": "URL to the MITRE ICS ATT&CK JSON file. Pertains to attack techniques targeting industrial control systems.",
+      "minLength": 1,
       "type": "string"
     },
     "MITRE_CAPEC_FILE_URL": {
       "default": "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json",
       "description": "URL to the CAPEC (Common Attack Pattern Enumeration and Classification) JSON file. Provides a comprehensive dictionary of known attack patterns used by adversaries.",
+      "minLength": 1,
       "type": "string"
     }
   },

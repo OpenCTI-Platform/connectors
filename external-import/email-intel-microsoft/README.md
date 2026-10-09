@@ -211,6 +211,7 @@ To restrict the app’s access to specific mailboxes, configure **Application Ac
 | TLP Level          | `tlp_level`                  | `EMAIL_INTEL_MICROSOFT_TLP_LEVEL`                  | amber+strict                        | ❌        | Default TLP marking              |
 | Look‑back window   | `relative_import_start_date` | `EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE` | P30D                                | ❌        | How far back the first run looks |
 | Allowed MIME types | `attachments_mime_types`     | `EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES`     | application/pdf,text/csv,text/plain | ❌        | Accepted attachment file type    |
+| Report type        | `report_type`                | `EMAIL_INTEL_MICROSOFT_REPORT_TYPE`                | threat-report                       | ❌        | Report type applied to imported reports (value from the `report_type_ov` vocabulary) |
 
 ---
 

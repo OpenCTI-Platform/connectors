@@ -53,7 +53,8 @@
     {
       "description": "Disable updates to pinned Python interpreter versions",
       "matchPackageNames": [
-        "python"
+        "python",
+        "cimg/python"
       ],
       "enabled": false
     },

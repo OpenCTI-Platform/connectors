@@ -46,7 +46,7 @@ class CatalystConnector:
 
         # Load configuration file and connection helper
         self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.client = ConnectorClient(self.helper, self.config)
 
     def _collect_intelligence(self) -> list:
