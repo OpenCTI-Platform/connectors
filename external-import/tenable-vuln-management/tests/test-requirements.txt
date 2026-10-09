@@ -2,3 +2,4 @@
 -r ../requirements.txt
 pytest
 pytest-mock
+restfly>=2.0.0
