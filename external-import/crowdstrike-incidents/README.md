@@ -137,8 +137,8 @@ Each alert produces one **Incident** and its related objects. Every object is cr
 
 | CrowdStrike field                             | OpenCTI Incident        | Notes                                                                                                     |
 |-----------------------------------------------|-------------------------|-----------------------------------------------------------------------------------------------------------|
-| `display_name`, `host_names[0]`, `user_names[0]` | `name`               | `<rule> on <host> by <user>`, as in the Falcon console. Falls back to `name`, then to `composite_id`.     |
-| `description`                                 | `description`           | Followed by a table: product, type, status, priority, priority explanation, detection ID, event IDs.      |
+| `display_name`, `host_names[0]`               | `name`                  | `<rule> on <host>`. Falls back to `name` for the rule, to `<rule>` without host, then to `composite_id`. |
+| `description`                                 | `description`           | Followed by a table: users, product, type, status, priority, priority explanation, detection ID, event IDs. |
 | `severity_name`                               | `severity`              | `Informational` and `Low` → `low`, `Medium` → `medium`, `High` → `high`, `Critical` → `critical`.         |
 | —                                             | `incident_type`         | Always `alert`.                                                                                           |
 | `product`                                     | `source`                | `CrowdStrike Falcon Next-Gen SIEM`.                                                                       |
@@ -149,7 +149,9 @@ Each alert produces one **Incident** and its related objects. Every object is cr
 
 The Incident STIX ID is generated from its `name` and `created` date, which do not change when the
 alert is updated in CrowdStrike: an updated alert updates the existing Incident instead of creating
-a new one.
+a new one. The user is deliberately **not** part of the name (it is listed in the description):
+users can be added to an alert after its creation, and a name change would create a duplicate
+Incident.
 
 #### Related objects
 
@@ -162,7 +164,9 @@ a new one.
 
 Attack Patterns are only created for MITRE ATT&CK IDs (`T1234` or `T1234.567`). Their STIX ID only
 depends on the MITRE ID, so they **merge with the techniques already imported** by the MITRE ATT&CK
-connector instead of creating duplicates.
+connector instead of creating duplicates. For the same reason they carry **no author and no TLP
+marking**: adding the connector's marking to the shared ATT&CK techniques would hide them from users
+not cleared for it. The `uses` relationship itself carries the author and the marking.
 
 #### Not mapped
 
@@ -179,13 +183,23 @@ connector instead of creating duplicates.
 - **Pagination**: the Alerts API rejects queries where `offset + limit` exceeds 10 000. The connector
   therefore paginates by keyset: after each page, the next query restarts at offset 0 from the last
   `updated_timestamp`. When a full page shares the same timestamp, it falls back to the offset within
-  that timestamp. Alerts already sent at the cursor boundary are skipped.
+  that timestamp. The IDs of the alerts already sent at the cursor timestamp are stored in the state
+  and skipped on the next query, so they are not re-sent at every run.
+- **Alerts updated during an import**: an alert can be updated between the ID query and the detail
+  call, which makes its `updated_timestamp` jump forward. To never skip the alerts in between, the
+  cursor only advances to timestamps older than the query time minus a 5-minute clock skew margin.
+  The most recent alerts are still imported immediately, and imported once more on the next run.
 - **Checkpoint after every bundle**: the cursor is saved after each page is sent to OpenCTI, so a
   crash during a large backlog resumes where it stopped instead of restarting.
 - **Per-alert failures**: an alert that cannot be parsed or converted is logged and skipped; the
   cursor still moves past it.
+- **Lenient parsing**: blank or `null` values (host names, IPs, users) are ignored instead of
+  dropping the whole alert.
 - **API errors**: a non-success response stops the run with an explicit error (a `403` mentions the
   `Alerts: Read` scope); the next scheduled run retries from the last saved cursor.
+- **State reset**: resetting the connector state in OpenCTI clears the cursor, even while the
+  connector is running (the connectors-sdk only overwrites the keys present in the stored state; the
+  connector resets its own fields first).
 
 ## Known caveats
 
@@ -197,8 +211,14 @@ connector instead of creating duplicates.
   OAuth2 flow, token refresh and cloud regions.
 - **Observables describe the affected internal assets**, not threat indicators: host names, private
   IP addresses and machine accounts (e.g. `HOST$`) are common.
-- **Incident names are not unique**: two alerts of the same rule on the same host and user share a
-  name; they stay distinct Incidents because their creation dates differ.
+- **Incident names are not unique**: two alerts of the same rule on the same host share a name; they
+  stay distinct Incidents because their creation dates differ.
+- **Host changes create a new Incident**: the name includes the first host name, so if CrowdStrike
+  changes it on an existing alert, a new Incident is created.
+- **Recent alerts are sent twice**: alerts updated in the last 5 minutes before a run are imported,
+  then imported again on the next run (harmless upsert).
+- **More than 10 000 alerts sharing the exact same `updated_timestamp`** cannot be paginated: the run
+  fails with an explicit error.
 - **Unknown severities are always imported**, even when `severity_min` is set.
 - **Alert retention**: alerts older than the CrowdStrike retention period (about 90 days observed)
   cannot be imported, whatever `import_start_date` is.
