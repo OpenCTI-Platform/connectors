@@ -204,7 +204,7 @@ class _SettingsLoader(BaseSettings):
         model_fields = deepcopy(connector_settings.model_fields)
         for field_info in model_fields.values():
             annotation = field_info.annotation
-            if annotation and issubclass(annotation, BaseModel):
+            if isinstance(annotation, type) and issubclass(annotation, BaseModel):
                 fields: dict[str, Any] = dict.fromkeys(
                     annotation.model_fields.keys(), Any
                 )
