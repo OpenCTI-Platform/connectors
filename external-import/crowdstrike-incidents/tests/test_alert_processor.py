@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from connectors_sdk.models import TLPMarking
 from connectors_sdk.models.enums import IncidentSeverity, IncidentType
+from crowdstrike_incidents.client_api import AlertPage
 from crowdstrike_incidents.models import CrowdstrikeAlert
 from crowdstrike_incidents.processors.alert_processor import (
     AUTHOR,
@@ -93,21 +94,33 @@ def test_incident_core_fields(ngsiem_alert_data):
     assert incident.markings == [TLPMarking(level="amber+strict")]
 
 
-def test_incident_name_identifies_rule_host_and_user(ngsiem_alert_data):
+def test_incident_name_identifies_rule_and_host(ngsiem_alert_data):
     incident = _incident(_convert(ngsiem_alert_data))
 
-    assert incident.name == "Synthetic Rule A on host-a.example.org by synthetic-user"
+    assert incident.name == "Synthetic Rule A on host-a.example.org"
+
+
+def test_incident_name_does_not_depend_on_users(ngsiem_alert_data):
+    """Users can be added to an alert later: they must not change the Incident ID."""
+    first = _incident(_convert(ngsiem_alert_data))
+    ngsiem_alert_data["users"].append({"user_name": "late-user"})
+    ngsiem_alert_data["user_names"].append("late-user")
+    second = _incident(_convert(ngsiem_alert_data))
+
+    assert first.name == second.name
+    assert first.id == second.id
 
 
 @pytest.mark.parametrize(
     "overrides, expected",
     [
-        ({"user_names": [], "users": []}, "Synthetic Rule A on host-a.example.org"),
-        ({"host_names": []}, "Synthetic Rule A by synthetic-user"),
+        ({"host_names": []}, "Synthetic Rule A"),
         (
-            {"display_name": None},
-            "Synthetic Rule A on host-a.example.org by synthetic-user",
+            {"host_names": ["  ", "host-b.example.org"]},
+            "Synthetic Rule A on host-b.example.org",
         ),
+        ({"display_name": None}, "Synthetic Rule A on host-a.example.org"),
+        ({"display_name": "   "}, "Synthetic Rule A on host-a.example.org"),
         (
             {
                 "display_name": None,
@@ -126,10 +139,29 @@ def test_incident_name_fallbacks(ngsiem_alert_data, overrides, expected):
     assert _incident(_convert(ngsiem_alert_data)).name == expected
 
 
-def test_incident_user_name_falls_back_to_users(ngsiem_alert_data):
+def test_users_are_listed_in_the_description(ngsiem_alert_data):
     ngsiem_alert_data["user_names"] = []
 
-    assert _incident(_convert(ngsiem_alert_data)).name.endswith("by synthetic-user")
+    description = _incident(_convert(ngsiem_alert_data)).description
+
+    assert "| Users | synthetic-user |" in description
+
+
+def test_users_fall_back_to_user_names_in_the_description(ngsiem_alert_data):
+    ngsiem_alert_data["users"] = []
+    ngsiem_alert_data["user_names"] = ["user-a", "user-b"]
+
+    description = _incident(_convert(ngsiem_alert_data)).description
+
+    assert "| Users | user-a, user-b |" in description
+
+
+def test_description_cells_are_escaped(ngsiem_alert_data):
+    ngsiem_alert_data["priority_explanation"] = ["a | b", "line\nbreak"]
+
+    description = _incident(_convert(ngsiem_alert_data)).description
+
+    assert "| Priority explanation | a \\| b; line break |" in description
 
 
 def test_incident_links_back_to_the_console(ngsiem_alert_data):
@@ -335,8 +367,38 @@ def test_every_object_has_author_and_marking(ngsiem_alert_data):
     for obj in objects:
         if obj is AUTHOR or isinstance(obj, TLPMarking):
             continue
+        if obj.id.startswith("attack-pattern--"):
+            continue
         assert obj.author == AUTHOR
         assert obj.markings == [TLPMarking(level="amber+strict")]
+
+
+def test_attack_patterns_carry_no_author_nor_marking(ngsiem_alert_data):
+    """They merge with the shared MITRE ATT&CK dataset and must not restrict it."""
+    ngsiem_alert_data["mitre_attack"] = [T1059]
+
+    (pattern,) = _of_type(_convert(ngsiem_alert_data), "attack-pattern")
+
+    assert pattern.author is None
+    assert pattern.markings is None
+
+
+def test_blank_values_do_not_drop_the_incident(ngsiem_alert_data):
+    ngsiem_alert_data.update(
+        {
+            "host_names": ["", "  "],
+            "source_ips": [None, " "],
+            "users": [{"user_name": " ", "sid": ""}],
+            "user_names": [""],
+        }
+    )
+
+    objects = _convert(ngsiem_alert_data)
+
+    assert len(_of_type(objects, "incident")) == 1
+    assert _of_type(objects, "hostname") == []
+    assert _of_type(objects, "user-account") == []
+    assert _of_type(objects, "relationship") == []
 
 
 def test_bundle_serialises_to_stix(ngsiem_alert_data):
@@ -349,6 +411,10 @@ def test_bundle_serialises_to_stix(ngsiem_alert_data):
 # ---------------------------------------------------------------------------
 # transform(): filters, failures, dedup, cursor
 # ---------------------------------------------------------------------------
+
+
+def _page(alerts: list[dict], cursor: str = "cursor", ids=()) -> AlertPage:
+    return AlertPage(alerts, cursor, frozenset(ids))
 
 
 def _alert(data: dict, index: int, **overrides) -> dict:
@@ -364,22 +430,19 @@ def _alert(data: dict, index: int, **overrides) -> dict:
 def test_transform_yields_one_bundle_per_page_with_its_cursor(ngsiem_alert_data):
     proc = _make_processor()
     pages = [
-        [_alert(ngsiem_alert_data, 1), _alert(ngsiem_alert_data, 2)],
-        [_alert(ngsiem_alert_data, 3)],
+        _page([_alert(ngsiem_alert_data, 1), _alert(ngsiem_alert_data, 2)], "c-1"),
+        _page([_alert(ngsiem_alert_data, 3)], "c-2"),
     ]
 
     bundles = list(proc.transform(iter(pages)))
 
-    assert [cursor for _, cursor in bundles] == [
-        "2025-01-15T11:00:02Z",
-        "2025-01-15T11:00:03Z",
-    ]
+    assert [page.cursor for _, page in bundles] == ["c-1", "c-2"]
     assert len(_of_type(bundles[0][0], "incident")) == 2
 
 
 def test_transform_deduplicates_shared_objects(ngsiem_alert_data):
     proc = _make_processor()
-    page = [_alert(ngsiem_alert_data, 1), _alert(ngsiem_alert_data, 2)]
+    page = _page([_alert(ngsiem_alert_data, 1), _alert(ngsiem_alert_data, 2)])
 
     ((objects, _),) = list(proc.transform(iter([page])))
 
@@ -390,26 +453,31 @@ def test_transform_deduplicates_shared_objects(ngsiem_alert_data):
 
 def test_transform_skips_alerts_below_minimum_severity(ngsiem_alert_data):
     proc = _make_processor(severity_min=Severity.HIGH)
-    page = [
-        _alert(ngsiem_alert_data, 1, severity_name="Medium"),
-        _alert(ngsiem_alert_data, 2, severity_name="High"),
-        _alert(ngsiem_alert_data, 3, severity_name=None),
-    ]
+    page = _page(
+        [
+            _alert(ngsiem_alert_data, 1, severity_name="Medium"),
+            _alert(ngsiem_alert_data, 2, severity_name="High"),
+            _alert(ngsiem_alert_data, 3, severity_name=None),
+        ],
+        "2025-01-15T11:00:03Z",
+    )
 
-    ((objects, cursor),) = list(proc.transform(iter([page])))
+    ((objects, out_page),) = list(proc.transform(iter([page])))
 
     names = {
         i.external_references[0].external_id for i in _of_type(objects, "incident")
     }
     # Alerts without a known severity are always imported
     assert names == {"alert-2", "alert-3"}
-    # The cursor still moves past the filtered alert
-    assert cursor == "2025-01-15T11:00:03Z"
+    # The page (and its cursor) is still returned past the filtered alert
+    assert out_page is page
 
 
 def test_transform_skips_unsupported_products(ngsiem_alert_data):
     proc = _make_processor()
-    page = [_alert(ngsiem_alert_data, 1, product="epp"), _alert(ngsiem_alert_data, 2)]
+    page = _page(
+        [_alert(ngsiem_alert_data, 1, product="epp"), _alert(ngsiem_alert_data, 2)]
+    )
 
     ((objects, _),) = list(proc.transform(iter([page])))
 
@@ -418,20 +486,20 @@ def test_transform_skips_unsupported_products(ngsiem_alert_data):
 
 def test_transform_logs_and_skips_invalid_alerts(ngsiem_alert_data):
     proc = _make_processor()
-    page = [{"composite_id": "broken"}, _alert(ngsiem_alert_data, 2)]
+    page = _page([{"composite_id": "broken"}, _alert(ngsiem_alert_data, 2)])
 
-    ((objects, cursor),) = list(proc.transform(iter([page])))
+    ((objects, out_page),) = list(proc.transform(iter([page])))
 
     assert len(_of_type(objects, "incident")) == 1
-    assert cursor == "2025-01-15T11:00:02Z"
+    assert out_page is page
     proc.logger.error.assert_called_once()
 
 
 def test_transform_yields_cursor_even_when_every_alert_is_filtered(ngsiem_alert_data):
     proc = _make_processor(severity_min=Severity.CRITICAL)
-    page = [_alert(ngsiem_alert_data, 1, severity_name="Low")]
+    page = _page([_alert(ngsiem_alert_data, 1, severity_name="Low")])
 
-    assert list(proc.transform(iter([page]))) == [([], "2025-01-15T11:00:01Z")]
+    assert list(proc.transform(iter([page]))) == [([], page)]
 
 
 # ---------------------------------------------------------------------------
@@ -467,9 +535,23 @@ def test_next_runs_resume_from_the_stored_cursor():
 
 def test_collect_streams_pages():
     proc = _make_processor()
-    proc._client.iter_alert_pages.return_value = iter([["a"], ["b"]])
+    pages = [_page([{"composite_id": "a"}]), _page([{"composite_id": "b"}])]
+    proc._client.iter_alert_pages.return_value = iter(pages)
 
-    assert list(proc.collect()) == [["a"], ["b"]]
+    assert list(proc.collect()) == pages
+
+
+def test_collect_skips_the_stored_boundary_ids():
+    proc = _make_processor(last_updated_timestamp="2025-01-15T11:00:02Z")
+    proc.state.last_boundary_ids = ["alert-1", "alert-2"]
+    proc._client.iter_alert_pages.return_value = iter([])
+
+    list(proc.collect())
+
+    assert proc._client.iter_alert_pages.call_args.kwargs["skip_ids"] == [
+        "alert-1",
+        "alert-2",
+    ]
 
 
 @pytest.fixture
@@ -480,15 +562,23 @@ def state_save(mocker) -> MagicMock:
 
 def test_send_checkpoints_the_cursor_after_each_bundle(state_save):
     proc = _make_processor()
-    saved: list[str | None] = []
-    state_save.side_effect = lambda state: saved.append(state.last_updated_timestamp)
+    saved: list[tuple] = []
+    state_save.side_effect = lambda state: saved.append(
+        (state.last_updated_timestamp, state.last_boundary_ids)
+    )
 
     proc.send(
-        iter([(["obj-1"], "cursor-1"), ([], "cursor-2"), (["obj-3"], "cursor-3")])
+        iter(
+            [
+                (["obj-1"], _page([], "cursor-1", {"b", "a"})),
+                ([], _page([], "cursor-2")),
+                (["obj-3"], _page([], "cursor-3", {"c"})),
+            ]
+        )
     )
 
     assert proc.work_manager.send.call_count == 2
-    assert saved == ["cursor-1", "cursor-2", "cursor-3"]
+    assert saved == [("cursor-1", ["a", "b"]), ("cursor-2", []), ("cursor-3", ["c"])]
 
 
 def test_cursor_is_not_saved_when_sending_fails(state_save):
@@ -496,7 +586,38 @@ def test_cursor_is_not_saved_when_sending_fails(state_save):
     proc.work_manager.send.side_effect = RuntimeError("queue down")
 
     with pytest.raises(RuntimeError):
-        proc.send(iter([(["obj-1"], "cursor-1")]))
+        proc.send(iter([(["obj-1"], _page([], "cursor-1"))]))
 
     state_save.assert_not_called()
     assert proc.state.last_updated_timestamp is None
+
+
+def test_state_reset_in_opencti_clears_the_cursor():
+    """Regression: the SDK only overwrites the keys present in the stored state."""
+    state = CrowdstrikeIncidentsState(
+        last_updated_timestamp="2025-01-15T11:00:02Z", last_boundary_ids=["alert-1"]
+    )
+    client = MagicMock()
+    client.load_state.return_value = {}  # state reset from the OpenCTI UI
+    state._client = client
+
+    state.load(force=True)
+
+    assert state.last_updated_timestamp is None
+    assert state.last_boundary_ids == []
+    assert state.last_run is None
+
+
+def test_state_load_applies_the_stored_values():
+    state = CrowdstrikeIncidentsState()
+    client = MagicMock()
+    client.load_state.return_value = {
+        "last_updated_timestamp": "2025-01-15T11:00:02Z",
+        "last_boundary_ids": ["alert-1"],
+    }
+    state._client = client
+
+    state.load(force=True)
+
+    assert state.last_updated_timestamp == "2025-01-15T11:00:02Z"
+    assert state.last_boundary_ids == ["alert-1"]

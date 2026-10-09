@@ -1,5 +1,6 @@
 """Tests for the CrowdStrike Alerts API client."""
 
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,6 +29,7 @@ class FakeAlerts:
         self.queries: list[dict] = []
         self.query_alerts_v2 = MagicMock(side_effect=self._query)
         self.get_alerts_v2 = MagicMock(side_effect=self._get)
+        self.on_get = None
 
     def _query(self, filter, sort, limit, offset, include_hidden):  # noqa: A002
         self.queries.append(
@@ -38,6 +40,8 @@ class FakeAlerts:
         return _ok([a["composite_id"] for a in matching[offset : offset + limit]])
 
     def _get(self, composite_ids, include_hidden):
+        if self.on_get:
+            self.on_get(self)
         by_id = {a["composite_id"]: a for a in self.alerts}
         # The API does not guarantee the order of the entities
         return _ok([by_id[i] for i in reversed(composite_ids)])
@@ -45,7 +49,11 @@ class FakeAlerts:
 
 @pytest.fixture
 def make_client(mocker):
-    def _make(alerts: list[dict], page_size: int = 2) -> tuple:
+    def _make(
+        alerts: list[dict],
+        page_size: int = 2,
+        now: datetime = datetime(2030, 1, 1, tzinfo=timezone.utc),
+    ) -> tuple:
         fake = FakeAlerts(alerts)
         alerts_cls = mocker.patch(
             "crowdstrike_incidents.client_api.Alerts", return_value=fake
@@ -55,6 +63,7 @@ def make_client(mocker):
             client_id="synthetic-id",
             client_secret="synthetic-secret",
             page_size=page_size,
+            now=lambda: now,
         )
         return client, fake, alerts_cls
 
@@ -62,7 +71,7 @@ def make_client(mocker):
 
 
 def _ids(pages) -> list[list[str]]:
-    return [[a["composite_id"] for a in page] for page in pages]
+    return [[a["composite_id"] for a in page.alerts] for page in pages]
 
 
 def test_falconpy_is_configured(make_client):
@@ -238,3 +247,88 @@ def test_default_page_size_respects_the_api_window():
 )
 def test_timestamp_sort_key_handles_variable_precision(earlier, later):
     assert timestamp_sort_key(earlier) < timestamp_sort_key(later)
+
+
+def test_pages_carry_the_cursor_and_boundary_ids(make_client):
+    client, _, _ = make_client(
+        [
+            _alert(1, "2025-01-01T00:00:01Z"),
+            _alert(2, "2025-01-01T00:00:02Z"),
+            _alert(3, "2025-01-01T00:00:02Z"),
+        ],
+        page_size=3,
+    )
+
+    (page,) = list(
+        client.iter_alert_pages(since="2025-01-01T00:00:00Z", products=["ngsiem"])
+    )
+
+    assert page.cursor == "2025-01-01T00:00:02Z"
+    assert page.boundary_ids == {"alert-2", "alert-3"}
+
+
+def test_skip_ids_are_not_yielded_again(make_client):
+    client, _, _ = make_client(
+        [_alert(1, "2025-01-01T00:00:01Z"), _alert(2, "2025-01-01T00:00:02Z")]
+    )
+
+    pages = list(
+        client.iter_alert_pages(
+            since="2025-01-01T00:00:01Z", products=["ngsiem"], skip_ids=["alert-1"]
+        )
+    )
+
+    assert _ids(pages) == [["alert-2"]]
+
+
+def test_alert_updated_after_the_query_does_not_skip_alerts(make_client):
+    """Regression: an update between the ID query and the detail call must not
+    move the cursor past alerts that were not fetched yet."""
+    alerts = [_alert(i, f"2025-01-01T00:00:0{i}Z") for i in range(10)]
+    client, fake, _ = make_client(
+        alerts,
+        page_size=3,
+        # The query runs at 00:05:20: the cursor may only advance up to 00:00:20
+        now=datetime(2025, 1, 1, 0, 5, 20, tzinfo=timezone.utc),
+    )
+
+    def update_alert_1_once(fake_alerts):
+        alert = next(a for a in fake_alerts.alerts if a["composite_id"] == "alert-1")
+        if alert["updated_timestamp"] != "2025-01-01T00:00:50Z":
+            alert["updated_timestamp"] = "2025-01-01T00:00:50Z"
+            fake_alerts.alerts.sort(key=lambda a: a["updated_timestamp"])
+
+    fake.on_get = update_alert_1_once
+
+    pages = list(
+        client.iter_alert_pages(since="2025-01-01T00:00:00Z", products=["ngsiem"])
+    )
+
+    yielded = {i for page in _ids(pages) for i in page}
+    assert yielded == {f"alert-{i}" for i in range(10)}
+    # The checkpoint never jumps to the updated timestamp before alert-9 is sent
+    cursors = [page.cursor for page in pages]
+    last_page_with_alert_9 = next(
+        index for index, page in enumerate(_ids(pages)) if "alert-9" in page
+    )
+    assert all(
+        cursor < "2025-01-01T00:00:50Z" for cursor in cursors[:last_page_with_alert_9]
+    )
+
+
+def test_recent_alerts_do_not_move_the_cursor(make_client):
+    client, _, _ = make_client(
+        [_alert(1, "2025-01-01T00:00:01Z"), _alert(2, "2025-01-01T00:09:00Z")],
+        page_size=5,
+        now=datetime(2025, 1, 1, 0, 10, tzinfo=timezone.utc),
+    )
+
+    (page,) = list(
+        client.iter_alert_pages(since="2025-01-01T00:00:00Z", products=["ngsiem"])
+    )
+
+    # alert-2 is within the clock skew margin: yielded, but the cursor stays on
+    # alert-1 so that alert-2 is fetched again on the next run
+    assert [a["composite_id"] for a in page.alerts] == ["alert-1", "alert-2"]
+    assert page.cursor == "2025-01-01T00:00:01Z"
+    assert page.boundary_ids == {"alert-1"}

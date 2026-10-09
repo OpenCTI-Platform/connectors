@@ -38,7 +38,7 @@ from connectors_sdk.models.enums import (
     IncidentType,
     RelationshipType,
 )
-from crowdstrike_incidents.client_api import CrowdstrikeAlertsClient
+from crowdstrike_incidents.client_api import AlertPage, CrowdstrikeAlertsClient
 from crowdstrike_incidents.models import CrowdstrikeAlert
 from crowdstrike_incidents.settings import Severity
 from pydantic import Field, ValidationError
@@ -70,8 +70,29 @@ class CrowdstrikeIncidentsState(ExternalImportConnectorState):
 
     last_updated_timestamp: str | None = Field(
         default=None,
-        description="updated_timestamp of the last alert sent to OpenCTI (raw API value).",
+        description="updated_timestamp to resume from (raw API value).",
     )
+    last_boundary_ids: list[str] = Field(
+        default_factory=list,
+        description="Composite IDs already sent whose timestamp equals the cursor.",
+    )
+
+    def load(self, force: bool = False) -> None:
+        """Load the state, resetting the fields absent from the stored state.
+
+        The SDK only overwrites the keys present in the stored state: after a
+        state reset in OpenCTI, the previous in-memory cursor would survive and
+        be saved back.
+        """
+        if self._client and (force or self._can_be_loaded):
+            for name, model_field in type(self).model_fields.items():
+                setattr(self, name, model_field.get_default(call_default_factory=True))
+        super().load(force=force)
+
+
+def _escape_cell(value: Any) -> str:
+    """Escape a value for a markdown table cell."""
+    return str(value).replace("|", "\\|").replace("\r", " ").replace("\n", " ")
 
 
 def _parse_severity(severity_name: str | None) -> Severity | None:
@@ -104,7 +125,7 @@ class AlertProcessor(BaseDataProcessor):
     # DataProcessor pipeline
     # ------------------------------------------------------------------
 
-    def collect(self) -> Generator[list[dict[str, Any]], None, None]:
+    def collect(self) -> Generator[AlertPage, None, None]:
         """Stream pages of raw alerts updated since the stored cursor."""
         since = self.state.last_updated_timestamp or self._initial_cursor()
         self.work_name = f"CrowdStrike Incidents import (since {since})"
@@ -117,26 +138,25 @@ class AlertProcessor(BaseDataProcessor):
             since=since,
             products=self._config.products,
             include_hidden=self._config.include_hidden,
+            skip_ids=self.state.last_boundary_ids,
         ):
-            total += len(page)
-            self.logger.info(f"Fetched {len(page)} alerts (total: {total})")
+            total += len(page.alerts)
+            self.logger.info(f"Fetched {len(page.alerts)} alerts (total: {total})")
             yield page
         self.logger.info(f"Collection complete: {total} alerts fetched.")
 
     def transform(
-        self, data: Iterable[list[dict[str, Any]]]
-    ) -> Generator[tuple[list[Any], str], None, None]:
-        """Yield ``(objects, cursor)`` per page.
+        self, data: Iterable[AlertPage]
+    ) -> Generator[tuple[list[Any], AlertPage], None, None]:
+        """Yield ``(objects, page)`` per page.
 
-        The cursor is the ``updated_timestamp`` of the last alert of the page,
-        including alerts that were filtered out or failed to convert, so that
-        they are not fetched again.
+        The page carries the cursor computed by the client; it also covers the
+        alerts that were filtered out or failed to convert, so that they are not
+        fetched again.
         """
         for page in data:
             objects: list[Any] = []
-            cursor: str | None = None
-            for raw_alert in page:
-                cursor = raw_alert.get("updated_timestamp") or cursor
+            for raw_alert in page.alerts:
                 try:
                     alert = CrowdstrikeAlert.model_validate(raw_alert)
                 except ValidationError as err:
@@ -157,17 +177,17 @@ class AlertProcessor(BaseDataProcessor):
                         "Failed to convert alert",
                         {"composite_id": alert.composite_id, "error": str(err)},
                     )
-            if cursor is not None:
-                yield self._dedup(objects), cursor
+            yield self._dedup(objects), page
 
     def send(  # type: ignore[override]
-        self, bundle_objects: Iterable[tuple[list[Any], str]]
+        self, bundle_objects: Iterable[tuple[list[Any], AlertPage]]
     ) -> None:
         """Send each bundle, then checkpoint the cursor (see module docstring)."""
-        for objects, cursor in bundle_objects:
+        for objects, page in bundle_objects:
             if objects:
                 self.work_manager.send(objects, self.work_name)
-            self.state.last_updated_timestamp = cursor
+            self.state.last_updated_timestamp = page.cursor
+            self.state.last_boundary_ids = sorted(page.boundary_ids)
             self.state.save()
 
     # ------------------------------------------------------------------
@@ -220,24 +240,27 @@ class AlertProcessor(BaseDataProcessor):
 
     @staticmethod
     def _incident_name(alert: CrowdstrikeAlert) -> str:
-        """Build '<rule> on <host> by <user>', as displayed in the Falcon console."""
+        """Build '<rule> on <host>'.
+
+        The user is deliberately left out (it is in the description): users can
+        be added to an alert later, and the Incident ID derives from its name.
+        """
         rule = alert.display_name or alert.name
         if not rule:
             return alert.composite_id
-        host = alert.host_names[0] if alert.host_names else None
-        user = (alert.user_names[0] if alert.user_names else None) or next(
-            (u.user_name for u in alert.users if u.user_name), None
-        )
-        name = rule
-        if host:
-            name += f" on {host}"
-        if user:
-            name += f" by {user}"
-        return name
+        if alert.host_names:
+            return f"{rule} on {alert.host_names[0]}"
+        return rule
 
     @staticmethod
-    def _incident_description(alert: CrowdstrikeAlert) -> str:
+    def _user_names(alert: CrowdstrikeAlert) -> list[str]:
+        names = [u.user_name for u in alert.users if u.user_name] or alert.user_names
+        return list(dict.fromkeys(names))
+
+    @classmethod
+    def _incident_description(cls, alert: CrowdstrikeAlert) -> str:
         rows = [
+            ("Users", ", ".join(cls._user_names(alert))),
             ("Product", alert.product),
             ("Type", alert.type),
             ("Status", alert.status),
@@ -247,7 +270,9 @@ class AlertProcessor(BaseDataProcessor):
             ("Event IDs", ", ".join(alert.event_ids)),
         ]
         table = "\n".join(
-            f"| {label} | {value} |" for label, value in rows if value not in (None, "")
+            f"| {label} | {_escape_cell(value)} |"
+            for label, value in rows
+            if value not in (None, "")
         )
         parts = [alert.description] if alert.description else []
         parts.append(f"| Attribute | Value |\n| --- | --- |\n{table}")
@@ -272,9 +297,9 @@ class AlertProcessor(BaseDataProcessor):
             ip_class = IPV4Address if ip.version == 4 else IPV6Address
             observables.append(ip_class(value=value, **common))
 
-        accounts = {
-            u.user_name: u.sid for u in alert.users if u.user_name
-        } or dict.fromkeys(alert.user_names)
+        accounts = {u.user_name: u.sid for u in alert.users if u.user_name} or (
+            dict.fromkeys(alert.user_names)
+        )
         for login, sid in accounts.items():
             observables.append(
                 UserAccount(account_login=login, user_id=sid or None, **common)
@@ -290,11 +315,11 @@ class AlertProcessor(BaseDataProcessor):
                 continue
             attack_patterns.setdefault(
                 technique_id,
+                # No author nor marking: the Attack Pattern merges with the
+                # shared MITRE ATT&CK one and must not restrict or re-attribute it.
                 AttackPattern(
                     name=technique.technique or technique_id,
                     mitre_id=technique_id,
-                    author=AUTHOR,
-                    markings=[self._marking],
                 ),
             )
         return list(attack_patterns.values())
