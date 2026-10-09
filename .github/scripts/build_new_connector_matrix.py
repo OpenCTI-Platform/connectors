@@ -18,6 +18,8 @@ Shared git/output/batching helpers live in _matrix_common.py.
 """
 
 import json
+import os
+import sys
 
 import _matrix_common as common
 
@@ -26,14 +28,8 @@ import _matrix_common as common
 # ---------------------------------------------------------------------------
 
 
-def discover_new_connectors(base_commit: str | None) -> list:
-    """Return connector roots that did not exist at *base_commit* at all.
-
-    If the base commit can't be resolved, we conservatively report no new
-    connectors rather than flagging every pre-existing connector as "new".
-    """
-    if base_commit is None:
-        return []
+def discover_new_connectors(base_commit: str) -> list:
+    """Return connector roots that did not exist at *base_commit* at all."""
     return [
         root
         for root in common.discover_connector_roots()
@@ -61,9 +57,15 @@ def make_entry(connector_roots: list) -> dict:
 
 def main() -> None:
     base_commit = common.get_base_commit()
+    if base_commit is None:
+        # Fail closed: reporting "no new connectors" here would let the
+        # required Connector Linter Summary pass without VC105/VC305 running.
+        release_ref = os.environ.get("RELEASE_REF", "master")
+        print(f"::error::Cannot resolve the merge base with origin/{release_ref}.")
+        sys.exit(1)
     new_connectors = discover_new_connectors(base_commit)
 
-    print(f"Base commit: {base_commit or 'unknown'}")
+    print(f"Base commit: {base_commit}")
     print(f"Newly added connector directories: {len(new_connectors)}")
     for root in new_connectors:
         print(f"  - {root}")

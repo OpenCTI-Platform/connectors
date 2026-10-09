@@ -17,6 +17,7 @@ resolves without any packaging).
 import json
 import math
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, Callable, TypeVar
@@ -106,6 +107,47 @@ def is_eligible(manifest: dict[str, Any]) -> bool:
     return is_verified(manifest) or is_manager_supported(manifest)
 
 
+_CONFIG_SCHEMA_DEPS_RE = re.compile(r"pydantic-settings|connectors-sdk")
+
+CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
+
+
+def _find_shallowest_file(root: Path, filename: str) -> Path | None:
+    matches = sorted(root.rglob(filename), key=lambda p: len(p.parts))
+    return matches[0] if matches else None
+
+
+def config_schema_path(connector_root: Path) -> Path:
+    """Path of the connector's generated config schema (may not exist)."""
+    return connector_root / "__metadata__" / CONFIG_SCHEMA_FILENAME
+
+
+def has_config_schema(connector_root: Path) -> bool:
+    """True if a generated config schema is committed for this connector."""
+    return config_schema_path(connector_root).exists()
+
+
+def has_config_schema_deps(connector_root: Path) -> bool:
+    """True if requirements.txt/pyproject.toml declares pydantic-settings or
+    connectors-sdk.
+
+    Mirrors the dependency check in generate_config_schema.sh: without it,
+    the mise task exits 1 even for a manager-supported connector, which
+    would otherwise leave its matrix job permanently red.
+    """
+    requirements_file = _find_shallowest_file(connector_root, "requirements.txt")
+    if requirements_file and _CONFIG_SCHEMA_DEPS_RE.search(
+        requirements_file.read_text()
+    ):
+        return True
+
+    pyproject_toml = _find_shallowest_file(connector_root, "pyproject.toml")
+    if pyproject_toml and "connectors-sdk" in pyproject_toml.read_text():
+        return True
+
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Connector discovery
 # ---------------------------------------------------------------------------
@@ -184,3 +226,13 @@ def write_output(key: str, value: str) -> None:
             f.write(line)
     else:
         print(line, end="")
+
+
+def warn(message: str, file: Path | str | None = None) -> None:
+    """Emit a GitHub Actions warning annotation.
+
+    Outside Actions this is just a printed line. Newlines are escaped as
+    ``%0A`` since a workflow command must stay on a single line.
+    """
+    location = f" file={file}" if file is not None else ""
+    print(f"::warning{location}::{message.replace(chr(10), '%0A')}")

@@ -82,6 +82,7 @@ def main() -> None:
     if not filtered:
         print("No connectors to lint, skipping.")
         common.write_output("has_connectors", "false")
+        common.write_output("connector_count", "0")
         common.write_output(
             "matrix", json.dumps({"include": []}, separators=(",", ":"))
         )
@@ -97,6 +98,7 @@ def main() -> None:
     )
     print(f"Matrix jobs: {len(entries)}")
     common.write_output("has_connectors", "true")
+    common.write_output("connector_count", str(len(filtered)))
     common.write_output(
         "matrix", json.dumps({"include": entries}, separators=(",", ":"))
     )

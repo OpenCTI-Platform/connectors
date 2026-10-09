@@ -1,0 +1,19 @@
+{
+  "data": [
+    {
+      "id": "campaign--23-021",
+      "type": "collection",
+      "attributes": {
+        "name": "Espionage-Motivated Actor Exploits Outlook Vulnerability CVE-2023-23397",
+        "collection_type": "campaign",
+        "description": "Campaign attributed to APT28 exploiting CVE-2023-23397."
+      },
+      "links": {
+        "self": "https://www.virustotal.com/api/v3/collections/campaign--23-021"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://www.virustotal.com/api/v3/ip_addresses/101.255.119.42/campaigns?limit=40"
+  }
+}
