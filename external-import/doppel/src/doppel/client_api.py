@@ -1,5 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import requests
 from doppel.constants import DOPPEL_ATTRIBUTION_HEADERS, RETRYABLE_REQUEST_ERRORS
@@ -163,27 +162,23 @@ class ConnectorClient:
             )
             raise
 
-    def _get_alerts(
-        self, url: str, params: dict[str, Any], page: int, total_pages: int
-    ) -> list:
-        self.helper.connector_logger.info(
-            "[DoppelConnector] Fetching page {}/{}".format(page, total_pages)
-        )
-        response = self._request_data(url, params={**params, "page": page})
-        data = response.json()
-        alerts = data.get("alerts", [])
-        self.helper.connector_logger.info(
-            "[DoppelConnector] Successfully fetched page {}/{} with {} alerts".format(
-                page, total_pages, len(alerts)
-            )
-        )
-        return alerts
-
     def get_alerts(
-        self, last_activity_timestamp: str, page: int = 0, page_size: int = 100
-    ) -> list:
+        self,
+        last_activity_timestamp: str,
+        last_activity_before: str,
+        page: int = 0,
+        page_size: int = 100,
+    ) -> tuple[list, int]:
         """
-        Retrieve alerts from api
+        Retrieve one page of alerts.
+
+        V2 requests bound the window with ``last_activity_before`` and sort by
+        the external value ``last_activity`` (not ``last_activity_timestamp``)
+        ascending so the connector can checkpoint the newest activity time on
+        the page. V1 omits those parameters until the V1 OpenAPI / gateway
+        rollout accepts them; sending them today returns HTTP 400.
+
+        :return: alerts and ``total_pages`` from that single response
         """
         alerts_endpoint = self.config.doppel.alerts_endpoint.lstrip("/")
         for prefix in ("v1/", "v2/"):
@@ -203,31 +198,33 @@ class ConnectorClient:
             "page": page,
             "page_size": page_size,
         }
+        if self.config.doppel.api_version == "v2":
+            params.update(
+                {
+                    "last_activity_before": last_activity_before,
+                    "sort_type": "last_activity",
+                    "sort_order": "asc",
+                }
+            )
 
         self.helper.connector_logger.info(
-            "[DoppelConnector] Fetching first page of alerts",
+            "[DoppelConnector] Fetching alerts page",
             {"url": url, "params": params},
         )
 
         response = self._request_data(url, params=params)
         data = response.json()
         metadata = data.get("metadata", {})
-        res = data.get("alerts", [])
+        alerts = data.get("alerts") or []
+        total_pages = metadata.get("total_pages", 0)
 
         self.helper.connector_logger.info(
-            "[DoppelConnector] Fetched first page of alerts",
-            {"url": url, "params": params, "metadata": metadata},
+            "[DoppelConnector] Fetched alerts page",
+            {
+                "url": url,
+                "params": params,
+                "metadata": metadata,
+                "alert_count": len(alerts),
+            },
         )
-        total_pages = metadata.get("total_pages", 0)
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(
-                    self._get_alerts, url, params, current_page, total_pages
-                )
-                # Doppel pagination is zero-indexed and total_pages is a count,
-                # so the final valid page is total_pages - 1.
-                for current_page in range(page + 1, total_pages)
-            ]
-            for future in as_completed(futures):
-                res.extend(future.result())
-        return res
+        return alerts, total_pages

@@ -169,7 +169,10 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 
 ## Behavior
 
-- Fetches alerts from Doppel API paginated by `last_activity_timestamp`
+- Fetches one page of alerts at a time from the Doppel API. V2 bounds the
+  window with `last_activity_timestamp` and the run start (`last_activity_before`)
+  and sorts by `last_activity` ascending. V1 omits those newer query parameters
+  until the V1 gateway accepts them.
 - Identifies every outbound Doppel API request, including V2 token minting, with
   `x-doppel-client: opencti/7.260901.0` and
   `User-Agent: doppel-opencti/7.260901.0` for usage attribution.
@@ -189,7 +192,10 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
   actionable Indicators remain connected through their `based-on` Observable
   relationships. Incident creation is independent from the optional Grouping
   and RFT case features and does not create an Incident Response case.
-- Bundles and sends the STIX objects to OpenCTI
+- Converts and sends each page to OpenCTI before requesting the next page.
+  `last_run` advances after every successful send to that page's newest
+  activity time, so a later page failure resumes from the last page that was
+  sent
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
   Indicators (description, score, external reference) and RFT cases

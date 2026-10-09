@@ -26,22 +26,17 @@ def test_client_sets_attribution_headers(client):
     assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
 
 
-@pytest.mark.parametrize(
-    ("total_pages", "expected_pages"),
-    [
-        (0, [0]),
-        (1, [0]),
-        (3, [0, 1, 2]),
-    ],
-)
-def test_get_alerts_fetches_each_zero_indexed_page_once(
-    client, total_pages, expected_pages
-):
+@pytest.mark.parametrize("total_pages", [0, 1, 3])
+def test_get_alerts_requests_one_page(client, total_pages):
     def request_data(_url, params):
-        page = params["page"]
+        assert params == {
+            "last_activity_timestamp": "2026-08-03T00:00:00Z",
+            "page": 0,
+            "page_size": 100,
+        }
         return _response(
             {
-                "alerts": [{"id": f"alert-{page}"}] if total_pages else [],
+                "alerts": [{"id": "alert-0"}] if total_pages else [],
                 "metadata": {"total_pages": total_pages},
             }
         )
@@ -49,40 +44,65 @@ def test_get_alerts_fetches_each_zero_indexed_page_once(
     client._request_data = MagicMock(side_effect=request_data)
     client._request_data.retry = MagicMock()
 
-    alerts = client.get_alerts("2026-08-03T00:00:00Z")
-
-    requested_pages = sorted(
-        call.kwargs["params"]["page"] for call in client._request_data.call_args_list
+    alerts, returned_pages = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
     )
-    assert requested_pages == expected_pages
-    assert {call.args[0] for call in client._request_data.call_args_list} == {
-        "https://api.doppel.test/v1/alerts"
+
+    assert client._request_data.call_count == 1
+    assert client._request_data.call_args.args[0] == "https://api.doppel.test/v1/alerts"
+    assert returned_pages == total_pages
+    assert alerts == ([{"id": "alert-0"}] if total_pages else [])
+
+
+def test_get_alerts_v1_omits_unsupported_window_sort_params(client):
+    client._request_data = MagicMock(return_value=_response())
+    client._request_data.retry = MagicMock()
+
+    client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
+    )
+
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "page": 2,
+        "page_size": 50,
     }
-    assert sorted(alert["id"] for alert in alerts) == [
-        f"alert-{page}" for page in expected_pages if total_pages
-    ]
 
 
-def test_get_alerts_continues_from_requested_start_page(client):
-    def request_data(_url, params):
-        page = params["page"]
-        return _response(
+def test_get_alerts_v2_sends_window_and_sort_params():
+    client = ConnectorClient(helper=MagicMock(), config=_config(api_version="v2"))
+    client._request_data = MagicMock(
+        return_value=_response(
             {
-                "alerts": [{"id": f"alert-{page}"}],
+                "alerts": [{"id": "alert-2"}],
                 "metadata": {"total_pages": 4},
             }
         )
-
-    client._request_data = MagicMock(side_effect=request_data)
+    )
     client._request_data.retry = MagicMock()
 
-    alerts = client.get_alerts("2026-08-03T00:00:00Z", page=2)
-
-    requested_pages = sorted(
-        call.kwargs["params"]["page"] for call in client._request_data.call_args_list
+    alerts, total_pages = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
     )
-    assert requested_pages == [2, 3]
-    assert sorted(alert["id"] for alert in alerts) == ["alert-2", "alert-3"]
+
+    assert client._request_data.call_count == 1
+    assert alerts == [{"id": "alert-2"}]
+    assert total_pages == 4
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
+        "page": 2,
+        "page_size": 50,
+    }
 
 
 def _config(*, api_version: str) -> SimpleNamespace:
@@ -117,7 +137,11 @@ def test_v1_uses_static_headers_and_normalized_v1_url():
 
     client.session = MagicMock()
     client.session.get.return_value = _response()
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     assert client.session.get.call_args.args[0] == "https://api.doppel.test/v1/alerts"
 
@@ -148,7 +172,11 @@ def test_v2_mints_token_and_uses_only_bearer_auth():
 
     client.session = MagicMock()
     client.session.get.return_value = _response()
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     call = client.session.get.call_args
     assert call.args[0] == "https://api.doppel.test/v2/alerts"
@@ -183,7 +211,11 @@ def test_v2_refreshes_once_after_unauthorized():
     client.session = MagicMock()
     client.session.get.side_effect = [unauthorized, _response()]
 
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     assert token_session.post.call_count == 2
     assert client.session.get.call_count == 2
