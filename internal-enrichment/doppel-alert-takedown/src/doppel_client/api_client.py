@@ -1,7 +1,9 @@
 import re
+from typing import Any
 
 import requests
 from doppel_client.constants import DOPPEL_ATTRIBUTION_HEADERS
+from doppel_client.oauth import OAuthTokenProvider
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 
@@ -40,9 +42,14 @@ class DoppelClient:
         self,
         helper: OpenCTIConnectorHelper,
         base_url: HttpUrl,
-        api_key: str,
-        user_api_key: str,
+        api_key: str | None = None,
+        user_api_key: str | None = None,
         organization_code: str | None = None,
+        api_version: str = "v1",
+        client_id: str | None = None,
+        client_secret: str | None = None,
+        token_url: HttpUrl | None = None,
+        token_audience: str = "doppel-external",
     ):
         """
         Initialize the client with necessary configuration.
@@ -50,24 +57,90 @@ class DoppelClient:
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             base_url (HttpUrl): The Doppel API base URL.
-            api_key (str): The Doppel API key (`x-api-key` header).
-            user_api_key (str): The Doppel user API key (`x-user-api-key` header).
+            api_key (str | None): The Doppel API key (`x-api-key` header) for V1.
+            user_api_key (str | None): The Doppel user API key
+                (`x-user-api-key` header) for V1.
             organization_code (str | None): The Doppel organization workspace
-                code (`x-organization-code` header), required for multi-org users.
+                code (`x-organization-code` header) for V1 multi-org users.
+            api_version (str): Doppel API version (`v1` or `v2`).
+            client_id (str | None): Doppel OAuth client ID for V2.
+            client_secret (str | None): Doppel OAuth client secret for V2.
+            token_url (HttpUrl | None): OAuth token endpoint for V2.
+            token_audience (str): OAuth audience for V2.
         """
         self.helper = helper
-        self.base_url = str(base_url).rstrip("/")
+        if api_version not in {"v1", "v2"}:
+            raise ValueError("api_version must be v1 or v2")
+
+        configured_base_url = str(base_url).rstrip("/")
+        api_root = self._strip_api_version(configured_base_url)
+        self.base_url = f"{api_root}/{api_version}"
 
         self.session = requests.Session()
         headers = {
             **DOPPEL_ATTRIBUTION_HEADERS,
             "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "x-user-api-key": user_api_key,
         }
-        if organization_code:
-            headers["x-organization-code"] = organization_code
+        self.oauth_token_provider: OAuthTokenProvider | None = None
+
+        if api_version == "v1":
+            if not api_key or not user_api_key:
+                raise ValueError("Doppel V1 API and user API keys are required")
+            headers.update(
+                {
+                    "x-api-key": api_key,
+                    "x-user-api-key": user_api_key,
+                }
+            )
+            if organization_code:
+                headers["x-organization-code"] = organization_code
+        else:
+            if not client_id or not client_secret:
+                raise ValueError("Doppel V2 client credentials are required")
+            resolved_token_url = (
+                str(token_url).rstrip("/") if token_url else f"{api_root}/oauth/token"
+            )
+            self.oauth_token_provider = OAuthTokenProvider(
+                token_url=resolved_token_url,
+                client_id=client_id,
+                client_secret=client_secret,
+                audience=token_audience,
+            )
+
         self.session.headers.update(headers)
+
+    @staticmethod
+    def _strip_api_version(base_url: str) -> str:
+        """Remove a configured API version so the selected version is authoritative."""
+        for suffix in ("/v1", "/v2"):
+            if base_url.endswith(suffix):
+                return base_url[: -len(suffix)]
+        return base_url
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
+        """Issue a request and refresh a rejected V2 token once."""
+        request_method = getattr(self.session, method.lower())
+        if self.oauth_token_provider is None:
+            return request_method(url, **kwargs)
+
+        access_token = self.oauth_token_provider.get_token()
+        headers = {
+            **kwargs.pop("headers", {}),
+            "Authorization": f"Bearer {access_token}",
+        }
+        response = request_method(url, headers=headers, **kwargs)
+        if response.status_code != 401:
+            return response
+
+        response.close()
+        access_token = self.oauth_token_provider.refresh_after_unauthorized(
+            access_token
+        )
+        retry_headers = {
+            **headers,
+            "Authorization": f"Bearer {access_token}",
+        }
+        return request_method(url, headers=retry_headers, **kwargs)
 
     def create_alert(
         self, entity: str, entity_type: str, tags: list[str] | None = None
@@ -80,7 +153,7 @@ class DoppelClient:
         :param tags: Optional list of tags to attach to the alert.
         :return: The created alert as a dict.
         """
-        url = f"{self.base_url}/v1/alert"
+        url = f"{self.base_url}/alert"
         payload = {
             "entity": entity,
             "entity_type": entity_type,
@@ -91,7 +164,7 @@ class DoppelClient:
             {"url_path": url, "entity": entity, "entity_type": entity_type},
         )
         try:
-            response = self.session.post(url, json=payload, timeout=30)
+            response = self._request("POST", url, json=payload, timeout=30)
             response.raise_for_status()
             return response.json()
         except (requests.RequestException, requests.HTTPError) as err:
@@ -143,13 +216,13 @@ class DoppelClient:
     ) -> dict:
         """Retrieve the current state of one Doppel alert."""
         params, identifier = self._alert_selector(alert_id, entity)
-        url = f"{self.base_url}/v1/alert"
+        url = f"{self.base_url}/alert"
         self.helper.connector_logger.info(
             "[API] Getting Doppel alert",
             {"url_path": url, "alert_identifier": identifier},
         )
         try:
-            response = self.session.get(url, params=params, timeout=30)
+            response = self._request("GET", url, params=params, timeout=30)
             response.raise_for_status()
             return self._validate_alert_response(
                 response.json(),
@@ -250,7 +323,7 @@ class DoppelClient:
         if not payload:
             raise ValueError("At least one alert field must be provided")
 
-        url = f"{self.base_url}/v1/alert"
+        url = f"{self.base_url}/alert"
         self.helper.connector_logger.info(
             "[API] Updating Doppel alert",
             {
@@ -260,7 +333,9 @@ class DoppelClient:
             },
         )
         try:
-            response = self.session.put(url, params=params, json=payload, timeout=30)
+            response = self._request(
+                "PUT", url, params=params, json=payload, timeout=30
+            )
             response.raise_for_status()
             if not response.content:
                 raise DoppelClientError(

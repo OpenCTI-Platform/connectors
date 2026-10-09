@@ -1,5 +1,9 @@
 # OpenCTI Palo Alto Cortex XDR Intel Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | 2026-09-17 | -       |
+
 ## Table of Contents
 
 - [OpenCTI Palo Alto Cortex XDR Intel Connector](#opencti-palo-alto-cortex-xdr-intel-connector)

@@ -51,14 +51,23 @@
       "type": "string"
     },
     "INTEL471_API_USERNAME": {
-      "description": "Titan API username",
+      "description": "Verity Client ID or Titan API Username.",
       "type": "string"
     },
     "INTEL471_API_KEY": {
-      "description": "Titan API key",
+      "description": "Verity Client Secret or Titan API Key.",
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "INTEL471_BACKEND": {
+      "default": "titan",
+      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
+      "enum": [
+        "titan",
+        "verity471"
+      ],
+      "type": "string"
     },
     "INTEL471_INTERVAL_INDICATORS": {
       "default": 60,
@@ -67,17 +76,7 @@
     },
     "INTEL471_INITIAL_HISTORY_INDICATORS": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
-      "type": "integer"
-    },
-    "INTEL471_INTERVAL_YARA": {
-      "default": 60,
-      "description": "How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
-      "type": "integer"
-    },
-    "INTEL471_INITIAL_HISTORY_YARA": {
-      "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the YARA rules should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
     },
     "INTEL471_INTERVAL_CVES": {
@@ -87,7 +86,7 @@
     },
     "INTEL471_INITIAL_HISTORY_CVES": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
     },
     "INTEL471_INTERVAL_REPORTS": {
@@ -97,8 +96,57 @@
     },
     "INTEL471_INITIAL_HISTORY_REPORTS": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
+    },
+    "INTEL471_INTERVAL_YARA": {
+      "default": 60,
+      "description": "How often YARA rules should be fetched in minutes (Titan only). If not set, the stream will not be enabled.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_YARA": {
+      "default": 0,
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the YARA rules should be fetched from on the connector's first run (Titan only). If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_ALERTS": {
+      "default": 0,
+      "description": "How often watcher alerts should be fetched in minutes (Verity471 only). Defaults to `0`, which leaves the stream disabled; set a non-zero interval to enable it.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_ALERTS": {
+      "default": 0,
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the watcher alerts should be fetched from on the connector's first run (Verity471 only). If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+      "type": "integer"
+    },
+    "INTEL471_WATCHER_GROUP_IDS": {
+      "default": [],
+      "description": "Optional comma-separated list of watcher group IDs to restrict the alerts stream to (Verity471 only). If not set, alerts from all watcher groups are fetched.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "INTEL471_WATCHER_IDS": {
+      "default": [],
+      "description": "Optional comma-separated list of watcher IDs to restrict the alerts stream to (Verity471 only). If not set, alerts from all watchers are fetched.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "INTEL471_STATUSES": {
+      "default": [],
+      "description": "Optional comma-separated list of alert statuses to restrict the alerts stream to (Verity471 only). Allowed values: `generated`, `needs_action`, `in_progress`, `completed`, `false_positive`. If not set, alerts of all statuses are fetched.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "INTEL471_IS_TRASHED_INCLUDED": {
+      "default": false,
+      "description": "Whether to include trashed alerts in the alerts stream (Verity471 only). Defaults to `false`.",
+      "type": "boolean"
     },
     "INTEL471_PROXY": {
       "default": null,
@@ -112,15 +160,6 @@
       "default": 70,
       "description": "Indicator score. Defaults to `70`.",
       "type": "integer"
-    },
-    "INTEL471_BACKEND": {
-      "default": "titan",
-      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
-      "enum": [
-        "titan",
-        "verity471"
-      ],
-      "type": "string"
     }
   },
   "required": [
