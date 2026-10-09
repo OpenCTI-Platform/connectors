@@ -152,6 +152,26 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
 
+  # codecov/patch is a required check, but Codecov only posts it after an
+  # upload. When no tests run (docs/CI-only changes, connectors without tests),
+  # an empty upload makes Codecov post its statuses anyway.
+  codecov-no-tests:
+    name: Codecov empty upload
+    needs:
+      - detect-test-files
+    if: >-
+      needs.detect-test-files.outputs.has_tests != 'true'
+      && (github.event_name == 'pull_request' || github.event_name == 'merge_group')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Notify Codecov of an empty upload
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          run_command: empty-upload
+
   # Single, stable job name to set as a required status check. Matrix entries
   # can't be required (their names change with the matrix content) and `test`
   # is skipped when there is nothing to run, so this job always runs and gives
