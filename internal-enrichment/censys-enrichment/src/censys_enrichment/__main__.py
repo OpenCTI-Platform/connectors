@@ -1,23 +1,16 @@
-"""
-Entry point of the script
-
-- traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-The traceback includes information about the point in the program where the exception occurred,
-which is very useful for debugging purposes.
-- exit(1): effective way to terminate a Python program when an error is encountered.
-It signals to the operating system and any calling processes that the program did not complete successfully.
-"""
+"""Main entry point for the Censys Enrichment connector."""
 
 import sys
 import traceback
 
-from censys_enrichment.client import Client
-from censys_enrichment.connector import Connector
-from censys_enrichment.settings import ConfigLoader
-from pycti import OpenCTIConnectorHelper
 
-if __name__ == "__main__":
+def main() -> None:
     try:
+        from censys_enrichment.client import Client
+        from censys_enrichment.connector import Connector
+        from censys_enrichment.settings import ConfigLoader
+        from pycti import OpenCTIConnectorHelper
+
         config = ConfigLoader()
         helper = OpenCTIConnectorHelper(
             config=config.to_helper_config(),

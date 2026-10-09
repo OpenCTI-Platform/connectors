@@ -105,6 +105,59 @@ def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
 
 
 @pytest.mark.usefixtures("mock_config")
+def test__get_converter_wires_client_helper_and_nvd_setting(
+    mocked_helper: Mock,
+) -> None:
+    """The converter receives the client, the helper and the NVD toggle."""
+    client = Mock()
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+    )
+
+    converter = connector._get_converter(entity_type="IPv4-Addr")
+
+    assert converter.client is client
+    assert converter.helper is mocked_helper
+    assert converter.nvd_enabled is True
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__generate_octi_objects_ipv4_skips_nvd_when_disabled(
+    mocked_helper: Mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """NVD enrichment is skipped entirely when CENSYS_ENRICHMENT_NVD_ENABLED=false."""
+    from censys_platform import Host, Service, Vuln
+
+    monkeypatch.setenv("CENSYS_ENRICHMENT_NVD_ENABLED", "false")
+    client = Mock()
+    client.fetch_ip.return_value = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+    )
+
+    objects = list(
+        connector._generate_octi_objects(
+            {
+                "type": "ipv4-addr",
+                "value": "1.2.3.4",
+                "id": "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc",
+            }
+        )
+    )
+
+    client.fetch_nvd_data.assert_not_called()
+    vulnerabilities = [o for o in objects if type(o).__name__ == "Vulnerability"]
+    assert [v.name for v in vulnerabilities] == ["CVE-2024-1234"]
+
+
+@pytest.mark.usefixtures("mock_config")
 def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
     connector = Connector(
         config=ConfigLoader(),
