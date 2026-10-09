@@ -43,7 +43,7 @@ connector.
 | RST_THREAT_FEED_KEEP_NAMED_VULNS | `boolean` |  | `true`, `false` | `true` | Create named vulnerability objects (e.g. printnightmare). |
 | RST_THREAT_FEED_CREATE_MITRE_TTPS | `boolean` |  | `true`, `false` | `false` | Create Attack-Pattern objects for MITRE TTP IDs and relate them to indicators. Can produce a large number of relationships. |
 | RST_THREAT_FEED_CREATE_CUSTOM_TTPS | `boolean` |  | `true`, `false` | `true` | Create custom Attack-Pattern objects for named techniques not yet covered by MITRE ATT&CK. |
+| RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS | `string` |  | `skip`, `add`, `replace` | `"skip"` | How to model IP indicators that include ports. `skip`: ipv4-addr indicator only. `add`: ipv4-addr indicator plus one network-traffic indicator that ORs every listed port. `replace`: network-traffic indicator only when ports are present; IPs without ports stay ipv4-addr indicators. Network-traffic indicators use the IP detection score threshold. |
 | RST_THREAT_FEED_MAX_RETRIES | `integer` |  | `3` | `3` | Maximum attempts when pushing bundles to OpenCTI. |
 | RST_THREAT_FEED_RETRY_DELAY | `integer` |  | `10` | `10` | Initial retry delay in seconds for OpenCTI push failures. The connector sleeps at least 1 second between retries. |
 | RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER | `number` |  | `2.0` | `2.0` | Exponential backoff multiplier for OpenCTI push retries. |
-| RST_THREAT_FEED_OPENCTI_BATCH_SIZE | `integer` |  | `100`, `200`, `500` | `200` | Max STIX objects per OpenCTI push. Large feeds (especially Domain) are flushed in chunks to bound memory and avoid oversized works. |

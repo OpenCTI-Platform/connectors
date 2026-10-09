@@ -27,7 +27,6 @@ services:
       - RST_THREAT_FEED_MAX_RETRIES=3 # retry configuration for connection issues when sending the STIX bundle to OpenCTI
       - RST_THREAT_FEED_RETRY_DELAY=10
       - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=true
@@ -42,7 +41,8 @@ services:
       - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
       - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false # relationships: Indicator -> indicates -> Attack-Pattern (MITRE TTP). Will create a lot of Relationships, so, be careful with this setting.
-      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true # Custom Attack-Pattern objects + relationships: Indicator -> indicates -> Attack-Pattern (Named Techniques or Attacks that are not yet covered by MITRE).
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti

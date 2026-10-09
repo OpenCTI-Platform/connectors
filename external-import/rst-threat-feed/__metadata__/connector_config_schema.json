@@ -327,6 +327,21 @@
       ],
       "type": "boolean"
     },
+    "RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS": {
+      "default": "skip",
+      "description": "How to model IP indicators that include ports. skip (default): create only the ipv4-addr indicator. add: also create one network-traffic indicator whose pattern ORs every listed port. replace: create only that network-traffic indicator when ports are present; IPs without ports stay ipv4-addr indicators. Network-traffic indicators use the IP detection score threshold.",
+      "enum": [
+        "skip",
+        "add",
+        "replace"
+      ],
+      "examples": [
+        "skip",
+        "add",
+        "replace"
+      ],
+      "type": "string"
+    },
     "RST_THREAT_FEED_MAX_RETRIES": {
       "default": 3,
       "description": "Maximum attempts when pushing bundles to OpenCTI.",
@@ -353,17 +368,6 @@
       ],
       "exclusiveMinimum": 0,
       "type": "number"
-    },
-    "RST_THREAT_FEED_OPENCTI_BATCH_SIZE": {
-      "default": 200,
-      "description": "Max STIX objects per OpenCTI push. Large feeds (especially Domain) are flushed in chunks to bound memory and avoid oversized works.",
-      "examples": [
-        100,
-        200,
-        500
-      ],
-      "minimum": 2,
-      "type": "integer"
     }
   },
   "required": [

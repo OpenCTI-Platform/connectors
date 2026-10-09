@@ -208,6 +208,19 @@ class RstThreatFeedConfig(BaseConfigModel):
         default=True,
         examples=[True, False],
     )
+    create_network_traffic_patterns: Literal["skip", "add", "replace"] = Field(
+        description=(
+            "How to model IP indicators that include ports. "
+            "skip (default): create only the ipv4-addr indicator. "
+            "add: also create one network-traffic indicator whose pattern "
+            "ORs every listed port. "
+            "replace: create only that network-traffic indicator when ports "
+            "are present; IPs without ports stay ipv4-addr indicators. "
+            "Network-traffic indicators use the IP detection score threshold."
+        ),
+        default="skip",
+        examples=["skip", "add", "replace"],
+    )
     max_retries: int = Field(
         description="Maximum attempts when pushing bundles to OpenCTI.",
         default=3,
@@ -228,15 +241,6 @@ class RstThreatFeedConfig(BaseConfigModel):
         default=2.0,
         gt=0,
         examples=[2.0],
-    )
-    opencti_batch_size: int = Field(
-        description=(
-            "Max STIX objects per OpenCTI push. Large feeds (especially Domain) "
-            "are flushed in chunks to bound memory and avoid oversized works."
-        ),
-        default=200,
-        ge=2,
-        examples=[100, 200, 500],
     )
 
 
@@ -296,11 +300,6 @@ class ConnectorSettings(BaseConnectorSettings):
             apikey.setdefault("format", "password")
             apikey.setdefault("writeOnly", True)
 
-        batch_size = properties.get("RST_THREAT_FEED_OPENCTI_BATCH_SIZE")
-        if isinstance(batch_size, dict):
-            batch_size.pop("exclusiveMinimum", None)
-            batch_size["minimum"] = 2
-
         return schema
 
     @classmethod
@@ -313,6 +312,8 @@ class ConnectorSettings(BaseConnectorSettings):
         )
         feed = data.get("rst_threat_feed")
         if isinstance(feed, dict):
+            # Feeds are imported as one bundle; the old chunk size is unused.
+            feed.pop("opencti_batch_size", None)
             if "create_mitre_ttp" in feed:
                 feed.setdefault("create_mitre_ttps", feed.pop("create_mitre_ttp"))
             interval = feed.get("interval")

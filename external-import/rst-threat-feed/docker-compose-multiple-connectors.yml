@@ -28,7 +28,6 @@ services:
       - RST_THREAT_FEED_MAX_RETRIES=3
       - RST_THREAT_FEED_RETRY_DELAY=10
       - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=true
@@ -44,6 +43,7 @@ services:
       - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
       - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti
@@ -68,7 +68,6 @@ services:
       - RST_THREAT_FEED_APIKEY=ChangeMe
       - RST_THREAT_FEED_PROXY=
       - RST_THREAT_FEED_SSL_VERIFY=true
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=false
@@ -79,6 +78,7 @@ services:
       - RST_THREAT_FEED_ONLY_NEW=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
       - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti
@@ -103,7 +103,6 @@ services:
       - RST_THREAT_FEED_APIKEY=ChangeMe
       - RST_THREAT_FEED_PROXY=
       - RST_THREAT_FEED_SSL_VERIFY=true
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=false
@@ -114,6 +113,7 @@ services:
       - RST_THREAT_FEED_ONLY_NEW=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
       - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti
@@ -138,7 +138,6 @@ services:
       - RST_THREAT_FEED_APIKEY=ChangeMe
       - RST_THREAT_FEED_PROXY=
       - RST_THREAT_FEED_SSL_VERIFY=true
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=true
@@ -149,6 +148,7 @@ services:
       - RST_THREAT_FEED_ONLY_NEW=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
       - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti
@@ -173,7 +173,6 @@ services:
       - RST_THREAT_FEED_APIKEY=ChangeMe
       - RST_THREAT_FEED_PROXY=
       - RST_THREAT_FEED_SSL_VERIFY=true
-      - RST_THREAT_FEED_OPENCTI_BATCH_SIZE=200
       - RST_THREAT_FEED_IP=false
       - RST_THREAT_FEED_DOMAIN=false
       - RST_THREAT_FEED_URL=false
@@ -184,6 +183,7 @@ services:
       - RST_THREAT_FEED_ONLY_NEW=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false
       - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti

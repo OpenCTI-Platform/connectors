@@ -44,6 +44,7 @@ class RSTThreatFeed:
         self._min_score_import = int(feed.min_score_import)
         self._min_score_detection = {
             "IPv4-Addr": int(feed.min_score_detection_ip),
+            "Network-Traffic": int(feed.min_score_detection_ip),
             "Domain-Name": int(feed.min_score_detection_domain),
             "Url": int(feed.min_score_detection_url),
             "StixFile": int(feed.min_score_detection_hash),
@@ -53,13 +54,13 @@ class RSTThreatFeed:
         self._keep_named_vulns = bool(feed.keep_named_vulns)
         self._create_custom_ttps = bool(feed.create_custom_ttps)
         self._create_mitre_ttps = bool(feed.create_mitre_ttps)
+        self._create_network_traffic_patterns = feed.create_network_traffic_patterns
         self._max_retries = int(feed.max_retries)
         self._retry_delay = int(feed.retry_delay)
         self._retry_backoff_multiplier = float(feed.retry_backoff_multiplier)
-        self._opencti_batch_size = max(2, int(feed.opencti_batch_size))
         self.update_existing_data = bool(self.config.connector.update_existing_data)
 
-        self.mitre_downloader = MitreTtpDownloader(self._downloader_config)
+        self.mitre_downloader = MitreTtpDownloader()
         self.mitre_ttp_mapping = self.mitre_downloader.load_ttp_mapping()
         self.converter = ConverterToStix(
             helper=self.helper,
@@ -128,11 +129,15 @@ class RSTThreatFeed:
     def run(self) -> None:
         self.helper.connector_logger.info("Starting RST Threat Feed connector")
         self.helper.connector_logger.info(
-            f"OpenCTI batch size: {self._opencti_batch_size}, "
+            "OpenCTI import: one bundle per feed, "
             f"CONNECTOR_UPDATE_EXISTING_DATA={self.update_existing_data}"
         )
         enabled = [name for name, on in self._feed_flags.items() if on]
         self.helper.connector_logger.info(f"Enabled feeds: {enabled}")
+        self.helper.connector_logger.info(
+            "Network-traffic patterns: "
+            f"{self._create_network_traffic_patterns}"
+        )
 
         duration_period_s = self.config.connector.duration_period.total_seconds()
         self.helper.connector_logger.info(
@@ -187,6 +192,7 @@ class RSTThreatFeed:
             self._create_mitre_ttps,
             self._create_custom_ttps,
             self.mitre_ttp_mapping,
+            self._create_network_traffic_patterns,
         )
         self.helper.connector_logger.info(
             f"Parsed IOCs: {len(iocs)}, Threats: {len(threats)}, "
@@ -201,60 +207,10 @@ class RSTThreatFeed:
             return True
 
         ordered = self._order_stix_objects(stix_objects)
-        foundation, remainder = self._partition_foundation(ordered)
-        batch_size = self._opencti_batch_size
-
-        if not remainder:
-            return self._batch_send_one(foundation, timestamp, feed_type)
-
-        if batch_size <= len(foundation):
-            if not self._batch_send_one(foundation, timestamp, feed_type):
-                return False
-            foundation_prefix: List[Any] = []
-            payload_budget = batch_size
-        else:
-            foundation_prefix = foundation
-            payload_budget = batch_size - len(foundation_prefix)
-
-        if len(foundation_prefix) + len(remainder) <= batch_size:
-            return self._batch_send_one(
-                foundation_prefix + remainder, timestamp, feed_type
-            )
-
-        total_chunks = (len(remainder) + payload_budget - 1) // payload_budget
-        for chunk_idx, offset in enumerate(range(0, len(remainder), payload_budget)):
-            payload = remainder[offset : offset + payload_budget]
-            chunk = foundation_prefix + payload
-            self.helper.connector_logger.info(
-                f"[{feed_type}] OpenCTI push chunk "
-                f"{chunk_idx + 1}/{total_chunks} "
-                f"({len(chunk)} object(s))"
-            )
-            if not self._batch_send_one(chunk, timestamp, feed_type):
-                return False
-        return True
-
-    @classmethod
-    def _partition_foundation(
-        cls, stix_objects: List[Any]
-    ) -> Tuple[List[Any], List[Any]]:
-        """Author organization + marking defs only (not sector identities)."""
-        foundation: List[Any] = []
-        remainder: List[Any] = []
-        for obj in stix_objects:
-            obj_type, _ = cls._stix_type_and_id(obj)
-            if obj_type == "marking-definition":
-                foundation.append(obj)
-                continue
-            if obj_type == "identity":
-                identity_class = getattr(obj, "identity_class", None)
-                if identity_class == "organization":
-                    foundation.append(obj)
-                else:
-                    remainder.append(obj)
-                continue
-            remainder.append(obj)
-        return foundation, remainder
+        self.helper.connector_logger.info(
+            f"[{feed_type}] OpenCTI push ({len(ordered)} object(s))"
+        )
+        return self._batch_send_one(ordered, timestamp, feed_type)
 
     @classmethod
     def _order_stix_objects(cls, stix_objects: List[Any]) -> List[Any]:

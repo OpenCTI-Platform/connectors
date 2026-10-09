@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Dict
 
 import requests
 from requests import RequestException
@@ -17,9 +17,6 @@ class MitreTtpDownloader:
     Downloads MITRE ATT&CK TTPs from the public enterprise-attack bundle and
     maintains a local ID→name mapping used when create_mitre_ttps is enabled.
     """
-
-    def __init__(self, conf: Dict[str, Any] | None = None) -> None:
-        self.conf = conf or {}
 
     def _mapping_path(self) -> str:
         return os.path.join(os.path.dirname(__file__), "mitre_ttp_mapping.json")

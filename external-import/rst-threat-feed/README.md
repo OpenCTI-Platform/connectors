@@ -56,7 +56,9 @@ Configuring the connector is straightforward. The minimal setup requires enterin
 | Parameter                                          | Docker envvar                                | Mandatory | Description                                                                                                                                                                                                  |
 | -------------------------------------------------- | -------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | OpenCTI URL                                        | `OPENCTI_URL`                                | Yes       | The URL of the OpenCTI platform.                                                                                                                                                                             |
-| OpenCTI Token                                      | `OPENCTI_TOKEN`                              | Yes       | The default admin token set in the OpenCTI platform.                                                                                                                                                         |
+| OpenCTI Token                                      | `OPENCTI_TOKEN`                              | Yes       | Token used to call OpenCTI. With auto-create on, this is an admin token used only to create the service account. With auto-create off, this must be the API token of the `[C]` user that should own the import. |
+| Auto-create service account                       | `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT`      | No        | Default: `false`. `true` creates or reuses a Connectors-group user named `[C] <CONNECTOR_NAME>` and imports as that user. See [Service accounts](#service-accounts).                                          |
+| Service account confidence                         | `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL` | No | Max confidence for the auto-created service account. Default: `50`.                                                                                                                                          |
 | Connector ID                                       | `CONNECTOR_ID`                               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                                                                                    |
 | Connector Name                                     | `CONNECTOR_NAME`                             | Yes       | Name of the connector. For example: `RST Threat Feed` or `RST Threat Feed - Domain`.                                                                                                                         |
 | Connector Scope                                    | `CONNECTOR_SCOPE`                            | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. E.g. application/json                                                                                               |
@@ -69,7 +71,6 @@ Configuring the connector is straightforward. The minimal setup requires enterin
 | HTTP / HTTPS proxy (standard)                      | `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY`    | No        | Honored for feed downloads (and MITRE mapping fetch). Use these in proxy-only networks.                                                                                                                      |
 | Explicit feed proxy override                       | `RST_THREAT_FEED_PROXY`                      | No        | Optional connector-specific proxy URL. When set, overrides env proxies for feed downloads only. When empty, standard `HTTP(S)_PROXY` is used.                                                              |
 | SSL Verification                                   | `RST_THREAT_FEED_SSL_VERIFY`                 | No        | Default: `true`. If set to `false`, SSL verification is disabled (use with caution, sometimes needed when SSL inspection is enabled).                                                                        |
-| OpenCTI Batch Size                                 | `RST_THREAT_FEED_OPENCTI_BATCH_SIZE`         | No        | Max STIX objects per OpenCTI push (default `200`). Large Domain feeds are chunked to avoid oversized works and missing-ref backlog.                                                                          |
 | Enable IP Threat Feed                              | `RST_THREAT_FEED_IP`                         | No        | Default: `true`. If `true`, the connector retrieves threat intelligence data for IP addresses.                                                                                                               |
 | Enable Domain Threat Feed                          | `RST_THREAT_FEED_DOMAIN`                     | No        | Default: `true`. If `true`, the connector retrieves threat intelligence data for domains.                                                                                                                    |
 | Enable URL Threat Feed                             | `RST_THREAT_FEED_URL`                        | No        | Default: `true`. If `true`, the connector retrieves threat intelligence data for URLs.                                                                                                                       |
@@ -91,6 +92,45 @@ Configuring the connector is straightforward. The minimal setup requires enterin
 | Keep named vulnerabilities                         | `RST_THREAT_FEED_KEEP_NAMED_VULNS`           | No        | Defines if the connector needs to create named vulnerabilities like ldapnightmare as separate objects or it should just use CVE numbers. Default: `true`                                                     |
 | Create custom TTPs                                 | `RST_THREAT_FEED_CREATE_CUSTOM_TTPS`         | No        | A user can select if `attack-pattern` objects with custom names that are still not present in the MITRE ATT&CK framework are to be created or not. Options are `true`, `false`. Default: `true`              |
 | Create MITRE TTPs                                  | `RST_THREAT_FEED_CREATE_MITRE_TTPS`          | No        | Create Attack-Pattern objects for MITRE TTP IDs. Can produce many relationships. Default: `false`                                                                                                            |
+| Create network-traffic patterns                    | `RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS` | No   | How to model IP indicators that list ports. `skip` (default): ipv4-addr indicator only. `add`: also create one network-traffic indicator that ORs every listed port. `replace`: network-traffic indicator only when ports are present; IPs without ports stay ipv4-addr indicators. Those indicators use the IP detection score threshold. |
 
-Bundles are ordered as **author → marking definitions → entities (including sector identities) → relationships**, chunked with `RST_THREAT_FEED_OPENCTI_BATCH_SIZE`, and sent with `cleanup_inconsistent_bundle=True`. Failed works are marked `in_error` before retry so they do not stack in OpenCTI.
+Each feed is sent as one bundle, ordered **author → marking definitions → entities (including sector identities) → relationships**, with `cleanup_inconsistent_bundle=True`. Failed works are marked `in_error` before retry so they do not stack in OpenCTI.
+
+## Service accounts
+
+Indicators are stored as the OpenCTI user that owns `OPENCTI_TOKEN` after startup. Auto-create is how that user becomes `[C] RST Threat Feed - Domain` (or the other connector names) instead of the admin account.
+
+In OpenCTI, open **Settings → Security → Users** and look for a user named `[C]` plus the connector's `CONNECTOR_NAME`. With `docker-compose-multiple-connectors.yml` those users are:
+
+| Compose service | User to look for |
+| --- | --- |
+| `connector-rst-threat-feed-hourly` | `[C] RST Threat Feed - Hourly` |
+| `connector-rst-threat-feed-ip` | `[C] RST Threat Feed - IP` |
+| `connector-rst-threat-feed-domain` | `[C] RST Threat Feed - Domain` |
+| `connector-rst-threat-feed-url` | `[C] RST Threat Feed - URL` |
+| `connector-rst-threat-feed-hash` | `[C] RST Threat Feed - Hash` |
+
+A single shared `OPENCTI_TOKEN` in `.env` is one account. Each service that must import as its own `[C]` user needs its own token variable.
+
+### No service account yet
+
+1. Set `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true`.
+2. Set `OPENCTI_TOKEN` to an admin token that can create users and API tokens.
+3. Start the connector. On first start it creates the `[C]` user in the Connectors group, creates an API token, and imports as that user.
+
+If the container then restarts and the log shows `Create token for user` followed by `AUTH_REQUIRED` / HTTP 401, the account may already exist from that attempt. Follow the steps below. Do not delete the connector to retry auto-create; startup fails on the new token, not because the user is missing.
+
+### Service account already exists
+
+1. Leave the `[C]` user in place.
+2. On that user, create one API token and copy it once. OpenCTI does not show the token again.
+3. Put it in the env file under a name used only by that service, for example `RST_THREAT_FEED_DOMAIN_OPENCTI_TOKEN`.
+4. In that service, set `OPENCTI_TOKEN` to that variable and set `CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=false`.
+
+```yaml
+- OPENCTI_TOKEN=${RST_THREAT_FEED_DOMAIN_OPENCTI_TOKEN}
+- CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=false
+```
+
+Auto-create left on will revoke the connector token and issue a new one at every start. Turn it off when that new token is rejected and the container stays in `Restarting` with `AUTH_REQUIRED`. With it off, the service keeps importing as the `[C]` user whose token you set.
 

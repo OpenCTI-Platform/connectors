@@ -21,7 +21,6 @@ class StubConnectorSettings(ConnectorSettings):
                 "rst_threat_feed": {
                     "baseurl": "http://test.com",
                     "apikey": "test-api-key",
-                    "opencti_batch_size": 5,
                     "domain": True,
                     "ip": False,
                     "url": False,
@@ -102,56 +101,27 @@ def test_order_stix_objects_author_marking_entities_relationships(connector):
     ]
 
 
-def test_batch_send_chunks_and_prefixes_foundation(connector):
+def test_batch_send_sends_one_ordered_bundle(connector):
     author = MagicMock(
         type="identity", id="identity--author", identity_class="organization"
     )
     marking = MagicMock(type="marking-definition", id="marking--1")
-    objects = [author, marking] + [
-        MagicMock(type="indicator", id=f"indicator--{i}") for i in range(8)
-    ]
+    indicators = [MagicMock(type="indicator", id=f"indicator--{i}") for i in range(8)]
+    objects = indicators + [marking, author]
 
-    sent_chunks = []
+    sent = []
 
     def capture(chunk, timestamp, feed_type):
-        sent_chunks.append(chunk)
+        sent.append(chunk)
         return True
 
     connector._batch_send_one = capture
     ok = connector._batch_send(objects, timestamp=1_700_000_000, feed_type="domain")
 
     assert ok is True
-    assert len(sent_chunks) >= 2
-    for chunk in sent_chunks:
-        assert chunk[0].id == "identity--author"
-        assert chunk[1].id == "marking--1"
-        assert len(chunk) <= connector._opencti_batch_size
-
-
-def test_batch_send_sends_foundation_once_when_batch_size_too_small(connector):
-    author = MagicMock(
-        type="identity", id="identity--author", identity_class="organization"
-    )
-    marking = MagicMock(type="marking-definition", id="marking--1")
-    objects = [author, marking] + [
-        MagicMock(type="indicator", id=f"indicator--{i}") for i in range(5)
+    assert len(sent) == 1
+    assert [obj.id for obj in sent[0]] == [
+        "identity--author",
+        "marking--1",
+        *[f"indicator--{i}" for i in range(8)],
     ]
-
-    connector._opencti_batch_size = 2
-    sent_chunks = []
-
-    def capture(chunk, timestamp, feed_type):
-        sent_chunks.append(chunk)
-        return True
-
-    connector._batch_send_one = capture
-    ok = connector._batch_send(objects, timestamp=1_700_000_000, feed_type="domain")
-
-    assert ok is True
-    assert sent_chunks[0][0].id == "identity--author"
-    assert sent_chunks[0][1].id == "marking--1"
-    assert len(sent_chunks[0]) == 2
-    for chunk in sent_chunks[1:]:
-        assert all(obj.type == "indicator" for obj in chunk)
-        assert len(chunk) <= connector._opencti_batch_size
-    assert sum(len(chunk) for chunk in sent_chunks[1:]) == 5
