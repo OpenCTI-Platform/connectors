@@ -164,9 +164,7 @@ def test_long_port_lists_are_split_across_patterns(tmp_path: Path):
 
     iocs, _, _ = _convert(path, "replace")
     network = [
-        ioc
-        for ioc in iocs.values()
-        if ioc["observable_type"] == "Network-Traffic"
+        ioc for ioc in iocs.values() if ioc["observable_type"] == "Network-Traffic"
     ]
 
     assert len(network) == 2

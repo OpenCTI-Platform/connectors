@@ -135,8 +135,7 @@ class RSTThreatFeed:
         enabled = [name for name, on in self._feed_flags.items() if on]
         self.helper.connector_logger.info(f"Enabled feeds: {enabled}")
         self.helper.connector_logger.info(
-            "Network-traffic patterns: "
-            f"{self._create_network_traffic_patterns}"
+            "Network-traffic patterns: " f"{self._create_network_traffic_patterns}"
         )
 
         duration_period_s = self.config.connector.duration_period.total_seconds()
