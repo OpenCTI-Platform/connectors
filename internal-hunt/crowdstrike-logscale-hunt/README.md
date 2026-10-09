@@ -79,6 +79,23 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
 Raw events never leave CrowdStrike: OpenCTI only receives counts and evidence values that are SHA-256 hashed and
 truncated.
 
+Indicator hunts look up their values, one query per observable type, in the Falcon sensor fields and in the
+CrowdStrike Parsing Standard (CPS) fields of third-party data, each with a regular expression filter (LogScale does not
+combine `in()` with `or`):
+
+| Observable type | Fields | Match |
+|---|---|---|
+| `IPv4-Addr` | `RemoteAddressIP4`, `source.ip`, `destination.ip` | Exact |
+| `IPv6-Addr` | `RemoteAddressIP6`, `source.ip`, `destination.ip` | Exact, case-insensitive |
+| `Domain-Name` | `DomainName`, `dns.question.name`, `destination.domain`, `url.domain` | The domain and its subdomains, case-insensitive |
+| `Hostname` | Same as `Domain-Name` | Exact, case-insensitive |
+| `Url` | `url.original`, `url.full` | Substring, case-sensitive |
+| `Email-Addr` | `email.from.address`, `email.to.address`, `user.email` | Exact, case-insensitive |
+| `StixFile` MD5 / SHA-1 / SHA-256 | `MD5HashData` / — / `SHA256HashData`, then `file.hash.*` and `process.hash.*` | Exact, case-insensitive |
+| `Mac-Addr` | `source.mac`, `destination.mac`, `host.mac` | Exact, case-insensitive |
+
+Other types (other hash algorithms, user accounts...) are reported not searched.
+
 ## Installation
 
 ### Requirements

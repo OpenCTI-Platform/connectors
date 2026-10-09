@@ -9,6 +9,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntLimits,
     HuntResult,
     HuntTimeWindow,
+    IocBatch,
     NativeQuery,
     RunDeadline,
     build_pipeline,
@@ -16,6 +17,7 @@ from connectors_sdk.connectors.internal_hunt import (
     parse_timestamp,
 )
 from crowdstrike_logscale_hunt.client import COUNT_FIELD, MAX_EVENTS, LogScaleClient
+from crowdstrike_logscale_hunt.lookups import batch_lookup, build_logscale_lookup
 from crowdstrike_logscale_hunt.settings import ConnectorSettings
 from sigma.backends.crowdstrike import LogScaleBackend
 from sigma.pipelines.crowdstrike import pipelines as crowdstrike_pipelines
@@ -154,6 +156,23 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
             build_pipeline(
                 pipeline or self.logscale_config.sigma_pipeline, crowdstrike_pipelines
             )
+        )
+
+    def ioc_query(self, batch: IocBatch) -> NativeQuery | None:
+        """Look up a batch of indicator values in the Falcon and CPS fields that hold them.
+
+        Args:
+            batch: Values of one observable type (and hash algorithm).
+
+        Returns:
+            The LogScale query of the events holding a value, or ``None`` for a
+            type no field holds (its values are reported not searched).
+        """
+        lookup = batch_lookup(batch)
+        if lookup is None:
+            return None
+        return NativeQuery(
+            language="logscale", query=build_logscale_lookup(batch, lookup)
         )
 
     def execute(

@@ -447,7 +447,7 @@ def test_start_registers_the_logscale_platform_and_listens():
         security_platform_type="SIEM",
         supports_preview=True,
         max_concurrent_runs=None,
-        supports_indicators=False,
+        supports_indicators=True,
         required_permissions=[
             {"name": name, "purpose": purpose}
             for name, purpose in CrowdstrikeLogscaleHuntConnector.required_permissions
