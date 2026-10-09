@@ -13,7 +13,7 @@ The repository root **`docker-compose.yml`** and **`.env.sample`** are unchanged
    cp common.env.sample common.env
    ```
 
-2. **Edit `env/common.env`** (secrets, global defaults). You normally leave all `TI_API__COLLECTIONS__*__ENABLE=false` here.
+2. **Edit `env/common.env`** (secrets, global defaults). You normally leave all `TI_API_COLLECTIONS_*_ENABLE=false` here.
 
 3. **Per service**: copy `env/groups/<profile>.env.sample` → `env/groups/<profile>.env`, set **`CONNECTOR_ID`**, adjust connector display name if needed.
 

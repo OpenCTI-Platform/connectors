@@ -191,10 +191,10 @@ These extra settings control optional rotating-file logging in addition to stdou
 
 | Environment variable | Default | Description |
 |---|---|---|
-| `TI_API__EXTRA_SETTINGS__ENABLE_FILE_LOGGING` | `false` | Writes a rotating `connector.log` inside the directory below. Mount the directory as a volume in `docker-compose.yml` to keep logs on the host. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_DIR` | `/opt/connector/logs` | Directory for the rotating log file. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_MAX_BYTES` | `10485760` | Maximum size in bytes of a single rotating log file. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_BACKUP_COUNT` | `5` | Number of rotated log files to keep. |
+| `TI_API_EXTRA_SETTINGS_ENABLE_FILE_LOGGING` | `false` | Writes a rotating `connector.log` inside the directory below. Mount the directory as a volume in `docker-compose.yml` to keep logs on the host. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_DIR` | `/opt/connector/logs` | Directory for the rotating log file. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_MAX_BYTES` | `10485760` | Maximum size in bytes of a single rotating log file. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_BACKUP_COUNT` | `5` | Number of rotated log files to keep. |
 
 
 ## Preserve manual labels — implementation scope
