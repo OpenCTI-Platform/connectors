@@ -65,9 +65,15 @@
       "type": "string"
     },
     "CRTSH_LABELS": {
-      "default": "crtsh,osint",
+      "default": [
+        "crtsh",
+        "osint"
+      ],
       "description": "Comma-separated list of labels to add to the imported objects (e.g. 'crtsh,osint').",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CRTSH_MARKING_REFS": {
       "default": null,

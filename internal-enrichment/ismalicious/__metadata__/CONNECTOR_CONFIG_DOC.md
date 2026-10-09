@@ -19,4 +19,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ISMALICIOUS_ENRICH_IPV4 | `boolean` |  | boolean | `true` | Whether to enrich IPv4 addresses. |
 | ISMALICIOUS_ENRICH_IPV6 | `boolean` |  | boolean | `true` | Whether to enrich IPv6 addresses. |
 | ISMALICIOUS_ENRICH_DOMAIN | `boolean` |  | boolean | `true` | Whether to enrich domain names. |
-| ISMALICIOUS_MIN_SCORE | `integer` |  | integer | `0` | Minimum risk score (0-100) required to report a finding. |
+| ISMALICIOUS_MIN_SCORE | `integer` |  | `0 <= x <= 100` | `0` | Minimum risk score (0-100) required to report a finding. |

@@ -97,6 +97,8 @@
     "ISMALICIOUS_MIN_SCORE": {
       "default": 0,
       "description": "Minimum risk score (0-100) required to report a finding.",
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     }
   },
