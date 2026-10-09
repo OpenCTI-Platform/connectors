@@ -32,7 +32,7 @@ class ShodanInternetDBConnector:
         self.converter = ConverterToStix(self.helper)
 
     def extract_and_check_markings(self, observable: dict[str, Any]) -> None:
-        max_tlp_name = self.config.shodan.max_tlp
+        max_tlp_name = self.config.connector.max_tlp
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP" and not (
                 OpenCTIConnectorHelper.check_max_tlp(

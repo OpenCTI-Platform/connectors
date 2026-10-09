@@ -47,7 +47,7 @@ class HatchingTriageSandboxConnector:
         self.botnet_color = self.config.hatching_triage_sandbox.botnet_color
         self.campaign_color = self.config.hatching_triage_sandbox.campaign_color
         self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
-        self.max_tlp = self.config.hatching_triage_sandbox.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
 
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type

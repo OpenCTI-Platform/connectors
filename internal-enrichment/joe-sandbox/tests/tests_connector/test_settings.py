@@ -412,3 +412,27 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         f"Expected a validation error for field {field_name!r}, "
         f"got errors for: {error_fields}"
     )
+
+
+def test_settings_should_default_connector_max_tlp_to_red():
+    """
+    Test that `connector.max_tlp` defaults to `TLP:RED`, so that every entity is still enriched by default.
+    """
+
+    # Given: A config dict without max_tlp
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "joe_sandbox": {"api_key": "test-api-key"},
+                }
+            )
+
+    # When: The settings are loaded
+    settings = FakeConnectorSettings()
+
+    # Then: The max TLP does not filter anything
+    assert settings.connector.max_tlp == "TLP:RED"

@@ -19,12 +19,12 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "name": "Test Connector",
                     "scope": "Artifact,Url,StixFile,File",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "reversinglabs_spectra_intel_submission": {
                     "url": "data.reversinglabs.com",
                     "username": "test-user",
                     "password": "test-password",
-                    "max_tlp": "TLP:AMBER",
                     "sandbox_os": "windows10",
                     "sandbox_internet_sim": False,
                     "create_indicators": True,
@@ -127,3 +127,32 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         FakeConnectorSettings()
 
     assert "Error validating configuration" in str(exc_info.value)
+
+
+def test_settings_should_migrate_deprecated_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `reversinglabs_spectra_intel_submission.max_tlp`
+    (`REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "reversinglabs_spectra_intel_submission": {
+                        "username": "test-user",
+                        "password": "test-password",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    with pytest.warns(
+        UserWarning, match="reversinglabs_spectra_intel_submission.max_tlp"
+    ):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:RED"

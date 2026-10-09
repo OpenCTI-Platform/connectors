@@ -20,9 +20,9 @@ from shodan_internetdb.settings import ConnectorSettings
                     "scope": "IPv4-Addr",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:WHITE",
                 },
                 "shodan": {
-                    "max_tlp": "TLP:WHITE",
                     "ssl_verify": True,
                 },
             },
@@ -104,11 +104,12 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "connector": {
                     "id": "00000000-0000-0000-0000-000000000000",
+                    "max_tlp": "INVALID_TLP_VALUE",
                 },
-                "shodan": {"max_tlp": "INVALID_TLP_VALUE"},
+                "shodan": {},
             },
-            "shodan.max_tlp",
-            id="invalid_shodan_max_tlp",
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -136,3 +137,52 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_default_connector_max_tlp_to_tlp_white():
+    """
+    Test that `connector.max_tlp` (`CONNECTOR_MAX_TLP`) keeps the connector's historical default, `TLP:WHITE`.
+    """
+
+    # Given: A config dict that does not set max_tlp
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "00000000-0000-0000-0000-000000000000"},
+                    "shodan": {},
+                }
+            )
+
+    # When: The settings are loaded
+    settings = FakeConnectorSettings()
+
+    # Then: The default is TLP:WHITE
+    assert settings.connector.max_tlp == "TLP:WHITE"
+
+
+def test_settings_should_migrate_deprecated_shodan_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `shodan.max_tlp` (`SHODAN_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the shodan section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "00000000-0000-0000-0000-000000000000"},
+                    "shodan": {"max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="shodan.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

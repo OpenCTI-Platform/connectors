@@ -12,9 +12,9 @@ services:
       - CONNECTOR_SCOPE=Indicator # optional (default: 'Indicator')
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_AUTO=false # optional (default: false). Keep false: each run costs 10 credits
+      - CONNECTOR_MAX_TLP=TLP:GREEN # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:GREEN')
       # Custom parameters for connector-dnslytics
       - DNSLYTICS_API_KEY=CHANGEME
       - DNSLYTICS_RESOLVE_HOSTING=true # optional (default: true)
-      - DNSLYTICS_MAX_TLP_LEVEL=green # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
       - DNSLYTICS_OUTPUT_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
     restart: always

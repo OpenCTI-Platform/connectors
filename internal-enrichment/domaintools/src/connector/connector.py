@@ -25,7 +25,7 @@ class DomainToolsConnector:
             self.config.domaintools.api_username,
             self.config.domaintools.api_key.get_secret_value(),
         )
-        self.max_tlp = self.config.domaintools.max_tlp
+        self.max_tlp = self.config.connector.max_tlp
         self.author = OrganizationAuthor(
             name=self._DEFAULT_AUTHOR,
             description="DomainTools is a leading provider of Whois and other DNS profile data for "

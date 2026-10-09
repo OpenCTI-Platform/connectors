@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - GREYNOISE_KEY=ChangeMe
-      - GREYNOISE_MAX_TLP=TLP:AMBER
       - GREYNOISE_SIGHTING_NOT_SEEN=false
       - GREYNOISE_NO_SIGHTINGS=false
     restart: always

@@ -20,10 +20,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "shodan": {
                     "token": "SecretStr",
-                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
@@ -83,10 +83,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "shodan": {
                     "token": "SecretStr",
-                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
@@ -108,9 +108,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "shodan": {
-                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,
@@ -144,3 +144,28 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_shodan_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `shodan.max_tlp` (`SHODAN_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the shodan section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "shodan": {"token": "SecretStr", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="shodan.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

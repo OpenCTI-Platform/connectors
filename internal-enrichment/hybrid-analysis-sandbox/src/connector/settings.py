@@ -54,15 +54,11 @@ class HybridAnalysisSandboxConfig(BaseConfigModel):
             default="110",
         )
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP for submission.",
-        default="TLP:AMBER",
     )
 
     api_key: SecretStr = DeprecatedField(

@@ -49,7 +49,7 @@ class Connector:
         """Return True if the entity's TLP is <= configured max TLP."""
         return self.helper.check_max_tlp(
             tlp=self._extract_tlp(markings=markings),
-            max_tlp=self.config.censys_enrichment.max_tlp,
+            max_tlp=self.config.connector.max_tlp,
         )
 
     def _generate_octi_objects(

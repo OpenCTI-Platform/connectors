@@ -69,13 +69,13 @@ This internal enrichment connector queries the GreyNoise API for CVE (Vulnerabil
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `vulnerability` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment of vulnerabilities |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `GREYNOISE_VULN_MAX_TLP` |
 
 ### GreyNoise Configuration
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `greynoise_vuln_key` | `GREYNOISE_VULN_KEY` | Yes | The GreyNoise API key |
-| `greynoise_vuln_max_tlp` | `GREYNOISE_VULN_MAX_TLP` | No | Maximum TLP level for data processing |
 | `greynoise_vuln_name` | `GREYNOISE_VULN_NAME` | No | The GreyNoise organization name |
 | `greynoise_vuln_description` | `GREYNOISE_VULN_DESCRIPTION` | No | The GreyNoise organization description |
 
@@ -102,8 +102,8 @@ services:
       #- CONNECTOR_SCOPE=vulnerability # Optional (default: ['vulnerability'])
       #- CONNECTOR_AUTO=true # Optional (default: false)
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: error)
+      #- CONNECTOR_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
       - GREYNOISE_VULN_KEY=ChangeMe
-      #- GREYNOISE_VULN_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
       #- GREYNOISE_VULN_NAME=GreyNoise Internet Scanner # Optional (default: 'GreyNoise Internet Scanner')
       #- GREYNOISE_VULN_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet. # Optional
     restart: always
@@ -187,7 +187,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed conn
 Common issues:
 - **CVE not found**: The CVE may not be tracked by GreyNoise
 - **Invalid API Key**: Ensure you have a valid API key with Vulnerability Prioritization License
-- **TLP Restrictions**: Check that entity TLP does not exceed `GREYNOISE_MAX_TLP`
+- **TLP Restrictions**: Check that entity TLP does not exceed `CONNECTOR_MAX_TLP`
 
 ---
 

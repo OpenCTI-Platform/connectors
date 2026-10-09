@@ -1,6 +1,7 @@
 """Commonly used Pydantic types with custom validation and serialization logic."""
 
 from datetime import datetime, timedelta, timezone
+from enum import StrEnum
 from typing import Annotated
 
 from pydantic import (
@@ -128,3 +129,47 @@ Examples
     m.model_dump_json()                          # -> {"start_date": "2023-10-01T00:00:00+00:00"}
 """,
 ]
+
+
+class TLP(StrEnum):
+    """TLP level in the `TLP:XXX` marking definition form.
+
+    This is the form of a TLP marking's `definition` in OpenCTI, expected by
+    `OpenCTIConnectorHelper.check_max_tlp`. Not to be confused with
+    `connectors_sdk.models.enums.TLPLevel`, the lower-case level used to build
+    `TLPMarking` objects.
+
+    As a `StrEnum`, a member compares equal to its value (`TLP.AMBER == "TLP:AMBER"`).
+    When used as a Pydantic field type, it accepts a TLP level in any case, with or
+    without the `TLP:` prefix (`"amber+strict"` -> `TLP.AMBER_STRICT`).
+
+    Examples:
+        >>> class Model(BaseModel):
+        ...     max_tlp: TLP = TLP.AMBER
+        >>> Model.model_validate({"max_tlp": "amber+strict"}).max_tlp
+        <TLP.AMBER_STRICT: 'TLP:AMBER+STRICT'>
+    """
+
+    CLEAR = "TLP:CLEAR"
+    WHITE = "TLP:WHITE"
+    GREEN = "TLP:GREEN"
+    AMBER = "TLP:AMBER"
+    AMBER_STRICT = "TLP:AMBER+STRICT"
+    RED = "TLP:RED"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "TLP | None":
+        """Find the member of a TLP level given in any case, with or without prefix.
+
+        Args:
+            value: The value that did not match any member exactly.
+
+        Returns:
+            The matching member, or `None` to let the lookup fail.
+        """
+        if not isinstance(value, str):
+            return None
+        level = value.strip().upper()
+        if not level.startswith("TLP:"):
+            level = f"TLP:{level}"
+        return next((member for member in cls if member.value == level), None)

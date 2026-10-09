@@ -124,7 +124,7 @@ class DoppelConnector:
             if marking_definition["definition_type"] == "TLP":
                 self.tlp = marking_definition["definition"]
 
-        return self.helper.check_max_tlp(self.tlp, self.config.doppel_alert_takedown.max_tlp)  # type: ignore[arg-type]
+        return self.helper.check_max_tlp(self.tlp, self.config.connector.max_tlp)  # type: ignore[arg-type]
 
     @staticmethod
     def _reference_values(reference: dict) -> tuple[str | None, str | None, str | None]:
@@ -362,7 +362,7 @@ class DoppelConnector:
             if not self.extract_and_check_markings(opencti_entity):
                 raise ValueError(
                     f"Entity TLP ({self.tlp}) exceeds "
-                    f"maximum allowed TLP ({self.config.doppel_alert_takedown.max_tlp})."
+                    f"maximum allowed TLP ({self.config.connector.max_tlp})."
                 )
 
             stix_entity = data["stix_entity"]

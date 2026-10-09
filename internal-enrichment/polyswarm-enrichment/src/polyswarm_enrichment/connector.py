@@ -44,7 +44,7 @@ class ConnectorTemplate:
 
         ps = settings.polyswarm
         # max_tlp: refuse enrichment for observables above this TLP level
-        self.max_tlp = ps.max_tlp or None
+        self.max_tlp = settings.connector.max_tlp
         # replace_with_lower_score: if False, skip score update when existing score is higher
         self.replace_with_lower_score = ps.replace_with_lower_score
         # Network IOC extraction config (#43)
@@ -823,16 +823,15 @@ class ConnectorTemplate:
                                 break
 
             # #38 — max_tlp: refuse enrichment for high-TLP observables
-            if self.max_tlp:
-                entity_tlp = self._get_tlp(observable, opencti_entity)
-                if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
-                    entity_tlp, self.max_tlp
-                ):
-                    self.helper.connector_logger.info(
-                        f"[CONNECTOR] Skipping: observable TLP {entity_tlp} "
-                        f"exceeds configured max_tlp {self.max_tlp}"
-                    )
-                    return "Observable TLP exceeds configured max_tlp"
+            entity_tlp = self._get_tlp(observable, opencti_entity)
+            if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
+                entity_tlp, self.max_tlp
+            ):
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
+                    {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
+                )
+                return "Observable TLP exceeds configured max_tlp"
 
             # Extract hash value
             hash_value = None

@@ -20,10 +20,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "vulnerability",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise_vuln": {
                     "key": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "name": "GreyNoise Internet Scanner",
                     "description": "GreyNoise collects and analyzes opportunistic scan and attack activity.",
                 },
@@ -96,14 +96,13 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
+                "connector": {"max_tlp": "INVALID_TLP_VALUE"},
                 "greynoise_vuln": {
                     "key": "test-api-key",
-                    "max_tlp": "INVALID_TLP_VALUE",
                 },
             },
-            "greynoise_vuln.max_tlp",
-            id="invalid_greynoise_vuln_max_tlp",
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
         pytest.param(
             {
@@ -143,3 +142,29 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_greynoise_vuln_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `greynoise_vuln.max_tlp` (`GREYNOISE_VULN_MAX_TLP`) is migrated
+    to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the greynoise_vuln section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "greynoise_vuln": {"key": "test-api-key", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="greynoise_vuln.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

@@ -9,10 +9,13 @@ OpenCTI-Platform/connectors#6708). These tests pin down the guarantees the
    ``ValidationError`` when either is missing.
 2. ``api_key`` is a ``SecretStr`` — masked in ``repr``, readable via
    ``get_secret_value()``.
-3. ``max_tlp`` defaults to ``TLP:AMBER+STRICT``.
+3. ``connector.max_tlp`` defaults to ``TLP:AMBER+STRICT``, and the deprecated
+   ``whisper.max_tlp`` is migrated to it.
 4. ``ConnectorSettings`` exposes the ``whisper:`` block and produces a valid
    helper-config dict (``opencti`` / ``connector`` keys) for pycti.
 """
+
+from typing import Any
 
 import pytest
 from conftest import StubConnectorSettings
@@ -26,9 +29,6 @@ def test_whisper_config_construction_succeeds_with_required_fields():
     w = WhisperConfig(api_url="https://api.whisper.test", api_key="k")
     assert w.api_url == "https://api.whisper.test"
     assert w.api_key.get_secret_value() == "k"
-    # Default TLP ceiling: AMBER+STRICT — strict-by-default keeps customer
-    # intel out of the Whisper API unless the operator opts in.
-    assert w.max_tlp == "TLP:AMBER+STRICT"
 
 
 def test_whisper_config_api_key_is_secret():
@@ -63,9 +63,9 @@ def test_whisper_config_fails_when_api_key_missing():
         "TLP:RED",
     ],
 )
-def test_whisper_config_accepts_every_canonical_tlp(tlp):
-    w = WhisperConfig(api_url="https://x", api_key="k", max_tlp=tlp)
-    assert w.max_tlp == tlp
+def test_connector_max_tlp_accepts_every_canonical_tlp(make_config, tlp):
+    settings = make_config(connector_overrides={"max_tlp": tlp})
+    assert settings.connector.max_tlp == tlp
 
 
 # --- ConnectorSettings (top-level, via the make_config stub) ----------------
@@ -79,7 +79,7 @@ def test_connector_settings_instantiates_from_valid_config():
     assert isinstance(settings, ConnectorSettings)
     assert settings.whisper.api_url == "https://api.whisper.test"
     assert settings.whisper.api_key.get_secret_value() == "test-key"
-    assert settings.whisper.max_tlp == "TLP:RED"
+    assert settings.connector.max_tlp == "TLP:RED"
 
 
 def test_connector_settings_exposes_whisper_block(make_config):
@@ -87,7 +87,7 @@ def test_connector_settings_exposes_whisper_block(make_config):
     assert isinstance(settings, ConnectorSettings)
     assert settings.whisper.api_url == "https://api.whisper.test"
     assert settings.whisper.api_key.get_secret_value() == "test-key"
-    assert settings.whisper.max_tlp == "TLP:RED"
+    assert settings.connector.max_tlp == "TLP:RED"
 
 
 def test_connector_settings_default_connector_scope_and_name(make_config):
@@ -103,9 +103,9 @@ def test_connector_settings_default_connector_scope_and_name(make_config):
     assert settings.connector.type == "INTERNAL_ENRICHMENT"
 
 
-def test_connector_settings_whisper_override(make_config):
-    settings = make_config(max_tlp="TLP:AMBER")
-    assert settings.whisper.max_tlp == "TLP:AMBER"
+def test_connector_settings_max_tlp_override(make_config):
+    settings = make_config(connector_overrides={"max_tlp": "TLP:AMBER"})
+    assert settings.connector.max_tlp == "TLP:AMBER"
 
 
 def test_to_helper_config_carries_opencti_and_connector_blocks(make_config):
@@ -114,3 +114,41 @@ def test_to_helper_config_carries_opencti_and_connector_blocks(make_config):
     assert "connector" in helper_config
     # The SDK normalises the URL (it may append a trailing slash).
     assert helper_config["opencti"]["url"].rstrip("/") == "http://localhost:8080"
+
+
+def _settings_from(config: dict[str, Any]) -> ConnectorSettings:
+    class _StubSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(config)
+
+    return _StubSettings()
+
+
+def test_connector_settings_default_max_tlp_is_amber_strict():
+    # Default TLP ceiling: AMBER+STRICT — strict-by-default keeps customer
+    # intel out of the Whisper API unless the operator opts in.
+    settings = _settings_from(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+            "connector": {"id": "11111111-1111-1111-1111-111111111111"},
+            "whisper": {"api_url": "https://api.whisper.test", "api_key": "k"},
+        }
+    )
+    assert settings.connector.max_tlp == "TLP:AMBER+STRICT"
+
+
+def test_deprecated_whisper_max_tlp_is_migrated_to_connector_max_tlp():
+    with pytest.warns(UserWarning, match="whisper.max_tlp"):
+        settings = _settings_from(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {"id": "11111111-1111-1111-1111-111111111111"},
+                "whisper": {
+                    "api_url": "https://api.whisper.test",
+                    "api_key": "k",
+                    "max_tlp": "TLP:RED",
+                },
+            }
+        )
+    assert settings.connector.max_tlp == "TLP:RED"

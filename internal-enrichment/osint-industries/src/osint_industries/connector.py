@@ -53,7 +53,7 @@ class OsintIndustriesConnector:
         :raises MaxTlpExceededError: when the observable's value must never
             be sent to the OSINT Industries API.
         """
-        max_tlp = self.config.osint_industries.max_tlp
+        max_tlp = self.config.connector.max_tlp
         refused = [
             marking.get("definition")
             for marking in observable.get("objectMarking") or []
@@ -184,7 +184,7 @@ class OsintIndustriesConnector:
                 meta={"reason": str(err)},
             )
             return self._safe_forward_original_bundle(
-                data, "Observable TLP is greater than OSINT_INDUSTRIES_MAX_TLP."
+                data, "Observable TLP is greater than CONNECTOR_MAX_TLP."
             )
         except Exception:
             self.helper.connector_logger.error(

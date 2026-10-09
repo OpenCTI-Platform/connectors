@@ -27,6 +27,7 @@ def test_root_public_api_is_valid():
         "BaseDataProcessor",
         "WorkManager",
         "ListFromString",
+        "TLP",
         "BaseClientApi",
         "RateLimit",
         "ApiClientError",

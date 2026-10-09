@@ -126,6 +126,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope  | scope            | `CONNECTOR_SCOPE`              | See note below       | Yes       | The entity types the connector can be triggered on **and** the types it emits.         |
 | Connector Auto   | auto             | `CONNECTOR_AUTO`               | false                | No        | `true` enables auto-enrichment on entity creation; `false` requires a manual trigger.  |
 | Log Level        | log_level        | `CONNECTOR_LOG_LEVEL`          | error                | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
+| Max TLP          | max_tlp          | `CONNECTOR_MAX_TLP`            | TLP:AMBER            | No        | Highest TLP the connector will enrich. Entities above it are refused. Replaces the deprecated `HUNTER_MAX_TLP`. |
 
 The default scope is:
 
@@ -155,7 +156,6 @@ Below are the parameters you'll need to set for the connector:
 | Max results        | max_results_per_query   | `HUNTER_MAX_RESULTS_PER_QUERY`   | 100                                    | No        | Maximum number of hunt packages retrieved per query.                                        |
 | Cache path         | cache_path              | `HUNTER_CACHE_PATH`              | /opt/opencti-connector-intel471-hunt/cache/cache.json        | No        | Location of the local `(hunt_uuid, last_updated)` cache. See [Cache](#cache).                |
 | Cache TTL          | cache_ttl_hours         | `HUNTER_CACHE_TTL_HOURS`         | 24                                     | No        | Lifetime, in hours, of a cache entry.                                                        |
-| Max TLP            | max_tlp                 | `HUNTER_MAX_TLP`                 | TLP:AMBER                              | No        | Highest TLP the connector will enrich. Entities above it are refused.                        |
 
 ## Deployment
 

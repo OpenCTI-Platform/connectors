@@ -99,7 +99,7 @@ class ReversingLabsSpectraAnalyzeConnector:
                 tlp = marking_definition["definition"]
 
             if not OpenCTIConnectorHelper.check_max_tlp(
-                tlp, self.config.reversinglabs_spectra_analyze.max_tlp
+                tlp, self.config.connector.max_tlp
             ):
                 raise ValueError(
                     f"{self.helper.connect_name}: ERROR: Do not send any data, TLP of the observable is greater than MAX TLP"

@@ -35,7 +35,7 @@ class PolySwarmConnector:
         self._local = threading.local()
 
         ps = config.polyswarm
-        self.max_tlp = ps.max_tlp
+        self.max_tlp = config.connector.max_tlp
         self.replace_with_lower_score = ps.replace_with_lower_score
 
         self.polyswarm_client = PolySwarmClient(

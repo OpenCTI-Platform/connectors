@@ -22,6 +22,7 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "expose_metrics": False,
             "id": "connector-uuid",
             "log_level": "error",
+            "max_tlp": "TLP:CLEAR",
             "metrics_port": 9095,
             "name": "Test connector",
             "only_contextual": False,
@@ -38,7 +39,6 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
         "recorded_future": {
             "token": "recorded-future-token",
             "create_indicator_threshold": 0,
-            "info_max_tlp": "TLP:CLEAR",
             "vulnerability_enrichment_optional_fields": "",  # empty comma-separated list
             "threat_actor_to_intrusion_set": False,
         },

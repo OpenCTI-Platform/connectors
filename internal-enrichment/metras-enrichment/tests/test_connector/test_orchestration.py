@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from connector.connector import MetrasEnrichmentConnector
-from connectors_sdk.models.enums import TLPLevel
 from pydantic import SecretStr
 
 IPV4_ID = "ipv4-addr--11111111-1111-4111-8111-111111111111"
@@ -12,15 +11,14 @@ FILE_ID = "file--22222222-2222-4222-8222-222222222222"
 TLP_RED = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
 
 
-def _enr(max_tlp=TLPLevel.AMBER_STRICT):
+def _enr(max_tlp="TLP:AMBER+STRICT"):
     cfg = SimpleNamespace(
         metras=SimpleNamespace(
             api_base_url="http://x/api",
             api_key=SecretStr("k"),
             verify_ssl=True,
-            max_tlp=max_tlp,
         ),
-        connector=SimpleNamespace(scope=["IPv4-Addr", "StixFile"]),
+        connector=SimpleNamespace(scope=["IPv4-Addr", "StixFile"], max_tlp=max_tlp),
     )
     helper = MagicMock()
     helper.connect_confidence_level = 50
@@ -69,7 +67,7 @@ def test_out_of_scope_forwards_original_bundle():
 
 
 def test_tlp_gate_blocks_above_max():
-    conn, _ = _enr(max_tlp=TLPLevel.GREEN)
+    conn, _ = _enr(max_tlp="TLP:GREEN")
     msg = conn.process_message(
         {
             "stix_entity": {

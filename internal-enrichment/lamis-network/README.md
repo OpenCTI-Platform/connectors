@@ -70,6 +70,7 @@ Configuration can be provided via environment variables or `config.yml`.
 | `connector.auto` | `CONNECTOR_AUTO` | `false` | Enable automatic enrichment on observable creation (default: `false` for quota-based APIs) |
 | `connector.confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | `50` | Confidence level (0-100) |
 | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `info` | Log verbosity (`debug`, `info`, `warn`, `error`) |
+| `connector.max_tlp` | `CONNECTOR_MAX_TLP` | `TLP:AMBER` | Maximum TLP allowed for enrichment (skips if exceeded). Replaces the deprecated `LAMIS_NETWORK_MAX_TLP` |
 
 ### Lamis Network Configuration
 
@@ -82,7 +83,6 @@ Configuration can be provided via environment variables or `config.yml`.
 | `lamis_network.create_indicator` | `LAMIS_NETWORK_CREATE_INDICATOR` | `true` | Generate STIX Indicator linked via `based-on` |
 | `lamis_network.add_relationships` | `LAMIS_NETWORK_ADD_RELATIONSHIPS` | `true` | Create ASN (`belongs-to`) and Location (`located-at`) entities |
 | `lamis_network.default_tlp` | `LAMIS_NETWORK_DEFAULT_TLP` | `TLP:CLEAR` | Default TLP marking for emitted STIX objects |
-| `lamis_network.max_tlp` | `LAMIS_NETWORK_MAX_TLP` | `TLP:AMBER` | Maximum TLP allowed for enrichment (skips if exceeded) |
 
 ---
 
@@ -112,6 +112,7 @@ services:
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - LAMIS_NETWORK_API_KEY=ChangeMe
       - LAMIS_NETWORK_API_URL=https://api.lamisnetwork.com
       - LAMIS_NETWORK_TIMEOUT=10
@@ -119,7 +120,6 @@ services:
       - LAMIS_NETWORK_CREATE_INDICATOR=true
       - LAMIS_NETWORK_ADD_RELATIONSHIPS=true
       - LAMIS_NETWORK_DEFAULT_TLP=TLP:CLEAR
-      - LAMIS_NETWORK_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -170,7 +170,7 @@ Query Lamis Network API (/v1/ip/{ip})
 ### TLP & Privacy
 
 The connector enforces strict TLP validation **before** dispatching the observable's IP address to the external API:
-- Every TLP marking is checked. If any is greater than `LAMIS_NETWORK_MAX_TLP` (e.g. `TLP:RED` against `TLP:AMBER`) or cannot be identified, enrichment is skipped before the external request.
+- Every TLP marking is checked. If any is greater than `CONNECTOR_MAX_TLP` (e.g. `TLP:RED` against `TLP:AMBER`) or cannot be identified, enrichment is skipped before the external request.
 - Emitted STIX entities inherit the source observable's markings, preventing unintended data exposure within OpenCTI.
 
 ### Error Handling

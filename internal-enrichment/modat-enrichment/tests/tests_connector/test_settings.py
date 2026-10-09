@@ -20,11 +20,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "ipv4-addr",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "modat": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:CLEAR",
                     "include_cves": True,
                     "max_services_in_summary": 10,
                 },
@@ -99,11 +99,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "ipv4-addr",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "modat": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:CLEAR",
                 },
             },
             "opencti.url",
@@ -152,3 +152,28 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_modat_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `modat.max_tlp` (`MODAT_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the modat section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "modat": {"api_key": "test-api-key", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="modat.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

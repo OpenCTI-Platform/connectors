@@ -1,15 +1,18 @@
-from typing import get_args
+from typing import Any, get_args
 from unittest.mock import MagicMock
 
 import pytest
 import stix2
 from connector.connector import VisionHeightConnector
-from connector.settings import TLPLevel
-from connector.utils import to_canonical_tlp_marking
+from connector.settings import ConnectorSettings, InternalEnrichmentConnectorConfig
 from pycti import Identity, OpenCTIConnectorHelper
 
+MAX_TLP_LEVELS = get_args(
+    InternalEnrichmentConnectorConfig.model_fields["max_tlp"].annotation
+)
 
-def _make_connector(max_tlp: str = "amber+strict") -> VisionHeightConnector:
+
+def _make_connector(max_tlp: str = "TLP:AMBER+STRICT") -> VisionHeightConnector:
     """Build a connector wired with the *real* ``check_max_tlp``.
 
     The rest of the TLP gating suite mocks ``check_max_tlp``, which cannot catch a
@@ -23,7 +26,7 @@ def _make_connector(max_tlp: str = "amber+strict") -> VisionHeightConnector:
     connector.client = MagicMock()
     connector.converter_to_stix = MagicMock()
     connector.config = MagicMock()
-    connector.config.visionheight.max_tlp_level = max_tlp
+    connector.config.connector.max_tlp = max_tlp
     connector.stix_objects_list = []
     return connector
 
@@ -32,44 +35,16 @@ def _marked(tlp: str) -> dict:
     return {"objectMarking": [{"definition_type": "TLP", "definition": tlp}]}
 
 
-# ---------- level -> canonical marking mapping ----------
+# ---------- configurable levels ----------
 
 
-@pytest.mark.parametrize(
-    "tlp_level, expected",
-    [
-        pytest.param("clear", "TLP:CLEAR", id="clear"),
-        pytest.param("green", "TLP:GREEN", id="green"),
-        pytest.param("amber", "TLP:AMBER", id="amber"),
-        pytest.param("amber+strict", "TLP:AMBER+STRICT", id="amber_strict"),
-        pytest.param("red", "TLP:RED", id="red"),
-    ],
-)
-def test_to_canonical_tlp_marking_maps_every_configurable_level(tlp_level, expected):
-    """Each configurable level maps to the canonical spelling used by pycti."""
-    assert to_canonical_tlp_marking(tlp_level) == expected
-
-
-def test_to_canonical_tlp_marking_covers_the_whole_literal_domain():
-    """Guard: adding a level to ``TLPLevel`` must not silently escape the mapping."""
-    assert set(get_args(TLPLevel)) == {
-        "clear",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    }
-
-
-@pytest.mark.parametrize("tlp_level", get_args(TLPLevel))
-def test_canonical_marking_is_a_key_pycti_knows(tlp_level):
+@pytest.mark.parametrize("max_tlp", MAX_TLP_LEVELS)
+def test_configurable_max_tlp_is_a_key_pycti_knows(max_tlp):
     """``check_max_tlp`` indexes a dict by the max TLP, so an unknown key raises.
 
-    ``TLP:CLEAR`` is allowed under every cap, so a ``True`` result proves the
-    converted cap is a valid key rather than a ``KeyError``.
+    ``TLP:CLEAR`` is allowed under every cap, so a ``True`` result proves every
+    value accepted by ``connector.max_tlp`` is a valid key rather than a ``KeyError``.
     """
-    max_tlp = to_canonical_tlp_marking(tlp_level)
-
     assert OpenCTIConnectorHelper.check_max_tlp("TLP:CLEAR", max_tlp) is True
 
 
@@ -79,10 +54,10 @@ def test_canonical_marking_is_a_key_pycti_knows(tlp_level):
 @pytest.mark.parametrize(
     "max_tlp, tlp",
     [
-        pytest.param("amber", "TLP:RED", id="red_above_amber"),
-        pytest.param("green", "TLP:AMBER", id="amber_above_green"),
-        pytest.param("amber+strict", "TLP:RED", id="red_above_amber_strict"),
-        pytest.param("clear", "TLP:GREEN", id="green_above_clear"),
+        pytest.param("TLP:AMBER", "TLP:RED", id="red_above_amber"),
+        pytest.param("TLP:GREEN", "TLP:AMBER", id="amber_above_green"),
+        pytest.param("TLP:AMBER+STRICT", "TLP:RED", id="red_above_amber_strict"),
+        pytest.param("TLP:CLEAR", "TLP:GREEN", id="green_above_clear"),
     ],
 )
 def test_observable_above_cap_is_refused(max_tlp, tlp):
@@ -96,11 +71,11 @@ def test_observable_above_cap_is_refused(max_tlp, tlp):
 @pytest.mark.parametrize(
     "max_tlp, tlp",
     [
-        pytest.param("amber", "TLP:CLEAR", id="clear_under_amber"),
-        pytest.param("amber", "TLP:GREEN", id="green_under_amber"),
-        pytest.param("amber", "TLP:AMBER", id="amber_at_amber"),
-        pytest.param("amber+strict", "TLP:AMBER+STRICT", id="strict_at_strict"),
-        pytest.param("red", "TLP:RED", id="red_at_red"),
+        pytest.param("TLP:AMBER", "TLP:CLEAR", id="clear_under_amber"),
+        pytest.param("TLP:AMBER", "TLP:GREEN", id="green_under_amber"),
+        pytest.param("TLP:AMBER", "TLP:AMBER", id="amber_at_amber"),
+        pytest.param("TLP:AMBER+STRICT", "TLP:AMBER+STRICT", id="strict_at_strict"),
+        pytest.param("TLP:RED", "TLP:RED", id="red_at_red"),
     ],
 )
 def test_observable_at_or_below_cap_is_allowed(max_tlp, tlp):
@@ -123,7 +98,7 @@ def test_observable_at_or_below_cap_is_allowed(max_tlp, tlp):
 )
 def test_unmarked_observable_is_allowed(opencti_entity):
     """No TLP marking means no cap to enforce: ``check_max_tlp`` returns early."""
-    connector = _make_connector(max_tlp="amber+strict")
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
 
     connector.extract_and_check_markings(opencti_entity)
 
@@ -144,8 +119,22 @@ def test_marked_observable_does_not_raise_key_error():
     with pytest.raises(KeyError):
         OpenCTIConnectorHelper.check_max_tlp("TLP:GREEN", "amber+strict")
 
-    # The fixed path converts the cap first, so the gate simply passes.
-    connector = _make_connector(max_tlp="amber+strict")
+    # The settings now normalize a lowercase value to the canonical form, so the
+    # gate simply passes.
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"max_tlp": "amber+strict"},
+                    "visionheight": {"api_key": "test-api-key"},
+                }
+            )
+
+    max_tlp = FakeConnectorSettings().connector.max_tlp
+    assert max_tlp == "TLP:AMBER+STRICT"
+    connector = _make_connector(max_tlp=max_tlp)
     connector.extract_and_check_markings(_marked("TLP:GREEN"))
 
 
@@ -156,7 +145,7 @@ def test_process_message_enriches_marked_observable_within_cap():
     and returned an error string, so *every* marked observable was silently left
     unenriched.
     """
-    connector = _make_connector(max_tlp="amber+strict")
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
     connector.helper.send_stix2_bundle.return_value = ["bundle"]
     connector.converter_to_stix.author = stix2.Identity(
         id=Identity.generate_id(name="VisionHeight", identity_class="organization"),

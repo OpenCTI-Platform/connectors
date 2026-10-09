@@ -9,7 +9,7 @@ connector:
   scope: 'vulnerability' # Optional (default: ['vulnerability'])
   log_level: 'info' # Optional (default: 'error')
   auto: false # Optional (default: false)
+  max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
 
 first_epss:
   api_base_url: 'https://api.first.org/data/v1/epss' # Optional (default: 'https://api.first.org/data/v1/epss')
-  max_tlp: "TLP:AMBER" # Optional (default: 'TLP:AMBER')

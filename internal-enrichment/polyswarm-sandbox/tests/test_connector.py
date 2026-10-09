@@ -52,7 +52,6 @@ def _mock_polyswarm_config(**overrides):
         "max_file_size": 33554432,
         "download_artifacts": True,
         "polykg_api_url": None,
-        "max_tlp": "TLP:AMBER",
         "replace_with_lower_score": True,
     }
     defaults.update(overrides)
@@ -65,10 +64,10 @@ def _mock_polyswarm_config(**overrides):
 def _mock_connector_config(**overrides):
     """Create a mock for config.connector with sensible defaults.
 
-    Note: max_tlp and replace_with_lower_score live in config.polyswarm,
-    NOT here — see PolySwarmConfig in settings.py.
+    Note: replace_with_lower_score lives in config.polyswarm, NOT here —
+    see PolySwarmConfig in settings.py.
     """
-    defaults = {}
+    defaults = {"max_tlp": "TLP:AMBER"}
     defaults.update(overrides)
     m = MagicMock()
     for k, v in defaults.items():
@@ -98,8 +97,8 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
     config.connector = _mock_connector_config(**(connector_overrides or {}))
     c.config = config
 
-    # Set attributes normally assigned in __init__ from config.polyswarm
-    c.max_tlp = config.polyswarm.max_tlp
+    # Set attributes normally assigned in __init__ from config
+    c.max_tlp = config.connector.max_tlp
     c.replace_with_lower_score = config.polyswarm.replace_with_lower_score
 
     c.polyswarm_client = MagicMock()
@@ -148,6 +147,23 @@ class TestPydanticConfig:
         assert config.polyswarm.sandbox_enabled is True
         assert config.polyswarm.poll_interval == 30
         assert config.connector.type == "INTERNAL_ENRICHMENT"
+        assert config.connector.max_tlp == "TLP:AMBER"
+
+    def test_deprecated_polyswarm_max_tlp_is_migrated(self, monkeypatch):
+        """The deprecated POLYSWARM_MAX_TLP still works and becomes CONNECTOR_MAX_TLP."""
+        ConnectorSettings = pytest.importorskip(
+            "connector.models.configs.settings", reason="connectors_sdk unavailable"
+        ).ConnectorSettings
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000004")
+        monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+        monkeypatch.setenv("POLYSWARM_MAX_TLP", "TLP:RED")
+
+        with pytest.warns(UserWarning, match="polyswarm.max_tlp"):
+            config = ConnectorSettings()
+
+        assert config.connector.max_tlp == "TLP:RED"
 
     def test_model_dump_pycti(self, monkeypatch):
         ConnectorSettings = pytest.importorskip(

@@ -1,6 +1,7 @@
 import re
 
 from connectors_sdk import (
+    TLP,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
@@ -13,6 +14,7 @@ from pydantic import (
     PrivateAttr,
     model_validator,
 )
+from pydantic.json_schema import SkipJsonSchema
 from pydantic_settings import BaseSettings
 
 
@@ -83,6 +85,10 @@ class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         default=True,
         description="If True, the connector will automatically import data from the API.",
     )
+    # Hidden from the config schema: the connector only applies labels inside OpenCTI and
+    # sends no data outside, so a max TLP would protect nothing. The field stays inherited
+    # from the SDK base config.
+    max_tlp: SkipJsonSchema[TLP] = Field(default=TLP.RED)
 
 
 class TaggerConfig(BaseSettings):

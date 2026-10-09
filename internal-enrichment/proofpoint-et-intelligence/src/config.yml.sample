@@ -8,9 +8,9 @@ connector:
   scope: 'IPv4-Addr,Domain-Name,StixFile'
   log_level: 'info'
   auto: true # Enable/disable auto-enrichment of observables
+  max_tlp: "TLP:AMBER+STRICT" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
 
 proofpoint_et_intelligence:
   api_base_url: 'https://api.emergingthreats.net/v1/'
   api_key: 'ChangeMe'
-  max_tlp: "TLP:AMBER+STRICT" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
   import_last_seen_time_window: "P30D"

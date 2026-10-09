@@ -11,8 +11,8 @@ services:
       # - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       # - CONNECTOR_AUTO=true
       # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_MAX_TLP=TLP:AMBER
       - SHADOWTRACKR_API_KEY=ChangeMe
-      # - SHADOWTRACKR_MAX_TLP=TLP:AMBER
       # - SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE=true  # lower the score based on the ShadowTrackr false positive estimate
       # - SHADOWTRACKR_REPLACE_VALID_TO_DATE=true  # set the valid until date to tomorrow for short lived attack sources like VPNs, CDNs and Clouds
     restart: always

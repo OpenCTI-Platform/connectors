@@ -24,6 +24,7 @@ def env(monkeypatch):
         "CONNECTOR_SCOPE",
         "CONNECTOR_AUTO",
         "CONNECTOR_LOG_LEVEL",
+        "CONNECTOR_MAX_TLP",
         "HUNTER_API_BASE_URL",
         "HUNTER_UI_BASE_URL",
         "HUNTER_INDEXES",
@@ -72,7 +73,7 @@ def test_settings_defaults(env):
     assert settings.hunter.request_timeout_seconds == 30
     assert settings.hunter.max_results_per_query == 100
     assert settings.hunter.cache_ttl_hours == 24
-    assert settings.hunter.max_tlp == "TLP:AMBER"
+    assert settings.connector.max_tlp == "TLP:AMBER"
     assert str(settings.hunter.api_base_url).startswith(
         "https://api.hunter.cyborgsecurity.io"
     )
@@ -108,10 +109,19 @@ def test_missing_opencti_token_raises(env):
 
 
 def test_invalid_value_raises(env):
-    env.setenv("HUNTER_MAX_TLP", "TLP:PURPLE")
+    env.setenv("CONNECTOR_MAX_TLP", "TLP:PURPLE")
 
     with pytest.raises(ConfigValidationError):
         ConnectorSettings()
+
+
+def test_deprecated_hunter_max_tlp_is_migrated_to_connector_max_tlp(env):
+    env.setenv("HUNTER_MAX_TLP", "TLP:RED")
+
+    with pytest.warns(UserWarning, match="hunter.max_tlp"):
+        settings = ConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:RED"
 
 
 def test_to_helper_config_is_pycti_shaped(env):

@@ -34,7 +34,17 @@ def test_config() -> None:
     assert config.connector.log_level == "error"
     assert config.connector.auto is False
 
-    assert config.censys_enrichmentapis.max_tlp == "TLP:AMBER"
+    assert config.connector.max_tlp == "TLP:AMBER"
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_deprecated_max_tlp_is_migrated_to_connector_max_tlp(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CENSYS_ENRICHMENTAPIS_MAX_TLP", "TLP:RED")
+    with pytest.warns(UserWarning, match="censys_enrichmentapis.max_tlp"):
+        config = ConfigLoader()
+    assert config.connector.max_tlp == "TLP:RED"
 
 
 @pytest.mark.usefixtures("mock_config")

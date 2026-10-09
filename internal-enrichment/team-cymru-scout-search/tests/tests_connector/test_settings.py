@@ -17,11 +17,11 @@ from scout_search_connector import ConnectorSettings
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "search_interval": 1,
                 },
             },
@@ -33,7 +33,6 @@ from scout_search_connector import ConnectorSettings
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "search_interval": 1,
                 },
             },
@@ -78,11 +77,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "search_interval": 1,
                 },
             },
@@ -97,11 +96,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "search_interval": 1,
                 },
             },
@@ -132,3 +131,27 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_pure_signal_scout_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `pure_signal_scout.max_tlp` (`PURE_SIGNAL_SCOUT_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "pure_signal_scout": {
+                        "api_token": "test-api-key",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="pure_signal_scout.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:RED"

@@ -57,7 +57,7 @@ class Connector:
     def _validate_entity_tlp(self, markings: list[dict[str, Any]]) -> None:
         """Reject an entity whose TLP exceeds the configured maximum."""
         entity_tlp = self._extract_tlp(markings=markings)
-        max_tlp = self.config.censys_enrichmentapis.max_tlp
+        max_tlp = self.config.connector.max_tlp
         if not self.helper.check_max_tlp(tlp=entity_tlp, max_tlp=max_tlp):
             raise MaxTlpError(
                 f"TLP {entity_tlp} of observable exceeds MAX TLP {max_tlp}"

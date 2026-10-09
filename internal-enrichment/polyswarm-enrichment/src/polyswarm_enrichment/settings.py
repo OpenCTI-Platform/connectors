@@ -4,12 +4,12 @@ Uses connectors_sdk base classes for Pydantic-validated configuration.
 All values are read from environment variables or config.yml.sample.
 """
 
-from typing import Literal
-
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -33,16 +33,12 @@ class PolySwarmConfig(BaseConfigModel):
     )
 
     # TLP + score
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-        "",
-    ] = Field(
-        default="",
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
+        # An empty value used to mean "no limit", which TLP:RED now expresses.
+        new_value_factory=lambda value: value or TLP.RED,
         description="Max TLP level of entities to enrich (empty = no limit).",
     )
     replace_with_lower_score: bool = Field(
@@ -95,6 +91,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     scope: ListFromString = Field(
         default=["StixFile", "Artifact"],
         description="The scope of the connector.",
+    )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.RED,
     )
 
 

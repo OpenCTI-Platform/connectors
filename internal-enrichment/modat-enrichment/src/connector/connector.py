@@ -22,7 +22,7 @@ class ModatConnector:
         modat = config.modat
         self.api_base_url = str(modat.api_base_url)
         self.api_key = modat.api_key.get_secret_value()
-        self.max_tlp = modat.max_tlp
+        self.max_tlp = config.connector.max_tlp
         self.default_score = int(modat.default_score)
         self.create_note = bool(modat.create_note)
         self.include_cves = bool(modat.include_cves)

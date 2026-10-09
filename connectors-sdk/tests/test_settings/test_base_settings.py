@@ -8,6 +8,7 @@ from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
     BaseStreamConnectorConfig,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
@@ -552,3 +553,66 @@ def test_base_stream_connector_config_json_schema_exposes_recovery_vars():
     assert "CONNECTOR_LIVE_STREAM_START_TIMESTAMP" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE" in schema["properties"]
+
+
+def test_base_internal_enrichment_connector_config_max_tlp_defaults_to_amber():
+    """Test that `BaseInternalEnrichmentConnectorConfig.max_tlp` defaults to `TLP:AMBER`."""
+
+    # Given/When: An internal enrichment connector config without max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"]
+    )
+
+    # Then: The default max TLP is TLP:AMBER
+    assert config.max_tlp == "TLP:AMBER"
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("TLP:RED", "TLP:RED"),
+        ("amber+strict", "TLP:AMBER+STRICT"),
+        (" TLP:Amber+Strict ", "TLP:AMBER+STRICT"),
+        ("clear", "TLP:CLEAR"),
+        ("WHITE", "TLP:WHITE"),
+    ],
+)
+def test_base_internal_enrichment_connector_config_normalizes_max_tlp(value, expected):
+    """Test that `max_tlp` accepts levels with or without `TLP:` prefix, in any case."""
+
+    # Given/When: An internal enrichment connector config with a non-canonical max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+    )
+
+    # Then: The value is normalized to the `TLP:XXX` form expected by pycti
+    assert config.max_tlp == expected
+
+
+@pytest.mark.parametrize("value", ["purple", "TLP:PURPLE", 3])
+def test_base_internal_enrichment_connector_config_rejects_invalid_max_tlp(value):
+    """Test that `max_tlp` rejects unknown TLP levels."""
+
+    # Given/When/Then: An unknown TLP level is rejected
+    with pytest.raises(ValidationError):
+        BaseInternalEnrichmentConnectorConfig(
+            id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+        )
+
+
+def test_base_internal_enrichment_connector_config_json_schema_exposes_max_tlp():
+    """Test that the generated config JSON schema exposes `CONNECTOR_MAX_TLP`."""
+
+    # Given: An internal enrichment connector settings class
+    class _EnrichmentSettings(BaseConnectorSettings):
+        connector: BaseInternalEnrichmentConnectorConfig = Field(
+            default_factory=BaseInternalEnrichmentConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _EnrichmentSettings.config_json_schema(connector_name="test-enrichment")
+
+    # Then: The max TLP env var is exposed with its default and allowed values
+    max_tlp = schema["properties"]["CONNECTOR_MAX_TLP"]
+    assert max_tlp["default"] == "TLP:AMBER"
+    assert "TLP:AMBER+STRICT" in max_tlp["enum"]

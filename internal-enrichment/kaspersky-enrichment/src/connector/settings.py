@@ -1,10 +1,11 @@
-from typing import Annotated, Literal
+from typing import Annotated
 
 from connector.constants import SECTIONS
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import (
@@ -84,16 +85,11 @@ class KasperskyConfig(BaseConfigModel):
         description="API key used to authenticate requests to the Kaspersky service.",
     )
 
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP marking of the entity to enrich (inclusive).",
-        default="TLP:AMBER",
     )
 
     zone_octi_score_mapping: DictFromString = Field(

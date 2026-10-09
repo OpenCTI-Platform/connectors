@@ -20,11 +20,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "Vulnerability",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "vulners": {
                     "api_key": "test-api-key",
                     "api_base_url": "https://vulners.com",
-                    "max_tlp_level": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -64,7 +64,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert settings.connector.name == "Vulners"
     assert settings.connector.scope == ["Vulnerability"]
     assert settings.vulners.api_base_url == "https://vulners.com"
-    assert settings.vulners.max_tlp_level == "TLP:AMBER"
+    assert settings.connector.max_tlp == "TLP:AMBER"
 
 
 @pytest.mark.parametrize(
@@ -122,3 +122,23 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_vulners_max_tlp_level_to_connector_max_tlp():
+    """The deprecated `VULNERS_MAX_TLP_LEVEL` is migrated to `CONNECTOR_MAX_TLP`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "vulners": {"api_key": "test-api-key", "max_tlp_level": "TLP:RED"},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="vulners.max_tlp_level"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:RED"

@@ -17,11 +17,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": "160",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -74,11 +74,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": "160",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             "opencti.token",
@@ -92,11 +92,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": "160",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             "connector.id",
@@ -126,3 +126,61 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_hybrid_analysis_sandbox_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `hybrid_analysis_sandbox.max_tlp` (`HYBRID_ANALYSIS_SANDBOX_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the hybrid_analysis_sandbox section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "hybrid_analysis_sandbox": {
+                        "token": "test-api-token",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="hybrid_analysis_sandbox.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"
+
+
+def test_settings_should_migrate_legacy_hybrid_analysis_max_tlp_to_connector_max_tlp():
+    """
+    Test that the legacy `hybrid_analysis.max_tlp` (`HYBRID_ANALYSIS_MAX_TLP`) is migrated
+    to `connector.max_tlp` (`CONNECTOR_MAX_TLP`) through the deprecated namespace.
+    """
+
+    # Given: A config dict that still sets max_tlp in the legacy hybrid_analysis section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "hybrid_analysis": {
+                        "token": "test-api-token",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="hybrid_analysis.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

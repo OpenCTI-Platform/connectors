@@ -20,12 +20,12 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "StixFile,Artifact",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "fortisandbox": {
                     "api_base_url": "https://fsa.example.com",
                     "username": "api-user",
                     "password": "api-pass",
-                    "max_tlp": "TLP:CLEAR",
                 },
             },
             id="full_valid_settings_dict",
@@ -116,3 +116,32 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_loc):
     # pydantic validation error so the test verifies the *right* field is rejected.
     if expected_loc is not None:
         assert expected_loc in str(err.value.__cause__)
+
+
+def test_settings_should_migrate_deprecated_fortisandbox_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `fortisandbox.max_tlp` (`FORTISANDBOX_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {"id": "connector-id"},
+                    "fortisandbox": {
+                        "api_base_url": "https://fsa.example.com",
+                        "username": "api-user",
+                        "password": "api-pass",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="fortisandbox.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:RED"

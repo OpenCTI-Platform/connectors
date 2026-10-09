@@ -1,10 +1,11 @@
 from datetime import timedelta
-from typing import Literal
 
 from connectors_sdk import (
+    TLP,
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -27,6 +28,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Enable/disable auto-enrichment of observables.",
         default=True,
     )
+    max_tlp: TLP = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLP.AMBER_STRICT,
+    )
 
 
 class ProofpointEtIntelligenceConfig(BaseConfigModel):
@@ -39,17 +47,12 @@ class ProofpointEtIntelligenceConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="The API key used for authentication to ProofPoint ET Intelligence.",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level the connector is authorized to enrich. "
         "Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED.",
-        default="TLP:AMBER+STRICT",
     )
     import_last_seen_time_window: timedelta = Field(
         description="The time window for importing 'last_seen' data, specified in ISO 8601 duration format.",

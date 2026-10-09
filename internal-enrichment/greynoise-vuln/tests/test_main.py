@@ -40,10 +40,10 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "vulnerability",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise_vuln": {
                     "key": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "name": "GreyNoise Internet Scanner",
                     "description": "GreyNoise test description",
                 },

@@ -38,7 +38,7 @@ class VulnersConnector:
             api_key=self.settings.vulners.api_key.get_secret_value(),
             base_url=self.settings.vulners.api_base_url,
         )
-        self.max_tlp = self.settings.vulners.max_tlp_level
+        self.max_tlp = self.settings.connector.max_tlp
 
     @staticmethod
     def _resolve_tlp(enrichment_entity: dict[str, Any]) -> str:

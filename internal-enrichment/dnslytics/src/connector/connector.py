@@ -79,7 +79,7 @@ class DnslyticsConnector:
             )
 
     def _check_markings(self, opencti_entity: dict) -> None:
-        max_tlp = "TLP:" + self.config.dnslytics.max_tlp_level.upper()
+        max_tlp = self.config.connector.max_tlp
         for marking in opencti_entity.get("objectMarking") or []:
             if marking.get("definition_type") != "TLP":
                 continue

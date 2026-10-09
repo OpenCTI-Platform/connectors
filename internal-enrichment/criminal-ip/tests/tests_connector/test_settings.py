@@ -20,10 +20,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "IPv4-Addr, Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "criminal_ip": {
                     "token": "my-secret-api-key",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -47,10 +47,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
                 "connector": {
                     "id": "some-id",
+                    "max_tlp": "TLP:RED",
                 },
                 "criminal_ip": {
                     "token": "my-secret-api-key",
-                    "max_tlp": "TLP:RED",
                 },
             },
             id="valid_settings_with_max_tlp_red",
@@ -65,10 +65,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "id": "connector-id",
                     "name": "Criminal IP",
                     "scope": "IPv4-Addr",
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "criminal_ip": {
                     "token": "my-secret-api-key",
-                    "max_tlp": "TLP:CLEAR",
                 },
             },
             id="valid_settings_single_scope",
@@ -106,7 +106,28 @@ def test_settings_defaults():
     settings = FakeConnectorSettings()
     assert settings.connector.name == "Criminal IP"
     assert settings.connector.scope == ["IPv4-Addr", "Domain-Name"]
-    assert settings.criminal_ip.max_tlp == "TLP:AMBER"
+    assert settings.connector.max_tlp == "TLP:AMBER"
+
+
+def test_settings_should_migrate_deprecated_criminal_ip_max_tlp_to_connector_max_tlp():
+    """Test that the deprecated `criminal_ip.max_tlp` (`CRIMINAL_IP_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`)."""
+    settings_dict = {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-token",
+        },
+        "connector": {"id": "connector-id"},
+        "criminal_ip": {"token": "my-secret-api-key", "max_tlp": "TLP:RED"},
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    with pytest.warns(UserWarning, match="criminal_ip.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == "TLP:RED"
 
 
 def test_settings_token_is_secret():
@@ -154,10 +175,8 @@ def test_settings_token_is_secret():
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
-                "criminal_ip": {
-                    "max_tlp": "TLP:AMBER",
-                },
+                "connector": {"max_tlp": "TLP:AMBER"},
+                "criminal_ip": {},
             },
             "criminal_ip.token",
             id="missing_criminal_ip_token",
@@ -168,13 +187,12 @@ def test_settings_token_is_secret():
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
+                "connector": {"max_tlp": "INVALID_TLP"},
                 "criminal_ip": {
                     "token": "my-secret-api-key",
-                    "max_tlp": "INVALID_TLP",
                 },
             },
-            "criminal_ip.max_tlp",
+            "connector.max_tlp",
             id="invalid_max_tlp_value",
         ),
     ],

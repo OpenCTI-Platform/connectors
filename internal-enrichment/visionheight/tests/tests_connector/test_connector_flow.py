@@ -7,7 +7,7 @@ from pycti import Identity
 
 
 def _make_connector(
-    scope: str = "ipv4-addr,domain-name", max_tlp: str = "amber+strict"
+    scope: str = "ipv4-addr,domain-name", max_tlp: str = "TLP:AMBER+STRICT"
 ) -> VisionHeightConnector:
     """Build a connector with all external boundaries (helper/client/converter) mocked."""
     connector = VisionHeightConnector.__new__(VisionHeightConnector)
@@ -16,7 +16,7 @@ def _make_connector(
     connector.client = MagicMock()
     connector.converter_to_stix = MagicMock()
     connector.config = MagicMock()
-    connector.config.visionheight.max_tlp_level = max_tlp
+    connector.config.connector.max_tlp = max_tlp
     connector.stix_objects_list = []
     return connector
 
@@ -46,7 +46,7 @@ def test_entity_in_scope_false():
 
 
 def test_extract_and_check_markings_raises_when_tlp_exceeds_cap():
-    connector = _make_connector(max_tlp="amber+strict")
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
     connector.helper.check_max_tlp.return_value = False
     # A non-TLP marking must be ignored; the TLP definition must be the one checked.
     entity = {
@@ -59,15 +59,14 @@ def test_extract_and_check_markings_raises_when_tlp_exceeds_cap():
     with pytest.raises(ValueError):
         connector.extract_and_check_markings(entity)
 
-    # The extracted TLP and the configured cap must be what gets checked, the cap
-    # being converted to the canonical form `check_max_tlp` understands.
+    # The extracted TLP and the configured cap must be what gets checked.
     connector.helper.check_max_tlp.assert_called_once_with(
         "TLP:RED", "TLP:AMBER+STRICT"
     )
 
 
 def test_extract_and_check_markings_passes_within_cap():
-    connector = _make_connector(max_tlp="amber+strict")
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
     connector.helper.check_max_tlp.return_value = True
     entity = {"objectMarking": [{"definition_type": "TLP", "definition": "TLP:GREEN"}]}
 
@@ -81,7 +80,7 @@ def test_extract_and_check_markings_passes_within_cap():
 
 def test_extract_and_check_markings_no_marking_checks_none():
     """With no markings at all, the TLP passed to the cap check must be None."""
-    connector = _make_connector(max_tlp="amber+strict")
+    connector = _make_connector(max_tlp="TLP:AMBER+STRICT")
     connector.helper.check_max_tlp.return_value = True
 
     connector.extract_and_check_markings({"objectMarking": []})

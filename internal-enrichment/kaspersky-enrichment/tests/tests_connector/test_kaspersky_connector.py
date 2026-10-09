@@ -31,7 +31,7 @@ class TestKasperskyConnector(object):
 
     @pytest.mark.usefixtures("fixture_data")
     def test_skip_entity_with_lower_tlp(self, fixture_data):
-        with mock.patch.object(self.mock_config.kaspersky, "max_tlp", "TLP:GREEN"):
+        with mock.patch.object(self.mock_config.connector, "max_tlp", "TLP:GREEN"):
             self.mock_helper.check_max_tlp.return_value = False
             assert (
                 self.connector.process_message(fixture_data)

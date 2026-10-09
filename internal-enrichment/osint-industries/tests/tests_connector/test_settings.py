@@ -35,12 +35,12 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
                     "scope": "Email-Addr, Phone-Number",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:RED",
                 },
                 "osint_industries": {
                     "api_key": "test-api-key",
                     "base_url": "https://api.osint.industries",
                     "tlp_level": "amber+strict",
-                    "max_tlp": "TLP:RED",
                     "premium": True,
                 },
             },
@@ -144,14 +144,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
-                "osint_industries": {
-                    "api_key": "test-api-key",
-                    "max_tlp": "TLP:PURPLE",
-                },
+                "connector": {"max_tlp": "TLP:PURPLE"},
+                "osint_industries": {"api_key": "test-api-key"},
             },
-            "osint_industries.max_tlp",
-            id="invalid_osint_industries_max_tlp",
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -208,6 +205,7 @@ def test_settings_should_default_connector_section():
     ]
     assert settings.connector.auto is False
     assert settings.connector.log_level == "error"
+    assert settings.connector.max_tlp == "TLP:AMBER"
 
 
 def test_settings_should_default_osint_industries_section():
@@ -222,7 +220,6 @@ def test_settings_should_default_osint_industries_section():
 
     assert str(settings.osint_industries.base_url) == "https://api.osint.industries/"
     assert settings.osint_industries.tlp_level == "amber+strict"
-    assert settings.osint_industries.max_tlp == "TLP:AMBER"
     assert settings.osint_industries.premium is False
 
 
@@ -272,3 +269,27 @@ def test_settings_should_coerce_premium_flag(raw_value, expected):
     settings = FakeConnectorSettings()
 
     assert settings.osint_industries.premium is expected
+
+
+def test_settings_should_migrate_deprecated_osint_industries_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `osint_industries.max_tlp` (`OSINT_INDUSTRIES_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "osint_industries": {
+                        "api_key": "test-api-key",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="osint_industries.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == "TLP:RED"

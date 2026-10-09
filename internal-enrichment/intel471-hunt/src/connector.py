@@ -64,7 +64,7 @@ class HunterEnrichmentConnector:
         for marking_definition in opencti_entity.get("objectMarking") or []:
             if marking_definition.get("definition_type") == "TLP":
                 tlp = marking_definition["definition"]
-        max_tlp = self.config.hunter.max_tlp
+        max_tlp = self.config.connector.max_tlp
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, max_tlp):
             raise ValueError(
                 f"Do not send any data, TLP of the entity ({tlp}) is greater "

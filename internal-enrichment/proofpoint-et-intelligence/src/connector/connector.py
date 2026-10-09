@@ -750,7 +750,7 @@ class ProofpointEtIntelligenceConnector:
                 highest_tlp_entity = current_tlp
 
         valid_max_tlp = self.helper.check_max_tlp(
-            highest_tlp_entity, self.config.proofpoint_et_intelligence.max_tlp
+            highest_tlp_entity, self.config.connector.max_tlp
         )
 
         if not valid_max_tlp:

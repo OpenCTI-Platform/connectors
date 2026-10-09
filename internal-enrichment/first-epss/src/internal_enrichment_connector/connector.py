@@ -121,7 +121,7 @@ class FirstEPSSConnector:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.first_epss.max_tlp
+            self.tlp, self.config.connector.max_tlp
         )
         if not valid_max_tlp:
             raise ValueError(

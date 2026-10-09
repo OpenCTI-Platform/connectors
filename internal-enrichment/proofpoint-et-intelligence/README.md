@@ -68,6 +68,7 @@ Key features:
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,Domain-Name,StixFile` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER+STRICT`). Replaces the deprecated `PROOFPOINT_ET_INTELLIGENCE_MAX_TLP` |
 
 ### ProofPoint ET Intelligence Configuration
 
@@ -75,7 +76,6 @@ Key features:
 |-----------|---------------|-----------|-------------|
 | `proofpoint_et_api_base_url` | `PROOFPOINT_ET_API_BASE_URL` | No | API base URL |
 | `proofpoint_et_api_key` | `PROOFPOINT_ET_API_KEY` | Yes | ET Intelligence API key |
-| `proofpoint_et_max_tlp` | `PROOFPOINT_ET_MAX_TLP` | No | Maximum TLP for enrichment |
 
 ---
 
@@ -100,8 +100,8 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,StixFile
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - PROOFPOINT_ET_API_KEY=ChangeMe
-      - PROOFPOINT_ET_MAX_TLP=TLP:AMBER
     restart: always
 ```
 

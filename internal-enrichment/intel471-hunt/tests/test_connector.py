@@ -17,7 +17,7 @@ def connector(monkeypatch) -> HunterEnrichmentConnector:
     """A connector with the network client and cache stubbed out."""
     conn = HunterEnrichmentConnector.__new__(HunterEnrichmentConnector)
     conn.config = MagicMock()
-    conn.config.hunter.max_tlp = "TLP:AMBER"
+    conn.config.connector.max_tlp = "TLP:AMBER"
     conn.helper = MagicMock()
     conn.helper.send_stix2_bundle.return_value = ["bundle"]
     # Use the real serializer so bundle construction is genuinely exercised.

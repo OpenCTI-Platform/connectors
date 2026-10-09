@@ -68,6 +68,7 @@ file (manual deployment). See [`config.yml.sample`](config.yml.sample).
 | Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT                            | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.          |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                                          | No        | Verbosity of the logs: `debug`, `info`, `warn`, or `error`.        |
 | Auto Mode       | auto       | `CONNECTOR_AUTO`            | false                                          | No        | Enables or disables automatic enrichment of observables.           |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | TLP:AMBER+STRICT                               | No        | Maximum TLP of an observable the connector will enrich. Replaces the deprecated `WHISPER_MAX_TLP`. |
 
 ### Whisper connector environment variables
 
@@ -75,7 +76,6 @@ file (manual deployment). See [`config.yml.sample`](config.yml.sample).
 |-----------|------------------|-----------------------------|----------------------------------|-----------|--------------------------------------------------------------------------|
 | API URL   | whisper.api_url  | `WHISPER_API_URL`           |                                  | Yes       | Base URL of the Whisper graph API, e.g. `https://graph.whisper.security` (the connector POSTs to `/api/query`). |
 | API Key   | whisper.api_key  | `WHISPER_API_KEY`           |                                  | Yes       | Whisper API key, sent as the `X-API-Key` header.                         |
-| Max TLP   | whisper.max_tlp  | `WHISPER_MAX_TLP`           | TLP:AMBER+STRICT                 | No        | Maximum TLP of an observable the connector will enrich.                  |
 
 ## Deployment
 

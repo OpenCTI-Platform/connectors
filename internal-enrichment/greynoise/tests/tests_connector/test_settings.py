@@ -17,10 +17,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise": {
                     "key": "ChangeMe",
-                    "max_tlp": "TLP:AMBER",
                     "sighting_not_seen": False,
                     "no_sightings": False,
                 },
@@ -32,7 +32,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "greynoise": {
                     "key": "ChangeMe",
-                    "max_tlp": "TLP:AMBER",
                     "sighting_not_seen": False,
                     "no_sightings": False,
                 },
@@ -78,10 +77,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise": {
                     "key": "ChangeMe",
-                    "max_tlp": "TLP:AMBER",
                     "sighting_not_seen": False,
                     "no_sightings": False,
                 },
@@ -97,10 +96,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise": {
                     "key": "ChangeMe",
-                    "max_tlp": "TLP:AMBER",
                     "sighting_not_seen": False,
                     "no_sightings": False,
                 },
@@ -132,3 +131,28 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_greynoise_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `greynoise.max_tlp` (`GREYNOISE_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the greynoise section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "greynoise": {"key": "ChangeMe", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="greynoise.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

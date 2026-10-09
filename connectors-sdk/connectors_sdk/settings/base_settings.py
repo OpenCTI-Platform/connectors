@@ -12,7 +12,7 @@ from types import UnionType
 from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
 from connectors_sdk.settings._settings_loader import _SettingsLoader
-from connectors_sdk.settings.annotated_types import ListFromString
+from connectors_sdk.settings.annotated_types import TLP, ListFromString
 from connectors_sdk.settings.deprecations import (
     Deprecate,
     migrate_deprecated_namespace,
@@ -430,12 +430,20 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
         auto (bool): Whether the connector should run automatically when an entity is created or updated.
+        max_tlp (TLP): The highest TLP of the entities the connector is allowed to enrich.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
     auto: bool = Field(
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+    max_tlp: TLP = Field(
+        default=TLP.AMBER,
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
     )
 
 

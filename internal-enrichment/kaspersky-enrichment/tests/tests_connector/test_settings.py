@@ -20,11 +20,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "kaspersky": {
                     "api_base_url": "https://tip.kaspersky.com",
                     "api_key": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                     "zone_octi_score_mapping": "red:100,orange:80,yellow:60,gray:20,green:0",
                     "file_sections": "LicenseInfo,Zone,FileGeneralInfo",
                     "ipv4_sections": "LicenseInfo,Zone,IpGeneralInfo",
@@ -84,11 +84,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "kaspersky": {
                     "api_base_url": "https://tip.kaspersky.com",
                     "api_key": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                     "zone_octi_score_mapping": "red:100,orange:80,yellow:60,gray:20,green:0",
                     "file_sections": "LicenseInfo,Zone,FileGeneralInfo",
                     "ipv4_sections": "LicenseInfo,Zone,IpGeneralInfo",
@@ -110,10 +110,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "kaspersky": {
                     "api_base_url": "https://tip.kaspersky.com",
-                    "max_tlp": "TLP:AMBER",
                     "zone_octi_score_mapping": "red:100,orange:80,yellow:60,gray:20,green:0",
                     "file_sections": "LicenseInfo,Zone,FileGeneralInfo",
                     "ipv4_sections": "LicenseInfo,Zone,IpGeneralInfo",
@@ -147,3 +147,28 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_kaspersky_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `kaspersky.max_tlp` (`KASPERSKY_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    # Given: A config dict that still sets max_tlp in the kaspersky section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "kaspersky": {"api_key": "SecretStr", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    with pytest.warns(UserWarning, match="kaspersky.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then: The value is used as connector.max_tlp
+    assert settings.connector.max_tlp == "TLP:RED"

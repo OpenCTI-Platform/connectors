@@ -123,7 +123,7 @@ class TemplateConnector:
                     self.tlp = marking_definition["definition"]
 
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.template.max_tlp_level
+            self.tlp, self.config.connector.max_tlp
         )
 
         if not valid_max_tlp:

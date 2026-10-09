@@ -104,10 +104,13 @@ class ConnectorConfigJsonSchemaGenerator(GenerateJsonSchema):
                         if new_namespaced_var := config_var_schema.get(
                             "new_namespaced_var"
                         ):
-                            if config_var_schema.get("new_namespace"):
-                                new_namespace = config_var_schema.get("new_namespace")
+                            # Per-variable target, so the namespace target stays
+                            # intact for the next variables of this namespace.
+                            var_new_namespace = (
+                                config_var_schema.get("new_namespace") or new_namespace
+                            )
                             config_var_schema["description"] = (
-                                f"Use {new_namespace.upper()}_{new_namespaced_var.upper()} instead.{removal_msg}"
+                                f"Use {var_new_namespace.upper()}_{new_namespaced_var.upper()} instead.{removal_msg}"
                             )
                         else:
                             config_var_schema["description"] = (

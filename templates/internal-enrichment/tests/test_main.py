@@ -40,11 +40,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             }
         )
