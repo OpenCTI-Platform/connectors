@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-opensearch-ocsf-hunt:
+    image: opencti/connector-opensearch-ocsf-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=OpenSearch OCSF Hunt # optional (default: 'OpenSearch OCSF Hunt')
+      # - CONNECTOR_SCOPE=opensearch # optional, hunt platform slug (default: 'opensearch')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=OpenSearch # optional, Security Platform the hunts run against (default: 'OpenSearch')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # OpenSearch cluster holding the OCSF events
+      - OPENSEARCH_OCSF_HUNT_URL=ChangeMe # e.g. https://opensearch.example.com:9200
+      - OPENSEARCH_OCSF_HUNT_USERNAME=ChangeMe # leave username and password empty without the security plugin
+      - OPENSEARCH_OCSF_HUNT_PASSWORD=ChangeMe
+      # - OPENSEARCH_OCSF_HUNT_VERIFY_SSL=true # optional (default: true)
+      # - OPENSEARCH_OCSF_HUNT_CA_CERT= # optional, path to a CA certificate bundle
+      # - OPENSEARCH_OCSF_HUNT_INDICES=ocsf-* # optional, index patterns holding the OCSF events
+      # - OPENSEARCH_OCSF_HUNT_QUERY_LANGUAGE=ppl # optional, language of the translated Sigma rules: 'ppl' or 'opensearch-lucene'
+      # - OPENSEARCH_OCSF_HUNT_SIGMA_PIPELINE=ocsf # optional, pySigma pipeline(s) chained with '+', or 'none'
+      # - OPENSEARCH_OCSF_HUNT_TIMESTAMP_FIELD=time # optional (default: 'time')
+      # - OPENSEARCH_OCSF_HUNT_TIMESTAMP_FORMAT=epoch_millis # optional, 'epoch_millis' or 'date' (default: 'epoch_millis')
+    restart: always

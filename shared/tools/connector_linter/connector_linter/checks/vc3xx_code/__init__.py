@@ -24,4 +24,5 @@ VC321: Enrichment connector must be playbook-compatible.
 VC322: Enrichment connector must read data['stix_objects'] (former bundle).
 VC323: Stream connectors must use helper.listen_stream().
 VC324: Relationship should not set both start_time and stop_time.
+VC327: Internal hunt connectors must use InternalHuntConnector or helper.listen_hunt().
 """

@@ -17,6 +17,7 @@ file.
 connectors-sdk/          Shared SDK: STIX models with deterministic IDs, settings, base connectors
 external-import/         Pull data from an external source into OpenCTI
 internal-enrichment/     Enrich existing OpenCTI entities on demand
+internal-hunt/           Execute OpenCTI hunts on a security platform (INTERNAL_HUNT)
 internal-import-file/    Parse uploaded files into STIX
 internal-export-file/    Export OpenCTI data to files
 stream/                  Consume the OpenCTI live stream and push to a third party
@@ -194,7 +195,7 @@ cd templates && sh create_connector_dir.sh -t external-import -n myconnector
 ```
 
 Valid types: `external-import`, `internal-enrichment`, `stream`,
-`internal-import-file`, `internal-export-file`. Then replace every
+`internal-import-file`, `internal-export-file`, `internal-hunt`. Then replace every
 `Template`/`template` reference, generate a UUIDv4 for the connector `id`
 default, fill in `__metadata__/connector_manifest.json`, and resolve the
 `TODO` checklists left in the template files.

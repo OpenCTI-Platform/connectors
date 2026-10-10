@@ -1,0 +1,27 @@
+{
+  "title": "Google SecOps Hunt",
+  "slug": "google-secops-hunt",
+  "description": "Executes OpenCTI hunts on Google Security Operations (SecOps, formerly Chronicle). OpenCTI dispatches one hunt run per hunt and time window; the connector translates the canonical Sigma rule of the hunt into a UDM search or a YARA-L 2.0 rule with pySigma (UDM pipeline) or runs the native UDM search or YARA-L rule written for Google SecOps, executes it through the Chronicle API over the run window within the run timeout and result limits, and reports the run to OpenCTI. When the hunt matches, the techniques and indicators of the hunt are sighted on the Google SecOps Security Platform and the IOC observables found in the results are sent as observed-data. Indicator hunts look up their IP addresses, domains, host names, URLs, email and MAC addresses and MD5, SHA-1 and SHA-256 file hashes with UDM searches, and report each value seen, not seen or not searched. Raw events never leave SecOps: OpenCTI only receives counts and truncated evidence, per field and per hit. Before you start: a service account JSON key with the Chronicle API Editor role on the project, the Chronicle API enabled. The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#google-secops, and Test connection on the connector page in OpenCTI checks them.",
+  "short_description": "Runs OpenCTI hunts (Sigma translated to UDM search or YARA-L, native queries, indicator lookups) on Google SecOps and reports hits, observed IOCs and redacted evidence.",
+  "logo": "internal-hunt/google-secops-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://cloud.google.com/security/products/security-operations",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/google-secops-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-google-secops-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

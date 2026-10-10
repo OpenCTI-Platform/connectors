@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-crowdstrike-logscale-hunt:
+    image: opencti/connector-crowdstrike-logscale-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=CrowdStrike LogScale Hunt # optional (default: 'CrowdStrike LogScale Hunt')
+      # - CONNECTOR_SCOPE=crowdstrike-logscale # optional, hunt platform slug (default: 'crowdstrike-logscale')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=CrowdStrike Falcon # optional, Security Platform the hunts run against (default: 'CrowdStrike Falcon')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # CrowdStrike Falcon Next-Gen SIEM or LogScale
+      - CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_ID=ChangeMe # CrowdStrike API client ID (deployment 'falcon')
+      - CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_SECRET=ChangeMe # CrowdStrike API client secret (deployment 'falcon')
+      # - CROWDSTRIKE_LOGSCALE_HUNT_DEPLOYMENT=falcon # optional, 'falcon' (Falcon Next-Gen SIEM) or 'logscale' (LogScale cluster)
+      # - CROWDSTRIKE_LOGSCALE_HUNT_BASE_URL=https://api.crowdstrike.com # optional, CrowdStrike API URL of your Falcon cloud
+      # - CROWDSTRIKE_LOGSCALE_HUNT_LOGSCALE_URL= # LogScale cluster URL (deployment 'logscale')
+      # - CROWDSTRIKE_LOGSCALE_HUNT_LOGSCALE_TOKEN= # LogScale API token (deployment 'logscale')
+      # - CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY=search-all # optional, repository or view searched
+      # - CROWDSTRIKE_LOGSCALE_HUNT_VERIFY_SSL=true # optional (default: true)
+      # - CROWDSTRIKE_LOGSCALE_HUNT_SIGMA_PIPELINE=crowdstrike_falcon # optional, 'crowdstrike_falcon', 'crowdstrike_fdr' or 'none'
+      # - CROWDSTRIKE_LOGSCALE_HUNT_POLL_INTERVAL=1 # optional, seconds between two query job status checks
+    restart: always

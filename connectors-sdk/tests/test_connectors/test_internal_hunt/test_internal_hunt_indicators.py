@@ -1,0 +1,658 @@
+# pragma: no cover
+# type: ignore
+"""Tests of indicator hunts in the internal hunt connector base."""
+
+import json
+from datetime import datetime, timezone
+
+import pytest
+from connectors_sdk.connectors.internal_hunt import (
+    HuntEvent,
+    HuntHitEvidence,
+    HuntIoc,
+    HuntResult,
+    HuntTranslationError,
+    HuntUnsupportedPyctiError,
+    IocBatch,
+    NativeQuery,
+    aggregated_observations,
+    batch_iocs,
+    hit_key,
+    match_events,
+    value_pattern,
+)
+
+from .conftest import DummyHuntConnector
+
+INDICATOR_SOURCE = {
+    "standard_id": "indicator--a932fcc6-e032-476c-826f-cb970a5a1ade",
+    "entity_type": "Indicator",
+    "name": "C2 address",
+}
+IOCS = [
+    {
+        "key": "k-ip",
+        "observable_type": "IPv4-Addr",
+        "value": "198.51.100.7",
+        "sources": [INDICATOR_SOURCE],
+    },
+    {
+        "key": "k-domain",
+        "observable_type": "Domain-Name",
+        "value": "evil.example.com",
+        "sources": [],
+    },
+    {
+        "key": "k-other-ip",
+        "observable_type": "IPv4-Addr",
+        "value": "198.51.100.8",
+        "sources": [INDICATOR_SOURCE],
+    },
+    {
+        "key": "k-mac",
+        "observable_type": "Mac-Addr",
+        "value": "00:1a:2b:3c:4d:5e",
+        "sources": [],
+    },
+]
+
+
+def ioc(key, observable_type, value, hash_algorithm=None):
+    return HuntIoc(
+        key=key,
+        observable_type=observable_type,
+        value=value,
+        hash_algorithm=hash_algorithm,
+    )
+
+
+def event(timestamp, **fields):
+    return HuntEvent(timestamp=datetime.fromisoformat(timestamp), fields=fields)
+
+
+class DummyIndicatorConnector(DummyHuntConnector):
+    """Looks up IP addresses and domains, not MAC addresses."""
+
+    def ioc_query(self, batch):
+        if batch.observable_type == "Mac-Addr":
+            return None
+        return NativeQuery(language="test", query=" OR ".join(batch.values))
+
+
+@pytest.fixture
+def indicator_event(hunt_event):
+    def _make(**overrides):
+        return hunt_event(
+            {"hunt_type": "indicators", "sigma_rule": None, "iocs": IOCS}, **overrides
+        )
+
+    return _make
+
+
+def test_batches_values_by_type_and_hash_algorithm():
+    iocs = [
+        ioc("a", "IPv4-Addr", "198.51.100.1"),
+        ioc("b", "IPv4-Addr", "198.51.100.2"),
+        ioc("c", "IPv4-Addr", "198.51.100.3"),
+        ioc("d", "StixFile", "d41d8cd98f00b204e9800998ecf8427e", "MD5"),
+        ioc(
+            "e",
+            "StixFile",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "SHA-256",
+        ),
+    ]
+    batches = batch_iocs(iocs, 2)
+    assert [
+        (batch.observable_type, batch.hash_algorithm, batch.values) for batch in batches
+    ] == [
+        ("IPv4-Addr", None, ["198.51.100.1", "198.51.100.2"]),
+        ("IPv4-Addr", None, ["198.51.100.3"]),
+        ("StixFile", "MD5", ["d41d8cd98f00b204e9800998ecf8427e"]),
+        (
+            "StixFile",
+            "SHA-256",
+            ["e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"],
+        ),
+    ]
+
+
+def test_finds_values_as_whole_tokens_only():
+    address = value_pattern(ioc("a", "IPv4-Addr", "1.2.3.4"))
+    assert address.search("dst=1.2.3.4:443")
+    assert not address.search("dst=11.2.3.4") and not address.search("dst=1.2.3.45")
+    domain = value_pattern(ioc("d", "Domain-Name", "evil.com"))
+    assert domain.search("GET https://cdn.EVIL.com/a") and domain.search(
+        "query=evil.com."
+    )
+    assert (
+        not domain.search("notevil.com")
+        and not domain.search("evil.community")
+        and not domain.search("evil.com.au")
+    )
+    digest = value_pattern(ioc("h", "StixFile", "d41d8cd98f00b204e9800998ecf8427e"))
+    assert digest.search("md5=D41D8CD98F00B204E9800998ECF8427E")
+    assert not digest.search("d41d8cd98f00b204e9800998ecf8427e00")
+    url = value_pattern(ioc("u", "Url", "https://evil.com/Payload"))
+    assert url.search("referer: https://evil.com/Payload?x=1") and not url.search(
+        "https://evil.com/payload"
+    )
+
+
+def test_matches_raw_events_with_counts_times_and_hosts():
+    batch = IocBatch(
+        "IPv4-Addr",
+        None,
+        (ioc("a", "IPv4-Addr", "198.51.100.7"), ioc("b", "IPv4-Addr", "198.51.100.8")),
+    )
+    events = [
+        event(
+            "2026-10-03T10:00:00+00:00",
+            DestinationIp="198.51.100.7",
+            ComputerName="WKS-01",
+        ),
+        event("2026-10-03T08:00:00+00:00", _raw="conn to 198.51.100.7", host="SRV-02"),
+        event("2026-10-03T09:00:00+00:00", _raw="conn to 198.51.100.70", host="SRV-03"),
+    ]
+    observations = match_events(batch, events)
+    assert set(observations) == {"a"}
+    seen = observations["a"]
+    assert seen.hits == 2
+    assert seen.first_seen == datetime(2026, 10, 3, 8, tzinfo=timezone.utc)
+    assert seen.last_seen == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
+    assert seen.hosts == ["WKS-01", "SRV-02"]
+
+
+def test_reads_aggregated_rows_of_the_batch_only():
+    batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
+    rows = [
+        HuntEvent(
+            fields={
+                "ioc": "a",
+                "hits": "14",
+                "first_seen": "1759478400",
+                "last_seen": "1759482000",
+                "hosts": ["WKS-01", "WKS-02"],
+            }
+        ),
+        HuntEvent(fields={"ioc": "not-of-the-batch", "hits": "3"}),
+    ]
+    observations = aggregated_observations(batch, rows)
+    assert list(observations) == ["a"]
+    assert observations["a"].hits == 14 and observations["a"].hosts == [
+        "WKS-01",
+        "WKS-02",
+    ]
+    assert observations["a"].first_seen == datetime.fromtimestamp(
+        1759478400, tz=timezone.utc
+    )
+
+
+def test_a_connector_without_lookup_refuses_indicator_hunts(
+    connector_factory, indicator_event, hunt_helper
+):
+    connector = connector_factory()
+    assert connector.supports_indicators is False
+    with pytest.raises(HuntTranslationError):
+        connector.process_message(indicator_event())
+    assert hunt_helper.report_hunt_run.call_args.args[1] == "failed"
+    assert (
+        "does not look up indicator values"
+        in hunt_helper.report_hunt_run.call_args.kwargs["error"]
+    )
+
+
+def test_registers_the_indicator_lookup_capability(hunt_settings, hunt_helper):
+    connector = DummyIndicatorConnector(hunt_settings)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.register_platform()
+    assert (
+        hunt_helper.register_hunt_platform.call_args.kwargs["supports_indicators"]
+        is True
+    )
+
+
+def test_previews_the_lookups_without_running_them(
+    hunt_settings, hunt_helper, indicator_event
+):
+    connector = DummyIndicatorConnector(hunt_settings)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event(mode="preview"))
+    assert connector.executed == []
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert (
+        kwargs["translated_query"] == "198.51.100.7 OR 198.51.100.8\n\nevil.example.com"
+    )
+    assert kwargs["query_language"] == "test"
+
+
+def test_reports_one_result_per_value_with_the_keys_of_its_hits(
+    hunt_settings, hunt_helper, indicator_event
+):
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-01"
+            ),
+            event("2026-10-03T11:00:00+00:00", query="evil.example.com", host="WKS-02"),
+            event(
+                "2026-10-03T12:00:00+00:00", query="www.evil.example.com", host="WKS-02"
+            ),
+        ],
+        truncated=False,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event())
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert hunt_helper.report_hunt_run.call_args.args[1] == "completed"
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert (
+        by_key["k-ip"]["seen"] is True
+        and by_key["k-ip"]["hits_count"] == 1
+        and by_key["k-ip"]["hosts"] == ["WKS-01"]
+    )
+    assert by_key["k-domain"]["hits_count"] == 2 and by_key["k-domain"][
+        "first_seen"
+    ].startswith("2026-10-03T11:00:00")
+    assert (
+        by_key["k-other-ip"]["seen"] is False
+        and by_key["k-other-ip"]["searched"] is True
+    )
+    assert (
+        by_key["k-mac"]["searched"] is False
+        and "does not look up Mac-Addr" in by_key["k-mac"]["reason"]
+    )
+    assert kwargs["hits_count"] == 3
+    assert kwargs["distinct_entities"] == 2
+    # The most seen value first, its preview within the evidence length limit
+    assert kwargs["evidence_sample"][0] == {
+        "field": "ioc.Domain-Name",
+        "value_hash": kwargs["evidence_sample"][0]["value_hash"],
+        "value_preview": "evil.example.com"[:16],
+        "count": 2,
+    }
+    # No sighting is sent, OpenCTI keeps one per hunt, source and platform; the
+    # pasted domain comes from no object and is created as an observable to be sighted
+    bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
+    assert [(item["type"], item["value"]) for item in bundle_objects] == [
+        ("domain-name", "evil.example.com")
+    ]
+    assert set(kwargs["result_ids"]) == {item["id"] for item in bundle_objects}
+    # Each seen value names the keys of the hits holding it, the run every key once
+    assert len(by_key["k-ip"]["hit_keys"]) == 1
+    assert len(by_key["k-domain"]["hit_keys"]) == 2
+    assert by_key["k-other-ip"]["hit_keys"] is None
+    assert sorted(kwargs["hit_keys"]) == sorted(
+        by_key["k-ip"]["hit_keys"] + by_key["k-domain"]["hit_keys"]
+    )
+    # The key of a sampled hit is the one OpenCTI recomputes from the sample
+    assert sorted(hit_key(HuntHitEvidence(**hit)) for hit in kwargs["hits_sample"]) == (
+        sorted(kwargs["hit_keys"])
+    )
+
+
+def test_reports_each_hit_with_the_field_holding_the_value(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given raw events holding an address, a subdomain of a domain, and none of the values
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T11:00:00+00:00", query="www.evil.example.com", host="WKS-02"
+            ),
+            event(
+                "2026-10-03T10:00:00+00:00",
+                DestinationIp="198.51.100.7",
+                host="WKS-01",
+                user="alice",
+            ),
+            event(
+                "2026-10-03T12:00:00+00:00", query="benign.example.org", host="WKS-03"
+            ),
+        ],
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then each hit names the field holding the value, its host and user, the earliest first
+    hits = hunt_helper.report_hunt_run.call_args.kwargs["hits_sample"]
+    assert [
+        (
+            hit["host"],
+            hit["user"],
+            [(m["field"], m["value_preview"]) for m in hit["matched"]],
+        )
+        for hit in hits
+    ] == [
+        ("WKS-01", "alice", [("DestinationIp", "198.51.100.7")]),
+        ("WKS-02", None, [("query", "www.evil.example")]),
+    ]
+
+
+def test_a_hit_never_reports_an_excluded_field(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a raw event holding an address in a field and in the raw payload the
+    # connector excludes from the evidence
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00",
+                DestinationIp="198.51.100.7",
+                _raw="conn 198.51.100.7 secret payload",
+                host="WKS-01",
+            ),
+        ],
+    )
+    connector = _indicator_connector(hunt_settings, hunt_helper, result)
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the hit reports the field, not the raw payload, the value keeps the key
+    # of the hit, and that key is the one OpenCTI recomputes from the sampled hit
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    (hit,) = kwargs["hits_sample"]
+    assert [m["field"] for m in hit["matched"]] == ["DestinationIp"]
+    assert "secret" not in str(kwargs)
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["hit_keys"] == kwargs["hit_keys"]
+    assert kwargs["hit_keys"] == [hit_key(HuntHitEvidence.model_validate(hit))]
+
+
+def test_a_value_found_only_in_an_excluded_field_keeps_its_hit(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a raw event holding an address in the raw payload only
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00",
+                _raw="conn 198.51.100.7 secret payload",
+                host="WKS-01",
+            ),
+        ],
+    )
+    connector = _indicator_connector(hunt_settings, hunt_helper, result)
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the hit is reported without any matched field, and the value keeps
+    # the key of the hit OpenCTI recomputes from the sample
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    (hit,) = kwargs["hits_sample"]
+    assert (hit["host"], hit["matched"]) == ("WKS-01", [])
+    assert "secret" not in json.dumps(kwargs["hits_sample"])
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-ip"]["hit_keys"] == kwargs["hit_keys"]
+    assert kwargs["hit_keys"] == [hit_key(HuntHitEvidence.model_validate(hit))]
+
+
+def test_aggregated_lookups_report_no_single_hit(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a platform aggregating the lookups, one row per value
+    class AggregatedConnector(DummyIndicatorConnector):
+        ioc_aggregated = True
+
+    result = HuntResult(
+        events=[
+            HuntEvent(
+                fields={
+                    "ioc": "k-ip",
+                    "hits": "4",
+                    "first_seen": "2026-10-03T10:00:00Z",
+                    "last_seen": "2026-10-03T12:00:00Z",
+                    "hosts": ["WKS-01"],
+                }
+            )
+        ]
+    )
+    connector = AggregatedConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the counts come from the rows, and no row is reported as a single hit:
+    # the hits cannot be told apart, OpenCTI counts them all as new
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 4
+    assert kwargs["hits_sample"] == []
+    assert "hit_keys" not in kwargs
+    assert all(item["hit_keys"] is None for item in kwargs["ioc_results"])
+
+
+def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_not_seen(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # The platform returned part of the matches only: 198.51.100.8 may be among the others
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-01"
+            ),
+        ],
+        truncated=True,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event())
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    for key in ("k-other-ip", "k-domain"):
+        assert by_key[key]["searched"] is False, key
+        assert "returned partial results" in by_key[key]["reason"]
+    assert kwargs["truncated"] is True
+
+
+def _indicator_connector(hunt_settings, hunt_helper, result):
+    from unittest.mock import MagicMock
+
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    connector._logger = MagicMock()
+    return connector
+
+
+def _two_events():
+    return HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-01"
+            ),
+            event(
+                "2026-10-03T11:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-02"
+            ),
+        ],
+        truncated=False,
+    )
+
+
+def test_the_lookups_of_a_run_share_its_maximum_results(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # 3 events for the run: the IPv4 lookup reads 2, the domain lookup only 1
+    connector = _indicator_connector(hunt_settings, hunt_helper, _two_events())
+    message = indicator_event()
+    message["limits"]["max_results"] = 3
+    connector.process_message(message)
+    assert [limits.max_results for _, _, limits in connector.executed] == [3, 1]
+    kwargs = connector._helper.report_hunt_run.call_args.kwargs
+    assert kwargs["truncated"] is True
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-domain"]["searched"] is False
+    assert "returned partial results" in by_key["k-domain"]["reason"]
+
+
+def test_a_lookup_the_run_can_no_longer_afford_is_not_searched(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # The IPv4 lookup reads the 2 events of the run: the domain is never looked up
+    connector = _indicator_connector(hunt_settings, hunt_helper, _two_events())
+    message = indicator_event()
+    message["limits"]["max_results"] = 2
+    connector.process_message(message)
+    assert len(connector.executed) == 1
+    assert "198.51.100.7" in connector.executed[0][0].query
+    kwargs = connector._helper.report_hunt_run.call_args.kwargs
+    assert kwargs["truncated"] is True
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-domain"]["searched"] is False
+    assert "read the maximum number of results" in by_key["k-domain"]["reason"]
+    assert by_key["k-mac"]["searched"] is False
+
+
+def test_ignores_aggregated_rows_without_hits():
+    batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
+    rows = [
+        HuntEvent(fields={"ioc": "a", "hits": "not a number"}),
+        HuntEvent(fields={"ioc": "a", "hits": "0"}),
+    ]
+    assert aggregated_observations(batch, rows) == {}
+
+
+def test_the_default_lookup_and_keyword_detection(connector_factory):
+    from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
+        _accepts_keyword,
+    )
+
+    connector = connector_factory()
+    assert (
+        connector.ioc_query(
+            IocBatch("IPv4-Addr", None, (ioc("a", "IPv4-Addr", "198.51.100.7"),))
+        )
+        is None
+    )
+    assert _accepts_keyword(1, "anything") is False
+    assert _accepts_keyword(lambda value, other=None: None, "other") is True
+    assert _accepts_keyword(lambda value: None, "other") is False
+
+
+def test_sends_nothing_without_a_security_platform(
+    hunt_settings, hunt_helper, indicator_event
+):
+    result = HuntResult(
+        events=[event("2026-10-03T10:00:00+00:00", query="evil.example.com")],
+        truncated=False,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event(security_platform=None))
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 1 and kwargs["result_ids"] == []
+    hunt_helper.send_stix2_bundle.assert_not_called()
+
+
+def test_sends_nothing_for_values_coming_from_objects(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a hit on a value of an indicator only: OpenCTI already has the indicator
+    result = HuntResult(
+        events=[event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")],
+        truncated=False,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event())
+
+    # Then the run reports the hit and its key, and sends no object
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 1 and kwargs["result_ids"] == []
+    assert len(kwargs["hit_keys"]) == 1
+    hunt_helper.send_stix2_bundle.assert_not_called()
+
+
+def test_fails_the_run_for_a_retry_when_the_observables_cannot_be_sent(
+    hunt_settings, hunt_helper, indicator_event
+):
+    result = HuntResult(
+        events=[event("2026-10-03T10:00:00+00:00", query="evil.example.com")],
+        truncated=False,
+    )
+    hunt_helper.send_stix2_bundle.side_effect = RuntimeError("broker down")
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    with pytest.raises(RuntimeError) as raised:
+        connector.process_message(indicator_event())
+    # The run is never reported completed without its knowledge: it fails, to be retried
+    assert hunt_helper.report_hunt_run.call_count == 1
+    assert hunt_helper.report_hunt_run.call_args.args[1] == "failed"
+    assert hunt_helper.report_hunt_run.call_args.kwargs["retryable"] is True
+    assert raised.value.hunt_run_reported is True
+
+
+def test_fails_the_run_with_a_pycti_that_cannot_report_values(
+    hunt_settings, hunt_helper, indicator_event
+):
+    reports = []
+
+    def report_hunt_run(
+        run_id,
+        status,
+        hits_count=None,
+        distinct_entities=None,
+        evidence_sample=None,
+        translated_query=None,
+        query_language=None,
+        cost_ms=None,
+        result_ids=None,
+        error=None,
+        truncated=None,
+    ):
+        reports.append((status, error))
+
+    hunt_helper.report_hunt_run = report_hunt_run
+    seen = event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")
+    connector = DummyIndicatorConnector(
+        hunt_settings, result=HuntResult(events=[seen], truncated=False)
+    )
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    with pytest.raises(HuntUnsupportedPyctiError):
+        connector.process_message(indicator_event())
+    assert (
+        reports[-1][0] == "failed"
+        and "cannot report the results of indicator hunts" in reports[-1][1]
+    )
+    # Nothing is looked up nor sighted for a run that could not be reported
+    assert connector.executed == []
+    hunt_helper.send_stix2_bundle.assert_not_called()

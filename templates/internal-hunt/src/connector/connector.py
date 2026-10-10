@@ -1,0 +1,159 @@
+"""Hunt connector.
+
+`TemplateConnector` is built on `InternalHuntConnector` (from `connectors-sdk`),
+which already implements the whole hunt run lifecycle: platform registration,
+native query override, preview mode, run timeout and `max_results`, benign
+suppression, observables and observed-data, hashed and truncated evidence, hit
+keys, and the run report. A hunt connector only implements:
+
+    - `languages`: the query languages it executes;
+    - `sigma_backend()`: the pySigma backend translating Sigma rules;
+    - `execute()`: the query execution on the platform.
+
+TODO:
+    - [ ] Set `languages` to the query language(s) of your platform
+        (`spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `udm`, `ppl`,
+        `opensearch-lucene`, `sql`...). The first one is produced by translation.
+    - [ ] Replace `TextQueryTestBackend` with the pySigma backend of your platform
+        (e.g. `SplunkBackend` from `pysigma-backend-splunk`) and register its
+        pipelines in `SIGMA_PIPELINES`.
+    - [ ] Map the events returned by your platform in `execute()`: the event time
+        (parsed with `parse_timestamp`) and the event fields (flattened with
+        `flatten_fields`).
+    - [ ] Declare the permissions the account needs on your platform in
+        `REQUIRED_PERMISSIONS`, its setup documentation in `DOCUMENTATION_URL`
+        and, in `ACCESS_DENIED_HINTS`, what a refused account lacks: OpenCTI
+        shows them on the page of the connector and on an "Access denied" run.
+    - [ ] Return the cheapest search of your platform in `connection_test_query()`
+        (or check each permission in `connection_checks()`): it backs
+        "Test connection" in OpenCTI.
+"""
+
+from connector.settings import ConnectorSettings
+from connectors_sdk import InternalHuntConnector
+from connectors_sdk.connectors.internal_hunt import (
+    HuntEvent,
+    HuntLimits,
+    HuntResult,
+    HuntTimeWindow,
+    NativeQuery,
+    RunDeadline,
+    build_pipeline,
+    flatten_fields,
+    parse_timestamp,
+)
+from sigma.backends.test import TextQueryTestBackend
+from sigma.pipelines.windows import windows_logsource_pipeline
+from template_client import TemplateClient
+
+SIGMA_PIPELINES = {
+    "windows-logsources": windows_logsource_pipeline,
+}
+"""pySigma pipelines selectable with `TEMPLATE_SIGMA_PIPELINE` or a hunt native query."""
+
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#before-you-start"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "search:read",
+        "Run the searches of the hunts on the indices of TEMPLATE_INDICES and read their results.",
+    ),
+)
+"""Permissions of the API key, shown on the page of the connector in OpenCTI."""
+
+ACCESS_DENIED_HINTS = {
+    401: "the platform refused the API key: check TEMPLATE_API_KEY, valid and not expired",
+    403: "the API key needs the search:read permission on the indices of TEMPLATE_INDICES",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
+class TemplateConnector(InternalHuntConnector):
+    """Hunt connector executing hunts on the platform search API."""
+
+    languages = ("opensearch-lucene",)
+    evidence_excluded_fields = frozenset({"_raw"})
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
+
+    def __init__(self, settings: ConnectorSettings) -> None:
+        """Initialize the connector (the helper is created by `start()`).
+
+        Args:
+            settings: The connector settings.
+        """
+        super().__init__(settings)
+        self.template_config = settings.template
+        self.client: TemplateClient | None = None
+
+    def post_init(self) -> None:
+        """Create the platform API client once the helper exists."""
+        self.client = TemplateClient(
+            base_url=str(self.template_config.api_base_url),
+            api_key=self.template_config.api_key.get_secret_value(),
+            verify_ssl=self.template_config.verify_ssl,
+        )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search of "Test connection": any event of the indices."""
+        return NativeQuery(language="opensearch-lucene", query="*")
+
+    def sigma_backend(self, pipeline: str | None) -> TextQueryTestBackend:
+        """Create the pySigma backend of the platform.
+
+        Args:
+            pipeline: Pipeline requested by the hunt, or `None` for the configured one.
+
+        Returns:
+            The pySigma backend.
+        """
+        return TextQueryTestBackend(
+            build_pipeline(
+                pipeline or self.template_config.sigma_pipeline, SIGMA_PIPELINES
+            )
+        )
+
+    def execute(
+        self,
+        native_query: NativeQuery,
+        time_window: HuntTimeWindow,
+        limits: HuntLimits,
+        deadline: RunDeadline | None = None,
+    ) -> HuntResult:
+        """Execute a query on the platform search API.
+
+        Args:
+            native_query: Query to execute.
+            time_window: Time window to search over.
+            limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
+
+        Returns:
+            The hunt results.
+        """
+        if self.client is None:
+            raise RuntimeError("The API client is created by start().")
+        response = self.client.search(
+            query=native_query.query,
+            indices=list(self.template_config.indices),
+            start=time_window.start,
+            end=time_window.end,
+            max_results=limits.max_results,
+            deadline=deadline or RunDeadline(limits.timeout_seconds),
+        )
+        events = [
+            HuntEvent(
+                timestamp=parse_timestamp(event.get("@timestamp")),
+                fields=flatten_fields(event),
+            )
+            for event in response["events"][: limits.max_results]
+        ]
+        return HuntResult(
+            events=events,
+            total_hits=response["total"],
+            truncated=response["total"] > len(events),
+        )

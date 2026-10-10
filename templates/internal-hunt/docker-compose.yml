@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-template:
+    image: opencti/connector-template:latest # 'template' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Template Hunt # optional (default: 'Template Hunt')
+      # - CONNECTOR_SCOPE=opensearch # optional, hunt platform slug (default: 'opensearch')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=Template SIEM # optional, Security Platform the hunts run against (default: 'Template SIEM')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Custom parameters for connector-template
+      - TEMPLATE_API_BASE_URL=ChangeMe
+      - TEMPLATE_API_KEY=ChangeMe
+      # - TEMPLATE_VERIFY_SSL=true # optional (default: true)
+      # - TEMPLATE_SIGMA_PIPELINE=none # optional, pySigma pipeline(s) chained with '+' (default: 'none')
+      # - TEMPLATE_INDICES=* # optional, indices searched by the hunts (default: '*')
+    restart: always

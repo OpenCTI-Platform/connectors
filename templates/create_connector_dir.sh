@@ -71,7 +71,7 @@ if [ -z "$TYPE" ] || [ -z "$NAME" ]; then
 fi
 
 # Define accepted types
-VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-import-file" "stream")
+VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-hunt" "internal-import-file" "stream")
 
 # Validate the connector type
 TYPE_IS_VALID=false
@@ -88,9 +88,11 @@ if [ "$TYPE_IS_VALID" = false ]; then
     exit 1
 fi
 
-if [[ ! "$NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
+# The name gives the Python class and module names: it starts with a letter,
+# and its segments of letters and digits are separated by single hyphens
+if [[ ! "$NAME" =~ ^[a-zA-Z][a-zA-Z0-9]*(-[a-zA-Z0-9]+)*$ ]]; then
     echo "Error: Connector name '$NAME' is invalid!"
-    echo "The name can only contain letters, digits, and hyphens (-)."
+    echo "The name starts with a letter and holds letters and digits, in segments separated by single hyphens (-), for example my-siem-2."
     exit 1
 fi
 
@@ -117,12 +119,13 @@ mkdir -p "$NEW_CONNECTOR_DIR"
 
 # Copy template files to the new directory
 echo "Copying template files..."
-cp -r "$TEMPLATE_DIR/"* "$NEW_CONNECTOR_DIR"
+# "/." also copies the dotfiles (.dockerignore), which a "/*" glob skips
+cp -r "$TEMPLATE_DIR/." "$NEW_CONNECTOR_DIR"
 
 # Update placeholders in the copied files
 echo "Customizing connector files..."
 
-PYTHON_NAME="$(echo "$NAME" | sed -E 's/-([a-z])/\U\1/g' | sed -E 's/^(.)/\U\1/')"
+PYTHON_NAME="$(echo "$NAME" | sed -E 's/-([a-z0-9])/\U\1/g' | sed -E 's/^(.)/\U\1/')"
 CAPITALIZED_NAME=$(echo "$NAME" |  sed 's/.*/\U&/' | sed -E 's/-/_/g')
 
 find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \

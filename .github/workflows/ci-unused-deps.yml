@@ -6,6 +6,7 @@ on:
       - 'external-import/**'
       - 'internal-enrichment/**'
       - 'internal-export-file/**'
+      - 'internal-hunt/**'
       - 'internal-import-file/**'
       - 'stream/**'
 
@@ -36,9 +37,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          pr_files=$(gh pr diff "$PR_NUMBER" --name-only)
+          # The files API, unlike `gh pr diff`, has no 20000-line diff limit
+          pr_files=$(gh api --paginate "repos/${{ github.repository }}/pulls/$PR_NUMBER/files" --jq '.[].filename')
           conns=()
-          for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
+          for dir in external-import internal-enrichment internal-import-file internal-export-file internal-hunt stream; do
             for connector in "$dir"/*/; do
               connector="${connector%/}"
               # A connector is scannable if it declares dependencies via a

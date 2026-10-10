@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Microsoft Sentinel Hunt' # optional (default: 'Microsoft Sentinel Hunt')
+  # scope: 'microsoft-sentinel' # optional, hunt platform slug (default: 'microsoft-sentinel')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Microsoft Sentinel' # optional (default: 'Microsoft Sentinel')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+microsoft_sentinel_hunt:
+  workspace_id: 'ChangeMe' # Log Analytics workspace ID (GUID)
+  tenant_id: 'ChangeMe' # app registration tenant ID
+  client_id: 'ChangeMe' # app registration client ID
+  client_secret: 'ChangeMe' # app registration client secret
+  # auth_type: 'app_registration' # optional, 'app_registration' or 'azure_credential' (default: 'app_registration')
+  # additional_workspaces: '' # optional, other workspaces queried with the main one (default: none)
+  # api_url: 'https://api.loganalytics.io' # optional (default: Azure public cloud)
+  # authority_host: 'login.microsoftonline.com' # optional (default: Azure public cloud)
+  # sigma_pipeline: 'sentinel_asim' # optional, 'sentinel_asim', 'azure_monitor', 'microsoft_xdr' or 'none'

@@ -32,7 +32,7 @@ jobs:
         id: filter
         if: github.event_name == 'pull_request'
         run: |
-          relevant='^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/'
+          relevant='^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-hunt|internal-import-file|stream|shared|templates)/'
           relevant+='|^(run_test\.sh|\.github/workflows/ci-tests-connectors\.yml|\.github/scripts/(build_test_matrix|_matrix_common)\.py)$'
           # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
           # Captured first so a git failure fails the step instead of being
