@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | HATCHING_TRIAGE_SANDBOX_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Hatching Triage API token. See https://tria.ge/account |
 | CONNECTOR_NAME | `string` |  | string | `"Hatching Triage Sandbox"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["Artifact", "Url"]` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["Artifact", "StixFile", "Url"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
