@@ -1,0 +1,182 @@
+[
+  {
+    "match": "APT1",
+    "type": "entity",
+    "category": "Intrusion-Set"
+  },
+  {
+    "match": "Ugly Gorilla",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "DOTA",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "SuperHard",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "Communist Party of China",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "Unit 61398",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "JackWang",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "Wang Dong",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "dota",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "Mei Qiang",
+    "type": "entity",
+    "category": "Threat-Actor-Group"
+  },
+  {
+    "match": "223.166.0.0/15",
+    "type": "observable",
+    "category": "IPv4-Addr.value"
+  },
+  {
+    "match": "58.246.0.0/15",
+    "type": "observable",
+    "category": "IPv4-Addr.value"
+  },
+  {
+    "match": "112.64.0.0/15",
+    "type": "observable",
+    "category": "IPv4-Addr.value"
+  },
+  {
+    "match": "139.226.0.0/15",
+    "type": "observable",
+    "category": "IPv4-Addr.value"
+  },
+  {
+    "match": "hugesoft.org",
+    "type": "observable",
+    "category": "Domain-Name.value"
+  },
+  {
+    "match": "arrowservice.net",
+    "type": "observable",
+    "category": "Domain-Name.value"
+  },
+  {
+    "match": "msnhome.org",
+    "type": "observable",
+    "category": "Domain-Name.value"
+  },
+  {
+    "match": "001dd76872d80801692ff942308c64e6",
+    "type": "observable",
+    "category": "File.hashes.MD5"
+  },
+  {
+    "match": "002325a0a67fded0381b5648d7fe9b8e",
+    "type": "observable",
+    "category": "File.hashes.MD5"
+  },
+  {
+    "match": "00dbb9e1c09dbdafb360f3163ba5a3de",
+    "type": "observable",
+    "category": "File.hashes.MD5"
+  },
+  {
+    "match": "MANITSME",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "WEBC2-UGX",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "WEBC2 Backdoor",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "HUC Packet Transmit Tool (HTRAN)",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "AURIGA",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "BANGAT",
+    "type": "entity",
+    "category": "Malware"
+  },
+  {
+    "match": "cachedump",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "fgdump",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "gsecdump",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "lslsass",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "mimikatz",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "pass-the-hash toolkit",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "pwdump7",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "pwdumpX",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "GETMAIL",
+    "type": "entity",
+    "category": "Tool"
+  },
+  {
+    "match": "MAPIGET",
+    "type": "entity",
+    "category": "Tool"
+  }
+]
