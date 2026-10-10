@@ -25,6 +25,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+      connector_count: ${{ steps.set-matrix.outputs.connector_count }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -158,6 +159,10 @@ jobs:
   # each error's code, message, and a permalink to the offending line. Kept
   # separate from the blocking pass/fail logic above so manager-supported
   # connectors' errors stay visible even though they don't fail the check.
+  # Above MAX_COMMENTED_CONNECTORS linted connectors (bulk changes such as a
+  # dependency bump), no comment is posted: the error list would exceed the
+  # environment and comment size limits. Annotations and step summaries of
+  # the vclint jobs still report every error.
   vclint-comment:
     name: Comment connector-linter errors on PR
     needs:
@@ -182,13 +187,18 @@ jobs:
 
       - name: Build error list
         id: build-errors
+        env:
+          CONNECTOR_COUNT: ${{ needs.detect-connectors.outputs.connector_count }}
+          MAX_COMMENTED_CONNECTORS: 20
         run: |
           errors=""
           count=0
           repo="${{ github.repository }}"
           sha="${{ github.event.pull_request.head.sha }}"
 
-          if [ -d annotations ]; then
+          if [ "${CONNECTOR_COUNT:-0}" -gt "$MAX_COMMENTED_CONNECTORS" ]; then
+            echo "::notice::${CONNECTOR_COUNT} connectors linted (more than ${MAX_COMMENTED_CONNECTORS}): no PR comment, see the vclint job annotations and summaries."
+          elif [ -d annotations ]; then
             while IFS= read -r line; do
               [ -z "$line" ] && continue
               file=$(echo "$line" | sed -E 's/^::error file=([^,]+),line=([0-9]+)::.*/\1/')

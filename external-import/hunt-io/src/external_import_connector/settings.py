@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Annotated, Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -8,13 +8,52 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, SkipValidation
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    SecretStr,
+    SkipValidation,
+    model_validator,
+)
+
+DEFAULT_API_VERSION = "v2"
+
+
+def _normalize_api_version(value: Any) -> Any:
+    """Normalize an api_version coming from an environment variable.
+
+    A compose passthrough such as `HUNT_IO_API_VERSION=${HUNT_IO_API_VERSION}` sets the
+    variable to an empty string when it is not defined, which would otherwise fail
+    validation instead of falling back to the default. Case is normalized too, since
+    environment variables are commonly written in upper case.
+    """
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized or DEFAULT_API_VERSION
+    return value
+
+
+ApiVersion = Annotated[
+    Literal["v2", "v3"],
+    BeforeValidator(_normalize_api_version),
+]
 
 
 class HuntIoConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
         description="Hunt.io API endpoint URL for the C2 threat intelligence feeds",
         default=HttpUrl("https://api.hunt.io/v1/feeds/c2"),
+    )
+    api_version: ApiVersion = Field(
+        description=(
+            "Which Hunt.io C2 feed API to target. 'v2' authenticates with a 'token' "
+            "header against https://api.hunt.io/v1/feeds/c2. 'v3' authenticates with "
+            "'Authorization: Bearer' against https://a.hunt.io/feeds/c2 and requires an "
+            "'ak_'-prefixed key. The two APIs are mutually exclusive: set api_base_url "
+            "to match the version, as changing one without the other returns HTTP 401"
+        ),
+        default=DEFAULT_API_VERSION,
     )
     api_key: SecretStr = Field(
         description=(
@@ -31,6 +70,25 @@ class HuntIoConfig(BaseConfigModel):
             default="amber",
         )
     )
+
+    @model_validator(mode="after")
+    def _validate_api_key_matches_version(self) -> "HuntIoConfig":
+        """Fail fast when a V3 key is malformed.
+
+        The V3 API rejects any key without an `ak_` prefix using the same opaque 401 it
+        returns for a missing key, which makes a typo indistinguishable from an
+        entitlement problem at runtime. V2 has no documented prefix rule, so this check
+        is deliberately scoped to V3 only.
+        """
+        if self.api_version == "v3" and not self.api_key.get_secret_value().startswith(
+            "ak_"
+        ):
+            raise ValueError(
+                "api_version 'v3' requires an 'ak_'-prefixed API key; the V3 API "
+                "rejects other keys with an HTTP 401 indistinguishable from a "
+                "missing key"
+            )
+        return self
 
 
 class ExternalImportConfig(BaseExternalImportConnectorConfig):

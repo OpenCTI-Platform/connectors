@@ -9,7 +9,7 @@ These models can be extended to create specific configurations for different typ
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
@@ -69,7 +69,8 @@ class BaseConfigModel(BaseModel, ABC):
                         field.annotation = annotation | None  # type: ignore[assignment]
                     elif annotation is not None and get_origin(annotation) is not None:
                         # Handle typing wrappers (e.g. SkipJsonSchema[X], Annotated[X, ...])
-                        field.annotation = annotation | None
+                        # cast: annotation type differs across pydantic versions
+                        field.annotation = cast(Any, annotation | None)
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False

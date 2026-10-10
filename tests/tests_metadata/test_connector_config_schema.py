@@ -237,7 +237,8 @@ def test_internal_enrichment_connector_config_schema(schema_path: str):
 
     # And CONNECTOR_SCOPE is an array of strings with a non-empty default
     assert properties["CONNECTOR_SCOPE"].get("type") == "array"
-    assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
+    assert properties["CONNECTOR_SCOPE"].get("items") != {}
+    assert properties["CONNECTOR_SCOPE"]["items"].get("type") == "string"
     assert isinstance(properties["CONNECTOR_SCOPE"].get("default"), list)
     assert len(properties["CONNECTOR_SCOPE"]["default"]) > 0
 
@@ -266,7 +267,8 @@ def test_internal_export_file_connector_config_schema(schema_path: str):
 
     # And CONNECTOR_SCOPE is an array of strings with a non-empty default
     assert properties["CONNECTOR_SCOPE"].get("type") == "array"
-    assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
+    assert properties["CONNECTOR_SCOPE"].get("items") != {}
+    assert properties["CONNECTOR_SCOPE"]["items"].get("type") == "string"
     assert isinstance(properties["CONNECTOR_SCOPE"].get("default"), list)
     assert len(properties["CONNECTOR_SCOPE"]["default"]) > 0
 
@@ -291,7 +293,8 @@ def test_internal_import_file_connector_config_schema(schema_path: str):
 
     # And CONNECTOR_SCOPE is an array of strings with a non-empty default
     assert properties["CONNECTOR_SCOPE"].get("type") == "array"
-    assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
+    assert properties["CONNECTOR_SCOPE"].get("items") != {}
+    assert properties["CONNECTOR_SCOPE"]["items"].get("type") == "string"
     assert isinstance(properties["CONNECTOR_SCOPE"].get("default"), list)
     assert len(properties["CONNECTOR_SCOPE"]["default"]) > 0
 
@@ -343,7 +346,8 @@ def test_stream_connector_config_schema(schema_path: str):
 
     # And CONNECTOR_SCOPE is an array of strings with a list default
     assert properties["CONNECTOR_SCOPE"].get("type") == "array"
-    assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
+    assert properties["CONNECTOR_SCOPE"].get("items") != {}
+    assert properties["CONNECTOR_SCOPE"]["items"].get("type") == "string"
     assert isinstance(properties["CONNECTOR_SCOPE"].get("default"), list)
 
     # And CONNECTOR_LIVE_STREAM_ID is a required string

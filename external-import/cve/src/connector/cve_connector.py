@@ -179,10 +179,17 @@ class CVEConnector:
             "[CONNECTOR] Getting the last CVEs since the last run..."
         )
 
-        last_run_ts = datetime.fromtimestamp(last_run, tz=timezone.utc)
+        start_date = datetime.fromtimestamp(last_run, tz=timezone.utc)
+        max_date_range = timedelta(days=MAX_AUTHORIZED)
 
-        cve_params = self._update_cve_params(last_run_ts, now)
-        asyncio.run(self._async_ingest(cve_params))
+        # The NVD API rejects any date range longer than MAX_AUTHORIZED days,
+        # so split the last_run-to-now range into consecutive windows of at
+        # most MAX_AUTHORIZED days each.
+        while start_date < now:
+            end_date = min(start_date + max_date_range, now)
+            cve_params = self._update_cve_params(start_date, end_date)
+            asyncio.run(self._async_ingest(cve_params))
+            start_date = end_date
 
     @staticmethod
     def _format_exception(err: BaseException) -> str:
