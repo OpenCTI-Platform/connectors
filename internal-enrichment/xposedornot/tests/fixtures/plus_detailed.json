@@ -1,0 +1,18 @@
+{
+  "breaches": [
+    {
+      "breach_id": "AlienStealerLogs",
+      "breached_date": "2025",
+      "details": "ALIEN TXTBASE, a stealer log collection, was exposed in February 2025 when 23 billion rows of logs were obtained from a Telegram channel, revealing 299M unique email addresses along with the websites they were entered into and the passwords used.",
+      "domain": "",
+      "industry": "Miscellaneous",
+      "logo": "https://xposedornot.com/static/logos/combolist.png",
+      "password_risk": "plaintext",
+      "searchable": "Yes",
+      "verified": "Yes",
+      "xposed_data": "Email addresses;Passwords",
+      "xposed_records": 299646818
+    }
+  ],
+  "email": "user+tag@example.com"
+}
