@@ -1,4 +1,4 @@
-pycti==7.261002.0
+pycti==7.261008.0
 urllib3==2.8.0
 pydantic-settings==2.15.0
 jsonschema==4.26.0
