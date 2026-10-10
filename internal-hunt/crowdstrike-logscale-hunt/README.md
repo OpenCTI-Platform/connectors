@@ -101,7 +101,7 @@ Other types (other hash algorithms, user accounts...) are reported not searched.
 ### Requirements
 
 - OpenCTI Platform providing hunts (the `INTERNAL_HUNT` connector type).
-- [`pycti`](https://pypi.org/project/pycti/) matching your OpenCTI version (pinned to `7.261002.0`). At startup, the
+- [`pycti`](https://pypi.org/project/pycti/) matching your OpenCTI version (pinned to `7.261008.0`). At startup, the
   connector checks that the installed pycti provides the hunt connector API (`INTERNAL_HUNT`, `register_hunt_platform`,
   `listen_hunt`, `report_hunt_run`) and stops with an explicit message otherwise.
 - Either Falcon Next-Gen SIEM (the `falcon` deployment, through the CrowdStrike API of your Falcon cloud), or a Falcon

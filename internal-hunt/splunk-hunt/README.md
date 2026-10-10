@@ -87,7 +87,7 @@ Raw events never leave Splunk: OpenCTI only receives counts and evidence values 
 ### Requirements
 
 - OpenCTI Platform providing hunts (the `INTERNAL_HUNT` connector type).
-- [`pycti`](https://pypi.org/project/pycti/) matching your OpenCTI version (pinned to `7.261002.0`). At startup, the
+- [`pycti`](https://pypi.org/project/pycti/) matching your OpenCTI version (pinned to `7.261008.0`). At startup, the
   connector checks that the installed pycti provides the hunt connector API (`INTERNAL_HUNT`, `register_hunt_platform`,
   `listen_hunt`, `report_hunt_run`) and stops with an explicit message otherwise.
 - Splunk Enterprise or Splunk Cloud 9.0 or later, with its REST API (management port, `8089` by default) reachable
