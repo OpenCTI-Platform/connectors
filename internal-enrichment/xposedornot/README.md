@@ -141,7 +141,7 @@ OpenCTI usually reads an observable's score as a level of threat. The XposedOrNo
 
 The Note carries the TLP marking configured by `XPOSEDORNOT_TLP_LEVEL` and, in addition, every marking the source observable carries (TLP, PAP, statement or custom), so it is never readable by anyone who cannot read the source. The enriched observable keeps its own markings untouched.
 
-The TLP gate evaluates every TLP marking of the observable, whether it arrives resolved, as a well-known TLP reference or as a TLP definition bundled with the entity: any marking above `XPOSEDORNOT_MAX_TLP`, or a TLP marking whose value cannot be read, skips the enrichment. Outside a playbook, an unexpected failure is reported to the platform with the email address and the API key redacted.
+The TLP gate evaluates every TLP marking of the observable, whether it arrives resolved, as a well-known TLP reference or as a TLP definition bundled with the entity: any marking above `XPOSEDORNOT_MAX_TLP`, or a TLP marking whose value cannot be read, skips the enrichment. A marking reference that resolves to nothing known also skips the enrichment. Outside a playbook, an unexpected failure is reported to the platform with the email address and the API key redacted, and errors are logged without the active traceback.
 
 ### Processing Details
 
@@ -164,5 +164,5 @@ Set `CONNECTOR_LOG_LEVEL=debug`. All API errors are logged through the connector
 - `XposedOrNot: request rejected`: the keyless endpoint refused the request; retry later or configure a key.
 - `XposedOrNot: redirect refused`: the base URL redirected; point `XPOSEDORNOT_API_BASE_URL` at the endpoint that answers directly.
 - `XposedOrNot request failed`: network or TLS failure; the logged detail carries the exception class with the address redacted.
-- `XposedOrNot: error response` / `XposedOrNot: invalid JSON in response` / `XposedOrNot: unexpected JSON payload`: the API answered with an error or a body this connector cannot read.
+- `XposedOrNot: error response` / `XposedOrNot: invalid or unexpected JSON payload`: the API answered with an error or a body this connector cannot read.
 - `Error processing message`: any other failure; the redacted reason is in the log and the work is in error.

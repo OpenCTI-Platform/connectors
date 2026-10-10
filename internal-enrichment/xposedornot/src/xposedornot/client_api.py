@@ -190,7 +190,7 @@ class XposedOrNotClient:
             for key, value in meta.items()
         }
         self.helper.connector_logger.error(message, meta=safe)
-        raise XposedOrNotError(message) from None
+        raise XposedOrNotError(message)
 
     def lookup(self, email: str) -> dict[str, Any]:
         """Normalised breach exposure of an address, {} when it is clean."""
@@ -207,12 +207,11 @@ class XposedOrNotClient:
                     url, params=params, timeout=self.timeout, allow_redirects=False
                 )
             except requests.RequestException as exc:
-                self._fail(
-                    "XposedOrNot request failed",
-                    email,
-                    error=type(exc).__name__,
-                    detail=str(exc),
-                )
+                failure = {"error": type(exc).__name__, "detail": str(exc)}
+            else:
+                failure = None
+            if failure is not None:
+                self._fail("XposedOrNot request failed", email, **failure)
             if resp.status_code == 404:
                 return {}
             if resp.status_code == 429:
@@ -248,10 +247,10 @@ class XposedOrNotClient:
             try:
                 data = resp.json()
             except ValueError:
-                self._fail("XposedOrNot: invalid JSON in response", email)
+                data = None
             if not isinstance(data, dict):
                 self._fail(
-                    "XposedOrNot: unexpected JSON payload",
+                    "XposedOrNot: invalid or unexpected JSON payload",
                     email,
                     type=type(data).__name__,
                 )

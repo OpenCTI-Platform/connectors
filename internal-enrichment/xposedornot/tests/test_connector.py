@@ -206,9 +206,13 @@ def test_own_reference_is_replaced_and_duplicates_collapsed():
 
 def test_note_carries_the_configured_tlp_plus_the_observable_markings():
     connector, helper, _ = make_connector(tlp_level="red")
-    connector._message_callback(
-        make_data(markings=("TLP:GREEN",), object_marking_refs=[TLP_GREEN_ID, PAP_ID])
+    data = make_data(
+        markings=("TLP:GREEN",), object_marking_refs=[TLP_GREEN_ID, PAP_ID]
     )
+    data["enrichment_entity"]["objectMarking"].append(
+        {"standard_id": PAP_ID, "definition_type": "PAP", "definition": "PAP:AMBER"}
+    )
+    connector._message_callback(data)
     note = by_type(helper)["note"]
     red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
     assert note["object_marking_refs"] == [red, TLP_GREEN_ID, PAP_ID]
@@ -286,7 +290,7 @@ def test_logged_errors_never_contain_the_email_or_the_api_key():
     assert "<redacted>" in logged
     assert EMAIL not in str(raised.value) and "SECRET-KEY" not in str(raised.value)
     assert str(raised.value).startswith("RuntimeError: ")
-    assert raised.value.__suppress_context__ is True
+    assert raised.value.__context__ is None and raised.value.__cause__ is None
 
 
 def test_run_listens_with_the_message_callback():
@@ -391,7 +395,47 @@ def test_bundled_tlp_definition_behind_an_unknown_reference_gates():
     client.lookup.assert_called_once()
 
 
-def test_unknown_non_tlp_reference_does_not_gate():
+def test_resolved_non_tlp_reference_does_not_gate_but_an_unknown_one_does():
     connector, _, client = make_connector()
-    connector._message_callback(make_data(markings=(), object_marking_refs=[PAP_ID]))
+    data = make_data(markings=(), object_marking_refs=[PAP_ID])
+    data["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "PAP", "definition": "PAP:AMBER"}
+    ]
+    connector._message_callback(data)
     client.lookup.assert_called_once()
+    unknown = "marking-definition--33333333-3333-4333-8333-333333333333"
+    message = connector._message_callback(
+        make_data(markings=(), object_marking_refs=[unknown])
+    )
+    assert "cannot be resolved; skipping" in message
+    client.lookup.assert_called_once()
+
+
+def test_rendered_pycti_error_log_carries_no_traceback_or_secrets(caplog):
+    from pycti.utils.opencti_logger import logger as pycti_logger
+
+    connector, helper, client = make_connector()
+    helper.connector_logger = pycti_logger("ERROR", json_logging=False)("xon-connector")
+    client.lookup.side_effect = RuntimeError(f"boom {EMAIL}")
+    with caplog.at_level("ERROR", logger="xon-connector"):
+        with pytest.raises(EnrichmentError):
+            connector._message_callback(make_data())
+    assert caplog.records
+    assert all(not r.exc_info or r.exc_info[0] is None for r in caplog.records)
+    assert "Traceback" not in caplog.text
+    attributes = str(getattr(caplog.records[0], "attributes", ""))
+    assert EMAIL not in caplog.text and EMAIL not in attributes
+    assert "<redacted>" in attributes
+
+
+def test_fallback_stix_value_is_redacted_too():
+    connector, helper, client = make_connector()
+    data = make_data()
+    data["enrichment_entity"].pop("observable_value")
+    client.lookup.side_effect = RuntimeError(f"boom {EMAIL}")
+    with pytest.raises(EnrichmentError) as raised:
+        connector._message_callback(data)
+    assert EMAIL not in str(raised.value)
+    assert EMAIL not in json.dumps(
+        helper.connector_logger.error.call_args.kwargs["meta"]
+    )

@@ -82,15 +82,24 @@ class XposedOrNotConnector:
         stix_objects: list[dict[str, Any]],
     ) -> list[Any]:
         """Every TLP value the source carries: resolved markings, well-known
-        reference ids and TLP definitions bundled alongside the entity."""
+        reference ids and TLP definitions bundled alongside the entity. A
+        reference that resolves to nothing is refused."""
         bundled = {
             obj.get("id"): obj
             for obj in stix_objects
             if isinstance(obj, dict) and obj.get("type") == "marking-definition"
         }
-        values = [
-            m.get("definition") for m in markings if m.get("definition_type") == "TLP"
-        ]
+        resolved = set(bundled) | set(TLP_IDS)
+        values = []
+        for marking in markings:
+            if marking.get("definition_type") == "TLP":
+                values.append(marking.get("definition"))
+            ref = marking.get("standard_id")
+            if not ref and marking.get("definition_type") and marking.get("definition"):
+                ref = PyctiMarkingDefinition.generate_id(
+                    marking["definition_type"], marking["definition"]
+                )
+            resolved.add(ref)
         for ref in stix_entity.get("object_marking_refs") or []:
             definition = bundled.get(ref) or {}
             kind = definition.get("x_opencti_definition_type") or definition.get(
@@ -101,6 +110,11 @@ class XposedOrNotConnector:
             elif str(kind or "").upper() == "TLP":
                 values.append(
                     definition.get("x_opencti_definition") or definition.get("name")
+                )
+            elif ref not in resolved:
+                raise MaxTlpError(
+                    f"Marking reference {ref!r} of the observable cannot be"
+                    " resolved; skipping"
                 )
         return values
 
@@ -173,7 +187,10 @@ class XposedOrNotConnector:
 
     def _redact(self, text: str, data: dict[str, Any]) -> str:
         observable = data.get("enrichment_entity") or {}
-        return redact(text, observable.get("observable_value"), self.client.api_key)
+        entity = data.get("stix_entity") or {}
+        values = [observable.get("observable_value"), entity.get("value")]
+        secrets = [str(value).strip() for value in values if value]
+        return redact(text, *secrets, self.client.api_key)
 
     def _process(self, data: dict[str, Any]) -> str:
         observable = data["enrichment_entity"]
@@ -242,13 +259,13 @@ class XposedOrNotConnector:
             self.helper.connector_logger.info(message)
             return self._forward(data, message)
         except Exception as error:
-            reason = self._redact(str(error), data)
-            self.helper.connector_logger.error(
-                "Error processing message", meta={"error": reason}
-            )
-            if not data.get("event_type"):
-                return self._forward(data, "Internal error (see logs)")
-            raise EnrichmentError(f"{type(error).__name__}: {reason}") from None
+            failure = f"{type(error).__name__}: {self._redact(str(error), data)}"
+        self.helper.connector_logger.error(
+            "Error processing message", meta={"error": failure}
+        )
+        if not data.get("event_type"):
+            return self._forward(data, "Internal error (see logs)")
+        raise EnrichmentError(failure)
 
     def run(self) -> None:
         self.helper.listen(message_callback=self._message_callback)

@@ -185,8 +185,8 @@ def test_exhausted_rate_limit_raises():
             "redirect refused",
         ),
         (FakeResp(403, {}), "request rejected"),
-        (FakeResp(200, ValueError("bad json")), "invalid JSON"),
-        (FakeResp(200, ["list"]), "unexpected JSON payload"),
+        (FakeResp(200, ValueError("bad json")), "JSON payload"),
+        (FakeResp(200, ["list"]), "JSON payload"),
         (requests.ConnectionError(f"dns failed for {EMAIL}"), "request failed"),
     ],
 )
@@ -213,7 +213,24 @@ def test_raised_error_traceback_carries_no_request_context():
         client.lookup(EMAIL)
     except XposedOrNotError as error:
         rendered = "".join(traceback.format_exception(error))
-        assert error.__suppress_context__ is True
+        assert error.__context__ is None and error.__cause__ is None
         assert EMAIL not in rendered and "dns failed" not in rendered
     else:
         raise AssertionError("lookup did not raise")
+
+
+def test_rendered_pycti_error_log_carries_no_traceback_or_secrets(caplog):
+    from pycti.utils.opencti_logger import logger as pycti_logger
+
+    client = make_client(requests.ConnectionError(f"dns failed for {EMAIL} key=k"))
+    client.api_key = "k"
+    client.helper.connector_logger = pycti_logger("ERROR", json_logging=False)(
+        "xon-test"
+    )
+    with caplog.at_level("ERROR", logger="xon-test"):
+        with pytest.raises(XposedOrNotError):
+            client.lookup(EMAIL)
+    assert caplog.records
+    assert all(not r.exc_info or r.exc_info[0] is None for r in caplog.records)
+    assert "Traceback" not in caplog.text
+    assert EMAIL not in caplog.text and "key=k" not in caplog.text
