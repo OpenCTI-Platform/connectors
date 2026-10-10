@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connector.settings import parse_threat_level_score_mapping
+from connector.settings import comma_separated_dict, parse_threat_level_score_mapping
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 
 
@@ -555,3 +555,64 @@ def test_parse_threat_level_score_mapping_raises_for_invalid_input(raw, error_fr
     with pytest.raises(ValueError) as err:
         parse_threat_level_score_mapping(raw)
     assert error_fragment in str(err.value)
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        pytest.param("", {}, id="empty"),
+        pytest.param(
+            "type=comment,category=Internal reference",
+            {"type": "comment", "category": "Internal reference"},
+            id="value_with_space",
+        ),
+        pytest.param(
+            " type = comment , category = External analysis ",
+            {"type": "comment", "category": "External analysis"},
+            id="padded_keys_and_values",
+        ),
+        pytest.param(
+            "Type=comment",
+            {"type": "comment"},
+            id="key_is_lowercased",
+        ),
+        pytest.param(
+            "comment=a=b",
+            {"comment": "a=b"},
+            id="value_with_equal_sign",
+        ),
+        pytest.param(
+            {"type": "comment"},
+            {"type": "comment"},
+            id="dict_passthrough",
+        ),
+    ],
+)
+def test_comma_separated_dict_returns_dict_for_valid_input(raw, expected):
+    """``comma_separated_dict`` keeps spaces inside values, so filters such as
+    ``category=Internal reference`` can match MISP attributes.
+    """
+    assert comma_separated_dict(raw) == expected
+
+
+def test_settings_keep_spaces_in_report_description_attribute_filters():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "misp": {
+                        "url": "http://test.com",
+                        "key": "test-api-key",
+                        "report_description_attribute_filter": "type=comment,category=Internal reference",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.misp.report_description_attribute_filters == {
+        "type": "comment",
+        "category": "Internal reference",
+    }

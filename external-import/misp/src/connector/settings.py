@@ -35,9 +35,11 @@ def comma_separated_dict(value: str | dict[str, str]) -> dict[str, str]:
     if isinstance(value, str):
         parsed_dict = {}
         if len(value):
+            # Only trim around keys and values: values such as MISP
+            # categories ("Internal reference") contain spaces.
             parsed_dict = {
-                x.split("=")[0].lower(): str(x.split("=")[1])
-                for x in value.replace(" ", "").split(",")
+                key.strip().lower(): entry_value.strip()
+                for key, entry_value in (x.split("=", 1) for x in value.split(","))
             }
         return parsed_dict
     return value
