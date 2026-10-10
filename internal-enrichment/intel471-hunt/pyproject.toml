@@ -11,8 +11,8 @@ requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Intel 471" }]
 dependencies = [
-    "pycti==7.261002.0",
-    "pydantic>=2.10, <3",
+    "pycti==7.261008.0",
+    "pydantic==2.14.0",
     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
     "stix2==3.0.2",
     "requests~=2.32",
