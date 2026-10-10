@@ -7,10 +7,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description | Examples |
 | -------- | ---- | -------- | --------------- | ------- | ----------- | -------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |  |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |  |
+| OPENCTI_TOKEN | `string` | ✅ | Length: `string >= 1` |  | The token of the user who represents the connector in the OpenCTI platform. |  |
 | VIRUSTOTAL_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | VirusTotal API token for authentication. |  |
-| CONNECTOR_NAME | `string` |  | string | `"VirusTotal"` | Name of the connector. |  |
-| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "Artifact", "IPv4-Addr", "Domain-Name", "Url", "Hostname", "Indicator"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |  |
+| CONNECTOR_NAME | `string` |  | Length: `string >= 1` | `"VirusTotal"` | Name of the connector. |  |
+| CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["StixFile", "Artifact", "IPv4-Addr", "Domain-Name", "Url", "Hostname", "Indicator"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |  |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Enables or disables automatic enrichment of observables for OpenCTI. |  |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |  |
@@ -30,7 +30,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | VIRUSTOTAL_IP_RESOLUTIONS_SINCE | `string` |  | string | `"P90D"` | Date floor for IP resolutions: stop paging at the first resolution last seen before it. ISO-8601 duration relative to each enrichment (`P90D`), absolute ISO-8601 date (`2025-10-01`) or `none` to disable the floor (the entry and page caps still apply). | ```P90D```, ```2025-10-01```, ```none``` |
 | VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES | `integer` |  | `1 <= x ` | `null` | Entry cap for IP resolutions: stop after this many resolutions fetched per enrichment, newest first, counted before the keyword filter. Sent to VirusTotal as the page size when below 40. Unset: no entry cap. | ```3``` |
 | VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES | `integer` |  | `1 <= x ` | `25` | Safety cap for IP resolutions: maximum number of pages (40 entries, one API lookup each) fetched per enrichment, whatever the date floor says. | ```25``` |
-| VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX | `string` |  | string | `null` | Case-insensitive regular expression a resolved domain must match to be imported. Filters the created objects, not the API quota. Unset: import all resolved domains. | ```^news```, ```press``` |
+| VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX | `string` |  | Length: `string >= 1` | `null` | Case-insensitive regular expression a resolved domain must match to be imported. Filters the created objects, not the API quota. Unset: import all resolved domains. | ```^news```, ```press``` |
 | VIRUSTOTAL_API_REQUESTS_PER_MINUTE | `integer` |  | `0 <= x ` | `4` | Spacing between IP resolutions pages, in requests per minute. 4 fits a free API key; 0 disables the wait (premium keys). Applies only to IP resolutions paging. | ```4```, ```0``` |
 | VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS | `boolean` |  | boolean | `false` | Whether or not to add IP resolution relationships. |  |
 | VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES | `integer` |  | integer | `10` | Create an indicator for Domain based observables once this positive threshold is reached. |  |
@@ -41,3 +41,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |  |
 | VIRUSTOTAL_URL_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |  |
 | VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE | `boolean` |  | boolean | `false` | Whether or not to include the attributes info in Note. |  |
+| VIRUSTOTAL_GTI_ENRICHMENT_ENABLED | `boolean` |  | boolean | `false` | Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access. |  |
+| VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI malware families (created as Malware entities). |  |
+| VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities). |  |
+| VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI campaigns (created as Campaign entities). |  |
+| VIRUSTOTAL_GTI_INCLUDE_REPORTS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI reports (created as Report entities). |  |
+| VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT | `integer` |  | `0 < x ` | `10` | Maximum number of related objects to pull per GTI relationship, per observable. |  |

@@ -25,13 +25,13 @@ class CrtSHClient:
     def __init__(
         self,
         domain,
-        labels="crtsh",
+        labels=["crtsh"],
         marking_refs="TLP:WHITE",
         is_expired=False,
         is_wildcard=False,
     ):
         self.marking_refs = TLP_MAP.get(marking_refs)
-        self.labels = labels.split(",")
+        self.labels = labels
         self.domain = self._transform_domain(domain, is_wildcard)
         self.url = DEFAULT_URL.format(search=domain)
         if is_expired:
