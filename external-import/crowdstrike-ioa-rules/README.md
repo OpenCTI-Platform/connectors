@@ -47,7 +47,7 @@ policies, and never creates, modifies, enables or disables a rule, a rule group 
 - OpenCTI Platform >= 7.261002.0 for the `deployed-on` relationship and the rule metadata properties.
   Older platforms are supported: deployments are then recorded as `related-to` relationships (see
   [The deployed-on relationship](#the-deployed-on-relationship)).
-- `pycti==7.261002.0` and the connectors SDK (`src/requirements.txt`).
+- `pycti==7.261008.0` and the connectors SDK (`src/requirements.txt`).
 - Network access to the CrowdStrike API of your cloud (`api.crowdstrike.com`, `api.us-2.crowdstrike.com`,
   `api.eu-1.crowdstrike.com` or `api.laggar.gcw.crowdstrike.com`).
 

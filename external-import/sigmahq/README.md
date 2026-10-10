@@ -37,7 +37,7 @@ Techniques are resolved against the platform once per rule package: a technique 
 
 - Python >= 3.11
 - OpenCTI Platform >= 6.9.5 (the rule metadata properties are stored from the OpenCTI release shipping the Threat-Informed Defense Matrix; older platforms ignore them)
-- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version (the connector pins `pycti==7.261002.0`)
+- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version (the connector pins `pycti==7.261008.0`)
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 
 ### Configuration variables

@@ -46,7 +46,7 @@ enables or disables one.
 - OpenCTI Platform >= 7.261002.0 for the `deployed-on` relationship and the rule metadata properties.
   Older platforms are supported: deployments are then recorded as `related-to` relationships (see
   [The deployed-on relationship](#the-deployed-on-relationship)).
-- `pycti==7.261002.0` and the connectors SDK (`src/requirements.txt`).
+- `pycti==7.261008.0` and the connectors SDK (`src/requirements.txt`).
 - Network access to Microsoft Entra ID (`login.microsoftonline.com`) and Azure Resource Manager
   (`management.azure.com`), or their sovereign cloud equivalents.
 

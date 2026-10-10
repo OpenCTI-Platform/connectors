@@ -48,7 +48,7 @@ enables or archives a rule.
 - OpenCTI Platform >= 7.261002.0 for the `deployed-on` relationship and the rule metadata properties.
   Older platforms are supported: deployments are then recorded as `related-to` relationships (see
   [The deployed-on relationship](#the-deployed-on-relationship)).
-- `pycti==7.261002.0`, the connectors SDK and `google-auth` (`src/requirements.txt`).
+- `pycti==7.261008.0`, the connectors SDK and `google-auth` (`src/requirements.txt`).
 - A Google SecOps instance bound to a Google Cloud project (the Chronicle API is enabled on that project).
 - Network access to `oauth2.googleapis.com` and to the regional Chronicle API endpoint
   (`<region>-chronicle.googleapis.com`).

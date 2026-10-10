@@ -51,7 +51,7 @@ modifies, enables or schedules one.
 - OpenCTI Platform >= 7.261002.0 for the `deployed-on` relationship and the rule metadata properties.
   Older platforms are supported: deployments are then recorded as `related-to` relationships (see
   [The deployed-on relationship](#the-deployed-on-relationship)).
-- `pycti==7.261002.0` and the connectors SDK (`src/requirements.txt`).
+- `pycti==7.261008.0` and the connectors SDK (`src/requirements.txt`).
 - Network access to the Splunk REST API (management port, `8089` by default).
 
 ### Permissions in Splunk

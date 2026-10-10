@@ -33,7 +33,7 @@ This connector imports YARA rules from Valhalla into OpenCTI as YARA pattern ind
 ### Requirements
 
 - OpenCTI Platform >= 6.x (the `x_opencti_rule_level` property is stored from the OpenCTI release shipping the Threat-Informed Defense Matrix; older platforms ignore it)
-- `pycti==7.261002.0` (pinned in `src/requirements.txt`)
+- `pycti==7.261008.0` (pinned in `src/requirements.txt`)
 - Valhalla API key (optional - demo data available without key)
 
 ## Configuration variables
