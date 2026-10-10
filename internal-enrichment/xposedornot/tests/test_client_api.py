@@ -202,3 +202,18 @@ def test_rejected_request_names_the_key_only_when_one_is_set():
     client = make_client(FakeResp(401, {}), api_key="k")
     with pytest.raises(XposedOrNotError, match="check the API key"):
         client.lookup(EMAIL)
+
+
+def test_raised_error_traceback_carries_no_request_context():
+    import traceback
+
+    client = make_client(requests.ConnectionError(f"dns failed for {EMAIL} key=k"))
+    client.api_key = "k"
+    try:
+        client.lookup(EMAIL)
+    except XposedOrNotError as error:
+        rendered = "".join(traceback.format_exception(error))
+        assert error.__suppress_context__ is True
+        assert EMAIL not in rendered and "dns failed" not in rendered
+    else:
+        raise AssertionError("lookup did not raise")

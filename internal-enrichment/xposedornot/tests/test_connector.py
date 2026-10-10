@@ -56,7 +56,7 @@ def test_skipped_entity_is_forwarded_unchanged_inside_a_playbook():
 def test_tlp_above_the_maximum_is_skipped(markings):
     connector, helper, client = make_connector()
     message = connector._message_callback(make_data(markings=markings))
-    assert "exceeds the maximum allowed (TLP:AMBER); skipping" in message
+    assert "above the maximum allowed (TLP:AMBER); skipping" in message
     client.lookup.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
 
@@ -206,7 +206,9 @@ def test_own_reference_is_replaced_and_duplicates_collapsed():
 
 def test_note_carries_the_configured_tlp_plus_the_observable_markings():
     connector, helper, _ = make_connector(tlp_level="red")
-    connector._message_callback(make_data(object_marking_refs=[TLP_GREEN_ID, PAP_ID]))
+    connector._message_callback(
+        make_data(markings=("TLP:GREEN",), object_marking_refs=[TLP_GREEN_ID, PAP_ID])
+    )
     note = by_type(helper)["note"]
     red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
     assert note["object_marking_refs"] == [red, TLP_GREEN_ID, PAP_ID]
@@ -294,3 +296,52 @@ def test_connector_builds_its_client_from_the_settings():
     assert connector.client.api_key == "k"
     assert connector.client.base_url == "https://api.xposedornot.com"
     assert connector.converter.max_table_rows == 50
+
+
+@pytest.mark.parametrize("definition", [None, "", "TLP:PINK", 7, {"level": "amber"}])
+def test_unreadable_tlp_marking_is_skipped_not_treated_as_unmarked(definition):
+    connector, helper, client = make_connector()
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": definition}
+    ]
+    message = connector._message_callback(data)
+    assert "unreadable or above the maximum allowed" in message
+    client.lookup.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_non_tlp_markings_do_not_gate_the_enrichment():
+    connector, _, client = make_connector()
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "PAP", "definition": None},
+        {"definition_type": "statement", "definition": "internal"},
+    ]
+    connector._message_callback(data)
+    client.lookup.assert_called_once()
+
+
+def test_markings_from_both_sources_are_merged_on_the_note():
+    connector, helper, _ = make_connector()
+    data = make_data(markings=("TLP:GREEN",), object_marking_refs=[TLP_GREEN_ID])
+    data["enrichment_entity"]["objectMarking"].append(
+        {"standard_id": PAP_ID, "definition_type": "PAP", "definition": "PAP:AMBER"}
+    )
+    connector._message_callback(data)
+    assert by_type(helper)["note"]["object_marking_refs"] == [
+        TLP_AMBER_ID,
+        TLP_GREEN_ID,
+        PAP_ID,
+    ]
+
+
+def test_only_exact_duplicate_references_are_collapsed():
+    connector, helper, _ = make_connector()
+    first = {"source_name": "Analyst", "url": "https://a.example", "description": "one"}
+    second = {**first, "description": "two"}
+    connector._message_callback(
+        make_data(entity={"external_references": [first, second, dict(first)]})
+    )
+    references = by_type(helper)["email-addr"]["x_opencti_external_references"]
+    assert references[:-1] == [first, second]

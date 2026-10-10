@@ -141,7 +141,7 @@ OpenCTI usually reads an observable's score as a level of threat. The XposedOrNo
 
 The Note carries the TLP marking configured by `XPOSEDORNOT_TLP_LEVEL` and, in addition, every marking the source observable carries (TLP, PAP, statement or custom), so it is never readable by anyone who cannot read the source. The enriched observable keeps its own markings untouched.
 
-The TLP gate evaluates every TLP marking of the observable: any marking above `XPOSEDORNOT_MAX_TLP` skips the enrichment.
+The TLP gate evaluates every TLP marking of the observable: any marking above `XPOSEDORNOT_MAX_TLP`, or a TLP marking whose value cannot be read, skips the enrichment.
 
 ### Processing Details
 

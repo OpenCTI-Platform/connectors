@@ -7,6 +7,7 @@ may leave the platform.
 
 from __future__ import annotations
 
+import json
 import re
 from copy import deepcopy
 from typing import Any
@@ -65,13 +66,13 @@ class XposedOrNotConnector:
     def _validate_tlp(self, markings: list[dict[str, Any]]) -> None:
         max_tlp = self.config.xposedornot.max_tlp
         for marking in markings:
+            if marking.get("definition_type") != "TLP":
+                continue
             tlp = marking.get("definition")
-            if marking.get(
-                "definition_type"
-            ) == "TLP" and not self.helper.check_max_tlp(tlp, max_tlp):
+            if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
                 raise MaxTlpError(
-                    f"TLP {tlp} of the observable exceeds the maximum allowed"
-                    f" ({max_tlp}); skipping"
+                    f"TLP marking {tlp!r} of the observable is unreadable or above"
+                    f" the maximum allowed ({max_tlp}); skipping"
                 )
 
     @staticmethod
@@ -79,19 +80,14 @@ class XposedOrNotConnector:
         stix_entity: dict[str, Any], markings: list[dict[str, Any]]
     ) -> list[str]:
         refs = list(stix_entity.get("object_marking_refs") or [])
-        if not refs:
-            for marking in markings:
-                ref = marking.get("standard_id")
-                if (
-                    not ref
-                    and marking.get("definition_type")
-                    and marking.get("definition")
-                ):
-                    ref = PyctiMarkingDefinition.generate_id(
-                        marking["definition_type"], marking["definition"]
-                    )
-                if ref:
-                    refs.append(ref)
+        for marking in markings:
+            ref = marking.get("standard_id")
+            if not ref and marking.get("definition_type") and marking.get("definition"):
+                ref = PyctiMarkingDefinition.generate_id(
+                    marking["definition_type"], marking["definition"]
+                )
+            if ref:
+                refs.append(ref)
         return list(dict.fromkeys(refs))
 
     def _enriched_observable(
@@ -120,11 +116,11 @@ class XposedOrNotConnector:
             entity.get("x_opencti_external_references") or []
         )
         kept: list[dict[str, Any]] = []
-        seen: set[tuple[Any, ...]] = set()
+        seen: set[str] = set()
         for ref in references:
             if not isinstance(ref, dict) or ref.get("source_name") == OWN_SOURCE_NAME:
                 continue
-            key = (ref.get("source_name"), ref.get("url"), ref.get("external_id"))
+            key = json.dumps(ref, sort_keys=True, default=str)
             if key not in seen:
                 seen.add(key)
                 kept.append(ref)

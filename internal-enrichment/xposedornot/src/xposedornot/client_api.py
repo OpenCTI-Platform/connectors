@@ -190,7 +190,7 @@ class XposedOrNotClient:
             for key, value in meta.items()
         }
         self.helper.connector_logger.error(message, meta=safe)
-        raise XposedOrNotError(message)
+        raise XposedOrNotError(message) from None
 
     def lookup(self, email: str) -> dict[str, Any]:
         """Normalised breach exposure of an address, {} when it is clean."""
