@@ -32,7 +32,8 @@ This connector imports YARA rules from Valhalla into OpenCTI as YARA pattern ind
 
 ### Requirements
 
-- OpenCTI Platform >= 6.x
+- OpenCTI Platform >= 6.x (the `x_opencti_rule_level` property is stored from the OpenCTI release shipping the Threat-Informed Defense Matrix; older platforms ignore it)
+- `pycti==7.261008.0` (pinned in `src/requirements.txt`)
 - Valhalla API key (optional - demo data available without key)
 
 ## Configuration variables
@@ -114,22 +115,27 @@ graph LR
     subgraph OpenCTI
         direction LR
         Indicator[YARA Indicator]
-        Malware[Malware]
+        AttackPattern[Attack Pattern]
+        IntrusionSet[Intrusion Set]
     end
 
     Rules --> Indicator
-    Indicator -- indicates --> Malware
+    Indicator -- indicates --> AttackPattern
+    Indicator -- indicates --> IntrusionSet
 ```
 
 ### Entity Mapping
 
-| Valhalla Data        | OpenCTI Entity      | Description                                      |
-|----------------------|---------------------|--------------------------------------------------|
-| YARA Rule            | Indicator (YARA)    | YARA pattern indicator                           |
-| Rule Name            | Indicator.name      | Name of the detection rule                       |
-| Rule Description     | Indicator.description | Rule description and context                  |
-| Tags                 | Labels              | Rule categories and targets                      |
-| Malware Reference    | Malware             | Associated malware family                        |
+| Valhalla Data          | OpenCTI Entity                  | Description                                                  |
+|------------------------|---------------------------------|--------------------------------------------------------------|
+| YARA Rule              | Indicator (YARA)                | YARA pattern indicator                                       |
+| Rule Name              | Indicator.name                  | Name of the detection rule                                   |
+| Rule Description       | Indicator.description           | Rule description and context                                 |
+| Score                  | Indicator.x_opencti_score       | Valhalla score (0-100)                                       |
+| Score                  | Indicator.x_opencti_rule_level  | Rule level derived from the score (see below)                |
+| Tags                   | Labels                          | Rule categories and targets                                  |
+| ATT&CK technique tags  | Attack Pattern                  | `T1059`, `T1059.001`: `indicates` relationship               |
+| ATT&CK group tags      | Intrusion Set                   | `G0016`: `indicates` relationship to the MITRE intrusion set |
 
 ### Processing Details
 
@@ -140,8 +146,11 @@ For each YARA rule from Valhalla:
    - Pattern: Full YARA rule content
    - Name and description
    - Labels from rule tags
+   - `x_opencti_rule_level` from the score, using the ranges of the Nextron YARA style guide: 0-39 `informational`, 40-59 `low`, 60-79 `medium`, 80-100 `high`
 
-2. **Malware Relationship**: If malware family is referenced, creates `indicates` relationship
+2. **Technique relationships**: one `indicates` relationship per ATT&CK technique or sub-technique tag, targeting the Attack Pattern whose id is derived from the MITRE id. The platform is asked once per run which techniques it already holds: those are referenced as they are (never renamed); the others are created under their MITRE ATT&CK name.
+
+3. **Group relationships**: one `indicates` relationship per ATT&CK group tag found in the MITRE ATT&CK dataset. A tag that is not found is logged and skipped; the other tags and rules are still imported.
 
 ### Rule Categories
 
