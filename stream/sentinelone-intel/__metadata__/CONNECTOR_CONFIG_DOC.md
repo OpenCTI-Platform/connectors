@@ -23,3 +23,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SENTINELONE_INTEL_ACCOUNT_ID | `integer` |  | integer | `null` | The Account ID for your SentinelOne management console |
 | SENTINELONE_INTEL_SITE_ID | `integer` |  | integer | `null` | The Site ID for your SentinelOne management console |
 | SENTINELONE_INTEL_GROUP_ID | `integer` |  | integer | `null` | The Group ID for your SentinelOne management console |
+| DEPLOYMENT_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back. |
+| DEPLOYMENT_RECONCILIATION_INTERVAL | `integer` |  | `0 <= x ` | `60` | Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation. |
+| SECURITY_PLATFORM_NAME | `string` |  | Length: `string >= 2` | `"SentinelOne"` | Name of the Security Platform entity representing SentinelOne in OpenCTI (created if it does not exist). |
+| SECURITY_PLATFORM_TYPE | `string` |  | string | `"EDR"` | Type of the Security Platform entity (open vocabulary security_platform_type_ov). |
+| SECURITY_PLATFORM_ID | `string` |  | string | `null` | Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name. |

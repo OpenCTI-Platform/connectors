@@ -5,10 +5,33 @@ Elastic Security API Handler for threat intelligence and SIEM rules management
 import hashlib
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import requests
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+READ_BACK_PAGE_SIZE = 500
+READ_BACK_KEEP_ALIVE = "2m"
+READ_BACK_FIELDS = ["opencti_doc_id", "stix", "threat.indicator.valid_until"]
+SIEM_RULE_TYPES = {"eql": "eql", "esql": "esql"}
+SIEM_RULE_INDICES = ["logs-*", "filebeat-*", "packetbeat-*", "winlogbeat-*"]
+SIEM_RULE_LOOKUP_PAGE_SIZE = 100
+# The fields an indicator update changes on a SIEM rule, restored when the update cannot complete
+RESTORABLE_SIEM_RULE_FIELDS = (
+    "id",
+    "name",
+    "description",
+    "risk_score",
+    "severity",
+    "query",
+    "language",
+)
+
+
+def _kql_string(value: str) -> str:
+    """Quote a value for a KQL filter."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 class ElasticApiHandlerError(Exception):
@@ -89,6 +112,115 @@ class ElasticApiHandler:
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         return hashlib.sha256(opencti_id.encode()).hexdigest()
 
+    def document_id(self, data: dict) -> str:
+        """Return the opencti_doc_id under which an object is written in the index"""
+        return self._generate_doc_id(data)
+
+    def iter_connector_documents(self) -> Iterator[dict]:
+        """
+        Read back every document written by the connector in the threat intel index.
+
+        A point in time keeps the pages consistent while the stream keeps writing,
+        and any error raises: a partial listing would report pushed indicators as removed.
+
+        :return: The ``_source`` of the documents (opencti_doc_id, stix, valid_until)
+        :raises ElasticApiHandlerError: On any Elasticsearch error
+        """
+        verify = self._get_verify_config()
+        try:
+            opened = requests.post(
+                f"{self.elastic_url}/{self.index_name}/_pit",
+                headers=self.headers,
+                params={"keep_alive": READ_BACK_KEEP_ALIVE},
+                verify=verify,
+                cert=self.cert,
+                timeout=30,
+            )
+            if opened.status_code == 404:
+                # The data stream does not exist yet: nothing has been pushed
+                return
+            if opened.status_code != 200:
+                raise ElasticApiHandlerError(
+                    f"Failed to read the indicators back: {opened.status_code}",
+                    {"response": opened.text[:500]},
+                )
+            pit_id = opened.json()["id"]
+            try:
+                search_after = None
+                while True:
+                    body: Dict[str, Any] = {
+                        "size": READ_BACK_PAGE_SIZE,
+                        "query": {"exists": {"field": "opencti_doc_id"}},
+                        "_source": READ_BACK_FIELDS,
+                        "pit": {"id": pit_id, "keep_alive": READ_BACK_KEEP_ALIVE},
+                        "sort": [{"_shard_doc": "asc"}],
+                    }
+                    if search_after is not None:
+                        body["search_after"] = search_after
+                    response = requests.post(
+                        f"{self.elastic_url}/_search",
+                        headers=self.headers,
+                        json=body,
+                        verify=verify,
+                        cert=self.cert,
+                        timeout=60,
+                    )
+                    if response.status_code != 200:
+                        raise ElasticApiHandlerError(
+                            f"Failed to read the indicators back: {response.status_code}",
+                            {"response": response.text[:500]},
+                        )
+                    result = response.json()
+                    hits_block = (
+                        result.get("hits") if isinstance(result, dict) else None
+                    )
+                    hits = (
+                        hits_block.get("hits") if isinstance(hits_block, dict) else None
+                    )
+                    if not isinstance(hits, list):
+                        # Never read as an empty page: every deployment would look absent.
+                        raise ElasticApiHandlerError(
+                            "Failed to read the indicators back: unexpected search response",
+                            {"response": response.text[:500]},
+                        )
+                    pit_id = result.get("pit_id", pit_id)
+                    for hit in hits:
+                        source = hit.get("_source") if isinstance(hit, dict) else None
+                        if not isinstance(source, dict):
+                            # Never skipped: its deployment would look absent.
+                            raise ElasticApiHandlerError(
+                                "Failed to read the indicators back: a hit carries no document",
+                                {"response": response.text[:500]},
+                            )
+                        yield source
+                    if len(hits) < READ_BACK_PAGE_SIZE:
+                        return
+                    last = hits[-1]
+                    search_after = last.get("sort") if isinstance(last, dict) else None
+                    if not search_after:
+                        # Without a cursor the next request would read the first page again forever.
+                        raise ElasticApiHandlerError(
+                            "Failed to read the indicators back: a full page carries no sort cursor",
+                            {"response": response.text[:500]},
+                        )
+            finally:
+                try:
+                    requests.delete(
+                        f"{self.elastic_url}/_pit",
+                        headers=self.headers,
+                        json={"id": pit_id},
+                        verify=verify,
+                        cert=self.cert,
+                        timeout=30,
+                    )
+                except requests.exceptions.RequestException:
+                    # The point in time expires on its own
+                    pass
+        except requests.exceptions.RequestException as e:
+            raise ElasticApiHandlerError(
+                "Request failed while reading the indicators back", {"error": str(e)}
+            )
+
     def _is_elastic_native_pattern(self, pattern_type: str) -> bool:
         """
         Check if the pattern type is native to Elastic
@@ -155,6 +287,7 @@ class ElasticApiHandler:
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
 
             # Build the rule
+            rule_type = SIEM_RULE_TYPES.get(pattern_type, "query")
             rule = {
                 "name": f"OpenCTI: {indicator_data.get('name', 'Threat Indicator')}",
                 "description": indicator_data.get(
@@ -162,26 +295,23 @@ class ElasticApiHandler:
                 ),
                 "risk_score": self._calculate_risk_score(indicator_data),
                 "severity": self._get_severity(indicator_data),
-                "type": "query",
+                "type": rule_type,
                 "query": query_config["query"],
                 "language": query_config["language"],
-                "index": [
-                    "logs-*",
-                    "filebeat-*",
-                    "packetbeat-*",
-                    "winlogbeat-*",
-                ],  # Default indices
                 "interval": "5m",
                 "from": "now-6m",
                 "enabled": True,
                 "tags": ["opencti", "threat-intel"],
-                "references": [f"{self.opencti_url}/dashboard/id/{opencti_id}"],
+                "references": [self._rule_reference(opencti_id)],
                 "meta": {
                     "opencti_id": opencti_id,
                     "pattern_type": pattern_type,
                     "original_pattern": pattern,
                 },
             }
+            if rule_type != "esql":
+                # ES|QL rules read the indices named in their query
+                rule["index"] = list(SIEM_RULE_INDICES)
 
             # Add threat mapping if available
             if "kill_chain_phases" in indicator_data:
@@ -227,7 +357,11 @@ class ElasticApiHandler:
             return None
 
     def _update_siem_rule(self, indicator_data: dict, rule_id: str) -> Optional[dict]:
-        """Update an existing SIEM rule"""
+        """Update the fields of an existing SIEM rule derived from the indicator.
+
+        A partial update (PATCH): the indices, schedule, tags and references of
+        the rule are kept.
+        """
         try:
             opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "id", indicator_data
@@ -263,7 +397,7 @@ class ElasticApiHandler:
             kibana_url = self._get_kibana_url()
             url = f"{kibana_url}/api/detection_engine/rules"
 
-            response = requests.put(
+            response = requests.patch(
                 url,
                 headers=self.headers,
                 json=rule_update,
@@ -327,33 +461,177 @@ class ElasticApiHandler:
             )
             return False
 
-    def _find_siem_rule_by_opencti_id(self, opencti_id: str) -> Optional[str]:
-        """Find SIEM rule by OpenCTI ID reference"""
-        try:
-            url = f"{self.elastic_url}/api/detection_engine/rules/_find"
-            params = {
-                "filter": f'alert.attributes.references:"opencti-id:{opencti_id}"'
-            }
+    def _rule_reference(self, opencti_id: str) -> str:
+        """Return the reference a SIEM rule carries to its OpenCTI indicator."""
+        return f"{self.opencti_url}/dashboard/id/{opencti_id}"
 
+    def _find_siem_rule_ids(self, opencti_id: str) -> List[str]:
+        """Find the ids of the SIEM rules created from an indicator.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The ids of the rules, every page read
+        :raises Exception: When Kibana cannot be queried (the rules are unknown)
+        """
+        return [str(rule["id"]) for rule in self._find_siem_rules(opencti_id)]
+
+    def _find_siem_rules(self, opencti_id: str) -> List[dict]:
+        """Find the SIEM rules created from an indicator.
+
+        Rule parameters are stored under ``alert.attributes.params``: a rule is
+        matched by the indicator reference it was created with, or by the
+        ``meta.opencti_id`` it carries until the rule is edited in Kibana.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The rules as Kibana returns them, every page read
+        :raises Exception: When Kibana cannot be queried (the rules are unknown)
+        """
+        # The detection engine is a Kibana API, like the other SIEM rule calls
+        url = f"{self._get_kibana_url()}/api/detection_engine/rules/_find"
+        rule_filter = (
+            "alert.attributes.params.references:"
+            f"{_kql_string(self._rule_reference(opencti_id))}"
+            " or alert.attributes.params.meta.opencti_id:"
+            f"{_kql_string(opencti_id)}"
+        )
+        found: List[dict] = []
+        page = 1
+        while True:
             response = requests.get(
                 url,
                 headers=self.headers,
-                params=params,
+                params={
+                    "filter": rule_filter,
+                    "page": page,
+                    "per_page": SIEM_RULE_LOOKUP_PAGE_SIZE,
+                },
                 verify=self._get_verify_config(),
                 cert=self.cert,
                 timeout=30,
             )
+            response.raise_for_status()
+            body = response.json()
+            rules = body.get("data") or []
+            found.extend(rules)
+            if not rules or len(found) >= int(body.get("total") or 0):
+                return found
+            page += 1
 
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("data") and len(result["data"]) > 0:
-                    return result["data"][0]["id"]
+    def _lookup_siem_rule_ids(self, opencti_id: str) -> Optional[List[str]]:
+        """Find the ids of the SIEM rules of an indicator, logging a failed lookup.
 
-            return None
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The ids of the rules, None when the lookup failed
+        """
+        rules = self._lookup_siem_rules(opencti_id)
+        return None if rules is None else [str(rule["id"]) for rule in rules]
 
+    def _lookup_siem_rules(self, opencti_id: str) -> Optional[List[dict]]:
+        """Find the SIEM rules of an indicator, logging a failed lookup.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The rules, None when the lookup failed
+        """
+        try:
+            return self._find_siem_rules(opencti_id)
         except Exception as e:
-            self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
+            self.helper.connector_logger.warning(
+                "Cannot look up the SIEM rule of the indicator",
+                meta={"opencti_id": opencti_id, "error": str(e)},
+            )
             return None
+
+    def _write_siem_rules_of_indicator(
+        self, indicator_data: dict, opencti_id: str
+    ) -> Tuple[bool, Optional[str], List[dict]]:
+        """Update the SIEM rules created from an indicator, or create its rule.
+
+        Looking the rules up first keeps a replayed or pushed again indicator
+        from creating a second rule. All or nothing: when an update fails, the
+        rules already updated get their previous definition back.
+
+        :param indicator_data: STIX indicator data with a native Elastic pattern
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup, creation or an update failed, the
+            id of the rule created (None when existing rules were updated), and
+            the previous definition of the rules updated
+        """
+        rules = self._lookup_siem_rules(opencti_id)
+        if rules is None:
+            return False, None, []
+        if not rules:
+            rule = self._create_siem_rule(indicator_data)
+            if rule is None:
+                return False, None, []
+            return True, str(rule["id"]) if rule.get("id") else None, []
+        updated_rules: List[dict] = []
+        for rule in rules:
+            if self._update_siem_rule(indicator_data, str(rule["id"])) is None:
+                self._restore_siem_rules(updated_rules, opencti_id)
+                return False, None, []
+            updated_rules.append(rule)
+        return True, None, updated_rules
+
+    def _restore_siem_rules(self, previous_rules: List[dict], opencti_id: str) -> None:
+        """Give updated rules back the definition they had before the update.
+
+        A rule left on the new indicator next to the previous threat intel
+        document would hide a partial update from the deployment read-back.
+
+        :param previous_rules: The rules as Kibana returned them before the update
+        :param opencti_id: OpenCTI ID of the indicator
+        """
+        url = f"{self._get_kibana_url()}/api/detection_engine/rules"
+        for previous in previous_rules:
+            rule_restore = {
+                field: previous[field]
+                for field in RESTORABLE_SIEM_RULE_FIELDS
+                if field in previous
+            }
+            try:
+                response = requests.patch(
+                    url,
+                    headers=self.headers,
+                    json=rule_restore,
+                    verify=self._get_verify_config(),
+                    cert=self.cert,
+                    timeout=30,
+                )
+                response.raise_for_status()
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "SIEM rule of an incomplete update not restored, "
+                    "the next event or push of the indicator updates it",
+                    meta={
+                        "rule_id": previous.get("id"),
+                        "opencti_id": opencti_id,
+                        "error": str(e),
+                    },
+                )
+
+    def _roll_back_siem_rule(self, rule_id: str, opencti_id: str) -> None:
+        """Delete a rule created for a threat intel entry that was not written.
+
+        :param rule_id: ID of the rule created
+        :param opencti_id: OpenCTI ID of the indicator
+        """
+        if self._delete_siem_rule(rule_id):
+            return
+        self.helper.connector_logger.error(
+            "SIEM rule created without its threat intel entry not deleted, "
+            "the next event or push of the indicator updates or deletes it",
+            meta={"rule_id": rule_id, "opencti_id": opencti_id},
+        )
+
+    def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
+        """Delete the SIEM rules created from an indicator, if it has any.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup or a deletion failed (a rule may remain)
+        """
+        rule_ids = self._lookup_siem_rule_ids(opencti_id)
+        if rule_ids is None:
+            return False
+        return all([self._delete_siem_rule(rule_id) for rule_id in rule_ids])
 
     def _calculate_risk_score(self, indicator_data: dict) -> int:
         """Calculate risk score based on indicator confidence and severity"""
@@ -830,64 +1108,61 @@ class ElasticApiHandler:
             "id", indicator_data
         )
         pattern_type = indicator_data.get("pattern_type", "stix")
+        created_rule_id: Optional[str] = None
+        updated_rules: List[dict] = []
 
         try:
             # Handle pattern-based indicators as SIEM rules only if native Elastic pattern
             if "pattern" in indicator_data and self._is_elastic_native_pattern(
                 pattern_type
             ):
-                if operation == "create":
-                    rule = self._create_siem_rule(indicator_data)
-                    if rule:
-                        self.helper.connector_logger.info(
-                            f"Created SIEM rule for {pattern_type} pattern",
-                            {"opencti_id": opencti_id},
+                if operation in ("create", "update"):
+                    written, created_rule_id, updated_rules = (
+                        self._write_siem_rules_of_indicator(indicator_data, opencti_id)
+                    )
+                    if not written:
+                        # The threat intel document is the trace the deployment
+                        # read-back sees: it is only written once the rule is.
+                        self.helper.connector_logger.warning(
+                            "SIEM rule of the indicator not written, threat intel entry not written",
+                            meta={"opencti_id": opencti_id, "operation": operation},
                         )
-
-                elif operation == "update":
-                    rule_id = self._find_siem_rule_by_opencti_id(opencti_id)
-                    if rule_id:
-                        rule = self._update_siem_rule(indicator_data, rule_id)
-                        if rule:
-                            self.helper.connector_logger.info(
-                                f"Updated SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
-                    else:
-                        # Rule doesn't exist, create it
-                        rule = self._create_siem_rule(indicator_data)
-                        if rule:
-                            self.helper.connector_logger.info(
-                                f"Created SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
+                        return False
 
                 elif operation == "delete":
-                    rule_id = self._find_siem_rule_by_opencti_id(opencti_id)
-                    if rule_id:
-                        if self._delete_siem_rule(rule_id):
-                            self.helper.connector_logger.info(
-                                f"Deleted SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
+                    if not self._delete_siem_rule_of_indicator(opencti_id):
+                        # The threat intel document is the trace the deployment
+                        # read-back sees: it stays while the rule may remain, so
+                        # the next removal retries the rule cleanup.
+                        self.helper.connector_logger.warning(
+                            "SIEM rule of the indicator not removed, threat intel entry kept",
+                            meta={"opencti_id": opencti_id},
+                        )
+                        return False
 
-            if operation == "create":
-                result = self.create_indicator(indicator_data)
-                if not result:
-                    success = False
-                else:
-                    self.helper.connector_logger.info(
-                        f"Created threat intel entry for {pattern_type} indicator",
-                        {"opencti_id": opencti_id},
+            if operation in ("create", "update"):
+                written_document = False
+                try:
+                    write = (
+                        self.create_indicator
+                        if operation == "create"
+                        else self.update_indicator
                     )
-            elif operation == "update":
-                result = self.update_indicator(indicator_data)
-                if not result:
+                    written_document = bool(write(indicator_data))
+                finally:
+                    # A rule without its threat intel entry would detect unseen
+                    # by the deployment read-back, and a rule on the new indicator
+                    # next to the previous entry would hide a partial update.
+                    if not written_document and created_rule_id is not None:
+                        self._roll_back_siem_rule(created_rule_id, opencti_id)
+                    if not written_document and updated_rules:
+                        self._restore_siem_rules(updated_rules, opencti_id)
+                if not written_document:
                     success = False
                 else:
                     self.helper.connector_logger.info(
-                        f"Updated threat intel entry for {pattern_type} indicator",
-                        {"opencti_id": opencti_id},
+                        f"Wrote threat intel entry for {pattern_type} indicator",
+                        meta={"opencti_id": opencti_id, "operation": operation},
                     )
             elif operation == "delete":
                 if not self.delete_indicator(indicator_data):
@@ -907,7 +1182,9 @@ class ElasticApiHandler:
 
         return success
 
-    def _delete_docs_by_opencti_id(self, doc_id: str) -> int:
+    def _delete_docs_by_opencti_id(
+        self, doc_id: str, keep: Optional[str] = None
+    ) -> int:
         """
         Delete every document matching the given opencti_doc_id from the data stream.
 
@@ -916,9 +1193,19 @@ class ElasticApiHandler:
         deletion and leaving stale duplicates behind.
 
         :param doc_id: The opencti_doc_id shared by the documents to remove
+        :param keep: The ``_id`` of a document to keep (the one just written)
         :return: Number of documents deleted
         """
-        delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
+        delete_query: Dict[str, Any] = {"query": {"term": {"opencti_doc_id": doc_id}}}
+        if keep is not None:
+            delete_query = {
+                "query": {
+                    "bool": {
+                        "filter": [{"term": {"opencti_doc_id": doc_id}}],
+                        "must_not": [{"ids": {"values": [keep]}}],
+                    }
+                }
+            }
         url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
         response = requests.post(
             url,
@@ -939,56 +1226,75 @@ class ElasticApiHandler:
             {"response": response.text},
         )
 
-    def create_indicator(self, observable_data: dict) -> Optional[dict]:
-        """Create a threat indicator in Elastic Security"""
+    def _replace_document(self, observable_data: dict, action: str) -> dict:
+        """Write the document of an object, then delete its previous documents.
+
+        Data streams are append-only and auto-generate document IDs: the new
+        document is stored first, so a failed write keeps the previous one, and
+        the other documents of the object are deleted once it is stored. A
+        failed cleanup leaves duplicates that the next write of the object
+        deletes; the object is written either way.
+
+        :param observable_data: The STIX object
+        :param action: ``create`` or ``update``, for the logs and errors
+        :return: The ``_id`` of the new document, its opencti_doc_id and the response
+        :raises ElasticApiHandlerError: When the document is not written
+        """
+        doc_id = self._generate_doc_id(observable_data)
+        ecs_doc = self._convert_to_ecs_threat(observable_data)
+
+        # Add document ID as a field for reference (since data streams auto-generate IDs)
+        ecs_doc["opencti_doc_id"] = doc_id
+
         try:
-            doc_id = self._generate_doc_id(observable_data)
-            ecs_doc = self._convert_to_ecs_threat(observable_data)
-
-            # Add document ID as a field for reference (since data streams auto-generate IDs)
-            ecs_doc["opencti_doc_id"] = doc_id
-
-            # Remove any pre-existing document for this indicator so a duplicated
-            # "create" event cannot accumulate several copies in the data stream.
-            self._delete_docs_by_opencti_id(doc_id)
-
-            # For data streams, use POST without specifying document ID
-            # Data streams require POST with auto-generated IDs
-            url = f"{self.elastic_url}/{self.index_name}/_doc"
             response = requests.post(
-                url,
+                f"{self.elastic_url}/{self.index_name}/_doc",
                 headers=self.headers,
                 json=ecs_doc,
                 verify=self._get_verify_config(),
                 cert=self.cert,
                 timeout=30,
             )
-
-            if response.status_code in [200, 201]:
-                result = response.json()
-                self.helper.connector_logger.debug(
-                    "Successfully created indicator in Elastic",
-                    {
-                        "elastic_id": result.get("_id"),
-                        "opencti_doc_id": doc_id,
-                        "result": result.get("result"),
-                    },
-                )
-                return {
-                    "id": result.get("_id"),
-                    "opencti_doc_id": doc_id,
-                    "result": result,
-                }
-            else:
-                raise ElasticApiHandlerError(
-                    f"Failed to create indicator: {response.status_code}",
-                    {"response": response.text},
-                )
-
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
-                "Request failed while creating indicator", {"error": str(e)}
+                f"Request failed while trying to {action} indicator", {"error": str(e)}
             )
+        if response.status_code not in [200, 201]:
+            raise ElasticApiHandlerError(
+                f"Failed to {action} indicator: {response.status_code}",
+                {"response": response.text},
+            )
+        result = response.json()
+        elastic_id = result.get("_id")
+
+        if elastic_id:
+            try:
+                deleted = self._delete_docs_by_opencti_id(doc_id, keep=elastic_id)
+                self.helper.connector_logger.debug(
+                    f"Deleted {deleted} previous indicator document(s)",
+                    meta={"opencti_doc_id": doc_id},
+                )
+            except (ElasticApiHandlerError, requests.exceptions.RequestException) as e:
+                self.helper.connector_logger.warning(
+                    "Previous threat intel entries not removed, removed with the next write",
+                    meta={"opencti_doc_id": doc_id, "error": str(e)},
+                )
+        self.helper.connector_logger.debug(
+            f"Successfully wrote indicator in Elastic ({action})",
+            meta={
+                "elastic_id": elastic_id,
+                "opencti_doc_id": doc_id,
+                "result": result.get("result"),
+            },
+        )
+        return {"id": elastic_id, "opencti_doc_id": doc_id, "result": result}
+
+    def create_indicator(self, observable_data: dict) -> Optional[dict]:
+        """Create a threat indicator in Elastic Security.
+
+        A replayed create replaces the existing document instead of adding a copy.
+        """
+        return self._replace_document(observable_data, "create")
 
     def bulk_create_indicators(self, observables_data: List[dict]) -> dict:
         """
@@ -1088,58 +1394,11 @@ class ElasticApiHandler:
             )
 
     def update_indicator(self, observable_data: dict) -> Optional[dict]:
-        """Update an existing threat indicator in Elastic Security"""
-        try:
-            doc_id = self._generate_doc_id(observable_data)
-            ecs_doc = self._convert_to_ecs_threat(observable_data)
+        """Update an existing threat indicator in Elastic Security.
 
-            # Add document ID as a field for reference
-            ecs_doc["opencti_doc_id"] = doc_id
-
-            # For data streams, we can't update directly - need to delete old and create new
-            # First, delete any existing document(s) for this indicator
-            deleted_count = self._delete_docs_by_opencti_id(doc_id)
-            self.helper.connector_logger.debug(
-                f"Deleted {deleted_count} old indicator(s) for update",
-                {"opencti_doc_id": doc_id},
-            )
-
-            # Now create the new document (data streams are append-only)
-            url = f"{self.elastic_url}/{self.index_name}/_doc"
-            response = requests.post(
-                url,
-                headers=self.headers,
-                json=ecs_doc,
-                verify=self._get_verify_config(),
-                cert=self.cert,
-                timeout=30,
-            )
-
-            if response.status_code in [200, 201]:
-                result = response.json()
-                self.helper.connector_logger.debug(
-                    "Successfully updated indicator in Elastic (via delete and recreate)",
-                    {
-                        "elastic_id": result.get("_id"),
-                        "opencti_doc_id": doc_id,
-                        "result": result.get("result"),
-                    },
-                )
-                return {
-                    "id": result.get("_id"),
-                    "opencti_doc_id": doc_id,
-                    "result": result,
-                }
-            else:
-                raise ElasticApiHandlerError(
-                    f"Failed to update indicator: {response.status_code}",
-                    {"response": response.text},
-                )
-
-        except requests.exceptions.RequestException as e:
-            raise ElasticApiHandlerError(
-                "Request failed while updating indicator", {"error": str(e)}
-            )
+        Data streams cannot update a document: a new one replaces it.
+        """
+        return self._replace_document(observable_data, "update")
 
     def delete_indicator(self, observable_data: dict) -> bool:
         """Delete a threat indicator from Elastic Security"""

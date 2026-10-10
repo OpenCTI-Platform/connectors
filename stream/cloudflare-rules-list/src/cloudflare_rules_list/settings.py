@@ -17,6 +17,11 @@ Environment variable mapping (nested by the first underscore):
     CLOUDFLARE_LIST_ID         -> cloudflare.list_id
     CLOUDFLARE_API_BASE_URL    -> cloudflare.api_base_url
     CLOUDFLARE_SYNC_INTERVAL   -> cloudflare.sync_interval
+    DEPLOYMENT_REPORTING_ENABLED       -> deployment.reporting_enabled
+    DEPLOYMENT_RECONCILIATION_INTERVAL -> deployment.reconciliation_interval
+    SECURITY_PLATFORM_NAME     -> security_platform.name
+    SECURITY_PLATFORM_TYPE     -> security_platform.type
+    SECURITY_PLATFORM_ID       -> security_platform.id
 """
 
 from datetime import timedelta
@@ -25,7 +30,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -83,11 +90,30 @@ class CloudflareConfig(BaseConfigModel):
     )
 
 
+class CloudflareSecurityPlatformConfig(SecurityPlatformConfig):
+    """Security Platform entity representing Cloudflare in OpenCTI (deployment write-back)."""
+
+    name: str = Field(
+        default="Cloudflare",
+        min_length=2,
+        description="Name of the Security Platform entity representing Cloudflare in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default=None,
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no web application firewall type.",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """Top-level settings.
 
-    ``opencti`` (url, token) is provided by :class:`BaseConnectorSettings`.
+    ``opencti`` (url, token) is provided by :class:`BaseConnectorSettings`;
+    ``deployment`` and ``security_platform`` configure the deployment write-back.
     """
 
     connector: _StreamConnectorConfig = Field(default_factory=_StreamConnectorConfig)
     cloudflare: CloudflareConfig = Field(default_factory=CloudflareConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    security_platform: CloudflareSecurityPlatformConfig = Field(
+        default_factory=CloudflareSecurityPlatformConfig
+    )

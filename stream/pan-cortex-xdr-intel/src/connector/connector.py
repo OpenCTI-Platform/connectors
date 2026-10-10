@@ -1,8 +1,17 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
+from connector.deployment import (
+    describe_error,
+    failure_reason,
+    pattern_pushed_values,
+    pushed_values,
+    rule_ids_of,
+)
 from connector.models import CortexXdrIoc, OctiIndicator
 from connectors_sdk import (
     ApiForbiddenError,
@@ -11,11 +20,17 @@ from connectors_sdk import (
     ApiServerError,
     ApiUnauthorizedError,
 )
-from cortex_xdr_client import CortexXdrApiError
+from connectors_sdk.connectors.stream.deployment import (
+    PendingWithdrawals,
+    normalize_value,
+    parse_datetime,
+)
+from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
+    from connectors_sdk import DeploymentAssurance
     from cortex_xdr_client import CortexXdrClient
     from pycti import OpenCTIConnectorHelper
 
@@ -29,6 +44,35 @@ _SUPPORTED_OBSERVABLE_TYPES = {
     "stixfile",
     "url",
 }
+
+
+_FATAL_API_CAUSES = (
+    ApiUnauthorizedError,  # 401
+    ApiForbiddenError,  # 403
+    ApiNotFoundError,  # 404
+    ApiRateLimitError,  # 429
+    ApiServerError,  # 5xx
+)
+"""Causes of a Cortex XDR API error that stop the connector (global failures)."""
+
+SHARED_VALUE_LOOKUP_REASON = (
+    "The connector could not read the other OpenCTI indicators of the former values"
+)
+"""Reason OpenCTI shows when the former values of an updated indicator cannot be checked."""
+
+
+def _former_pattern(context: Any) -> str | None:
+    """Return the pattern an update event replaced, read from its reverse patch."""
+    reverse_patch = context.get("reverse_patch") if isinstance(context, dict) else None
+    for patch in reverse_patch if isinstance(reverse_patch, list) else []:
+        if isinstance(patch, dict) and patch.get("path") == "/pattern":
+            value = patch.get("value")
+            return value if isinstance(value, str) else None
+    return None
+
+
+class SharedValueLookupError(Exception):
+    """The OpenCTI indicators sharing the values of a deleted indicator cannot be read."""
 
 
 class StreamMessage(Protocol):
@@ -56,6 +100,8 @@ class Connector:
             Store the connector's configuration.
         client (CortexXdrClient):
             Provide methods to request the Cortex XDR API.
+        assurance (DeploymentAssurance | None):
+            Deployment write-back (dissemination assurance), if any.
 
     ---
 
@@ -68,10 +114,13 @@ class Connector:
         helper: OpenCTIConnectorHelper,
         settings: ConnectorSettings,
         client: CortexXdrClient,
+        assurance: DeploymentAssurance | None = None,
     ) -> None:
         self.helper = helper
         self.settings = settings
         self.client = client
+        self.assurance = assurance
+        self.pending_withdrawals = PendingWithdrawals(helper)
 
         # Reusable exit message for fatal errors logging
         self._exit_message = (
@@ -223,8 +272,14 @@ class Connector:
 
         return extracted_xdr_iocs  # type: ignore[return-value]  # `rule_id` (int) is added to each dict
 
-    def _handle_upsert(self, octi_indicator: OctiIndicator) -> None:
-        """Upsert `octi_indicator`'s supported observables into Cortex XDR as IOCs."""
+    def _handle_upsert(self, octi_indicator: OctiIndicator) -> list[str] | None:
+        """Upsert `octi_indicator`'s supported observables into Cortex XDR as IOCs.
+
+        Returns:
+            The `rule_id`s of the upserted IOCs known from the response or the
+            look-up (possibly empty), or `None` when no Cortex XDR IOC could be
+            extracted (nothing was sent).
+        """
         # Extract Cortex XDR IOCs from the indicator's observables
         # (`xdr_iocs` is re-assigned after each transformation to ease debugging)
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
@@ -239,7 +294,7 @@ class Connector:
                     "observables_count": len(octi_indicator.observables),
                 },
             )
-            return
+            return None
 
         self.helper.connector_logger.debug(
             "Upserting IOC(s) into Cortex XDR",
@@ -247,17 +302,243 @@ class Connector:
         )
 
         # Send the payloads to Cortex XDR as dicts, omitting any unset fields to let client default them.
-        self.client.insert_iocs(
-            [ioc.model_dump(exclude_none=True) for ioc in xdr_iocs]  # type: ignore[arg-type]
-        )
+        try:
+            response = self.client.insert_iocs(
+                [ioc.model_dump(exclude_none=True) for ioc in xdr_iocs]  # type: ignore[arg-type]
+            )
+        except CortexXdrRejectedIocsError:
+            self._roll_back_created_iocs(octi_indicator, xdr_iocs)
+            raise
 
         self.helper.connector_logger.info(
             "Successfully upserted IOC(s) into Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
+        return rule_ids_of(response, xdr_iocs)
 
-    def _handle_delete(self, octi_indicator: OctiIndicator) -> None:
-        """Delete `octi_indicator`'s supported observables from Cortex XDR."""
+    def _roll_back_created_iocs(
+        self, octi_indicator: OctiIndicator, xdr_iocs: Sequence[CortexXdrIoc]
+    ) -> None:
+        """Delete the IOCs an upsert Cortex XDR partly rejected created.
+
+        The indicator is reported `failed`, and a withdrawal only deletes the IOC
+        whose `rule_id` a `failed` deployment records (Cortex XDR stores no owner):
+        the IOCs the upsert created would stay live. They are the values Cortex XDR
+        held no IOC for before the upsert (no `rule_id`); the IOCs it updated existed
+        before it and are left in place. A failed deletion is logged.
+        """
+        values = [ioc.indicator for ioc in xdr_iocs if ioc.rule_id is None]
+        if not values:
+            return
+        try:
+            self.client.delete_iocs(
+                [{"field": "indicator", "operator": "IN", "value": values}]
+            )
+        except CortexXdrApiError as err:
+            self.helper.connector_logger.warning(
+                "IOCs created by a rejected upsert not deleted from Cortex XDR",
+                {
+                    "indicator_id": octi_indicator.id,
+                    "values": values,
+                    "error": describe_error(err),
+                },
+            )
+
+    def push_indicator(self, data: dict[str, Any]) -> str | None:
+        """Upsert an OpenCTI indicator into Cortex XDR (reconciliation re-push).
+
+        Args:
+            data: The indicator, in the stream event shape.
+
+        Returns:
+            The `rule_id` of the first Cortex XDR IOC, if known.
+
+        Raises:
+            ValueError: When no observable of the indicator can be pushed.
+            CortexXdrApiError: When Cortex XDR rejects the request.
+        """
+        octi_indicator = self._build_octi_indicator(data)
+        rule_ids = (
+            self._handle_upsert(octi_indicator) if octi_indicator.observables else None
+        )
+        if rule_ids is None:
+            raise ValueError(
+                "No observable of the indicator can be pushed to Cortex XDR"
+            )
+        return rule_ids[0] if rule_ids else None
+
+    def _report_pushed(self, data: dict[str, Any], rule_ids: list[str]) -> None:
+        """Report an indicator live in Cortex XDR, with its first `rule_id`."""
+        if self.assurance is not None:
+            self.assurance.report_pushed(
+                data, external_id=rule_ids[0] if rule_ids else None
+            )
+
+    def _report_withdrawal_failed(
+        self, data: dict[str, Any], error: BaseException
+    ) -> None:
+        """Report an update whose former values could not be deleted."""
+        if isinstance(error, SharedValueLookupError):
+            if self.assurance is not None:
+                self.assurance.report_push_failed(data, SHARED_VALUE_LOOKUP_REASON)
+            return
+        self._report_failed(data, error)
+
+    def _report_failed(self, data: dict[str, Any], error: BaseException) -> None:
+        """Report an indicator rejected by Cortex XDR (no-op without write-back)."""
+        if self.assurance is not None:
+            self.assurance.report_push_failed(data, failure_reason(error))
+
+    def _report_removed(self, data: dict[str, Any]) -> None:
+        """Report an indicator deleted from Cortex XDR (no-op without write-back)."""
+        if self.assurance is not None:
+            self.assurance.report_removed(data)
+
+    def _values_kept_for_other_indicators(
+        self, values: Sequence[str], indicator_id: str | None
+    ) -> set[str]:
+        """Return the IOC values another valid OpenCTI indicator still holds.
+
+        Cortex XDR holds one IOC per value: deleting the IOC of a value another
+        indicator shares would take that indicator offline as well. Revoked
+        indicators and indicators whose `valid_until` is past do not keep a value.
+
+        Raises:
+            SharedValueLookupError: When OpenCTI cannot be queried.
+        """
+        wanted = {
+            normalized: value
+            for value in values
+            if (normalized := normalize_value(value)) is not None
+        }
+        # Hashes are written in either case in the patterns of other indicators.
+        spellings = dict.fromkeys(
+            spelling
+            for value in values
+            for spelling in (value, value.lower(), value.upper())
+        )
+        try:
+            indicators = self.helper.api.indicator.list(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "pattern",
+                            "values": [f"'{spelling}'" for spelling in spellings],
+                            "operator": "contains",
+                            "mode": "or",
+                        },
+                        {"key": "revoked", "values": ["false"]},
+                    ],
+                    "filterGroups": [],
+                },
+                getAll=True,
+            )
+        except Exception as err:
+            raise SharedValueLookupError(
+                f"Cannot read the OpenCTI indicators sharing its values: {err}"
+            ) from err
+        now = datetime.now(UTC)
+        kept: set[str] = set()
+        for indicator in indicators or []:
+            if indicator_id is not None and indicator.get("id") == indicator_id:
+                continue
+            valid_until = parse_datetime(indicator.get("valid_until"))
+            if valid_until is not None and valid_until <= now:
+                continue
+            for value in pushed_values(indicator.get("pattern")):
+                if value in wanted:
+                    kept.add(wanted[value])
+        return kept
+
+    def _former_values(
+        self, octi_indicator: OctiIndicator, context: dict[str, Any] | None
+    ) -> list[str]:
+        """Return the values of the pattern an update replaced it no longer holds.
+
+        Cortex XDR holds one IOC per value: the IOCs of these values would stay live
+        next to the IOCs of the current pattern.
+        """
+        former_pattern = _former_pattern(context)
+        if former_pattern is None:
+            return []
+        current = {
+            normalize_value(ioc.indicator)
+            for ioc in self._extract_xdr_iocs(octi_indicator)
+        }
+        return [
+            value
+            for value in dict.fromkeys(pattern_pushed_values(former_pattern))
+            if normalize_value(value) not in current
+        ]
+
+    def _withdraw_value(self, value: str, indicator_id: str | None) -> None:
+        """Delete the IOC of a former value, unless another valid indicator holds it.
+
+        Raises:
+            SharedValueLookupError: When OpenCTI cannot be queried.
+            CortexXdrApiError: When Cortex XDR refuses the deletion.
+        """
+        if self._values_kept_for_other_indicators([value], indicator_id):
+            self.helper.connector_logger.info(
+                "IOC of a former value kept in Cortex XDR for other OpenCTI indicators",
+                meta={"indicator_id": indicator_id},
+            )
+            return
+        self.client.delete_iocs(
+            [{"field": "indicator", "operator": "IN", "value": [value]}]
+        )
+
+    def _withdraw_former_values(
+        self,
+        data: dict[str, Any],
+        octi_indicator: OctiIndicator,
+        values: list[str] | None = None,
+    ) -> CortexXdrApiError | SharedValueLookupError | None:
+        """Delete the IOCs of the former values of an indicator.
+
+        The values of the update being processed and those earlier updates could
+        not delete, kept in the connector state (see `PendingWithdrawals`), are
+        deleted unless another valid indicator holds them. A refusal is logged and
+        the values left are kept for the next update or delete of the indicator.
+
+        Returns:
+            The error of a refused deletion, `None` when no former value is left.
+
+        Raises:
+            CortexXdrApiError: On a global failure of the Cortex XDR API, which
+                stops the connector (the values left are kept).
+        """
+        try:
+            self.pending_withdrawals.withdraw(
+                data.get("id"),
+                lambda value: self._withdraw_value(value, octi_indicator.id),
+                values or [],
+            )
+        except (CortexXdrApiError, SharedValueLookupError) as err:
+            if isinstance(err.__cause__, _FATAL_API_CAUSES):
+                raise
+            self.helper.connector_logger.warning(
+                "IOCs of a former pattern not deleted from Cortex XDR",
+                {
+                    "indicator_id": octi_indicator.id,
+                    "values": self.pending_withdrawals.values(data.get("id")),
+                    "error": describe_error(err),
+                },
+            )
+            return err
+        return None
+
+    def _handle_delete(self, octi_indicator: OctiIndicator) -> bool:
+        """Delete `octi_indicator`'s supported observables from Cortex XDR.
+
+        The IOCs of values another valid OpenCTI indicator holds are kept.
+
+        Returns:
+            `True` when the IOCs are deleted or kept for other indicators, `False`
+            when no Cortex XDR IOC could be extracted or the other indicators
+            cannot be read (nothing was sent).
+        """
         # Extract Cortex XDR IOCs from the indicator's observables
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
         if not xdr_iocs:
@@ -269,11 +550,30 @@ class Connector:
                     "observables_count": len(octi_indicator.observables),
                 },
             )
-            return
+            return False
+
+        values = list(dict.fromkeys(ioc.indicator for ioc in xdr_iocs))
+        try:
+            kept = self._values_kept_for_other_indicators(values, octi_indicator.id)
+        except SharedValueLookupError as err:
+            self.helper.connector_logger.error(
+                "Cannot check the other indicators of the deleted IOC(s), "
+                "skipping the deletion",
+                meta={"indicator_id": octi_indicator.id, "error": str(err)},
+            )
+            return False
+        if kept:
+            self.helper.connector_logger.info(
+                "IOC(s) kept in Cortex XDR for other OpenCTI indicators",
+                meta={"indicator_id": octi_indicator.id, "kept": len(kept)},
+            )
+        deleted = [value for value in values if value not in kept]
+        if not deleted:
+            return True
 
         self.helper.connector_logger.debug(
             "Deleting IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+            meta={"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
 
         # Delete all the IOCs corresponding to the filters on Cortex XDR
@@ -282,15 +582,16 @@ class Connector:
                 {
                     "field": "indicator",
                     "operator": "IN",
-                    "value": [ioc.indicator for ioc in xdr_iocs],
+                    "value": deleted,
                 }
             ]
         )
 
         self.helper.connector_logger.info(
             "Successfully deleted IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+            meta={"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
+        return True
 
     def _process_message(self, msg: StreamMessage) -> None:
         """Process a single stream event message.
@@ -339,6 +640,14 @@ class Connector:
 
         try:
             octi_indicator = self._build_octi_indicator(entity_data)
+            former_values = (
+                self._former_values(octi_indicator, message_data.get("context"))
+                if event == "update"
+                else []
+            )
+            has_former_values = event != "create" and bool(
+                former_values or self.pending_withdrawals.values(entity_data.get("id"))
+            )
             if not octi_indicator.observables:
                 self.helper.connector_logger.warning(
                     "No supported observable(s) found in indicator, skipping it",
@@ -348,7 +657,8 @@ class Connector:
                         "observables_count": len(octi_indicator.observables),
                     },
                 )
-                return
+                if not has_former_values:
+                    return
 
             self.helper.connector_logger.info(
                 "Parsed observable(s) from stream event",
@@ -373,20 +683,40 @@ class Connector:
 
         try:
             if event in {"create", "update"}:
-                self._handle_upsert(octi_indicator)
+                if event == "update":
+                    error = self._withdraw_former_values(
+                        entity_data, octi_indicator, former_values
+                    )
+                    if error is not None:
+                        self._report_withdrawal_failed(entity_data, error)
+                        return
+                rule_ids = (
+                    self._handle_upsert(octi_indicator)
+                    if octi_indicator.observables
+                    else None
+                )
+                if rule_ids is not None:
+                    self._report_pushed(entity_data, rule_ids)
+                elif not octi_indicator.observables and has_former_values:
+                    self._report_removed(entity_data)
             elif event == "delete":
-                self._handle_delete(octi_indicator)
+                former_left = (
+                    self._withdraw_former_values(entity_data, octi_indicator)
+                    is not None
+                )
+                removed = (
+                    self._handle_delete(octi_indicator)
+                    if octi_indicator.observables
+                    else has_former_values
+                )
+                if removed and not former_left:
+                    self._report_removed(entity_data)
 
         except CortexXdrApiError as err:
-            fatal_causes = (
-                ApiUnauthorizedError,  # 401
-                ApiForbiddenError,  # 403
-                ApiNotFoundError,  # 404
-                ApiRateLimitError,  # 429
-                ApiServerError,  # 5xx
-            )
+            if event != "delete":
+                self._report_failed(entity_data, err)
 
-            if err.__cause__ and isinstance(err.__cause__, fatal_causes):
+            if err.__cause__ and isinstance(err.__cause__, _FATAL_API_CAUSES):
                 # The process must be **killed to avoid exhausting** the stream with repeated global failure e.g.,
                 # invalid/revoked API key, rate limit exceeded, API breaking changes, etc.
                 self.helper.connector_logger.error(
@@ -394,7 +724,7 @@ class Connector:
                     {
                         "event": event,
                         "entity_data": entity_data,
-                        "error": err,
+                        "error": describe_error(err),
                     },
                 )
                 raise  # let `pycti` kill the connector process
@@ -406,11 +736,13 @@ class Connector:
                     {
                         "event": event,
                         "entity_data": entity_data,
-                        "error": err,
+                        "error": describe_error(err),
                     },
                 )
                 return  # skip the event and continue
         except Exception as err:
+            if event != "delete":
+                self._report_failed(entity_data, err)
             # Repetitive unexpected errors could consume the stream in vain (no action performed).
             # To avoid data loss, the connector must stop and the issue must be investigated and fixed before resuming.
             self.helper.connector_logger.error(
@@ -425,4 +757,11 @@ class Connector:
 
     def start(self) -> None:
         """Start the connector's main loop: listen to the OpenCTI stream and process each message."""
+        if self.assurance is not None:
+            self.assurance.start()
+        # Former values Cortex XDR refused to delete are retried, also once the
+        # indicator is deleted.
+        self.pending_withdrawals.start_retries(
+            lambda _indicator_id, value: self._withdraw_value(value, None)
+        )
         self.helper.listen_stream(self._process_message)

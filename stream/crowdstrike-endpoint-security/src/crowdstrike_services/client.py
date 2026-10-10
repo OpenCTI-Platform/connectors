@@ -1,6 +1,11 @@
-from typing import TYPE_CHECKING
+from collections.abc import Collection, Iterator
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any
 
 from falconpy import IOC as CrowdstrikeIOC
+from falconpy import Alerts as CrowdstrikeAlerts
 
 from .constants import (
     observable_type_mapper,
@@ -11,6 +16,75 @@ from .constants import (
 if TYPE_CHECKING:
     from crowdstrike_connector.settings import CrowdstrikeEndpointSecurityConfig
     from pycti import OpenCTIConnectorHelper
+
+IOC_SOURCE = "OpenCTI IOC"
+"""Source set on every IOC created by the connector."""
+
+TO_DELETE_TAG = "TO_DELETE"
+"""Tag added to the IOCs soft-deleted by the connector (permanent_delete=False)."""
+
+IOC_PAGE_SIZE = 500
+"""Page size of the IOC read-back (maximum accepted by the IOC API)."""
+
+MAX_IOC_PAGES = 2_000
+"""Safety bound of the IOC read-back (1 000 000 IOCs)."""
+
+ALERT_PAGE_SIZE = 1_000
+"""Page size of the alert retrieval (maximum accepted by the Alerts API)."""
+
+
+def alert_id(alert: dict[str, Any]) -> str | None:
+    """Return the id of an alert (``composite_id``, ``id`` for older payloads)."""
+    identifier = alert.get("composite_id") or alert.get("id")
+    return str(identifier) if identifier else None
+
+
+class CrowdstrikeApiError(Exception):
+    """Raised when the CrowdStrike API rejects a request."""
+
+
+class IocOperationStatus(StrEnum):
+    """Outcome of an IOC operation of the connector."""
+
+    CREATED = "created"
+    UPDATED = "updated"
+    EXISTS = "exists"
+    DELETED = "deleted"
+    ABSENT = "absent"
+    SKIPPED = "skipped"
+    FAILED = "failed"
+
+
+LIVE_STATUSES = frozenset(
+    {IocOperationStatus.CREATED, IocOperationStatus.UPDATED, IocOperationStatus.EXISTS}
+)
+"""Outcomes meaning that the IOC is present in CrowdStrike after the operation."""
+
+
+@dataclass(frozen=True, slots=True)
+class IocOperationResult:
+    """Outcome of a create, update or delete operation on a CrowdStrike IOC.
+
+    Attributes:
+        status: What happened (created, updated, already existing, deleted, absent
+            from CrowdStrike, skipped because the IOC type is not supported, failed).
+        ioc_id: The CrowdStrike IOC id, when known.
+        error: The CrowdStrike error message, when the operation failed (for the
+            connector logs only).
+        status_code: The HTTP status of the CrowdStrike response that failed the
+            operation (a success status when the response could not be read), None
+            when CrowdStrike could not be reached.
+    """
+
+    status: IocOperationStatus
+    ioc_id: str | None = None
+    error: str | None = None
+    status_code: int | None = None
+
+    @property
+    def is_live(self) -> bool:
+        """Tell whether the IOC is present in CrowdStrike after the operation."""
+        return self.status in LIVE_STATUSES
 
 
 class CrowdstrikeClient:
@@ -31,18 +105,103 @@ class CrowdstrikeClient:
             # Convert HttpUrl to string
             base_url=str(self.config.api_base_url),
         )
+        self._alerts: CrowdstrikeAlerts | None = None
 
-    def _handle_api_error(self, response: dict) -> None:
+    @property
+    def alerts(self) -> CrowdstrikeAlerts:
+        """Alerts service class, sharing the authentication of the IOC service class."""
+        if self._alerts is None:
+            self._alerts = CrowdstrikeAlerts(auth_object=self.cs)
+        return self._alerts
+
+    @staticmethod
+    def _api_error_message(response: dict) -> str | None:
+        """
+        Extract the error message of a Crowdstrike API response
+        :param response: Response in dict
+        :return: Error message, None when the call succeeded
+        """
+        status_code = response.get("status_code", 0)
+        if status_code < 400:
+            return None
+        body = response.get("body") or {}
+        for error in body.get("errors") or []:
+            if isinstance(error, dict) and error.get("message"):
+                return str(error["message"])
+        return f"HTTP {status_code}"
+
+    def _handle_api_error(self, response: dict) -> str | None:
         """
         Handle API error from Crowdstrike
         :param response: Response in dict
-        :return: None
+        :return: Error message, None when the call succeeded
         """
-        if response["status_code"] >= 400:
-            error_message = response["body"]["errors"][0]["message"]
+        error_message = self._api_error_message(response)
+        if error_message is not None:
             self.helper.connector_logger.error(
                 "[API] Error while processing indicator",
                 {"error_message": error_message},
+            )
+        return error_message
+
+    def _search_indicator_with_error(
+        self, ioc_value: str
+    ) -> tuple[list | None, str | None, int | None]:
+        """
+        Search for existing indicator into Crowdstrike
+        Every page of the search is read: a delete removes all the IOCs it returns
+        :param ioc_value: IOC value in string
+        :return: List of IOC ids (None on error), the error message and the HTTP
+            status of the failed search (see `IocOperationResult.status_code`)
+        """
+        try:
+            cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
+            ioc_ids: list = []
+            after: str | None = None
+            seen_tokens: set[str] = set()
+            for _ in range(MAX_IOC_PAGES):
+                parameters: dict[str, Any] = {"filter": cs_filter}
+                if after:
+                    parameters["after"] = after
+                response = self.cs.indicator_search(**parameters)
+                error_message = self._handle_api_error(response)
+
+                if response["status_code"] != 200:
+                    return (
+                        None,
+                        error_message
+                        or f"Unexpected status code {response['status_code']}",
+                        response["status_code"],
+                    )
+                body = response["body"]
+                resources = body["resources"]
+                if not resources:
+                    return (ioc_ids or resources), None, None
+                ioc_ids.extend(resources)
+                after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
+                if not after:
+                    return ioc_ids, None, None
+                if after in seen_tokens:
+                    return (
+                        None,
+                        "The IOC API returned the same pagination token twice",
+                        200,
+                    )
+                seen_tokens.add(after)
+            return (
+                None,
+                f"IOC search stopped after {MAX_IOC_PAGES} pages without reaching the end",
+                200,
+            )
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[API] Error while searching indicator", {"error_message": err}
+            )
+            return (
+                None,
+                str(err) or type(err).__name__,
+                None if isinstance(err, OSError) else 200,
             )
 
     def _search_indicator(self, ioc_value: str) -> list | None:
@@ -52,19 +211,7 @@ class CrowdstrikeClient:
         :param ioc_value: IOC value in string
         :return: List of resources or None
         """
-        try:
-            cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
-
-            response = self.cs.indicator_search(filter=cs_filter)
-            self._handle_api_error(response)
-
-            if response["status_code"] == 200:
-                return response["body"]["resources"]
-
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[API] Error while searching indicator", {"error_message": err}
-            )
+        return self._search_indicator_with_error(ioc_value)[0]
 
     @staticmethod
     def _parse_indicator_pattern(pattern: str) -> str:
@@ -177,10 +324,10 @@ class CrowdstrikeClient:
         if event == "delete":
             if "labels" in data:
                 labels = data["labels"]
-                labels.append("TO_DELETE")
+                labels.append(TO_DELETE_TAG)
                 data["labels"] = labels
             else:
-                data["labels"] = ["TO_DELETE"]
+                data["labels"] = [TO_DELETE_TAG]
         if event == "create":
             if "labels" in data:
                 # Keep the new labels added, TO_DELETE is removed here
@@ -217,7 +364,7 @@ class CrowdstrikeClient:
                 "value": ioc_value,
                 "severity": ioc_severity,
                 "applied_globally": True,
-                "source": "OpenCTI IOC",
+                "source": IOC_SOURCE,
             }
 
             # If description exists, add it in indicator to create in Crowdstrike
@@ -246,15 +393,31 @@ class CrowdstrikeClient:
         else:
             return None
 
-    def create_indicator(self, data: dict, event: str | None = None) -> None:
+    @staticmethod
+    def _created_ioc_id(response: dict) -> str | None:
+        """
+        Extract the id of the IOC created by an indicator_create call
+        :param response: Response in dict
+        :return: IOC id or None
+        """
+        for resource in (response.get("body") or {}).get("resources") or []:
+            if isinstance(resource, dict) and resource.get("id"):
+                return str(resource["id"])
+        return None
+
+    def create_indicator(
+        self, data: dict, event: str | None = None
+    ) -> IocOperationResult:
         """
         Create IOC from OpenCTI to Crowdstrike
         :param data: Data of IOC in dict
         :param event: Event in string or None
-        :return: None
+        :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs = self._search_indicator(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC doesn't exist, create the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) == 0:
@@ -262,41 +425,64 @@ class CrowdstrikeClient:
 
             if body is not None:
                 response = self.cs.indicator_create(body=body)
-                self._handle_api_error(response)
+                error_message = self._handle_api_error(response)
 
                 if response["status_code"] == 201:
                     self.helper.connector_logger.info(
                         "[API] IOC successfully created in Crowdstrike",
                         {"ioc_value": ioc_value},
                     )
+                    return IocOperationResult(
+                        IocOperationStatus.CREATED,
+                        ioc_id=self._created_ioc_id(response),
+                    )
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=error_message
+                    or f"Unexpected status code {response['status_code']}",
+                    status_code=response["status_code"],
+                )
             else:
                 self.helper.connector_logger.info(
                     "[API] IOC cannot be created in Crowdstrike",
                     {"ioc_value": ioc_value},
                 )
+                return IocOperationResult(IocOperationStatus.SKIPPED)
 
         elif self.config.permanent_delete is False:
-            self.update_indicator(data, event)
+            result = self.update_indicator(data, event)
 
             self.helper.connector_logger.info(
                 "[API] IOC already exists in Crowdstrike",
                 {"ioc_value": ioc_value},
             )
+            return result
         else:
             self.helper.connector_logger.info(
                 "[API] IOC already exists in Crowdstrike",
                 {"ioc_value": ioc_value},
             )
+            if ioc_cs is None:
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
+            return IocOperationResult(IocOperationStatus.EXISTS, ioc_id=ioc_cs[0])
 
-    def update_indicator(self, data: dict, event: str | None = None) -> None:
+    def update_indicator(
+        self, data: dict, event: str | None = None
+    ) -> IocOperationResult:
         """
         Update IOC from OpenCTI to Crowdstrike
         :param data: Data of IOC in dict
         :param event: Event in string or None
-        :return: None
+        :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs = self._search_indicator(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC exists, update the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
@@ -310,48 +496,277 @@ class CrowdstrikeClient:
 
             if body is not None:
                 response = self.cs.indicator_update(body=body)
-                self._handle_api_error(response)
+                error_message = self._handle_api_error(response)
 
                 if response["status_code"] == 200:
                     self.helper.connector_logger.info(
                         "[API] IOC successfully updated in Crowdstrike",
                         {"ioc_value": ioc_value},
                     )
+                    return IocOperationResult(IocOperationStatus.UPDATED, ioc_id=ioc_id)
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    ioc_id=ioc_id,
+                    error=error_message
+                    or f"Unexpected status code {response['status_code']}",
+                    status_code=response["status_code"],
+                )
             else:
                 self.helper.connector_logger.info(
                     "[API] IOC cannot be updated in Crowdstrike",
                     {"ioc_value": ioc_value},
                 )
+                return IocOperationResult(IocOperationStatus.SKIPPED, ioc_id=ioc_id)
 
         else:
             self.helper.connector_logger.info(
                 "[API] IOC doesn't exist in Crowdstrike",
                 {"ioc_value": ioc_value},
             )
+            if ioc_cs is None:
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
+            return IocOperationResult(IocOperationStatus.ABSENT)
 
-    def delete_indicator(self, data: dict) -> None:
+    def delete_indicator(self, data: dict) -> IocOperationResult:
         """
         Delete IOC from OpenCTI to Crowdstrike
+        Every IOC of the value created by the connector is deleted: the IOC is
+        only gone once none of them is left
         :param data: Data of IOC in dict
-        :return: None
+        :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
         ioc_value = self._extract_indicator_value(data["pattern"])
-        ioc_cs = self._search_indicator(ioc_value)
+        ioc_cs, search_error, search_status = self._search_indicator_with_error(
+            ioc_value
+        )
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
-            ioc_id = ioc_cs[0]
-            response = self.cs.indicator_delete(ioc_id)
-            self._handle_api_error(response)
+            for ioc_id in ioc_cs:
+                response = self.cs.indicator_delete(ioc_id)
+                error_message = self._handle_api_error(response)
 
-            if response["status_code"] == 200:
-                self.helper.connector_logger.info(
-                    "[API] IOC successfully deleted in Crowdstrike",
-                    {"ioc_value": ioc_value},
-                )
+                if response["status_code"] != 200:
+                    return IocOperationResult(
+                        IocOperationStatus.FAILED,
+                        ioc_id=ioc_id,
+                        error=error_message
+                        or f"Unexpected status code {response['status_code']}",
+                        status_code=response["status_code"],
+                    )
+            self.helper.connector_logger.info(
+                "[API] IOC successfully deleted in Crowdstrike",
+                {"ioc_value": ioc_value, "ioc_count": len(ioc_cs)},
+            )
+            return IocOperationResult(IocOperationStatus.DELETED, ioc_id=ioc_cs[0])
 
         else:
             self.helper.connector_logger.info(
                 "[API] IOC doesn't exist in Crowdstrike",
                 {"ioc_value": ioc_value},
             )
+            if ioc_cs is None:
+                return IocOperationResult(
+                    IocOperationStatus.FAILED,
+                    error=search_error,
+                    status_code=search_status,
+                )
+            return IocOperationResult(IocOperationStatus.ABSENT)
+
+    def _raise_for_response(self, response: dict, expected_status: int) -> dict:
+        """
+        Raise when a Crowdstrike API response is not the expected one
+        :param response: Response in dict
+        :param expected_status: Expected HTTP status code
+        :return: Response body in dict
+        """
+        if response.get("status_code") != expected_status:
+            raise CrowdstrikeApiError(
+                self._api_error_message(response)
+                or f"Unexpected status code {response.get('status_code')}"
+            )
+        body = response.get("body")
+        return body if isinstance(body, dict) else {}
+
+    @staticmethod
+    def _resources_of(body: dict[str, Any], kind: str) -> list[dict[str, Any]]:
+        """
+        Return the resources of a listing response
+        :param body: Response body
+        :param kind: What is listed, for the error message
+        :return: The resources, empty only for a listing reported empty
+        :raise CrowdstrikeApiError: When the response carries no resource list, or a
+            resource that is not an object. It is never read as an empty or shorter
+            listing: deployments would look absent and the hit window would move
+            past unread alerts
+        """
+        resources = body.get("resources")
+        pagination = (body.get("meta") or {}).get("pagination") or {}
+        if resources is None and pagination.get("total") == 0:
+            return []
+        if not isinstance(resources, list):
+            raise CrowdstrikeApiError(
+                f"Unexpected {kind} listing response (resources are missing)"
+            )
+        if not all(isinstance(resource, dict) for resource in resources):
+            raise CrowdstrikeApiError(
+                f"Unexpected {kind} listing response (a resource is not an object)"
+            )
+        return resources
+
+    def iter_connector_iocs(
+        self,
+        page_size: int = IOC_PAGE_SIZE,
+        max_pages: int = MAX_IOC_PAGES,
+        ioc_value: str | None = None,
+    ) -> Iterator[dict[str, Any]]:
+        """
+        Iterate over the IOCs created by the connector's API client
+        (`created_by` is the API client id, as for the stream searches)
+        :param page_size: Number of IOCs per page
+        :param max_pages: Safety bound of the number of pages
+        :param ioc_value: Only iterate over the IOCs of this value
+        :return: IOC entities
+        :raise CrowdstrikeApiError: On any API error, never yield a partial listing silently
+        """
+        ioc_filter = f'created_by:"{self.config.client_id}"'
+        if ioc_value is not None:
+            ioc_filter = f'value:"{ioc_value}"+{ioc_filter}'
+        after: str | None = None
+        seen_tokens: set[str] = set()
+        for _ in range(max_pages):
+            parameters: dict[str, Any] = {"filter": ioc_filter, "limit": page_size}
+            if after:
+                parameters["after"] = after
+            body = self._raise_for_response(
+                self.cs.indicator_combined(parameters=parameters), 200
+            )
+            resources = self._resources_of(body, "IOC")
+            yield from resources
+            pagination = (body.get("meta") or {}).get("pagination") or {}
+            after = pagination.get("after")
+            if not resources or not after:
+                return
+            if after in seen_tokens:
+                raise CrowdstrikeApiError(
+                    "The IOC API returned the same pagination token twice"
+                )
+            seen_tokens.add(after)
+        raise CrowdstrikeApiError(
+            f"IOC read-back stopped after {max_pages} pages without reaching the end"
+        )
+
+    def delete_ioc(self, ioc_id: str) -> None:
+        """
+        Delete one IOC by id
+        :param ioc_id: CrowdStrike IOC id
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the deletion
+        """
+        self._raise_for_response(self.cs.indicator_delete(ids=[ioc_id]), 200)
+
+    def deactivate_ioc(self, ioc: dict[str, Any]) -> None:
+        """
+        Stop the detection of an IOC without deleting it (permanent_delete=False):
+        the action becomes 'no_action' and the TO_DELETE tag is added
+        :param ioc: IOC entity as read back from CrowdStrike
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the update
+        """
+        tags = [tag for tag in ioc.get("tags") or [] if isinstance(tag, str)]
+        if TO_DELETE_TAG not in tags:
+            tags.append(TO_DELETE_TAG)
+        body = {
+            "comment": "IOC withdrawn from OpenCTI",
+            "indicators": [
+                {
+                    "id": ioc["id"],
+                    "action": "no_action",
+                    "mobile_action": "no_action",
+                    "tags": tags,
+                }
+            ],
+        }
+        self._raise_for_response(self.cs.indicator_update(body=body), 200)
+
+    def withdraw_value(self, ioc_value: str) -> int:
+        """
+        Withdraw the IOCs of a value created by the connector's API client, as the
+        reconciliation does: deleted when permanent_delete is true, otherwise kept
+        but no longer detecting (see `deactivate_ioc`)
+        :param ioc_value: IOC value in string
+        :return: Number of IOCs withdrawn
+        :raise CrowdstrikeApiError: When CrowdStrike refuses the search or a withdrawal,
+            or the IOCs of the value cannot all be listed (nothing is withdrawn then)
+        """
+        iocs = list(self.iter_connector_iocs(ioc_value=ioc_value))
+        for ioc in iocs:
+            if not ioc.get("id"):
+                raise CrowdstrikeApiError("An IOC of the value carries no id")
+            if self.config.permanent_delete:
+                self.delete_ioc(str(ioc["id"]))
+            else:
+                self.deactivate_ioc(ioc)
+        return len(iocs)
+
+    def iter_alerts(
+        self,
+        since: datetime,
+        max_alerts: int,
+        page_size: int = ALERT_PAGE_SIZE,
+        exclude_ids: Collection[str] = (),
+    ) -> Iterator[dict[str, Any]]:
+        """
+        Iterate over the alerts created since a date, oldest first
+        :param since: Only return alerts created at or after this date
+        :param max_alerts: Maximum number of alerts returned
+        :param page_size: Number of alerts per page
+        :param exclude_ids: Ids (see `alert_id`) of alerts already read, skipped
+            without counting towards `max_alerts`
+        :return: Alert entities
+        :raise CrowdstrikeApiError: On any API error, an unexpected response or a
+            pagination token returned twice (the listing is never cut short silently)
+        """
+        since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        after: str | None = None
+        seen_tokens: set[str] = set()
+        returned = 0
+        while returned < max_alerts:
+            body = self._raise_for_response(
+                self.alerts.get_alerts_combined(
+                    filter=f"created_timestamp:>='{since_utc}'",
+                    sort="created_timestamp|asc",
+                    limit=(
+                        page_size
+                        if exclude_ids
+                        else min(page_size, max_alerts - returned)
+                    ),
+                    after=after,
+                ),
+                200,
+            )
+            resources = self._resources_of(body, "alert")
+            if not all(alert_id(resource) for resource in resources):
+                # A capped read continues by excluding the ids already read: an alert
+                # without id would be returned, and counted, again and again.
+                raise CrowdstrikeApiError(
+                    "Unexpected alert listing response (an alert carries no id)"
+                )
+            for resource in resources:
+                if returned >= max_alerts:
+                    return
+                if exclude_ids and alert_id(resource) in exclude_ids:
+                    continue
+                returned += 1
+                yield resource
+            next_after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
+            if not resources or not next_after:
+                return
+            if next_after in seen_tokens:
+                raise CrowdstrikeApiError(
+                    "The alerts API returned the same pagination token twice"
+                )
+            seen_tokens.add(next_after)
+            after = next_after

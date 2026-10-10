@@ -47,6 +47,97 @@ The SDK includes custom exceptions to handle errors gracefully. Use these except
 
 See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
 
+### Reporting deployment status from stream connectors
+
+Stream connectors can report to OpenCTI whether each indicator they push is actually live on the security platform
+(dissemination assurance). OpenCTI stores the lifecycle on a `deployed-on` relationship between the indicator and a
+`Security Platform` entity (`deployed`, `active`, `failed`, `removed`...) and counts detection hits as a sighting.
+
+1. Add the settings namespaces (they give the `DEPLOYMENT_*`, `HITS_*` and `SECURITY_PLATFORM_*` variables):
+
+```python
+from connectors_sdk import (
+    BaseConnectorSettings,
+    BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
+    SecurityPlatformConfig,
+)
+from pydantic import Field
+
+
+class StreamConnectorConfig(BaseStreamConnectorConfig):
+    name: str = Field(default="My EDR", description="The name of the connector.")
+
+
+class MyEdrSecurityPlatformConfig(SecurityPlatformConfig):
+    name: str = Field(default="My EDR", min_length=2, description="Name of the Security Platform entity.")
+    type: str | None = Field(default="EDR", description="Type of the Security Platform entity.")
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)  # only when the vendor exposes detections
+    security_platform: MyEdrSecurityPlatformConfig = Field(default_factory=MyEdrSecurityPlatformConfig)
+```
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DEPLOYMENT_REPORTING_ENABLED` | `true` | Report the deployment status of every pushed indicator. |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60` | Minutes between two reconciliations with the vendor (`0` disables). |
+| `HITS_REPORTING_ENABLED` | `true` | Report detection hits (connectors able to read detections only). |
+| `SECURITY_PLATFORM_NAME` | per connector | Security Platform entity, created if missing (upsert by name). |
+| `SECURITY_PLATFORM_TYPE` | per connector | `EDR`, `XDR`, `SIEM`, `SOAR`, `NDR`, `ISPM`... |
+| `SECURITY_PLATFORM_ID` | | Bind an existing Security Platform entity instead of resolving it by name. |
+
+2. Implement a `DeploymentVendorAdapter` when the vendor API can read the pushed indicators back (`list_vendor_indicators`,
+   `remove_vendor_indicator`, `push_indicator`, `collect_hits` when detections are available, and `is_complete` when the
+   vendor holds one item per observable, so that an indicator only partly on the vendor is pushed again instead of being
+   confirmed `active`). A vendor keeping one item per observable value without the OpenCTI id overrides
+   `expected_values` instead: every item holding one of those values is matched (and removed on withdrawal), and the
+   indicator is pushed again while one of them is missing. Value matching, for the vendor items and the hits alike, then
+   only uses those values (an empty set when the connector pushes none of the pattern values), so an item holding a
+   pattern value the connector does not push is never withdrawn. An item another live deployment shares is never
+   withdrawn. A vendor storing the pattern it was written with sets `VendorIndicator.pattern`: vendor items that only
+   hold an earlier pattern of the indicator (left by a failed update) then never confirm it (it is pushed again, a
+   `failed` one stays `failed`). A `pending` deployment (analyst retry) is pushed again when the read-back finds it
+   absent, inactive or only partly on the vendor; one the vendor holds in full is already live, so it is confirmed
+   `active` without a new push.
+   An adapter keeping a local snapshot of what it pushes (uploaded as a whole) overrides `forget_indicator`, called
+   for a deployment withdrawn while the vendor no longer holds it, so that the next upload does not restore it.
+   When the vendor API cannot read the indicators back, a `DeploymentPushAdapter` (`push_indicator`, optional
+   `collect_hits`) still gets the periodic re-push of `pending` deployments and the hit reporting; presence, absence
+   and withdrawal need the read-back.
+   When the listing cannot guarantee completeness (offset pages of a collection without a documented
+   order), set `confirms_absence = True` and implement `confirm_absent`: an indicator missing from the listing is then
+   only reported `removed` once a direct vendor lookup confirms it (at most `max_absence_checks` lookups per run, 100 by
+   default; the next ones wait for the next run).
+
+3. Wire the facade and report after each vendor call (reports are queued and sent in batches, never raise):
+
+```python
+from connectors_sdk import DeploymentAssurance
+
+assurance = DeploymentAssurance.from_settings(helper, settings, adapter=MyEdrAdapter(client))
+assurance.start()  # feature detection, platform resolution, periodic reconciliation
+
+assurance.report_pushed(stix_indicator, external_id=vendor_id)
+assurance.report_push_failed(stix_indicator, error)
+assurance.report_removed(stix_indicator)
+```
+
+OpenCTI shows the failure reason in the Deployments tabs: report one short sentence naming the platform and the cause,
+never a vendor response. `deployment_failure_reason(platform, action, status_code)` writes it with the wording every
+connector shares (`deployment_failure_reason("Google SecOps", "entity ingestion", 403)` gives
+`"Google SecOps refused the entity ingestion: permission denied"`; for a success status whose response cannot be read,
+`"... returned an unexpected response to the ..."`; without a status, `"... could not be reached for the ..."`); log the
+vendor response with the indicator id instead. The re-push of the reconciliation reports the message
+of the exception `push_indicator` raises, so adapters raise the same sentence.
+
+On OpenCTI platforms without the write-back API, the module logs once and becomes a no-op. See the
+[TDR](TDRs/2026-10-03-Deployment_write_back_for_stream_connectors.md) for the design and the reconciliation algorithm.
+
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  

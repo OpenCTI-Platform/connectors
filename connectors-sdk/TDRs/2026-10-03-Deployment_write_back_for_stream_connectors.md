@@ -1,0 +1,135 @@
+# TDR: Deployment write-back for stream connectors (dissemination assurance)
+
+<br>
+
+## Overview
+
+This document describes the `connectors_sdk.connectors.stream.deployment` module. It lets stream connectors report to
+OpenCTI whether each indicator they disseminate is actually live on the security platform they feed, reconcile that
+state periodically with the indicators read back from the vendor, and report detection hits.
+
+OpenCTI stores the lifecycle on a `deployed-on` relationship between the indicator and a `Security Platform` entity
+(`pending`, `deployed`, `active`, `failed`, `removed`, `expired`) and counts hits with a sighting of the indicator on the
+platform (umbrella issue OpenCTI-Platform/opencti#18680, connectors issue OpenCTI-Platform/connectors#7852).
+
+<br>
+
+## Motivation
+
+OpenCTI disseminates indicators to tens of stream connectors but cannot tell whether an indicator was accepted by the
+EDR or SIEM, is still present after the vendor retention purge, or ever matched anything. Every stream connector would
+otherwise reimplement the same GraphQL calls, feature detection, batching, rate-limit handling and reconciliation logic,
+with subtle differences. The write-back must also never break the dissemination itself and must keep working with older
+OpenCTI platforms (no-op).
+
+<br>
+
+## Proposed Solution
+
+### Components
+
+| Component | Role |
+| --- | --- |
+| `DeploymentConfig`, `HitsConfig`, `SecurityPlatformConfig` | Settings namespaces giving `DEPLOYMENT_REPORTING_ENABLED`, `DEPLOYMENT_RECONCILIATION_INTERVAL`, `HITS_REPORTING_ENABLED`, `SECURITY_PLATFORM_NAME`, `SECURITY_PLATFORM_TYPE`, `SECURITY_PLATFORM_ID`. Connectors subclass `SecurityPlatformConfig` to set their default name and type. |
+| `DeploymentAssuranceOptions` | Resolved options, built from SDK settings (`from_settings`) or, for connectors still loading their configuration by hand, from `config.yml` and the environment (`from_legacy_config`). |
+| `DeploymentReporter` | Feature detection, security platform resolution, single, batch and hit reports, listing of the deployments of the platform, coalescing queue for the stream path. |
+| `DeploymentReconciler` + `DeploymentVendorAdapter` | Reconciliation runner (periodic daemon thread) and the vendor operations a connector implements: list, remove, push, and optionally collect hits. |
+| `DeploymentPushAdapter` | Base of `DeploymentVendorAdapter` for vendors whose API cannot list the pushed indicators (push, optional hits): the reconciliation then only pushes `pending` deployments again and reports hits. |
+| `DeploymentAssurance` | Facade wiring the reporter and the reconciliation for a connector. |
+
+### Key design decisions
+
+| Decision | Rationale |
+| --- | --- |
+| Composable facade, not a stream connector base class | Stream connectors share no base class today (SDK-based and legacy ones coexist). A composable object is adopted with a few lines by any of them. |
+| Feature detection by reading one field added with the write-back (`deployments_count` of an indicator) once (cached), as pycti does, without introspection | Introspection may be disabled on a platform. Older platforms refuse the query at schema validation: the reporter logs once at info level and becomes a no-op. Any other failed detection is retried after a delay instead of disabling the feature forever. The three mutations ship together, so one detection covers them. |
+| pycti helpers first, GraphQL fallback | The SDK must not require a pycti release shipping `report_indicator_deployment` and friends: they are called when present (`hasattr`), otherwise the documented GraphQL documents are sent through `helper.api.query`. |
+| No reporting method raises | Errors are warnings, rejections of individual reports are returned and logged at info level (for example the indicator of a stream delete event no longer exists). Dissemination never breaks because of the write-back. |
+| `Too many requests` retried with exponential backoff | The OpenCTI write-back API is rate limited per user. |
+| Stream reports are queued, coalesced per indicator and flushed in batches from a timer thread (every 5 s, at once when 500 reports are queued) | The stream callback never waits for a GraphQL call (nor its rate-limit backoff), and the batch mutation (max 500 reports per call) is used. Batches are sent in order, the latest report of an indicator wins. |
+| Queued reports wait (at most 10 000) while the feature detection or the platform resolution is retried | A transient OpenCTI outage at start-up does not lose the outcome of the first pushes; reports are dropped only when the platform is known not to support the write-back. |
+| Reconciliation lists `pending`, `deployed`, `active`, `failed` and `expired` deployments | `expired` is listed in addition to the contract statuses so that indicators still present on the vendor after their expiry are withdrawn and their removal confirmed. |
+| Vendor read-back errors abort the run; a read-back limit disables absence-based decisions | A partial vendor listing would otherwise report live indicators as `removed`. |
+| From the vendor snapshot to its reports, the queued stream reports are held (sent before the snapshot under the same hold, then right after the reconciliation batch); the run is skipped while the reports sent before it are not delivered | OpenCTI applies reports in arrival order: a stream `removed` pushed while the vendor is read must land after the stale `active` of the snapshot, never before, and an older stream outcome sent again after the batch would overwrite it. The stream thread never waits: a timer flush finding the reports held is armed again instead. |
+| The hit window moves on after every run; a hit report that did not reach OpenCTI (outage, timeout, rate limit) is sent again unchanged with the next runs (for at most 24 hours), and the newer hits of the indicator wait behind it in one report never sent | An outage longer than the lookback window loses no detection. OpenCTI ignores a report whose last hit is not newer than the one it recorded, so a report recorded before its call timed out is never merged with newer hits, which would count it twice. A rejected report (deleted, no longer readable indicator) is dropped and holds back nothing. |
+| The hit checkpoint (the start of the next read, never after the first hit of a report not delivered yet) is kept in the connector state under `deployment_hits_since`; the first read after a start resumes there, at most 7 days back, and keeps the lookback overlap after a short stop | A connector stopped longer than the lookback window loses no detection of the last 7 days, which bounds the first vendor query after a long stop. A state set to `None` is never replaced (pycti reads it as a reset from the platform and starts the stream over); state errors fall back to the lookback window and never stop the hit reports. |
+| Absence decisions skip deployments whose `last_sync_at` is at or after the start of the run | The stream may push an indicator while the vendor is being read back; it is judged on the next run (`deferred` counter). |
+| Every vendor item matched by the OpenCTI id or the vendor id of a deployment is withdrawn before `removed` is reported | A vendor can hold several items for one indicator (one per observable, or duplicates); a single failed removal reports nothing and the next run retries. Value matching keeps a single item since a value can be shared by unrelated indicators. |
+| A deployment to withdraw that the vendor no longer holds is reported `removed` and handed to `forget_indicator` (no-op by default) | `remove_vendor_indicator` is not called without a vendor item; an adapter uploading a local snapshot as a whole would otherwise restore the indicator with its next upload. |
+| A vendor item also matched by a deployment staying on the vendor is never withdrawn; the withdrawn deployment is reported `removed` | A value can be shared by several indicators of a value-only vendor: revoking one of them must not take the item of a live one offline. An item shared by two withdrawals is removed once. |
+| Adapters of vendors keeping one item per value without the OpenCTI id declare `expected_values`: every item holding one of them is matched, and the default `is_complete` needs all of them (the indicator is pushed again otherwise, `incomplete` counter) | The vendor id of one item (the first IOC of a file indicator) would otherwise confirm an indicator whose other items were deleted on the vendor, and a withdrawal would leave those items behind. |
+| Value matching of a vendor adapter declaring `expected_values` only uses those values (empty when the connector pushes none of the pattern values), for the vendor items and for the hits without id | A pattern can mix values the connector pushes with values it cannot push (a process name next to an IPv4 address): matching every pattern value would credit, and on withdrawal delete, a vendor item another source created for a value the connector never pushed. |
+| A capped detection read returns a `HitCollection` with `complete_until`; only the hits before it are reported and the next run resumes there | Under sustained volume a capped read would otherwise advance the window and lose the detections beyond the cap. Adapters read the oldest detections first (sorted reads, or halved time windows when the vendor API has no ordering). |
+| Vendor indicators carrying an OpenCTI id but no deployment are reported `active` | Backfills the indicators pushed before the write-back existed. |
+| Hits are counted only when newer than the `last_hit_at` of the deployment | Overlapping time windows (and restarts) never double count; the platform ignores replays as well. |
+
+### Usage
+
+```python
+class MyEdrSecurityPlatformConfig(SecurityPlatformConfig):
+    name: str = Field(default="My EDR", min_length=2, description="...")
+    type: str | None = Field(default="EDR", description="...")
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)  # only when hits are retrievable
+    security_platform: MyEdrSecurityPlatformConfig = Field(
+        default_factory=MyEdrSecurityPlatformConfig
+    )
+
+
+assurance = DeploymentAssurance.from_settings(helper, settings, adapter=MyEdrAdapter(client))
+assurance.start()
+# in the stream callback, after each vendor call:
+assurance.report_pushed(stix_indicator, external_id=vendor_id)
+assurance.report_push_failed(stix_indicator, error)
+assurance.report_removed(stix_indicator)
+```
+
+<br>
+
+## Advantages
+
+- One implementation of the write-back contract for every stream connector, unit tested with 100% coverage.
+- Safe by construction: no exception, no blocking call in the stream path, graceful degradation on older platforms.
+- Connectors only implement vendor operations (list, remove, push, hits); the reconciliation algorithm is shared.
+- Works for SDK-based and legacy connectors.
+
+<br>
+
+## Disadvantages
+
+- Background threads (flush timer, reconciliation) run inside the connector process; they are daemon threads and the
+  queue is flushed at exit.
+- Queued reports can be lost if the process is killed abruptly; the next reconciliation restores the state.
+- Value matching (for vendors that do not keep the OpenCTI id) can match an indicator sharing the same observable value;
+  such an item stays on the vendor while one of the indicators sharing it is live.
+
+<br>
+
+## Alternatives Considered
+
+1. **A `StreamConnector` base class owning the listen loop**
+
+    **Rejected for now**. It would require migrating every stream connector at once. The facade can later be owned by
+    such a base class without changing connector code.
+
+2. **Synchronous single reports in the stream callback**
+
+    **Rejected**. One GraphQL call per event doubles the processing time of large streams and does not use the batch
+    mutation.
+
+3. **Reporting through STIX bundles (deployed-on relationships in bundles)**
+
+    **Rejected**. Bundles go through the worker queue, cannot express "only refresh `last_sync_at`" without creating
+    history noise, and offer no feedback on rejected reports.
+
+<br>
+
+## References
+
+- OpenCTI umbrella issue: https://github.com/OpenCTI-Platform/opencti/issues/18680
+- Connectors issue: https://github.com/OpenCTI-Platform/connectors/issues/7852
+- Related TDR: [Typing and validation of configurations with Pydantic Settings](./2025-10-01-Typing_and_validation_of_configurations_with_Pydantic_Settings.md)

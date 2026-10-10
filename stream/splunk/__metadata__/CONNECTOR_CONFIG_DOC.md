@@ -27,6 +27,13 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SPLUNK_AUTH_TYPE | `string` |  | string | `"Bearer"` | Authorization scheme used with the Splunk token. |
 | SPLUNK_SSL_VERIFY | `boolean` |  | boolean | `true` | Whether to verify the SSL certificate of the Splunk instance. |
 | SPLUNK_IGNORE_TYPES | `array` |  | string | `[]` | Comma-separated list of entity types to ignore. |
+| SPLUNK_HITS_SAVED_SEARCH | `string` |  | string | `null` | Name of a Splunk saved search, visible in the owner/app namespace, returning the matches of the KV Store indicators in your events. It is run over the time range of each hit collection; every result carries 'opencti_id' (the KV Store '_key') or 'value' (the matched observable value), '_time' and optionally 'count' (the matches at that '_time', never of several times). Leave empty to not report hits. |
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether to expose Prometheus metrics. |
 | METRICS_PORT | `integer` |  | integer | `9113` | Port on which metrics should be exposed. |
 | METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | IP address on which metrics should be exposed. |
+| DEPLOYMENT_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back. |
+| DEPLOYMENT_RECONCILIATION_INTERVAL | `integer` |  | `0 <= x ` | `60` | Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation. |
+| HITS_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the detections (hits) of deployed indicators observed on the security platform, as a sighting of the indicator on the Security Platform entity. Hits are collected during each reconciliation. |
+| SECURITY_PLATFORM_NAME | `string` |  | Length: `string >= 2` | `"Splunk"` | Name of the Security Platform entity representing Splunk in OpenCTI (created if it does not exist). |
+| SECURITY_PLATFORM_TYPE | `string` |  | string | `"SIEM"` | Type of the Security Platform entity (open vocabulary security_platform_type_ov). |
+| SECURITY_PLATFORM_ID | `string` |  | string | `null` | Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name. |

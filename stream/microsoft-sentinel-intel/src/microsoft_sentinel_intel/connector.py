@@ -1,7 +1,11 @@
 import json
 import sys
 import traceback
+from http import HTTPStatus
 
+from azure.core.exceptions import AzureError
+from connectors_sdk import DeploymentAssurance
+from connectors_sdk.connectors.stream.deployment import deployment_failure_reason
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.errors import (
@@ -13,6 +17,103 @@ from microsoft_sentinel_intel.settings import ConnectorSettings
 from microsoft_sentinel_intel.utils import is_stix_identity, is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
+REJECTED_UPLOAD_MESSAGE = "[API] Microsoft Sentinel rejected the object"
+UNREADABLE_UPLOAD_REASON = (
+    "Microsoft Sentinel answered the upload with a response that could not be read"
+)
+
+PLATFORM_NAME = "Microsoft Sentinel"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "indicator upload"
+"""What Microsoft Sentinel is asked to do when an indicator is pushed."""
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the reason OpenCTI shows for an indicator Microsoft Sentinel did not take.
+
+    :param error: The error raised while uploading the indicator.
+    :return: One short sentence naming Microsoft Sentinel and the cause; the Azure
+        response is left to the logs (`describe_error`).
+    """
+    if isinstance(error, ConnectorError):
+        status_code = (error.metadata or {}).get("status_code")
+        if not isinstance(status_code, int) or isinstance(status_code, bool):
+            # Microsoft Sentinel answered with a payload the connector cannot use.
+            status_code = HTTPStatus.OK
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, status_code)
+    if isinstance(error, AzureError | OSError):
+        # The HTTP errors are client errors: an Azure error left is a transport one.
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION)
+    return f"The connector could not complete the {PUSH_ACTION} to {PLATFORM_NAME}"
+
+
+def _rejection_error(reason: str) -> ConnectorClientError:
+    """Build the error of an object the upload response rejected.
+
+    :param reason: The rejection reason listed by Microsoft Sentinel.
+    """
+    return ConnectorClientError(
+        message=REJECTED_UPLOAD_MESSAGE,
+        metadata={
+            "error": reason,
+            # A listed rejection refuses the object; an unreadable answer does not.
+            "status_code": (
+                HTTPStatus.OK
+                if reason == UNREADABLE_UPLOAD_REASON
+                else HTTPStatus.BAD_REQUEST
+            ),
+        },
+    )
+
+
+def _rejected_objects(response: object, count: int) -> dict[int, str]:
+    """Return the reason of each object an upload response rejected, by index.
+
+    Sentinel answers 200 when at least one object is imported and lists the rejected
+    ones in `errors` (`recordIndex`, `errorMessages`). An error that names no object
+    of the upload rejects all of them: a rejected object is never reported live.
+    A body that is not a JSON object cannot tell which objects were imported: all
+    of them are rejected; an empty body lists no rejection.
+
+    :param response: The upload response.
+    :param count: The number of objects uploaded.
+    :return: The rejection reason by object index (empty when all were imported).
+    """
+    try:
+        raw = response.body()
+    except AttributeError:
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    if isinstance(raw, bytes | str) and not raw.strip():
+        return {}
+    try:
+        body = json.loads(raw)
+    except (TypeError, ValueError):
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    if not isinstance(body, dict):
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    errors = body.get("errors")
+    if not errors:
+        return {}
+    rejected: dict[int, str] = {}
+    for entry in errors if isinstance(errors, list) else [errors]:
+        error = entry if isinstance(entry, dict) else {}
+        messages = error.get("errorMessages")
+        reason = (
+            "; ".join(str(message) for message in messages)
+            if isinstance(messages, list) and messages
+            else "rejected by Microsoft Sentinel"
+        )
+        index = error.get("recordIndex")
+        if (
+            not isinstance(index, int)
+            or isinstance(index, bool)
+            or not 0 <= index < count
+        ):
+            return dict.fromkeys(range(count), reason)
+        rejected[index] = reason
+    return rejected
+
 
 class Connector:
 
@@ -21,10 +122,13 @@ class Connector:
         helper: OpenCTIConnectorHelper,
         config: ConnectorSettings,
         client: ConnectorClient,
+        assurance: DeploymentAssurance | None = None,
     ) -> None:
         self.helper = helper
         self.config = config
         self.client = client
+        # Deployment write-back (dissemination assurance), wired by `main.py`.
+        self.assurance = assurance
 
     def _prepare_stix_object(self, stix_object: dict) -> dict:
         stix_object = dict(stix_object)
@@ -55,6 +159,56 @@ class Connector:
             return True
         return False
 
+    def push_indicator(self, stix_object: dict) -> None:
+        """Upload one STIX object to Microsoft Sentinel.
+
+        Shared by the stream create/update path and the reconciliation re-push.
+
+        :param stix_object: STIX object data dict (stream event shape).
+        :raises ConnectorClientError: If the upload API rejects the object (also
+            when it answers 200 with the object in its `errors`).
+        """
+        response = self.client.upload_stix_objects(
+            stix_objects=[self._prepare_stix_object(stix_object)],
+            source_system=self.config.microsoft_sentinel_intel.source_system,
+        )
+        if rejected := _rejected_objects(response, 1):
+            raise _rejection_error(rejected[0])
+
+    def _report_uploaded(self, stix_objects: list[dict]) -> None:
+        """Report the indicators accepted by the upload API.
+
+        A revoked indicator uploaded to Sentinel is no longer valid there (revocation
+        propagated), so it is reported `removed`; others are reported `deployed`.
+        Sentinel returns no per-object id: the indicator keeps its STIX id.
+        """
+        if self.assurance is None:
+            return
+        for stix_object in stix_objects:
+            if not is_stix_indicator(stix_object):
+                continue
+            if stix_object.get("revoked") is True:
+                self.assurance.report_removed(stix_object)
+            else:
+                self.assurance.report_pushed(stix_object)
+
+    def _report_upload_failed(
+        self, stix_objects: list[dict], error: BaseException
+    ) -> None:
+        """Report the indicators rejected by the upload API, with a short reason (the
+        Azure response is logged where the error is handled)."""
+        if self.assurance is None:
+            return
+        reason = failure_reason(error)
+        for stix_object in stix_objects:
+            if is_stix_indicator(stix_object):
+                self.assurance.report_push_failed(stix_object, reason)
+
+    def _report_deleted(self, stix_object: dict) -> None:
+        """Report an indicator removed from Sentinel (or already absent)."""
+        if self.assurance is not None:
+            self.assurance.report_removed(stix_object)
+
     def _process_event(self, event_type: str, stix_object: dict) -> bool:
         """Process a single STIX event by dispatching to the appropriate API call.
 
@@ -75,11 +229,12 @@ class Connector:
 
         match event_type:
             case "create" | "update":
-                prepared = self._prepare_stix_object(stix_object)
-                self.client.upload_stix_objects(
-                    stix_objects=[prepared],
-                    source_system=self.config.microsoft_sentinel_intel.source_system,
-                )
+                try:
+                    self.push_indicator(stix_object)
+                except Exception as err:
+                    self._report_upload_failed([stix_object], err)
+                    raise
+                self._report_uploaded([stix_object])
             case "delete":
                 if not is_stix_indicator(stix_object):
                     self.helper.connector_logger.info(
@@ -94,6 +249,7 @@ class Connector:
                     stix_object["id"],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
+                self._report_deleted(stix_object)
             case _:
                 raise ConnectorWarning(
                     message=f"Unsupported event type: {event_type}, Skipping..."
@@ -204,10 +360,31 @@ class Connector:
                 self.helper.connector_logger.info(
                     message=f"[BATCH] Uploading {len(prepared_objects)} objects",
                 )
-                self.client.upload_stix_objects(
-                    stix_objects=prepared_objects,
-                    source_system=self.config.microsoft_sentinel_intel.source_system,
+                try:
+                    response = self.client.upload_stix_objects(
+                        stix_objects=prepared_objects,
+                        source_system=self.config.microsoft_sentinel_intel.source_system,
+                    )
+                except Exception as err:
+                    self._report_upload_failed(objects_to_upload, err)
+                    raise
+                rejected = _rejected_objects(response, len(objects_to_upload))
+                if rejected:
+                    self.helper.connector_logger.warning(
+                        message=f"[BATCH] Microsoft Sentinel rejected {len(rejected)}/{len(objects_to_upload)} objects",
+                        meta={"errors": sorted(set(rejected.values()))},
+                    )
+                self._report_uploaded(
+                    [
+                        data
+                        for index, data in enumerate(objects_to_upload)
+                        if index not in rejected
+                    ]
                 )
+                for index in sorted(rejected):
+                    self._report_upload_failed(
+                        [objects_to_upload[index]], _rejection_error(rejected[index])
+                    )
 
             for data in objects_to_delete:
                 try:
@@ -219,6 +396,7 @@ class Connector:
                         data["id"],
                         source_system=self.config.microsoft_sentinel_intel.source_system,
                     )
+                    self._report_deleted(data)
                 except ConnectorClientError as err:
                     self.helper.connector_logger.error(
                         message=f"[BATCH] Failed to delete indicator {data['id']}",
@@ -245,6 +423,8 @@ class Connector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
+        if self.assurance is not None:
+            self.assurance.start()
         if self.config.microsoft_sentinel_intel.batch_mode:
             self.helper.connector_logger.info(
                 message=f"[BATCH] Batch mode enabled (batch_size={self.config.microsoft_sentinel_intel.batch_size}, batch_timeout={self.config.microsoft_sentinel_intel.batch_timeout}s, max_per_minute=100)",

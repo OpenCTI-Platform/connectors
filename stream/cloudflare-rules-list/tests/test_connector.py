@@ -37,6 +37,8 @@ def connector(helper, config, client):
     conn = Connector(helper=helper, config=config, client=client)
     # Force sync to trigger on demand in tests.
     conn.sync_interval = 0
+    # The stream events of the tests arrive after a successful initial full sync.
+    conn._full_sync_done = True
     return conn
 
 
@@ -175,7 +177,7 @@ def test_handle_delete_unknown_id_is_noop(connector):
 # --------------------------------------------------------------------------- #
 # _check_sync / _sync_to_cloudflare
 # --------------------------------------------------------------------------- #
-def test_check_sync_does_not_sync_before_interval(connector, monkeypatch):
+def test_check_sync_does_not_sync_before_interval(connector, monkeypatch, timers):
     connector.sync_interval = 9999
     connector._last_sync_time = 0.0
     monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 1.0)
@@ -183,6 +185,30 @@ def test_check_sync_does_not_sync_before_interval(connector, monkeypatch):
     monkeypatch.setattr(connector, "_sync_to_cloudflare", sync)
     connector._check_sync()
     sync.assert_not_called()
+    (timer,) = timers
+    assert timer.interval == 9998.0
+    assert timer.daemon is True
+
+
+def test_deferred_sync_errors_are_logged(connector, monkeypatch, timers):
+    """The timer thread logs an unexpected error instead of dying silently."""
+    connector.sync_interval = 60
+    connector._last_sync_time = 0.0
+    now = [10.0]
+    monkeypatch.setattr(
+        "cloudflare_rules_list.connector.time.monotonic", lambda: now[0]
+    )
+    connector._check_sync()
+    monkeypatch.setattr(
+        connector, "_sync_to_cloudflare", MagicMock(side_effect=RuntimeError("boom"))
+    )
+    now[0] = 60.0
+
+    timers[0].function()
+
+    connector.logger.error.assert_called_once_with(
+        "Deferred sync failed", meta={"error": "boom"}
+    )
 
 
 def test_sync_to_cloudflare_empty_cache(connector):
@@ -214,18 +240,32 @@ def test_sync_to_cloudflare_with_operation(connector):
     connector.client.wait_for_operation.assert_called_once_with("op-1")
 
 
-def test_sync_to_cloudflare_without_operation_id(connector):
+def test_sync_to_cloudflare_without_operation_id_is_an_error(connector):
+    # The client refuses an acknowledgement that names no bulk operation
     connector._indicator_cache = {"ind-1": "1.1.1.1"}
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "Unexpected Cloudflare response: the bulk operation has no 'operation_id'",
+        status_code=200,
+    )
     connector._sync_to_cloudflare()
     connector.client.wait_for_operation.assert_not_called()
+    connector.logger.warning.assert_called_once()
 
 
-def test_sync_to_cloudflare_handles_api_error(connector):
+def test_sync_to_cloudflare_handles_api_error(connector, monkeypatch, timers):
+    """A refused snapshot is uploaded again at the end of the sync interval."""
+    monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 10.0)
+    connector.sync_interval = 3600
     connector._indicator_cache = {"ind-1": "1.1.1.1"}
     connector.client.replace_list_items.side_effect = CloudflareAPIError("nope")
     connector._sync_to_cloudflare()
-    connector.logger.error.assert_called_once()
+    connector.logger.warning.assert_called_once_with(
+        "Failed to sync to Cloudflare, retried later", meta={"error": "nope"}
+    )
+    connector.logger.error.assert_not_called()
+    assert connector._sync_pending is True
+    (timer,) = timers
+    assert timer.interval == 3600.0
 
 
 # --------------------------------------------------------------------------- #
@@ -250,7 +290,7 @@ def test_full_sync_loads_indicators_and_observables(connector):
     connector.helper.api.stix_cyber_observable.list.return_value = [
         {"id": "obs-1", "entity_type": "IPv4-Addr", "observable_value": "8.8.8.8"},
     ]
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.return_value = {"operation_id": "op-1"}
 
     connector._full_sync()
 
@@ -258,14 +298,15 @@ def test_full_sync_loads_indicators_and_observables(connector):
     connector.client.replace_list_items.assert_called_once()
 
 
-def test_full_sync_handles_observable_error(connector):
+def test_full_sync_fails_on_observable_error(connector):
     connector.helper.api.indicator.list.return_value = []
     connector.helper.api.stix_cyber_observable.list.side_effect = RuntimeError("boom")
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.return_value = {"operation_id": "op-1"}
 
-    connector._full_sync()
+    with pytest.raises(RuntimeError, match="boom"):
+        connector._full_sync()
 
-    connector.logger.warning.assert_called_once()
+    connector.client.replace_list_items.assert_not_called()
 
 
 # --------------------------------------------------------------------------- #

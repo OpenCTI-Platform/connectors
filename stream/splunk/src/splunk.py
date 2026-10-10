@@ -2,18 +2,46 @@
 # Splunk Connector for OpenCTI #
 ################################
 
+import copy
 import json
 import logging
 import os
 import traceback
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from queue import Queue
 
 import requests
+from connectors_sdk import DeploymentAssurance
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
+from splunk_deployment import (
+    build_deployment_assurance,
+    describe_error,
+    failure_reason,
+)
 from stix_shifter.stix_translation import stix_translation
+
+KV_STORE_PAGE_SIZE = 1000
+"""Items read per KV store request during the deployment reconciliation."""
+
+KV_STORE_INDICATOR_FIELDS = (
+    "_key",
+    "id",
+    "type",
+    "name",
+    "pattern",
+    "pattern_type",
+    "values",
+    "revoked",
+    "valid_until",
+)
+"""KV store fields read back during the deployment reconciliation."""
+
+READ_TIMEOUT_SECONDS = 120
+"""Timeout of the read-back and hit searches (the stream path keeps its behaviour)."""
 
 
 def sanitize_key(key):
@@ -75,6 +103,9 @@ class KVStore:
         return r.status_code < 300
 
     def create(self, id: str, payload: dict):
+        """Write an item. An item already stored under the key (a create event
+        replayed, an indicator pushed again by the reconciliation) is replaced, so
+        the item stored is always the payload written."""
         if id is not None and payload is not None:
             payload["_key"] = id
             r = requests.post(
@@ -83,22 +114,27 @@ class KVStore:
                 headers=self.headers,
                 verify=self.splunk_ssl_verify,
             )
-            if r.status_code != 409:
+            if r.status_code == 409:
+                self._replace(id, payload).raise_for_status()
+            else:
                 r.raise_for_status()
 
     def update(self, id: str, payload: dict):
         if id is not None and payload is not None:
             payload["_key"] = id
-            r = requests.put(
-                f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
-                json=payload,
-                headers=self.headers,
-                verify=self.splunk_ssl_verify,
-            )
+            r = self._replace(id, payload)
             if r.status_code == 404:
                 self.create(id, payload)
             else:
                 r.raise_for_status()
+
+    def _replace(self, id: str, payload: dict) -> requests.Response:
+        return requests.put(
+            f"{self.collection_url}/data/{self.splunk_kv_store_name}/{id}",
+            json=payload,
+            headers=self.headers,
+            verify=self.splunk_ssl_verify,
+        )
 
     def delete(self, id: str):
         if id is not None:
@@ -109,6 +145,106 @@ class KVStore:
             )
             if r.status_code != 404:
                 r.raise_for_status()
+
+    def list_indicators(self, page_size: int = KV_STORE_PAGE_SIZE) -> Iterator[dict]:
+        """Read the indicator items of the collection back, page by page.
+
+        Pages are read by ascending `_key` (keyset pagination), so items written by
+        the stream consumers during the listing never shift the pages.
+
+        Args:
+            page_size: Items per request (below the `max_rows_per_query` KV store limit).
+
+        Yields:
+            The indicator items (`type` = `indicator`), restricted to the read-back fields.
+
+        Raises:
+            requests.HTTPError: When a page cannot be read.
+            ValueError: When Splunk returns an unexpected payload.
+        """
+        last_key = None
+        while True:
+            query: dict = {"type": "indicator"}
+            if last_key is not None:
+                query = {"$and": [query, {"_key": {"$gt": last_key}}]}
+            r = requests.get(
+                f"{self.collection_url}/data/{self.splunk_kv_store_name}",
+                params={
+                    "query": json.dumps(query),
+                    "fields": ",".join(KV_STORE_INDICATOR_FIELDS),
+                    "sort": "_key",
+                    "limit": page_size,
+                },
+                headers=self.headers,
+                verify=self.splunk_ssl_verify,
+                timeout=READ_TIMEOUT_SECONDS,
+            )
+            r.raise_for_status()
+            items = r.json()
+            if not isinstance(items, list):
+                raise ValueError("Unexpected KV store response (a list is expected)")
+            # A skipped item would make its deployment look absent.
+            if not all(
+                isinstance(item, dict)
+                and isinstance(item.get("_key"), str)
+                and item["_key"]
+                for item in items
+            ):
+                raise ValueError(
+                    "Unexpected KV store response (every item must carry a _key)"
+                )
+            yield from items
+            if len(items) < page_size:
+                return
+            last_key = items[-1]["_key"]
+
+    def run_saved_search(
+        self, name: str, earliest: datetime, max_results: int
+    ) -> list[dict]:
+        """Run a saved search as a oneshot search job and return its results.
+
+        The `savedsearch` command uses the time range of the request instead of
+        the time range saved with the search. Results are sorted oldest first (then
+        by OpenCTI id and value), so a bounded read is complete up to its newest
+        result, and bounded twice: by `head` in the search and by the `count` of the
+        oneshot output (100 by default).
+
+        Args:
+            name: The saved search name, visible in the owner/app namespace.
+            earliest: Start of the time range (the end is now).
+            max_results: Maximum number of results returned.
+
+        Returns:
+            The result rows.
+
+        Raises:
+            requests.HTTPError: When the search cannot be run.
+            ValueError: When Splunk returns an unexpected payload.
+        """
+        escaped_name = name.replace("\\", "\\\\").replace('"', '\\"')
+        r = requests.post(
+            f"{self.splunk_url}/servicesNS/{self.splunk_owner}/{self.splunk_app}/search/jobs",
+            data={
+                "search": (
+                    f'| savedsearch "{escaped_name}" | sort 0 _time opencti_id value '
+                    f"| head {max_results}"
+                ),
+                "exec_mode": "oneshot",
+                "output_mode": "json",
+                "earliest_time": f"{earliest.timestamp():.3f}",
+                "latest_time": "now",
+                "count": max_results,
+            },
+            headers={"Authorization": f"{self.splunk_auth_type} {self.splunk_token}"},
+            verify=self.splunk_ssl_verify,
+            timeout=READ_TIMEOUT_SECONDS,
+        )
+        r.raise_for_status()
+        content = r.json()
+        results = content.get("results") if isinstance(content, dict) else None
+        if not isinstance(results, list):
+            raise ValueError("Unexpected search job response (results are missing)")
+        return results
 
 
 class Metrics:
@@ -149,6 +285,7 @@ class SplunkConnector:
         ignore_types: list[str],
         consumer_count: int,
         metrics: Metrics | None = None,
+        assurance: DeploymentAssurance | None = None,
     ) -> None:
         self.kvstore = kvstore
         self.queue = queue
@@ -156,6 +293,7 @@ class SplunkConnector:
         self.ignore_types = ignore_types
         self.metrics = metrics
         self.consumer_count = consumer_count
+        self.assurance = assurance
 
         self._org_name_cache = {}
 
@@ -267,39 +405,117 @@ class SplunkConnector:
             error_msg = traceback.format_exc()
             self.helper.log_error("An error occurred while consuming messages")
             self.helper.log_error(error_msg)
+            # os._exit skips the exit handlers: send the queued deployment reports first
+            self.flush_deployment_reports()
             os._exit(1)  # exit the current process, killing all threads
 
     def _consume(self):
         while True:
-            msg = self.queue.get()
-            payload = json.loads(msg.data)["data"]
-            id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
+            self.process_message(self.queue.get())
 
-            self.helper.log_info(f"processing message with id {id}")
+    def process_message(self, msg):
+        payload = json.loads(msg.data)["data"]
+        # Without the OpenCTI extension, pycti returns the STIX id of the object.
+        id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
-            if self.is_filtered(payload):
-                self.helper.log_info(f"item with id {id} is filtered")
-                continue
+        self.helper.log_info(f"processing message with id {id}")
 
-            payload = self.enrich_payload(payload)
+        if self.is_filtered(payload):
+            self.helper.log_info(f"item with id {id} is filtered")
+            return
 
-            match msg.event:
-                case "create":
-                    self.kvstore.create(id, payload)
-                    self.helper.log_info(
-                        f"kvstore item with id {id} created (payload: {json.dumps(payload)})"
-                    )
-                case "update":
-                    self.kvstore.update(id, payload)
-                    self.helper.log_info(
-                        f"kvstore item with id {id} updated (payload: {json.dumps(payload)})"
-                    )
-                case "delete":
-                    self.helper.log_info(f"kvstore item with id {id} deleted")
-                    self.kvstore.delete(id)
-            if self.metrics is not None:
-                self.metrics.msg(msg.event)
-                self.metrics.state(msg.id)
+        # enrich_payload drops the OpenCTI extension that identifies the indicator
+        stix_object = dict(payload)
+        payload = self.enrich_payload(payload)
+
+        match msg.event:
+            case "create":
+                self._push(stix_object, id, lambda: self.kvstore.create(id, payload))
+                self.helper.log_info(
+                    f"kvstore item with id {id} created (payload: {json.dumps(payload)})"
+                )
+            case "update":
+                self._push(stix_object, id, lambda: self.kvstore.update(id, payload))
+                self.helper.log_info(
+                    f"kvstore item with id {id} updated (payload: {json.dumps(payload)})"
+                )
+            case "delete":
+                self.helper.log_info(f"kvstore item with id {id} deleted")
+                self.kvstore.delete(id)
+                if id is not None and self.assurance is not None:
+                    self.assurance.report_removed(stix_object, external_id=id)
+        if self.metrics is not None:
+            self.metrics.msg(msg.event)
+            self.metrics.state(msg.id)
+
+    def _push(self, stix_object: dict, key: str | None, write) -> None:
+        """Write an item to the KV store and report the deployment outcome.
+
+        Args:
+            stix_object: The streamed STIX object (OpenCTI extension included).
+            key: The KV store key (OpenCTI id); nothing is written without it.
+            write: The KV store call.
+
+        Raises:
+            Exception: The KV store error, after the failure was reported.
+        """
+        try:
+            write()
+        except Exception as err:
+            if key is not None and self.assurance is not None:
+                self._log_write_error(key, err)
+                self.assurance.report_push_failed(stix_object, failure_reason(err))
+            raise
+        if key is not None and self.assurance is not None:
+            self.assurance.report_pushed(stix_object, external_id=key)
+
+    def push_indicator(self, stix_indicator: dict) -> str:
+        """Write an indicator to the KV store with the stream create path.
+
+        Used by the deployment reconciliation to push again an indicator whose
+        deployment is pending (analyst retry).
+
+        Args:
+            stix_indicator: The indicator in the stream event shape.
+
+        Returns:
+            The KV store key of the item.
+
+        Raises:
+            ValueError: When the indicator cannot be written by this connector.
+            requests.HTTPError: When Splunk rejects the item.
+        """
+        key = OpenCTIConnectorHelper.get_attribute_in_extension("id", stix_indicator)
+        if key is None:
+            raise ValueError("The indicator has no OpenCTI id to use as KV store key")
+        if self.is_filtered(stix_indicator):
+            raise ValueError(
+                "Indicators are excluded by the connector configuration (SPLUNK_IGNORE_TYPES)"
+            )
+        payload = self.enrich_payload(copy.deepcopy(stix_indicator))
+        try:
+            self.kvstore.create(key, payload)
+        except Exception as err:
+            self._log_write_error(key, err)
+            raise
+        self.helper.log_info(f"kvstore item with id {key} pushed again")
+        return key
+
+    def _log_write_error(self, key: str, error: BaseException) -> None:
+        """Log a KV store write Splunk refused, with its response (OpenCTI only gets
+        a short reason)."""
+        self.helper.connector_logger.warning(
+            "KV store write rejected", {"key": key, "error": describe_error(error)}
+        )
+
+    def flush_deployment_reports(self) -> None:
+        """Send the queued deployment reports now (never raises)."""
+        if self.assurance is None:
+            return
+        try:
+            self.assurance.flush()
+        except Exception as err:
+            self.helper.log_warning(f"unable to flush the deployment reports: {err}")
 
     def start(self):
         if self.kvstore.init():
@@ -307,6 +523,8 @@ class SplunkConnector:
         else:
             self.helper.log_warning("unable to create kvstore")
 
+        if self.assurance is not None:
+            self.assurance.start()
         self.register_producer()
         self.start_consumers()
 
@@ -385,14 +603,20 @@ if __name__ == "__main__":
             metrics = None
 
         # create connector and start
-        SplunkConnector(
+        connector = SplunkConnector(
             helper,
             kvstore,
             queue,
             ignore_types,
             consumer_count,
             metrics=metrics,
-        ).start()
+        )
+
+        # deployment write-back (deployed-on relationships, reconciliation, hits)
+        connector.assurance = build_deployment_assurance(
+            helper, config, kvstore, connector.push_indicator
+        )
+        connector.start()
     except Exception:
         traceback.print_exc()
         exit(1)
