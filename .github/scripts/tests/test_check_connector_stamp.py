@@ -1701,6 +1701,376 @@ def test_installed_stamp_needs_the_source_stamp(tmp_path):
     assert not image.covered
 
 
+CONSOLE_SCRIPT_DOCKERFILE = (
+    "FROM python:3.12-alpine\nCOPY . /opt/build\nWORKDIR /opt/app\n"
+    "RUN pip install /opt/build && rm -rf /opt/build\n"
+    "COPY .connector_version.jso[n] ./\n"
+    'CMD ["sample-connector"]\n'
+)
+CONSOLE_SCRIPT_PROJECT = (
+    '[project]\nname = "sample"\n'
+    '[project.scripts]\nsample-connector = "sample_connector.__main__:main"\n'
+)
+CONSOLE_SCRIPT_SETUP_CFG = (
+    "[options.entry_points]\n"
+    "console_scripts =\n    sample-connector = sample_connector.__main__:main\n"
+)
+
+
+def console_script(root, packaging=None, dockerfile=CONSOLE_SCRIPT_DOCKERFILE):
+    """A packaged connector started by a console script its project declares."""
+    if packaging is None:
+        packaging = {"pyproject.toml": CONSOLE_SCRIPT_PROJECT}
+    return packaged(root, packaging, dockerfile=dockerfile)
+
+
+def test_console_script_reads_the_scripts_and_the_working_directories(tmp_path):
+    # The packaging of internal-enrichment/zetalytics: a src layout pip
+    # installs, started by the console script its pyproject.toml declares.
+    dockerfile = (
+        "FROM python:3.12-alpine\n"
+        "RUN apk update && apk upgrade && \\\n"
+        "    apk --no-cache add git build-base libmagic libffi-dev\n"
+        "COPY src/sample_dns /opt/sample/src/sample_dns\n"
+        "COPY pyproject.toml /opt/sample/pyproject.toml\n"
+        "WORKDIR /opt/sample\n"
+        "RUN pip3 install --no-cache-dir . && \\\n"
+        "    apk del git build-base\n"
+        "COPY .connector_version.jso[n] ./\n"
+        'CMD ["sample-dns-connector"]\n'
+    )
+    files = {
+        "Dockerfile": dockerfile,
+        "pyproject.toml": (
+            '[build-system]\nrequires = ["setuptools", "wheel"]\n'
+            'build-backend = "setuptools.build_meta"\n'
+            '[project]\nname = "SampleDns"\nversion = "1.0.0"\n'
+            '[project.scripts]\nsample-dns-connector = "sample_dns.__main__:main"\n'
+            '[tool.setuptools.packages.find]\nwhere = ["src"]\n'
+        ),
+        "src/sample_dns/__init__.py": "",
+        "src/sample_dns/__main__.py": "",
+    }
+    image = single(tmp_path / "copied", files, src=False)
+    assert image.covered, image.reason
+    assert image.reason == "stamp at /opt/sample/.connector_version.json"
+    files["Dockerfile"] = dockerfile.replace("COPY .connector_version.jso[n] ./\n", "")
+    image = single(tmp_path / "missing", files, src=False)
+    assert not image.covered
+    assert image.reason == "no COPY carries a stamp into the final image"
+
+
+def test_console_script_does_not_read_the_package_directory(tmp_path):
+    # __main__ is the wrapper pip wrote in its scripts directory, not the module
+    # it imports: a stamp the package data ships is not read, unlike python -m.
+    packaging = {
+        "pyproject.toml": CONSOLE_SCRIPT_PROJECT
+        + '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    }
+    dockerfile = CONSOLE_SCRIPT_DOCKERFILE.replace(
+        "COPY .connector_version.jso[n] ./\n", ""
+    )
+    image = console_script(tmp_path / "script", packaging, dockerfile)
+    assert not image.covered
+    assert image.reason == (
+        "stamp at /<site-packages>/sample_connector/.connector_version.json,"
+        " pycti reads ['/opt/app', '/usr/local/sbin']"
+    )
+    module = dockerfile.replace(
+        'CMD ["sample-connector"]', 'CMD ["python", "-m", "sample_connector"]'
+    )
+    image = console_script(tmp_path / "module", packaging, module)
+    assert image.covered
+    assert (
+        image.reason
+        == "stamp at /<site-packages>/sample_connector/.connector_version.json"
+    )
+
+
+@pytest.mark.parametrize(
+    "packaging",
+    [
+        {"pyproject.toml": CONSOLE_SCRIPT_PROJECT},
+        {
+            "pyproject.toml": (
+                '[project]\nname = "sample"\n[project.gui-scripts]\n'
+                'sample-connector = "sample_connector.__main__:main"\n'
+            )
+        },
+        # A package: the wrapper imports its initializer.
+        {
+            "pyproject.toml": (
+                '[project]\nname = "sample"\n[project.scripts]\n'
+                'sample-connector = "sample_connector:main"\n'
+            )
+        },
+        {"setup.cfg": CONSOLE_SCRIPT_SETUP_CFG},
+        {
+            "setup.cfg": (
+                "[options.entry_points]\ngui_scripts =\n"
+                "    sample-connector = sample_connector.__main__:main [cli]\n"
+            )
+        },
+        # Without a [project] table, setuptools reads the entry points of setup.cfg.
+        {
+            "pyproject.toml": '[build-system]\nbuild-backend = "setuptools.build_meta"\n',
+            "setup.cfg": (
+                "[options.entry_points]\n"
+                "console_scripts = sample-connector=sample_connector.__main__:main\n"
+            ),
+        },
+    ],
+)
+def test_console_script_declarations(tmp_path, packaging):
+    image = console_script(tmp_path, packaging)
+    assert image.covered, image.reason
+    assert image.reason == "stamp at /opt/app/.connector_version.json"
+
+
+@pytest.mark.parametrize(
+    "packaging",
+    [
+        {"pyproject.toml": '[project]\nname = "sample"\n'},
+        {
+            "pyproject.toml": (
+                '[project]\nname = "sample"\n[project.scripts]\n'
+                'other-connector = "sample_connector.__main__:main"\n'
+            )
+        },
+        # setuptools rejects console scripts in [project.entry-points].
+        {
+            "pyproject.toml": (
+                '[project]\nname = "sample"\n[project.entry-points.console_scripts]\n'
+                'sample-connector = "sample_connector.__main__:main"\n'
+            )
+        },
+        # With a [project] table, setuptools ignores the entry points of setup.cfg.
+        {
+            "pyproject.toml": '[project]\nname = "sample"\n',
+            "setup.cfg": CONSOLE_SCRIPT_SETUP_CFG,
+        },
+        # Declared dynamic: the console scripts are not modelled.
+        {
+            "pyproject.toml": '[project]\nname = "sample"\ndynamic = ["scripts"]\n',
+            "setup.cfg": CONSOLE_SCRIPT_SETUP_CFG,
+        },
+    ],
+)
+def test_console_scripts_the_project_does_not_declare(tmp_path, packaging):
+    image = console_script(tmp_path, packaging)
+    assert not image.covered
+    assert image.reason == (
+        "not supported: entry point 'sample-connector' is not a file of the image model"
+    )
+
+
+def test_console_script_of_an_editable_install(tmp_path):
+    dockerfile = CONSOLE_SCRIPT_DOCKERFILE.replace(
+        "pip install /opt/build && rm -rf /opt/build", "pip install -e /opt/build"
+    )
+    image = console_script(tmp_path, dockerfile=dockerfile)
+    assert image.reason == (
+        "not supported: entry point 'sample-connector' is not a file of the image model"
+    )
+
+
+@pytest.mark.parametrize(
+    "reference, copies, reason",
+    [
+        (
+            "missing_module:main",
+            "",
+            "module missing_module is not a file of the image model",
+        ),
+        (
+            "sample_connector.cli:main",
+            "",
+            "module sample_connector.cli is not a file of the image model",
+        ),
+        ("not a reference", "", "object reference 'not a reference'"),
+        # The wrapper's own directory comes first on sys.path.
+        (
+            "sample_connector.__main__:main",
+            "COPY sample_connector /usr/local/bin/sample_connector\n",
+            "/usr/local/bin/sample_connector, in a directory of PATH, may hold the"
+            " module sample_connector.__main__ it imports",
+        ),
+    ],
+)
+def test_console_script_module_outside_the_model(tmp_path, reference, copies, reason):
+    pyproject = (
+        '[project]\nname = "sample"\n[project.scripts]\n'
+        f'sample-connector = "{reference}"\n'
+    )
+    dockerfile = CONSOLE_SCRIPT_DOCKERFILE.replace("CMD", copies + "CMD")
+    image = console_script(tmp_path, {"pyproject.toml": pyproject}, dockerfile)
+    assert not image.covered
+    assert image.reason == f"not supported: console script sample-connector: {reason}"
+
+
+@pytest.mark.parametrize(
+    "start, entrypoint",
+    [
+        ('CMD ["sample-connector", "--verbose"]', None),
+        ('CMD ["env", "PYTHONUNBUFFERED=1", "sample-connector"]', None),
+        ("CMD sample-connector", None),
+        (
+            'CMD ["sh", "/opt/app/entrypoint.sh"]',
+            "#!/bin/sh\nset -e\nexec sample-connector\n",
+        ),
+        (
+            'CMD ["sh", "/opt/app/entrypoint.sh"]',
+            "#!/bin/sh\nsample-connector --verbose\n",
+        ),
+    ],
+)
+def test_console_script_start_commands(tmp_path, start, entrypoint):
+    dockerfile = CONSOLE_SCRIPT_DOCKERFILE.replace('CMD ["sample-connector"]', start)
+    packaging = {"pyproject.toml": CONSOLE_SCRIPT_PROJECT}
+    if entrypoint is not None:
+        dockerfile = dockerfile.replace("CMD", "COPY entrypoint.sh ./\nCMD")
+        packaging["entrypoint.sh"] = entrypoint
+    image = console_script(tmp_path, packaging, dockerfile)
+    assert image.covered, image.reason
+    assert image.reason == "stamp at /opt/app/.connector_version.json"
+
+
+NOT_A_FILE = "entry point 'sample-connector' is not a file of the image model"
+
+
+@pytest.mark.parametrize(
+    "step, reason",
+    [
+        ("RUN rm /usr/local/bin/sample-connector\n", NOT_A_FILE),
+        ("RUN rm -rf /usr/local\n", NOT_A_FILE),
+        ("RUN find /usr/local/bin -name 'sample-*' -delete\n", NOT_A_FILE),
+        ("RUN pip uninstall -y sample\n", NOT_A_FILE),
+        # Another install may replace the distribution, and its console scripts.
+        (
+            "RUN pip install requests\n",
+            "console script sample-connector: /<scripts>/sample-connector holds"
+            " what a build command wrote",
+        ),
+        (
+            "RUN ln -s /bin/true /usr/local/bin/sample-connector\n",
+            "entry point /usr/local/bin/sample-connector is not a file of the image model",
+        ),
+        (
+            "COPY sample_connector/__main__.py /usr/bin/sample-connector\n",
+            "'sample-connector' is a console script of an installed project and"
+            " /usr/bin/sample-connector, a file the build wrote: which one runs"
+            " depends on where pip wrote the script",
+        ),
+        # Deletions that do not reach a scripts directory keep the console script.
+        ("RUN rm -rf /opt/venv /usr/share/doc /tmp/*\n", None),
+        ("RUN find /usr/local/bin -name 'other-*' -delete\n", None),
+    ],
+)
+def test_console_script_removed_or_replaced_by_the_build(tmp_path, step, reason):
+    dockerfile = CONSOLE_SCRIPT_DOCKERFILE.replace("CMD", step + "CMD")
+    image = console_script(tmp_path, dockerfile=dockerfile)
+    if reason is None:
+        assert image.covered, image.reason
+    else:
+        assert not image.covered
+        assert image.reason == f"not supported: {reason}"
+
+
+def test_console_script_reads_above_every_directory_of_path(tmp_path):
+    # pycti walks up from the scripts directory, which may be any directory of
+    # PATH, before the working directory.
+    manifest = CONSOLE_SCRIPT_DOCKERFILE.replace(
+        "CMD", "COPY __metadata__ /usr/__metadata__\nCMD"
+    )
+    packaging = {
+        "pyproject.toml": CONSOLE_SCRIPT_PROJECT,
+        "__metadata__/connector_manifest.json": '{"container_version": "9.9.9"}',
+    }
+    image = console_script(tmp_path / "manifest", packaging, manifest)
+    assert not image.covered
+    assert image.reason == (
+        "pycti reads /usr/__metadata__/connector_manifest.json"
+        " (__metadata__/connector_manifest.json of the build context,"
+        " version '9.9.9') before any build stamp"
+    )
+    above = CONSOLE_SCRIPT_DOCKERFILE.replace(
+        "COPY .connector_version.jso[n] ./", "COPY .connector_version.json /usr/local/"
+    )
+    image = console_script(tmp_path / "above", dockerfile=above)
+    assert not image.covered
+    assert image.reason == (
+        "stamp at /usr/local/.connector_version.json, pycti reads ['/opt/app', '/usr/sbin']"
+    )
+    venv = CONSOLE_SCRIPT_DOCKERFILE.replace(
+        "WORKDIR", "ENV PATH=/opt/venv/bin:$PATH\nWORKDIR"
+    )
+    image = console_script(tmp_path / "venv", dockerfile=venv)
+    assert image.covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "target, modelled",
+    [
+        ("/usr/local/bin/sample-connector", ["/<scripts>/sample-connector"]),
+        ("/usr/bin/sample-*", ["/<scripts>/sample-*"]),
+        ("/opt/venv/bin/sample-connector", ["/<scripts>/sample-connector"]),
+        ("/usr/local/bin", ["/<scripts>"]),
+        ("/usr/local", ["/<scripts>"]),
+        ("/", ["/<scripts>"]),
+        ("/usr/l*", ["/<scripts>"]),
+        ("/usr/local/binaries", []),
+        ("/opt/build", []),
+        ("/usr/local/lib/python3.12/site-packages", []),
+        ("/tmp/*", []),
+    ],
+)
+def test_deletions_reaching_the_console_scripts(target, modelled):
+    assert check.script_targets(target) == modelled
+
+
+@pytest.mark.parametrize(
+    "texts, scripts",
+    [
+        (
+            {
+                "pyproject.toml": (
+                    '[project]\nname = "s"\n[project.scripts]\na = "p.m:main"\n'
+                    '[project.gui-scripts]\nb = "p:run"\n'
+                )
+            },
+            {"a": "p.m:main", "b": "p:run"},
+        ),
+        (
+            {
+                "setup.cfg": (
+                    "[options.entry_points]\nconsole_scripts =\n"
+                    "    a = p.m:main [cli]\n    # c = p:other\ngui_scripts = b=p:run\n"
+                )
+            },
+            {"a": "p.m:main", "b": "p:run"},
+        ),
+        (
+            {
+                "pyproject.toml": '[project]\nname = "s"\n',
+                "setup.cfg": "[options.entry_points]\nconsole_scripts = a = p:main\n",
+            },
+            {},
+        ),
+        (
+            {
+                "pyproject.toml": (
+                    '[project]\nname = "s"\n'
+                    '[project.entry-points.console_scripts]\na = "p:main"\n'
+                )
+            },
+            {},
+        ),
+    ],
+)
+def test_console_scripts_of_the_packaging(texts, scripts):
+    assert check.PackagingConfig(texts).scripts == scripts
+
+
 def test_every_built_variant_is_checked(tmp_path):
     (tmp_path / "Dockerfile_ubi9").write_text(
         'FROM registry.access.redhat.com/ubi9/ubi-minimal\nARG CONNECTOR_CMD="main.py"\nARG CONNECTOR_WORKDIR="/opt/connector/src"\n'

@@ -67,10 +67,18 @@ looks. The model covers exactly this:
   manifest the package data ships is read before it, as in the source.
 * Start command: the python interpreter with its script, its ``-m`` module
   (looked up in the working directory, ``PYTHONPATH`` and the installed
-  packages, as ``-I``, ``-P``, ``-E`` and ``-S`` allow) or ``-c``, started
-  directly or by a shell script of the image, with the environment ``env``
-  gives it. A deletion of a native site-packages path also applies to the
-  installed packages of the model.
+  packages, as ``-I``, ``-P``, ``-E`` and ``-S`` allow) or ``-c``, or a
+  console script of an installed project (``[project.scripts]`` and
+  ``[project.gui-scripts]`` of ``pyproject.toml``, or the ``console_scripts``
+  and ``gui_scripts`` of ``[options.entry_points]`` in ``setup.cfg`` when there
+  is no ``[project]`` table), started directly or by a shell script of the
+  image, with the environment ``env`` gives it. A console script runs the
+  wrapper pip writes in the scripts directory of the interpreter, which
+  imports the module its object reference names (a file of the model): pycti
+  reads that scripts directory, one of the PATH directories (each one is
+  checked), and the working directory, not the package directory. A deletion
+  of a native site-packages or scripts path also applies to the installed
+  packages and console scripts of the model.
 
 Anything outside the model is reported as "not supported" with the construct
 that stopped the analysis, never assumed to be fine: heredocs, variables the
@@ -78,6 +86,7 @@ build does not define, a directory change or the start of python inside a
 conditional or a loop of the entry script, an entry point that is not a file
 of the model, a shell interpreter line with -c or with more than one word, a command outside the closed world above or acting on a path it
 cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``,
+console scripts declared dynamic or in another file,
 automatic discovery of a namespace package, build backends other than
 setuptools, packaging files a build command wrote, a module setuptools imports
 for a command class or an ``attr:`` value that is not a literal, and, for an
@@ -128,6 +137,10 @@ STAMP_PARENT_DEPTH = 4
 # Abstract location of the installed packages: the real path depends on the
 # Python version of the base image, and pycti only needs the package directory.
 SITE_PACKAGES = "/<site-packages>"
+# Abstract location of the console scripts pip writes for an installed project:
+# the bin directory of the interpreter's prefix or virtual environment, a path
+# the model does not know (the start command finds the script on PATH).
+SCRIPTS = "/<scripts>"
 # Where python -m looks between PYTHONPATH and site-packages: the standard
 # library and lib-dynload of the interpreter.
 STANDARD_LIBRARY = "/<standard-library>"
@@ -1270,6 +1283,12 @@ NATIVE_LIBRARY_ENTRY = re.compile(
 # A path in a site-packages directory (any copy of it), with its top-level
 # entry when it lies below it.
 SITE_PACKAGES_ENTRY = re.compile(r"/(?:site|dist)-packages(?:/+(?P<top>[^/]+))?(?=/|$)")
+# Where pip writes console scripts in the base images (the bin directory of the
+# prefixes above); the model keeps them in SCRIPTS.
+NATIVE_SCRIPTS = re.compile(
+    r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)/bin(?=/|$)"
+)
+NATIVE_SCRIPTS_ROOTS = ("/usr/local/bin", "/usr/bin")
 
 
 def holds_library_directory(region):
@@ -1348,6 +1367,28 @@ def modelled_targets(target):
     return [target]
 
 
+def script_targets(target):
+    """Where the model keeps what a deletion of ``target`` (absolute, wildcards
+    allowed) removes from the console scripts pip wrote: a native path of a
+    scripts directory, a parent of one, or a pattern that may reach one."""
+    match = NATIVE_SCRIPTS.match(target)
+    if match:
+        return [SCRIPTS + target[match.end() :]]
+    literal = (
+        GLOB_CHARS.split(target, maxsplit=1)[0] if GLOB_CHARS.search(target) else None
+    )
+    if any(
+        root.startswith(target.rstrip("/") + "/")
+        or (
+            literal is not None
+            and (root.startswith(literal) or literal.startswith(root))
+        )
+        for root in NATIVE_SCRIPTS_ROOTS
+    ):
+        return [SCRIPTS]
+    return []
+
+
 def pattern_reaches(pattern, path):
     """The wildcard ``pattern`` (absolute) expands through ``path``: its first
     components, as many as ``path`` has, match it."""
@@ -1361,7 +1402,7 @@ def pattern_reaches(pattern, path):
 def remove_files(files, target, descendants=True):
     """Delete ``target`` (absolute, wildcards allowed), and everything below it
     unless ``descendants`` is unset: a plain rm leaves a directory in place."""
-    for modelled in modelled_targets(target):
+    for modelled in (*modelled_targets(target), *script_targets(target)):
         if GLOB_CHARS.search(modelled):
 
             def matches(candidate, pattern=modelled):
@@ -1446,6 +1487,11 @@ class PackagingConfig:
         # None: automatic discovery, whose namespace handling is not modelled.
         self.namespaces = None
         self.unsupported = None
+        # The console scripts pip writes for the project: name -> object reference.
+        self.scripts = {}
+        # A [project] table: setuptools then ignores the entry points of setup.cfg
+        # unless they are declared dynamic (those are not modelled).
+        self.declares_project = False
         pyproject = texts.get("pyproject.toml")
         if pyproject is not None:
             self._read_pyproject(pyproject)
@@ -1500,6 +1546,15 @@ class PackagingConfig:
             self.unsupported = f"package data of the build backend {backend}"
         tool = data.get("tool", {}).get("setuptools", {})
         project = data.get("project", {})
+        if project:
+            self.declares_project = True
+            # Console scripts declared in [project.entry-points] are rejected by
+            # setuptools: only these two tables give them.
+            for key in ("scripts", "gui-scripts"):
+                declared = project.get(key)
+                if isinstance(declared, dict):
+                    for name, reference in declared.items():
+                        self.scripts[str(name)] = object_reference(reference)
         readme = project.get("readme")
         referenced = [readme] if isinstance(readme, str) else []
         dynamic_readme = tool.get("dynamic", {}).get("readme")
@@ -1592,6 +1647,13 @@ class PackagingConfig:
             self.packages = []
         if parser.has_option("options", "package_dir"):
             self.unsupported = self.unsupported or "package_dir of setuptools"
+        if not self.declares_project:
+            for group in ("console_scripts", "gui_scripts"):
+                raw = parser.get("options.entry_points", group, fallback="")
+                for line in raw.splitlines():
+                    name, sep, reference = line.partition("=")
+                    if sep and name.strip() and not name.strip().startswith(("#", ";")):
+                        self.scripts[name.strip()] = object_reference(reference)
 
     @property
     def automatic(self):
@@ -1637,6 +1699,11 @@ class PackagingConfig:
             fnmatch.fnmatchcase(filename, p.strip())
             for p in patterns(self.exclude_package_data)
         )
+
+
+def object_reference(value):
+    """The ``module:attribute`` of an entry point declaration, without its extras."""
+    return re.sub(r"\[[^\]]*\]\s*$", "", str(value)).strip()
 
 
 def package_data_matches(pattern, filename):
@@ -3320,8 +3387,12 @@ class Shell:
     def _executed_script(self, words, env, conditional):
         """A shell script of the image run as a command: it runs here (its
         deletions count, and in a start script its python processes). A python
-        script of the image is a python process of a start script. True when the
-        command was one of these."""
+        script of the image is a python process of a start script, and so is a
+        console script of an installed project. True when the command was one
+        of these."""
+        if self.start and self.model.console_script(words[0], self.files) is not None:
+            self._launch(words, env, conditional)
+            return True
         path = self.model.find_executable(
             words[0], self.cwd, env, self.files, self.stage.links
         )
@@ -3751,6 +3822,15 @@ class Shell:
                     removes,
                     uncertain,
                 )
+            # So are the console scripts, by the native path of their directory.
+            for modelled in script_targets(base):
+                self._find_delete(
+                    modelled,
+                    root_name,
+                    tests if NATIVE_SCRIPTS.match(base) else None,
+                    removes,
+                    uncertain,
+                )
 
     @staticmethod
     def _find_tests(args):
@@ -3974,8 +4054,10 @@ class Shell:
             targets.append(arg)
             i += 1
         if command == "uninstall":
-            # Which files a distribution owns is not modelled: none of the installed packages is kept.
+            # Which files a distribution owns is not modelled: none of the
+            # installed packages or console scripts is kept.
             remove_files(self.files, SITE_PACKAGES)
+            remove_files(self.files, SCRIPTS)
             return
         if command != "install":
             return
@@ -4004,11 +4086,16 @@ class Shell:
             # An editable install replaces a regular install of the same project
             # by a link to its source; which one it replaces is not modelled.
             remove_files(self.files, SITE_PACKAGES)
+            remove_files(self.files, SCRIPTS)
         # pip removes the files of an installed distribution it replaces; which
         # project an install replaces is not modelled, so what earlier installs
-        # put in site-packages may be gone.
+        # put in site-packages, and their console scripts, may be gone.
         self._uncertain_files(
-            [p for p in self.files if p.startswith(SITE_PACKAGES + "/")]
+            [
+                p
+                for p in self.files
+                if p.startswith((SITE_PACKAGES + "/", SCRIPTS + "/"))
+            ]
         )
         if editable or conditional:
             return
@@ -4949,6 +5036,11 @@ class ImageModel:
                             f" ships {path}, which a build command wrote"
                         )
                     files[f"{SITE_PACKAGES}/{package}/{name}"] = origin
+        # pip writes a wrapper in its scripts directory for each console script
+        # the project declares; the wrapper imports the module it names.
+        for name, reference in (config or PackagingConfig(texts)).scripts.items():
+            if name and "/" not in name:
+                files[f"{SCRIPTS}/{name}"] = ("console-script", reference)
 
     @staticmethod
     def _roots(texts):
@@ -5031,6 +5123,16 @@ class ImageModel:
             if script is None:
                 raise Unsupported("a shell started without a script")
             return self._script(files, cwd, env, nesting, script)
+        reference = self.console_script(words[0], files)
+        if reference is not None:
+            if shadow is not None:
+                raise Unsupported(
+                    f"'{words[0]}' is a console script of an installed project and"
+                    f" {shadow}, a file the build wrote: which one runs depends on"
+                    " where pip wrote the script"
+                )
+            anchors = self._console_script_start(words[0], reference, cwd, env, files)
+            return [(anchors, dict(files))]
         path = shadow or self._executable(words[0], cwd, env, files)
         text = self._read(files, path)
         if not text.startswith("#!"):
@@ -5110,10 +5212,68 @@ class ImageModel:
             return image_path(command, cwd, "entry point", self.final.links)
         path = self.find_executable(command, cwd, env, files, self.final.links)
         if path is None:
+            if self.final.written(f"{SCRIPTS}/{command}"):
+                raise Unsupported(
+                    f"console script {command}: {SCRIPTS}/{command} holds what a"
+                    " build command wrote"
+                )
             raise Unsupported(
                 f"entry point '{command}' is not a file of the image model"
             )
         return path
+
+    @staticmethod
+    def console_script(command, files):
+        """The object reference of the console script of an installed project
+        that the bare name ``command`` runs, None when there is none."""
+        if "/" in command:
+            return None
+        origin = files.get(f"{SCRIPTS}/{command}")
+        if origin is None or origin[0] != "console-script":
+            return None
+        return origin[1]
+
+    def _console_script_start(self, command, reference, cwd, env, files):
+        """Directories pycti reads for a console script: the wrapper pip wrote
+        runs as __main__ from the scripts directory, which PATH finds among its
+        directories (the model does not know which one, so each is a choice
+        that must lead to the stamp), and the working directory. The module the
+        object reference names must be a file of the model: the package
+        directory is not one of the directories pycti reads."""
+        module = reference.partition(":")[0].strip()
+        if not module or not all(part.isidentifier() for part in module.split(".")):
+            raise Unsupported(
+                f"console script {command}: object reference '{reference}'"
+            )
+        choices = tuple(
+            dict.fromkeys(
+                image_path(directory, "/", "PATH entry", self.final.links)
+                for directory in env.get("PATH", DEFAULT_PATH).split(":")
+                if directory.startswith("/") and not re.search(r"[$`]", directory)
+            )
+        )
+        if not choices:
+            raise Unsupported(f"console script {command}: no PATH directory holds it")
+        # The wrapper imports the module with its own directory first on sys.path.
+        top = module.split(".")[0]
+        for directory in choices:
+            for path in (
+                posixpath.join(directory, top),
+                posixpath.join(directory, f"{top}.py"),
+            ):
+                if (
+                    path in files
+                    or any(f.startswith(path + "/") for f in files)
+                    or self.final.written(path)
+                ):
+                    raise Unsupported(
+                        f"console script {command}: {path}, in a directory of PATH,"
+                        f" may hold the module {module} it imports"
+                    )
+        self._module_dir(
+            module, cwd, env, files, True, False, False, self.final, script=command
+        )
+        return [choices] + ([cwd] if cwd is not None else [])
 
     def python_start(self, words, cwd, env, files):
         """Directories pycti reads for a python command line: the directory of
@@ -5195,11 +5355,22 @@ class ImageModel:
 
     @staticmethod
     def _module_dir(
-        module, cwd, env, files, safe_path, ignore_env, no_site=False, stage=None
+        module,
+        cwd,
+        env,
+        files,
+        safe_path,
+        ignore_env,
+        no_site=False,
+        stage=None,
+        script=None,
     ):
+        """Directory of the file python runs for ``-m module`` or, for the
+        console script ``script``, of the module its wrapper imports."""
+        what = f"console script {script}" if script else f"python -m {module}"
         parts = module.split(".")
         if not all(part.isidentifier() for part in parts):
-            raise Unsupported(f"python -m {module}")
+            raise Unsupported(what)
         entries = [] if safe_path else [""]
         if not ignore_env and env.get("PYTHONPATH"):
             entries += env["PYTHONPATH"].split(":")
@@ -5207,7 +5378,7 @@ class ImageModel:
         for entry in entries:
             if not entry.startswith("/") and cwd is None:
                 # The working directory, or a path relative to it.
-                raise Unsupported(f"python -m {module} in an unknown working directory")
+                raise Unsupported(f"{what} in an unknown working directory")
             bases.append(
                 image_path(
                     entry or ".",
@@ -5232,7 +5403,7 @@ class ImageModel:
             )
             if elsewhere:
                 raise Unsupported(
-                    f"python -m {module}: a module {parts[0]} also lies in {posixpath.dirname(elsewhere[0])}"
+                    f"{what}: a module {parts[0]} also lies in {posixpath.dirname(elsewhere[0])}"
                 )
             regions = (
                 (*stage.replaced, *stage.unknown_dirs) if stage is not None else ()
@@ -5246,10 +5417,13 @@ class ImageModel:
                 ):
                     continue
                 raise Unsupported(
-                    f"python -m {module}: {region} holds what a build command"
+                    f"{what}: {region} holds what a build command"
                     " wrote, where python finds site-packages"
                 )
-        missing = Unsupported(f"module {module} is not a file of the image model")
+        missing = Unsupported(
+            (f"{what}: " if script else "")
+            + f"module {module} is not a file of the image model"
+        )
 
         def find(names, search):
             # As the import system: in each entry a package with __init__.py or
@@ -5267,12 +5441,12 @@ class ImageModel:
                     found = standard_library_module(name, files, regions)
                     if found in files:
                         raise Unsupported(
-                            f"python -m {module} may run {found}, a file the build"
+                            f"{what} may run {found}, a file the build"
                             " wrote, from the standard library"
                         )
                     if found:
                         raise Unsupported(
-                            f"python -m {module}: {found} holds what a build command"
+                            f"{what}: {found} holds what a build command"
                             " wrote, where python finds its standard library"
                         )
                     continue
@@ -5283,7 +5457,7 @@ class ImageModel:
                     or stage.written(f"{path}/__init__.py")
                 ):
                     raise Unsupported(
-                        f"python -m {module}: {path} holds what a build command wrote"
+                        f"{what}: {path} holds what a build command wrote"
                     )
                 if f"{path}/__init__.py" in files:
                     portions = [path]
@@ -5298,6 +5472,11 @@ class ImageModel:
                 raise missing
             if rest:
                 return find(rest, portions)
+            if script:
+                # The wrapper imports the package: its initializer, not __main__.
+                if f"{portions[0]}/__init__.py" in files:
+                    return portions[0]
+                raise missing
             for portion in portions:
                 if f"{portion}/__main__.py" in files:
                     return portion
@@ -5344,7 +5523,18 @@ def pycti_version(text):
 
 def coverage(image, model, anchors, files):
     """Whether a python process reading ``anchors`` takes its identity from a
-    stamp the build wrote: pycti keeps the first identity file it reads."""
+    stamp the build wrote: pycti keeps the first identity file it reads. A tuple
+    among the anchors is a directory the model only knows to be one of its
+    members (the scripts directory of a console script): each must lead to the
+    stamp."""
+    for index, anchor in enumerate(anchors):
+        if isinstance(anchor, tuple):
+            for choice in anchor:
+                chosen = [*anchors[:index], choice, *anchors[index + 1 :]]
+                result = coverage(image, model, chosen, files)
+                if not result.covered:
+                    return result
+            return result
     stamps = sorted(
         path
         for path, origin in files.items()
