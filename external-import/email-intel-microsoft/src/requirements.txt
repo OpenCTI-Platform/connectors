@@ -1,7 +1,7 @@
 -r ./base_connector/requirements.txt
 azure-identity==1.26.0
 email_validator==2.3.0
-msgraph-sdk==1.63.0
-pycti==7.261002.0
-pydantic~=2.13.5
+msgraph-sdk==1.64.0
+pycti==7.261008.0
+pydantic==2.14.0
 pydantic-settings==2.15.0
