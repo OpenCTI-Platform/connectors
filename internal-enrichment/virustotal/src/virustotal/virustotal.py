@@ -115,6 +115,28 @@ class VirusTotalConnector:
             self.config.virustotal.include_attributes_in_note
         )
 
+        # GTI collection enrichment settings
+        self.gti_enrichment_enabled = self.config.virustotal.gti_enrichment_enabled
+        self.gti_include_malware_families = (
+            self.config.virustotal.gti_include_malware_families
+        )
+        self.gti_include_threat_actors = (
+            self.config.virustotal.gti_include_threat_actors
+        )
+        self.gti_include_campaigns = self.config.virustotal.gti_include_campaigns
+        self.gti_include_reports = self.config.virustotal.gti_include_reports
+        self.gti_relationship_limit = self.config.virustotal.gti_relationship_limit
+
+        if (
+            self.gti_include_malware_families
+            or self.gti_include_threat_actors
+            or self.gti_include_campaigns
+            or self.gti_include_reports
+        ) and not self.gti_enrichment_enabled:
+            self.helper.log_warning(
+                "[VirusTotal] Connector configured to include GTI relationships, but GTI enrichment is not enabled"
+            )
+
     # ------------------------------------------------------------------
     # YARA cache (shared across processor instances)
     # ------------------------------------------------------------------
