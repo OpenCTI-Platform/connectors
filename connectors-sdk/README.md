@@ -41,6 +41,55 @@ for obj in [author, ip, org, rel]:
     print(stix_object)
 ```
 
+### Reading provenance summaries
+
+OpenCTI versions that ship provenance, corroboration and freshness ([OpenCTI-Platform/opencti#18676](https://github.com/OpenCTI-Platform/opencti/issues/18676))
+record which sources asserted each Stix Core Object (SDO and SCO), Stix Core Relationship and sighting, and when.
+They export a summary of these assertions in the `opencti-provenance` STIX property extension
+(`extension-definition--283daa2f-7739-5345-a110-19d73676f670`, available as `STIX_EXT_OCTI_PROVENANCE`) when the provenance of an object is known.
+The summary holds counts, dates and flags only: it never contains source names nor user emails.
+Objects exported by OpenCTI versions without provenance support carry no such extension, and `from_stix` returns `None` for them.
+
+`ProvenanceSummary.from_stix` reads it from a STIX object received from OpenCTI, either a plain dict (stream events, bundles) or a `stix2` library object:
+
+```python
+import json
+
+from connectors_sdk.models import ProvenanceSummary, ProvenanceSummaryError
+from connectors_sdk.models.enums import ProvenanceSourceKind
+
+
+def process_message(self, msg) -> None:
+    stix_object = json.loads(msg.data)["data"]
+    try:
+        summary = ProvenanceSummary.from_stix(stix_object)
+    except ProvenanceSummaryError as err:
+        self.helper.connector_logger.warning("Malformed provenance", meta={"error": str(err)})
+        return
+    if summary is None:
+        return  # OpenCTI exported no provenance for this object
+    if summary.single_sourced or summary.freshness_stale:
+        return  # forward only corroborated and fresh knowledge
+    connector_sources = summary.sources_by_kind.get(ProvenanceSourceKind.CONNECTOR, 0)
+```
+
+| Field                 | Type                                | Meaning                                                            |
+|-----------------------|-------------------------------------|--------------------------------------------------------------------|
+| `corroboration_count` | `int` (>= 0)                        | Number of distinct sources asserting the fact, every source counted |
+| `assertions_count`    | `int` (>= 0)                        | Sum of the assertion counts of the sources detailed by OpenCTI (see below) |
+| `first_asserted`      | `datetime` or `None`                | When a source asserted the fact for the first time                 |
+| `last_asserted`       | `datetime` or `None`                | When a source asserted the fact for the last time                  |
+| `single_sourced`      | `bool`                              | Exactly one source asserts the fact                                |
+| `has_conflicts`       | `bool`                              | Sources proposed conflicting values for some attributes            |
+| `conflicting_fields`  | `tuple[str, ...]`                   | Names of the attributes with conflicting values                    |
+| `freshness_stale`     | `bool`                              | A knowledge freshness rule flagged the fact as stale               |
+| `sources_by_kind`     | read-only mapping `ProvenanceSourceKind` -> `int` | Distinct sources per kind among the sources detailed by OpenCTI (see below): `connector`, `feed`, `author`, `user`, `inference`, `emulation` |
+
+- OpenCTI keeps the details of up to 200 sources per element (the earliest source and the most recently active ones). `corroboration_count` and `single_sourced` always count every source; `assertions_count` and `sources_by_kind` are computed from the detailed sources, so on an element asserted by more than 200 sources their total can be lower than `corroboration_count`.
+- `from_stix` returns `None` when the object carries no provenance extension. It raises `ProvenanceSummaryError` (a `ValueError`) when the extension is malformed, with the pydantic `ValidationError` as cause when the content fails validation.
+- The summary is read-only: the model is frozen and its collections are immutable. It is not a write model: it has no `to_stix2_object` method and no write model accepts it. Connectors never send provenance: OpenCTI computes it from who writes the data.
+- Forward compatibility: payload fields unknown to the SDK version are ignored, and unknown source kinds are kept in `sources_by_kind` (with a `UserWarning`).
+
 ### Using Exceptions
 
 The SDK includes custom exceptions to handle errors gracefully. Use these exceptions to manage edge cases and improve the reliability of your connector.
