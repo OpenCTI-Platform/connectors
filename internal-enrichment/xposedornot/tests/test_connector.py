@@ -6,7 +6,7 @@ import pytest
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from src.xposedornot.connector import XposedOrNotConnector
 from src.xposedornot.converter_to_stix import ObservableNote
-from src.xposedornot.errors import XposedOrNotError
+from src.xposedornot.errors import EnrichmentError, XposedOrNotError
 
 from tests.conftest import (
     BREACHED,
@@ -259,7 +259,9 @@ def test_observable_missing_from_the_bundle_is_appended():
 def test_api_error_puts_the_work_in_error_outside_a_playbook():
     connector, helper, client = make_connector()
     client.lookup.side_effect = XposedOrNotError("XposedOrNot: error response")
-    with pytest.raises(XposedOrNotError):
+    with pytest.raises(
+        EnrichmentError, match="XposedOrNotError: XposedOrNot: error response"
+    ):
         connector._message_callback(make_data())
     helper.send_stix2_bundle.assert_not_called()
     helper.connector_logger.error.assert_called_once()
@@ -277,11 +279,14 @@ def test_logged_errors_never_contain_the_email_or_the_api_key():
     connector, helper, client = make_connector()
     client.api_key = "SECRET-KEY"
     client.lookup.side_effect = RuntimeError(f"failed for {EMAIL} with SECRET-KEY")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(EnrichmentError) as raised:
         connector._message_callback(make_data())
     logged = json.dumps(helper.connector_logger.error.call_args.kwargs["meta"])
     assert EMAIL not in logged and "SECRET-KEY" not in logged
     assert "<redacted>" in logged
+    assert EMAIL not in str(raised.value) and "SECRET-KEY" not in str(raised.value)
+    assert str(raised.value).startswith("RuntimeError: ")
+    assert raised.value.__suppress_context__ is True
 
 
 def test_run_listens_with_the_message_callback():
@@ -345,3 +350,48 @@ def test_only_exact_duplicate_references_are_collapsed():
     )
     references = by_type(helper)["email-addr"]["x_opencti_external_references"]
     assert references[:-1] == [first, second]
+
+
+def test_stix_entity_of_another_type_is_skipped_despite_the_metadata():
+    connector, _, client = make_connector()
+    data = make_data()
+    data["stix_entity"]["id"] = "ipv4-addr--11111111-1111-4111-8111-111111111111"
+    message = connector._message_callback(data)
+    assert message == "Unsupported entity type: Email-Addr"
+    client.lookup.assert_not_called()
+
+
+def test_tlp_reference_without_a_resolved_marking_still_gates():
+    connector, _, client = make_connector()
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    message = connector._message_callback(
+        make_data(markings=(), object_marking_refs=[red])
+    )
+    assert "'TLP:RED'" in message and "skipping" in message
+    client.lookup.assert_not_called()
+
+
+def test_bundled_tlp_definition_behind_an_unknown_reference_gates():
+    connector, _, client = make_connector()
+    ref = "marking-definition--22222222-2222-4222-8222-222222222222"
+    data = make_data(markings=(), object_marking_refs=[ref])
+    data["stix_objects"].append(
+        {
+            "type": "marking-definition",
+            "id": ref,
+            "definition_type": "TLP",
+            "name": "TLP:RED",
+        }
+    )
+    message = connector._message_callback(data)
+    assert "'TLP:RED'" in message
+    client.lookup.assert_not_called()
+    data["stix_objects"][-1]["name"] = "TLP:GREEN"
+    connector._message_callback(data)
+    client.lookup.assert_called_once()
+
+
+def test_unknown_non_tlp_reference_does_not_gate():
+    connector, _, client = make_connector()
+    connector._message_callback(make_data(markings=(), object_marking_refs=[PAP_ID]))
+    client.lookup.assert_called_once()

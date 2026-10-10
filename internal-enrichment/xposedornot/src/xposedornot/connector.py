@@ -18,6 +18,7 @@ from pycti import OpenCTIConnectorHelper
 from src.xposedornot.client_api import XposedOrNotClient, redact, usable_score
 from src.xposedornot.converter_to_stix import ConverterToStix
 from src.xposedornot.errors import (
+    EnrichmentError,
     EnrichmentSkipped,
     EntityNotInScopeError,
     InvalidEmailError,
@@ -33,6 +34,17 @@ OWN_REFERENCE = {
     "description": "XposedOrNot breach exposure check",
 }
 OWNED_LABELS = frozenset({"data-breach", "plaintext-password-exposure"})
+TLP_LEVELS = (
+    "TLP:CLEAR",
+    "TLP:WHITE",
+    "TLP:GREEN",
+    "TLP:AMBER",
+    "TLP:AMBER+STRICT",
+    "TLP:RED",
+)
+TLP_IDS = {
+    PyctiMarkingDefinition.generate_id("TLP", level): level for level in TLP_LEVELS
+}
 
 
 class XposedOrNotConnector:
@@ -63,12 +75,38 @@ class XposedOrNotConnector:
             bundle, update=update, cleanup_inconsistent_bundle=True
         )
 
-    def _validate_tlp(self, markings: list[dict[str, Any]]) -> None:
+    @staticmethod
+    def _source_tlps(
+        markings: list[dict[str, Any]],
+        stix_entity: dict[str, Any],
+        stix_objects: list[dict[str, Any]],
+    ) -> list[Any]:
+        """Every TLP value the source carries: resolved markings, well-known
+        reference ids and TLP definitions bundled alongside the entity."""
+        bundled = {
+            obj.get("id"): obj
+            for obj in stix_objects
+            if isinstance(obj, dict) and obj.get("type") == "marking-definition"
+        }
+        values = [
+            m.get("definition") for m in markings if m.get("definition_type") == "TLP"
+        ]
+        for ref in stix_entity.get("object_marking_refs") or []:
+            definition = bundled.get(ref) or {}
+            kind = definition.get("x_opencti_definition_type") or definition.get(
+                "definition_type"
+            )
+            if ref in TLP_IDS:
+                values.append(TLP_IDS[ref])
+            elif str(kind or "").upper() == "TLP":
+                values.append(
+                    definition.get("x_opencti_definition") or definition.get("name")
+                )
+        return values
+
+    def _validate_tlp(self, values: list[Any]) -> None:
         max_tlp = self.config.xposedornot.max_tlp
-        for marking in markings:
-            if marking.get("definition_type") != "TLP":
-                continue
-            tlp = marking.get("definition")
+        for tlp in values:
             if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
                 raise MaxTlpError(
                     f"TLP marking {tlp!r} of the observable is unreadable or above"
@@ -141,10 +179,15 @@ class XposedOrNotConnector:
         observable = data["enrichment_entity"]
         stix_entity = data["stix_entity"]
         entity_type = observable.get("entity_type")
-        if entity_type not in self.config.connector.scope:
-            raise EntityNotInScopeError(f"Unsupported entity type: {entity_type}")
+        stix_type = str(stix_entity.get("id") or "").split("--")[0]
+        if entity_type not in self.config.connector.scope or stix_type != "email-addr":
+            raise EntityNotInScopeError(
+                f"Unsupported entity type: {entity_type or stix_type}"
+            )
         markings = observable.get("objectMarking") or []
-        self._validate_tlp(markings)
+        self._validate_tlp(
+            self._source_tlps(markings, stix_entity, data["stix_objects"])
+        )
         email = str(
             observable.get("observable_value") or stix_entity.get("value") or ""
         )
@@ -199,13 +242,13 @@ class XposedOrNotConnector:
             self.helper.connector_logger.info(message)
             return self._forward(data, message)
         except Exception as error:
+            reason = self._redact(str(error), data)
             self.helper.connector_logger.error(
-                "Error processing message",
-                meta={"error": self._redact(str(error), data)},
+                "Error processing message", meta={"error": reason}
             )
             if not data.get("event_type"):
                 return self._forward(data, "Internal error (see logs)")
-            raise
+            raise EnrichmentError(f"{type(error).__name__}: {reason}") from None
 
     def run(self) -> None:
         self.helper.listen(message_callback=self._message_callback)

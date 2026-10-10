@@ -16,3 +16,7 @@ class MaxTlpError(EnrichmentSkipped):
 
 class InvalidEmailError(EnrichmentSkipped):
     """The observable value is not an email address."""
+
+
+class EnrichmentError(Exception):
+    """An enrichment failed; the message is already redacted."""
