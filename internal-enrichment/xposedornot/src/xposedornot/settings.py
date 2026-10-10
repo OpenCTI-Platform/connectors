@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Typed connector settings (connectors-sdk BaseConnectorSettings)."""
 
 from typing import Literal
@@ -15,8 +14,6 @@ SUPPORTED_SCOPE_ENTITY_TYPES = frozenset({"Email-Addr"})
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
-    """Defaults for the INTERNAL_ENRICHMENT connector block."""
-
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
         default="c6b0f5f2-c47e-4d49-92a9-10371b40f5d8",
@@ -30,21 +27,6 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The scope of the connector (observable types to enrich).",
         default=["Email-Addr"],
     )
-
-    @field_validator("scope", mode="after")
-    @classmethod
-    def _scope_must_be_supported(cls, value: list[str]) -> list[str]:
-        unsupported = [
-            entry for entry in value if entry not in SUPPORTED_SCOPE_ENTITY_TYPES
-        ]
-        if unsupported:
-            raise ValueError(
-                f"Unsupported CONNECTOR_SCOPE entries: {unsupported}. This"
-                f" connector only enriches"
-                f" {sorted(SUPPORTED_SCOPE_ENTITY_TYPES)}."
-            )
-        return value
-
     auto: bool = Field(
         description=(
             "Enables or disables automatic enrichment of observables. The keyless"
@@ -54,10 +36,19 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         default=False,
     )
 
+    @field_validator("scope", mode="after")
+    @classmethod
+    def _scope_must_be_supported(cls, value: list[str]) -> list[str]:
+        unsupported = [v for v in value if v not in SUPPORTED_SCOPE_ENTITY_TYPES]
+        if unsupported:
+            raise ValueError(
+                f"Unsupported CONNECTOR_SCOPE entries: {unsupported}. This"
+                f" connector only enriches {sorted(SUPPORTED_SCOPE_ENTITY_TYPES)}."
+            )
+        return value
+
 
 class XposedOrNotConfig(BaseConfigModel):
-    """Configuration specific to the XposedOrNot connector."""
-
     api_key: SecretStr | None = Field(
         description=(
             "Optional XposedOrNot API key (console.xposedornot.com). When set, the"
@@ -102,14 +93,22 @@ class XposedOrNotConfig(BaseConfigModel):
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
         Field(
             description=(
-                "Minimum Traffic Light Protocol (TLP) level applied to the"
-                " objects imported into OpenCTI. The note carries the stricter"
-                " of this level and the source observable's own marking."
-                " Results contain personal data; a restrictive TLP is"
-                " recommended. 'white' is the deprecated alias of 'clear'."
+                "TLP marking applied to the summary note, in addition to the"
+                " markings the source observable already carries. Results"
+                " contain personal data; a restrictive level is recommended."
+                " 'white' is the deprecated alias of 'clear'."
             ),
             default="amber",
         )
+    )
+    update_score: bool = Field(
+        description=(
+            "Write the XposedOrNot risk score (community API only) to the"
+            " observable's score. The score measures how exposed the address"
+            " is, not how malicious it is, and overwrites the existing score."
+            " Disable to keep only the note and the labels."
+        ),
+        default=True,
     )
 
     @field_validator("api_base_url", mode="after")
@@ -124,8 +123,6 @@ class XposedOrNotConfig(BaseConfigModel):
 
 
 class ConnectorSettings(BaseConnectorSettings):
-    """Override BaseConnectorSettings with the connector-specific config blocks."""
-
     connector: InternalEnrichmentConnectorConfig = Field(
         default_factory=InternalEnrichmentConnectorConfig
     )

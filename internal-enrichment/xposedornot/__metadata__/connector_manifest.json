@@ -1,8 +1,8 @@
 {
   "title": "XposedOrNot",
   "slug": "xposedornot",
-  "description": "XposedOrNot is an open, free data-breach search service tracking 760+ breaches. Given an email address, it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry and password-storage risk, plus an overall risk score.\n\nIntegrating XposedOrNot with OpenCTI lets analysts enrich an Email-Addr observable in place: the observable receives a risk-derived score (community API only), `data-breach` labels (plus a `plaintext-password-exposure` label when applicable) and an external reference, and a markdown summary note is attached with a per-breach table covering the most recent breaches (50 by default, configurable), with a line naming how many more were found whenever the table is capped. The connector works without any API key via the free community API (rate limits apply); an optional commercial key raises limits. Breach exposure tied to an email address is personal information and must only be used for lawful, authorised investigations (GDPR / legal basis / proper investigative framework).",
-  "short_description": "Enrich an email address with its data-breach exposure — breach names, dates, records, exposed data classes and password-storage risk — score and label the observable, and attach a summary note. No API key required.",
+  "description": "XposedOrNot is an open, free data-breach search service tracking 760+ breaches. Given an email address, it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry, password-storage risk and a short description, plus an overall risk score.\n\nIntegrating XposedOrNot with OpenCTI lets analysts enrich an Email-Addr observable in place: the observable receives `data-breach` labels (plus a `plaintext-password-exposure` label when applicable), an external reference and, by default, a score, and a markdown summary note is attached with a per-breach table covering the most recent breaches (50 by default, configurable), with a line naming how many more were found whenever the table is capped. The score is the XposedOrNot risk score (community API only): it measures how exposed the address is, not how malicious it is, and it overwrites the observable's existing score. Set `XPOSEDORNOT_UPDATE_SCORE=false` to keep only the note and the labels. The connector works without any API key via the free community API (rate limits apply); an optional commercial key raises limits. Breach exposure tied to an email address is personal information and must only be used for lawful, authorised investigations (GDPR / legal basis / proper investigative framework).",
+  "short_description": "Enrich an email address with its data-breach exposure: breach names, dates, records, exposed data classes, password-storage risk and descriptions. Labels the observable, scores its exposure (optional) and attaches a summary note. No API key required.",
   "logo": "internal-enrichment/xposedornot/__metadata__/logo.png",
   "use_cases": [
     "Brand, Digital Risk & Underground Exposure",
@@ -13,12 +13,12 @@
     "Digital Risk Protection"
   ],
   "license_type": "Free",
-  "contact": null,
+  "contact": "help@xposedornot.com",
   "verified": false,
   "last_verified_date": null,
-  "playbook_supported": false,
+  "playbook_supported": true,
   "max_confidence_level": 75,
-  "support_version": ">= 6.8.12",
+  "support_version": ">=7.261008.0",
   "subscription_link": "https://console.xposedornot.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/xposedornot",
   "manager_supported": true,

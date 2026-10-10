@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-"""Convert an XposedOrNot lookup result into STIX objects.
-
-The enrichment is deliberately conservative to keep graphs clean:
-  - the source Email-Addr observable is updated in place (score, labels,
-    external reference) by the connector;
-  - the per-breach detail lands in one markdown Note attached to the
-    observable, rendered by OpenCTI.
-"""
+"""Build the STIX Note that summarises an address's breach exposure."""
 
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from connectors_sdk.models import Note, OrganizationAuthor, Reference
@@ -20,27 +12,28 @@ from pycti import Note as PyctiNote
 from pydantic import Field
 from src.xposedornot.client_api import usable_score
 
+EPOCH_ANCHOR = datetime(1970, 1, 1, tzinfo=timezone.utc)
+PLAINTEXT_PASSWORD_RISKS = frozenset({"plaintext", "plaintextpassword"})
+DEFAULT_MAX_TABLE_ROWS = 50
+MAX_DETAILS_CHARS = 160
+TABLE_COLUMNS = (
+    "Breach",
+    "Date",
+    "Records",
+    "Domain",
+    "Industry",
+    "Exposed data",
+    "Password risk",
+    "Verified",
+    "Description",
+)
+
 
 class ObservableNote(Note):
-    """Note whose STIX id and `created` are derived from the source observable,
-    so a re-enrichment updates the existing Note in place instead of adding a
-    second one. `modified` advances with each enrichment: it is the STIX
-    version marker, and freezing it lets a platform treat refreshed breach
-    content as an unchanged version and drop it. `supersedes` carries the
-    `modified` of the version being replaced, so the new one outranks it even
-    when that version claims a timestamp ahead of the clock. That value has
-    already round-tripped through a store that keeps dates to the
-    millisecond, so the tie-break advances by a millisecond: a smaller step
-    truncates back onto the superseded stamp and the version stops being
-    newer."""
+    """Note whose id and `created` derive from the observable, so re-enrichment
+    updates it in place. `modified` always advances so the newer version wins."""
 
-    source_id: str = Field(
-        description="STIX id of the observable this note describes.",
-    )
-    supersedes: datetime | None = Field(
-        default=None,
-        description="`modified` of the version this note replaces, if any.",
-    )
+    source_id: str = Field(description="STIX id of the observable this note describes.")
 
     @staticmethod
     def stable_id(source_id: str) -> str:
@@ -50,165 +43,57 @@ class ObservableNote(Note):
 
     def to_stix2_object(self) -> NoteStix:
         properties = dict(super().to_stix2_object())
+        anchor = self.created or EPOCH_ANCHOR
+        if anchor.tzinfo is None:
+            anchor = anchor.replace(tzinfo=timezone.utc)
         properties["id"] = self.stable_id(self.source_id)
-        anchor = as_utc(self.created) or EPOCH_ANCHOR
         properties["created"] = anchor
-        modified = max(datetime.now(timezone.utc), anchor)
-        superseded = as_utc(self.supersedes)
-        if superseded is not None and modified <= superseded:
-            modified = superseded + timedelta(milliseconds=1)
-        properties["modified"] = modified
+        properties["modified"] = max(datetime.now(timezone.utc), anchor)
         return NoteStix(allow_custom=True, **properties)
 
 
-def as_utc(value: datetime | None) -> datetime | None:
-    """A datetime that can be compared with `now`, or None.
-
-    Both timestamps here are compared against an aware `datetime.now`, and
-    Python refuses to order a naive datetime against an aware one, so a
-    caller passing a bare `datetime.now()` raised a TypeError instead of
-    producing a note.
-    """
-    if value is None:
-        return None
-    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-
-
-PLAINTEXT_PASSWORD_RISKS = frozenset({"plaintext", "plaintextpassword"})
-EPOCH_ANCHOR = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-
-EARLIEST_BREACH_YEAR = 1970
+def stable_timestamp(value: Any) -> datetime:
+    """The observable's creation time, or the epoch when it is unusable."""
+    if isinstance(value, str) and value:
+        try:
+            value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return EPOCH_ANCHOR
+    if not isinstance(value, datetime):
+        return EPOCH_ANCHOR
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value if value <= datetime.now(timezone.utc) else EPOCH_ANCHOR
 
 
 def breach_year(breach: dict[str, Any]) -> int | None:
-    """The four-digit year a breach is dated, or None when it is unreadable.
-
-    A year outside the range breaches can plausibly fall in is treated as
-    unreadable rather than reported. The note states the first and latest
-    exposure as fact, so a record dated `9999` or `0001` was presenting the
-    API's malformed value to an analyst as though the connector stood behind
-    it, and it dragged the newest-first ordering of the table with it.
-    """
     try:
         year = int(str(breach.get("date"))[:4])
     except (TypeError, ValueError):
         return None
-    if EARLIEST_BREACH_YEAR <= year <= datetime.now(timezone.utc).year:
-        return year
-    return None
+    return year if 1970 <= year <= datetime.now(timezone.utc).year else None
 
 
-DEFAULT_MAX_TABLE_ROWS = 50
+def _cell(value: Any, limit: int = 0) -> str:
+    """A value flattened to one printable line, safe inside a markdown table."""
+    if value is None or value == "":
+        return "—"
+    text = str(value).replace("\\", "\\\\").replace("|", "\\|")
+    text = re.sub(r"\s+", " ", text)
+    text = "".join(char for char in text if char.isprintable()).strip()
+    if limit and len(text) > limit:
+        text = text[: limit - 1].rstrip() + "…"
+    return text or "—"
 
 
-def read_timestamp(value: Any) -> datetime | None:
-    """A timestamp exactly as given, or None when it cannot be read.
-
-    `stable_timestamp` discards a value ahead of the clock because it is
-    choosing an anchor. This one keeps it, because the caller is asking what
-    an existing version already claims and therefore what it has to beat.
-    """
-    if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    if isinstance(value, str) and value:
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-    return None
-
-
-def stable_timestamp(value: Any) -> datetime:
-    """A timestamp fixed per observable, so re-enrichment does not churn the Note.
-
-    stix2 stamps `created` and `modified` at build time, which would give the
-    same Note id a new version on every run. Anchoring on the observable's own
-    creation time keeps them constant; any deterministic value works, so an
-    unparseable or absent one falls back to the epoch.
-
-    A timestamp in the future falls back too. `modified` is the later of the
-    anchor and now, so an anchor ahead of the clock becomes the modified
-    marker itself and stops advancing between runs, which is exactly the
-    freezing this anchoring exists to avoid: a platform would read refreshed
-    breach content as an unchanged version and drop it.
-    """
-    parsed = None
-    if isinstance(value, datetime):
-        parsed = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    elif isinstance(value, str) and value:
-        try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return EPOCH_ANCHOR
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-    if parsed is None or parsed > datetime.now(timezone.utc):
-        return EPOCH_ANCHOR
-    return parsed
-
-
-def _one_line_items(value: Any) -> list[Any]:
-    """The entries of a list-shaped field, or nothing when it is not one."""
-    return list(value) if isinstance(value, (list, tuple)) else []
-
-
-def _one_line(value: Any) -> str:
-    """Untrusted text flattened to a single printable line.
-
-    Every character `str.splitlines` treats as a break has to go, not just
-    `\n`. These values reach the note from the third-party API, and one
-    carrying a carriage return, a form feed or a Unicode line separator ends
-    the current markdown block and starts whatever follows as a new one,
-    which is how a risk label became a heading.
-    """
-    text = re.sub(r"\s+", " ", str(value))
-    return "".join(char for char in text if char.isprintable()).strip()
-
-
-def _md_cell(value: Any) -> str:
-    """Make a value safe for a one-line markdown table cell.
-
-    As `_one_line`, and the cell separator is escaped as well so a value
-    carrying a pipe cannot open a column of its own.
-
-    Backslashes go first, and the order matters. Escaping only the pipe
-    leaves a value that already ends in a backslash spelling an escaped
-    backslash followed by a live separator, so it could still open a
-    column despite the escaping.
-    """
-    text = str(value if value is not None else "—")
-    text = text.replace("\\", "\\\\")
-    return _one_line(text.replace("|", "\\|")) or "—"
-
-
-def _record_count(value: Any) -> int | None:
-    """A record count the note can state, or None.
-
-    A bool is an int to Python, so `True` would be summed as one record and
-    rendered as one, and a negative count is not a count of anything. The
-    normalisers never emit either, but the converter is public and must not
-    report a number it cannot vouch for.
-    """
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        return None
-    return value
-
-
-def _fmt_records(value) -> str:
-    count = _record_count(value)
-    return f"{count:,}" if count is not None else "—"
+def _records(value: Any) -> str:
+    return f"{value:,}" if type(value) is int and value >= 0 else "—"
 
 
 class ConverterToStix:
-    """Build the Note describing the breach exposure of an email address."""
-
     def __init__(
-        self,
-        author: OrganizationAuthor,
-        max_table_rows: int = DEFAULT_MAX_TABLE_ROWS,
-    ):
+        self, author: OrganizationAuthor, max_table_rows: int = DEFAULT_MAX_TABLE_ROWS
+    ) -> None:
         self.author = author
         self.max_table_rows = max_table_rows
 
@@ -229,13 +114,6 @@ class ConverterToStix:
         return (min(years), max(years)) if years else (None, None)
 
     @staticmethod
-    def most_recent(breaches: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Breaches newest first, so a capped table keeps the relevant rows."""
-        return sorted(
-            breaches, key=lambda breach: breach_year(breach) or -1, reverse=True
-        )
-
-    @staticmethod
     def has_plaintext_exposure(breaches: list[dict[str, Any]]) -> bool:
         return any(
             str(breach.get("password_risk") or "").strip().lower()
@@ -249,15 +127,13 @@ class ConverterToStix:
         result: dict[str, Any],
         markings: list[Any],
         observed_at: Any = None,
-        supersedes: datetime | None = None,
     ) -> ObservableNote:
-        breaches = [
-            breach for breach in result.get("breaches") or [] if hasattr(breach, "get")
-        ]
+        breaches = list(result.get("breaches") or [])
         first_year, latest_year = self.years(breaches)
-        counts = [_record_count(breach.get("records")) for breach in breaches]
-        known_counts = [count for count in counts if count is not None]
-        total_records = sum(known_counts)
+        counts = [b.get("records") for b in breaches]
+        known = [c for c in counts if type(c) is int and c >= 0]
+        risk_label = _cell(result.get("risk_label")) if result.get("risk_label") else ""
+        score = usable_score(result.get("risk_score"))
 
         lines = [
             "## XposedOrNot — breach exposure summary",
@@ -268,10 +144,8 @@ class ConverterToStix:
             lines.append(
                 f"**First exposure:** {first_year} — **Latest:** {latest_year}  "
             )
-        if known_counts:
-            lines.append(f"**Total records across breaches:** {total_records:,}  ")
-        risk_label = _one_line(result.get("risk_label") or "")
-        score = usable_score(result.get("risk_score"))
+        if known:
+            lines.append(f"**Total records across breaches:** {sum(known):,}  ")
         if risk_label and score is not None:
             lines.append(f"**Overall risk:** {risk_label} ({score}/100)  ")
         elif risk_label:
@@ -279,39 +153,33 @@ class ConverterToStix:
         elif score is not None:
             lines.append(f"**Overall risk:** {score}/100  ")
         if self.has_plaintext_exposure(breaches):
-            lines.append("")
-            lines.append("⚠️ **At least one breach stored passwords in plaintext.**")
+            lines += ["", "⚠️ **At least one breach stored passwords in plaintext.**"]
         lines += [
             "",
-            "| Breach | Date | Records | Domain | Industry | Exposed data"
-            " | Password risk | Verified |",
-            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+            "| " + " | ".join(TABLE_COLUMNS) + " |",
+            "|" + " --- |" * len(TABLE_COLUMNS),
         ]
-        rendered = self.most_recent(breaches)
+        rows = sorted(breaches, key=lambda b: breach_year(b) or -1, reverse=True)
         if self.max_table_rows:
-            rendered = rendered[: self.max_table_rows]
-        for breach in rendered:
+            rows = rows[: self.max_table_rows]
+        for breach in rows:
             cells = [
-                _md_cell(breach.get("name")),
-                _md_cell(breach.get("date")),
-                _fmt_records(breach.get("records")),
-                _md_cell(breach.get("domain")),
-                _md_cell(breach.get("industry")),
-                _md_cell(
-                    ", ".join(
-                        str(item)
-                        for item in _one_line_items(breach.get("data_classes"))
-                    )
-                ),
-                _md_cell(breach.get("password_risk")),
-                _md_cell(breach.get("verified")),
+                _cell(breach.get("name")),
+                _cell(breach.get("date")),
+                _records(breach.get("records")),
+                _cell(breach.get("domain")),
+                _cell(breach.get("industry")),
+                _cell(", ".join(map(str, breach.get("data_classes") or []))),
+                _cell(breach.get("password_risk")),
+                _cell(breach.get("verified")),
+                _cell(breach.get("details"), MAX_DETAILS_CHARS),
             ]
-            lines.append(f"| {' | '.join(cells)} |")
-        hidden = len(breaches) - len(rendered)
+            lines.append("| " + " | ".join(cells) + " |")
+        hidden = len(breaches) - len(rows)
         if hidden > 0:
             lines.append(
-                f"| _… and {hidden} more breach(es); see xposedornot.com for"
-                " the full list_ | | | | | | | |"
+                f"| _… and {hidden} more breach(es); see xposedornot.com for the"
+                " full list_ |" + " |" * (len(TABLE_COLUMNS) - 1)
             )
         lines += [
             "",
@@ -329,5 +197,4 @@ class ConverterToStix:
             labels=["xposedornot", "data-breach"],
             author=self.author,
             markings=markings,
-            supersedes=supersedes,
         )

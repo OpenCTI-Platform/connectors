@@ -90,7 +90,7 @@
     },
     "XPOSEDORNOT_TLP_LEVEL": {
       "default": "amber",
-      "description": "Minimum Traffic Light Protocol (TLP) level applied to the objects imported into OpenCTI. The note carries the stricter of this level and the source observable's own marking. Results contain personal data; a restrictive TLP is recommended. 'white' is the deprecated alias of 'clear'.",
+      "description": "TLP marking applied to the summary note, in addition to the markings the source observable already carries. Results contain personal data; a restrictive level is recommended. 'white' is the deprecated alias of 'clear'.",
       "enum": [
         "clear",
         "white",
@@ -100,6 +100,11 @@
         "red"
       ],
       "type": "string"
+    },
+    "XPOSEDORNOT_UPDATE_SCORE": {
+      "default": true,
+      "description": "Write the XposedOrNot risk score (community API only) to the observable's score. The score measures how exposed the address is, not how malicious it is, and overwrites the existing score. Disable to keep only the note and the labels.",
+      "type": "boolean"
     }
   },
   "required": [

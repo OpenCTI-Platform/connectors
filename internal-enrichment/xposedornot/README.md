@@ -21,27 +21,28 @@ Table of Contents
   - [Behavior](#behavior)
     - [Data Flow](#data-flow)
     - [Enrichment Mapping](#enrichment-mapping)
-    - [Marking Propagation](#marking-propagation)
+    - [Score semantics](#score-semantics)
+    - [Markings](#markings)
     - [Processing Details](#processing-details)
   - [Legal and privacy notice](#legal-and-privacy-notice)
   - [Debugging](#debugging)
 
 ## Introduction
 
-[XposedOrNot](https://xposedornot.com) is an open, free data-breach search service tracking 760+ known breaches. Given an email address it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry and password-storage risk, plus an overall risk score.
+[XposedOrNot](https://xposedornot.com) is an open, free data-breach search service tracking 760+ known breaches. Given an email address it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry, password-storage risk and a short description, plus an overall risk score.
 
-This internal-enrichment connector enriches `Email-Addr` observables with that exposure data. **No API key or registration is required** — the free community API is used by default. An optional commercial key ([console.xposedornot.com](https://console.xposedornot.com)) switches the connector to the Plus API with higher rate limits.
+This internal-enrichment connector enriches `Email-Addr` observables with that exposure data. **No API key or registration is required**: the free community API is used by default. An optional commercial key ([console.xposedornot.com](https://console.xposedornot.com)) switches the connector to the Plus API with higher rate limits.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.261008.0
 - No XposedOrNot account or API key needed (optional key for higher volume)
 
 ## Configuration variables
 
-Configuration is set either in `docker-compose.yml` (for Docker), a `.env` file, or `config.yml` (for manual deployment). The exhaustive generated reference lives in [`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.md).
+Configuration is set either in `docker-compose.yml` (for Docker), a `.env` file, or `config.yml` (for manual deployment). The generated reference lives in [`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.md).
 
 ### OpenCTI environment variables
 
@@ -52,24 +53,25 @@ Configuration is set either in `docker-compose.yml` (for Docker), a `.env` file,
 
 ### Base connector environment variables
 
-| Parameter       | config.yml | Docker environment variable | Default                                | Mandatory | Description                                                                                                                                 |
-|-----------------|------------|-----------------------------|----------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | `c6b0f5f2-c47e-4d49-92a9-10371b40f5d8` | No        | A unique `UUIDv4` identifier for this connector instance. Set your own when running more than one.                                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            | `XposedOrNot`                          | No        | Name of the connector.                                                                                                                       |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | `Email-Addr`                           | No        | Observable types to enrich. Only `Email-Addr` is supported; anything else is rejected at startup.                                             |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT`                  | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                                                                                    |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`                                | No        | Verbosity of the logs: `debug`, `info`, `warn` or `error`.                                                                                    |
+| Parameter       | config.yml | Docker environment variable | Default                                | Mandatory | Description                                                                                                                      |
+|-----------------|------------|-----------------------------|----------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              | `c6b0f5f2-c47e-4d49-92a9-10371b40f5d8` | No        | A unique `UUIDv4` identifier for this connector instance. Set your own when running more than one.                               |
+| Connector Name  | name       | `CONNECTOR_NAME`            | `XposedOrNot`                          | No        | Name of the connector.                                                                                                           |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | `Email-Addr`                           | No        | Observable types to enrich. Only `Email-Addr` is supported; anything else is rejected at startup.                                |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT`                  | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                                                                       |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`                                | No        | Verbosity of the logs: `debug`, `info`, `warn` or `error`.                                                                       |
 | Auto Mode       | auto       | `CONNECTOR_AUTO`            | `false`                                | No        | Automatic enrichment of observables. The keyless API allows 2 requests/second and 25/hour per IP; keep manual, or configure an API key first. |
 
 ### Connector extra parameters environment variables
 
-| Parameter         | config.yml                      | Docker environment variable       | Default                      | Mandatory | Description                                                                                                                                                                             |
-|-------------------|---------------------------------|-----------------------------------|------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| API key           | xposedornot.api_key             | `XPOSEDORNOT_API_KEY`             | *(empty)*                    | No        | Optional key from [console.xposedornot.com](https://console.xposedornot.com). Switches to the Plus API with higher limits. The connector is fully functional without it.                  |
-| Base URL          | xposedornot.api_base_url        | `XPOSEDORNOT_API_BASE_URL`        | `https://api.xposedornot.com` | No       | Base URL of the free community API. Must be `https://`; plain `http://` is rejected at startup because the email address travels to this endpoint. No effect when an API key is set.      |
-| Max TLP           | xposedornot.max_tlp             | `XPOSEDORNOT_MAX_TLP`             | `TLP:AMBER`                  | No        | Maximum TLP of an observable the connector may enrich. The email address is sent to the XposedOrNot API, so this gates what may leave the platform.                                       |
-| TLP level         | xposedornot.tlp_level           | `XPOSEDORNOT_TLP_LEVEL`           | `amber`                      | No        | Minimum TLP applied to produced objects: `clear`, `white`, `green`, `amber`, `amber+strict` or `red`. `white` is the deprecated alias of `clear`.                                         |
-| Max note breaches | xposedornot.max_note_breaches   | `XPOSEDORNOT_MAX_NOTE_BREACHES`   | `50`                         | No        | How many breaches the summary note tabulates, newest first; a line names how many more were found. `0` renders every breach.                                                              |
+| Parameter         | config.yml                    | Docker environment variable     | Default                       | Mandatory | Description                                                                                                                                                      |
+|-------------------|-------------------------------|---------------------------------|-------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| API key           | xposedornot.api_key           | `XPOSEDORNOT_API_KEY`           | *(empty)*                     | No        | Optional key from [console.xposedornot.com](https://console.xposedornot.com). Switches to the Plus API with higher limits. The connector is fully functional without it. |
+| Base URL          | xposedornot.api_base_url      | `XPOSEDORNOT_API_BASE_URL`      | `https://api.xposedornot.com` | No        | Base URL of the free community API. Must be `https://`; plain `http://` is rejected at startup because the email address travels to this endpoint. No effect when an API key is set. |
+| Max TLP           | xposedornot.max_tlp           | `XPOSEDORNOT_MAX_TLP`           | `TLP:AMBER`                   | No        | Maximum TLP of an observable the connector may enrich. The email address is sent to the XposedOrNot API, so this gates what may leave the platform.               |
+| TLP level         | xposedornot.tlp_level         | `XPOSEDORNOT_TLP_LEVEL`         | `amber`                       | No        | TLP marking applied to the summary note: `clear`, `white`, `green`, `amber`, `amber+strict` or `red`. `white` is the deprecated alias of `clear`.               |
+| Update score      | xposedornot.update_score      | `XPOSEDORNOT_UPDATE_SCORE`      | `true`                        | No        | Write the XposedOrNot risk score to the observable's score. See [Score semantics](#score-semantics). Set to `false` to keep only the note and the labels.         |
+| Max note breaches | xposedornot.max_note_breaches | `XPOSEDORNOT_MAX_NOTE_BREACHES` | `50`                          | No        | How many breaches the summary note tabulates, newest first; a line names how many more were found. `0` renders every breach.                                     |
 
 ## Deployment
 
@@ -92,57 +94,61 @@ python3 -m src
 
 ## Usage
 
-On an `Email-Addr` observable, click the enrichment button and select the XposedOrNot connector (or set `CONNECTOR_AUTO=true` — mind the rate limits above). The connector is playbook-compatible: when nothing is found (or the observable is out of scope, above the maximum TLP, or the API call fails) the incoming bundle is handed back unchanged so the next playbook step still runs. One case is deliberately not handed back: if a marking carried by the observable, or by any other object in the same bundle, cannot be resolved to a definition, nothing is published at all and the chain stops there. Forwarding would either strip that marking from the bundle or emit a reference to an object the platform cannot see, and neither is an acceptable way to pass on data whose restrictions are unknown.
+On an `Email-Addr` observable, click the enrichment button and select the XposedOrNot connector (or set `CONNECTOR_AUTO=true`, minding the rate limits above). The connector is playbook-compatible: when there is nothing to add (no breach, observable out of scope, above the maximum TLP, or not an email address) the incoming bundle is handed back unchanged so the next playbook step still runs.
+
+The keyless community API is meant for evaluation and low-volume manual use: 2 requests per second and 25 per hour per IP. For automatic enrichment or sustained volume, configure an API key.
 
 ## Behavior
 
-For a breached email address, the connector enriches the observable in place and attaches one Note. Besides the Note, the only objects it publishes are the Note's author (an `XposedOrNot` Organization identity) and the marking definitions the Note and the observable reference; no relationships are built:
+For a breached email address, the connector enriches the observable in place and attaches one Note. Besides the Note, the only objects it publishes are the Note's author (an `XposedOrNot` Organization identity) and the Note's TLP marking definition; no relationships are built:
 
-- the observable's **score** is set from the XposedOrNot risk score (0–100). The community API returns this score; the Plus API does not, so with `XPOSEDORNOT_API_KEY` set the note carries no risk line and the observable receives no score. A score this connector set on an earlier community-API run is retracted (set to null) rather than left stale; a score set by anyone else is left untouched;
-- **labels** `data-breach` — and `plaintext-password-exposure` when at least one breach stored passwords in plaintext — are added to the observable. Both labels belong to the connector, so a `plaintext-password-exposure` label from an earlier run is removed when the current result no longer warrants it; every other label is preserved;
-- an **external reference** to xposedornot.com is attached. The connector's own earlier reference is replaced rather than duplicated; the observable's other references are kept, with exact duplicates (same source name and URL, the scheme and host compared without regard to case) collapsed to one;
-- a markdown **Note** is attached with the breach table (the 50 most recent by default, with a footer naming how many more; see `XPOSEDORNOT_MAX_NOTE_BREACHES`): breach name, date, records exposed, affected domain, industry, exposed data classes, password-storage risk and verification status, plus first/latest exposure years and totals. Re-enriching the same observable updates that note in place instead of creating a second one.
+- the observable's **score** is set from the XposedOrNot risk score (0 to 100) when `XPOSEDORNOT_UPDATE_SCORE` is `true` and the API returned one. The community API returns it; the Plus API does not, so with `XPOSEDORNOT_API_KEY` set the observable's existing score is left untouched and the note carries no risk line;
+- **labels** `data-breach`, and `plaintext-password-exposure` when at least one breach stored passwords in plaintext, are added to the observable. Both labels belong to the connector and are refreshed on every run; every other label is preserved;
+- an **external reference** to xposedornot.com is attached. The connector's own earlier reference is replaced rather than duplicated; the observable's other references are kept;
+- a markdown **Note** is attached with the breach table (the 50 most recent by default, with a footer naming how many more; see `XPOSEDORNOT_MAX_NOTE_BREACHES`): breach name, date, records exposed, affected domain, industry, exposed data classes, password-storage risk, verification status and a short description (truncated to 160 characters), plus first/latest exposure years and totals. Re-enriching the same observable updates that note in place instead of creating a second one.
 
-A clean email (not found in any breach) completes with the status `No known breach exposure for this email address (XposedOrNot).` and modifies nothing. Rate limiting (HTTP 429) is retried with backoff honouring `Retry-After`; each retry warning names the optional key as the way to raise limits, and persistent rate limiting fails that single enrichment with `XposedOrNot: still rate limited after retries.` — the connector itself keeps running.
+A clean email (not found in any breach) completes with the status `No known breach exposure for this email address (XposedOrNot)` and modifies nothing. An API failure (network error, HTTP error, rate limit still hit after three attempts) raises, so the work is reported in error; inside a playbook the original bundle is still handed back.
 
 ### Data Flow
 
 ```mermaid
 graph LR
-    A[Email-Addr observable] --> B{In scope, markings resolvable,<br/>within max TLP, valid address?}
-    B -- marking unresolvable --> X[Refused: nothing published]
+    A[Email-Addr observable] --> B{In scope, within max TLP,<br/>valid address?}
     B -- no --> C[No-op: in a playbook the original<br/>bundle is handed back unchanged]
     B -- yes --> D[XposedOrNot API]
-    D -- failure or no breaches --> C
-    D -- breaches --> E[Score, labels, external reference<br/>and markings on the observable]
-    E --> F[Markdown Note with the breach table,<br/>its author identity and markings]
+    D -- no breaches --> C
+    D -- failure --> X[Work in error]
+    D -- breaches --> E[Score, labels and external<br/>reference on the observable]
+    E --> F[Markdown Note with the breach table,<br/>its author identity and TLP marking]
     F --> G[STIX bundle sent to OpenCTI]
 ```
 
 ### Enrichment Mapping
 
-| XposedOrNot field        | OpenCTI target                                        |
-|--------------------------|-------------------------------------------------------|
-| `risk_score`             | `x_opencti_score` on the Email-Addr (community API only) |
-| any breach               | `data-breach` label on the Email-Addr                 |
-| `password_risk` plaintext | `plaintext-password-exposure` label on the Email-Addr |
-| per-breach detail        | rows of the markdown table in the attached Note       |
-| service identity         | `XposedOrNot` external reference on the Email-Addr    |
+| XposedOrNot field         | OpenCTI target                                                             |
+|---------------------------|----------------------------------------------------------------------------|
+| `risk_score`              | `x_opencti_score` on the Email-Addr (community API only, optional)         |
+| any breach                | `data-breach` label on the Email-Addr                                      |
+| `password_risk` plaintext | `plaintext-password-exposure` label on the Email-Addr                      |
+| per-breach detail         | rows of the markdown table in the attached Note, `details` as Description  |
+| service identity          | `XposedOrNot` external reference on the Email-Addr                         |
 
-No relationships are built. Apart from the enriched observable, the bundle carries the Note, its author identity and the marking definitions they reference.
+### Score semantics
 
-### Marking Propagation
+OpenCTI usually reads an observable's score as a level of threat. The XposedOrNot risk score measures something else: how exposed a **victim** address is across known breaches. A heavily breached address such as `test@example.com` scores 100 without being malicious in any way. Keep this in mind before routing scored Email-Addr observables into detection-oriented workflows or feeds. The score overwrites the observable's existing score. Teams that use the score for detection should set `XPOSEDORNOT_UPDATE_SCORE=false` and rely on the labels and the Note instead.
 
-The Note carries exactly one TLP marking, at the stricter of `XPOSEDORNOT_TLP_LEVEL` and the source observable's own TLP level, and in addition every non-TLP marking the observable carries (PAP, statement and custom markings), so it is never readable by anyone who cannot read the source. The source's own TLP is deliberately not repeated beside the stricter one: two TLP markings on one object invite the weaker of them to be read as the object's level. The enriched observable keeps all of its own markings, its TLP included, and every marking definition referenced in the bundle travels with it, references carried by objects the connector did not enrich included: a reference the bundle does not define is rebuilt when its identifier names a TLP level, and when nothing can derive it the bundle is not published at all. A companion object losing a restriction it arrived with is no more acceptable than the enriched observable losing one.
+### Markings
 
-The TLP gate fails closed in both directions. A marking above `XPOSEDORNOT_MAX_TLP` skips the enrichment, and so does a TLP marking whose value the connector cannot read: treating an unreadable marking as "unmarked" would let an observable through on a field nobody could parse. A marking reference that can be resolved from neither the bundle nor the observable fails the enrichment rather than publishing derived data with a weaker restriction.
+The Note carries the TLP marking configured by `XPOSEDORNOT_TLP_LEVEL` and, in addition, every marking the source observable carries (TLP, PAP, statement or custom), so it is never readable by anyone who cannot read the source. The enriched observable keeps its own markings untouched.
+
+The TLP gate evaluates every TLP marking of the observable: any marking above `XPOSEDORNOT_MAX_TLP` skips the enrichment.
 
 ### Processing Details
 
-- The Note's STIX id is derived from the source observable, so re-enriching updates the existing Note instead of creating a second one. Its `created` is anchored to the observable and `modified` advances on each run.
-- Rate limiting (HTTP 429) is retried twice, three attempts in total, with backoff honouring `Retry-After` in both delta-seconds and HTTP-date form, with a one second floor and a sixty second cap.
+- The Note's STIX id and `created` derive from the source observable, so re-enriching updates the existing Note instead of creating a second one; `modified` advances on each run.
+- Rate limiting (HTTP 429) is retried twice, three attempts in total, with backoff honouring `Retry-After` in delta-seconds or HTTP-date form, floored at one second and capped at sixty.
 - Redirects are refused: an `https` base URL cannot be downgraded to `http` mid-request.
-- The email address and the API key are redacted from everything this connector emits: every log field and every status message it returns to the platform. Both are matched in raw, normalised and percent-encoded form, without regard to case, and a payload in which the value is still legible once decoded is dropped in full rather than logged. This covers error bodies, redirect `Location` headers, tracebacks, refusal reasons and the enrichment status shown against the work.
+- The email address and the API key are redacted from every log field and every status message the connector emits, in raw and percent-encoded form; a payload in which the value is still legible once decoded is dropped in full rather than logged.
 
 ## Legal and privacy notice
 
@@ -150,13 +156,13 @@ The observable's email address is the only platform data that leaves OpenCTI, se
 
 ## Debugging
 
-Set `CONNECTOR_LOG_LEVEL=debug`. All API errors are logged through the connector logger with masked context; the API key never appears in logs. Typical messages:
+Set `CONNECTOR_LOG_LEVEL=debug`. All API errors are logged through the connector logger with redacted context; the API key never appears in logs. Typical messages:
 
-- `XposedOrNot rate limited (keyless: 2/s, 25/hour); backing off.` — expected under keyless bursts; configure a key for volume.
-- `XposedOrNot Plus API rate limited; backing off.` — the same condition with a key configured.
-- `XposedOrNot: still rate limited after retries.` — the three backoff attempts were exhausted; that single enrichment fails and the connector keeps running.
-- `XposedOrNot: API key rejected by the Plus API` — check `XPOSEDORNOT_API_KEY`.
-- `XposedOrNot: request rejected by the community API` — the keyless endpoint refused the request; retry later or configure a key.
-- `XposedOrNot: redirect refused; the API must answer directly over https` — the base URL redirected; point `XPOSEDORNOT_API_BASE_URL` at the endpoint that answers directly.
-- `XposedOrNot request failed` — network or TLS failure; the logged detail carries the exception class with the address redacted.
-- `XposedOrNot: error response` / `XposedOrNot: invalid JSON in response.` / `XposedOrNot: unexpected JSON payload type` — the API answered with an error or a body this connector cannot read.
+- `XposedOrNot rate limited; backing off` with `keyless: true`: expected under keyless bursts; configure a key for volume.
+- `XposedOrNot: still rate limited after retries`: the three attempts were exhausted; that single enrichment is in error and the connector keeps running.
+- `XposedOrNot: request rejected (check the API key)`: the Plus API refused the key in `XPOSEDORNOT_API_KEY`.
+- `XposedOrNot: request rejected`: the keyless endpoint refused the request; retry later or configure a key.
+- `XposedOrNot: redirect refused`: the base URL redirected; point `XPOSEDORNOT_API_BASE_URL` at the endpoint that answers directly.
+- `XposedOrNot request failed`: network or TLS failure; the logged detail carries the exception class with the address redacted.
+- `XposedOrNot: error response` / `XposedOrNot: invalid JSON in response` / `XposedOrNot: unexpected JSON payload`: the API answered with an error or a body this connector cannot read.
+- `Error processing message`: any other failure; the redacted reason is in the log and the work is in error.

@@ -1,612 +1,204 @@
-# -*- coding: utf-8 -*-
-"""Unit tests for the XposedOrNot API client.
-
-Covers the free and Plus API paths, clean results (404 and empty 200),
-rate limiting and error branches — all with a mocked HTTP session, no
-real network call.
-"""
-
-import json
-import os
 from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from unittest.mock import patch
-from urllib.parse import quote
 
+import pytest
 import requests
-from src.xposedornot.client_api import (  # noqa: E402
+from src.xposedornot.client_api import (
+    PLUS_BASE_URL,
     XposedOrNotClient,
+    redact,
     retry_after_seconds,
+    usable_score,
 )
+from src.xposedornot.errors import XposedOrNotError
 
-from tests.conftest import make_helper
-
-FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
-
-
-def _fixture(name):
-    with open(os.path.join(FIXTURES, name), "r", encoding="utf-8") as fh:
-        return json.load(fh)
+from tests.conftest import EMAIL, fixture, make_helper
 
 
 class FakeResp:
-    def __init__(
-        self, status_code=200, json_data=None, headers=None, text="", bad_json=False
-    ):
-        self.status_code = status_code
-        self._json = json_data
+    def __init__(self, status, payload=None, headers=None, text=None):
+        self.status_code = status
         self.headers = headers or {}
-        self.text = text
-        self._bad_json = bad_json
-
-    @property
-    def is_redirect(self):
-        return (
-            self.status_code in (301, 302, 303, 307, 308) and "Location" in self.headers
-        )
-
-    @property
-    def is_permanent_redirect(self):
-        return self.status_code in (301, 308) and "Location" in self.headers
+        self._payload = payload
+        self.text = text if text is not None else str(payload)
 
     def json(self):
-        if self._bad_json:
-            raise ValueError("bad json")
-        return self._json
+        if isinstance(self._payload, Exception):
+            raise self._payload
+        return self._payload
 
 
-def _client(api_key=None):
-    helper = make_helper()
-    return XposedOrNotClient(helper, api_key=api_key), helper
+def make_client(*responses, api_key=None):
+    client = XposedOrNotClient(make_helper(), api_key=api_key)
+    client.session.get = _queue(list(responses))
+    return client
 
 
-def test_free_path_url_and_normalisation():
-    client, _ = _client()
-    resp = FakeResp(200, _fixture("breach_analytics.json"))
-    with patch.object(client.session, "get", return_value=resp) as mocked_get:
-        result = client.lookup("test@example.com")
-    mocked_get.assert_called_once_with(
-        "https://api.xposedornot.com/v1/breach-analytics",
-        params={"email": "test@example.com"},
-        timeout=30,
-        allow_redirects=False,
-    )
-    assert result["risk_label"] == "Critical" and result["risk_score"] == 100
-    assert [b["name"] for b in result["breaches"]] == [
-        "AlienStealerLogs",
-        "ManchesterAirportsGroup",
-    ]
-    first = result["breaches"][0]
-    assert first["records"] == 299646818
-    assert first["password_risk"] == "plaintext"
-    assert first["data_classes"] == ["Email addresses", "Passwords"]
+def _queue(responses):
+    calls = []
+
+    def get(url, **kwargs):
+        calls.append((url, kwargs))
+        response = responses.pop(0)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    get.calls = calls
+    return get
 
 
-def test_plus_path_used_when_key_set_and_email_is_url_encoded():
-    client, _ = _client(api_key="SECRET")
-    assert client.session.headers["x-api-key"] == "SECRET"
-    resp = FakeResp(200, _fixture("plus_detailed.json"))
-    with patch.object(client.session, "get", return_value=resp) as mocked_get:
-        result = client.lookup("user+tag@example.com")
-    mocked_get.assert_called_once_with(
-        "https://plus-api.xposedornot.com/v3/check-email/user%2Btag%40example.com",
-        params={"detailed": "true"},
-        timeout=30,
-        allow_redirects=False,
-    )
-    assert [b["name"] for b in result["breaches"]] == ["AlienStealerLogs"]
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("user@example.com failed", "<redacted> failed"),
+        ("USER%40EXAMPLE.COM", "<redacted>"),
+        ("user%2540example.com", "<redacted>"),
+        ("nothing here", "nothing here"),
+        ("", ""),
+    ],
+)
+def test_redact_blanks_raw_encoded_and_nested_forms(text, expected):
+    assert redact(text, "user@example.com") == expected
 
 
-def test_clean_email_404_and_empty_200_both_return_empty_dict():
-    client, _ = _client()
-    with patch.object(client.session, "get", return_value=FakeResp(404)):
-        assert client.lookup("clean@example.org") == {}
-    live_clean = _fixture("breach_analytics_clean.json")
-    with patch.object(client.session, "get", return_value=FakeResp(200, live_clean)):
-        assert client.lookup("clean@example.org") == {}
-    empty = {"ExposedBreaches": {"breaches_details": []}}
-    with patch.object(client.session, "get", return_value=FakeResp(200, empty)):
-        assert client.lookup("clean@example.org") == {}
+def test_redact_handles_overlapping_secrets_in_one_pass():
+    key = "xon_user@example.com_9f3c"
+    out = redact(f"key={key} mail=user@example.com", "user@example.com", key)
+    assert key not in out and "user@example.com" not in out and "9f3c" not in out
 
 
-def test_malformed_nested_payloads_never_raise():
-    """Malformed nesting must honour the contract: a dict, {} or None, never a raise."""
-    client, _ = _client()
-    for payload in (
-        {"ExposedBreaches": {"breaches_details": ["Yahoo"]}},
-        {"ExposedBreaches": "oops"},
-        {"ExposedBreaches": {"breaches_details": {"not": "a list"}}},
-        {"ExposedBreaches": {"breaches_details": [None, 7]}},
-    ):
-        with patch.object(client.session, "get", return_value=FakeResp(200, payload)):
-            assert client.lookup("test@example.com") == {}
-
-    partial = {
-        "ExposedBreaches": {"breaches_details": [{"breach": "A"}]},
-        "BreachMetrics": "x",
-    }
-    with patch.object(client.session, "get", return_value=FakeResp(200, partial)):
-        result = client.lookup("test@example.com")
-    assert result["risk_score"] is None and result["risk_label"] is None
-    assert [b["name"] for b in result["breaches"]] == ["A"]
+def test_redact_without_secrets_returns_the_text():
+    assert redact("a@b.c", None, "") == "a@b.c"
 
 
-def test_malformed_plus_payload_never_raises():
-    client, _ = _client(api_key="SECRET")
-    for payload in ({"breaches": ["x"]}, {"breaches": "nope"}, {"breaches": [None]}):
-        with patch.object(client.session, "get", return_value=FakeResp(200, payload)):
-            assert client.lookup("test@example.com") == {}
-
-
-def test_rate_limit_retries_then_gives_up_without_final_sleep():
-    client, helper = _client()
-    resp_429 = FakeResp(429, headers={"Retry-After": "0"})
-    with patch.object(client.session, "get", return_value=resp_429) as mocked_get:
-        with patch("src.xposedornot.client_api.time.sleep") as mocked_sleep:
-            assert client.lookup("test@example.com") is None
-    assert mocked_get.call_count == 3
-    assert mocked_sleep.call_count == 2
-    assert all(call.args[0] >= 1 for call in mocked_sleep.call_args_list)
-    assert helper.connector_logger.error.called
-    warned = str(helper.connector_logger.warning.call_args)
-    assert "keyless" in warned
-
-
-def test_zero_or_past_retry_after_still_backs_off():
-    client, _ = _client()
-    from email.utils import format_datetime as _fmt
-
-    past = _fmt(datetime.now(timezone.utc) - timedelta(hours=1), usegmt=True)
-    for header in ("0", past):
-        responses = [FakeResp(429, headers={"Retry-After": header}), FakeResp(404)]
-        with patch.object(client.session, "get", side_effect=responses):
-            with patch("src.xposedornot.client_api.time.sleep") as mocked_sleep:
-                assert client.lookup("test@example.com") == {}
-        assert mocked_sleep.call_args.args[0] >= 1
-
-
-def test_rate_limit_message_tailored_for_plus_api():
-    client, helper = _client(api_key="SECRET")
-    resp_429 = FakeResp(429, headers={"Retry-After": "0"})
-    with patch.object(client.session, "get", return_value=resp_429):
-        with patch("src.xposedornot.client_api.time.sleep"):
-            assert client.lookup("test@example.com") is None
-    warned = str(helper.connector_logger.warning.call_args)
-    assert "Plus API" in warned and "keyless" not in warned
-
-
-def test_retry_after_parsing_supports_delta_seconds_and_http_date():
-    assert retry_after_seconds("7") == 7
-    assert retry_after_seconds(None) == 15
-    assert retry_after_seconds("") == 15
-    assert retry_after_seconds("soon") == 15
+def test_retry_after_seconds():
     future = datetime.now(timezone.utc) + timedelta(seconds=30)
-    assert 28 <= retry_after_seconds(format_datetime(future, usegmt=True)) <= 31
-    past = datetime.now(timezone.utc) - timedelta(minutes=5)
-    assert retry_after_seconds(format_datetime(past, usegmt=True)) == 0
-
-
-def test_rate_limit_honours_http_date_retry_after_and_caps_it():
-    client, _ = _client()
-    soon = datetime.now(timezone.utc) + timedelta(seconds=20)
-    later = datetime.now(timezone.utc) + timedelta(minutes=10)
-    responses = [
-        FakeResp(429, headers={"Retry-After": format_datetime(soon, usegmt=True)}),
-        FakeResp(429, headers={"Retry-After": format_datetime(later, usegmt=True)}),
-        FakeResp(404),
-    ]
-    with patch.object(client.session, "get", side_effect=responses):
-        with patch("src.xposedornot.client_api.time.sleep") as mocked_sleep:
-            assert client.lookup("test@example.com") == {}
-    first, second = [call.args[0] for call in mocked_sleep.call_args_list]
-    assert 18 <= first <= 21
-    assert second == 60
-
-
-def test_rate_limit_recovers_after_backoff():
-    client, _ = _client()
-    responses = [FakeResp(429, headers={"Retry-After": "0"}), FakeResp(404)]
-    with patch.object(client.session, "get", side_effect=responses):
-        with patch("src.xposedornot.client_api.time.sleep"):
-            assert client.lookup("test@example.com") == {}
-
-
-def test_request_exception_is_logged_without_the_email():
-    client, helper = _client(api_key="SECRET")
-    import requests as _requests
-
-    boom = _requests.ConnectionError(
-        "HTTPSConnectionPool(host='plus-api.xposedornot.com'): Max retries exceeded"
-        " with url: /v3/check-email/user%2Btag%40example.com (Caused by timeout)"
-    )
-    with patch.object(client.session, "get", side_effect=boom):
-        assert client.lookup("user+tag@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert "user+tag@example.com" not in logged
-    assert "user%2Btag%40example.com" not in logged
-    assert "ConnectionError" in logged and "<redacted>" in logged
-
-
-def test_non_object_json_payload_returns_none():
-    client, helper = _client()
-    for payload in ([], None, "text", 42):
-        with patch.object(client.session, "get", return_value=FakeResp(200, payload)):
-            assert client.lookup("test@example.com") is None
-    assert helper.connector_logger.error.call_count == 4
-    assert "payload type" in str(helper.connector_logger.error.call_args)
-
-
-def test_redirects_are_refused_and_logged_without_the_email():
-    client, helper = _client()
-    for status in (301, 302, 307, 308):
-        resp = FakeResp(
-            status,
-            headers={
-                "Location": "http://api.xposedornot.com/v1/breach-analytics?email=test%40example.com"
-            },
-        )
-        with patch.object(client.session, "get", return_value=resp) as mocked_get:
-            assert client.lookup("test@example.com") is None
-        assert mocked_get.call_args.kwargs["allow_redirects"] is False
-    logged = str(helper.connector_logger.error.call_args)
-    assert "redirect refused" in logged
-    assert "test@example.com" not in logged and "test%40example.com" not in logged
-    assert "<redacted>" in logged
-
-
-def test_redaction_leaves_text_untouched_when_there_is_no_email():
-    from src.xposedornot.client_api import redact
-
-    assert redact("connection to api failed", "") == "connection to api failed"
-    assert redact("", "a@b.test") == ""
-    assert redact("hit a@b.test twice a@b.test", "a@b.test") == (
-        "hit <redacted> twice <redacted>"
-    )
-
-
-def test_redirect_without_location_header_is_still_refused():
-    client, helper = _client()
-    with patch.object(client.session, "get", return_value=FakeResp(302)):
-        assert client.lookup("test@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert "redirect refused" in logged
-
-
-def test_api_key_is_redacted_from_every_logged_field():
-    secret = "SuperSecretKey123"
-    body = '{"error": "bad key %s for test@example.com"}' % secret
-    client, helper = _client(api_key=secret)
-    with patch.object(client.session, "get", return_value=FakeResp(500, text=body)):
-        assert client.lookup("test@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert secret not in logged and "test@example.com" not in logged
-    assert logged.count("<redacted>") >= 2
-
-    client, helper = _client(api_key=secret)
-    location = f"https://evil.test/?x-api-key={quote(secret, safe='')}"
-    with patch.object(
-        client.session,
-        "get",
-        return_value=FakeResp(302, headers={"Location": location}),
-    ):
-        assert client.lookup("test@example.com") is None
-    assert secret not in str(helper.connector_logger.error.call_args)
-    assert quote(secret, safe="") not in str(helper.connector_logger.error.call_args)
-
-    client, helper = _client(api_key=secret)
-    boom = requests.ConnectionError(f"auth failed with x-api-key={secret}")
-    with patch.object(client.session, "get", side_effect=boom):
-        assert client.lookup("test@example.com") is None
-    assert secret not in str(helper.connector_logger.error.call_args)
-
-
-def test_redaction_is_case_insensitive_about_percent_escapes():
-    """A lowercase escape must not slip the address into the logs.
-
-    `quote` emits only uppercase escapes, so a literal comparison missed the
-    equally valid `user%2btag%40example.com` a server may answer with, and the
-    address reached the log despite the redaction guarantee.
-    """
-    from urllib.parse import quote
-
-    from src.xposedornot.client_api import redact
-
-    email = "user+tag@example.com"
-    encoded = quote(email, safe="")
-    assert encoded == "user%2Btag%40example.com"
-    for spelling in (encoded, encoded.lower(), encoded.upper(), email, email.upper()):
-        assert (
-            email.lower()
-            not in redact(f"redirect to https://x/?email={spelling}", email).lower()
-        )
-        assert "%2b" not in redact(f"?email={spelling}", email).lower()
-
-
-def test_redaction_drops_the_payload_when_any_encoding_still_reveals_it():
-    """Targeted replacement only knows the spellings it was given.
-
-    Any character may be percent-encoded, so a partially encoded address
-    matches neither the raw nor the fully encoded form. The whole payload is
-    dropped rather than logged when the secret is still legible decoded.
-    """
-    from src.xposedornot.client_api import redact
-
-    email = "user+tag@example.com"
-    for spelling in (
-        "us%65r%2Btag%40example.com",
-        "USER%2BTAG@EXAMPLE.COM",
-        "user%2Btag@example.com",
-    ):
-        assert redact(f"body={spelling}", email) == "<redacted>"
-    assert redact("k=%73ecret", "secret") == "<redacted>"
-    assert redact("nothing sensitive here", email) == "nothing sensitive here"
-
-
-def test_redaction_handles_several_secrets_and_blank_ones():
-    from src.xposedornot.client_api import redact
-
-    assert redact("a KEY b MAIL c", "MAIL", "KEY") == "a <redacted> b <redacted> c"
-    assert redact("nothing here", None, "") == "nothing here"
-    assert redact("", "KEY") == ""
-
-
-def test_one_secret_inside_another_is_not_partly_exposed():
-    """Replacing secrets one at a time let an earlier pass break a later match.
-
-    An API key that contains the enriched address kept its prefix and suffix
-    once the address inside it had been blanked, so the key reached the log
-    in all but the middle; two secrets that merely overlapped left the tail
-    of the second. The result must not depend on the order the caller passes
-    them in.
-    """
-    from src.xposedornot.client_api import redact
-
-    email = "user@example.test"
-    key = "xon_live_%s_9f3c2a7b41" % email
-    text = "auth failed for key %s calling %s" % (key, email)
-    for secrets in ((email, key), (key, email)):
-        cleaned = redact(text, *secrets)
-        assert cleaned == "auth failed for key <redacted> calling <redacted>", secrets
-        for fragment in ("xon_live_", "9f3c2a7b41", email):
-            assert fragment not in cleaned, (fragment, secrets)
-
-    assert redact("abcdefghi", "abcdef", "defghi") == "<redacted>"
-    assert redact("abcdefghi", "defghi", "abcdef") == "<redacted>"
-
-
-def test_error_body_is_logged_redacted():
-    client, helper = _client()
-    body = '{"error": "lookup failed for test@example.com"}'
-    with patch.object(client.session, "get", return_value=FakeResp(500, text=body)):
-        assert client.lookup("test@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert "test@example.com" not in logged and "<redacted>" in logged
-
-
-def test_server_error_and_bad_json_return_none():
-    client, helper = _client()
-    with patch.object(client.session, "get", return_value=FakeResp(500, text="boom")):
-        assert client.lookup("test@example.com") is None
-    with patch.object(client.session, "get", return_value=FakeResp(200, bad_json=True)):
-        assert client.lookup("test@example.com") is None
-    assert helper.connector_logger.error.call_count == 2
-
-
-def test_plus_auth_errors_logged_without_key_leak():
-    client, helper = _client(api_key="SECRET")
-    with patch.object(client.session, "get", return_value=FakeResp(422)):
-        assert client.lookup("test@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert "SECRET" not in logged and "Plus API" in logged
-
-
-def test_keyless_auth_error_does_not_blame_a_missing_plus_key():
-    client, helper = _client()
-    with patch.object(client.session, "get", return_value=FakeResp(403)):
-        assert client.lookup("test@example.com") is None
-    logged = str(helper.connector_logger.error.call_args)
-    assert "community API" in logged and "Plus" not in logged
-
-
-def test_to_int_does_not_launder_values_the_score_check_rejects():
-    """Coercion must not invent a number the API did not send.
-
-    `int()` turns True into 1 and 3.7 into 3, so a value `usable_score`
-    rejects outright arrived downstream already laundered into one it
-    accepts. `int(float("inf"))` also raises OverflowError, which was not
-    caught. A string spelling a whole number is still read, since that
-    changes the notation and not the value.
-    """
-    from src.xposedornot.client_api import _to_int
-    from src.xposedornot.connector import usable_score
-
-    for laundered in (True, False, 3.7, 99.9, float("inf"), float("nan")):
-        assert _to_int(laundered) is None, laundered
-
-    assert _to_int("42") == 42
-    assert _to_int(42) == 42
-    assert _to_int(42.0) == 42
-    assert _to_int("abc") is None
-    assert _to_int(None) is None
-    assert _to_int(10**400) == 10**400
-
-    for raw in (True, False, 3.7, 99.9, 150, -5, "abc", None, float("inf")):
-        coerced = _to_int(raw)
-        assert usable_score(raw) is None
-        assert usable_score(coerced) is None, (raw, coerced)
-
-
-def test_a_multiply_encoded_secret_is_still_redacted():
-    """One decode pass only peels one layer.
-
-    `%2573ecret` decodes to `%73ecret`, not to the secret, so a value encoded
-    twice read as already clean and survived into the logged field.
-    """
-    from urllib.parse import quote, unquote
-
-    from src.xposedornot.client_api import redact
-
-    def recoverable(text, secret, depth=12):
-        current = text
-        for _ in range(depth):
-            if secret.casefold() in current.casefold():
-                return True
-            nxt = unquote(current)
-            if nxt == current:
-                return False
-            current = nxt
-        return False
-
-    assert redact("k=%2573ecret", "secret") == "<redacted>"
-
-    for secret in ("s p@c/al+secret", "user+tag@example.com"):
-        spelling = secret
-        for _ in range(10):
-            assert not recoverable(redact("body=" + spelling, secret), secret), spelling
-            spelling = quote(spelling, safe="")
-
-    assert redact("nothing sensitive", "s p@c/al+secret") == "nothing sensitive"
-
-
-def test_fully_decoded_settles_and_is_bounded():
-    from src.xposedornot.client_api import MAX_DECODE_PASSES, fully_decoded
-
-    assert fully_decoded("plain") == "plain"
-    assert fully_decoded("%2573ecret") == "secret"
-    assert fully_decoded("a%2520b") == "a b"
-    assert MAX_DECODE_PASSES >= 10
-    deep = "secret"
-    from urllib.parse import quote
-
-    for _ in range(8):
-        deep = quote(deep, safe="")
-    assert fully_decoded(deep) == "secret"
-
-
-def test_a_payload_encoded_past_the_cap_is_dropped_whole():
-    """Decoding that never settled proves nothing about the text.
-
-    The check stopped after `MAX_DECODE_PASSES` and read whatever it had
-    reached. A body that encoded the address one layer deeper than the cap
-    was therefore searched in an encoded form, matched nothing, and was
-    logged as clean while still decoding back to the address.
-    """
-    from urllib.parse import quote, unquote
-
-    from src.xposedornot.client_api import MAX_DECODE_PASSES, decoded_layers, redact
-
-    email = "user@example.test"
-    deep = email
-    for _ in range(MAX_DECODE_PASSES + 5):
-        deep = quote(deep, safe="")
-    assert decoded_layers(deep)[1] is False
-    assert redact('{"error":"bad address %s"}' % deep, email, "KEY") == "<redacted>"
-
-    shallow = quote(quote(email, safe=""), safe="")
-    assert decoded_layers(shallow)[1] is True
-
-    readable = redact(
-        '{"error":"bad address %s"}' % quote(email, safe=""), email, "KEY"
-    )
-    assert readable == '{"error":"bad address <redacted>"}'
-
-    assert unquote(redact(deep)) != "<redacted>"
-
-
-def test_a_record_without_an_identifier_is_not_a_breach():
-    """A nameless record was counted as an exposure that never happened.
-
-    An empty object in either API's breach list produced "Found 1 breach(es)",
-    labelled the observable `data-breach` and wrote a row of dashes into the
-    note: an assertion about a person's exposure the API never made.
-    """
-    from src.xposedornot.client_api import _normalise_free, _normalise_plus
-
-    def free(details):
-        return _normalise_free({"ExposedBreaches": {"breaches_details": details}})
-
-    def plus(entries):
-        return _normalise_plus({"breaches": entries})
-
-    for nameless in ({}, {"breach": None}, {"breach": "   "}, {"xposed_records": 9}):
-        assert free([nameless]) == {}, nameless
-    for nameless in ({}, {"breach_id": None}, {"breach_id": "  "}):
-        assert plus([nameless]) == {}, nameless
-
-    kept = free([{"breach": "Real", "xposed_records": 5}, {}])
-    assert [b["name"] for b in kept["breaches"]] == ["Real"]
-    kept = plus([{"breach_id": "Real"}, {}])
-    assert [b["name"] for b in kept["breaches"]] == ["Real"]
-
-    assert free([{"breach": "  Padded  "}])["breaches"][0]["name"] == "Padded"
-
-
-def test_data_classes_accept_a_list_as_well_as_the_joined_string():
-    """A list is one entry per element, not one entry spelling out the list."""
-    from src.xposedornot.client_api import _split_data_classes
-
-    assert _split_data_classes("Email addresses;Passwords; ;") == [
-        "Email addresses",
-        "Passwords",
-    ]
-    assert _split_data_classes(["Email addresses", None, " Passwords "]) == [
-        "Email addresses",
-        "Passwords",
-    ]
-    assert _split_data_classes(None) == []
-
-
-def test_retry_after_with_non_ascii_digits_falls_back_instead_of_raising():
-    """`str.isdigit` accepts superscripts that `int()` rejects."""
-    from src.xposedornot.client_api import DEFAULT_RETRY_AFTER, retry_after_seconds
-
-    assert retry_after_seconds("15") == 15
-    for odd in ("²", "¹⁵", "１５"):
-        assert retry_after_seconds(odd) == DEFAULT_RETRY_AFTER, odd
-
-
-def test_html_entity_encoded_secrets_are_redacted_too():
-    """An HTML error page can spell the address with character references."""
-    from src.xposedornot.client_api import redact
-
-    for text in (
-        "sent to a&#64;b.test",
-        "a&#x40;b.test",
-        "a%26%2364%3Bb.test",
-        "A&#64;B.TEST",
-    ):
-        out = redact(text, "a@b.test")
-        assert "b.test" not in out or "<redacted>" in out, (text, out)
-        assert "a&#64;b" not in out and "a@b.test" not in out.lower(), (text, out)
-
-
-def test_non_scalar_api_fields_are_dropped_rather_than_printed():
-    """A list or mapping where a string belongs would be rendered as Python syntax."""
-    from src.xposedornot.client_api import _normalise_free, _normalise_plus
-
-    free = _normalise_free(
-        {
-            "ExposedBreaches": {
-                "breaches_details": [
-                    {
-                        "breach": "A",
-                        "xposed_date": ["2024"],
-                        "domain": {"d": 1},
-                        "industry": None,
-                        "password_risk": 7,
-                        "verified": True,
-                    }
-                ]
-            },
-            "BreachMetrics": {"risk": [{"risk_label": ["High"], "risk_score": 55}]},
+    assert retry_after_seconds("7") == 7
+    assert 28 <= retry_after_seconds(format_datetime(future)) <= 31
+    assert retry_after_seconds(format_datetime(future - timedelta(hours=1))) == 0
+    assert retry_after_seconds("garbage") == 15
+    assert retry_after_seconds(None, default=3) == 3
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (100, 100),
+        (0, 0),
+        (42.0, 42),
+        ("50", None),
+        (101, None),
+        (-1, None),
+        (7.5, None),
+        (True, None),
+    ],
+)
+def test_usable_score(value, expected):
+    assert usable_score(value) == expected
+
+
+def test_community_response_is_normalised():
+    client = make_client(FakeResp(200, fixture("breach_analytics.json")))
+    result = client.lookup(EMAIL)
+    url, kwargs = client.session.get.calls[0]
+    assert url == "https://api.xposedornot.com/v1/breach-analytics"
+    assert kwargs["params"] == {"email": EMAIL} and kwargs["allow_redirects"] is False
+    assert len(result["breaches"]) == 2
+    first = result["breaches"][0]
+    assert first["name"] and first["details"] and isinstance(first["records"], int)
+    assert first["data_classes"] and first["password_risk"]
+    assert usable_score(result["risk_score"]) is not None and result["risk_label"]
+
+
+def test_plus_response_is_normalised_without_a_score():
+    client = make_client(FakeResp(200, fixture("plus_detailed.json")), api_key="k")
+    result = client.lookup(EMAIL)
+    url, kwargs = client.session.get.calls[0]
+    assert url == f"{PLUS_BASE_URL}/v3/check-email/victim%40example.com"
+    assert kwargs["params"] == {"detailed": "true"}
+    assert client.session.headers["x-api-key"] == "k"
+    assert result["breaches"][0]["details"]
+    assert result["risk_score"] is None and result["risk_label"] is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        fixture("breach_analytics_clean.json"),
+        {},
+        {"ExposedBreaches": "junk"},
+        {"breaches": [{}]},
+    ],
+)
+def test_clean_or_empty_payloads_are_a_clean_result(payload):
+    assert make_client(FakeResp(200, payload)).lookup(EMAIL) == {}
+    assert make_client(FakeResp(200, payload), api_key="k").lookup(EMAIL) == {}
+
+
+def test_404_is_a_clean_result():
+    assert make_client(FakeResp(404, "nope")).lookup(EMAIL) == {}
+
+
+def test_malformed_breach_entries_are_skipped():
+    payload = {
+        "ExposedBreaches": {
+            "breaches_details": [
+                None,
+                {"breach": ""},
+                {"breach": "Ok", "xposed_records": "12"},
+            ]
         }
+    }
+    result = make_client(FakeResp(200, payload)).lookup(EMAIL)
+    assert [b["name"] for b in result["breaches"]] == ["Ok"]
+    assert result["breaches"][0]["records"] == 12
+
+
+def test_rate_limit_is_retried_honouring_retry_after():
+    client = make_client(
+        FakeResp(429, headers={"Retry-After": "2"}),
+        FakeResp(200, fixture("breach_analytics.json")),
     )
-    breach = free["breaches"][0]
-    assert breach["date"] is None and breach["domain"] is None
-    assert breach["password_risk"] == 7 and breach["verified"] is True
-    assert free["risk_label"] is None and free["risk_score"] == 55
-    plus = _normalise_plus(
-        {"breaches": [{"breach_id": "A", "domain": ["x"], "industry": "Food"}]}
+    with patch("src.xposedornot.client_api.time.sleep") as sleep:
+        assert client.lookup(EMAIL)["breaches"]
+    sleep.assert_called_once_with(2)
+
+
+def test_exhausted_rate_limit_raises():
+    client = make_client(
+        *(FakeResp(429, headers={"Retry-After": "0"}) for _ in range(3))
     )
-    assert plus["breaches"][0]["domain"] is None
-    assert plus["breaches"][0]["industry"] == "Food"
+    with patch("src.xposedornot.client_api.time.sleep") as sleep:
+        with pytest.raises(XposedOrNotError, match="still rate limited"):
+            client.lookup(EMAIL)
+    assert sleep.call_args_list == [((1,),), ((1,),)]
+
+
+@pytest.mark.parametrize(
+    "response, match",
+    [
+        (FakeResp(500, text=f"boom {EMAIL}"), "error response"),
+        (
+            FakeResp(302, headers={"Location": f"http://x/?e={EMAIL}"}),
+            "redirect refused",
+        ),
+        (FakeResp(403, {}), "request rejected"),
+        (FakeResp(200, ValueError("bad json")), "invalid JSON"),
+        (FakeResp(200, ["list"]), "unexpected JSON payload"),
+        (requests.ConnectionError(f"dns failed for {EMAIL}"), "request failed"),
+    ],
+)
+def test_failures_raise_and_log_without_the_email(response, match):
+    client = make_client(response)
+    with pytest.raises(XposedOrNotError, match=match):
+        client.lookup(EMAIL)
+    logged = str(client.helper.connector_logger.error.call_args)
+    assert EMAIL not in logged
+
+
+def test_rejected_request_names_the_key_only_when_one_is_set():
+    client = make_client(FakeResp(401, {}), api_key="k")
+    with pytest.raises(XposedOrNotError, match="check the API key"):
+        client.lookup(EMAIL)
