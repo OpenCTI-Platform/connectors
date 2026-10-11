@@ -16,6 +16,7 @@ from connectors_sdk.models import (
     Indicator,
     IntrusionSet,
     Malware,
+    Reference,
     Relationship,
     Tool,
 )
@@ -35,6 +36,16 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
     def __init__(self, config: "GTIConfig", logger: "logging.Logger", tlp_level: str):
         super().__init__(config, logger, tlp_level)
+
+        # The models get the author, the marking and the relationship ends as
+        # references to their ids, computed once. Given the models themselves,
+        # connectors-sdk validates them again and rebuilds their STIX object each
+        # time (BaseIdentifiedObject._compute_stix_id): for an entry with 6
+        # relations, 13 times for the author and the marking, 8 for the
+        # indicator, whose STIX pattern is parsed at each build. The models only
+        # read these ids: the STIX objects produced are the same.
+        self._author = Reference(id=self.organization.id)
+        self._marking = Reference(id=self.tlp_marking.id)
 
         self._converter = {
             "domain": self._convert_domain,
@@ -212,8 +223,8 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             pattern=pattern,
             pattern_type="stix",
             main_observable_type="StixFile",
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
             score=score,
             valid_from=(
                 datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
@@ -265,8 +276,8 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             pattern=pattern,
             pattern_type="stix",
             main_observable_type=observable_type,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
             score=(
                 attrs.gti_assessment.threat_score.value
                 if attrs.gti_assessment and attrs.gti_assessment.threat_score
@@ -298,8 +309,8 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             pattern=f"[url:value = '{attrs.url}']",
             pattern_type="stix",
             main_observable_type="Url",
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
             score=(
                 attrs.gti_assessment.threat_score.value
                 if attrs.gti_assessment and attrs.gti_assessment.threat_score
@@ -331,8 +342,8 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             pattern=f"[domain-name:value = '{entry.id}']",
             pattern_type="stix",
             main_observable_type="Domain-Name",
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
             score=(
                 attrs.gti_assessment.threat_score.value
                 if attrs.gti_assessment and attrs.gti_assessment.threat_score
@@ -383,16 +394,16 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         malware = Malware(
             name=malware_name.upper(),
             is_family=True,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
         )
 
         relationship = Relationship(
             type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=malware,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            source=Reference(id=ioc_entry.id),
+            target=Reference(id=malware.id),
+            author=self._author,
+            markings=[self._marking],
         )
 
         return [
@@ -410,16 +421,16 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         campaign = Campaign(
             name=campaign_name,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
         )
 
         relationship = Relationship(
             type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=campaign,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            source=Reference(id=ioc_entry.id),
+            target=Reference(id=campaign.id),
+            author=self._author,
+            markings=[self._marking],
         )
 
         return [
@@ -439,15 +450,15 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         intrusion_set = IntrusionSet(
             name=threat_actor_name.upper(),
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
         )
         relationship = Relationship(
             type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=intrusion_set,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            source=Reference(id=ioc_entry.id),
+            target=Reference(id=intrusion_set.id),
+            author=self._author,
+            markings=[self._marking],
         )
 
         return [
@@ -470,16 +481,16 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         software_toolkit = Tool(
             name=software_toolkit_name.upper(),
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
         )
 
         relationship = Relationship(
             type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=software_toolkit,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            source=Reference(id=ioc_entry.id),
+            target=Reference(id=software_toolkit.id),
+            author=self._author,
+            markings=[self._marking],
         )
 
         return [
@@ -500,16 +511,16 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         attack_pattern = AttackPattern(
             name=attack_technique_id.upper(),
             mitre_id=attack_technique_id.upper(),
-            author=self.organization,
-            markings=[self.tlp_marking],
+            author=self._author,
+            markings=[self._marking],
         )
 
         relationship = Relationship(
             type=RelationshipType.INDICATES,
-            source=ioc_entry,
-            target=attack_pattern,
-            author=self.organization,
-            markings=[self.tlp_marking],
+            source=Reference(id=ioc_entry.id),
+            target=Reference(id=attack_pattern.id),
+            author=self._author,
+            markings=[self._marking],
         )
 
         return [

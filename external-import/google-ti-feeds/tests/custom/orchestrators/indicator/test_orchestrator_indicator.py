@@ -1,6 +1,8 @@
 """Validate the indicator orchestration workflow A-to-Z using IOC delta stubs."""
 
+import asyncio
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock
@@ -516,3 +518,143 @@ def test_gti_indicator_fetch_error_without_package_id() -> None:
     err = GTIIndicatorFetchError(message="server error")
     assert hasattr(err, "structured_data")  # noqa: S101
     assert "package_id" not in err.structured_data  # noqa: S101
+
+
+# =====================
+# Converting a package never blocks the event loop
+# =====================
+# A real IOC delta package holds tens of thousands of entries and converting one
+# entry costs milliseconds of CPU: converted inside the event loop, a package
+# stalls the other collection tasks (reports, threat actors…) for minutes.
+
+
+class _Ticker:
+    """A concurrent task that counts its iterations, to measure its progress."""
+
+    def __init__(self) -> None:
+        self.ticks = 0
+        self._stopped = False
+
+    async def run(self) -> None:
+        while not self._stopped:
+            self.ticks += 1
+            await asyncio.sleep(0.005)
+
+    def stop(self) -> None:
+        self._stopped = True
+
+
+def _given_package_of(monkeypatch: Any, entries: list[Any]) -> None:
+    """Make every fetched package hold the given raw entries."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    async def _fetch(self: Any, package_id: str, ioc_type: str) -> list[Any]:
+        return entries
+
+    monkeypatch.setattr(ClientAPIIndicator, "fetch_ioc_delta_package", _fetch)
+
+
+def _given_slow_converter(ind_orch: Any, ticker: _Ticker) -> list[int]:
+    """Replace the converter with a slow one recording the ticker's progress.
+
+    time.sleep stands for the CPU time a real entry costs: it blocks the thread
+    that runs it, as the conversion does.
+    """
+    ticks_seen: list[int] = []
+
+    def _slow_convert(entry_data: Any) -> list[Any]:
+        time.sleep(0.02)
+        ticks_seen.append(ticker.ticks)
+        return [f"stix-{entry_data}"]
+
+    ind_orch.converter.convert = _slow_convert
+    return ticks_seen
+
+
+def _given_batch_recorder(ind_orch: Any) -> list[Any]:
+    """Record the items the orchestrator adds to its batch processor."""
+    added: list[Any] = []
+    ind_orch.batch_processor = MagicMock()
+    ind_orch.batch_processor.add_items.side_effect = added.extend
+    return added
+
+
+@pytest.mark.asyncio
+async def test_process_package_given_slow_conversion_then_other_tasks_progress(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """Another task keeps running while a package converts."""
+    # Given a package of 10 entries, each taking 20 ms to convert
+    _given_package_of(monkeypatch, list(range(10)))
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    ticker = _Ticker()
+    ticks_seen = _given_slow_converter(ind_orch, ticker)
+    _given_batch_recorder(ind_orch)
+
+    # When the package is processed next to the ticking task
+    ticker_task = asyncio.create_task(ticker.run())
+    await asyncio.sleep(0)
+    await ind_orch._process_package("2026101009", "file")
+    ticker.stop()
+    await ticker_task
+
+    # Then the ticking task progressed during the conversion (200 ms, a tick
+    # every 5 ms): blocked, it would not have ticked once
+    assert len(ticks_seen) == 10  # noqa: S101
+    assert ticks_seen[-1] - ticks_seen[0] >= 5  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_process_package_given_several_chunks_then_converts_every_entry_in_order(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """Chunked conversion keeps every entry, in the package's order."""
+    from connector.src.custom.orchestrators.indicator import orchestrator_indicator
+
+    # Given a package of 7 entries converted 3 at a time
+    monkeypatch.setattr(orchestrator_indicator, "CONVERSION_CHUNK_SIZE", 3)
+    _given_package_of(monkeypatch, list(range(7)))
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    ind_orch.converter.convert = lambda entry: [f"stix-{entry}-a", f"stix-{entry}-b"]
+    added = _given_batch_recorder(ind_orch)
+
+    # When the package is processed
+    await ind_orch._process_package("2026101009", "file")
+
+    # Then every entry's objects are added to the batch, in order
+    assert added == [  # noqa: S101
+        f"stix-{entry}-{part}" for entry in range(7) for part in ("a", "b")
+    ]
+
+
+@pytest.mark.asyncio
+async def test_process_package_given_several_chunks_then_logs_progress(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """The conversion logs how many entries are converted after each chunk."""
+    from connector.src.custom.orchestrators.indicator import orchestrator_indicator
+
+    # Given a package of 7 entries converted 3 at a time
+    monkeypatch.setattr(orchestrator_indicator, "CONVERSION_CHUNK_SIZE", 3)
+    _given_package_of(monkeypatch, list(range(7)))
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    ind_orch.converter.convert = lambda entry: [f"stix-{entry}"]
+    _given_batch_recorder(ind_orch)
+    ind_orch.logger = MagicMock()
+
+    # When the package is processed
+    await ind_orch._process_package("2026101009", "file")
+
+    # Then one progress line per chunk carries converted/total
+    progress = [
+        (meta["package_id"], meta["converted"], meta["total"])
+        for meta in (call.args[1] for call in ind_orch.logger.info.call_args_list)
+        if "converted" in meta
+    ]
+    assert progress == [  # noqa: S101
+        ("2026101009", 3, 7),
+        ("2026101009", 6, 7),
+        ("2026101009", 7, 7),
+    ]

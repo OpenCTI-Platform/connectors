@@ -1,0 +1,429 @@
+[
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence File Link",
+          "source_name": "[GTI] File aabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabb",
+          "url": "https://www.virustotal.com/gui/file/aabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabb"
+        }
+      ],
+      "id": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "name": "test.exe",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[file:hashes.'SHA-256' = 'aabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabbaabb' OR file:hashes.'MD5' = 'ccddccddccddccddccddccddccddccdd' OR file:hashes.'SHA-1' = 'eeffeeffeeffeeffeeffeeffeeffeeffeeffeeff']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "StixFile",
+      "x_opencti_score": 80
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "malware--36297121-bf18-56e1-b200-d39c9f9f5cee",
+      "is_family": true,
+      "name": "EMOTET",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "malware"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--ea674e5a-9a45-5b7b-885c-24c2a8ff4b5f",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "malware--36297121-bf18-56e1-b200-d39c9f9f5cee",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "malware--20f52322-29a4-5ac9-b58c-a105bddc624f",
+      "is_family": true,
+      "name": "TRICKBOT",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "malware"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--30dc7ce2-41e5-5312-8acb-76187bf6b4df",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "malware--20f52322-29a4-5ac9-b58c-a105bddc624f",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "intrusion-set--f743ab1d-b2f2-58f8-975f-0993511c0b9d",
+      "name": "APT28",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "intrusion-set"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--5e3166a7-d251-5028-a378-7b2312d945b7",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "intrusion-set--f743ab1d-b2f2-58f8-975f-0993511c0b9d",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "tool--d2d17342-7c91-563c-bb85-a51d5b5c30e4",
+      "name": "COBALT STRIKE",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "tool"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--a7b7ef56-4f96-5439-a830-dc61060f33fd",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "tool--d2d17342-7c91-563c-bb85-a51d5b5c30e4",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "attack-pattern--b4d20430-6a7e-59fd-b2e4-8d3f6be56a6a",
+      "name": "T1059.001",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "attack-pattern",
+      "x_mitre_id": "T1059.001"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--149b2e0b-b767-5c9c-ad70-78b1b9a7cb26",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "attack-pattern--b4d20430-6a7e-59fd-b2e4-8d3f6be56a6a",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "attack-pattern--ae16eaf9-2344-57f1-b59f-aaebc86005f1",
+      "name": "T1105",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "attack-pattern",
+      "x_mitre_id": "T1105"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--f4775731-c7f5-5e18-9a5a-02b1f065ce52",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "attack-pattern--ae16eaf9-2344-57f1-b59f-aaebc86005f1",
+      "type": "relationship"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "attack-pattern--d041e624-3991-5138-9544-d3ba2ce68ff7",
+      "name": "T1566",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "attack-pattern",
+      "x_mitre_id": "T1566"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--5cd04f26-1d8a-51e2-b9b2-c97612c24d88",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--45619d94-4d92-51b9-b4af-9477be0a1f98",
+      "spec_version": "2.1",
+      "target_ref": "attack-pattern--d041e624-3991-5138-9544-d3ba2ce68ff7",
+      "type": "relationship"
+    }
+  ],
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence File Link",
+          "source_name": "[GTI] File deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+          "url": "https://www.virustotal.com/gui/file/deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+        }
+      ],
+      "id": "indicator--6ee3322d-c769-590f-bcb7-1a33eda0b27e",
+      "name": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[file:hashes.'MD5' = 'abababababababababababababababab']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "StixFile"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "attack-pattern--9cb9c55e-6cce-5743-b250-1a60682f550d",
+      "name": "T1027",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "attack-pattern",
+      "x_mitre_id": "T1027"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--a9b07d8a-add1-5b1e-b138-fd29da144784",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--6ee3322d-c769-590f-bcb7-1a33eda0b27e",
+      "spec_version": "2.1",
+      "target_ref": "attack-pattern--9cb9c55e-6cce-5743-b250-1a60682f550d",
+      "type": "relationship"
+    }
+  ],
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence IP Link",
+          "source_name": "[GTI] IP 1.2.3.4",
+          "url": "https://www.virustotal.com/gui/ip-address/1.2.3.4"
+        }
+      ],
+      "id": "indicator--274128a4-2ad4-50b5-ae7b-b0dea1fa9861",
+      "name": "1.2.3.4",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[ipv4-addr:value = '1.2.3.4']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "IPv4-Addr",
+      "x_opencti_score": 70
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "tool--dae20ca4-ebdf-5248-83ac-0f7a52f94fcc",
+      "name": "MIMIKATZ",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "tool"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--839002ee-52a0-5d88-bb7c-33b8e3bfdb5a",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--274128a4-2ad4-50b5-ae7b-b0dea1fa9861",
+      "spec_version": "2.1",
+      "target_ref": "tool--dae20ca4-ebdf-5248-83ac-0f7a52f94fcc",
+      "type": "relationship"
+    }
+  ],
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence IP Link",
+          "source_name": "[GTI] IP 2001:db8::1",
+          "url": "https://www.virustotal.com/gui/ip-address/2001:db8::1"
+        }
+      ],
+      "id": "indicator--0413d25d-a9c5-5a47-9c73-d240aba5a2be",
+      "name": "2001:db8::1",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[ipv6-addr:value = '2001:db8::1']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "IPv6-Addr",
+      "x_opencti_score": 70
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "malware--2df61a44-6e40-552a-a1e8-bbd9a7b81833",
+      "is_family": true,
+      "name": "MIRAI",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "malware"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--5e78bd51-122e-529d-ada2-8c0816444bb0",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--0413d25d-a9c5-5a47-9c73-d240aba5a2be",
+      "spec_version": "2.1",
+      "target_ref": "malware--2df61a44-6e40-552a-a1e8-bbd9a7b81833",
+      "type": "relationship"
+    }
+  ],
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence URL Link",
+          "source_name": "[GTI] URL https://evil.example.com/payload",
+          "url": "https://www.virustotal.com/gui/url/url-id-hash"
+        }
+      ],
+      "id": "indicator--c7644638-505c-551c-a851-f897c891b2d8",
+      "name": "https://evil.example.com/payload",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[url:value = 'https://evil.example.com/payload']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "Url",
+      "x_opencti_score": 90
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "attack-pattern--f60cbe7b-70f0-5b90-b26e-a52e9d89f7ff",
+      "name": "T1204.001",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "attack-pattern",
+      "x_mitre_id": "T1204.001"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--019aaa82-ca63-5b2d-a36f-45a8fd194eda",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--c7644638-505c-551c-a851-f897c891b2d8",
+      "spec_version": "2.1",
+      "target_ref": "attack-pattern--f60cbe7b-70f0-5b90-b26e-a52e9d89f7ff",
+      "type": "relationship"
+    }
+  ],
+  [
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "external_references": [
+        {
+          "description": "Google Threat Intelligence Domain Link",
+          "source_name": "[GTI] Domain evil.example.com",
+          "url": "https://www.virustotal.com/gui/domain/evil.example.com"
+        }
+      ],
+      "id": "indicator--251b41b7-1baf-527e-a251-5821a471dd65",
+      "name": "evil.example.com",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "pattern": "[domain-name:value = 'evil.example.com']",
+      "pattern_type": "stix",
+      "pattern_version": "2.1",
+      "spec_version": "2.1",
+      "type": "indicator",
+      "valid_from": "2023-11-14T22:13:20Z",
+      "x_opencti_create_observables": true,
+      "x_opencti_main_observable_type": "Domain-Name",
+      "x_opencti_score": 60
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "intrusion-set--3febd416-e3b4-5a4a-8886-44670f411c85",
+      "name": "UNC1234",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "spec_version": "2.1",
+      "type": "intrusion-set"
+    },
+    {
+      "created_by_ref": "identity--81c3ca7b-e8d4-57cb-9c1c-89ed954880a7",
+      "id": "relationship--62d9bce2-1a48-560b-b681-58c8d80a247f",
+      "object_marking_refs": [
+        "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+      ],
+      "relationship_type": "indicates",
+      "source_ref": "indicator--251b41b7-1baf-527e-a251-5821a471dd65",
+      "spec_version": "2.1",
+      "target_ref": "intrusion-set--3febd416-e3b4-5a4a-8886-44670f411c85",
+      "type": "relationship"
+    }
+  ]
+]

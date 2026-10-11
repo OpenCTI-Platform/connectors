@@ -1,7 +1,9 @@
 """Comprehensive tests for ConvertToSTIXIndicator."""
 
+import json
 import logging
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1290,3 +1292,175 @@ class TestConvertAssociationFilter:
         result = _when_convert(converter, data)
         # Then – AND logic: score filter rejects even with valid association
         _then_returns_empty(result)
+
+
+# =====================
+# 28. convert – each STIX object is built once (performance, issue: IOC delta
+#     conversion blocks the event loop)
+# =====================
+
+
+def _given_items(
+    item_type: str, names: list[str], *, as_id: bool = False
+) -> IOCDeltaRelationshipData:
+    return IOCDeltaRelationshipData(
+        data=[
+            IOCDeltaRelationshipItem(
+                type=item_type,
+                id=name if as_id else f"{item_type}--{name}",
+                attributes=(
+                    None if as_id else IOCDeltaRelationshipItemAttributes(name=name)
+                ),
+            )
+            for name in names
+        ]
+    )
+
+
+def _given_rich_relationships() -> IOCDeltaRelationships:
+    """2 malware families, 1 threat actor, 1 software toolkit, 3 attack techniques."""
+    return IOCDeltaRelationships(
+        malware_families=_given_items("collection", ["Emotet", "TrickBot"]),
+        threat_actors=_given_items("collection", ["APT28"]),
+        software_toolkits=_given_items("collection", ["Cobalt Strike"]),
+        attack_techniques=_given_items(
+            "attack_technique", ["T1059.001", "T1105", "T1566"], as_id=True
+        ),
+        campaigns=_given_items("collection", ["Ignored Campaign"]),
+    )
+
+
+def _given_stix_build_counter(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
+    """Count the calls to to_stix2_object() of each connectors-sdk model."""
+    import connectors_sdk.models as sdk_models
+
+    counts: dict[str, int] = {}
+    for name in [
+        "Indicator",
+        "Malware",
+        "IntrusionSet",
+        "Tool",
+        "AttackPattern",
+        "Relationship",
+        "TLPMarking",
+        "OrganizationAuthor",
+    ]:
+        model = getattr(sdk_models, name)
+        original = model.to_stix2_object
+
+        def counting(self, _original=original, _name=name):  # type: ignore[no-untyped-def]
+            counts[_name] = counts.get(_name, 0) + 1
+            return _original(self)
+
+        monkeypatch.setattr(model, "to_stix2_object", counting)
+    return counts
+
+
+class TestConvertBuildsEachStixObjectOnce:
+    """Each model's STIX object is built once by the connector.
+
+    connectors-sdk builds it one more time when the model is created, to compute
+    its id (BaseIdentifiedObject._compute_stix_id), hence 2 builds per model. The
+    author and the TLP marking are built when the converter is created, never
+    per entry.
+    """
+
+    def test_file_entry_with_relations_builds_each_object_twice_at_most(
+        self, converter: ConvertToSTIXIndicator, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Given
+        data = _given_file_entry(relationships=_given_rich_relationships())
+        counts = _given_stix_build_counter(monkeypatch)
+        # When
+        result = _when_convert(converter, data)
+        # Then – 1 indicator + 7 targets + 7 relationships
+        _then_returns_n_objects(result, 15)
+        assert counts == {  # noqa: S101
+            "Indicator": 2,
+            "Malware": 4,
+            "IntrusionSet": 2,
+            "Tool": 2,
+            "AttackPattern": 6,
+            "Relationship": 14,
+        }
+
+    def test_many_entries_never_build_author_or_marking(
+        self, converter: ConvertToSTIXIndicator, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Given
+        entries = [
+            _given_file_entry(relationships=_given_rich_relationships()),
+            _given_ip_entry(relationships=_given_rich_relationships()),
+            _given_url_entry(relationships=_given_rich_relationships()),
+            _given_domain_entry(relationships=_given_rich_relationships()),
+        ]
+        counts = _given_stix_build_counter(monkeypatch)
+        # When
+        for data in entries:
+            _when_convert(converter, data)
+        # Then
+        assert counts.get("TLPMarking", 0) == 0  # noqa: S101
+        assert counts.get("OrganizationAuthor", 0) == 0  # noqa: S101
+        assert counts["Indicator"] == 2 * len(entries)  # noqa: S101
+
+
+# =====================
+# 29. convert – the STIX objects produced are pinned (same output before and
+#     after the build-once change)
+# =====================
+
+EXPECTED_STIX_OBJECTS_PATH = Path(__file__).parent / "expected_stix_objects.json"
+
+
+def _given_pinned_entries() -> list[dict]:
+    return [
+        _given_file_entry(relationships=_given_rich_relationships()),
+        _given_file_entry(
+            sha256=None,
+            md5="ab" * 16,
+            sha1=None,
+            meaningful_name=None,
+            score=None,
+            relationships=_given_relationships(attack_technique_id="T1027"),
+        ),
+        _given_ip_entry(
+            relationships=_given_relationships(software_toolkit_name="Mimikatz")
+        ),
+        _given_ip_entry(
+            "2001:db8::1", relationships=_given_relationships(malware_name="Mirai")
+        ),
+        _given_url_entry(
+            relationships=_given_relationships(attack_technique_id="T1204.001")
+        ),
+        _given_domain_entry(
+            relationships=_given_relationships(threat_actor_name="UNC1234"),
+        ),
+    ]
+
+
+def _then_without_timestamps(result: list) -> list[dict]:
+    """Serialize the STIX objects, minus created/modified (set at build time)."""
+    objects = []
+    for obj in result:
+        serialized = json.loads(obj.serialize(sort_keys=True))
+        serialized.pop("created", None)
+        serialized.pop("modified", None)
+        objects.append(serialized)
+    return objects
+
+
+class TestConvertOutputPinned:
+    """The STIX objects produced for a given input are pinned."""
+
+    def test_pinned_entries_produce_the_expected_stix_objects(
+        self, converter: ConvertToSTIXIndicator
+    ) -> None:
+        # Given
+        entries = _given_pinned_entries()
+        expected = json.loads(EXPECTED_STIX_OBJECTS_PATH.read_text())
+        # When
+        result = [
+            _then_without_timestamps(_when_convert(converter, data)) for data in entries
+        ]
+        # Then
+        assert result == expected  # noqa: S101

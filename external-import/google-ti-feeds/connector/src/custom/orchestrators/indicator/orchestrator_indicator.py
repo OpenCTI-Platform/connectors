@@ -1,5 +1,6 @@
 """Indicator-specific orchestrator for fetching and processing IOC delta data."""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -16,6 +17,9 @@ from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
 
 LOG_PREFIX = "[OrchestratorIndicator]"
+
+# Entries converted per worker-thread call, and per progress log line.
+CONVERSION_CHUNK_SIZE = 1000
 
 
 class OrchestratorIndicator(BaseOrchestrator):
@@ -129,10 +133,7 @@ class OrchestratorIndicator(BaseOrchestrator):
                 },
             )
 
-            all_stix: list[Any] = []
-            for entry_data in raw_entries:
-                stix_objects = self.converter.convert(entry_data)
-                all_stix.extend(stix_objects)
+            all_stix = await self._convert_entries(raw_entries, package_id, ioc_type)
 
             if all_stix:
                 self._add_entities_to_batch(
@@ -149,3 +150,41 @@ class OrchestratorIndicator(BaseOrchestrator):
                     "error": str(e),
                 },
             )
+
+    async def _convert_entries(
+        self, raw_entries: list[Any], package_id: str, ioc_type: str
+    ) -> list[Any]:
+        """Convert a package's entries to STIX off the event loop, chunk by chunk.
+
+        The conversion is CPU-bound and a package holds tens of thousands of
+        entries: run in the event loop, it would stall the other collection tasks
+        (and time their requests out) for minutes. Each chunk runs in a worker
+        thread, and a progress line is logged after each one.
+        """
+        all_stix: list[Any] = []
+        total = len(raw_entries)
+        for start in range(0, total, CONVERSION_CHUNK_SIZE):
+            chunk = raw_entries[start : start + CONVERSION_CHUNK_SIZE]
+            all_stix.extend(await asyncio.to_thread(self._convert_chunk, chunk))
+            self.logger.info(
+                "Converted IOC delta entries",
+                {
+                    "prefix": LOG_PREFIX,
+                    "package_id": package_id,
+                    "ioc_type": ioc_type,
+                    "converted": start + len(chunk),
+                    "total": total,
+                },
+            )
+        return all_stix
+
+    def _convert_chunk(self, entries: list[Any]) -> list[Any]:
+        """Convert entries to STIX (runs in a worker thread).
+
+        The converter only reads shared state (the config, the author's and the
+        marking's ids): one chunk at a time runs, next to the event loop.
+        """
+        stix_objects: list[Any] = []
+        for entry_data in entries:
+            stix_objects.extend(self.converter.convert(entry_data))
+        return stix_objects

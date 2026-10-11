@@ -1,9 +1,12 @@
 """Test module for ClientAPIIndicator."""
 
+import asyncio
 import io
 import json
 import tarfile
+import time
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -294,3 +297,48 @@ def test_parse_tar_bz2_skips_directory_members(client: ClientAPIIndicator) -> No
 
     # Then
     assert result == [{"found": True}]
+
+
+# =====================
+# Scenario: fetch_ioc_delta_package – parsing never blocks the event loop
+# =====================
+
+
+@pytest.mark.asyncio
+async def test_fetch_ioc_delta_package_given_slow_parse_then_other_tasks_progress(
+    client: ClientAPIIndicator,
+    mock_fetcher: MagicMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Another task keeps running while a package is decompressed and parsed."""
+    # Given a package whose decompression and parse take 200 ms
+    mock_fetcher.fetch_bytes.return_value = (200, b"tar.bz2")
+    ticks = 0
+    ticks_seen: list[int] = []
+
+    def _slow_parse(content: bytes, package_id: str, ioc_type: str) -> list[Any]:
+        for _ in range(10):
+            time.sleep(0.02)
+            ticks_seen.append(ticks)
+        return [{"type": "file"}]
+
+    monkeypatch.setattr(client, "_parse_tar_bz2", _slow_parse)
+
+    async def _ticker() -> None:
+        nonlocal ticks
+        while not done:
+            ticks += 1
+            await asyncio.sleep(0.005)
+
+    # When the package is fetched next to the ticking task
+    done = False
+    ticker_task = asyncio.create_task(_ticker())
+    await asyncio.sleep(0)
+    result = await client.fetch_ioc_delta_package("2026101009", "file")
+    done = True
+    await ticker_task
+
+    # Then the parsed entries are returned and the ticking task progressed
+    # meanwhile: blocked, it would not have ticked once
+    assert result == [{"type": "file"}]
+    assert ticks_seen[-1] - ticks_seen[0] >= 5

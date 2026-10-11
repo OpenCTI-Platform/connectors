@@ -1,5 +1,6 @@
 """Client API for fetching IOC delta packages from GTI."""
 
+import asyncio
 import io
 import json
 import logging
@@ -79,7 +80,10 @@ class ClientAPIIndicator(BaseClientAPI):
             )
             return None
 
-        return self._parse_tar_bz2(content, package_id, ioc_type)
+        # Decompressing and parsing a package takes seconds: off the event loop.
+        return await asyncio.to_thread(
+            self._parse_tar_bz2, content, package_id, ioc_type
+        )
 
     def _parse_tar_bz2(
         self, content: bytes, package_id: str, ioc_type: str
