@@ -9,7 +9,7 @@ services:
       #- CONNECTOR_NAME=DomainTools
       #- CONNECTOR_SCOPE=Domain-Name,Ipv4-Addr
       #- CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
+      #- CONNECTOR_MAX_TLP=TLP:AMBER
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
-      #- DOMAINTOOLS_MAX_TLP=TLP:AMBER
     restart: always
