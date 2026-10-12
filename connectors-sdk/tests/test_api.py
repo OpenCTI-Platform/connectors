@@ -35,6 +35,20 @@ def test_root_public_api_is_valid():
         "ApiNotFoundError",
         "ApiRateLimitError",
         "ApiServerError",
+        "DeploymentAssurance",
+        "DeploymentAssuranceOptions",
+        "DeploymentConfig",
+        "DeploymentPushAdapter",
+        "DeploymentReconciler",
+        "DeploymentReporter",
+        "DeploymentStatus",
+        "DeploymentVendorAdapter",
+        "HitCollection",
+        "HitsConfig",
+        "IndicatorDeployment",
+        "SecurityPlatformConfig",
+        "VendorHit",
+        "VendorIndicator",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports

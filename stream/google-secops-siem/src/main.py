@@ -2,6 +2,7 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from secops_siem_connector import ConnectorSettings, SecOpsSIEMConnector
+from secops_siem_connector.deployment import build_deployment_assurance
 
 if __name__ == "__main__":
     """
@@ -18,6 +19,7 @@ if __name__ == "__main__":
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         connector = SecOpsSIEMConnector(config=settings, helper=helper)
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

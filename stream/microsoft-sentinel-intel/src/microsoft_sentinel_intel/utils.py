@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from microsoft_sentinel_intel.errors import ConnectorError
 from pycti import OpenCTIConnectorHelper
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
@@ -61,6 +62,18 @@ def is_stix_indicator(data: dict) -> bool:
     return data.get("type") == "indicator" and data.get("pattern_type", "").startswith(
         "stix"
     )
+
+
+def describe_error(error: BaseException) -> str:
+    """
+    Build a readable message of an error, including the API error of connector errors.
+    :param error: The error
+    :return: The message (deployment `error_message`)
+    """
+    if isinstance(error, ConnectorError):
+        details = (error.metadata or {}).get("error")
+        return f"{error.message}: {details}" if details else error.message
+    return str(error) or type(error).__name__
 
 
 def is_stix_identity(data: dict) -> bool:

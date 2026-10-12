@@ -32,4 +32,12 @@ services:
 #      - MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT=30
 #      - MICROSOFT_SENTINEL_INTEL_EVENT_TYPES=create,update,delete
 #      - MICROSOFT_SENTINEL_INTEL_PUBLISH_IDENTITIES=false
+
+      # Dissemination assurance (deployment write-back to OpenCTI)
+#      - DEPLOYMENT_REPORTING_ENABLED=true
+#      - DEPLOYMENT_RECONCILIATION_INTERVAL=60 # Minutes, 0 disables the reconciliation
+#      - HITS_REPORTING_ENABLED=true
+#      - "SECURITY_PLATFORM_NAME=Microsoft Sentinel"
+#      - SECURITY_PLATFORM_TYPE=SIEM
+#      - SECURITY_PLATFORM_ID= # Existing Security Platform entity id (optional)
     restart: always

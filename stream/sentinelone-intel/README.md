@@ -22,6 +22,7 @@
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
     - [Behavior](#behavior)
+        - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
     - [Known Limitations](#known-limitations)
     - [Debugging](#debugging)
 
@@ -187,6 +188,83 @@ Based on the IOC types SentinelOne supports, the connector can only process Indi
 Alongside this, the connector is only able to consume basic **single-expression** STIX patterns (e.g., file:hashes.'SHA-256' = '<hash>').
 
 Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
+
+When an Indicator is deleted from the stream (deleted in OpenCTI or no longer matching the stream filters), the IOCs of
+the connector's scope whose external id is the STIX id of the Indicator are deleted from SentinelOne. An update event
+that changes the pattern replaces these IOCs: they are deleted, then the current pattern is created. Other update events
+change nothing in SentinelOne.
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in SentinelOne. The status is stored on the
+`deployed-on` relationship between the indicator and the `SentinelOne` Security Platform entity (created if it does not
+exist).
+
+| When                                      | Reported to OpenCTI                                                                                           |
+|-------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| Indicator created in SentinelOne          | `deployed`, with the `uuid` of the first IOC returned by SentinelOne as external id (when returned)           |
+| Indicator rejected by SentinelOne         | `failed`, with a short reason such as "SentinelOne refused the IOC creation: permission denied" (the SentinelOne response is written to the connector log) |
+| Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
+| Update event changing the pattern         | The former IOCs are deleted, then the indicator is created and reported like a create (`deployed` or `failed`); `failed` when the former IOCs cannot be deleted; `removed` when the new pattern is not supported, once no IOC of the indicator is left (former IOCs deleted, or none found for a supported former pattern; nothing is reported when neither pattern is supported) |
+| Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when one of them has no `uuid` or the lookup fails) |
+| Delete event, no IOC of the indicator     | `removed`: the lookup completed and no IOC carries the STIX id of the indicator, so it is already absent (nothing is reported for an unsupported pattern, never pushed) |
+| Reconciliation, indicator present         | `active` when an IOC holds the value of the current pattern; IOCs of an earlier pattern (an update whose replacement failed) do not confirm it: the indicator is pushed again, a `failed` one stays `failed` |
+| Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator the read-back still finds in SentinelOne is confirmed `active` instead |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from SentinelOne and reported `removed`    |
+| Reconciliation, unknown indicator         | IOCs whose external id is the STIX id of an indicator with no deployment yet are reported `active` (backfill) |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the connector's scope (account
+  and/or site) are read back with the Threat Intelligence IOCs API (1,000 per page, `cursor` pagination); IOCs
+  whose `validUntil` is in the past are not live: they never confirm a deployment, and the ones of a withdrawn or
+  expired indicator are deleted. Only the IOCs whose external id is the STIX id of an indicator (the ones the
+  connector creates) are read back, and deployments are matched by that id or by IOC `uuid`, never by value: an IOC
+  of the same value created by another source neither confirms a deployment nor blocks its withdrawal. A read-back error, a cursor repeated by the API, malformed pagination
+  metadata or a malformed IOC (without a non-empty `uuid` or value, or with a `validUntil` that is not an ISO 8601
+  date) skips the run: indicators are never reported `removed` from a
+  partial listing.
+- **Scope with a group**: the Threat Intelligence IOCs API lists IOCs by account or site only, so the IOCs of a group
+  cannot be read back apart from those of the other groups of its site or account. When `SENTINELONE_INTEL_GROUP_ID`
+  is set, the deployments come from the pushes, pattern updates and deletions of the stream (`deployed`, `failed`,
+  `removed`), and the
+  reconciliation only pushes the `pending` ones again (analyst retry): presence, absence, withdrawal and backfill need
+  a scope without group. A delete event looks the IOCs of the indicator up by external id in the site or account of
+  the group (the whole API token scope for a group alone) and deletes them with the group in the deletion filter; when
+  none is found, the indicator is reported `removed` all the same, which is how a deployment whose IOCs were deleted in
+  SentinelOne is repaired without read-back. The connector logs this mode when it starts.
+- **Withdrawal safety**: only the IOCs whose external id is the STIX id of the indicator are deleted; an IOC of the same
+  value created by another source is left in place.
+- **Hits**: not reported. The Threat Intelligence IOCs API exposes no detection or match count for the uploaded IOCs.
+- **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
+  the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
+  a deployment are handled by the reconciliation: a retry (`pending`) pushes the indicator again, a withdrawal deletes
+  its IOCs from SentinelOne.
+- **Permissions**: the API token user needs to view, create and delete Threat Intelligence IOCs in the configured scope.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `SentinelOne` Security Platform show one row per deployment, with its status and the time of the
+last report (no hit count: SentinelOne exposes none for these IOCs).
+
+- A `failed` deployment shows the reason the connector reported, for example "SentinelOne refused the IOC creation:
+  permission denied" or "SentinelOne could not be reached for the IOC creation"; the HTTP status and the SentinelOne
+  response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation pushes the indicator again and reports
+  `deployed` or `failed` (an indicator the read-back still finds live in SentinelOne is confirmed `active` without a
+  new push).
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes the IOCs created from it and
+  reports it `removed`.
+
+| Environment variable                 | Default       | Description                                                           |
+|--------------------------------------|---------------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`        | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`          | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `SECURITY_PLATFORM_NAME`             | `SentinelOne` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `EDR`         | Type of the Security Platform entity (`security_platform_type_ov`).   |
+| `SECURITY_PLATFORM_ID`               |               | Id of an existing Security Platform entity, used instead of the name. |
 
 ## Known Limitations
 

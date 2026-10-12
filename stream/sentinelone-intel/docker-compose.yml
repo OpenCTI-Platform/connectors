@@ -17,4 +17,10 @@ services:
       - SENTINELONE_INTEL_ACCOUNT_ID=ChangeMe_OR_EMPTY
       - SENTINELONE_INTEL_SITE_ID=ChangeMe_OR_EMPTY
       - SENTINELONE_INTEL_GROUP_ID=ChangeMe_OR_EMPTY
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      #- DEPLOYMENT_REPORTING_ENABLED=true # Optional (default: true)
+      #- DEPLOYMENT_RECONCILIATION_INTERVAL=60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+      #- SECURITY_PLATFORM_NAME=SentinelOne # Optional (default: 'SentinelOne')
+      #- SECURITY_PLATFORM_TYPE=EDR # Optional (default: 'EDR')
+      #- SECURITY_PLATFORM_ID=ChangeMe # Optional (existing Security Platform entity id)
     restart: always

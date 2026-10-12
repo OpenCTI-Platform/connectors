@@ -16,4 +16,11 @@ services:
       #- MICROSOFT_DEFENDER_INTEL_ACTION=Alert # Optional (default: 'Alert')
       #- MICROSOFT_DEFENDER_INTEL_EXPIRE_TIME=30 # Optional (default: 30)
       #- MICROSOFT_DEFENDER_INTEL_PASSIVE_ONLY=false # Optional (default: false)
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      #- DEPLOYMENT_REPORTING_ENABLED=true # Optional (default: true)
+      #- DEPLOYMENT_RECONCILIATION_INTERVAL=60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+      #- HITS_REPORTING_ENABLED=true # Optional (default: true, requires the Alert.Read.All permission)
+      #- SECURITY_PLATFORM_NAME=Microsoft Defender for Endpoint # Optional (default: 'Microsoft Defender for Endpoint')
+      #- SECURITY_PLATFORM_TYPE=EDR # Optional (default: 'EDR')
+      #- SECURITY_PLATFORM_ID=ChangeMe # Optional (existing Security Platform entity id)
     restart: always

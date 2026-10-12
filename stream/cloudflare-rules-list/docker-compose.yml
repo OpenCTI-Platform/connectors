@@ -22,3 +22,10 @@ services:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - CLOUDFLARE_LIST_ID=${CLOUDFLARE_LIST_ID}
       - CLOUDFLARE_SYNC_INTERVAL=${CLOUDFLARE_SYNC_INTERVAL:-PT1H}
+
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      - DEPLOYMENT_REPORTING_ENABLED=${DEPLOYMENT_REPORTING_ENABLED:-true}
+      - DEPLOYMENT_RECONCILIATION_INTERVAL=${DEPLOYMENT_RECONCILIATION_INTERVAL:-60}
+      - SECURITY_PLATFORM_NAME=${SECURITY_PLATFORM_NAME:-Cloudflare}
+      # - SECURITY_PLATFORM_TYPE=ChangeMe # optional (default: none)
+      # - SECURITY_PLATFORM_ID=ChangeMe # optional (existing Security Platform entity id)

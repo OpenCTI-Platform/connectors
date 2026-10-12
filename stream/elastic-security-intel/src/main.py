@@ -1,6 +1,7 @@
 import traceback
 
 from elastic_security_intel_connector import ElasticSecurityIntelConnector
+from elastic_security_intel_connector.deployment import build_deployment_assurance
 
 if __name__ == "__main__":
     """
@@ -14,6 +15,7 @@ if __name__ == "__main__":
     """
     try:
         connector = ElasticSecurityIntelConnector()
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

@@ -23,3 +23,12 @@ cloudflare:
   # Minimum interval between snapshot uploads to Cloudflare.
   # Accepts ISO-8601 duration strings like 'PT30M', 'PT1H', 'PT1H30M', etc.
   sync_interval: 'PT1H'
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+#  reporting_enabled: true # Optional (default: true)
+#  reconciliation_interval: 60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+#security_platform:
+#  name: 'Cloudflare' # Optional (default: 'Cloudflare')
+#  type: 'ChangeMe' # Optional (default: none)
+#  id: 'ChangeMe' # Optional (existing Security Platform entity id)

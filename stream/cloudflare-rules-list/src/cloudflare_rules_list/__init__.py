@@ -5,7 +5,7 @@ Rules List, built on the modern OpenCTI ``connectors-sdk`` + Pydantic-settings
 architecture (OpenCTI 7.x / pycti 7.x).
 """
 
-from .connector import Connector
-from .settings import ConnectorSettings
+from cloudflare_rules_list.connector import Connector
+from cloudflare_rules_list.settings import ConnectorSettings
 
 __all__ = ["Connector", "ConnectorSettings"]

@@ -5,6 +5,7 @@ import traceback
 
 from cloudflare_rules_list import Connector, ConnectorSettings
 from cloudflare_rules_list.client import CloudflareRulesListClient
+from cloudflare_rules_list.deployment import build_deployment_assurance
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -17,6 +18,7 @@ if __name__ == "__main__":
             base_url=settings.cloudflare.api_base_url,
         )
         connector = Connector(helper=helper, config=settings, client=client)
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

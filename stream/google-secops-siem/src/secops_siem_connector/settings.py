@@ -2,7 +2,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, HttpUrl, SecretStr, field_validator
 
@@ -84,10 +87,32 @@ class SecOpsSIEMConfig(BaseConfigModel):
         return SecretStr(normalized_value)
 
 
+class SecOpsSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Define the Security Platform entity representing Google SecOps SIEM in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="Google SecOps SIEM",
+        min_length=2,
+        description="Name of the Security Platform entity representing Google SecOps SIEM in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default="SIEM",
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `SecOpsSIEMConfig`.
+    Override `BaseConnectorSettings` to include `StreamConnectorConfig`, `SecOpsSIEMConfig`
+    and the deployment write-back namespaces (`deployment`, `hits`, `security_platform`).
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
     secops_siem: SecOpsSIEMConfig = Field(default_factory=SecOpsSIEMConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)
+    security_platform: SecOpsSecurityPlatformConfig = Field(
+        default_factory=SecOpsSecurityPlatformConfig
+    )

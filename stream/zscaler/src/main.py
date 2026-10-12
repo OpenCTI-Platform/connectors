@@ -4,6 +4,7 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from stream_connector import ZscalerConnector
+from stream_connector.deployment import build_deployment_assurance
 from stream_connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
@@ -24,6 +25,7 @@ if __name__ == "__main__":
             zscaler_blacklist_name=config.zscaler.blacklist_name,
         )
 
+        connector.assurance = build_deployment_assurance(connector, config)
         connector.authenticate_with_zscaler()
         connector.start()
 

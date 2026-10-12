@@ -15,3 +15,14 @@ pan_cortex_xdr_intel:
   api_base_url: 'ChangeMe' # Cortex XDR API base URL (tenant FQDN), e.g. 'https://api-<fqdn>'
   api_key_id: 'ChangeMe'
   api_key: 'ChangeMe'
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+#  reporting_enabled: true # Optional (default: true)
+#  reconciliation_interval: 60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+#hits:
+#  reporting_enabled: true # Optional (default: true, requires the Alerts and Incidents view permission)
+#security_platform:
+#  name: 'Palo Alto Cortex XDR' # Optional (default: 'Palo Alto Cortex XDR')
+#  type: 'XDR' # Optional (default: 'XDR')
+#  id: 'ChangeMe' # Optional (existing Security Platform entity id)

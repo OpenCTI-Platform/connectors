@@ -1,6 +1,7 @@
 import traceback
 
 from connector import Connector, ConnectorSettings
+from connector.deployment import build_deployment_assurance
 from cortex_xdr_client import CortexXdrClient
 from pycti import OpenCTIConnectorHelper
 
@@ -25,6 +26,7 @@ if __name__ == "__main__":
         )
 
         connector = Connector(helper=helper, settings=settings, client=client)
+        connector.assurance = build_deployment_assurance(connector)
         connector.start()
     except Exception:
         traceback.print_exc()

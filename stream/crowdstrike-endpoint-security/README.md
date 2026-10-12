@@ -22,6 +22,7 @@ The CrowdStrike Endpoint Security connector streams OpenCTI indicators to CrowdS
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -37,6 +38,7 @@ Key features:
 - Platform-specific IOC targeting (Windows, Mac, Linux, mobile)
 - Configurable permanent or soft delete behavior
 - Prometheus metrics for monitoring
+- Dissemination assurance: deployment status, periodic IOC reconciliation and alert hits reported back to OpenCTI
 
 ## Installation
 
@@ -44,7 +46,8 @@ Key features:
 
 - OpenCTI Platform >= 5.0.0
 - CrowdStrike Falcon account with API access
-- API credentials (Client ID and Client Secret) with IOC Manager permissions
+- API credentials (Client ID and Client Secret) with IOC Manager permissions (**IOC Management: Read and Write**), plus
+  **Alerts: Read** to report hits (see [Dissemination assurance](#dissemination-assurance-deployment-write-back))
 
 ## Configuration variables
 
@@ -146,7 +149,7 @@ graph LR
 | Event Type | Action                                                        |
 |------------|---------------------------------------------------------------|
 | create     | Creates IOC in CrowdStrike (or updates if exists with soft delete) |
-| update     | Updates IOC in CrowdStrike                                    |
+| update     | Updates IOC in CrowdStrike; when the pattern changes the IOC value, the IOC of the former value is withdrawn (deleted, or deactivated without permanent delete) unless another valid OpenCTI indicator pushes that value, and the IOC of the new value is created |
 | delete     | Permanently deletes or marks as `TO_DELETE` based on configuration |
 
 ### Entity Mapping
@@ -179,6 +182,54 @@ graph LR
 | linux            | linux                | Always available                |
 | android          | android              | Requires `falcon_for_mobile_active=true` |
 | ios              | ios                  | Requires `falcon_for_mobile_active=true` |
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in CrowdStrike Falcon. The status is stored on
+the `deployed-on` relationship between the indicator and the `CrowdStrike Falcon` Security Platform entity (created if
+it does not exist), and detection hits are counted with a sighting of the indicator on that entity.
+
+| When                                      | Reported to OpenCTI                                                                                  |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------|
+| IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
+| IOC rejected by CrowdStrike               | `failed`, with a short reason such as "CrowdStrike refused the IOC push: invalid request" or "CrowdStrike could not be reached for the IOC push" (the CrowdStrike error and HTTP status are written to the connector log) |
+| Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
+| Update changing the IOC value             | As for a create once the IOC of the former value is withdrawn (it is kept when another valid OpenCTI indicator pushes the value); `failed` when CrowdStrike refuses the withdrawal or the other indicators of the former value cannot be read (the new value is then not pushed, and the former value is kept in the connector state: a later update or delete of the indicator withdraws it, and so does the retry the connector runs every 5 minutes, also once the indicator is deleted), `removed` when CrowdStrike does not take the new value |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value, and of any former value kept by a refused withdrawal, is deleted (or none is left); the IOC of a value another valid OpenCTI indicator (neither revoked nor expired) pushes is kept, and the indicator is reported `removed` all the same; nothing when the other indicators cannot be read |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting (a refused tagging is logged) |
+| Reconciliation, IOC present               | `active`                                                                                             |
+| Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an IOC still present is confirmed `active` instead |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are withdrawn and reported `removed`          |
+| Hits                                      | Falcon alerts whose IOC value matches a deployed indicator                                            |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs created by the connector API client
+  (`created_by`) with the `OpenCTI IOC` source are read back with the IOC API (500 per page). Deleted IOCs are ignored.
+  Expired IOCs, and IOCs withdrawn by the connector (tagged `TO_DELETE` with the `no_action` action), are not live: they
+  never confirm a deployment, but a withdrawal or an expiry still deletes or deactivates them. Deployments are
+  matched by IOC id, then by the IOC value the connector pushes (the first value of the pattern: an IOC holding
+  another value of a composite pattern never confirms nor withdraws it). A withdrawal deletes the IOC when
+  `CROWDSTRIKE_PERMANENT_DELETE=true`;
+  otherwise the IOC is kept, tagged `TO_DELETE` and its action set to `no_action` so that it stops detecting. A
+  read-back error skips the run: IOCs are never reported `removed` from a partial listing.
+- **Hits**: during each reconciliation, the Falcon alerts created since the previous run are read (at most 10,000 per
+  run, oldest first; when the limit is reached the next run resumes at the newest alert read). An alert counts one hit
+  for every deployed indicator whose pushed IOC value (the first value of its pattern) is the alert IOC value, at the
+  alert creation time; hits already reported
+  are never counted twice. An alert without a creation time or with malformed IOC fields fails the read: the next run
+  reads the same alerts again. The API client needs the **Alerts: Read** scope; without it, set
+  `HITS_REPORTING_ENABLED=false`.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default              | Description                                                           |
+|--------------------------------------|----------------------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`               | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                 | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `HITS_REPORTING_ENABLED`             | `true`               | Report the alert hits of the deployed indicators.                     |
+| `SECURITY_PLATFORM_NAME`             | `CrowdStrike Falcon` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `EDR`                | Type of the Security Platform entity (`security_platform_type_ov`).    |
+| `SECURITY_PLATFORM_ID`               |                      | Id of an existing Security Platform entity, used instead of the name. |
 
 ## Debugging
 

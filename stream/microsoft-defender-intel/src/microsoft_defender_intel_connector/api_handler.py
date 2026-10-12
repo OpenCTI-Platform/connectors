@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
-from typing import Literal
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 from urllib.parse import quote
 
 import requests
@@ -15,6 +16,33 @@ from pydantic import HttpUrl
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
+
+APPLICATION_NAME = "OpenCTI Microsoft Defender Intel"
+"""`application` of every indicator created by the connector."""
+
+ALERTS_RESOURCE_PATH = "api/alerts"
+"""Path of the alerts API, relative to the base URL."""
+
+MAX_PAGE_SIZE = 10_000
+"""Maximum `$top` accepted by the indicators and alerts APIs."""
+
+RESTORABLE_INDICATOR_FIELDS = (
+    "id",
+    "indicatorValue",
+    "indicatorType",
+    "application",
+    "action",
+    "title",
+    "description",
+    "externalId",
+    "lastUpdateTime",
+    "expirationTime",
+    "severity",
+    "recommendedActions",
+    "rbacGroupNames",
+    "generateAlert",
+)
+"""Fields of an indicator, as Defender returns it, that a submit-or-update request writes."""
 
 
 class DefenderApiHandlerError(Exception):
@@ -161,7 +189,7 @@ class DefenderApiHandler:
             body = {
                 "indicatorType": IOC_TYPES[observable["type"]],
                 "indicatorValue": observable["value"],
-                "application": "OpenCTI Microsoft Defender Intel",
+                "application": APPLICATION_NAME,
                 "action": self.action or get_action(observable),
                 "title": observable["value"],
                 "description": get_description(observable),
@@ -232,6 +260,23 @@ class DefenderApiHandler:
         )
         return data
 
+    def restore_indicator(self, previous: dict) -> dict | None:
+        """
+        Write a Threat Intelligence Indicator back to the values read before an update.
+        :param previous: The indicator as Defender returned it before the update
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
+        """
+        body = {
+            field: previous[field]
+            for field in RESTORABLE_INDICATOR_FIELDS
+            if previous.get(field) is not None
+        }
+        return self._send_request(
+            "post",
+            f"{self.base_url}/{self.resource_path.lstrip('/')}",
+            json=body,
+        )
+
     def post_indicators(self, observables: list[dict]) -> dict | None:
         """
         Create a Threat Intelligence Indicator on Defender from an OpenCTI observable.
@@ -276,3 +321,113 @@ class DefenderApiHandler:
             f"{self.base_url}/{self.resource_path.strip('/')}/{indicator_id}",
         )
         return True
+
+    def _get_page(self, url: str, params: str) -> list[dict[str, Any]]:
+        """
+        Read one page of an OData collection.
+
+        The callers detect the last page from its length: a page with a row that is
+        not an object is rejected, never shortened.
+        :param url: Collection URL
+        :param params: Encoded query string
+        :return: Items of the page
+        :raise DefenderApiHandlerError: On any error or an unexpected payload
+        """
+        data = self._send_request("get", url, params=params)
+        items = data.get("value") if isinstance(data, dict) else None
+        if not isinstance(items, list):
+            raise DefenderApiHandlerError(
+                "[API] Unexpected response format: missing 'value' list",
+                {"url_path": f"GET {url}"},
+            )
+        if not all(isinstance(item, dict) for item in items):
+            raise DefenderApiHandlerError(
+                "[API] Unexpected response format: a 'value' row is not an object",
+                {"url_path": f"GET {url}"},
+            )
+        return items
+
+    def iter_application_indicators(
+        self,
+        application: str = APPLICATION_NAME,
+        page_size: int = MAX_PAGE_SIZE,
+        max_pages: int = 100,
+    ) -> Iterator[dict[str, Any]]:
+        """
+        Iterate over the active indicators of an application, paginated with `$top` and `$skip`.
+
+        Offsets shift when indicators are created or deleted during the listing, which
+        would silently skip a row. Each page after the first therefore starts one row
+        early and must start with the last row of the previous page; otherwise the
+        listing fails, so the reconciliation never acts on a listing with a hole.
+        :param application: The `application` of the indicators (the connector's by default)
+        :param page_size: `$top` of each page (2 to 10,000)
+        :param max_pages: Safety bound of the number of pages
+        :return: Indicator entities
+        :raise DefenderApiHandlerError: On any error or when rows moved between pages,
+            never yield a partial listing silently
+        """
+        if page_size < 2:
+            raise ValueError("page_size must be at least 2 to verify page overlaps")
+        url = f"{self.base_url}/{self.resource_path.strip('/')}"
+        odata_application = application.replace("'", "''")
+        query_filter = quote(f"application eq '{odata_application}'", safe="")
+        read = 0
+        previous_last_id = None
+        for page in range(max_pages):
+            skip = read if previous_last_id is None else read - 1
+            items = self._get_page(
+                url,
+                f"$filter={query_filter}&$top={page_size}&$skip={skip}",
+            )
+            full_page = len(items) == page_size
+            if previous_last_id is not None:
+                if not items or items[0].get("id") != previous_last_id:
+                    raise DefenderApiHandlerError(
+                        "[API] Indicators changed during the read-back, listing discarded",
+                        {"page": page, "skip": skip},
+                    )
+                items = items[1:]
+            yield from items
+            if not full_page:
+                return
+            read += len(items)
+            previous_last_id = items[-1].get("id")
+        raise DefenderApiHandlerError(
+            "[API] Indicator read-back stopped before reaching the end",
+            {"max_pages": max_pages, "page_size": page_size},
+        )
+
+    def list_alerts(
+        self,
+        since: datetime,
+        max_alerts: int = MAX_PAGE_SIZE,
+        until: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        List the alerts created since a date, with their evidence.
+        :param since: Only alerts created at or after this date
+        :param max_alerts: Maximum number of alerts returned (10,000 at most per request)
+        :param until: Only alerts created strictly before this date, when given
+        :return: Alert entities
+        :raise DefenderApiHandlerError: On any error or an unexpected payload
+        """
+        since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        expression = f"alertCreationTime ge {since_utc}"
+        if until is not None:
+            until_utc = until.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            expression += f" and alertCreationTime lt {until_utc}"
+        query_filter = quote(expression, safe="")
+        url = f"{self.base_url}/{ALERTS_RESOURCE_PATH}"
+        alerts: list[dict[str, Any]] = []
+        while len(alerts) < max_alerts:
+            top = min(MAX_PAGE_SIZE, max_alerts - len(alerts))
+            items = self._get_page(
+                url,
+                f"$filter={query_filter}&$expand=evidence&$top={top}"
+                f"&$skip={len(alerts)}",
+            )
+            alerts.extend(items[:top])
+            if len(items) < top:
+                break
+        return alerts

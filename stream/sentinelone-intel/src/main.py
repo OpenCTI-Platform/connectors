@@ -2,6 +2,7 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from sentinelone_connector import SentinelOneIntelConnector
+from sentinelone_connector.deployment import build_deployment_assurance
 from sentinelone_connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
@@ -19,6 +20,7 @@ if __name__ == "__main__":
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         connector = SentinelOneIntelConnector(config=settings, helper=helper)
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

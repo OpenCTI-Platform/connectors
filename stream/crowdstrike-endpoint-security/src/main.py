@@ -1,6 +1,7 @@
 import traceback
 
 from crowdstrike_connector import ConnectorSettings, CrowdstrikeConnector
+from crowdstrike_connector.deployment import build_deployment_assurance
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -18,6 +19,7 @@ if __name__ == "__main__":
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         connector = CrowdstrikeConnector(config=settings, helper=helper)
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

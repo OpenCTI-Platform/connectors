@@ -1,7 +1,7 @@
 {
   "title": "Splunk",
   "slug": "splunk",
-  "description": "This connector allows organizations to feed a Splunk KV Store using OpenCTI knowledge.",
+  "description": "This connector allows organizations to feed a Splunk KV Store using OpenCTI knowledge. It reports the deployment status of each indicator back to OpenCTI, reconciles it periodically with the KV Store content and reports the matches returned by an optional saved search as hits.",
   "short_description": "This connector allows organizations to feed a Splunk KV Store using OpenCTI knowledge.",
   "logo": "stream/splunk/__metadata__/logo.png",
   "use_cases": [

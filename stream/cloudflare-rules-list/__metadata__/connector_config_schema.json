@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cloudflare-rules-list_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Cloudflare Rules List",
+      "description": "The name of the connector as shown in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "cloudflare"
+      ],
+      "description": "Connector scope (comma-separated).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_START_TIMESTAMP": {
+      "default": null,
+      "description": "Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state).",
+      "type": "integer"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER": {
+      "default": true,
+      "description": "Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state).",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE": {
+      "default": null,
+      "description": "ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "description": "Cloudflare account ID that owns the Rules List.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Cloudflare API token with the 'Account > Account Filter Lists > Edit' permission.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CLOUDFLARE_LIST_ID": {
+      "description": "ID of the existing Cloudflare Rules List (IP kind) to sync into.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_BASE_URL": {
+      "default": "https://api.cloudflare.com/client/v4",
+      "description": "Base URL of the Cloudflare API. Override only for testing against a mock server or a Cloudflare-compatible gateway.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CLOUDFLARE_SYNC_INTERVAL": {
+      "default": "PT1H",
+      "description": "Minimum interval between snapshot uploads to Cloudflare. Accepts ISO-8601 duration like 'PT30M', 'PT1H', 'PT1H30M', etc.",
+      "format": "duration",
+      "type": "string"
+    },
+    "DEPLOYMENT_REPORTING_ENABLED": {
+      "default": true,
+      "description": "Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back.",
+      "type": "boolean"
+    },
+    "DEPLOYMENT_RECONCILIATION_INTERVAL": {
+      "default": 60,
+      "description": "Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "SECURITY_PLATFORM_NAME": {
+      "default": "Cloudflare",
+      "description": "Name of the Security Platform entity representing Cloudflare in OpenCTI (created if it does not exist).",
+      "minLength": 2,
+      "type": "string"
+    },
+    "SECURITY_PLATFORM_TYPE": {
+      "default": null,
+      "description": "Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no web application firewall type.",
+      "type": "string"
+    },
+    "SECURITY_PLATFORM_ID": {
+      "default": null,
+      "description": "Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_LIST_ID"
+  ],
+  "additionalProperties": true
+}

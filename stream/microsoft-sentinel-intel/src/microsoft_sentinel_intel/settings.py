@@ -4,7 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, SecretStr, model_validator
 
@@ -83,9 +86,8 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="API version of the Microsoft log analytics workspace interface",
         default="2024-02-01-preview",
     )
-    # TODO: remove management_api_version config var (not used anymore)
     management_api_version: str = Field(
-        description="API version of the Microsoft management interface",
+        description="API version of the Microsoft Sentinel management interface, used to read the incidents and their entities (hits reporting)",
         default="2025-03-01",
     )
     query_api_version: str = Field(
@@ -148,12 +150,34 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         return self
 
 
+class MicrosoftSentinelSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Define the Security Platform entity representing Microsoft Sentinel in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="Microsoft Sentinel",
+        min_length=2,
+        description="Name of the Security Platform entity representing Microsoft Sentinel in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default="SIEM",
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `MicrosoftSentinelIntelConfig`.
+    Override `BaseConnectorSettings` to include `StreamConnectorConfig`, `MicrosoftSentinelIntelConfig`
+    and the deployment write-back namespaces (`deployment`, `hits`, `security_platform`).
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
     microsoft_sentinel_intel: MicrosoftSentinelIntelConfig = Field(
         default_factory=MicrosoftSentinelIntelConfig
+    )
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)
+    security_platform: MicrosoftSentinelSecurityPlatformConfig = Field(
+        default_factory=MicrosoftSentinelSecurityPlatformConfig
     )
