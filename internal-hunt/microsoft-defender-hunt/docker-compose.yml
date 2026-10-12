@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-microsoft-defender-hunt:
+    image: opencti/connector-microsoft-defender-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Microsoft Defender Hunt # optional (default: 'Microsoft Defender Hunt')
+      # - CONNECTOR_SCOPE=microsoft-defender # optional, hunt platform slug (default: 'microsoft-defender')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=Microsoft Defender XDR # optional, Security Platform the hunts run against (default: 'Microsoft Defender XDR')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=XDR # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'XDR')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Microsoft Entra ID app registration granted ThreatHunting.Read.All
+      - MICROSOFT_DEFENDER_HUNT_TENANT_ID=ChangeMe # app registration tenant ID
+      - MICROSOFT_DEFENDER_HUNT_CLIENT_ID=ChangeMe # app registration client ID
+      - MICROSOFT_DEFENDER_HUNT_CLIENT_SECRET=ChangeMe # app registration client secret
+      # - MICROSOFT_DEFENDER_HUNT_LOGIN_URL=https://login.microsoftonline.com # optional (default: global cloud)
+      # - MICROSOFT_DEFENDER_HUNT_GRAPH_URL=https://graph.microsoft.com # optional (default: global cloud)
+      # - MICROSOFT_DEFENDER_HUNT_SIGMA_PIPELINE=microsoft_xdr # optional, 'microsoft_xdr' or 'none'
+    restart: always

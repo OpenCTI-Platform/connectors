@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Microsoft Defender Hunt' # optional (default: 'Microsoft Defender Hunt')
+  # scope: 'microsoft-defender' # optional, hunt platform slug (default: 'microsoft-defender')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Microsoft Defender XDR' # optional (default: 'Microsoft Defender XDR')
+  # security_platform_type: 'XDR' # optional (default: 'XDR')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+microsoft_defender_hunt:
+  tenant_id: 'ChangeMe' # app registration tenant ID
+  client_id: 'ChangeMe' # app registration client ID
+  client_secret: 'ChangeMe' # app registration client secret
+  # login_url: 'https://login.microsoftonline.com' # optional (default: global cloud)
+  # graph_url: 'https://graph.microsoft.com' # optional (default: global cloud)
+  # sigma_pipeline: 'microsoft_xdr' # optional, 'microsoft_xdr' or 'none'

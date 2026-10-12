@@ -544,6 +544,7 @@ class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
 HUNT_PLATFORMS: tuple[str, ...] = (
     "splunk",
     "microsoft-sentinel",
+    "microsoft-defender",
     "elastic-security",
     "crowdstrike-logscale",
     "google-secops",

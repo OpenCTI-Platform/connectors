@@ -48,7 +48,7 @@ the contract would be re-implemented, and could drift, in each connector.
 
 | Setting | Purpose |
 | --- | --- |
-| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `clickhouse`, `s3-ocsf`, `internet`). |
+| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `clickhouse`, `s3-ocsf`, `internet`). |
 | `security_platform_name` / `security_platform_type` | Security Platform identity the hunts run against (required, except for `internet`). |
 | `max_concurrent_runs` | Connector-side concurrency limit, sent at registration. |
 | `observable_types` | Observable types the connector may create; IOC types by default, widened explicitly. |

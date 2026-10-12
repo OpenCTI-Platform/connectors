@@ -32,6 +32,7 @@ VALID_CONNECTOR_TYPES = {
 HUNT_PLATFORMS = {
     "splunk",
     "microsoft-sentinel",
+    "microsoft-defender",
     "elastic-security",
     "crowdstrike-logscale",
     "google-secops",

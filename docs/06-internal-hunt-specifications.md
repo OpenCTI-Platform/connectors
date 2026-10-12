@@ -26,6 +26,7 @@ Each connector instance executes against exactly one platform, identified by a s
 |---|---|
 | `splunk` | Splunk Enterprise / Splunk Cloud |
 | `microsoft-sentinel` | Microsoft Sentinel (Log Analytics) |
+| `microsoft-defender` | Microsoft Defender XDR (advanced hunting) |
 | `elastic-security` | Elastic Security (Elasticsearch) |
 | `crowdstrike-logscale` | CrowdStrike Falcon LogScale |
 | `google-secops` | Google Security Operations (Chronicle) |
