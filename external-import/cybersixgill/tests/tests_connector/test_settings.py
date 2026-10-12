@@ -44,6 +44,16 @@ MINIMAL_VALID_SETTINGS_DICT = {
             MINIMAL_VALID_SETTINGS_DICT,
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "cybersixgill": {
+                    **MINIMAL_VALID_SETTINGS_DICT["cybersixgill"],
+                    "fetch_size": 1,
+                },
+            },
+            id="minimum_fetch_size",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -198,6 +208,28 @@ def test_settings_should_prefer_duration_period_over_deprecated_interval_sec():
             },
             "cybersixgill.client_secret",
             id="missing_cybersixgill_client_secret",
+        ),
+        pytest.param(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "cybersixgill": {
+                    **MINIMAL_VALID_SETTINGS_DICT["cybersixgill"],
+                    "fetch_size": 0,
+                },
+            },
+            "cybersixgill.fetch_size",
+            id="zero_cybersixgill_fetch_size",
+        ),
+        pytest.param(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "cybersixgill": {
+                    **MINIMAL_VALID_SETTINGS_DICT["cybersixgill"],
+                    "fetch_size": -1,
+                },
+            },
+            "cybersixgill.fetch_size",
+            id="negative_cybersixgill_fetch_size",
         ),
     ],
 )

@@ -61,6 +61,7 @@ class CybersixgillConfig(BaseConfigModel):
     )
     fetch_size: int = Field(
         description="Number of indicators to fetch per run.",
+        ge=1,
         default=2000,
     )
     interval_sec: int | None = DeprecatedField(

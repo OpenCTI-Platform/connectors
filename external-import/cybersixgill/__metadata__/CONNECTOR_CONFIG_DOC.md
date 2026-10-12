@@ -18,5 +18,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CYBERSIXGILL_CREATE_OBSERVABLES | `boolean` |  | boolean |  | `true` | Create observables from indicators. |
 | CYBERSIXGILL_CREATE_INDICATORS | `boolean` |  | boolean |  | `true` | Create STIX indicators. |
 | CYBERSIXGILL_ENABLE_RELATIONSHIPS | `boolean` |  | boolean |  | `true` | Create relationships between SDOs. |
-| CYBERSIXGILL_FETCH_SIZE | `integer` |  | integer |  | `2000` | Number of indicators to fetch per run. |
+| CYBERSIXGILL_FETCH_SIZE | `integer` |  | `1 <= x ` |  | `2000` | Number of indicators to fetch per run. |
 | CYBERSIXGILL_INTERVAL_SEC | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |

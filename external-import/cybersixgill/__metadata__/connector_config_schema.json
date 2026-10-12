@@ -82,6 +82,7 @@
     "CYBERSIXGILL_FETCH_SIZE": {
       "default": 2000,
       "description": "Number of indicators to fetch per run.",
+      "minimum": 1,
       "type": "integer"
     },
     "CYBERSIXGILL_INTERVAL_SEC": {
