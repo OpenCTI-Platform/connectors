@@ -1,0 +1,28 @@
+{
+  "title": "Spur Enrichment",
+  "slug": "spur-enrichment",
+  "description": "Enrich IPv4 and IPv6 observables on demand with the Spur Context API. Each enrichment adds Spur labels (tunnels, risks, services, infrastructure, client behaviors, AI activity) and a score to the IP, links it to its autonomous system and locations, creates an anonymization Infrastructure per VPN or proxy operator, and attaches a note with the client context.",
+  "short_description": "Enrich IP addresses with Spur Context API intelligence: VPN, proxy and anonymization services, risks, autonomous system, location and client behaviors.",
+  "logo": "internal-enrichment/spur-enrichment/__metadata__/logo.png",
+  "use_cases": [
+    "Fraud, Financial Crime & Cryptocurrency Monitoring",
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://spur.us",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/spur-enrichment",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-spur-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
