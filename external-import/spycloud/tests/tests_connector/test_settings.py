@@ -89,7 +89,7 @@ def test_settings_should_apply_defaults():
 
     assert settings.connector.name == "SpyCloud"
     assert settings.connector.scope == ["spycloud"]
-    assert settings.connector.log_level == "debug"
+    assert settings.connector.log_level == "info"
     assert settings.connector.duration_period == timedelta(hours=1)
     assert settings.spycloud.severity_levels == []
     assert settings.spycloud.watchlist_types == []

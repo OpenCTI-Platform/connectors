@@ -9,7 +9,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.settings.annotated_types import parse_comma_separated_list
-from pydantic import BeforeValidator, Field, SecretStr, field_validator
+from pydantic import BeforeValidator, Field, HttpUrl, SecretStr, field_validator
 from spycloud_connector.models.opencti import TLPMarkingLevel
 from spycloud_connector.models.spycloud import (
     BreachRecordSeverity,
@@ -46,7 +46,7 @@ class SpyCloudConnectorConfig(BaseExternalImportConnectorConfig):
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
-        default="debug",
+        default="info",
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -61,7 +61,7 @@ class SpyCloudConfig(BaseConfigModel):
     Mirrors the existing `SPYCLOUD_*` variables.
     """
 
-    api_base_url: str = Field(
+    api_base_url: HttpUrl = Field(
         description="SpyCloud API base URL (a trailing slash is added if missing).",
     )
     api_key: SecretStr = Field(
@@ -100,11 +100,16 @@ class SpyCloudConfig(BaseConfigModel):
         default_factory=lambda: datetime.now(UTC) - timedelta(days=30),
     )
 
-    @field_validator("api_base_url")
+    # `HttpUrl` adds a trailing slash only when the URL has no path, so
+    # `https://api.spycloud.io/enterprise-v2` keeps none and `urljoin` would drop
+    # `enterprise-v2`. `urljoin` also rejects a mix of `HttpUrl` and `str`, so the
+    # value is returned as a `str`.
+    @field_validator("api_base_url", mode="after")
     @classmethod
-    def _add_trailing_slash(cls, value: str) -> str:
-        """Ensure the API base URL ends with a slash, so that endpoints can be joined to it."""
-        return value if value.endswith("/") else f"{value}/"
+    def _add_trailing_slash(cls, value: HttpUrl) -> str:
+        """Return the validated URL as a string ending with a slash, so that endpoints can be joined to it."""
+        url = str(value)
+        return url if url.endswith("/") else f"{url}/"
 
 
 class ConnectorSettings(BaseConnectorSettings):

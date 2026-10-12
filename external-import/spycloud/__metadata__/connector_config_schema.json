@@ -32,7 +32,7 @@
       "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "debug",
+      "default": "info",
       "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
@@ -56,6 +56,9 @@
     },
     "SPYCLOUD_API_BASE_URL": {
       "description": "SpyCloud API base URL (a trailing slash is added if missing).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SPYCLOUD_API_KEY": {

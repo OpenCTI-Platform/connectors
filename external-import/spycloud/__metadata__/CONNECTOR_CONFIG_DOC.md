@@ -8,11 +8,11 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
-| SPYCLOUD_API_BASE_URL | `string` | ✅ | string |  | SpyCloud API base URL (a trailing slash is added if missing). |
+| SPYCLOUD_API_BASE_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | SpyCloud API base URL (a trailing slash is added if missing). |
 | SPYCLOUD_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | SpyCloud API key. |
 | CONNECTOR_NAME | `string` |  | string | `"SpyCloud"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["spycloud"]` | The scope of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"debug"` | The minimum level of logs to display. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | SPYCLOUD_SEVERITY_LEVELS | `array` |  | `2` `5` `20` `25` | `[]` | Comma-separated list of severities to filter breach records (allowed values are 2, 5, 20, 25). Leave empty to import all severities. |

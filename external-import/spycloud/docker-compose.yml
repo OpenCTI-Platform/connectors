@@ -11,7 +11,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       # - CONNECTOR_NAME=SpyCloud
       # - CONNECTOR_SCOPE=spycloud
-      # - CONNECTOR_LOG_LEVEL=debug
+      # - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's definition parameters OPTIONAL
