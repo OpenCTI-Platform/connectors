@@ -110,10 +110,10 @@ class Cybersixgill:
                     "Cybersixgill Darkfeed connector internal error: {0}", str(e)
                 )
 
-                if self.helper.connect_run_and_terminate:
-                    self.helper.log_info("Connector stop")
-                    self.helper.force_ping()
-                    sys.exit(0)
+            if self._is_run_once():
+                self.helper.log_info("Connector stop")
+                self.helper.force_ping()
+                sys.exit(0)
 
             self._sleep(delay_sec=run_interval)
 
@@ -150,6 +150,10 @@ class Cybersixgill:
 
         time_diff = current_time - last_run
         return time_diff >= self._get_interval()
+
+    def _is_run_once(self) -> bool:
+        # A zero CONNECTOR_DURATION_PERIOD means run once and exit
+        return bool(self.helper.connect_run_and_terminate) or self._get_interval() == 0
 
     def _initiate_work(self, timestamp: int) -> str:
         datetime_str = timestamp_to_datetime(timestamp)

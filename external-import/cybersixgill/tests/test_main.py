@@ -159,3 +159,31 @@ def test_run_should_sleep_after_a_successful_run(connector, monkeypatch):
     connector._sleep.assert_called_once_with(
         delay_sec=Cybersixgill._CONNECTOR_RUN_INTERVAL_SEC
     )
+
+
+@pytest.mark.parametrize("import_error", [None, RuntimeError("API down")])
+def test_run_should_exit_after_one_attempt_when_duration_period_is_zero(
+    connector, monkeypatch, import_error
+):
+    """A zero `CONNECTOR_DURATION_PERIOD` MUST run once and exit, even when the import fails."""
+    monkeypatch.setattr(connector, "interval_sec", 0)
+    monkeypatch.setattr(
+        connector.helper, "get_state", MagicMock(return_value={"last_run": 10_000})
+    )
+    monkeypatch.setattr(connector.helper, "set_state", MagicMock())
+    monkeypatch.setattr(connector.helper, "force_ping", MagicMock())
+    monkeypatch.setattr(connector.helper.api.work, "initiate_work", MagicMock())
+    monkeypatch.setattr(connector.helper.api.work, "to_processed", MagicMock())
+    monkeypatch.setattr(
+        connector.indicator_importer,
+        "run",
+        MagicMock(return_value={}, side_effect=import_error),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        connector.run()
+
+    assert exc_info.value.code == 0
+    connector.indicator_importer.run.assert_called_once()
+    connector.helper.force_ping.assert_called_once()
+    connector._sleep.assert_not_called()
