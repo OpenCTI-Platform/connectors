@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 
+class ResultWindowExceededError(requests.HTTPError):
+    """Raised when Doppel requires a narrower alert activity window."""
+
+
 class ConnectorClient:
     def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         """
@@ -123,7 +127,31 @@ class ConnectorClient:
             response.raise_for_status()
             return response
         except requests.HTTPError as http_err:
-            if http_err.response.status_code == 504:
+            try:
+                error_json = http_err.response.json()
+                error_msg = error_json.get("message", http_err.response.text)
+            except Exception:
+                error_json = {}
+                error_msg = http_err.response.text or str(http_err)
+
+            if (
+                http_err.response.status_code == 422
+                and error_json.get("code") == "result_window_exceeded"
+            ):
+                self.helper.connector_logger.warning(
+                    "[API] Alert result window exceeded; narrowing activity range",
+                    {
+                        "url": api_url,
+                        "maximum_results": error_json.get("maximum_results"),
+                        "params": params,
+                    },
+                )
+                raise ResultWindowExceededError(
+                    error_msg,
+                    response=http_err.response,
+                    request=http_err.request,
+                ) from http_err
+            elif http_err.response.status_code == 504:
                 self.helper.connector_logger.warning(
                     "[API] Gateway Timeout, retrying...",
                     {"url": api_url, "params": params},
@@ -136,12 +164,6 @@ class ConnectorClient:
                 )
                 raise
             else:
-                try:
-                    error_json = http_err.response.json()
-                    error_msg = error_json.get("message", http_err.response.text)
-                except Exception:
-                    error_msg = http_err.response.text or str(http_err)
-
                 self.helper.connector_logger.error(
                     "[API] HTTP error during fetch",
                     {
@@ -172,11 +194,10 @@ class ConnectorClient:
         """
         Retrieve one page of alerts.
 
-        V2 requests bound the window with ``last_activity_before`` and sort by
-        the external value ``last_activity`` (not ``last_activity_timestamp``)
+        Requests bound the window with ``last_activity_before`` and sort by the
+        external value ``last_activity`` (not ``last_activity_timestamp``)
         ascending so the connector can checkpoint the newest activity time on
-        the page. V1 omits those parameters until the V1 OpenAPI / gateway
-        rollout accepts them; sending them today returns HTTP 400.
+        the page without skipping older alerts.
 
         :return: alerts and ``total_pages`` from that single response
         """
@@ -195,17 +216,12 @@ class ConnectorClient:
 
         params = {
             "last_activity_timestamp": last_activity_timestamp,
+            "last_activity_before": last_activity_before,
+            "sort_type": "last_activity",
+            "sort_order": "asc",
             "page": page,
             "page_size": page_size,
         }
-        if self.config.doppel.api_version == "v2":
-            params.update(
-                {
-                    "last_activity_before": last_activity_before,
-                    "sort_type": "last_activity",
-                    "sort_order": "asc",
-                }
-            )
 
         self.helper.connector_logger.info(
             "[DoppelConnector] Fetching alerts page",

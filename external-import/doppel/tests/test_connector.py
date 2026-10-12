@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from doppel.client_api import ResultWindowExceededError
 from doppel.connector import DoppelConnector
 
 RUN_START = datetime(2026, 8, 3, 12, 0, 0, tzinfo=timezone.utc)
@@ -92,6 +93,74 @@ def test_process_message_failure_on_second_page_keeps_first_checkpoint(
     )
 
 
+def test_process_message_bisects_oversized_window_until_oldest_range_fits(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    stored = _record_last_runs(helper)
+    requested_windows = []
+
+    def get_alerts(**kwargs):
+        requested_windows.append(
+            (
+                kwargs["last_activity_timestamp"],
+                kwargs["last_activity_before"],
+                kwargs["page"],
+            )
+        )
+        if kwargs["last_activity_before"] in {
+            "2026-08-03T12:00:00",
+            "2026-08-03T11:00:00",
+        }:
+            raise ResultWindowExceededError("Result window exceeds 50000 alerts")
+        return (
+            [
+                {
+                    "id": "oldest-alert",
+                    "last_activity_timestamp": "2026-08-03T10:15:00Z",
+                }
+            ],
+            1,
+        )
+
+    connector.client.get_alerts.side_effect = get_alerts
+
+    connector.process_message()
+
+    assert requested_windows == [
+        ("2026-08-03T10:00:00", "2026-08-03T12:00:00", 0),
+        ("2026-08-03T10:00:00", "2026-08-03T11:00:00", 0),
+        ("2026-08-03T10:00:00", "2026-08-03T10:30:00", 0),
+    ]
+    assert stored == [
+        "2026-08-03 10:15:00",
+        "2026-08-03 10:30:00",
+    ]
+    helper.send_stix2_bundle.assert_called_once()
+    assert helper.connector_logger.warning.call_count == 2
+    helper.api.work.to_processed.assert_called_once_with(
+        "work-1", "Doppel connector successfully run"
+    )
+
+
+def test_process_message_does_not_loop_when_one_second_window_is_too_large(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    helper.get_state.return_value = {"last_run": "2026-08-03 11:59:59"}
+    connector.client.get_alerts.side_effect = ResultWindowExceededError(
+        "Result window exceeds 50000 alerts"
+    )
+
+    connector.process_message()
+
+    connector.client.get_alerts.assert_called_once()
+    helper.set_state.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+    helper.connector_logger.error.assert_called_once()
+
+
 def test_process_message_same_timestamp_pages_then_moves_cursor(doppel_connector):
     connector, helper = doppel_connector
     stored = _record_last_runs(helper)
@@ -162,6 +231,28 @@ def test_process_message_same_timestamp_failure_keeps_page_checkpoint(
     )
     helper.api.work.to_processed.assert_called_once()
     assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+
+
+def test_process_message_full_final_same_timestamp_page_stops_at_total_pages(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    connector.config.doppel.page_size = 2
+    stored = _record_last_runs(helper)
+    page = [
+        {
+            "id": f"alert-{index}",
+            "last_activity_timestamp": "2026-08-03T10:15:00Z",
+        }
+        for index in range(2)
+    ]
+    connector.client.get_alerts.return_value = (page, 1)
+
+    connector.process_message()
+
+    connector.client.get_alerts.assert_called_once()
+    helper.send_stix2_bundle.assert_called_once()
+    assert stored == ["2026-08-03 10:15:00", WINDOW_END]
 
 
 def test_process_message_short_page_stores_window_end(doppel_connector):

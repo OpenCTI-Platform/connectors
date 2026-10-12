@@ -169,10 +169,13 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 
 ## Behavior
 
-- Fetches one page of alerts at a time from the Doppel API. V2 bounds the
-  window with `last_activity_timestamp` and the run start (`last_activity_before`)
-  and sorts by `last_activity` ascending. V1 omits those newer query parameters
-  until the V1 gateway accepts them.
+- Fetches one page of alerts at a time from the Doppel API. V1 and V2 bound
+  the window with `last_activity_timestamp` and the run start
+  (`last_activity_before`) and sort by `last_activity` ascending.
+- If Doppel rejects a window containing more than 50,000 results, repeatedly
+  halves the activity range and processes the oldest accepted range. The
+  connector checkpoints that range's upper boundary, so later scheduled runs
+  continue the backlog without deep offset pagination.
 - Identifies every outbound Doppel API request, including V2 token minting, with
   `x-doppel-client: opencti/7.260901.0` and
   `User-Agent: doppel-opencti/7.260901.0` for usage attribution.
@@ -195,7 +198,7 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 - Converts and sends each page to OpenCTI before requesting the next page.
   `last_run` advances after every successful send to that page's newest
   activity time, so a later page failure resumes from the last page that was
-  sent
+  sent.
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
   Indicators (description, score, external reference) and RFT cases

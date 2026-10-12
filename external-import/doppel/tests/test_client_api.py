@@ -2,7 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from doppel.client_api import ConnectorClient
+import requests
+from doppel.client_api import ConnectorClient, ResultWindowExceededError
 from pydantic import SecretStr
 
 
@@ -31,6 +32,9 @@ def test_get_alerts_requests_one_page(client, total_pages):
     def request_data(_url, params):
         assert params == {
             "last_activity_timestamp": "2026-08-03T00:00:00Z",
+            "last_activity_before": "2026-08-03T02:00:00Z",
+            "sort_type": "last_activity",
+            "sort_order": "asc",
             "page": 0,
             "page_size": 100,
         }
@@ -55,7 +59,9 @@ def test_get_alerts_requests_one_page(client, total_pages):
     assert alerts == ([{"id": "alert-0"}] if total_pages else [])
 
 
-def test_get_alerts_v1_omits_unsupported_window_sort_params(client):
+def test_get_alerts_v1_sends_bounded_ascending_params_to_prevent_backlog_skips(
+    client,
+):
     client._request_data = MagicMock(return_value=_response())
     client._request_data.retry = MagicMock()
 
@@ -68,6 +74,9 @@ def test_get_alerts_v1_omits_unsupported_window_sort_params(client):
 
     assert client._request_data.call_args.kwargs["params"] == {
         "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
         "page": 2,
         "page_size": 50,
     }
@@ -103,6 +112,45 @@ def test_get_alerts_v2_sends_window_and_sort_params():
         "page": 2,
         "page_size": 50,
     }
+
+
+def test_request_data_maps_result_window_response_without_retry(client):
+    response = _response(
+        {
+            "code": "result_window_exceeded",
+            "message": "Narrow the activity time range",
+            "maximum_results": 50_000,
+        },
+        status_code=422,
+    )
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(ResultWindowExceededError) as error:
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    assert error.value.response is response
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.warning.assert_called_once_with(
+        "[API] Alert result window exceeded; narrowing activity range",
+        {
+            "url": "https://api.doppel.test/v1/alerts",
+            "maximum_results": 50_000,
+            "params": {"page": 0},
+        },
+    )
+
+
+def test_request_data_does_not_map_unrelated_422(client):
+    response = _response({"message": "Invalid search filters"}, status_code=422)
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(requests.HTTPError):
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.error.assert_called_once()
 
 
 def _config(*, api_version: str) -> SimpleNamespace:

@@ -1,7 +1,7 @@
 import sys
 from datetime import datetime, timedelta, timezone
 
-from doppel.client_api import ConnectorClient
+from doppel.client_api import ConnectorClient, ResultWindowExceededError
 from doppel.converter_to_stix import ConverterToStix
 from doppel.settings import ConnectorSettings
 from doppel.utils import parse_iso_datetime
@@ -24,7 +24,7 @@ class DoppelConnector:
             enable_rft_case=self.config.doppel.enable_rft_case,
         )
 
-    def _get_last_run(self, current_state, start_datetime: datetime) -> datetime:
+    def _get_last_run(self, current_state, start_datetime: datetime) -> str:
         """
         Retrieve previous run from current state or the
         start date depending on historical_polling_days from config
@@ -54,6 +54,21 @@ class DoppelConnector:
     def _format_api_timestamp(last_run: str) -> str:
         """Reformat a stored last_run value as ``yyyy-mm-ddThh:mm:ss``."""
         return datetime.fromisoformat(last_run).isoformat(timespec="seconds")
+
+    @staticmethod
+    def _bisect_window(window_start: str, window_end: str) -> str:
+        """Return the UTC midpoint of an activity window, truncated to seconds."""
+        start = parse_iso_datetime(window_start)
+        end = parse_iso_datetime(window_end)
+        if start is None or end is None or start >= end:
+            raise ValueError("Invalid Doppel alert activity window")
+
+        midpoint = (start + (end - start) / 2).replace(microsecond=0)
+        if midpoint <= start:
+            raise ValueError(
+                "Doppel alert result window exceeds the limit within one second"
+            )
+        return midpoint.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     @staticmethod
     def _activity_checkpoint(timestamp: object) -> str | None:
@@ -114,7 +129,9 @@ class DoppelConnector:
         newest activity time so a later failure resumes from the last page
         that was stored. The lower bound is inclusive, so a full page whose
         alerts all share that timestamp keeps the in-memory cursor and
-        requests the next page instead of repeating the same page forever.
+        requests the next page instead of repeating the same page forever. If
+        Doppel rejects a result window above its limit, the connector bisects
+        the window until the oldest bounded range can be processed safely.
         :return: None
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
@@ -129,12 +146,31 @@ class DoppelConnector:
             page_size = self.config.doppel.page_size
 
             while True:
-                alerts, _total_pages = self.client.get_alerts(
-                    last_activity_timestamp=self._format_api_timestamp(cursor),
-                    last_activity_before=self._format_api_timestamp(window_end),
-                    page=page,
-                    page_size=page_size,
-                )
+                try:
+                    alerts, total_pages = self.client.get_alerts(
+                        last_activity_timestamp=self._format_api_timestamp(cursor),
+                        last_activity_before=self._format_api_timestamp(window_end),
+                        page=page,
+                        page_size=page_size,
+                    )
+                except ResultWindowExceededError:
+                    if page != 0:
+                        raise RuntimeError(
+                            "Doppel alert result window exceeded while paging a "
+                            "single activity timestamp"
+                        )
+                    previous_window_end = window_end
+                    window_end = self._bisect_window(cursor, window_end)
+                    self.helper.connector_logger.warning(
+                        "[DoppelConnector] Narrowing oversized alert activity window",
+                        {
+                            "last_activity_timestamp": cursor,
+                            "previous_last_activity_before": previous_window_end,
+                            "last_activity_before": window_end,
+                        },
+                    )
+                    continue
+
                 if not alerts:
                     break
 
@@ -152,6 +188,8 @@ class DoppelConnector:
                 current_state = self._store_last_run(current_state, checkpoint)
                 page_is_full = len(alerts) >= page_size
                 if page_is_full and self._alerts_share_checkpoint(alerts, checkpoint):
+                    if page + 1 >= total_pages:
+                        break
                     self.helper.connector_logger.info(
                         "[DoppelConnector] Full page shares one activity timestamp; "
                         "fetching the next page",
