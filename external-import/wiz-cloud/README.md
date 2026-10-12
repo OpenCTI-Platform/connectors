@@ -1,6 +1,6 @@
 # OpenCTI Wiz Cloud Security Connector
 
-Ingests **Wiz Threat Detection Issues** from a Wiz tenant as **OpenCTI Incidents**, together with the affected cloud asset as a **System** linked by a `targets` relationship.
+Ingests **Wiz Threat Detection Issues** from a Wiz tenant as **OpenCTI Incidents**, together with the affected cloud resource (virtual machine, service account, container image or access key) linked to the incident.
 
 > **Not to be confused with the `wiz` connector**, which imports the public Wiz Research threat landscape feed from threats.wiz.io. This connector imports your own tenant's findings from the authenticated Wiz GraphQL API. The two are complementary.
 
@@ -52,8 +52,8 @@ python src/main.py
 ```mermaid
 graph LR
     A[Wiz issuesV2<br/>type THREAT_DETECTION] --> B[Incident]
-    A --> C[System<br/>entitySnapshot]
-    B -- targets --> C
+    A --> C[System / User Account /<br/>Software / Credential<br/>entitySnapshot]
+    B -- targets / related-to --> C
     W[Wiz] -- created-by --> B
     W -- created-by --> C
 ```
@@ -61,14 +61,22 @@ graph LR
 | OpenCTI | Wiz source |
 |---|---|
 | Incident `name` | `sourceRules[].name` + the Wiz issue `id` |
-| Incident `description` | `description` (omitted when empty) |
+| Incident `description` | `description` (omitted when empty), followed by an **Affected resource** summary of `entitySnapshot` |
 | Incident `first_seen` / `last_seen` | `firstEventAt` / `lastEventAt` (fallback `createdAt` / `updatedAt`) |
 | Incident `severity` | `severity` |
 | Incident external reference | `url` (Wiz portal deep link) + issue `id` |
-| System `name` | `entitySnapshot.name` |
-| System external reference | `entitySnapshot.externalId` (+ `cloudProviderURL` when present) |
-| System `labels` | `entitySnapshot.tags` as `key=value` |
-| Relationship | Incident `targets` System |
+
+The affected resource (`entitySnapshot`) is always summarized in the incident description (name, type, cloud platform, region, provider ID, external ID). It is also created as an entity for the following resource types only:
+
+| `entitySnapshot.type` | OpenCTI entity | Relationship from the Incident |
+|---|---|---|
+| `VIRTUAL_MACHINE` | System (`name`) | `targets` |
+| `SERVICE_ACCOUNT` | User Account (`account_login` = `name`, `user_id` = `externalId`) | `related-to` |
+| `CONTAINER_IMAGE` | Software (`name`) | `related-to` |
+| `ACCESS_KEY` | Credential (`value` = `name`, the key id, never a secret) | `related-to` |
+| `SUBSCRIPTION` and any other type | none, description only | none |
+
+Each created entity carries `entitySnapshot.externalId` (and `cloudProviderURL` when present) as an external reference. Resource tags are not imported.
 
 Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT ASC`, so incidents reach the platform in the order they happened). Entity IDs are deterministic, so re-runs never duplicate.
 

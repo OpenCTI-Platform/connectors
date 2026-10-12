@@ -1,7 +1,8 @@
 """Processor turning Wiz Threat Detection issues into OpenCTI Incidents.
 
-Each issue becomes an Incident, and the cloud resource it was raised on
-becomes a System linked with a targets relationship.
+Each issue becomes an Incident. The cloud resource it was raised on is always
+described in the incident description, and becomes an entity linked to the
+incident only for the resource types mapped in _entity_for.
 """
 
 from collections.abc import Iterator
@@ -10,17 +11,21 @@ from importlib import resources
 
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
+    BaseIdentifiedEntity,
     ExternalReference,
     Incident,
     OrganizationAuthor,
     Relationship,
+    Software,
     System,
     TLPMarking,
+    UserAccount,
 )
 from connectors_sdk.models.enums import IncidentSeverity, IncidentType, RelationshipType
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
+from wiz_cloud.observables import Credential
 
 ISSUES_QUERY = (
     resources.files("wiz_cloud.queries").joinpath("issues.graphql").read_text("utf-8")
@@ -123,7 +128,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         """
         # Run-scoped caches: the same entitySnapshot backs many issues, and
         # author/marking must be sent once, not once per page.
-        systems_cache: dict[str, System] = {}
+        entities_cache: dict[str, BaseIdentifiedEntity] = {}
         shared_sent = False
         max_created = self.state.issues_last_created_at
         issues_converted = 0
@@ -141,7 +146,7 @@ class WizIssuesProcessor(BaseDataProcessor):
                     )
                     continue
 
-                objects.extend(self._convert(issue, systems_cache))
+                objects.extend(self._convert(issue, entities_cache))
                 issues_converted += 1
                 if max_created is None or issue.created_at > max_created:
                     max_created = issue.created_at
@@ -174,26 +179,28 @@ class WizIssuesProcessor(BaseDataProcessor):
 
     # -- conversion ----------------------------------------------------------
 
-    def _convert(self, issue: WizIssue, systems_cache: dict[str, System]) -> list:
+    def _convert(
+        self, issue: WizIssue, entities_cache: dict[str, BaseIdentifiedEntity]
+    ) -> list:
         """Convert one Wiz issue into its bundle objects.
 
         Args:
             issue: Parsed Wiz issue.
-            systems_cache: Systems already built during this run, keyed by
+            entities_cache: Entities already built during this run, keyed by
                 entitySnapshot id, so a resource shared by several issues is
-                emitted once and targeted many times.
+                emitted once and linked many times.
 
         Returns:
-            A list holding the Incident, plus the System and the targets
-            Relationship when the issue carries an entity snapshot. A list is
-            returned so further entities can be appended without changing the
-            signature.
+            A list holding the Incident, plus the resource entity and the
+            Relationship linking them when the issue carries an entity
+            snapshot of a mapped type. A list is returned so further entities
+            can be appended without changing the signature.
         """
         objects: list = []
 
         incident = Incident(
             name=self._incident_name(issue),
-            description=issue.description or None,  # "" observed in payloads
+            description=self._incident_description(issue),
             incident_type=IncidentType.ALERT,
             severity=_SEVERITY.get(issue.severity, IncidentSeverity.LOW),
             source="Wiz",
@@ -208,19 +215,29 @@ class WizIssuesProcessor(BaseDataProcessor):
         )
         objects.append(incident)
 
-        if issue.entity_snapshot is not None:
-            system, is_new = self._system_for(issue.entity_snapshot, systems_cache)
-            if is_new:
-                objects.append(system)
-            objects.append(
-                Relationship(
-                    type=RelationshipType.TARGETS,
-                    source=incident,
-                    target=system,
-                    author=self._author,
-                    markings=[self._marking],
-                )
+        if issue.entity_snapshot is None:
+            return objects
+
+        entity, is_new = self._entity_for(issue.entity_snapshot, entities_cache)
+        if entity is None:
+            return objects
+        if is_new:
+            objects.append(entity)
+        objects.append(
+            Relationship(
+                # OpenCTI only allows related-to between an Incident and an
+                # observable; targets is kept for the System.
+                type=(
+                    RelationshipType.TARGETS
+                    if isinstance(entity, System)
+                    else RelationshipType.RELATED_TO
+                ),
+                source=incident,
+                target=entity,
+                author=self._author,
+                markings=[self._marking],
             )
+        )
 
         return objects
 
@@ -230,6 +247,32 @@ class WizIssuesProcessor(BaseDataProcessor):
         # is what keeps each incident name unambiguous.
         name = issue.rule_name or ""
         return f"{name} - Wiz issue {issue.id}" if name else f"Wiz issue {issue.id}"
+
+    def _incident_description(self, issue: WizIssue) -> str | None:
+        # The affected resource is written out whatever its type, so the
+        # incident stays self-explanatory for types that get no entity.
+        parts = [
+            issue.description,  # "" observed in payloads
+            self._resource_summary(issue.entity_snapshot),
+        ]
+        return "\n\n".join(part for part in parts if part) or None
+
+    @staticmethod
+    def _resource_summary(snapshot: WizEntitySnapshot | None) -> str | None:
+        if snapshot is None:
+            return None
+        fields = (
+            ("Name", snapshot.name),
+            ("Type", snapshot.type),
+            ("Cloud platform", snapshot.cloud_platform),
+            ("Region", snapshot.region),
+            ("Provider ID", snapshot.provider_id),
+            ("External ID", snapshot.external_id),
+            ("Cloud provider URL", snapshot.cloud_provider_url),
+        )
+        # region, providerId and cloudProviderURL are often "" in payloads.
+        lines = [f"- {label}: {value}" for label, value in fields if value]
+        return "\n".join(["**Affected resource**", "", *lines])
 
     def _labels(self, issue: WizIssue) -> list[str]:
         # No "wiz" label: the incident is already created-by the Wiz author
@@ -253,13 +296,65 @@ class WizIssuesProcessor(BaseDataProcessor):
             )
         return references
 
-    def _system_for(
-        self, snapshot: WizEntitySnapshot, cache: dict[str, System]
-    ) -> tuple[System, bool]:
+    def _entity_for(
+        self, snapshot: WizEntitySnapshot, cache: dict[str, BaseIdentifiedEntity]
+    ) -> tuple[BaseIdentifiedEntity | None, bool]:
+        """Return the entity for a snapshot, building it on first sight.
+
+        Args:
+            snapshot: The resource the issue was raised on.
+            cache: Entities already built during this run, keyed by
+                entitySnapshot id.
+
+        Returns:
+            The entity, or None when the snapshot type is not mapped, and
+            whether it was built by this call and still has to be emitted.
+        """
         if snapshot.id in cache:
             return cache[snapshot.id], False
+        if not snapshot.name:
+            # Every mapped model requires a non-empty name or value.
+            return None, False
 
-        description_parts = [
+        common = {
+            "description": self._snapshot_context(snapshot),
+            "external_references": self._snapshot_references(snapshot),
+            "author": self._author,
+            "markings": [self._marking],
+        }
+        # Do not add labels to the entities as tags are too numerous and
+        # create noise.
+        entity: BaseIdentifiedEntity
+        match snapshot.type:
+            case "VIRTUAL_MACHINE":
+                entity = System(name=snapshot.name, **common)
+            case "SERVICE_ACCOUNT":
+                entity = UserAccount(
+                    # OpenCTI displays account_login first, so the readable
+                    # name goes there and the Wiz identifier in user_id.
+                    account_login=snapshot.name,
+                    user_id=snapshot.external_id or None,
+                    display_name=snapshot.name,
+                    is_service_account=True,
+                    **common,
+                )
+            case "CONTAINER_IMAGE":
+                entity = Software(name=snapshot.name, **common)
+            case "ACCESS_KEY":
+                # The access key id. Wiz never returns the secret.
+                entity = Credential(value=snapshot.name, **common)
+            case _:
+                # Mapping every Wiz resource type costs a lot for little
+                # benefit: any other type (SUBSCRIPTION included) only appears
+                # in the incident description.
+                return None, False
+
+        cache[snapshot.id] = entity
+        return entity, True
+
+    @staticmethod
+    def _snapshot_context(snapshot: WizEntitySnapshot) -> str | None:
+        parts = [
             part
             for part in (
                 snapshot.type,
@@ -269,28 +364,19 @@ class WizIssuesProcessor(BaseDataProcessor):
             )
             if part
         ]
-        references = []
-        if snapshot.external_id:
-            references.append(
-                ExternalReference(
-                    source_name="Wiz",
-                    external_id=snapshot.external_id,
-                    description="Cloud provider resource identifier",
-                    # cloudProviderURL is usually "" in practice; guard on
-                    # falsiness, not None.
-                    url=snapshot.cloud_provider_url or None,
-                )
-            )
+        return " | ".join(parts) or None
 
-        system = System(
-            name=snapshot.name,
-            description=" | ".join(description_parts) or None,
-            # Do not add labels to System entities as tags are too numerous
-            # and create noise
-            # labels=[f"{key}={value}" for key, value in snapshot.tags.items()],
-            external_references=references,
-            author=self._author,
-            markings=[self._marking],
-        )
-        cache[snapshot.id] = system
-        return system, True
+    @staticmethod
+    def _snapshot_references(snapshot: WizEntitySnapshot) -> list[ExternalReference]:
+        if not snapshot.external_id:
+            return []
+        return [
+            ExternalReference(
+                source_name="Wiz",
+                external_id=snapshot.external_id,
+                description="Cloud provider resource identifier",
+                # cloudProviderURL is usually "" in practice; guard on
+                # falsiness, not None.
+                url=snapshot.cloud_provider_url or None,
+            )
+        ]

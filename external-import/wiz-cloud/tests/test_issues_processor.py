@@ -2,7 +2,7 @@
 
 Covers the edge cases the sample proved real:
 - empty description
-- duplicated entitySnapshot across issues (System emitted once, targeted twice)
+- duplicated entitySnapshot across issues (entity emitted once, linked twice)
 - actors: null inside threatDetectionDetails
 - tags with slashes in keys
 
@@ -13,7 +13,10 @@ the models are exercised here, no I/O.
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+from connectors_sdk.models import Software, System, UserAccount
+from connectors_sdk.models.enums import RelationshipType
 from wiz_cloud.models import WizIssue
+from wiz_cloud.observables import Credential
 from wiz_cloud.processors import WizIssuesProcessor
 from wiz_cloud.processors.issues_processor import _utc
 from wiz_cloud.settings import WizCloudConfig
@@ -55,28 +58,58 @@ class TestWizIssueModel:
 
 class TestConversion:
     def test_incident_name_is_rule_plus_issue_id(self, processor, signin_issue):
-        objects = processor._convert(signin_issue, systems_cache={})
+        objects = processor._convert(signin_issue, entities_cache={})
         incident = objects[0]
         assert incident.name == (
             "Wiz Sign-in from Unusual Country"
             " - Wiz issue 22b081f9-42d1-5b53-a504-1ddfbf28d53e"
         )
 
-    def test_empty_description_falls_back_to_none(
+    def test_empty_description_keeps_only_the_resource_summary(
         self, processor, empty_description_issue
     ):
-        incident = processor._convert(empty_description_issue, systems_cache={})[0]
-        assert incident.description is None
+        incident = processor._convert(empty_description_issue, entities_cache={})[0]
+        assert incident.description == (
+            "**Affected resource**\n"
+            "\n"
+            "- Name: tivan-eleonore-vm\n"
+            "- Type: VIRTUAL_MACHINE\n"
+            "- Cloud platform: AWS\n"
+            "- Region: us-east-2\n"
+            "- Provider ID: arn:aws:ec2:us-east-2:998231069301:instance/i-038b4a2cfb0c1f036\n"
+            "- External ID: i-038b4a2cfb0c1f036"
+        )
         assert incident.name == (
             "Service account token was accessed"
             " - Wiz issue 15811dfb-9cdf-539a-951f-d7961526d74d"
         )
 
+    def test_description_appends_the_resource_after_the_issue_text(
+        self, processor, signin_issue
+    ):
+        incident = processor._convert(signin_issue, entities_cache={})[0]
+        assert incident.description.startswith(
+            "Detects Wiz login from an unusual country.\n\n**Affected resource**\n"
+        )
+        # Empty strings from the payload are not written out.
+        assert "Region" not in incident.description
+
+    def test_no_snapshot_and_empty_description_falls_back_to_none(
+        self, processor, empty_description_issue_data
+    ):
+        empty_description_issue_data["entitySnapshot"] = None
+        issue = WizIssue.model_validate(empty_description_issue_data)
+
+        objects = processor._convert(issue, entities_cache={})
+
+        assert len(objects) == 1
+        assert objects[0].description is None
+
     def test_labels_describe_the_issue_without_naming_the_source(
         self, processor, signin_issue
     ):
         """The Wiz author and external reference already name the source."""
-        incident = processor._convert(signin_issue, systems_cache={})[0]
+        incident = processor._convert(signin_issue, entities_cache={})[0]
 
         assert "wiz" not in incident.labels
         assert "threat-detection" in incident.labels
@@ -91,6 +124,99 @@ class TestConversion:
         assert len(first) == 3  # incident, system, relationship
         assert len(second) == 2  # incident, relationship
         assert len(cache) == 1
+
+
+class TestEntityMapping:
+    @staticmethod
+    def _convert(processor, issue_data, **snapshot):
+        issue_data["entitySnapshot"].update(snapshot)
+        issue = WizIssue.model_validate(issue_data)
+        return processor._convert(issue, entities_cache={})
+
+    def test_virtual_machine_is_a_targeted_system(
+        self, processor, empty_description_issue_data
+    ):
+        incident, system, relationship = self._convert(
+            processor, empty_description_issue_data
+        )
+
+        assert isinstance(system, System)
+        assert system.name == "tivan-eleonore-vm"
+        assert system.external_references[0].external_id == "i-038b4a2cfb0c1f036"
+        assert relationship.type == RelationshipType.TARGETS
+        assert relationship.source is incident
+        assert relationship.target is system
+
+    def test_service_account_is_a_related_user_account(
+        self, processor, signin_issue_data
+    ):
+        _, account, relationship = self._convert(processor, signin_issue_data)
+
+        assert isinstance(account, UserAccount)
+        assert account.account_login == "TA-733-INTEG-ING"
+        assert account.user_id == "mlipebtwsndhxdmnzdwrxzmio"
+        assert account.is_service_account is True
+        assert relationship.type == RelationshipType.RELATED_TO
+        assert relationship.target is account
+
+    def test_container_image_is_a_related_software(
+        self, processor, empty_description_issue_data
+    ):
+        _, software, relationship = self._convert(
+            processor,
+            empty_description_issue_data,
+            type="CONTAINER_IMAGE",
+            name="nginx:1.27",
+        )
+
+        assert isinstance(software, Software)
+        assert software.name == "nginx:1.27"
+        assert relationship.type == RelationshipType.RELATED_TO
+
+    def test_access_key_is_a_related_credential(
+        self, processor, empty_description_issue_data
+    ):
+        _, credential, relationship = self._convert(
+            processor,
+            empty_description_issue_data,
+            type="ACCESS_KEY",
+            name="AKIAIOSFODNN7EXAMPLE",
+        )
+
+        assert isinstance(credential, Credential)
+        assert credential.value == "AKIAIOSFODNN7EXAMPLE"
+        assert credential.to_stix2_object()["type"] == "credential"
+        assert relationship.type == RelationshipType.RELATED_TO
+
+    def test_subscription_is_only_described(
+        self, processor, empty_description_issue_data
+    ):
+        objects = self._convert(
+            processor,
+            empty_description_issue_data,
+            type="SUBSCRIPTION",
+            name="prod-account",
+        )
+
+        assert len(objects) == 1
+        assert "- Name: prod-account" in objects[0].description
+        assert "- Type: SUBSCRIPTION" in objects[0].description
+
+    def test_unmapped_type_is_only_described(
+        self, processor, empty_description_issue_data
+    ):
+        objects = self._convert(processor, empty_description_issue_data, type="BUCKET")
+
+        assert len(objects) == 1
+        assert "- Type: BUCKET" in objects[0].description
+
+    def test_nameless_snapshot_is_skipped_instead_of_failing(
+        self, processor, empty_description_issue_data
+    ):
+        objects = self._convert(processor, empty_description_issue_data, name="")
+
+        assert len(objects) == 1
+        assert "**Affected resource**" in objects[0].description
 
 
 class TestTransformLogging:
