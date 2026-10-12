@@ -5,6 +5,8 @@ from typing import Any
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
     DEFAULT_ENTITY_FIELDS,
+    DEFAULT_HIT_FIELDS,
+    HitFields,
     HuntEvent,
     HuntLimits,
     HuntResult,
@@ -43,6 +45,9 @@ RAW_FIELDS = frozenset(
     }
 )
 """Raw event and LogScale bookkeeping fields, never sampled as evidence."""
+
+HIT_FIELDS = HitFields(event_id=("@id", *DEFAULT_HIT_FIELDS.event_id))
+"""Fields of a hit: LogScale gives every event its id (``@id``), the key of its hits."""
 
 
 def strip_statement_end(query: str) -> str:
@@ -85,6 +90,7 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
     documentation_url = DOCUMENTATION_URL
     query_join = " or "
     evidence_excluded_fields = RAW_FIELDS
+    hit_fields = HIT_FIELDS
     entity_fields = (
         *DEFAULT_ENTITY_FIELDS,
         "ComputerName",

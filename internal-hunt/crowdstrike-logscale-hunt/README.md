@@ -207,7 +207,8 @@ Investigate).
 5. The run is reported with the hit count, the distinct hosts (`ComputerName`), users (`UserName`) and network peers,
    the query executed and an evidence sample. `@rawstring`, sensor and customer identifiers (`aid`, `cid`) and
    LogScale bookkeeping fields (`@id`, `#repo`, `@ingesttimestamp`...) are never sampled; host names, user names and
-   command lines only appear hashed and truncated in the evidence.
+   command lines only appear hashed and truncated in the evidence. Each hit is keyed by the id LogScale gives its
+   event (`@id`), so a hit found again by a later run adds nothing to the sighting count.
 
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.

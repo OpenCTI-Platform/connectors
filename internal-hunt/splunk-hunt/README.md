@@ -210,14 +210,16 @@ text. The connector registers as supporting indicator lookups and, for each run:
 
 1. groups the values by observable type in batches of `limits.ioc_batch_size` values (50 by default);
 2. runs one search per batch over the run window, within the search prefix:
-   `search (<prefix>) ("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(if(match(_raw, ...), "<key>", null()), ...) | stats count as hits min(_time) as first_seen max(_time) as last_seen values(host) as hosts by ioc`.
+   `search (<prefix>) ("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(if(match(_raw, ...), "<key>", null()), ...) | eval host=coalesce(host, ""), event_id=index.":"._cd | stats count as hits min(_time) as first_seen max(_time) as last_seen values(event_id) as event_ids by ioc host`.
    Each event is credited to every value its raw text holds as a whole token (`198.51.100.7` never matches
    `198.51.100.70`, `evil.com` matches `cdn.evil.com` but not `evil.com.au`), so the counts are exact;
-3. reports, for every value, whether it was seen, its hits, its first and last event and at most ten hosts;
-4. sends nothing else: OpenCTI keeps one sighting per hunt, indicator or observable the value comes from, and Security
-   Platform, updated in place at each run (a pasted value is created as an observable so that OpenCTI can sight it).
-   The lookups return counts, not single events, so OpenCTI cannot tell the hits of two runs apart and counts every
-   hit of a run as new; scheduled runs only search since the previous run, so the counts barely overlap.
+3. reports, for every value, whether it was seen, its hits, its first and last event and its hosts, and for every
+   value and host, its hits and their first and last event;
+4. sends nothing else: OpenCTI keeps one sighting per indicator or observable the value comes from and Security
+   Platform, whichever hunt found it, updated in place at each run (a pasted value is created as an observable so that
+   OpenCTI can sight it). Each row lists the address of its events (index and `_cd`, at most 10,000 per row): a hit
+   found again by a later run adds nothing to the sighting count. A row holding more hits leaves the hits of its
+   lookup unidentified, and OpenCTI then counts them from the totals.
 
 Preview the query in OpenCTI shows the searches of every batch without running them.
 

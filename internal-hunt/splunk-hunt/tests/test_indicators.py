@@ -68,7 +68,10 @@ def test_build_ioc_lookup_attributes_each_value_as_a_whole_token():
     assert query.startswith('("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(')
     assert '"k1"' in query and '"k2"' in query
     assert "| stats count as hits min(_time) as first_seen" in query
-    assert "values(host) as hosts by ioc" in query
+    # One row per value and host, listing the address of each event
+    assert '| eval host=coalesce(host, ""), event_id=index.":"._cd ' in query
+    assert "values(event_id) as event_ids by ioc host" in query
+    assert "event_ids=mvindex(event_ids, 0, 9999)" in query
     # The attribution regex of a value never matches inside a longer address
     pattern = re.search(r'match\(_raw, "(\(\?i\)[^"]+)"\), "k1"', query).group(1)
     regex = re.compile(pattern.replace("\\\\", "\\"))
@@ -85,17 +88,27 @@ def test_registers_indicator_lookups(connector_factory):
 def test_runs_one_aggregated_lookup_per_type_and_reports_each_value(
     connector_factory, helper, requests_mock, hunt_event
 ):
-    # Given Splunk aggregating the hits of one address of the batch
+    # Given Splunk aggregating the hits of one address of the batch on two hosts,
+    # each row listing the address of its events
     _mock_job(
         requests_mock,
         [
             {
                 "ioc": "k-ip",
-                "hits": "14",
+                "host": "ws1",
+                "hits": "3",
                 "first_seen": "1759478400",
+                "last_seen": "1759480000",
+                "event_ids": ["main:1:10", "main:1:11", "main:2:12"],
+            },
+            {
+                "ioc": "k-ip",
+                "host": "ws2",
+                "hits": "1",
+                "first_seen": "1759482000",
                 "last_seen": "1759482000",
-                "hosts": ["ws1", "ws2"],
-            }
+                "event_ids": "main:3:13",
+            },
         ],
     )
 
@@ -110,16 +123,20 @@ def test_runs_one_aggregated_lookup_per_type_and_reports_each_value(
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "completed")
     by_key = {item["key"]: item for item in kwargs["ioc_results"]}
-    assert by_key["k-ip"]["seen"] is True and by_key["k-ip"]["hits_count"] == 14
+    assert by_key["k-ip"]["seen"] is True and by_key["k-ip"]["hits_count"] == 4
     assert by_key["k-ip"]["hosts"] == ["ws1", "ws2"]
     assert by_key["k-ip-2"]["seen"] is False
-    assert kwargs["hits_count"] == 14
+    assert kwargs["hits_count"] == 4
     assert kwargs["query_language"] == "spl"
     # Nothing is sent: OpenCTI sights the indicator of the address on the Security
-    # Platform itself; aggregated counts carry no hit key, the hits count as new
+    # Platform itself
     helper.send_stix2_bundle.assert_not_called()
-    assert "hit_keys" not in kwargs
-    assert by_key["k-ip"]["hit_keys"] is None
+    # And each hit has the key of its event, so that a run finding the same
+    # events again adds nothing
+    assert len(by_key["k-ip"]["hit_keys"]) == 4 == len(kwargs["hit_keys"])
+    assert sorted(
+        (item["host"], item["hits_count"]) for item in kwargs["observations"]
+    ) == [("ws1", 3), ("ws2", 1)]
     assert "1 of 3 value(s) seen" in message
 
 

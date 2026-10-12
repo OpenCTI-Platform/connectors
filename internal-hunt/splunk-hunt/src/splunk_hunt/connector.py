@@ -56,6 +56,10 @@ SPLUNK_INTERNAL_FIELDS = frozenset(
 
 TSTATS_RE = re.compile(r"^\|\s*tstats\b", re.IGNORECASE)
 
+MAX_ROW_EVENT_IDS = 10000
+"""Most event addresses a lookup row returns: a row holding more hits leaves the
+hits of its batch unidentified, OpenCTI then counts them from the totals."""
+
 DOCUMENTATION_URL = "https://docs.opencti.io/latest/usage/hunt-connectors/#splunk"
 
 REQUIRED_PERMISSIONS = (
@@ -182,13 +186,15 @@ def spl_string(value: str) -> str:
 
 
 def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
-    """Build the SPL lookup of a batch of indicator values, one result row per value found.
+    """Build the SPL lookup of a batch of indicator values, one result row per value and host.
 
     The search keeps the events whose raw text holds one of the values (phrase
     terms, fast on the index); each event is then attributed to every value its
     raw text holds as a whole token (``match`` with the SDK value pattern, case
     insensitive except for URLs), and the rows aggregate the hits, the first and
-    last event time (epoch seconds) and at most ten hosts per value key.
+    last event time (epoch seconds) and the address of each event (index and
+    ``_cd``) per value key and host: OpenCTI tells the hits of a value apart
+    from one run to the next by these addresses.
 
     Args:
         batch: Values of one observable type.
@@ -213,8 +219,11 @@ def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
         f"({terms}) "
         f"| eval ioc=mvappend({attributions}) "
         "| where isnotnull(ioc) "
-        f"| stats count as hits min(_time) as first_seen max(_time) as last_seen values({host_field}) as hosts by ioc "
-        "| eval first_seen=floor(first_seen), last_seen=floor(last_seen), hosts=mvindex(hosts, 0, 9)"
+        f'| eval host=coalesce({host_field}, ""), event_id=index.":"._cd '
+        "| stats count as hits min(_time) as first_seen max(_time) as last_seen "
+        "values(event_id) as event_ids by ioc host "
+        "| eval first_seen=floor(first_seen), last_seen=floor(last_seen), "
+        f"event_ids=mvindex(event_ids, 0, {MAX_ROW_EVENT_IDS - 1})"
     )
 
 

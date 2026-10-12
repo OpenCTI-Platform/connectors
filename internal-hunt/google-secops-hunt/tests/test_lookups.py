@@ -238,6 +238,70 @@ def test_indicator_hunt_runs_udm_searches_and_reports_each_value(
     ]
 
 
+def test_indicator_hits_name_the_machine_of_the_event_and_have_their_keys(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given DNS events resolving the hunted domain: the target names the domain,
+    # the principal is a named machine, or an address only, and one event has no
+    # UDM id
+    unnamed = udm_event(
+        "2026-10-03T11:00:00Z",
+        principal={"ip": ["10.0.0.9"]},
+        target={"hostname": "cdn.evil.example"},
+        network={"dns": {"questions": [{"name": "cdn.evil.example"}]}},
+    )
+    del unnamed["udm"]["metadata"]["id"]
+    requests_mock.get(
+        UDM_SEARCH_URL,
+        json={
+            "events": [
+                udm_event(
+                    "2026-10-03T10:00:00Z",
+                    principal={"hostname": "ws1", "ip": ["10.0.0.5"]},
+                    target={"hostname": "evil.example"},
+                    src={"hostname": "relay"},
+                ),
+                unnamed,
+            ]
+        },
+    )
+    connector = connector_factory()
+    hunt_event["hunt"].update(
+        {
+            "hunt_type": "indicators",
+            "sigma_rule": None,
+            "iocs": [
+                {
+                    "key": "k-domain",
+                    "observable_type": "Domain-Name",
+                    "value": "evil.example",
+                }
+            ],
+        }
+    )
+
+    # When the indicator hunt runs
+    connector.process_message(hunt_event)
+
+    # Then the victims are the machines the events happened on, never their target
+    kwargs = helper.report_hunt_run.call_args.kwargs
+    [result] = kwargs["ioc_results"]
+    assert result["hosts"] == ["ws1", "relay", "10.0.0.9"]
+    assert sorted(item["host"] for item in kwargs["observations"]) == [
+        "10.0.0.9",
+        "ws1",
+    ]
+    assert [hit["host"] for hit in kwargs["hits_sample"]] == ["ws1", "10.0.0.9"]
+    # And each hit has the key of its event, the resource name without UDM id
+    assert [hit["event_id"] for hit in kwargs["hits_sample"]] == [
+        "abc-2026-10-03T10:00:00Z",
+        "projects/p/locations/l/instances/i/events/e-2026-10-03T11:00:00Z",
+    ]
+    assert len(result["hit_keys"]) == 2 == len(kwargs["hit_keys"])
+    # And the name of an event is never shown as evidence
+    assert all(item["field"] != "event_name" for item in kwargs["evidence_sample"])
+
+
 def test_indicator_hunt_preview_lists_the_udm_searches(
     connector_factory, helper, requests_mock, hunt_event
 ):

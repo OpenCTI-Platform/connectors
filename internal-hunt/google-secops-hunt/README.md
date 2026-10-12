@@ -204,6 +204,11 @@ or not searched. Each seen value is sighted on the Google SecOps Security Platfo
 that holds the value. When SecOps holds more events than the run reads, a value missing from the part read is reported
 as not searched.
 
+The host of a hit is the machine the event happened on: `principal.hostname`, `principal.asset.hostname`,
+`src.hostname` or `src.asset.hostname`, else `principal.ip`. The target of an event (the domain resolved, the server
+reached) is never taken for the machine. Each hit is keyed by the UDM id of its event (`metadata.id`), else by the
+resource name SecOps gives the event, so a hit found again by a later run adds nothing to the sighting count.
+
 ## Behavior
 
 1. The run window is passed to SecOps as the time range of the search or rule test (no time condition is added to
@@ -228,8 +233,9 @@ as not searched.
    - **Per field**: the matched fields first, then hosts, users and addresses. UDM bookkeeping fields (`metadata.id`,
      `metadata.product_log_id`, event, ingestion and collection times, base labels, enrichment state) are never
      sampled.
-   - **Per hit**: each hit, the earliest first, with the UDM fields the search or rule matched and their values, the
-     host, user and process, the event time and the event ID (`metadata.id`).
+   - **Per hit**: the earliest hit of every rule (or value) and machine first, then the earliest of the others, each
+     with the UDM fields the search or rule matched and their values, the host, user and process, the event time and
+     the event ID (`metadata.id`, else the event resource name).
 
    Values are truncated, and matched values are also SHA-256 hashed. Host names, user names and command lines only
    appear in the evidence.

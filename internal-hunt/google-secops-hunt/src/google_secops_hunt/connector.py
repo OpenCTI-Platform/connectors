@@ -21,7 +21,12 @@ from connectors_sdk.connectors.internal_hunt import (
     parse_timestamp,
 )
 from google.oauth2 import service_account
-from google_secops_hunt.client import Credentials, SearchResult, SecOpsClient
+from google_secops_hunt.client import (
+    EVENT_NAME_FIELD,
+    Credentials,
+    SearchResult,
+    SecOpsClient,
+)
 from google_secops_hunt.lookups import batch_lookup, build_udm_lookup
 from google_secops_hunt.settings import ConnectorSettings
 from sigma.backends.secops import SecOpsBackend
@@ -37,6 +42,7 @@ TIME_FIELDS: tuple[str, ...] = ("metadata.event_timestamp", "detection_time")
 
 BOOKKEEPING_FIELDS = frozenset(
     {
+        EVENT_NAME_FIELD,
         "metadata.id",
         "metadata.product_log_id",
         "metadata.event_timestamp",
@@ -75,16 +81,21 @@ _UDM_FIELD = re.compile(
     rf"(?<![\w.])(?:\$\w+\.)?((?:{'|'.join(UDM_ROOTS)})(?:\.\w+)+)", re.IGNORECASE
 )
 
+HOST_FIELDS: tuple[str, ...] = (
+    "principal.hostname",
+    "principal.asset.hostname",
+    "src.hostname",
+    "src.asset.hostname",
+)
+"""UDM fields naming the machine an event happened on. The target of an event
+(the domain resolved, the server reached) is never the machine hunted for."""
+
+HOST_FALLBACK_FIELDS: tuple[str, ...] = ("principal.ip",)
+"""UDM fields naming the machine of an event that names no host."""
+
 HIT_FIELDS = HitFields(
-    event_id=("metadata.id",),
-    host=(
-        "principal.hostname",
-        "principal.asset.hostname",
-        "target.hostname",
-        "target.asset.hostname",
-        "src.hostname",
-        "observer.hostname",
-    ),
+    event_id=("metadata.id", EVENT_NAME_FIELD),
+    host=(*HOST_FIELDS, *HOST_FALLBACK_FIELDS),
     user=(
         "principal.user.userid",
         "principal.user.user_display_name",
@@ -140,6 +151,8 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         "target.asset.hostname",
     )
     hit_fields = HIT_FIELDS
+    ioc_host_fields = HOST_FIELDS
+    ioc_host_fallback_fields = HOST_FALLBACK_FIELDS
 
     def __init__(self, settings: ConnectorSettings) -> None:
         """Initialize the connector (the helper is created by ``start()``).

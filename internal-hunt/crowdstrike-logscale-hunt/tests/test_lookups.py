@@ -128,6 +128,7 @@ def test_indicator_hunt_runs_logscale_lookups_and_reports_each_value(
                 [
                     {
                         "@timestamp": TEN_AM_MS,
+                        "@id": "event-1",
                         "ComputerName": "ws1",
                         "RemoteAddressIP4": "198.51.100.7",
                     }
@@ -180,6 +181,10 @@ def test_indicator_hunt_runs_logscale_lookups_and_reports_each_value(
     assert by_key["k-domain"]["hosts"] == ["ws2"]
     assert by_key["k-sha256"]["hosts"] == ["ws3"]
     assert by_key["k-sha512"]["searched"] is False
+    # And a hit is known by the id LogScale gives its event, never shown as evidence
+    hit = next(item for item in kwargs["hits_sample"] if item["host"] == "ws1")
+    assert hit["event_id"] == "event-1"
+    assert all(item["field"] != "@id" for item in kwargs["evidence_sample"])
 
 
 def test_indicator_hunt_preview_lists_the_logscale_lookups(

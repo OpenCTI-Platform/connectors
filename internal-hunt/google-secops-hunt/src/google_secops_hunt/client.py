@@ -24,6 +24,9 @@ MAX_RESULTS = 10000
 
 TOKEN_TIMEOUT_SECONDS = 30.0
 
+EVENT_NAME_FIELD = "event_name"
+"""Field of a UDM search event holding the resource name SecOps gives the event."""
+
 
 class Credentials(Protocol):
     """Google credentials issuing OAuth2 access tokens."""
@@ -292,9 +295,19 @@ def _detection_label(detection: dict[str, Any]) -> str:
 
 
 def _udm(event: dict[str, Any]) -> dict[str, Any]:
-    """Return the UDM document of a UDM search event."""
+    """Return the UDM document of a UDM search event, with the resource name of the event.
+
+    The name (``.../events/<id>``) identifies the event when its UDM document
+    holds no ``metadata.id``.
+    """
     udm = event.get("udm")
-    return dict(udm) if isinstance(udm, dict) else dict(event)
+    if not isinstance(udm, dict):
+        return dict(event)
+    document = dict(udm)
+    name = event.get("name")
+    if isinstance(name, str) and name.strip():
+        document.setdefault(EVENT_NAME_FIELD, name.strip())
+    return document
 
 
 def _detection_events(detection: dict[str, Any]) -> list[dict[str, Any]]:

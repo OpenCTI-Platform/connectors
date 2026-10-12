@@ -110,7 +110,7 @@ def make_settings(overrides: dict[str, Any] | None = None) -> ConnectorSettings:
 def udm_event(timestamp: str, **fields: Any) -> dict[str, Any]:
     """Build a UDM search event, its id unique per timestamp like real events."""
     return {
-        "name": "projects/p/locations/l/instances/i/events/e1",
+        "name": f"projects/p/locations/l/instances/i/events/e-{timestamp}",
         "udm": {
             "metadata": {"event_timestamp": timestamp, "id": f"abc-{timestamp}"},
             **fields,
