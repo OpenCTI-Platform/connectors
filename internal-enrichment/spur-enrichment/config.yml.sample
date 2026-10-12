@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  # id: 'c384ed87-1b09-439c-9a45-c2b5942e4c5c'
+  # name: 'Spur Enrichment'
+  # scope: 'IPv4-Addr,IPv6-Addr'
+  # log_level: 'error'
+  # auto: false # Each enrichment consumes one query of the Spur Context API quota
+  # max_tlp: 'amber' # Available values: clear, white, green, amber, amber+strict, red
+
+spur:
+  api_key: 'ChangeMe'
+  # api_base_url: 'https://api.spur.us'
+  # tlp_level: 'amber' # Available values: clear, white, green, amber, amber+strict, red
+  # default_score: 70
