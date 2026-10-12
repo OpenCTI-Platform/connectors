@@ -317,6 +317,10 @@ connector directories changed.
 - `ci-connector-verified-linter.yml`: connector-linter on changed connectors,
   results posted as a PR comment.
 - `ci-unused-deps.yml`: deptry on changed connectors.
+- `ci-config-schema.yml`: config schema generation on changed
+  manager-supported connectors (all of them when the generation tooling
+  changes). The generated files are not compared with the committed ones.
+  `build-manifest.yml` calls it to regenerate every schema.
 - `ci-check-connector-identity-uniqueness.yml`: no two manifests share an
   identity.
 - `gh-pr-check-conventions.yml`: signed commits, linked issue, PR title format.

@@ -1,0 +1,149 @@
+name: Config Schema
+
+# Generates the config schemas of manager-supported connectors.
+#
+# On pull requests and in the merge queue it covers the connectors changed
+# since the merge base (all of them when the generation tooling changes), so a
+# connector whose schema cannot be generated is caught before merge. The
+# generated files are not compared with the committed ones.
+#
+# build-manifest.yml calls it with all_connectors and upload_schemas to
+# regenerate every schema and hand them over to its build_manifest job.
+
+on:
+  # No paths filter, so Config Schema Summary always reports and can be a
+  # required check. The matrix script already selects the changed connectors.
+  pull_request:
+    branches:
+      - master
+  merge_group:
+    branches:
+      - master
+    types: [checks_requested]
+  workflow_call:
+    inputs:
+      all_connectors:
+        description: Generate every manager-supported connector, not only the changed ones.
+        type: boolean
+        default: false
+      upload_schemas:
+        description: Upload the generated schemas as manifest-schema-* artifacts.
+        type: boolean
+        default: false
+      release_ref:
+        description: Branch the connectors-sdk is installed from. Empty means master.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  detect_connectors:
+    name: Detect manager-supported connectors
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # build_manifest_matrix.py needs git merge-base to select the changed
+          # connectors. The full regeneration does not look at history.
+          fetch-depth: ${{ inputs.all_connectors && 1 || 0 }}
+          persist-credentials: false
+
+      - id: set-matrix
+        name: Build schema matrix from connector manifests
+        env:
+          # inputs is empty on pull_request and merge_group, hence the negation.
+          CHANGED_ONLY: ${{ !inputs.all_connectors }}
+        run: python .github/scripts/build_manifest_matrix.py
+
+  generate_config_schema:
+    name: Generate schema ${{ matrix.name }}
+    needs: detect_connectors
+    if: needs.detect_connectors.outputs.has_connectors == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect_connectors.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+
+      # The upload below globs every connector's metadata: only the files this
+      # job regenerates must be in it.
+      - name: Remove existing generated schema/doc files
+        if: inputs.upload_schemas
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f */*/__metadata__/connector_config_schema.json */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+
+      - name: Generate config schema
+        shell: bash
+        env:
+          CONNECTOR_PATHS: ${{ matrix.connector_paths }}
+          RELEASE_REF: ${{ inputs.release_ref }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r connector_path; do
+            [ -z "$connector_path" ] && continue
+            echo "::group::Generating schema for ${connector_path}"
+            mise run generate_config_schema "$connector_path"
+            echo "::endgroup::"
+          done <<< "${CONNECTOR_PATHS}"
+
+      # Collected by build-manifest.yml's build_manifest job: each matrix job
+      # only regenerates its own connector(s), so the schemas are handed off
+      # rather than committed from here.
+      - name: Upload generated schema
+        if: inputs.upload_schemas
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manifest-schema-${{ strategy.job-index }}
+          path: |
+            */*/__metadata__/connector_config_schema.json
+            */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+          if-no-files-found: ignore
+          retention-days: 1
+
+  # Single, stable job name to set as a required status check. Matrix entries
+  # can't be required (their names change with the matrix content) and
+  # generate_config_schema is skipped when nothing changed, so this job always
+  # runs and gives one go/no-go.
+  config-schema-summary:
+    name: Config Schema Summary
+    needs:
+      - detect_connectors
+      - generate_config_schema
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        env:
+          DETECT_RESULT: ${{ needs.detect_connectors.result }}
+          HAS_CONNECTORS: ${{ needs.detect_connectors.outputs.has_connectors }}
+          GENERATE_RESULT: ${{ needs.generate_config_schema.result }}
+        run: |
+          # A failed detection leaves has_connectors empty: not a clean "nothing to do".
+          if [ "$DETECT_RESULT" != "success" ]; then
+            echo "::error::Connector detection did not succeed (result: $DETECT_RESULT)."
+            exit 1
+          fi
+          if [ "$HAS_CONNECTORS" != "true" ]; then
+            echo "No manager-supported connector to generate."
+            exit 0
+          fi
+          if [ "$GENERATE_RESULT" != "success" ]; then
+            echo "::error::Config schema generation did not succeed (result: $GENERATE_RESULT)."
+            exit 1
+          fi
+          echo "Config schemas generated for every selected connector."
