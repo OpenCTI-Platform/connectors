@@ -64,6 +64,22 @@ class HuntNativeQuery(_HuntRequestModel):
         default=None,
         description="Name of the pySigma processing pipeline to translate the Sigma rule with.",
     )
+    rule_key: str | None = Field(
+        default=None,
+        description="Key of the Sigma rule this query overrides, None for the first rule.",
+    )
+
+
+class HuntSigmaRule(_HuntRequestModel):
+    """One Sigma rule of a detection-rule hunt, translated and run on its own."""
+
+    key: str = Field(description="Key of the rule, echoed in its result.")
+    title: str | None = Field(default=None, description="Title of the rule.")
+    rule: str = Field(min_length=1, description="Sigma rule (YAML).")
+    native_query: HuntNativeQuery | None = Field(
+        default=None,
+        description="Native query of this rule for the connector platform, if any.",
+    )
 
 
 class HuntTechnique(_HuntRequestModel):
@@ -133,11 +149,18 @@ class HuntDefinition(_HuntRequestModel):
         default="telemetry", description="Kind of hunt."
     )
     sigma_rule: str | None = Field(
-        default=None, description="Canonical Sigma rule (YAML) of the hunt."
+        default=None, description="First Sigma rule (YAML) of the hunt."
+    )
+    sigma_rules: list[HuntSigmaRule] = Field(
+        default_factory=list,
+        description=(
+            "Every Sigma rule of the hunt, each run on its own with a result per rule. "
+            "Empty from a platform that sends sigma_rule only."
+        ),
     )
     native_query: HuntNativeQuery | None = Field(
         default=None,
-        description="Native query of the hunt for the connector platform, if any.",
+        description="Native query of the hunt (its first rule) for the connector platform, if any.",
     )
     expected_observables: list[str] = Field(
         default_factory=list,
@@ -178,6 +201,7 @@ class HuntDefinition(_HuntRequestModel):
         "targets",
         "indicators",
         "iocs",
+        "sigma_rules",
         mode="before",
     )
     @classmethod
@@ -450,6 +474,55 @@ class HuntIocResult(BaseModel):
     )
 
 
+class HuntRuleResult(BaseModel):
+    """What one Sigma rule of a detection-rule hunt run translated to and found."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str = Field(description="Key of the rule in the run message.")
+    title: str | None = Field(default=None, description="Title of the rule.")
+    status: Literal[HuntRunStatus.COMPLETED, HuntRunStatus.FAILED] = Field(
+        description="Completed, or failed with its error (the other rules still run)."
+    )
+    translated_query: str | None = Field(
+        default=None, description="Query the rule translated to."
+    )
+    query_language: str | None = Field(default=None, description="Its language.")
+    hits_count: int = Field(default=0, ge=0, description="Hits of the rule.")
+    truncated: bool = Field(
+        default=False, description="The platform returned partial results."
+    )
+    first_hit_at: AwareDatetime | None = Field(
+        default=None, description="Time of the first hit of the rule."
+    )
+    last_hit_at: AwareDatetime | None = Field(
+        default=None, description="Time of the last hit of the rule."
+    )
+    error: str | None = Field(default=None, description="Why the rule failed.")
+
+
+class HuntObservation(BaseModel):
+    """Every hit of a run for one value (or rule) on one victim, never a sample."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str = Field(description="Key of the value or of the rule.")
+    host: str | None = Field(
+        default=None, description="Victim host, None when the hits name none."
+    )
+    hits_count: int = Field(ge=0, description="Hits of the group.")
+    first_seen: AwareDatetime | None = Field(
+        default=None, description="Time of the first hit of the group."
+    )
+    last_seen: AwareDatetime | None = Field(
+        default=None, description="Time of the last hit of the group."
+    )
+    hit_keys: list[str] | None = Field(
+        default=None,
+        description="Keys of the hits of the group, None when they cannot be told apart.",
+    )
+
+
 class HuntRunReport(BaseModel):
     """Outcome of a hunt run reported to OpenCTI."""
 
@@ -508,4 +581,20 @@ class HuntRunReport(BaseModel):
     )
     ioc_results: list[HuntIocResult] | None = Field(
         default=None, description="Indicator hunts: the result of each value."
+    )
+    rule_results: list[HuntRuleResult] | None = Field(
+        default=None, description="Detection-rule hunts: the result of each rule."
+    )
+    observations: list[HuntObservation] | None = Field(
+        default=None,
+        description=(
+            "Every hit of the run grouped by value (or rule) and victim: OpenCTI "
+            "counts and dates its observed data and sightings from them."
+        ),
+    )
+    first_hit_at: AwareDatetime | None = Field(
+        default=None, description="Time of the first hit of the run."
+    )
+    last_hit_at: AwareDatetime | None = Field(
+        default=None, description="Time of the last hit of the run."
     )

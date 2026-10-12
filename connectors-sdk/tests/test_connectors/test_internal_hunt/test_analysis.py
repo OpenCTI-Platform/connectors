@@ -18,6 +18,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntResult,
     HuntTimeoutError,
     HuntTimeWindow,
+    ObservationGroups,
     RunDeadline,
     build_evidence,
     build_hit_evidence,
@@ -26,6 +27,8 @@ from connectors_sdk.connectors.internal_hunt import (
     event_time_bounds,
     evidence_fields,
     flatten_fields,
+    hit_group,
+    hit_host,
     hit_key,
     present_fields,
     sha256_hex,
@@ -351,13 +354,83 @@ def test_long_identity_values_are_sent_as_their_digest():
 
     # Then a long value is sent as its digest, never in clear, a short one as it is,
     # and the keys stay distinct and independent of the preview length
-    assert [hit.host for hit in evidence] == [
-        f"sha256:{sha256_hex(hosts[0])}",
-        f"sha256:{sha256_hex(hosts[1])}",
-        "ws-01",
-    ]
-    assert short == long == [hit_key(hit) for hit in evidence]
+    assert sorted(hit.host for hit in evidence) == sorted(
+        [f"sha256:{sha256_hex(hosts[0])}", f"sha256:{sha256_hex(hosts[1])}", "ws-01"]
+    )
+    assert short == long
+    assert sorted(short) == sorted(hit_key(hit) for hit in evidence)
     assert len(set(short)) == 3
+
+
+def test_the_hit_sample_shows_every_value_and_victim_before_a_second_hit():
+    # Given many early hits of one value on one host, then one hit of another
+    # value and one hit of the first value on another host
+    start = datetime(2026, 10, 3, tzinfo=timezone.utc)
+    hits = [
+        (HuntEvent(timestamp=start + timedelta(minutes=i), fields={"host": "ws1"}), [])
+        for i in range(5)
+    ]
+    groups = [[hit_group("a", "ws1")] for _ in hits]
+    hits.append(
+        (HuntEvent(timestamp=start + timedelta(hours=2), fields={"host": "ws1"}), [])
+    )
+    groups.append([hit_group("b", "ws1")])
+    hits.append(
+        (HuntEvent(timestamp=start + timedelta(hours=1), fields={"host": "ws2"}), [])
+    )
+    groups.append([hit_group("a", "ws2")])
+    limits = HuntLimits(evidence_max_items=3)
+
+    # When a sample of three is taken, with and without the groups
+    sample = build_hit_evidence(hits, limits, groups=groups)
+    by_time = build_hit_evidence(hits, limits)
+    one = build_hit_evidence(hits, HuntLimits(evidence_max_items=1), groups=groups)
+
+    # Then the sample holds the first hit of each group, in time order, where a
+    # sample by time only holds the earliest hits
+    assert [item.timestamp for item in sample] == [
+        start,
+        start + timedelta(hours=1),
+        start + timedelta(hours=2),
+    ]
+    assert [item.timestamp for item in by_time] == [
+        start + timedelta(minutes=i) for i in range(3)
+    ]
+    assert [item.timestamp for item in one] == [start]
+    assert hit_host(hits[-1][0]) == "ws2"
+
+
+def test_observation_groups_count_and_date_every_hit_per_value_and_victim():
+    # Given hits added per value and victim, some without keys, one group empty
+    first = datetime(2026, 10, 3, 1, tzinfo=timezone.utc)
+    last = datetime(2026, 10, 3, 5, tzinfo=timezone.utc)
+    groups = ObservationGroups()
+    groups.add("b", "ws1", last, ["k3"])
+    groups.add("a", "ws1", last, ["k1"])
+    groups.add("a", "ws1", first, ["k2", "k1"])
+    groups.add("a", None, None, None, count=4, last=last)
+    groups.add("c", "ws1", first, [], count=0)
+
+    # When the groups are built
+    built = groups.build()
+
+    # Then each value and victim has its count, dates and distinct keys, the
+    # keys unknown as soon as one hit has none, and empty groups are left out
+    assert [(item.key, item.host) for item in built] == [
+        ("a", None),
+        ("a", "ws1"),
+        ("b", "ws1"),
+    ]
+    unnamed, named, other = built
+    assert (unnamed.hits_count, unnamed.hit_keys, unnamed.first_seen) == (
+        4,
+        None,
+        None,
+    )
+    assert unnamed.last_seen == last
+    assert (named.hits_count, named.hit_keys) == (2, ["k1", "k2"])
+    assert (named.first_seen, named.last_seen) == (first, last)
+    assert other.hit_keys == ["k3"]
 
 
 def test_a_hit_reports_a_bounded_number_of_matched_fields():

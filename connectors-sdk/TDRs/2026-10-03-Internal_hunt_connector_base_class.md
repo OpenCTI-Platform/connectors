@@ -19,18 +19,20 @@ Every hunt connector repeats the same pipeline:
 
 1. register the hunt platform of the connector (`register_hunt_platform`);
 2. parse the hunt run message and pick the logic to execute: the native query override of the platform, or the
-   canonical Sigma rule translated with pySigma;
+   canonical Sigma rule translated with pySigma; a hunt holding several Sigma rules has each rule translated and run
+   on its own, with one result per rule;
 3. honour the preview mode (translate only, never execute);
 4. execute the query within the run limits (`timeout_seconds`, `max_results`);
 5. suppress the benign events of the hunt;
 6. map the results to STIX (one observed-data per IOC observable, with its number of observations), with
    deterministic ids scoped to the hunt run for observed-data, markings and author inherited from the hunt. The
-   sightings are not the connector's: OpenCTI keeps one sighting per technique and indicator of the hunt on the
-   Security Platform across runs, from the hit keys of the report;
+   sightings are not the connector's: OpenCTI keeps one sighting per technique or indicator and Security Platform
+   across runs and hunts, from the hit keys of the report;
 7. send the bundle within the run work;
 8. report the run: hits, the stable key of every hit read (`hit_keys`, so that OpenCTI counts only the hits it never
-   saw), distinct entities, redacted evidence (SHA-256 hashes and truncated previews), translated query, cost and
-   result ids, or the error of a failed run.
+   saw), every hit grouped by rule (or value) and victim (`observations`, which OpenCTI counts and dates the observed
+   data and sightings from), distinct entities, redacted evidence (SHA-256 hashes and truncated previews, the first
+   hit of every group first), translated query, cost and result ids, or the error of a failed run.
 
 Only the platform translation backend and the query execution are platform specific. Without a base class, privacy
 guarantees (no raw telemetry in the platform, internal IP addresses and domains never turned into observables) and

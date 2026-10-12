@@ -77,15 +77,20 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 
 ## Hunt run lifecycle
 
-1. **Message**: `event_type = INTERNAL_HUNT`, `mode` (`execute` or `preview`), `hunt_run`, `hunt` (Sigma rule,
+1. **Message**: `event_type = INTERNAL_HUNT`, `mode` (`execute` or `preview`), `hunt_run`, `hunt` (Sigma rules,
    native query, expected observables, benign patterns, markings, author, techniques, targets, indicators),
    `time_window`, `limits` (`max_results`, `timeout_seconds`, `evidence_max_items`, `evidence_max_value_length`) and
-   `security_platform`.
+   `security_platform`. A detection-rule hunt holds a list of Sigma rules (`hunt.sigma_rules`), each with its key,
+   title, rule and native query for the platform; `hunt.sigma_rule` and `hunt.native_query` hold its first rule for
+   connectors reading a single rule.
 2. **Query**: the hunt native query written for the connector platform is executed verbatim (its language must be one
    of the connector languages). Otherwise the Sigma rule is translated with pySigma; a native query with an empty
-   query only selects the pipeline used for the translation.
-3. **Preview**: in `preview` mode the run is reported `completed` with the translated query; nothing is executed and
-   no knowledge is sent.
+   query only selects the pipeline used for the translation. With `sigma_rules`, each rule is translated and run on its
+   own, with its own native query: a rule that does not translate, or that the platform rejects, fails alone, and the
+   run fails only when every rule failed. The rules share the run deadline and `max_results`, in their order. A rule
+   is named by its title in the pySigma errors.
+3. **Preview**: in `preview` mode the run is reported `completed` with the translated query (and the translation of
+   each rule in `rule_results`); nothing is executed and no knowledge is sent.
 4. **Execution**: `execute()` runs in a worker thread bounded by `timeout_seconds`; it receives the `RunDeadline` the
    base class waits for, so its requests, polling, retries and authentication share one absolute deadline. On timeout
    `on_timeout()` cancels the platform job and the run fails. Results beyond `max_results` are dropped, the total hit
@@ -99,7 +104,12 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    report is refused after its bundle was sent is reported `failed`, and its retry upserts the same objects: their
    identifiers derive from the hunt run. Indicator runs check that pycti reports per-value results before any lookup.
 7. **Report**: `completed` with hits, the key of every hit read, distinct entities, evidence, translated query,
-   language, cost and the ids of the objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
+   language, cost, the ids of the objects `to_stix()` maps, the result of each rule (`rule_results`: status, query,
+   hits, partial results, first and last hit, error), the first and last hit of the run, and the **observations**:
+   every hit read grouped by rule (or indicator value) and victim host, with the count, the first and last hit time and
+   the keys of the hits of each group. OpenCTI counts and dates the observed data and the sightings from the
+   observations, never from the evidence sample. `truncated` means the platform returned part of the results only.
+   Or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
    work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
    report the run a second time. A failed run also says whether running it again can succeed (`retryable`):
    deterministic failures are `retryable: false` and OpenCTI does not retry them. These are translation failures
@@ -157,6 +167,13 @@ Rules:
   references count once in `hits_count` and after benign suppression.
 - Declare `evidence_excluded_fields` for raw payload fields (e.g. Splunk `_raw`), `entity_fields` for the host, user
   and peer fields of the platform, and `observable_fields` for platform fields the name heuristics do not recognize.
+- Declare in `hit_fields` the field holding the id the platform gives each event (`metadata.id`, `@id`, `_cd`): a hit
+  is keyed by it, so a run finding the same events again adds nothing to the sightings. Declare in `ioc_host_fields`
+  the fields naming the machine an event happened on, never its target (the domain resolved, the server reached), and
+  in `ioc_host_fallback_fields` the fields naming it when no host name is present (an address).
+- Aggregated indicator lookups (`ioc_aggregated`) return one row per value and host, with the ids of its events in
+  `event_ids` when the platform can list them: a row listing fewer ids than hits leaves the hits of its batch
+  unidentified, and OpenCTI then counts them from the totals.
 - Add `pysigma` and the backend package of the platform to `src/requirements.txt` (the SDK `hunt` extra cannot be
   used because the CI rewrites the connectors-sdk requirement line).
 
@@ -180,9 +197,9 @@ For a telemetry run with hits, the connector sends:
   (event id, detection, host, user, process) are sent as they are up to 256 characters (`HIT_IDENTITY_MAX_LENGTH`),
   a longer one as its SHA-256 digest: the evidence stays bounded and a key never depends on the preview length.
 
-Connectors send no sighting. OpenCTI counts the hits a hunt never saw before on the Security Platform, and keeps one
-**sighting** per technique and per indicator of the hunt on the Security Platform: the first run with hits creates it,
-the next ones update it in place (count of the distinct known hits, first and latest hit).
+Connectors send no sighting. OpenCTI counts the hits never seen before on the Security Platform, and keeps one
+**sighting** per technique or indicator and Security Platform, whichever hunt found it: the first run with hits
+creates it, the next ones update it in place (count of the distinct known hits of every hunt, first and latest hit).
 
 Objects inherit the markings and the author of the hunt, and every observed-data carries its run in
 `x_opencti_hunt_run_id`. Identifiers are deterministic: observables keep their standard pycti ids, while the ids of the
@@ -199,7 +216,8 @@ escalation threshold of the new hits of the hunt.
 - The evidence sample holds at most `evidence_max_items` values. Each value is SHA-256 hashed and its preview truncated
   to `evidence_max_value_length`. Fields referenced by the detection come first, then the `entity_fields`. An
   `evidence_excluded_fields` entry also excludes its sub-fields.
-- The evidence of single hits (`hits_sample`) holds at most `evidence_max_items` hits, the earliest first. Each hit has
+- The evidence of single hits (`hits_sample`) holds at most `evidence_max_items` hits: the earliest hit of every rule
+  (or value) and victim first, then the earliest of the others, in time order. Each hit has
   the fields the detection matched in it (for indicator hunts, the fields holding a looked-up value), each value hashed
   and its preview truncated; an `evidence_excluded_fields` entry and its sub-fields are never among them, and the hit
   keys derive from the fields reported. It also has the host, user and process named by `hit_fields`, the event time, the event
@@ -230,4 +248,6 @@ so every run of a hunt, renamed or not, grows the same infrastructure.
 
 `INTERNAL_HUNT`, `listen_hunt`, `register_hunt_platform` and `report_hunt_run` ship with the pycti release of the
 OpenCTI platform providing hunts. `start()` checks them and stops with an explicit message when the installed pycti
-is older.
+is older. The report fields added since (`rule_results`, `observations`, `first_hit_at`, `last_hit_at`, `hit_keys`,
+`hits_sample`) are sent only when the installed pycti takes them; a message without `sigma_rules` runs its
+`sigma_rule` as before.

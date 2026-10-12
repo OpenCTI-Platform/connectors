@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from connectors_sdk.connectors.internal_hunt.errors import HuntTranslationError
@@ -54,7 +55,26 @@ def parse_sigma_rule(sigma_rule: str) -> SigmaCollection:
         raise HuntTranslationError(f"Invalid Sigma rule: {err}") from err
     if not collection.rules:
         raise HuntTranslationError("The Sigma rule document contains no rule.")
+    for rule in collection.rules:
+        title = getattr(rule, "title", None)
+        if getattr(rule, "source", None) is None and title:
+            rule.source = _titled_location(str(title))
     return collection
+
+
+def _titled_location(title: str) -> Any:
+    """Return a rule source that reads as the rule title.
+
+    A rule parsed from text has no source file, and pySigma names a rule by its
+    source in its errors ("while applying processing pipeline on rule None").
+    """
+    from sigma.exceptions import SigmaRuleLocation
+
+    class _TitledLocation(SigmaRuleLocation):
+        def __str__(self) -> str:
+            return f"'{title}'"
+
+    return _TitledLocation(path=Path("sigma-rule.yml"))
 
 
 def build_pipeline(

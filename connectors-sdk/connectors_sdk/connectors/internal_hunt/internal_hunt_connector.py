@@ -30,6 +30,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar
@@ -40,12 +41,15 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_HIT_FIELDS,
     HOST_FIELDS,
     HitFields,
+    ObservationGroups,
     build_evidence,
     build_hit_evidence,
     build_hit_keys,
     count_distinct_entities,
     event_time_bounds,
     evidence_fields,
+    hit_group,
+    hit_host,
     present_fields,
     suppress_benign,
 )
@@ -61,24 +65,28 @@ from connectors_sdk.connectors.internal_hunt.errors import (
 from connectors_sdk.connectors.internal_hunt.indicators import (
     IocBatch,
     IocObservation,
-    aggregated_observations,
     batch_iocs,
     build_indicator_objects,
     build_ioc_evidence,
     build_ioc_results,
+    event_hosts,
+    index_value_hits,
     match_events,
-    value_hit_keys,
+    read_aggregated_rows,
     value_hits,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntConnectionCheck,
     HuntEvent,
     HuntLimits,
+    HuntNativeQuery,
     HuntRequest,
     HuntResult,
+    HuntRuleResult,
     HuntRunMode,
     HuntRunReport,
     HuntRunStatus,
+    HuntSigmaRule,
     HuntTimeWindow,
     NativeQuery,
 )
@@ -123,6 +131,87 @@ CONNECTION_CHECK_TIMEOUT_SECONDS = 60
 """Time budget of a connection test."""
 
 CONNECTION_CHECK_WINDOW = timedelta(minutes=15)
+
+LOGIC_KEY = "logic"
+"""Group key of the hits of a hunt without Sigma rule list (native query, or a platform sending sigma_rule only)."""
+
+
+@dataclass
+class _TrackedHits:
+    """The hits of a run with their keys and sampling groups, and their groups by rule and victim."""
+
+    hits: list[tuple[HuntEvent, Sequence[str]]] = field(default_factory=list)
+    keys: list[str] = field(default_factory=list)
+    labels: list[list[str]] = field(default_factory=list)
+    groups: ObservationGroups = field(default_factory=ObservationGroups)
+
+
+_ResolvedRule = tuple[HuntSigmaRule, NativeQuery | None, Exception | None]
+"""A Sigma rule of a hunt with its query, or the error that kept it from translating."""
+
+
+@dataclass
+class _RuleRun:
+    """What the rules of a run found so far, and what they have left of the run."""
+
+    remaining: int
+    tracked: _TrackedHits = field(default_factory=_TrackedHits)
+    events: dict[str, HuntEvent] = field(default_factory=dict)
+    results: list[HuntRuleResult] = field(default_factory=list)
+    evidence_names: dict[str, None] = field(default_factory=dict)
+    first_error: Exception | None = None
+    hits_count: int = 0
+    truncated: bool = False
+
+
+def _combined_query(resolved: Sequence[_ResolvedRule]) -> tuple[str | None, str | None]:
+    """Return the queries of the translated rules, each under its title, and their language."""
+    translated = [(rule, query) for rule, query, _ in resolved if query is not None]
+    combined = "\n\n".join(
+        f"-- {rule.title or rule.key}\n{query.query}" for rule, query in translated
+    )
+    return combined or None, translated[0][1].language if translated else None
+
+
+@dataclass
+class _ValueHits:
+    """The hits of the lookups of an indicator run, by value and victim."""
+
+    hits: list[tuple[HuntEvent, Sequence[str]]] = field(default_factory=list)
+    labels: list[list[str]] = field(default_factory=list)
+    groups: ObservationGroups = field(default_factory=ObservationGroups)
+    matched_fields: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Aggregated lookups tell their hits apart only when every row lists the ids of its events
+    value_keys: dict[str, dict[str, None]] | None = field(default_factory=dict)
+
+    def add(
+        self,
+        event: HuntEvent,
+        fields: Sequence[str],
+        key: str,
+        host: str | None,
+        held: Mapping[str, Sequence[str]],
+    ) -> None:
+        """Record a hit holding the values ``held``, each with the fields holding it."""
+        self.hits.append((event, fields))
+        self.labels.append([hit_group(value_key, host) for value_key in held])
+        for value_key, names in held.items():
+            if self.value_keys is not None:
+                self.value_keys.setdefault(value_key, {})[key] = None
+            self.groups.add(value_key, host, event.timestamp, [key])
+            counts = self.matched_fields.setdefault(value_key, {})
+            for name in dict.fromkeys(names):
+                counts[name] = counts.get(name, 0) + 1
+
+
+def _hit_dates(events: Sequence[HuntEvent]) -> tuple[datetime | None, datetime | None]:
+    """Return the times of the first and last hit, None without dated hit."""
+    timestamps = [event.timestamp for event in events if event.timestamp is not None]
+    if not timestamps:
+        return None, None
+    return min(timestamps), max(timestamps)
+
+
 """Time window of the search a default connection test runs."""
 
 
@@ -233,6 +322,8 @@ class InternalHuntConnector(ABC):
             value (``ioc``, ``hits``, ``first_seen``, ``last_seen``, ``hosts``),
             False when it returns raw events the base searches for the values.
         ioc_host_fields: Result fields naming the host of an event.
+        ioc_host_fallback_fields: Result fields naming the host of an event
+            whose ``ioc_host_fields`` name none (an address when no host name).
         required_permissions: Permissions the account of the connector needs on
             its platform, as ``(name, purpose)``: OpenCTI shows them on the
             connector, next to its connection test.
@@ -260,6 +351,7 @@ class InternalHuntConnector(ABC):
     observable_fields: ClassVar[Mapping[str, str]] = MappingProxyType({})
     ioc_aggregated: ClassVar[bool] = False
     ioc_host_fields: ClassVar[tuple[str, ...]] = HOST_FIELDS
+    ioc_host_fallback_fields: ClassVar[tuple[str, ...]] = ()
     required_permissions: ClassVar[tuple[tuple[str, str], ...]] = ()
     documentation_url: ClassVar[str | None] = None
 
@@ -687,7 +779,25 @@ class InternalHuntConnector(ABC):
             HuntTranslationError: If the override language is not supported or
                 the hunt has no logic for the platform.
         """
-        native = request.hunt.native_query
+        return self._resolve(request.hunt.native_query, request.hunt.sigma_rule)
+
+    def resolve_rule_query(self, rule: HuntSigmaRule) -> NativeQuery:
+        """Return the query to execute for one Sigma rule of a hunt: its native override, or its translation.
+
+        Args:
+            rule: The rule, with its native query for the platform if any.
+
+        Returns:
+            The query to execute.
+
+        Raises:
+            HuntTranslationError: If the rule does not translate for the platform.
+        """
+        return self._resolve(rule.native_query, rule.rule)
+
+    def _resolve(
+        self, native: HuntNativeQuery | None, sigma_rule: str | None
+    ) -> NativeQuery:
         pipeline = None
         if native is not None and native.platform == self.platform:
             if native.query.strip():
@@ -702,8 +812,8 @@ class InternalHuntConnector(ABC):
                     pipeline=native.pipeline,
                 )
             pipeline = native.pipeline
-        if request.hunt.sigma_rule and request.hunt.sigma_rule.strip():
-            return self.translate(request.hunt.sigma_rule, pipeline)
+        if sigma_rule and sigma_rule.strip():
+            return self.translate(sigma_rule, pipeline)
         raise HuntTranslationError(
             f"The hunt has no Sigma rule and no native query for the '{self.platform}' platform."
         )
@@ -749,6 +859,8 @@ class InternalHuntConnector(ABC):
         try:
             if request.hunt.hunt_type == INDICATOR_HUNT:
                 return self._complete_indicator_run(request, started)
+            if request.hunt.sigma_rules:
+                return self._complete_rules(request, started)
             native_query = self.resolve_query(request)
             if request.mode is HuntRunMode.PREVIEW:
                 return self._complete_preview(request, native_query, started)
@@ -804,6 +916,8 @@ class InternalHuntConnector(ABC):
             )
             for event in result.events
         ]
+        tracked = self._track_hits(LOGIC_KEY, hits, request.limits)
+        first_hit_at, last_hit_at = _hit_dates(result.events)
         self._send_objects(objects)
         self.report(
             request.hunt_run.id,
@@ -822,10 +936,15 @@ class InternalHuntConnector(ABC):
                     (*native_query.fields, *self.entity_fields),
                     self.evidence_excluded_fields,
                 ),
-                hits_sample=build_hit_evidence(hits, request.limits, self.hit_fields),
-                hit_keys=build_hit_keys(hits, request.limits, self.hit_fields),
+                hits_sample=build_hit_evidence(
+                    hits, request.limits, self.hit_fields, tracked.labels
+                ),
+                hit_keys=list(dict.fromkeys(tracked.keys)),
                 result_ids=result_ids,
                 cost_ms=self._elapsed_ms(started),
+                observations=tracked.groups.build(),
+                first_hit_at=first_hit_at,
+                last_hit_at=last_hit_at,
             ),
         )
         self.logger.info(
@@ -842,6 +961,235 @@ class InternalHuntConnector(ABC):
             f"{len(result_ids)} object(s) sent."
         )
 
+    def _track_hits(
+        self,
+        key: str,
+        hits: Sequence[tuple[HuntEvent, Sequence[str]]],
+        limits: HuntLimits,
+        tracked: _TrackedHits | None = None,
+    ) -> _TrackedHits:
+        """Group the hits of a rule (or of the logic) by victim, with their keys and sampling groups."""
+        tracked = tracked or _TrackedHits()
+        for event, matched in hits:
+            [hit] = build_hit_keys([(event, matched)], limits, self.hit_fields)
+            host = hit_host(event, self.hit_fields)
+            tracked.keys.append(hit)
+            tracked.labels.append([hit_group(key, host)])
+            tracked.groups.add(key, host, event.timestamp, [hit])
+        return tracked
+
+    def _complete_rules(self, request: HuntRequest, started: float) -> str:
+        """Translate and run each Sigma rule of a hunt on its own, then report one result per rule.
+
+        A rule that does not translate, or that the platform rejects, fails on
+        its own: the run completes with the results of the other rules, and
+        fails only when every rule failed (with the error of the first one).
+        The rules share the deadline and the ``max_results`` of the run, in
+        their order. A preview reports the translation of each rule.
+        """
+        resolved: list[_ResolvedRule] = []
+        for rule in request.hunt.sigma_rules:
+            try:
+                resolved.append((rule, self.resolve_rule_query(rule), None))
+            except HuntError as err:
+                resolved.append((rule, None, err))
+        if request.mode is HuntRunMode.PREVIEW:
+            return self._preview_rules(request, resolved, started)
+        deadline = RunDeadline(request.limits.timeout_seconds)
+        run = _RuleRun(remaining=request.limits.max_results)
+        for rule, query, error in resolved:
+            run.results.append(
+                self._run_rule(request, rule, query, error, deadline, run)
+            )
+        if all(result.status is HuntRunStatus.FAILED for result in run.results):
+            return self._fail_rules(request, run.results, run.first_error, started)
+        combined, language = _combined_query(resolved)
+        unique_events = list(run.events.values())
+        first_hit_at, last_hit_at = _hit_dates(unique_events)
+        combined_result = HuntResult(
+            events=unique_events, total_hits=run.hits_count, truncated=run.truncated
+        )
+        objects = self._bundle_objects(self.to_stix(request, combined_result))
+        self._send_objects(objects)
+        self.report(
+            request.hunt_run.id,
+            HuntRunReport(
+                status=HuntRunStatus.COMPLETED,
+                translated_query=combined,
+                query_language=language,
+                hits_count=run.hits_count,
+                truncated=run.truncated,
+                distinct_entities=count_distinct_entities(
+                    unique_events, self.entity_fields
+                ),
+                evidence_sample=build_evidence(
+                    unique_events,
+                    request.limits,
+                    (*run.evidence_names, *self.entity_fields),
+                    self.evidence_excluded_fields,
+                ),
+                hits_sample=build_hit_evidence(
+                    run.tracked.hits,
+                    request.limits,
+                    self.hit_fields,
+                    run.tracked.labels,
+                ),
+                hit_keys=list(dict.fromkeys(run.tracked.keys)),
+                result_ids=list(objects),
+                cost_ms=self._elapsed_ms(started),
+                rule_results=run.results,
+                observations=run.tracked.groups.build(),
+                first_hit_at=first_hit_at,
+                last_hit_at=last_hit_at,
+            ),
+        )
+        failed = sum(
+            1 for result in run.results if result.status is HuntRunStatus.FAILED
+        )
+        self.logger.info(
+            "[HUNT] Hunt run completed",
+            {
+                "hunt_run_id": request.hunt_run.id,
+                "hits_count": run.hits_count,
+                "rules": len(run.results),
+                "failed_rules": failed,
+                "objects_sent": len(objects),
+            },
+        )
+        return (
+            f"Hunt run {request.hunt_run.id} completed: {run.hits_count} hit(s) over "
+            f"{len(run.results) - failed} of {len(run.results)} rule(s), "
+            f"{len(objects)} object(s) sent."
+        )
+
+    def _preview_rules(
+        self, request: HuntRequest, resolved: list[_ResolvedRule], started: float
+    ) -> str:
+        """Report the translation of each Sigma rule of a hunt without running any."""
+        results = [
+            HuntRuleResult(
+                key=rule.key,
+                title=rule.title,
+                status=(
+                    HuntRunStatus.COMPLETED
+                    if query is not None
+                    else HuntRunStatus.FAILED
+                ),
+                translated_query=query.query if query else None,
+                query_language=query.language if query else None,
+                error=_error_message(error) if error else None,
+            )
+            for rule, query, error in resolved
+        ]
+        translated = sum(1 for _, query, _ in resolved if query is not None)
+        if not translated:
+            return self._fail_rules(request, results, resolved[0][2], started)
+        combined, language = _combined_query(resolved)
+        self.report(
+            request.hunt_run.id,
+            HuntRunReport(
+                status=HuntRunStatus.COMPLETED,
+                translated_query=combined,
+                query_language=language,
+                cost_ms=self._elapsed_ms(started),
+                rule_results=results,
+            ),
+        )
+        return (
+            f"Hunt run {request.hunt_run.id} preview completed: {translated} "
+            f"of {len(resolved)} rule(s) translated."
+        )
+
+    def _run_rule(
+        self,
+        request: HuntRequest,
+        rule: HuntSigmaRule,
+        query: NativeQuery | None,
+        error: Exception | None,
+        deadline: RunDeadline,
+        run: _RuleRun,
+    ) -> HuntRuleResult:
+        """Run one translated rule within what the run has left, add its hits to the run, return its result."""
+        if query is None:
+            run.first_error = run.first_error or error
+            return HuntRuleResult(
+                key=rule.key,
+                title=rule.title,
+                status=HuntRunStatus.FAILED,
+                error=_error_message(error) if error else None,
+            )
+        translated = HuntRuleResult(
+            key=rule.key,
+            title=rule.title,
+            status=HuntRunStatus.COMPLETED,
+            translated_query=query.query,
+            query_language=query.language,
+        )
+        if run.remaining <= 0:
+            run.truncated = True
+            return translated.model_copy(update={"truncated": True})
+        try:
+            raw = self._execute_within_limits(
+                request, query, deadline, max_results=run.remaining
+            )
+        except HuntTimeoutError:
+            raise
+        except Exception as err:
+            run.first_error = run.first_error or err
+            return translated.model_copy(
+                update={"status": HuntRunStatus.FAILED, "error": _error_message(err)}
+            )
+        run.remaining -= len(raw.events)
+        result = suppress_benign(raw, request.hunt.benign_patterns, deadline)
+        hits = [
+            (
+                event,
+                evidence_fields(
+                    present_fields(event, query.fields), self.evidence_excluded_fields
+                ),
+            )
+            for event in result.events
+        ]
+        start = len(run.tracked.keys)
+        self._track_hits(rule.key, hits, request.limits, run.tracked)
+        run.tracked.hits.extend(hits)
+        for (event, _), key in zip(hits, run.tracked.keys[start:], strict=True):
+            run.events.setdefault(key, event)
+        run.evidence_names.update(dict.fromkeys(query.fields))
+        run.hits_count += result.hits_count
+        run.truncated = run.truncated or result.truncated
+        first_hit_at, last_hit_at = _hit_dates(result.events)
+        return translated.model_copy(
+            update={
+                "hits_count": result.hits_count,
+                "truncated": result.truncated,
+                "first_hit_at": first_hit_at,
+                "last_hit_at": last_hit_at,
+            }
+        )
+
+    def _fail_rules(
+        self,
+        request: HuntRequest,
+        results: list[HuntRuleResult],
+        error: Exception | None,
+        started: float,
+    ) -> str:
+        """Report a run whose every rule failed, with the result of each rule, then raise the first error."""
+        failure = error or HuntTranslationError("Every Sigma rule of the hunt failed.")
+        self.report(
+            request.hunt_run.id,
+            HuntRunReport(
+                status=HuntRunStatus.FAILED,
+                cost_ms=self._elapsed_ms(started),
+                error=_error_message(failure),
+                retryable=is_retryable(failure),
+                rule_results=results,
+            ),
+        )
+        _mark_reported(failure)
+        raise failure
+
     def plan_ioc_lookups(
         self, request: HuntRequest
     ) -> list[tuple[IocBatch, NativeQuery | None]]:
@@ -857,6 +1205,40 @@ class InternalHuntConnector(ABC):
             (batch, self.ioc_query(batch))
             for batch in batch_iocs(request.hunt.iocs, request.limits.ioc_batch_size)
         ]
+
+    def _read_lookup(
+        self,
+        request: HuntRequest,
+        batch: IocBatch,
+        result: HuntResult,
+        state: _ValueHits,
+    ) -> dict[str, IocObservation]:
+        """Read the result of one lookup into the hits of the run, return what it saw of each value."""
+        if self.ioc_aggregated:
+            found, row_keys = read_aggregated_rows(
+                batch, result.events, state.groups, request.limits.max_results
+            )
+            if row_keys is None or state.value_keys is None:
+                state.value_keys = None
+            else:
+                for key, keys in row_keys.items():
+                    state.value_keys.setdefault(key, {}).update(keys)
+            return found
+        batch_hits = [
+            (event, evidence_fields(fields, self.evidence_excluded_fields))
+            for event, fields in value_hits(batch, result.events)
+        ]
+        for (event, fields), held in zip(
+            batch_hits, index_value_hits(batch, batch_hits), strict=True
+        ):
+            [key] = build_hit_keys([(event, fields)], request.limits, self.hit_fields)
+            hosts = event_hosts(
+                event, self.ioc_host_fields, self.ioc_host_fallback_fields
+            )
+            state.add(event, fields, key, hosts[0] if hosts else None, held)
+        return match_events(
+            batch, result.events, self.ioc_host_fields, self.ioc_host_fallback_fields
+        )
 
     def _complete_indicator_run(self, request: HuntRequest, started: float) -> str:
         """Look up the values of an indicator hunt, send the observables seen, then report one result per value.
@@ -891,11 +1273,7 @@ class InternalHuntConnector(ABC):
         deadline = RunDeadline(request.limits.timeout_seconds)
         observations: dict[str, IocObservation] = {}
         unsearched: dict[str, str] = {}
-        hits: list[tuple[HuntEvent, list[str]]] = []
-        # Aggregated lookups return one count per value, never the events: their hits cannot be told apart
-        value_keys: dict[str, dict[str, None]] | None = (
-            None if self.ioc_aggregated else {}
-        )
+        state = _ValueHits()
         truncated = False
         remaining = request.limits.max_results
         for batch, query in lookups:
@@ -917,20 +1295,7 @@ class InternalHuntConnector(ABC):
             remaining -= len(raw_result.events)
             result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
             truncated = truncated or result.truncated
-            if value_keys is None:
-                found = aggregated_observations(batch, result.events)
-            else:
-                found = match_events(batch, result.events, self.ioc_host_fields)
-                batch_hits = [
-                    (event, evidence_fields(fields, self.evidence_excluded_fields))
-                    for event, fields in value_hits(batch, result.events)
-                ]
-                hits.extend(batch_hits)
-                batch_keys = value_hit_keys(
-                    batch, batch_hits, request.limits, self.hit_fields
-                )
-                for key, keys in batch_keys.items():
-                    value_keys.setdefault(key, {}).update(dict.fromkeys(keys))
+            found = self._read_lookup(request, batch, result, state)
             for key, observation in found.items():
                 observations.setdefault(key, IocObservation()).merge(observation)
             if result.truncated:
@@ -944,6 +1309,7 @@ class InternalHuntConnector(ABC):
                 unsearched.update(
                     {ioc.key: reason for ioc in batch.iocs if ioc.key not in found}
                 )
+        value_keys = state.value_keys
         ioc_results = build_ioc_results(
             request.hunt.iocs,
             observations,
@@ -956,6 +1322,12 @@ class InternalHuntConnector(ABC):
         )
         objects = self._bundle_objects(build_indicator_objects(request, ioc_results))
         hits_count = sum(result.hits_count for result in ioc_results)
+        seen_dates = [
+            date
+            for result in ioc_results
+            for date in (result.first_seen, result.last_seen)
+            if date is not None
+        ]
         self._send_objects(objects)
         self.report(
             request.hunt_run.id,
@@ -969,17 +1341,26 @@ class InternalHuntConnector(ABC):
                     {host for result in ioc_results for host in result.hosts}
                 ),
                 evidence_sample=build_ioc_evidence(
-                    request.hunt.iocs, ioc_results, request.limits
+                    request.hunt.iocs, ioc_results, request.limits, state.matched_fields
                 ),
-                hits_sample=build_hit_evidence(hits, request.limits, self.hit_fields),
+                hits_sample=build_hit_evidence(
+                    state.hits, request.limits, self.hit_fields, state.labels
+                ),
                 hit_keys=(
                     None
                     if value_keys is None
-                    else build_hit_keys(hits, request.limits, self.hit_fields)
+                    else list(
+                        dict.fromkeys(
+                            key for keys in value_keys.values() for key in keys
+                        )
+                    )
                 ),
                 result_ids=list(objects),
                 cost_ms=self._elapsed_ms(started),
                 ioc_results=ioc_results,
+                observations=state.groups.build(),
+                first_hit_at=min(seen_dates) if seen_dates else None,
+                last_hit_at=max(seen_dates) if seen_dates else None,
             ),
         )
         seen = sum(1 for result in ioc_results if result.seen)
@@ -1152,6 +1533,37 @@ class InternalHuntConnector(ABC):
             extra["hits_sample"] = [
                 hit.model_dump(mode="json") for hit in report.hits_sample
             ]
+        # An older pycti or OpenCTI reads the run as the result of its first rule, its
+        # observed data and sightings from the run totals, the hits dated by the sample
+        optional: dict[str, Any] = {
+            "rule_results": (
+                [result.model_dump(mode="json") for result in report.rule_results]
+                if report.rule_results is not None
+                else None
+            ),
+            "observations": (
+                [
+                    observation.model_dump(
+                        mode="json",
+                        exclude=None if hit_keys_supported else {"hit_keys"},
+                    )
+                    for observation in report.observations
+                ]
+                if report.observations is not None
+                else None
+            ),
+            "first_hit_at": (
+                report.first_hit_at.isoformat() if report.first_hit_at else None
+            ),
+            "last_hit_at": (
+                report.last_hit_at.isoformat() if report.last_hit_at else None
+            ),
+        }
+        for keyword, value in optional.items():
+            if value is not None and _accepts_keyword(
+                self.helper.report_hunt_run, keyword
+            ):
+                extra[keyword] = value
         self.helper.report_hunt_run(
             run_id,
             report.status.value,

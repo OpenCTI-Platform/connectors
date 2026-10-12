@@ -119,8 +119,11 @@ and internal domain names are never turned into observables.
    platform events in `execute()`. Override `on_timeout()` when the platform runs asynchronous jobs.
 4. **Indicator hunts** (optional): override `ioc_query(batch)` to look up a batch of values of one observable type
    (`batch.observable_type`, `batch.values`). Return a query whose events the base searches for the values, or set
-   `ioc_aggregated = True` and return one row per value key (`ioc`, `hits`, `first_seen`, `last_seen`, `hosts`) for
-   exact counts. Return `None` for a type the platform cannot look up: its values are reported not searched. The base
+   `ioc_aggregated = True` and return one row per value key and host (`ioc`, `host`, `hits`, `first_seen`,
+   `last_seen`, and `event_ids`, the ids of its events, so that the hits are told apart from one run to the next) for
+   exact counts. Return `None` for a type the platform cannot look up: its values are reported not searched. Set
+   `hit_fields` to the field holding the id of an event, and `ioc_host_fields` to the fields naming the machine an
+   event happened on (never its target). The base
    batches the values, reports one result per value and sights the seen ones; overriding `ioc_query` makes the
    connector register as supporting indicator lookups.
 5. **Permissions and Test connection**: declare `required_permissions` (`(name, purpose)` of each least-privilege

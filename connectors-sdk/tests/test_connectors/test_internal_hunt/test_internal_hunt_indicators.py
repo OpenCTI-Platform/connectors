@@ -10,15 +10,20 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntEvent,
     HuntHitEvidence,
     HuntIoc,
+    HuntLimits,
     HuntResult,
     HuntTranslationError,
     HuntUnsupportedPyctiError,
     IocBatch,
     NativeQuery,
+    ObservationGroups,
     aggregated_observations,
     batch_iocs,
+    event_hit_key,
     hit_key,
     match_events,
+    read_aggregated_rows,
+    value_hit_keys,
     value_pattern,
 )
 
@@ -163,6 +168,25 @@ def test_matches_raw_events_with_counts_times_and_hosts():
     assert seen.hosts == ["WKS-01", "SRV-02"]
 
 
+def test_the_host_of_an_event_falls_back_to_its_address():
+    batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
+    named = event(
+        "2026-10-03T08:00:00+00:00",
+        query="evil.com",
+        **{"principal.hostname": "WKS-01", "principal.ip": "10.0.0.5"},
+    )
+    unnamed = event(
+        "2026-10-03T09:00:00+00:00", query="evil.com", **{"principal.ip": "10.0.0.6"}
+    )
+
+    # When/Then an event names its host, else its address
+    observations = match_events(
+        batch, [named, unnamed], ("principal.hostname",), ("principal.ip",)
+    )
+    assert observations["a"].hosts == ["WKS-01", "10.0.0.6"]
+    assert match_events(batch, [unnamed], ("principal.hostname",))["a"].hosts == []
+
+
 def test_reads_aggregated_rows_of_the_batch_only():
     batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
     rows = [
@@ -274,13 +298,25 @@ def test_reports_one_result_per_value_with_the_keys_of_its_hits(
     )
     assert kwargs["hits_count"] == 3
     assert kwargs["distinct_entities"] == 2
-    # The most seen value first, its preview within the evidence length limit
+    # The most seen value first, under the field it matched, its preview within
+    # the evidence length limit
     assert kwargs["evidence_sample"][0] == {
-        "field": "ioc.Domain-Name",
+        "field": "query",
         "value_hash": kwargs["evidence_sample"][0]["value_hash"],
         "value_preview": "evil.example.com"[:16],
         "count": 2,
     }
+    # Every hit is counted and dated per value and victim, whatever the sample holds
+    observations = {
+        (item["key"], item["host"]): item for item in kwargs["observations"]
+    }
+    assert set(observations) == {("k-ip", "WKS-01"), ("k-domain", "WKS-02")}
+    domain = observations[("k-domain", "WKS-02")]
+    assert domain["hits_count"] == 2 and len(domain["hit_keys"]) == 2
+    assert domain["first_seen"].startswith("2026-10-03T11:00:00")
+    assert domain["last_seen"].startswith("2026-10-03T12:00:00")
+    assert kwargs["first_hit_at"].startswith("2026-10-03T10:00:00")
+    assert kwargs["last_hit_at"].startswith("2026-10-03T12:00:00")
     # No sighting is sent, OpenCTI keeps one per hunt, source and platform; the
     # pasted domain comes from no object and is created as an observable to be sighted
     bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
@@ -442,6 +478,112 @@ def test_aggregated_lookups_report_no_single_hit(
     assert kwargs["hits_sample"] == []
     assert "hit_keys" not in kwargs
     assert all(item["hit_keys"] is None for item in kwargs["ioc_results"])
+
+
+def test_aggregated_lookups_listing_their_events_tell_their_hits_apart(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a platform aggregating the lookups per value and host, each row
+    # listing the ids of its events
+    class AggregatedConnector(DummyIndicatorConnector):
+        ioc_aggregated = True
+
+    rows = [
+        {"host": "WKS-01", "hits": "2", "event_ids": ["e1", "e2"]},
+        {"host": "WKS-02", "hits": "1", "event_ids": "e3"},
+    ]
+    result = HuntResult(
+        events=[
+            HuntEvent(
+                fields={
+                    "ioc": "k-ip",
+                    "first_seen": "2026-10-03T10:00:00Z",
+                    "last_seen": "2026-10-03T12:00:00Z",
+                    **row,
+                }
+            )
+            for row in rows
+        ]
+    )
+    connector = AggregatedConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then each hit has the key of its event, and every hit is counted per victim
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 3
+    assert sorted(kwargs["hit_keys"]) == sorted(
+        event_hit_key(event_id) for event_id in ("e1", "e2", "e3")
+    )
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert len(by_key["k-ip"]["hit_keys"]) == 3
+    assert by_key["k-ip"]["hosts"] == ["WKS-01", "WKS-02"]
+    assert sorted(
+        (item["host"], item["hits_count"], len(item["hit_keys"]))
+        for item in kwargs["observations"]
+    ) == [("WKS-01", 2, 2), ("WKS-02", 1, 1)]
+    # And a value counted without events is reported under its type
+    assert kwargs["evidence_sample"][0]["field"] == "ioc.IPv4-Addr"
+
+
+def test_each_value_names_the_keys_of_the_hits_holding_it():
+    # Given hits holding one or two values, one in a field the hit does not report
+    batch = IocBatch(
+        "Domain-Name",
+        None,
+        (ioc("a", "Domain-Name", "evil.com"), ioc("b", "Domain-Name", "bad.org")),
+    )
+    first = event("2026-10-03T10:00:00+00:00", query="evil.com", host="WKS-01")
+    second = event(
+        "2026-10-03T11:00:00+00:00", query="evil.com", referrer="bad.org", host="X"
+    )
+    hits = [(first, ["query"]), (second, ["query"])]
+
+    # When/Then each value names the keys of its hits, the hidden field included
+    keys = value_hit_keys(batch, hits, HuntLimits())
+    assert len(keys["a"]) == 2 and len(keys["b"]) == 1
+    assert keys["b"][0] == keys["a"][1]
+
+
+@pytest.mark.parametrize(
+    "rows, max_keys",
+    [
+        pytest.param(
+            [{"ioc": "a", "hits": "3", "event_ids": ["e1", "e2", "e3"]}],
+            2,
+            id="beyond_the_bound",
+        ),
+        pytest.param(
+            [{"ioc": "a", "hits": "3", "event_ids": ["e1", "e2"]}],
+            None,
+            id="part_of_the_events",
+        ),
+    ],
+)
+def test_aggregated_rows_listing_part_of_their_events_leave_the_hits_unidentified(
+    rows, max_keys
+):
+    batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
+    events = [
+        HuntEvent(fields=row)
+        for row in [*rows, {"ioc": "a", "hits": "x", "event_ids": ["e4"]}]
+    ]
+    groups = ObservationGroups()
+
+    # When the rows are read
+    observations, keys = read_aggregated_rows(batch, events, groups, max_keys)
+
+    # Then the count keeps every hit but no hit has a key, and a row without a
+    # readable count is ignored
+    assert observations["a"].hits == 3
+    assert keys is None
+    [group] = groups.build()
+    assert (group.host, group.hits_count, group.hit_keys) == (None, 3, None)
 
 
 def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_not_seen(

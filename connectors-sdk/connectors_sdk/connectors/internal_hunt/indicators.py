@@ -12,8 +12,10 @@ A platform answers a lookup in one of two ways:
   domain matches its subdomains, never a longer domain; an address never
   matches inside a longer one), and the fields holding them for the evidence of
   each hit;
-- one aggregated row per value (``ioc``, ``hits``, ``first_seen``,
-  ``last_seen``, ``hosts``), exact counts computed by the platform itself.
+- one aggregated row per value, or per value and host (``ioc``, ``hits``,
+  ``first_seen``, ``last_seen``, ``hosts`` or ``host``, and ``event_ids`` when
+  the platform lists the ids of the events), exact counts computed by the
+  platform itself.
 """
 
 from __future__ import annotations
@@ -27,7 +29,9 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_HIT_FIELDS,
     HOST_FIELDS,
     HitFields,
+    ObservationGroups,
     build_hit_keys,
+    event_hit_key,
     sha256_hex,
     value_strings,
 )
@@ -54,8 +58,16 @@ from connectors_sdk.models.enums import HashAlgorithm
 HOSTS_MAX = 10
 """Hosts kept per value (OpenCTI keeps the same number)."""
 
-AGGREGATED_FIELDS = ("ioc", "hits", "first_seen", "last_seen", "hosts")
-"""Fields of an aggregated lookup row, one row per value."""
+AGGREGATED_FIELDS = (
+    "ioc",
+    "hits",
+    "first_seen",
+    "last_seen",
+    "hosts",
+    "host",
+    "event_ids",
+)
+"""Fields of an aggregated lookup row, one row per value or per value and host."""
 
 _TOKEN_BOUNDARIES: dict[str, tuple[str, str]] = {
     "IPv4-Addr": (r"(?<![0-9.])", r"(?![0-9]|\.[0-9])"),
@@ -173,22 +185,28 @@ def value_pattern(ioc: HuntIoc) -> re.Pattern[str]:
 
 
 def event_hosts(
-    event: HuntEvent, host_fields: Sequence[str] = HOST_FIELDS
+    event: HuntEvent,
+    host_fields: Sequence[str] = HOST_FIELDS,
+    fallback_fields: Sequence[str] = (),
 ) -> list[str]:
-    """Return the hosts an event names, from its host fields."""
+    """Return the hosts an event names, from its host fields, else from its fallback fields."""
     lowered = {name.lower(): value for name, value in event.fields.items()}
-    hosts: list[str] = []
-    for name in host_fields:
-        for host in value_strings(lowered.get(name.lower())):
-            if host not in hosts:
-                hosts.append(host)
-    return hosts
+    for names in (host_fields, fallback_fields):
+        hosts: list[str] = []
+        for name in names:
+            for host in value_strings(lowered.get(name.lower())):
+                if host not in hosts:
+                    hosts.append(host)
+        if hosts:
+            return hosts
+    return []
 
 
 def match_events(
     batch: IocBatch,
     events: Sequence[HuntEvent],
     host_fields: Sequence[str] = HOST_FIELDS,
+    fallback_fields: Sequence[str] = (),
 ) -> dict[str, IocObservation]:
     """Find the values of a batch in raw result events.
 
@@ -196,6 +214,7 @@ def match_events(
         batch: The values looked up.
         events: Events returned by the platform.
         host_fields: Fields naming the host of an event.
+        fallback_fields: Fields naming the host of an event whose host fields name none.
 
     Returns:
         The observation of each value found, by value key.
@@ -209,7 +228,11 @@ def match_events(
         hosts: list[str] | None = None
         for key, pattern in patterns.items():
             if any(pattern.search(text) for text in texts):
-                hosts = event_hosts(event, host_fields) if hosts is None else hosts
+                hosts = (
+                    event_hosts(event, host_fields, fallback_fields)
+                    if hosts is None
+                    else hosts
+                )
                 observations.setdefault(key, IocObservation()).add(
                     event.timestamp, hosts
                 )
@@ -266,23 +289,57 @@ def value_hit_keys(
     Returns:
         The distinct hit keys of every value found, by value key.
     """
-    patterns = {ioc.key: value_pattern(ioc) for ioc in batch.iocs}
     keys: dict[str, dict[str, None]] = {}
-    for event, fields in hits:
-        texts = [
-            text for value in event.fields.values() for text in value_strings(value)
-        ]
+    for (event, fields), held in zip(hits, index_value_hits(batch, hits), strict=True):
         [key] = build_hit_keys([(event, fields)], limits, hit_fields)
-        for ioc_key, pattern in patterns.items():
-            if any(pattern.search(text) for text in texts):
-                keys.setdefault(ioc_key, {})[key] = None
+        for ioc_key in held:
+            keys.setdefault(ioc_key, {})[key] = None
     return {ioc_key: list(found) for ioc_key, found in keys.items()}
+
+
+def index_value_hits(
+    batch: IocBatch, hits: Sequence[tuple[HuntEvent, Sequence[str]]]
+) -> list[dict[str, list[str]]]:
+    """Return the values each hit holds, by value key, each with the fields of the hit holding it.
+
+    The values are read in every field of the event, so a value found in a field
+    the hit does not report (excluded from the evidence) still belongs to the
+    hit, with no field.
+
+    Args:
+        batch: The values looked up.
+        hits: The events holding a value, with the fields they report (``value_hits``).
+
+    Returns:
+        For each hit, in order: the fields holding each value it holds.
+    """
+    patterns = {ioc.key: value_pattern(ioc) for ioc in batch.iocs}
+    index: list[dict[str, list[str]]] = []
+    for event, reported in hits:
+        shown = set(reported)
+        found: dict[str, list[str]] = {}
+        for name, value in event.fields.items():
+            texts = value_strings(value)
+            for key, pattern in patterns.items():
+                if any(pattern.search(text) for text in texts):
+                    fields = found.setdefault(key, [])
+                    if name in shown:
+                        fields.append(name)
+        index.append(found)
+    return index
+
+
+def _row_hits(event: HuntEvent) -> int:
+    try:
+        return int(float(str(event.fields.get("hits") or 0)))
+    except ValueError:
+        return 0
 
 
 def aggregated_observations(
     batch: IocBatch, events: Sequence[HuntEvent]
 ) -> dict[str, IocObservation]:
-    """Read aggregated lookup rows, one per value (see ``AGGREGATED_FIELDS``).
+    """Read aggregated lookup rows, one per value or per value and host (see ``AGGREGATED_FIELDS``).
 
     A row naming a value the batch does not hold is ignored.
 
@@ -293,25 +350,73 @@ def aggregated_observations(
     Returns:
         The observation of each value found, by value key.
     """
-    keys = {ioc.key for ioc in batch.iocs}
+    observations, _ = read_aggregated_rows(batch, events)
+    return observations
+
+
+def read_aggregated_rows(
+    batch: IocBatch,
+    events: Sequence[HuntEvent],
+    groups: ObservationGroups | None = None,
+    max_keys: int | None = None,
+) -> tuple[dict[str, IocObservation], dict[str, dict[str, None]] | None]:
+    """Read aggregated lookup rows: the observation of each value and the keys of its hits.
+
+    A row carries the value (``ioc``), its count, first and last time, its hosts
+    (``hosts``, or one ``host`` per row) and, when the platform lists them, the
+    ids of its events (``event_ids``): the key of each hit derives from its event
+    id, so an aggregated lookup tells its hits apart. A row listing no event id,
+    or fewer ids than hits, or more than ``max_keys`` allows, leaves the hits of
+    the batch unidentified.
+
+    Args:
+        batch: The values looked up.
+        events: Rows returned by the platform.
+        groups: Filled with the hits of each value and host.
+        max_keys: Most hit keys read over the rows.
+
+    Returns:
+        The observation of each value found, by value key, and the keys of the
+        hits of each value (None when a row lists no event id).
+    """
+    known = {ioc.key for ioc in batch.iocs}
     observations: dict[str, IocObservation] = {}
+    value_keys: dict[str, dict[str, None]] | None = {}
+    read = 0
     for event in events:
         key = str(event.fields.get("ioc") or "")
-        if key not in keys:
+        hits = _row_hits(event)
+        if key not in known or hits <= 0:
             continue
-        try:
-            hits = int(float(str(event.fields.get("hits") or 0)))
-        except ValueError:
-            hits = 0
-        if hits <= 0:
-            continue
+        host_values = value_strings(event.fields.get("host"))
+        hosts = host_values or value_strings(event.fields.get("hosts"))
+        first_seen = parse_timestamp(event.fields.get("first_seen"))
+        last_seen = parse_timestamp(event.fields.get("last_seen"))
         observations.setdefault(key, IocObservation()).add(
-            parse_timestamp(event.fields.get("first_seen")),
-            value_strings(event.fields.get("hosts")),
-            hits,
-            parse_timestamp(event.fields.get("last_seen")),
+            first_seen, hosts, hits, last_seen
         )
-    return observations
+        event_ids = value_strings(event.fields.get("event_ids"))
+        keys: list[str] | None = None
+        # A row listing part of its events cannot tell its other hits apart
+        complete = len(event_ids) >= hits and (
+            max_keys is None or read + len(event_ids) <= max_keys
+        )
+        if event_ids and complete and value_keys is not None:
+            keys = [event_hit_key(event_id) for event_id in event_ids]
+            read += len(keys)
+            value_keys.setdefault(key, {}).update(dict.fromkeys(keys))
+        else:
+            value_keys = None
+        if groups is not None:
+            groups.add(
+                key,
+                host_values[0] if host_values else None,
+                first_seen,
+                keys,
+                hits,
+                last_seen,
+            )
+    return observations, value_keys
 
 
 def build_ioc_results(
@@ -360,23 +465,49 @@ def build_ioc_results(
 
 
 def build_ioc_evidence(
-    iocs: Sequence[HuntIoc], results: Sequence[HuntIocResult], limits: HuntLimits
+    iocs: Sequence[HuntIoc],
+    results: Sequence[HuntIocResult],
+    limits: HuntLimits,
+    matched_fields: Mapping[str, Mapping[str, int]] | None = None,
 ) -> list[HuntEvidence]:
-    """Return the evidence of an indicator hunt run: each seen value and its hits, the most seen first."""
+    """Return the evidence of an indicator hunt run: each seen value in the fields that held it, the most seen first.
+
+    A value is reported in each field of the events that held it
+    (``target.hostname``), with the number of hits holding it there. A value
+    counted without events (an aggregated lookup) is reported under
+    ``ioc.<observable type>``.
+
+    Args:
+        iocs: Values of the hunt.
+        results: The result of every value.
+        limits: Run limits (number of items and preview length).
+        matched_fields: Hits holding each value in each field, by value key.
+
+    Returns:
+        At most ``limits.evidence_max_items`` items.
+    """
     by_key = {ioc.key: ioc for ioc in iocs}
-    seen = sorted(
-        (result for result in results if result.seen),
-        key=lambda result: -result.hits_count,
-    )
+    items: list[tuple[int, str, str, HuntIoc]] = []
+    for result in results:
+        ioc = by_key.get(result.key)
+        if ioc is None or not result.seen:
+            continue
+        fields = (matched_fields or {}).get(result.key) or {}
+        if fields:
+            items.extend((count, name, ioc.key, ioc) for name, count in fields.items())
+        else:
+            items.append(
+                (result.hits_count, f"ioc.{ioc.observable_type}", ioc.key, ioc)
+            )
+    items.sort(key=lambda item: (-item[0], item[2], item[1]))
     return [
         HuntEvidence(
-            field=f"ioc.{by_key[result.key].observable_type}",
-            value_hash=sha256_hex(by_key[result.key].value),
-            value_preview=by_key[result.key].value[: limits.evidence_max_value_length],
-            count=result.hits_count,
+            field=name,
+            value_hash=sha256_hex(ioc.value),
+            value_preview=ioc.value[: limits.evidence_max_value_length],
+            count=count,
         )
-        for result in seen[: limits.evidence_max_items]
-        if result.key in by_key
+        for count, name, _, ioc in items[: limits.evidence_max_items]
     ]
 
 

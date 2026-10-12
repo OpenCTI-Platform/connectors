@@ -7,6 +7,7 @@ matched values also SHA-256 hashed.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 from collections import Counter
@@ -23,6 +24,7 @@ from connectors_sdk.connectors.internal_hunt.models import (
     HuntHitEvidence,
     HuntHitField,
     HuntLimits,
+    HuntObservation,
     HuntResult,
     HuntTimeWindow,
 )
@@ -435,10 +437,14 @@ def build_hit_evidence(
     hits: Iterable[tuple[HuntEvent, Sequence[str]]],
     limits: HuntLimits,
     hit_fields: HitFields = DEFAULT_HIT_FIELDS,
+    groups: Sequence[Iterable[str]] | None = None,
 ) -> list[HuntHitEvidence]:
     """Build the redacted evidence of single hits: what matched, where, by whom and when.
 
-    One item per event, the earliest first (events without time last). A hit
+    One item per event, the earliest first (events without time last). With
+    ``groups`` (the value or rule and the victim of each hit, see
+    ``hit_group``), the sample holds the earliest hit of every group before any
+    second hit of a group, so that each value and each victim shows up. A hit
     reports at most ``HIT_MATCHED_FIELDS_MAX`` matched fields, the first ones of
     the hunt logic that hold a value; a matched value is hashed whole and its
     preview truncated. The event id, detection, host, user, process and matched
@@ -451,23 +457,134 @@ def build_hit_evidence(
         hits: Each result event with the fields the hunt matched in it.
         limits: Run limits (number of hits and preview length).
         hit_fields: Fields read for the event id, host, user and process.
+        groups: The groups of each hit, in the order of ``hits``.
 
     Returns:
         At most ``limits.evidence_max_items`` hits.
     """
     if limits.evidence_max_items == 0:
         return []
-    ordered = sorted(
-        hits,
-        key=lambda hit: (
-            hit[0].timestamp is None,
-            hit[0].timestamp.timestamp() if hit[0].timestamp else 0.0,
-        ),
-    )
-    return [
+    evidence = [
         _hit_evidence(event, matched, limits.evidence_max_value_length, hit_fields)
-        for event, matched in ordered[: limits.evidence_max_items]
+        for event, matched in hits
     ]
+    keys = [hit_key(item) for item in evidence]
+    times = [
+        item.timestamp.timestamp() if item.timestamp else None for item in evidence
+    ]
+    order = sorted(
+        range(len(evidence)),
+        key=lambda index: (times[index] is None, times[index] or 0.0, keys[index]),
+    )
+    chosen: list[int] = []
+    chosen_keys: set[str] = set()
+
+    def _pick(index: int) -> None:
+        chosen.append(index)
+        chosen_keys.add(keys[index])
+
+    if groups is not None:
+        covered: set[str] = set()
+        for index in order:
+            if len(chosen) == limits.evidence_max_items:
+                break
+            labels = set(groups[index])
+            if keys[index] not in chosen_keys and labels - covered:
+                _pick(index)
+                covered.update(labels)
+    for index in order:
+        if len(chosen) == limits.evidence_max_items:
+            break
+        if keys[index] not in chosen_keys:
+            _pick(index)
+    rank = {index: position for position, index in enumerate(order)}
+    return [evidence[index] for index in sorted(chosen, key=rank.__getitem__)]
+
+
+def hit_group(key: str, host: str | None) -> str:
+    """Return the sampling group of a hit: its value (or rule) key and its victim."""
+    return json.dumps([key, host or ""], separators=(",", ":"))
+
+
+def hit_host(
+    event: HuntEvent, hit_fields: HitFields = DEFAULT_HIT_FIELDS
+) -> str | None:
+    """Return the host a hit reports (the first host field holding a value)."""
+    return _identity(_first_value(event, hit_fields.host))
+
+
+@dataclass
+class _ObservationGroup:
+    hits: int = 0
+    first_seen: datetime | None = None
+    last_seen: datetime | None = None
+    keys: dict[str, None] = dataclasses.field(default_factory=dict)
+    keyed: bool = True
+
+
+class ObservationGroups:
+    """Every hit of a run grouped by value (or rule) and victim (``HuntObservation``).
+
+    OpenCTI counts and dates the observed data and the sightings of a run from
+    these groups, never from the hit sample.
+    """
+
+    def __init__(self) -> None:
+        """Start with no group."""
+        self._groups: dict[tuple[str, str | None], _ObservationGroup] = {}
+
+    def add(
+        self,
+        key: str,
+        host: str | None,
+        timestamp: datetime | None,
+        hit_keys: Iterable[str] | None,
+        count: int = 1,
+        last: datetime | None = None,
+    ) -> None:
+        """Add hits to the group of a value (or rule) and a victim.
+
+        Args:
+            key: Key of the value or of the rule.
+            host: Victim host, None when the hits name none.
+            timestamp: Time of the (first) hit.
+            hit_keys: Keys of the hits, None when they cannot be told apart.
+            count: Number of hits.
+            last: Time of the last hit, the timestamp by default.
+        """
+        group = self._groups.setdefault((key, host or None), _ObservationGroup())
+        group.hits += max(0, count)
+        last = last or timestamp
+        if timestamp and (group.first_seen is None or timestamp < group.first_seen):
+            group.first_seen = timestamp
+        if last and (group.last_seen is None or last > group.last_seen):
+            group.last_seen = last
+        if hit_keys is None:
+            group.keyed = False
+        else:
+            group.keys.update(dict.fromkeys(hit_keys))
+
+    def build(self) -> list[HuntObservation]:
+        """Return the groups, by value (or rule) then victim."""
+        return [
+            HuntObservation(
+                key=key,
+                host=host,
+                hits_count=group.hits,
+                first_seen=group.first_seen,
+                last_seen=group.last_seen,
+                hit_keys=list(group.keys) if group.keyed else None,
+            )
+            for (key, host), group in sorted(
+                self._groups.items(), key=lambda item: (item[0][0], item[0][1] or "")
+            )
+            if group.hits > 0
+        ]
+
+
+def event_hit_key(event_id: str) -> str:
+    """Return the key of a hit known by its event id only (an aggregated lookup row)."""
+    return hit_key(HuntHitEvidence(event_id=_identity(event_id)))
 
 
 HIT_KEY_VERSION = "v1"
@@ -588,22 +705,24 @@ def _hit_evidence(
                 )
             )
 
-    def _first(names: Sequence[str]) -> str | None:
-        for field in present_fields(event, names):
-            texts = value_strings(event.fields[field])
-            if texts:
-                return texts[0]
-        return None
-
     return HuntHitEvidence(
-        event_id=_identity(_first(hit_fields.event_id)),
+        event_id=_identity(_first_value(event, hit_fields.event_id)),
         timestamp=event.timestamp,
         detection=_identity(event.detection),
         matched=fields,
-        host=_identity(_first(hit_fields.host)),
-        user=_identity(_first(hit_fields.user)),
-        process=_identity(_first(hit_fields.process)),
+        host=_identity(_first_value(event, hit_fields.host)),
+        user=_identity(_first_value(event, hit_fields.user)),
+        process=_identity(_first_value(event, hit_fields.process)),
     )
+
+
+def _first_value(event: HuntEvent, names: Sequence[str]) -> str | None:
+    """Return the first value of the first of the fields that holds one."""
+    for name in present_fields(event, names):
+        texts = value_strings(event.fields[name])
+        if texts:
+            return texts[0]
+    return None
 
 
 def count_distinct_entities(

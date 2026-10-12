@@ -119,6 +119,20 @@ def test_convert_sigma_wraps_backend_errors():
         convert_sigma(TextQueryTestBackend(), parse_sigma_rule(SIGMA_RULE), "nope")
 
 
+def test_conversion_errors_name_the_rule_by_its_title():
+    # Given a backend failing on a field of the rule, as a platform backend
+    # rejecting a field name does
+    class _FailingBackend(TextQueryTestBackend):
+        def finalize_query(self, *args, **kwargs):
+            raise ValueError("Field CommandLine is not a valid UDM field")
+
+    # When/Then the error names the rule by its title, not by a missing file
+    with pytest.raises(HuntTranslationError) as caught:
+        convert_sigma(_FailingBackend(), parse_sigma_rule(SIGMA_RULE))
+    assert "rule 'Encoded PowerShell'" in str(caught.value)
+    assert "rule None" not in str(caught.value)
+
+
 def test_detection_fields_walks_nested_detections_and_skips_keywords():
     # Given a rule with keywords and nested detection items
     collection = parse_sigma_rule("""
