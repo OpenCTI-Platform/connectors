@@ -3,20 +3,16 @@ services:
   connector-google-safebrowsing:
     image: opencti/connector-google-safebrowsing:latest
     environment:
-      # Connector's definition parameters:
-      - CONNECTOR_NAME=Google Safe Browsing
-      - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
       # Connector's generic execution parameters:
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN= # Your Connector's token
-      - CONNECTOR_ID= # Your connector UUID
-      - CONNECTOR_LOG_LEVEL=info 
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Google Safe Browsing
+      - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
+      - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=true
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
       # Connector's custom execution parameters:
-      - SAFE_BROWSING_API_KEY= # Your Google/Yandex Safe Browsing API key
+      - SAFE_BROWSING_API_KEY=ChangeMe # Your Google/Yandex Safe Browsing API key
       # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Optional (default). Use https://sba.yandex.net for Yandex
-      # - GOOGLE_SAFE_BROWSING_API_KEY= # Legacy Google key, used only if SAFE_BROWSING_API_KEY is unset (backward compatibility)
+      # - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe # Legacy Google key, used only if SAFE_BROWSING_API_KEY is unset (backward compatibility)
     restart: always
-
-
