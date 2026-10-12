@@ -195,7 +195,7 @@ The connector retrieves data from VulnCheck's API and imports it into OpenCTI
 as STIX objects. The following types of data are processed:
 
 - **VulnCheck KEV**: Populates OpenCTI with vulnerabilities actively exploited
-in the wild, focusing on high-priority risks.
+in the wild, focusing on high-priority risks. Each vulnerability is labeled `VulnCheck KEV`.
 - **NVD-2**: Imports vulnerability information enriched with CVSS scores,
 SSVC decision points (exploitation, automatable, technical impact),
 descriptions, and associated CPEs. For VulnCheck NVD-2, the VulnCheck SSVC

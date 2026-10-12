@@ -180,6 +180,7 @@ def test_vckev(converter):
     entity = SimpleNamespace(cve=["CVE-2024-0001"])
     objs = vckev._extract_stix_from_vckev(converter, [entity], LOG)
     assert _types(objs) == ["vulnerability"]
+    assert objs[0].labels == [vckev.VULNCHECK_KEV_LABEL]
 
 
 def test_vcnvd2_full(converter):
