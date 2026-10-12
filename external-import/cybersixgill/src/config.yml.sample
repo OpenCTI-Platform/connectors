@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  # id: 'ChangeMe' # optional (default: '4a843046-945d-4855-94ce-ead2bf5c8710')
   # name: 'Cybersixgill Darkfeed'
   # scope: 'cybersixgill' # MIME type or SCO
   # log_level: 'error'

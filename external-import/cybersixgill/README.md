@@ -66,7 +66,7 @@ Configure the connector in `docker-compose.yml`:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_ID=ChangeMe # optional (default: 4a843046-945d-4855-94ce-ead2bf5c8710)
       - CONNECTOR_SCOPE=cybersixgill
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT5M
