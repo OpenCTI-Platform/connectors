@@ -18,6 +18,7 @@ class DoppelConnector:
         self.converter = ConverterToStix(
             self.helper,
             tlp_level=self.config.doppel.tlp_level,
+            enable_incidents=self.config.doppel.enable_incidents,
             enable_grouping_case=self.config.doppel.enable_grouping_case,
             enable_rft_case=self.config.doppel.enable_rft_case,
         )

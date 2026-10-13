@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | PROOFPOINT_ET_INTELLIGENCE_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API key used for authentication to ProofPoint ET Intelligence. |
 | CONNECTOR_NAME | `string` |  | string | `"ProofPoint ET Intelligence"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "Domain-Name", "StixFile"]` | The scope of the connector. |

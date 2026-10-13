@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "FT3 Framework",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -29,11 +31,13 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
       "default": "EXTERNAL_IMPORT",
       "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
       "type": "string"
@@ -59,11 +63,13 @@
     "FT3_TACTICS_URL": {
       "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json",
       "description": "URL to the FT3 Tactics JSON file. This dataset includes fraud tactics from the FT3 framework.",
+      "minLength": 1,
       "type": "string"
     },
     "FT3_TECHNIQUES_URL": {
       "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json",
       "description": "URL to the FT3 Techniques JSON file. Contains fraud techniques and their relationships to tactics.",
+      "minLength": 1,
       "type": "string"
     }
   },

@@ -110,4 +110,4 @@ class ShodanInternetDBConnector:
         Start the connector
         :return: None
         """
-        self.helper.listen(message_callback=self._process_message)
+        self.helper.listen(message_callback=self.process_message)

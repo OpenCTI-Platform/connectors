@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-honeylabs:
+    image: opencti/connector-honeylabs:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=HoneyLabs
+      # - CONNECTOR_SCOPE=Indicator,IPv4-Addr,Url
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT1H
+      - HONEYLABS_API_KEY=ChangeMe
+      # - HONEYLABS_API_ROOT=https://honeylabs.net/taxii2/api/
+      # - HONEYLABS_COLLECTIONS=attackers,malware-infrastructure
+      # - HONEYLABS_IMPORT_SINCE=P7D
+      # - HONEYLABS_PAGE_SIZE=500
+      # - HONEYLABS_CREATE_OBSERVABLES=true
+      # - HONEYLABS_TLP_LEVEL=clear
+    restart: always

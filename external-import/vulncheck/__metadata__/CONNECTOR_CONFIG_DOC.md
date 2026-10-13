@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | VULNCHECK_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API key used to authenticate against the VulnCheck API. |
 | CONNECTOR_NAME | `string` |  | string |  | `"VulnCheck"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string |  | `["vulnerability", "malware", "threat-actor", "infrastructure", "location", "ip-addr", "indicator", "external-reference", "attack-pattern", "course-of-action", "x-mitre-data-source", "report"]` | Comma-separated STIX object types to import, e.g. `vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,attack-pattern,course-of-action,x-mitre-data-source,report` (add `software` only if prepared for the volume — see [Data Volume](#data-volume)). |

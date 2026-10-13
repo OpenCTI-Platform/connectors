@@ -1,22 +1,18 @@
 FROM python:3.12-alpine
-
-# Copy the connector
-COPY src /opt/opencti-connector-socradar
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-COPY requirements.txt .
-
-RUN pip install -r requirements.txt --no-cache-dir --upgrade pip && \
-    rm requirements.txt && \
+COPY requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+    rm /tmp/requirements.txt && \
     apk del git build-base
 
-# Expose entrypoint.sh
-COPY entrypoint.sh .
+# Copy the connector
+COPY src /opt/opencti-connector-socradar
+WORKDIR /opt/opencti-connector-socradar
 
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "main.py"]

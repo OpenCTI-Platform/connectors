@@ -1,5 +1,6 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connector.utils import to_canonical_tlp_marking
 from pycti import OpenCTIConnectorHelper
 from visionheight_client import VisionHeightClient
 
@@ -95,13 +96,17 @@ class VisionHeightConnector:
         """
         Verify the observable's TLP marking does not exceed the configured cap.
         Raises ValueError if it does.
+
+        The configured cap is stored lowercase but ``check_max_tlp`` only knows
+        the canonical ``TLP:XXX`` names, hence the conversion here.
         """
         tlp = None
         for marking in opencti_entity.get("objectMarking", []):
             if marking["definition_type"] == "TLP":
                 tlp = marking["definition"]
 
-        if not self.helper.check_max_tlp(tlp, self.config.visionheight.max_tlp_level):
+        max_tlp = to_canonical_tlp_marking(self.config.visionheight.max_tlp_level)
+        if not self.helper.check_max_tlp(tlp, max_tlp):
             raise ValueError(
                 "[CONNECTOR] TLP of the observable exceeds the connector's "
                 "max_tlp_level; refusing to enrich."

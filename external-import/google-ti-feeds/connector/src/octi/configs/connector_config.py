@@ -31,6 +31,30 @@ class ConnectorConfig(BaseConfig):
     scope: str = Field(
         default="report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
         description="Comma-separated list of OpenCTI entity types that this connector can import",
+        # Override the generated JSON schema so that CONNECTOR_SCOPE is
+        # emitted as an array, matching the schema convention produced by
+        # connectors_sdk.BaseSettings. The runtime type stays str because
+        # this connector does not use connectors_sdk.BaseSettings yet.
+        json_schema_extra={
+            "type": "array",
+            "items": {"type": "string"},
+            "default": [
+                "report",
+                "location",
+                "identity",
+                "attack_pattern",
+                "domain",
+                "file",
+                "ipv4",
+                "ipv6",
+                "malware",
+                "sector",
+                "intrusion_set",
+                "url",
+                "vulnerability",
+                "campaign",
+            ],
+        },
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         default="error",

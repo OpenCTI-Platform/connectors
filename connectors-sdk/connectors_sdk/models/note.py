@@ -46,10 +46,6 @@ class Note(BaseIdentifiedEntity):
         default=None,
         description="Types of the note.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the note.",
-    )
     authors: list[str] | None = Field(
         default=None,
         description="The name of the author(s) of this note (e.g., the analyst(s) that created it).",
@@ -90,7 +86,6 @@ class Note(BaseIdentifiedEntity):
             ),
             abstract=self.abstract,
             content=self.content,
-            labels=self.labels,
             authors=self.authors,
             object_refs=[obj.id for obj in self.objects or []],
             allow_custom=True,

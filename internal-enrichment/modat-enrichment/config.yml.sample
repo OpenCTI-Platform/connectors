@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'd2d7a7e3-4cb4-4f58-94c2-7bb6d2f8f643'
+  name: 'Modat Enrichment'
+  scope: 'ipv4-addr'
+  log_level: 'info'
+  auto: false
+
+modat:
+  api_base_url: 'https://api.magnify.modat.io'
+  api_key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  default_score: 50
+  create_note: true
+  include_cves: false
+  max_services_in_summary: 25

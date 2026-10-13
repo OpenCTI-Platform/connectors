@@ -98,3 +98,33 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_infoblox_api_get_builds_url_from_httpurl(
+    mock_opencti_connector_helper, monkeypatch
+):
+    """`infoblox.url` is a pydantic `HttpUrl`, not a `str`, so it must be cast before
+    calling `.rstrip()`. Otherwise the request URL is never built and no IOC is fetched.
+    """
+    import connector.connector as connector_module
+
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = Infoblox(config=settings, helper=helper)
+
+    captured_urls = []
+
+    def fake_get(url, *args, **kwargs):
+        captured_urls.append(url)
+        response = MagicMock()
+        response.json.return_value = {}
+        return response
+
+    monkeypatch.setattr(connector_module.requests, "get", fake_get)
+
+    connector.infoblox_api_get()
+
+    assert captured_urls, "request URL was never built (HttpUrl.rstrip raised)"
+    assert captured_urls[0].startswith(
+        "https://csp.infoblox.com/tide/api/data/threats?type=ip"
+    )

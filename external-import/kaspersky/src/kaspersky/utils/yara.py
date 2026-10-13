@@ -140,7 +140,7 @@ class YaraRuleUpdater:
             return False
 
     def _needs_updating(self, current_rule: YaraRule, new_rule: YaraRule) -> bool:
-        if current_rule.name != new_rule.name:
+        if current_rule.name.lower() != new_rule.name.lower():
             self._error(
                 "Current ({0}) and new ({1}) YARA rules names do not match",
                 current_rule.name,
@@ -281,8 +281,7 @@ def _parse_yara_rule(yara_rule: str) -> Optional[Mapping[str, Any]]:
 
     description = _get_description(yara_rule)
     if description is None:
-        log.error("No description for rule: %s", yara_rule)
-        return None
+        log.debug("No description for rule: %s", name)
 
     report = _get_report(yara_rule)
     if report is None:

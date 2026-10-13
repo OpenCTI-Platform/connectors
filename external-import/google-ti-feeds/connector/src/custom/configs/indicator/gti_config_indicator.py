@@ -40,6 +40,18 @@ class GTIIndicatorConfig(GTIBaseConfig):
         "score are discarded. Indicators without a score are always imported. "
         "Set to 100 or leave unset (None) to disable the filter entirely.",
     )
+    indicator_require_malware_family: bool = Field(
+        default=False,
+        description="Only import indicators that have at least one association "
+        "with a Malware Family. Combined with indicator_require_threat_actor "
+        "using OR logic, and with indicator_min_score using AND logic.",
+    )
+    indicator_require_threat_actor: bool = Field(
+        default=False,
+        description="Only import indicators that have at least one association "
+        "with a Threat Actor. Combined with indicator_require_malware_family "
+        "using OR logic, and with indicator_min_score using AND logic.",
+    )
 
     @field_validator("indicator_import_start_date", mode="after")
     @classmethod

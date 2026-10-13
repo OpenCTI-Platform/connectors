@@ -46,10 +46,10 @@ def fixture_mock_connector_helper() -> Mock:
 @pytest.fixture(name="mock_config")
 def fixture_mock_config() -> Mock:
     config = Mock()
-    config.api_base_url = "http://testserver"
-    config.create_indicator = False
-    config.include_relationships = False
-    config.licence_key_base64 = generate_fake_certificate(
+    config.import_document_ai.api_base_url = "http://testserver"
+    config.import_document_ai.create_indicator = False
+    config.import_document_ai.include_relationships = False
+    config.import_document_ai.licence_key_base64 = generate_fake_certificate(
         common_name="test",
         validity_start=None,
         validity_duration=None,
@@ -290,7 +290,7 @@ def test_process_message_with_invalid_certificate_raises_http_error(
     imported_file: OpenCTIFileObject,
 ) -> None:
     # Given a connector wired to the dev FastAPI server with an invalid certificate header
-    mock_config.licence_key_base64 = "not-a-valid-certificate"
+    mock_config.import_document_ai.licence_key_base64 = "not-a-valid-certificate"
     connector = build_connector_for_smoke_test(
         monkeypatch=monkeypatch,
         mock_connector_helper=mock_connector_helper,
@@ -480,7 +480,7 @@ def test_process_message_with_create_indicator_enabled_marks_observables_for_ind
     imported_file: OpenCTIFileObject,
 ) -> None:
     # Given a connector configured to delegate indicator creation to the platform
-    mock_config.create_indicator = True
+    mock_config.import_document_ai.create_indicator = True
     connector = build_connector_for_smoke_test(
         monkeypatch=monkeypatch,
         mock_connector_helper=mock_connector_helper,

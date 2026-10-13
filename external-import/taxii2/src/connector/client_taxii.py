@@ -1,8 +1,18 @@
 import taxii2client.v20 as tx20
 import taxii2client.v21 as tx21
+from pydantic import SecretStr
 from requests.auth import AuthBase, HTTPBasicAuth
 from taxii2client.common import TokenAuth
 from taxii2client.exceptions import TAXIIServiceException
+
+
+def _reveal(secret: SecretStr | None) -> str | None:
+    """
+    Reveal the plain value of an optional secret
+    :param secret: The secret to reveal, if any
+    :return: The plain secret value or None
+    """
+    return secret.get_secret_value() if secret is not None else None
 
 
 class ApiKeyAuth(AuthBase):
@@ -28,36 +38,38 @@ class Taxii2:
         self.helper = helper
         self.config = config
 
-        if self.config.use_token:
-            auth = TokenAuth(self.config.token)
-        elif self.config.use_apikey:
-            auth = ApiKeyAuth(self.config.apikey_key, self.config.apikey_value)
+        taxii2 = config.taxii2
+        if taxii2.use_token:
+            auth = TokenAuth(_reveal(taxii2.token))
+        elif taxii2.use_apikey:
+            auth = ApiKeyAuth(taxii2.apikey_key, _reveal(taxii2.apikey_value))
         else:
-            auth = HTTPBasicAuth(self.config.username, self.config.password)
-        if self.config.taxii2v21:
-            self.config.server = tx21.Server(
-                self.config.discovery_url,
+            auth = HTTPBasicAuth(taxii2.username, _reveal(taxii2.password))
+        # Stored on the instance (not on the frozen `config`) since it is built at runtime
+        if taxii2.v21:
+            self.server = tx21.Server(
+                str(taxii2.discovery_url),
                 auth=auth,
-                verify=self.config.verify_ssl,
-                cert=self.config.cert_path,
+                verify=taxii2.verify_ssl,
+                cert=taxii2.cert_path,
             )
         else:
-            self.config.server = tx20.Server(
-                self.config.discovery_url,
+            self.server = tx20.Server(
+                str(taxii2.discovery_url),
                 auth=auth,
-                verify=self.config.verify_ssl,
-                cert=self.config.cert_path,
+                verify=taxii2.verify_ssl,
+                cert=taxii2.cert_path,
             )
 
         self.filters = {}
-        if self.config.enable_url_query_limit and self.config.taxii2v21:
-            self.filters["limit"] = self.config.url_query_limit
+        if taxii2.enable_url_query_limit and taxii2.v21:
+            self.filters["limit"] = taxii2.url_query_limit
 
     def _get_root(self, root_path):
         """
         Returns an APi Root object, given a Server and an API Root path
         """
-        for root in self.config.server.api_roots:
+        for root in self.server.api_roots:
             if root.url.split("/")[-2] == root_path:
                 return root
         msg = f"Api Root {root_path} does not exist in the TAXII server"
@@ -79,7 +91,7 @@ class Taxii2:
         """
         self.helper.log_info("Polling all API Roots")
         stix_objects = []
-        for root in self.config.server.api_roots:
+        for root in self.server.api_roots:
             if coll_title == "*":
                 obj = self.poll_entire_root(root)
                 if len(obj) > 0:

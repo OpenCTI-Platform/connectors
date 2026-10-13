@@ -13,7 +13,9 @@ services:
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-template
-      - TEMPLATE_API_BASE_URL=CHANGEME
       - TEMPLATE_API_KEY=CHANGEME
       - TEMPLATE_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - TEMPLATE_IMPORT_SINCE=2023-01-01T00:00:00Z # optional, import data updated since this date (default: 30 days ago)
+      - TEMPLATE_IMPORT_VULNERABILITIES=true # optional, enable/disable the import of vulnerabilities (default: true)
+      - TEMPLATE_IMPORT_REPORTS=true # optional, enable/disable the import of reports (default: true)
     restart: always

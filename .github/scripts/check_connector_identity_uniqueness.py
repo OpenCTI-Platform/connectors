@@ -16,6 +16,9 @@ CONNECTOR_TYPE_DIRS = common.CONNECTOR_TYPE_DIRS
 
 FIELDS_TO_CHECK = ["slug", "container_image"]
 
+# CI publishes `{repo}/connector-{folder basename}` (see build-connector-image).
+PUBLISHED_IMAGE_PREFIX = "opencti/connector-"
+
 
 def normalize_slug(slug: str) -> str:
     """Normalize a slug the same way the manifest fragment generator does.
@@ -122,6 +125,27 @@ def collect_normalized_slug_duplicates(
     return duplicates
 
 
+def collect_image_name_mismatches(
+    manifests: list[tuple[str, dict[str, Any]]],
+) -> list[tuple[str, str, str]]:
+    """Detect manifests whose `container_image` is not the image CI publishes.
+
+    CI builds and pushes `opencti/connector-{folder basename}`, so any other
+    declared value points to an image that does not exist on Docker Hub.
+
+    Returns (manifest path, declared image, expected image) tuples.
+    """
+    mismatches: list[tuple[str, str, str]] = []
+    for path, data in manifests:
+        raw_value = data.get("container_image")
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            continue  # non-empty check already enforced by collect_duplicates
+        expected = f"{PUBLISHED_IMAGE_PREFIX}{Path(path).parent.parent.name}"
+        if raw_value != expected:
+            mismatches.append((path, raw_value, expected))
+    return sorted(mismatches)
+
+
 def main() -> int:
     connector_dirs = list_connector_dirs_from_fs()
     manifests = [
@@ -130,11 +154,13 @@ def main() -> int:
     duplicates = collect_duplicates(manifests)
     folder_duplicates = collect_folder_name_duplicates(connector_dirs)
     normalized_slug_duplicates = collect_normalized_slug_duplicates(manifests)
+    image_mismatches = collect_image_name_mismatches(manifests)
 
     has_failure = (
         any(duplicates[field] for field in FIELDS_TO_CHECK)
         or bool(folder_duplicates)
         or bool(normalized_slug_duplicates)
+        or bool(image_mismatches)
     )
     if not has_failure:
         print("No connector identity duplicates detected.")
@@ -157,11 +183,20 @@ def main() -> int:
         for path in paths:
             print(f"  - {path}")
 
+    for path, declared, expected in image_mismatches:
+        print(f"- [container_image_mismatch] {path}")
+        print(f"  - declared: {declared}")
+        print(f"  - expected: {expected}")
+
     print("\nFix by ensuring each connector has unique manifest values for:")
     print("- connector folder basename (used by CI to build Docker image names)")
     print("- slug")
     print("- container_image")
     print("- normalized slug (used as the manifest fragment id/slug for XTM Hub)")
+    print(
+        f"\nAnd that container_image is {PUBLISHED_IMAGE_PREFIX}<connector folder "
+        "basename>, the image CI actually publishes."
+    )
     return 1
 
 

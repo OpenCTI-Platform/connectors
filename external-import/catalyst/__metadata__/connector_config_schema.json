@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/catalyst_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "CATALYST",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "catalyst"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector (ISO-8601 duration format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CATALYST_BASE_URL": {
+      "default": "https://prod.blindspot.prodaft.com/api",
+      "description": "The base URL of the CATALYST API.",
+      "type": "string"
+    },
+    "CATALYST_API_KEY": {
+      "default": null,
+      "description": "The CATALYST API key. If not provided, the public endpoint is used.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CATALYST_TLP_LEVEL": {
+      "default": "white",
+      "description": "Default TLP marking applied to the imported data.",
+      "type": "string"
+    },
+    "CATALYST_TLP_FILTER": {
+      "default": "ALL",
+      "description": "Comma-separated list of TLP levels to fetch (options: CLEAR, GREEN, AMBER, RED, ALL).",
+      "type": "string"
+    },
+    "CATALYST_CATEGORY_FILTER": {
+      "default": "ALL",
+      "description": "Comma-separated list of categories to fetch (options: DISCOVERY, ATTRIBUTION, RESEARCH, FLASH_ALERT, ALL).",
+      "type": "string"
+    },
+    "CATALYST_SYNC_DAYS_BACK": {
+      "default": 730,
+      "description": "Number of days to go back when no last run is present in the connector state.",
+      "type": "integer"
+    },
+    "CATALYST_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables from the fetched data.",
+      "type": "boolean"
+    },
+    "CATALYST_CREATE_INDICATORS": {
+      "default": false,
+      "description": "Whether to create indicators from the fetched data.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

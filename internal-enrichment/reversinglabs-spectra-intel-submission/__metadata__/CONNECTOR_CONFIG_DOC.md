@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_USERNAME | `string` | ✅ | string |  | ReversingLabs Spectra Intelligence username. |
 | REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_PASSWORD | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | ReversingLabs Spectra Intelligence password. |
 | CONNECTOR_NAME | `string` |  | string | `"ReversingLabs Spectra Intelligence Submission"` | The name of the connector. |

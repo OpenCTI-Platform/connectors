@@ -20,6 +20,4 @@ RUN apk --no-cache add libmagic libxslt libxml2 && \
 
 # Expose and entrypoint
 COPY src ./src
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
-ENTRYPOINT ["/bin/sh", "entrypoint.sh"]
+ENTRYPOINT ["python3", "src/main.py"]

@@ -621,6 +621,15 @@ class ProofpointEtIntelligenceConnector:
                 for entity in entities:
                     if key == "get_geolocation":
                         entity = self.utils.get_location_info(entity)
+                        # A Location cannot be built without a country: skip it
+                        # rather than losing the whole enrichment over it.
+                        if not entity.get("country") or not entity.get("country_code"):
+                            self.helper.connector_logger.info(
+                                "[CONNECTOR] Geolocation skipped, the country could "
+                                "not be determined",
+                                {"geolocation": entity},
+                            )
+                            continue
 
                     prepare_args = (
                         (

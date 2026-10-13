@@ -18,5 +18,8 @@ RUN cd /opt/ && \
     rm -rf /opt/connector
 
 FROM package AS app
-# Run the app
-CMD ["GoogleTIFeeds"]
+# Run the app.
+# Started as a module rather than through the `GoogleTIFeeds` console script: the
+# script lives in /usr/local/bin, so pycti would anchor its version lookup there
+# and never find the stamp shipped inside the package.
+CMD ["python3", "-m", "connector"]

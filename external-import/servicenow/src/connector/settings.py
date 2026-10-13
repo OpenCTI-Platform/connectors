@@ -48,29 +48,13 @@ class _ConnectorConfig(BaseExternalImportConnectorConfig):
         default=timedelta(hours=24),
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
-    queue_threshold: Optional[PositiveInt] = Field(
-        default=None,
+    queue_threshold: PositiveInt = Field(
+        default=500,
         description="Connector queue max size in Mbytes. Default to 500.",
     )
     run_and_terminate: Optional[bool] = Field(
         default=None,
         description="Connector run-and-terminate flag.",
-    )
-    send_to_queue: Optional[bool] = Field(
-        default=None,
-        description="Connector send-to-queue flag.",
-    )
-    send_to_directory: Optional[bool] = Field(
-        default=None,
-        description="Connector send-to-directory flag.",
-    )
-    send_to_directory_path: Optional[str] = Field(
-        default=None,
-        description="Connector send-to-directory path.",
-    )
-    send_to_directory_retention: Optional[PositiveInt] = Field(
-        default=None,
-        description="Connector send-to-directory retention in days.",
     )
 
 

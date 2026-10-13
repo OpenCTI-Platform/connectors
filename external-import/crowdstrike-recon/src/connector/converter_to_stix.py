@@ -322,7 +322,6 @@ class ConverterToStix:
         incident_type = item_type or "alert"
         incident_labels = []
         inc_sco_sdo_refs = []
-        attachment_files = []
 
         if item_type == "typosquatting_domain":
             typosquatting = notification.get("typosquatting") or {}
@@ -451,7 +450,6 @@ class ConverterToStix:
             custom_properties={
                 "severity": notification.get("rule_priority"),
                 "incident_type": incident_type,
-                "x_opencti_files": attachment_files,
             },
         )
         stix_objects.append(stix_incident)

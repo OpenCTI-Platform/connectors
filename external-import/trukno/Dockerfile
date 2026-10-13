@@ -13,7 +13,6 @@ RUN cd /opt/opencti-connector-trukno && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Start the connector
+WORKDIR /opt/opencti-connector-trukno
+ENTRYPOINT ["python", "main.py"]

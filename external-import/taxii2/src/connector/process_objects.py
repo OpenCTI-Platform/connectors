@@ -21,9 +21,13 @@ class ProcessObjects:
         for obj in stix_objects:
             object_type = obj["type"]
             if object_type == "indicator":
-                obj["x_opencti_create_observables"] = self.config.create_observables
+                obj["x_opencti_create_observables"] = (
+                    self.config.taxii2.create_observables
+                )
             elif StixCyberObservableTypes.has_value(object_type):
-                obj["x_opencti_create_indicators"] = self.config.create_indicators
+                obj["x_opencti_create_indicators"] = (
+                    self.config.taxii2.create_indicators
+                )
         return stix_objects
 
     def add_custom_label(self, stix_objects: list) -> list:
@@ -34,7 +38,7 @@ class ProcessObjects:
         for obj in stix_objects:
             if "labels" in obj:
                 new_labels = obj["labels"]
-                new_labels.append(self.config.custom_label)
+                new_labels.append(self.config.taxii2.custom_label)
                 obj["labels"] = new_labels
         return stix_objects
 
@@ -45,9 +49,9 @@ class ProcessObjects:
         :return: List of STIX objects
         """
         for obj in stix_objects:
-            if self.config.stix_custom_property in obj and "labels" in obj:
+            if self.config.taxii2.stix_custom_property in obj and "labels" in obj:
                 new_labels = obj["labels"]
-                new_labels.append(obj[self.config.stix_custom_property])
+                new_labels.append(obj[self.config.taxii2.stix_custom_property])
                 obj["labels"] = new_labels
         return stix_objects
 
@@ -103,7 +107,7 @@ class ProcessObjects:
                 if match is not None and (
                     " AND " in obj["pattern"] or " OR " in obj["pattern"]
                 ):
-                    obj["name"] = self.config.force_multiple_pattern_name
+                    obj["name"] = self.config.taxii2.force_multiple_pattern_name
                 # Otherwise, use the extracted part from the pattern
                 elif match != None:
                     obj["name"] = match[2]
@@ -118,29 +122,33 @@ class ProcessObjects:
             if "labels" in obj:
                 obj_labels_set = {label.lower() for label in obj["labels"]}
                 # High score labels
-                for high_label in self.config.indicator_high_score_labels:
+                for high_label in self.config.taxii2.indicator_high_score_labels:
                     if high_label.lower() in obj_labels_set:
-                        obj["x_opencti_score"] = int(self.config.indicator_high_score)
+                        obj["x_opencti_score"] = int(
+                            self.config.taxii2.indicator_high_score
+                        )
                         break
                 # Medium score labels (if high score not already assigned)
                 if "x_opencti_score" not in obj:
-                    for med_label in self.config.indicator_medium_score_labels:
+                    for med_label in self.config.taxii2.indicator_medium_score_labels:
                         if med_label.lower() in obj_labels_set:
                             obj["x_opencti_score"] = int(
-                                self.config.indicator_medium_score
+                                self.config.taxii2.indicator_medium_score
                             )
                             break
                 # Low score labels (if neither high nor medium score assigned)
                 if "x_opencti_score" not in obj:
-                    for low_label in self.config.indicator_low_score_labels:
+                    for low_label in self.config.taxii2.indicator_low_score_labels:
                         if low_label.lower() in obj_labels_set:
                             obj["x_opencti_score"] = int(
-                                self.config.indicator_low_score
+                                self.config.taxii2.indicator_low_score
                             )
                             break
                 # Default score if no match found
                 if "x_opencti_score" not in obj:
-                    obj["x_opencti_score"] = int(self.config.default_x_opencti_score)
+                    obj["x_opencti_score"] = int(
+                        self.config.taxii2.default_x_opencti_score
+                    )
         return stix_objects
 
     def set_indicator_as_detection(self, stix_objects: list) -> list:
@@ -174,7 +182,7 @@ class ProcessObjects:
                 for label in obj["labels"]:
                     exclude = any(
                         re.search(regex, label)
-                        for regex in self.config.labels_to_exclude
+                        for regex in self.config.taxii2.labels_to_exclude
                     )
                     # If no match, add label to new_labels
                     if not exclude:
@@ -192,7 +200,7 @@ class ProcessObjects:
         # Parse the characters_to_replace_in_label string into a list of (find, replace) tuples
         replacement_rules = [
             tuple(pair.split(":"))
-            for pair in self.config.characters_to_replace_in_label
+            for pair in self.config.taxii2.characters_to_replace_in_label
         ]
 
         for obj in stix_objects:
@@ -219,7 +227,8 @@ class ProcessObjects:
             if obj["type"] == "indicator":
                 if (
                     "pattern_type" in obj
-                    and obj["pattern_type"] not in self.config.pattern_types_to_ignore
+                    and obj["pattern_type"]
+                    not in self.config.taxii2.pattern_types_to_ignore
                 ):
                     new_stix_objects.append(obj)
             else:
@@ -235,7 +244,8 @@ class ProcessObjects:
         return [
             obj
             for obj in stix_objects
-            if "type" in obj and obj["type"] not in self.config.object_types_to_ignore
+            if "type" in obj
+            and obj["type"] not in self.config.taxii2.object_types_to_ignore
         ]
 
     def ignore_specific_patterns(self, stix_objects: list) -> list:
@@ -249,7 +259,7 @@ class ProcessObjects:
             if obj["type"] == "indicator":
                 if "pattern" in obj and all(
                     pattern not in obj["pattern"]
-                    for pattern in self.config.patterns_to_ignore
+                    for pattern in self.config.taxii2.patterns_to_ignore
                 ):
                     new_stix_objects.append(obj)
             else:
@@ -268,7 +278,7 @@ class ProcessObjects:
             if obj["type"] == "note":
                 if "content" in obj and all(
                     content not in obj["content"]
-                    for content in self.config.notes_to_ignore
+                    for content in self.config.taxii2.notes_to_ignore
                 ):
                     new_stix_objects.append(obj)
             else:
@@ -284,7 +294,7 @@ class ProcessObjects:
         for obj in stix_objects:
             if obj["type"] == "indicator":
                 note = self.converter_to_stix.create_note(
-                    abstract=self.config.save_original_indicator_id_abstract,
+                    abstract=self.config.taxii2.save_original_indicator_id_abstract,
                     content=obj["id"],
                     object_refs=[obj["id"]],
                 )
@@ -299,7 +309,7 @@ class ProcessObjects:
         for obj in stix_objects:
             if obj["type"] == "report":
                 obj["x_opencti_workflow_id"] = (
-                    self.config.change_report_status_x_opencti_workflow_id
+                    self.config.taxii2.change_report_status_x_opencti_workflow_id
                 )
         return stix_objects
 
@@ -310,52 +320,55 @@ class ProcessObjects:
         """
         stix_objects = self.add_main_observable_type(stix_objects)
 
-        if not self.config.taxii2v21:
+        if not self.config.taxii2.v21:
             stix_objects = self.taxii20_add_pattern_type(stix_objects)
 
-        if self.config.ignore_pattern_types:
+        if self.config.taxii2.ignore_pattern_types:
             stix_objects = self.ignore_pattern_types(stix_objects)
 
-        if self.config.ignore_object_types:
+        if self.config.taxii2.ignore_object_types:
             stix_objects = self.ignore_object_types(stix_objects)
 
-        if self.config.ignore_specific_patterns:
+        if self.config.taxii2.ignore_specific_patterns:
             stix_objects = self.ignore_specific_patterns(stix_objects)
 
-        if self.config.ignore_specific_notes:
+        if self.config.taxii2.ignore_specific_notes:
             stix_objects = self.ignore_specific_notes(stix_objects)
 
-        if self.config.create_observables or self.config.create_indicators:
+        if (
+            self.config.taxii2.create_observables
+            or self.config.taxii2.create_indicators
+        ):
             stix_objects = self.indicator_observable_generation(stix_objects)
 
-        if self.config.add_custom_label:
+        if self.config.taxii2.add_custom_label:
             stix_objects = self.add_custom_label(stix_objects)
 
-        if self.config.stix_custom_property_to_label:
+        if self.config.taxii2.stix_custom_property_to_label:
             stix_objects = self.add_custom_property_label(stix_objects)
 
-        if self.config.force_pattern_as_name:
+        if self.config.taxii2.force_pattern_as_name:
             stix_objects = self.force_pattern_as_name(stix_objects)
 
-        if self.config.determine_x_opencti_score_by_label:
+        if self.config.taxii2.determine_x_opencti_score_by_label:
             stix_objects = self.determine_x_opencti_score_by_label(stix_objects)
 
-        if self.config.set_indicator_as_detection:
+        if self.config.taxii2.set_indicator_as_detection:
             stix_objects = self.set_indicator_as_detection(stix_objects)
 
-        if self.config.create_author:
+        if self.config.taxii2.create_author:
             stix_objects = self.create_author(stix_objects)
 
-        if self.config.exclude_specific_labels:
+        if self.config.taxii2.exclude_specific_labels:
             stix_objects = self.exclude_specific_labels(stix_objects)
 
-        if self.config.replace_characters_in_label:
+        if self.config.taxii2.replace_characters_in_label:
             stix_objects = self.replace_characters_in_label(stix_objects)
 
-        if self.config.save_original_indicator_id_to_note:
+        if self.config.taxii2.save_original_indicator_id_to_note:
             stix_objects = self.save_original_indicator_id_to_note(stix_objects)
 
-        if self.config.change_report_status:
+        if self.config.taxii2.change_report_status:
             stix_objects = self.change_report_status(stix_objects)
 
         return stix_objects

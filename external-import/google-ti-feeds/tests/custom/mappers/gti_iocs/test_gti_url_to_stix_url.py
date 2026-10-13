@@ -157,6 +157,23 @@ def url_with_threat_score() -> GTIURLData:
 
 
 @pytest.fixture
+def url_with_zero_score() -> GTIURLData:
+    """Fixture for url data with a genuine zero threat score (fully benign, e.g. youtube.com)."""
+    return GTIURLDataFactory.build(
+        id="https://benign.example.com/path",
+        attributes=URLModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                threat_score=ThreatScoreFactory.build(value=0),
+                verdict=None,
+            ),
+        ),
+    )
+
+
+@pytest.fixture
 def url_with_malicious_verdict() -> GTIURLData:
     """Fixture for URL data with malicious verdict."""
     return GTIURLDataFactory.build(
@@ -372,6 +389,33 @@ def test_gti_url_to_stix_with_threat_score(
     _then_stix_objects_have_score(url_observable, indicator, 70)
 
 
+# Scenario: Convert GTI url with a genuine zero threat score to STIX objects
+@pytest.mark.order(1)
+def test_gti_url_to_stix_with_zero_score(
+    url_with_zero_score: GTIURLData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test conversion of GTI url with a genuine zero threat score to STIX objects.
+
+    Regression test: `if score:` previously treated a real score of 0 as falsy,
+    dropping x_opencti_score entirely and letting OpenCTI fall back to its own
+    default score of 50 instead of the real value.
+    """
+    # Given a GTI url with a genuine zero threat score
+    mapper = _given_gti_url_mapper(
+        url_with_zero_score, mock_organization, mock_tlp_marking
+    )
+
+    # When converting to STIX
+    stix_objects = _when_convert_to_stix(mapper)
+
+    # Then the STIX objects should have a score of 0, not a missing score
+    _then_stix_objects_created_successfully(stix_objects)
+    url_observable, indicator, relationship = stix_objects
+    _then_stix_objects_have_score(url_observable, indicator, 0)
+
+
 # Scenario: Convert GTI URL with malicious verdict to STIX objects
 @pytest.mark.order(1)
 def test_gti_url_to_stix_with_malicious_verdict(
@@ -460,7 +504,7 @@ def test_gti_url_to_stix_with_all_data(
     _then_stix_url_has_correct_properties(
         url_observable, url_with_all_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_objects_have_score(url_observable, indicator, 95)
+    _then_stix_objects_have_score(url_observable, indicator, 85)
     _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
     _then_stix_indicator_has_correct_timestamps(indicator, url_with_all_data)
     _then_stix_url_has_value(url_observable, "https://original.example.com/malware")
@@ -604,6 +648,32 @@ def test_get_score_with_threat_score(
 
     # Then threat score should be returned
     assert score == 70  # noqa: S101
+
+
+# Scenario: Extract score with a genuine zero threat score
+@pytest.mark.order(1)
+def test_get_score_with_zero_threat_score(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _get_score method returns 0, not None, for a genuine zero threat score."""
+    # Given a url with a real threat score of 0 and no mandiant score
+    url_data = GTIURLDataFactory.build(
+        attributes=URLModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                threat_score=ThreatScoreFactory.build(value=0),
+            )
+        )
+    )
+    mapper = _given_gti_url_mapper(url_data, mock_organization, mock_tlp_marking)
+
+    # When getting score
+    score = mapper._get_score()
+
+    # Then the real zero score should be returned, not None
+    assert score == 0  # noqa: S101
 
 
 # Scenario: Extract score with mandiant confidence score available fallback
@@ -875,14 +945,21 @@ def _then_stix_url_has_correct_properties(
     assert tlp_marking.id in url_observable.object_marking_refs  # noqa: S101
 
 
+def _get_opencti_score(obj: Any) -> int | None:
+    """Extract x_opencti_score from a raw pydantic model or a converted STIX2 object."""
+    score = getattr(obj, "x_opencti_score", None)
+    if score is not None:
+        return score
+    custom_properties = getattr(obj, "custom_properties", None) or {}
+    return custom_properties.get("x_opencti_score")
+
+
 def _then_stix_objects_have_score(
     url_observable: Any, indicator: Any, expected_score: int
 ) -> None:
     """Assert that STIX objects have score."""
-    if hasattr(url_observable, "score"):
-        assert url_observable.score == expected_score  # noqa: S101
-    if hasattr(indicator, "score"):
-        assert indicator.score == expected_score  # noqa: S101
+    assert _get_opencti_score(url_observable) == expected_score  # noqa: S101
+    assert _get_opencti_score(indicator) == expected_score  # noqa: S101
 
 
 def _then_stix_indicator_has_type(

@@ -2,3 +2,11 @@
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = ["--cov=import_doc_ai"]
+
+[tool.connector-linter]
+# VC301 / VC302 do not apply: the connector imports a user's document and has
+# no data of its own to sign. Imported objects keep the author the extraction
+# gives them, or none, and never inherit the triggering entity's author
+# (OpenCTI-Platform/opencti#14105), like every other internal-import-file
+# connector but import-file-misp, which takes the author from the MISP event.
+ignore = ["VC301", "VC302"]

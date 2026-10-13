@@ -1,12 +1,13 @@
 {
-  "title": "Intel471 V2",
+  "title": "Intel 471 v2",
   "slug": "intel471_v2",
-  "description": "The Intel471 V2 connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform into OpenCTI. Version 2 introduces a Reports stream (replacing IOCs) and several enhancements over V1. It runs four configurable streams: malware indicators, YARA rules, reports (breach alerts, spot reports, malware reports), and CVE vulnerabilities. Each stream produces structured STIX objects with relationships linking indicators, observables, and reports.",
-  "short_description": "Imports malware indicators, YARA rules, threat reports, and CVE vulnerabilities from Intel 471's Titan platform into OpenCTI via four configurable streams.",
+  "description": "Intel 471 delivers structured intelligence on cyber threats and cybercriminal activity. This connector brings that intelligence into OpenCTI as STIX 2.1 objects. It is built for Verity471, Intel 471's intelligence platform, and also works with the legacy Titan platform. The connector runs four streams, each configured independently: malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities, and watcher alerts. Watcher alerts arrive as Incidents, each linked to what triggered it: a report, forum post, leaked credential, indicator or malware event. The other streams produce indicators, malware, vulnerabilities and reports, along with their related observables and relationships.",
+  "short_description": "Ingests malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities and watcher alerts from Intel 471's Verity471 platform into OpenCTI.",
   "logo": "external-import/intel471_v2/__metadata__/logo.png",
   "use_cases": [
     "Adversary & Campaign Insights",
-    "Vulnerability & Exploit Awareness"
+    "Vulnerability & Exploit Awareness",
+    "Brand, Digital Risk & Underground Exposure"
   ],
   "solution_categories": [
     "Threat Intelligence Feed"

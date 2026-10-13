@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 from intel471 import ConnectorSettings
+from intel471.settings import normalize_epoch_millis
 
 INITIAL_HISTORY_TIMESTAMP = 1696156471000  # 2023-10-01
 
@@ -167,6 +168,198 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
+
+    with pytest.raises(ConfigValidationError, match="Error validating configuration"):
+        FakeConnectorSettings()
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        pytest.param(0, 0, id="zero_means_no_initial_history"),
+        pytest.param(
+            INITIAL_HISTORY_TIMESTAMP,
+            INITIAL_HISTORY_TIMESTAMP,
+            id="milliseconds_are_kept_as_is",
+        ),
+        pytest.param(
+            INITIAL_HISTORY_TIMESTAMP // 1000,
+            INITIAL_HISTORY_TIMESTAMP,
+            id="seconds_are_converted_to_milliseconds",
+        ),
+        pytest.param(946_684_800, 946_684_800_000, id="lower_bound_in_seconds"),
+        pytest.param(
+            946_684_800_000, 946_684_800_000, id="lower_bound_in_milliseconds"
+        ),
+        pytest.param(4_102_444_800, 4_102_444_800_000, id="upper_bound_in_seconds"),
+        pytest.param(
+            4_102_444_800_000, 4_102_444_800_000, id="upper_bound_in_milliseconds"
+        ),
+    ],
+)
+def test_normalize_epoch_millis_should_return_milliseconds(value, expected):
+    """
+    Test that `normalize_epoch_millis` passes through epoch milliseconds, scales up
+    epoch seconds, and leaves the `0` default (no initial history) alone.
+
+    :param value: The raw `initial_history_*` value
+    :param expected: The expected value in epoch milliseconds
+    """
+
+    assert normalize_epoch_millis(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param(12345, id="too_small_for_either_unit"),
+        pytest.param(946_684_799, id="just_below_lower_bound_in_seconds"),
+        pytest.param(4_102_444_801_000, id="just_above_upper_bound_in_milliseconds"),
+        pytest.param(-INITIAL_HISTORY_TIMESTAMP, id="negative"),
+    ],
+)
+def test_normalize_epoch_millis_should_raise_when_neither_unit(value):
+    """
+    Test that `normalize_epoch_millis` rejects values that are plausible neither as
+    epoch milliseconds nor as epoch seconds, rather than silently turning them into
+    a date that would re-ingest the whole history.
+
+    :param value: The raw `initial_history_*` value
+    """
+
+    with pytest.raises(ValueError, match="not a valid epoch timestamp"):
+        normalize_epoch_millis(value)
+
+
+def test_settings_should_convert_initial_history_given_in_seconds():
+    """
+    Test that `ConnectorSettings` converts every `initial_history_*` given in epoch
+    seconds into epoch milliseconds, so the streams always call the API in the unit
+    it expects.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "initial_history_indicators": INITIAL_HISTORY_TIMESTAMP // 1000,
+                        "initial_history_yara": INITIAL_HISTORY_TIMESTAMP // 1000,
+                        "initial_history_cves": INITIAL_HISTORY_TIMESTAMP,
+                        "initial_history_reports": 0,
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.initial_history_indicators == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.initial_history_yara == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.initial_history_cves == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.initial_history_reports == 0
+
+
+def test_settings_should_parse_alerts_filters():
+    """
+    The alerts stream's filter settings parse from comma-separated strings into lists
+    (`watcher_group_ids`, `watcher_ids`, `statuses`) and a bool (`is_trashed_included`),
+    and `initial_history_alerts` is normalised like the other initial-history fields.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "interval_alerts": 30,
+                        "initial_history_alerts": INITIAL_HISTORY_TIMESTAMP // 1000,
+                        "watcher_group_ids": "1,2,3",
+                        "watcher_ids": "10,20",
+                        "statuses": "generated,completed",
+                        "is_trashed_included": True,
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 30
+    assert settings.intel471.initial_history_alerts == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.watcher_group_ids == ["1", "2", "3"]
+    assert settings.intel471.watcher_ids == ["10", "20"]
+    assert settings.intel471.statuses == ["generated", "completed"]
+    assert settings.intel471.is_trashed_included is True
+
+
+def test_settings_alerts_defaults_are_disabled_and_empty():
+    """
+    With no alerts settings given, the stream is disabled (`interval_alerts == 0`), the
+    filters are empty lists, and trashed alerts are excluded.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 0
+    assert settings.intel471.initial_history_alerts == 0
+    assert settings.intel471.watcher_group_ids == []
+    assert settings.intel471.watcher_ids == []
+    assert settings.intel471.statuses == []
+    assert settings.intel471.is_trashed_included is False
+
+
+def test_settings_should_raise_when_initial_history_is_not_an_epoch():
+    """
+    Test that an `initial_history_*` value that is plausible neither as epoch
+    milliseconds nor as epoch seconds fails configuration validation on startup.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "initial_history_indicators": 12345,
+                    },
+                }
+            )
 
     with pytest.raises(ConfigValidationError, match="Error validating configuration"):
         FakeConnectorSettings()

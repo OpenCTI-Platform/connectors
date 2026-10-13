@@ -59,8 +59,11 @@ def test_extract_and_check_markings_raises_when_tlp_exceeds_cap():
     with pytest.raises(ValueError):
         connector.extract_and_check_markings(entity)
 
-    # The extracted TLP and the configured cap must be what gets checked.
-    connector.helper.check_max_tlp.assert_called_once_with("TLP:RED", "amber+strict")
+    # The extracted TLP and the configured cap must be what gets checked, the cap
+    # being converted to the canonical form `check_max_tlp` understands.
+    connector.helper.check_max_tlp.assert_called_once_with(
+        "TLP:RED", "TLP:AMBER+STRICT"
+    )
 
 
 def test_extract_and_check_markings_passes_within_cap():
@@ -71,7 +74,9 @@ def test_extract_and_check_markings_passes_within_cap():
     # Must not raise.
     connector.extract_and_check_markings(entity)
 
-    connector.helper.check_max_tlp.assert_called_once_with("TLP:GREEN", "amber+strict")
+    connector.helper.check_max_tlp.assert_called_once_with(
+        "TLP:GREEN", "TLP:AMBER+STRICT"
+    )
 
 
 def test_extract_and_check_markings_no_marking_checks_none():
@@ -81,7 +86,7 @@ def test_extract_and_check_markings_no_marking_checks_none():
 
     connector.extract_and_check_markings({"objectMarking": []})
 
-    connector.helper.check_max_tlp.assert_called_once_with(None, "amber+strict")
+    connector.helper.check_max_tlp.assert_called_once_with(None, "TLP:AMBER+STRICT")
 
 
 # ---------- _collect_intelligence ----------

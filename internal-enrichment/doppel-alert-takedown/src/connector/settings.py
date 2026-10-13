@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -24,8 +24,25 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         default="Doppel Alert and Takedown",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector (types of observables to enrich).",
+        description=(
+            "The OpenCTI entity types supported by the connector. Add Incident to "
+            "request takedown for existing Doppel alerts."
+        ),
         default=["Url", "Domain-Name"],
+    )
+    auto: bool = Field(
+        description=(
+            "Whether the connector should run automatically when an entity is "
+            "created or updated. Must be false when CONNECTOR_SCOPE includes Incident."
+        ),
+        default=False,
+    )
+    auto_update: bool = Field(
+        description=(
+            "Whether the connector should run automatically when an entity is "
+            "updated. Must be false when CONNECTOR_SCOPE includes Incident."
+        ),
+        default=False,
     )
 
 
@@ -35,15 +52,69 @@ class DoppelAlertTakedownConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(
-        description="Doppel API base URL.",
+        description=(
+            "Doppel API base URL. A trailing /v1 or /v2 is accepted and normalized "
+            "to the selected api_version."
+        ),
         default=HttpUrl("https://api.doppel.com"),
     )
-    api_key: SecretStr = Field(
-        description="Doppel API key, sent as the `x-api-key` header.",
+
+    api_version: Literal["v1", "v2"] = Field(
+        description=(
+            "Doppel API version. Choose exactly one authentication mode: V1 API "
+            "keys or V2 OAuth client credentials."
+        ),
+        default="v1",
     )
-    user_api_key: SecretStr = Field(
-        description="Doppel user API key, sent as the `x-user-api-key` header.",
+
+    api_key: SecretStr | None = Field(
+        description=(
+            "V1 API key sent as the x-api-key header. Required for V1 and must "
+            "be unset for V2."
+        ),
+        default=None,
     )
+
+    user_api_key: SecretStr | None = Field(
+        description=(
+            "V1 user API key sent as the x-user-api-key header. Required for V1 "
+            "and must be unset for V2."
+        ),
+        default=None,
+    )
+
+    organization_code: str | None = Field(
+        description=(
+            "Optional V1 organization workspace code sent as the "
+            "x-organization-code header. Must be unset for V2."
+        ),
+        default=None,
+    )
+
+    client_id: str | None = Field(
+        description="OAuth client ID required for V2 and must be unset for V1.",
+        default=None,
+    )
+
+    client_secret: SecretStr | None = Field(
+        description="OAuth client secret required for V2 and must be unset for V1.",
+        default=None,
+    )
+
+    token_url: HttpUrl | None = Field(
+        description=(
+            "Optional V2 OAuth token endpoint. Defaults to /oauth/token on the "
+            "API base URL and must be unset for V1."
+        ),
+        default=None,
+    )
+
+    token_audience: str = Field(
+        description="OAuth audience used only for the V2 client-credentials exchange.",
+        default="doppel-external",
+        min_length=1,
+    )
+
     tags: ListFromString = Field(
         description="List of tags to attach to the alerts created in Doppel.",
         default=[],
@@ -64,6 +135,40 @@ class DoppelAlertTakedownConfig(BaseConfigModel):
         description="Max TLP level of entities to enrich.",
     )
 
+    @model_validator(mode="after")
+    def validate_authentication(self) -> "DoppelAlertTakedownConfig":
+        """Require exactly one credential set for the selected API version."""
+        if self.api_version == "v1":
+            if any(
+                value is not None
+                for value in (self.client_id, self.client_secret, self.token_url)
+            ):
+                raise ValueError(
+                    "V2 OAuth settings must be unset when api_version is v1"
+                )
+            if self.api_key is None or not self.api_key.get_secret_value().strip():
+                raise ValueError("api_key is required when api_version is v1")
+            if (
+                self.user_api_key is None
+                or not self.user_api_key.get_secret_value().strip()
+            ):
+                raise ValueError("user_api_key is required when api_version is v1")
+            return self
+
+        if any(
+            value is not None
+            for value in (self.api_key, self.user_api_key, self.organization_code)
+        ):
+            raise ValueError("V1 API key settings must be unset when api_version is v2")
+        if self.client_id is None or not self.client_id.strip():
+            raise ValueError("client_id is required when api_version is v2")
+        if (
+            self.client_secret is None
+            or not self.client_secret.get_secret_value().strip()
+        ):
+            raise ValueError("client_secret is required when api_version is v2")
+        return self
+
 
 class ConnectorSettings(BaseConnectorSettings):
     """
@@ -76,3 +181,16 @@ class ConnectorSettings(BaseConnectorSettings):
     doppel_alert_takedown: DoppelAlertTakedownConfig = Field(
         default_factory=DoppelAlertTakedownConfig
     )
+
+    @model_validator(mode="after")
+    def prevent_automatic_incident_takedowns(self) -> "ConnectorSettings":
+        """Incident takedown must always be an explicit manual action."""
+        incident_enabled = any(
+            str(scope).lower() == "incident" for scope in self.connector.scope
+        )
+        if incident_enabled and (self.connector.auto or self.connector.auto_update):
+            raise ValueError(
+                "CONNECTOR_AUTO and CONNECTOR_AUTO_UPDATE must be false when "
+                "CONNECTOR_SCOPE includes Incident"
+            )
+        return self
