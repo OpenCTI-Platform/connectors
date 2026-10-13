@@ -27,7 +27,9 @@ class Connector:
 
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(bundle=bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle, cleanup_inconsistent_bundle=True
+        )
         return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def _is_entity_in_scope(self, entity_type: str) -> bool:
@@ -73,6 +75,8 @@ class Connector:
     def _get_converter(self, entity_type: str) -> CensysConverter:
         converter = get_converter(entity_type=entity_type)
         converter.client = self.client
+        converter.helper = self.helper
+        converter.nvd_enabled = self.config.censys_enrichment.nvd_enabled
         return converter
 
     def _process(

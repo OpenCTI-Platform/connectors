@@ -16,3 +16,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | CENSYS_ENRICHMENT_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | The maximum TLP level allowed for enrichment. |
+| CENSYS_ENRICHMENT_NVD_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Optional NVD API key.  Without a key requests are limited to 5 per 30 seconds; with a key the limit rises to 50 per 30 seconds.  Register at https://nvd.nist.gov/developers/request-an-api-key. |
+| CENSYS_ENRICHMENT_NVD_ENABLED | `boolean` |  | boolean | `true` | Set to false to disable NVD CVE enrichment entirely.  Useful when another connector (e.g. OpenCTI's own CVE connector) already handles vulnerability data and you want to avoid duplication. |
