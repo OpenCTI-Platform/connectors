@@ -26,6 +26,7 @@ from connector.stix_builder import (
     make_url,
     stairwell_identity,
     valid_hash,
+    with_markings,
 )
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.exceptions.error import DataRetrievalError
@@ -107,6 +108,32 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         self.indicator_validity = timedelta(
             days=max(1, int(s.import_indicator_validity_days))
         )
+
+    def process(self) -> None:
+        """Run collect → transform → send, keeping checkpoints if any step fails.
+
+        `transform()` moves the checkpoints in memory before the SDK sends the
+        bundle. The SDK saves state only after a successful run, but a failed
+        run's in-memory checkpoints would otherwise carry into the next run
+        whenever the stored state lacks those keys (for example a first run),
+        skipping objects that were never sent.
+        """
+        state = self.state
+        saved = state.model_dump()
+        saved_fields_set = set(state.model_fields_set)
+        try:
+            super().process()
+        except BaseException:
+            for key, value in saved.items():
+                setattr(state, key, value)
+            # setattr marks every field as set; restore that bookkeeping too,
+            # or old-format state would look already migrated (see
+            # ConnectorState.migrate_legacy) and lose its resume cursor. Extra
+            # fields need no restore: the SDK's load() re-applies every stored
+            # key on the next run.
+            state.__pydantic_fields_set__.clear()
+            state.__pydantic_fields_set__.update(saved_fields_set)
+            raise
 
     # ------------------------------------------------------------------
     # collect: fetch raw pages, no STIX
@@ -245,20 +272,22 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         )
         if not emitted:
             return []
-        return [stairwell_identity(), *objects, *self._wrapper(batch, objects, emitted)]
+        # The author and the TLP marking definition travel with every bundle,
+        # so no reference in it is left dangling.
+        return with_markings(
+            [stairwell_identity(), *objects, *self._wrapper(batch, objects, emitted)]
+        )
 
     def _wrapper(
         self, batch: Batch, objects: list[dict[str, Any]], emitted: int
     ) -> list[dict[str, Any]]:
         """The per-run Grouping/Report (and truncation Note when capped).
 
-        The seed is the run's start time (microsecond precision), so every
-        run, including each run that resumes a capped window, gets its own
-        wrapper.
+        Its ID includes the run's start time (a Grouping's `created`, a
+        Report's `published`), so every run, including each run that resumes a
+        capped window, gets its own wrapper.
         """
         run_label = batch.run_started.strftime("%Y-%m-%d %H:%M UTC")
-        run_id = batch.run_started.isoformat()
-        seed = f"stairwell-import-run|{run_id}"
         name = f"Stairwell MalEval import — {run_label}"
         truncated = batch.resume_token is not None
         lines = [
@@ -278,7 +307,6 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         refs = [o["id"] for o in objects]
         if self.wrapper == "report":
             wrapper = make_report(
-                seed=seed,
                 name=name,
                 object_refs=refs,
                 published=_iso(batch.run_started),
@@ -287,9 +315,9 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             )
         else:
             wrapper = make_grouping(
-                seed=seed,
                 name=name,
                 object_refs=refs,
+                created=batch.run_started.isoformat(),
                 description="\n".join(lines),
                 context="malware-analysis",
                 tlp=self.tlp,
@@ -298,10 +326,10 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         if truncated:
             out.append(
                 make_note(
-                    seed=f"stairwell-import-truncation|{run_id}",
                     abstract="Stairwell Import Truncation",
                     content=(
-                        "This run reached "
+                        f"Run {_iso(batch.run_started)} (window "
+                        f"{_iso(batch.cutoff)} → {_iso(batch.window_end)}) reached "
                         f"STAIRWELL_IMPORT_MAX_INDICATORS={self.max_indicators} "
                         f"after {batch.fetched} objects ({emitted} indicators "
                         "emitted). The remaining objects in this window are "
@@ -348,7 +376,6 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         indicator = make_indicator(
             pattern=f"[file:hashes.'SHA-256' = '{sha256}']",
             name=f"Stairwell MalEval file: {sha256[:12]}…",
-            seed=f"stairwell-file-indicator|{sha256}",
             valid_from=_iso(valid_from),
             valid_until=_iso(valid_from + self.indicator_validity),
             description=f"MalEval bucket: {bucket}",

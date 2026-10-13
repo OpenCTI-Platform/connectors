@@ -62,10 +62,13 @@ def _run(processor):
 
 
 def _file_obj(sha256, bucket="PROBABILITY_HIGH", net=None, **extra):
+    # Each file has its own SHA-1/MD5, as real files do: a File's STIX ID
+    # derives from one hash (MD5 first), so shared fake hashes would collide.
+    digest = (str(sha256) * 2)[:40] if sha256 else ""
     obj = {
         "sha256": sha256,
-        "sha1": "a" * 40,
-        "md5": "b" * 32,
+        "sha1": digest if len(digest) == 40 else "a" * 40,
+        "md5": digest[:32] if len(digest) == 40 else "b" * 32,
         "stairwellFirstSeenTime": "2026-05-06T00:00:00Z",
         "malEval": {"probabilityBucket": bucket} if bucket else {},
     }
@@ -117,7 +120,9 @@ def test_happy_path_emits_grouping_with_indicators(env):
     assert grouping["name"].startswith("Stairwell MalEval import — ")
     assert grouping["context"] == "malware-analysis"
     assert {
-        o["id"] for o in objects if o["type"] not in ("identity", "grouping")
+        o["id"]
+        for o in objects
+        if o["type"] not in ("identity", "grouping", "marking-definition")
     } <= set(grouping["object_refs"])
 
 
@@ -403,3 +408,72 @@ def test_current_state_is_not_reinterpreted(env):
     processor.collect()
     assert state.watermark is None
     assert processor.client.list_objects_metadata.call_args.kwargs["page_token"] == "p2"
+
+
+@pytest.mark.parametrize("tlp", ["green", "clear", "amber+strict"])
+def test_every_reference_in_the_result_resolves_within_it(env, tlp):
+    env.setenv("STAIRWELL_IMPORT_TLP", tlp)
+    net = {"ipAddresses": ["1.2.3.4"], "hostnames": ["c2.example.com"]}
+    objects = _run(_processor(_one_page(_file_obj("a" * 64, net=net))))
+    ids = {o["id"] for o in objects}
+    markings = [o for o in objects if o["type"] == "marking-definition"]
+    assert len(markings) == 1
+    for obj in objects:
+        refs = list(obj.get("object_marking_refs") or [])
+        refs += [
+            obj[k] for k in ("created_by_ref", "source_ref", "target_ref") if k in obj
+        ]
+        refs += list(obj.get("object_refs") or [])
+        missing = [r for r in refs if r not in ids]
+        assert not missing, (obj["type"], missing)
+
+
+def test_send_failure_leaves_checkpoints_unmoved(env):
+    """The SDK sends after transform(); if that fails, nothing may advance."""
+    state = ConnectorState()
+    processor = _processor(_one_page(_file_obj("a" * 64)), state)
+    processor.work_manager = MagicMock()
+    processor.work_manager.__enter__ = MagicMock(return_value=processor.work_manager)
+    processor.work_manager.__exit__ = MagicMock(return_value=False)
+    processor.work_manager.send.side_effect = RuntimeError("queue down")
+    before = state.model_dump()
+    with pytest.raises(RuntimeError, match="queue down"):
+        processor.process()
+    assert state.model_dump() == before
+    processor.work_manager.send.assert_called_once()
+
+
+def test_successful_process_moves_checkpoints(env):
+    state = ConnectorState()
+    processor = _processor(_one_page(_file_obj("a" * 64)), state)
+    processor.work_manager = MagicMock()
+    processor.work_manager.__enter__ = MagicMock(return_value=processor.work_manager)
+    processor.work_manager.__exit__ = MagicMock(return_value=False)
+    processor.process()
+    assert state.watermark is not None
+
+
+def test_failed_run_on_legacy_state_keeps_the_legacy_cursor(env):
+    """A rollback must not leave the state looking already migrated."""
+    raw = {
+        "last_run": "2026-04-01T00:00:00.000Z",
+        "pending": {
+            "cutoff": "2026-03-01T00:00:00.000Z",
+            "window_end": "2026-04-01T00:00:00.000Z",
+            "page_token": "p7",
+        },
+    }
+    state = _loaded(raw)
+    failing = _processor(_one_page(_file_obj("a" * 64)), state)
+    failing.work_manager = MagicMock()
+    failing.work_manager.__enter__ = MagicMock(return_value=failing.work_manager)
+    failing.work_manager.__exit__ = MagicMock(return_value=False)
+    failing.work_manager.send.side_effect = RuntimeError("queue down")
+    with pytest.raises(RuntimeError):
+        failing.process()
+    # Next run: the SDK's load() re-applies the stored (still legacy) keys.
+    for key, value in raw.items():
+        setattr(state, key, value)
+    retry = _processor(_one_page(), state)
+    retry.collect()
+    assert retry.client.list_objects_metadata.call_args.kwargs["page_token"] == "p7"

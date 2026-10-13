@@ -70,7 +70,11 @@ Environment variables override the file.
   fetch or bundle send fails the run and no state is saved, so the next run
   retries the same window. If Stairwell rejects a saved page token (4xx other
   than 429), the run restarts the window from its first page. Re-sent objects
-  are deduplicated by their deterministic STIX ids.
+  are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
+  `generate_id()` for SDOs and relationships, spec-standard IDs for
+  observables), so the same entity from another connector merges with ours.
+  Each bundle carries the Stairwell author identity and the TLP marking
+  definition it references.
   State saved by versions of this connector that predate the SDK (`last_run`
   plus a nested `pending` cursor) is adopted on the first run, so an
   in-progress backlog resumes instead of restarting.

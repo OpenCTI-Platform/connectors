@@ -67,7 +67,7 @@ class StairwellConfig(BaseConfigModel):
         default=90,
     )
     import_min_bucket: str = Field(
-        description="Minimum MalEval bucket: LOW | MEDIUM | HIGH | VERY_HIGH.",
+        description="Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH.",
         default="HIGH",
     )
     import_scope: str = Field(
