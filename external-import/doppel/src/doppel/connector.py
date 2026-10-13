@@ -153,12 +153,12 @@ class DoppelConnector:
                         page=page,
                         page_size=page_size,
                     )
-                except ResultWindowExceededError:
+                except ResultWindowExceededError as err:
                     if page != 0:
                         raise RuntimeError(
                             "Doppel alert result window exceeded while paging a "
                             "single activity timestamp"
-                        )
+                        ) from err
                     previous_window_end = window_end
                     window_end = self._bisect_window(cursor, window_end)
                     self.helper.connector_logger.warning(
@@ -174,6 +174,11 @@ class DoppelConnector:
                 if not alerts:
                     break
 
+                # Validate the page checkpoint before creating OpenCTI work or
+                # sending data. Otherwise an invalid page could be delivered
+                # without advancing state and replay forever on later runs.
+                checkpoint = self._newest_activity_checkpoint(alerts)
+
                 if work_id is None:
                     friendly_name = f"Doppel run @ {window_end}"
                     work_id = self.helper.api.work.initiate_work(
@@ -182,7 +187,6 @@ class DoppelConnector:
 
                 self._send_alert_page(alerts, work_id)
 
-                checkpoint = self._newest_activity_checkpoint(alerts)
                 # Persist after every successful send so a later page failure
                 # does not replay pages already delivered.
                 current_state = self._store_last_run(current_state, checkpoint)

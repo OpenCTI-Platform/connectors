@@ -93,6 +93,23 @@ def test_process_message_failure_on_second_page_keeps_first_checkpoint(
     )
 
 
+def test_process_message_validates_checkpoint_before_opencti_side_effects(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    connector.client.get_alerts.return_value = ([{"id": "missing-activity"}], 1)
+
+    connector.process_message()
+
+    helper.api.work.initiate_work.assert_not_called()
+    connector.converter.convert_alerts_to_stix.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.set_state.assert_not_called()
+    error = helper.connector_logger.error.call_args.args[1]["error"]
+    assert isinstance(error, ValueError)
+    assert str(error) == "Doppel alerts are missing last_activity_timestamp"
+
+
 def test_process_message_bisects_oversized_window_until_oldest_range_fits(
     doppel_connector,
 ):
@@ -229,6 +246,37 @@ def test_process_message_same_timestamp_failure_keeps_page_checkpoint(
         connector.client.get_alerts.call_args_list[1].kwargs["last_activity_timestamp"]
         == "2026-08-03T10:00:00"
     )
+    helper.api.work.to_processed.assert_called_once()
+    assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+
+
+def test_process_message_paging_window_error_preserves_original_cause(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    connector.config.doppel.page_size = 1
+    result_window_error = ResultWindowExceededError(
+        "Result window exceeds 50000 alerts"
+    )
+    connector.client.get_alerts.side_effect = [
+        (
+            [
+                {
+                    "id": "same-timestamp",
+                    "last_activity_timestamp": "2026-08-03T10:15:00Z",
+                }
+            ],
+            2,
+        ),
+        result_window_error,
+    ]
+
+    connector.process_message()
+
+    helper.send_stix2_bundle.assert_called_once()
+    error = helper.connector_logger.error.call_args.args[1]["error"]
+    assert isinstance(error, RuntimeError)
+    assert error.__cause__ is result_window_error
     helper.api.work.to_processed.assert_called_once()
     assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 
