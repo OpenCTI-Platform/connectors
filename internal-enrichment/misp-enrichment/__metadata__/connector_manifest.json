@@ -1,0 +1,28 @@
+{
+  "title": "MISP Enrichment",
+  "slug": "misp-enrichment",
+  "description": "MISP (Malware Information Sharing Platform) is an open-source threat intelligence platform for sharing, storing and correlating Indicators of Compromise (IOCs).\n\nThis connector looks up OpenCTI observables (IPv4, IPv6, domain name, URL, email address, file hashes) and STIX indicators in a MISP instance. For an indicator, every supported value of its STIX pattern is looked up. The lookup searches the MISP attributes matching the value exactly, then retrieves their events, which can be filtered by creator organisation, owner organisation and event name.\n\nFor each matched MISP event, the connector enriches the entity with:\n1. **An external reference** linking to the MISP event, for a quick analyst pivot.\n2. **A note** describing the matched attributes and the event context (threat level, tags, analysis comments).\n3. *(Optional)* **The MISP attribute and event tags as labels**.\n4. *(Optional)* **A report** containing the entity, enabled with `MISP_IMPORT_EVENTS=true`.\n\nThe connector is playbook compatible.",
+  "short_description": "Looks up observables and indicators in a MISP instance and enriches them with external references to the matched MISP events, notes describing the matches, and labels from the MISP tags.",
+  "logo": "internal-enrichment/misp-enrichment/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://www.misp-project.org",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/misp-enrichment",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-misp-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
