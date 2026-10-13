@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import quote
 
 from .stairwell import StairwellClient
 from .stairwell.score import monotonic_score, score_for_bucket
@@ -15,13 +16,18 @@ from .stix_builder import (
     make_relationship,
     make_sighting,
     make_x509_certificate,
+    md_code,
+    md_prose,
+    md_text,
     network_observable_for,
     stairwell_identity,
     tlp_marking,
 )
 
 DEFAULT_VARIANT_LIMIT = 25
-DEFAULT_SIGHTINGS_LIMIT = 100
+# Sightings carry customer asset names, environment ids, and file paths
+# (which often contain usernames) into OpenCTI, so they are opt-in.
+DEFAULT_SIGHTINGS_LIMIT = 0
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +46,22 @@ def _to_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _to_count(value: Any) -> int | None:
+    """Parse a non-negative count from the API, or None.
+
+    proto3 JSON encodes int64 as a string, so "42" is valid; anything that is
+    not a non-negative integer (including a bool) is treated as absent.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 0 else None
+    # isdecimal, not isdigit: isdigit accepts superscripts that int() rejects.
+    if isinstance(value, str) and value.strip().isdecimal():
+        return int(value.strip())
+    return None
 
 
 class FileEnricher:
@@ -251,7 +273,7 @@ class FileEnricher:
 
         variants = metadata.get("variants") or {}
         variant_count = (
-            variants.get("total")
+            _to_count(variants.get("total"))
             if isinstance(variants, dict)
             else (len(variants) if isinstance(variants, list) else None)
         )
@@ -295,7 +317,7 @@ class FileEnricher:
                 make_note(
                     seed=f"stairwell-ai-triage|{entity_id}",
                     abstract="Stairwell AI File Triage",
-                    content=full_summary,
+                    content=md_prose(full_summary),
                     object_refs=[entity_id],
                     tlp=self.tlp,
                 )
@@ -431,19 +453,20 @@ class FileEnricher:
     ) -> dict[str, Any]:
         displayed = len(capped)
         family = variants_payload.get("family") or ""
-        total = (
-            variants_payload.get("variant_count")
-            or variants_payload.get("variantCount")
-            or len(variants_payload.get("variants") or [])
-        )
+        total = _to_count(variants_payload.get("variant_count"))
+        if total is None:
+            total = _to_count(variants_payload.get("variantCount"))
+        if total is None:
+            raw = variants_payload.get("variants")
+            total = len(raw) if isinstance(raw, list) else 0
 
         lines: list[str] = []
         if family:
-            lines.append(f"**Family:** {family}")
+            lines.append(f"**Family:** {md_text(family)}")
         lines.append(f"**Total variants:** {total}")
         cap_note = (
             ""
-            if displayed >= int(total or 0)
+            if displayed >= total
             else f" (capped at STAIRWELL_VARIANT_LIMIT={self.variant_limit})"
         )
         lines.append(f"**Displayed:** {displayed}{cap_note}")
@@ -459,11 +482,12 @@ class FileEnricher:
             else:
                 sim_str = "—"
             opencti_link = (
-                f"[OpenCTI]({self.opencti_base_url}/dashboard/search/knowledge/{sha})"
+                f"[OpenCTI]({self.opencti_base_url}/dashboard/search/knowledge/"
+                f"{quote(sha, safe='')})"
             )
             stairwell_link = f"[Stairwell]({self.client.object_ui_url(sha)})"
             lines.append(
-                f"| {idx} | `{sha[:12]}…{sha[-8:]}` | {sim_str} | "
+                f"| {idx} | {md_code(f'{sha[:12]}…{sha[-8:]}', in_table=True)} | {sim_str} | "
                 f"{opencti_link} · {stairwell_link} |"
             )
 
@@ -500,13 +524,13 @@ class FileEnricher:
         if any((h_md5, h_sha1, h_sha256, h_sha3)):
             lines.append("## Hashes")
             if h_md5:
-                lines.append(f"- **MD5:** `{h_md5}`")
+                lines.append(f"- **MD5:** {md_code(h_md5)}")
             if h_sha1:
-                lines.append(f"- **SHA-1:** `{h_sha1}`")
+                lines.append(f"- **SHA-1:** {md_code(h_sha1)}")
             if h_sha256:
-                lines.append(f"- **SHA-256:** `{h_sha256}`")
+                lines.append(f"- **SHA-256:** {md_code(h_sha256)}")
             if h_sha3:
-                lines.append(f"- **SHA-3 256:** `{h_sha3}`")
+                lines.append(f"- **SHA-3 256:** {md_code(h_sha3)}")
             lines.append("")
             had_content = True
 
@@ -514,7 +538,7 @@ class FileEnricher:
         prop_lines: list[str] = []
         name = metadata.get("name") or ""
         if name and not name.startswith("objects/"):
-            prop_lines.append(f"- **Name:** `{name}`")
+            prop_lines.append(f"- **Name:** {md_code(name)}")
         size = metadata.get("size")
         if size is not None:
             try:
@@ -524,11 +548,11 @@ class FileEnricher:
                 else:
                     prop_lines.append(f"- **Size:** {size_int / 1_000_000:.2f} MB")
             except (TypeError, ValueError):
-                prop_lines.append(f"- **Size:** {size}")
+                prop_lines.append(f"- **Size:** {md_text(size)}")
         if metadata.get("mimeType"):
-            prop_lines.append(f"- **MIME type:** `{metadata['mimeType']}`")
+            prop_lines.append(f"- **MIME type:** {md_code(metadata['mimeType'])}")
         if metadata.get("magic"):
-            prop_lines.append(f"- **Magic:** `{metadata['magic']}`")
+            prop_lines.append(f"- **Magic:** {md_code(metadata['magic'])}")
         if metadata.get("shannonEntropy") is not None:
             try:
                 prop_lines.append(
@@ -536,14 +560,16 @@ class FileEnricher:
                 )
             except (TypeError, ValueError):
                 prop_lines.append(
-                    f"- **Shannon entropy:** {metadata['shannonEntropy']}"
+                    f"- **Shannon entropy:** {md_text(metadata['shannonEntropy'])}"
                 )
         if metadata.get("imphash"):
-            prop_lines.append(f"- **imphash:** `{metadata['imphash']}`")
+            prop_lines.append(f"- **imphash:** {md_code(metadata['imphash'])}")
         if metadata.get("imphashSorted"):
-            prop_lines.append(f"- **imphash (sorted):** `{metadata['imphashSorted']}`")
+            prop_lines.append(
+                f"- **imphash (sorted):** {md_code(metadata['imphashSorted'])}"
+            )
         if metadata.get("tlsh"):
-            prop_lines.append(f"- **TLSH:** `{metadata['tlsh']}`")
+            prop_lines.append(f"- **TLSH:** {md_code(metadata['tlsh'])}")
         if prop_lines:
             lines.append("## File properties")
             lines.extend(prop_lines)
@@ -553,18 +579,20 @@ class FileEnricher:
         # Stairwell observation: first seen + MalEval
         obs_lines: list[str] = []
         if metadata.get("stairwellFirstSeenTime"):
-            obs_lines.append(f"- **First seen:** {metadata['stairwellFirstSeenTime']}")
+            obs_lines.append(
+                f"- **First seen:** {md_text(metadata['stairwellFirstSeenTime'])}"
+            )
         verdict = mal_eval.get("probability_bucket") or mal_eval.get(
             "probabilityBucket"
         )
         severity = mal_eval.get("severity")
         mal_labels = mal_eval.get("labels") or []
         if verdict:
-            obs_lines.append(f"- **MalEval verdict:** `{verdict}`")
+            obs_lines.append(f"- **MalEval verdict:** {md_code(verdict)}")
         if severity:
-            obs_lines.append(f"- **MalEval severity:** `{severity}`")
+            obs_lines.append(f"- **MalEval severity:** {md_code(severity)}")
         if isinstance(mal_labels, list) and mal_labels:
-            joined = ", ".join(f"`{lbl}`" for lbl in mal_labels)
+            joined = ", ".join(md_code(lbl) for lbl in mal_labels)
             obs_lines.append(f"- **MalEval labels:** {joined}")
         if obs_lines:
             lines.append("## Stairwell observation")
@@ -587,7 +615,7 @@ class FileEnricher:
         if yara_names:
             lines.append("## YARA matches")
             for rule in yara_names:
-                lines.append(f"- `{rule}`")
+                lines.append(f"- {md_code(rule)}")
             lines.append("")
             had_content = True
 
@@ -607,14 +635,14 @@ class FileEnricher:
                 lines.append("## Network indicators")
                 if ips:
                     lines.append(
-                        f"- **IP addresses:** {', '.join(f'`{v}`' for v in ips)}"
+                        f"- **IP addresses:** {', '.join(md_code(v) for v in ips)}"
                     )
                 if hostnames:
                     lines.append(
-                        f"- **Hostnames:** {', '.join(f'`{v}`' for v in hostnames)}"
+                        f"- **Hostnames:** {', '.join(md_code(v) for v in hostnames)}"
                     )
                 if urls:
-                    lines.append(f"- **URLs:** {', '.join(f'`{v}`' for v in urls)}")
+                    lines.append(f"- **URLs:** {', '.join(md_code(v) for v in urls)}")
                 lines.append("")
                 had_content = True
 
@@ -626,22 +654,26 @@ class FileEnricher:
             if (isinstance(certs, list) and certs) or pkcs7:
                 lines.append("## Object signature")
                 if pkcs7:
-                    lines.append(f"- **PKCS7 verification:** `{pkcs7}`")
+                    lines.append(f"- **PKCS7 verification:** {md_code(pkcs7)}")
                 if isinstance(certs, list):
                     for idx, cert in enumerate(certs, start=1):
                         if not isinstance(cert, dict):
                             continue
                         lines.append(f"- **Certificate {idx}:**")
                         if cert.get("subject"):
-                            lines.append(f"  - Subject: `{cert['subject']}`")
+                            lines.append(f"  - Subject: {md_code(cert['subject'])}")
                         if cert.get("issuer"):
-                            lines.append(f"  - Issuer: `{cert['issuer']}`")
+                            lines.append(f"  - Issuer: {md_code(cert['issuer'])}")
                         if cert.get("earliestValidTime"):
-                            lines.append(f"  - Valid from: {cert['earliestValidTime']}")
+                            lines.append(
+                                f"  - Valid from: {md_text(cert['earliestValidTime'])}"
+                            )
                         if cert.get("latestValidTime"):
-                            lines.append(f"  - Valid until: {cert['latestValidTime']}")
+                            lines.append(
+                                f"  - Valid until: {md_text(cert['latestValidTime'])}"
+                            )
                         if cert.get("signature"):
-                            lines.append(f"  - Signature: `{cert['signature']}`")
+                            lines.append(f"  - Signature: {md_code(cert['signature'])}")
                 lines.append("")
                 had_content = True
 
@@ -713,7 +745,7 @@ class FileEnricher:
         if stix_hashes:
             sco["hashes"] = stix_hashes
         if tldr:
-            sco["x_opencti_description"] = tldr
+            sco["x_opencti_description"] = md_prose(tldr)
         if final_score is not None and final_score != current_score:
             sco["x_opencti_score"] = final_score
         if labels:
@@ -723,7 +755,7 @@ class FileEnricher:
         if prevalence is not None:
             sco["x_stairwell_prevalence"] = prevalence
         if variant_count is not None:
-            sco["x_stairwell_variant_count"] = int(variant_count)
+            sco["x_stairwell_variant_count"] = variant_count
 
         # Stairwell metadata → standard + custom STIX file properties.
         # Some Stairwell responses echo back the API path (e.g.
@@ -894,9 +926,9 @@ class FileEnricher:
             if not first_seen or not last_seen:
                 continue
 
-            description_lines = [f"**Stairwell asset:** `{asset_id}`"]
+            description_lines = [f"**Stairwell asset:** {md_code(asset_id)}"]
             if env_id:
-                description_lines.append(f"**Environment:** `{env_id}`")
+                description_lines.append(f"**Environment:** {md_code(env_id)}")
             description_lines.append(f"**Events:** {len(asset_records)}")
             paths_seen = sorted(
                 {
@@ -908,13 +940,14 @@ class FileEnricher:
             if paths_seen:
                 description_lines.append("**Paths (sample):**")
                 for p in paths_seen:
-                    description_lines.append(f"- `{p}`")
+                    description_lines.append(f"- {md_code(p)}")
 
             identity = make_identity_system(
                 asset_id=asset_id,
                 name=str(asset_name),
                 description=(
-                    f"Stairwell-managed asset {asset_name} " f"(environment {env_id})"
+                    f"Stairwell-managed asset {md_text(asset_name)} "
+                    f"(environment {md_text(env_id)})"
                     if env_id
                     else None
                 ),

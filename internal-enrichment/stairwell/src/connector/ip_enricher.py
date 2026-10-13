@@ -10,6 +10,8 @@ from .stix_builder import (
     make_external_reference,
     make_note,
     make_relationship,
+    md_fence,
+    md_text,
     stairwell_identity,
     tlp_marking,
 )
@@ -198,27 +200,29 @@ class IpEnricher:
         # otherwise dump structured fields.
         note_lines: list[str] = []
         if country_name:
-            note_lines.append(f"**Country:** {country_name} ({country or '?'})")
-        elif country:
-            note_lines.append(f"**Country:** {country}")
-        if city or region:
             note_lines.append(
-                f"**Location:** {', '.join(p for p in (city, region) if p)}"
+                f"**Country:** {md_text(country_name)} ({md_text(country or '?')})"
             )
+        elif country:
+            note_lines.append(f"**Country:** {md_text(country)}")
+        if city or region:
+            location = ", ".join(md_text(p) for p in (city, region) if p)
+            note_lines.append(f"**Location:** {location}")
         if cloud_provider and cloud_provider != "CLOUD_PROVIDER_UNSPECIFIED":
-            note_lines.append(f"**Cloud provider:** {cloud_provider}")
+            note_lines.append(f"**Cloud provider:** {md_text(cloud_provider)}")
         if asn_int is not None:
             asn_line = f"**ASN:** AS{asn_int}"
             if asn_org:
-                asn_line += f" ({asn_org})"
+                asn_line += f" ({md_text(asn_org)})"
             note_lines.append(asn_line)
         if "x_stairwell_subnet" in custom_props:
-            note_lines.append(f"**Subnet:** {custom_props['x_stairwell_subnet']}")
+            note_lines.append(
+                f"**Subnet:** {md_text(custom_props['x_stairwell_subnet'])}"
+            )
 
         if whois_string:
-            note_lines.append("\n**WHOIS:**\n```")
-            note_lines.append(whois_string.strip())
-            note_lines.append("```")
+            note_lines.append("\n**WHOIS:**")
+            note_lines.append(md_fence(whois_string.strip()))
 
         if isinstance(hosts, dict):
             host_list = hosts.get("hostnames") or hosts.get("results") or []
@@ -233,7 +237,7 @@ class IpEnricher:
                             or ""
                         )
                     if h:
-                        note_lines.append(f"- {h}")
+                        note_lines.append(f"- {md_text(h)}")
 
         if note_lines:
             objects.append(

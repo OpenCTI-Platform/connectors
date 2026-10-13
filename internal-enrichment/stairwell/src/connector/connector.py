@@ -12,8 +12,9 @@ class StairwellConnector:
     """Internal-enrichment connector: enriches observables with Stairwell intel.
 
     Triggered by OpenCTI (manual enrichment or, when `CONNECTOR_AUTO=true`,
-    on newly-created in-scope observables). Playbook-compatible: every call
-    returns after sending a STIX bundle back to OpenCTI.
+    on newly-created in-scope observables). Playbook-compatible: an
+    enriched entity is sent back as a STIX bundle, and an entity type outside
+    the connector's scope gets its playbook bundle back unchanged.
     """
 
     def __init__(
@@ -23,7 +24,6 @@ class StairwellConnector:
         self.helper = helper
 
         s = config.stairwell
-        self.max_tlp = s.max_tlp_level
         self.client = StairwellClient(
             api_token=s.api_token,
             base_url=str(s.api_base_url),
@@ -38,20 +38,8 @@ class StairwellConnector:
             resolutions_limit=s.resolutions_limit,
             sightings_limit=s.sightings_limit,
             opencti_base_url=str(config.opencti.url).rstrip("/"),
+            max_tlp=s.max_tlp_level,
         )
-
-    def _check_max_tlp(self, data: dict[str, Any]) -> None:
-        """Refuse to enrich an observable whose TLP exceeds `max_tlp_level`."""
-        entity = data.get("enrichment_entity") or {}
-        tlp = "TLP:CLEAR"
-        for marking in entity.get("objectMarking") or []:
-            if marking.get("definition_type") == "TLP":
-                tlp = marking.get("definition")
-        if not self.helper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
-                "[CONNECTOR] Observable TLP is greater than the connector's "
-                "max TLP; skipping enrichment."
-            )
 
     def process_message(self, data: dict[str, Any]) -> str:
         stix_entity = data.get("stix_entity") or {}
@@ -59,11 +47,25 @@ class StairwellConnector:
         if not entity_id:
             return "No entity_id in enrichment message"
 
-        self._check_max_tlp(data)
-
-        observable = self.helper.api.stix_cyber_observable.read(id=entity_id)
+        # pycti resolves the entity before calling back (and fails the message
+        # if it cannot). The max-TLP gate in Dispatcher.dispatch checks every
+        # TLP marking on it before any enricher calls Stairwell.
+        observable = data.get("enrichment_entity")
         if not observable:
             return f"Observable {entity_id} not found"
+
+        if not self.dispatcher.supports(observable):
+            if not data.get("event_type"):
+                # A playbook step must hand its bundle on even when this
+                # connector has nothing to add, so return it unchanged.
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(data.get("stix_objects") or [])
+                )
+                return "Entity type not in scope; playbook bundle returned unchanged"
+            raise ValueError(
+                f"Failed to process observable, {observable.get('entity_type')} "
+                "is not a supported entity type."
+            )
 
         try:
             return self.dispatcher.dispatch(observable)

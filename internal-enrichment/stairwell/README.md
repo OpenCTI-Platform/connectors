@@ -51,13 +51,27 @@ Environment variables override the file.
 | Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
 | Default TLP | `stairwell.default_tlp` | `STAIRWELL_DEFAULT_TLP` | no | `amber` | `clear`, `green`, `amber`, `amber+strict`, `red` |
-| Max TLP | `stairwell.max_tlp_level` | `STAIRWELL_MAX_TLP_LEVEL` | no | `red` | Max TLP of an observable the connector will enrich |
+| Max TLP | `stairwell.max_tlp_level` | `STAIRWELL_MAX_TLP_LEVEL` | no | `amber` | Highest TLP an observable may carry and still be sent to Stairwell: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 | Variant limit | `stairwell.variant_limit` | `STAIRWELL_VARIANT_LIMIT` | no | `25` | Max variant SCOs per file enrichment (`0` disables) |
 | Resolutions limit | `stairwell.resolutions_limit` | `STAIRWELL_RESOLUTIONS_LIMIT` | no | `50` | Max DNS resolution rows per domain (`0` disables) |
-| Sightings limit | `stairwell.sightings_limit` | `STAIRWELL_SIGHTINGS_LIMIT` | no | `100` | Max unique assets per file (`0` disables sightings) |
+| Sightings limit | `stairwell.sightings_limit` | `STAIRWELL_SIGHTINGS_LIMIT` | no | `0` | Max unique assets per file; `0` (the default) disables sightings. See **Sightings** below before enabling |
 
 ## Behavior
 
+- **Max TLP is enforced before any Stairwell call.** An observable with any
+  TLP marking above `STAIRWELL_MAX_TLP_LEVEL` (or a TLP marking pycti does not
+  recognise) is refused and the enrichment fails with an error; its value
+  never leaves OpenCTI. An observable with no TLP marking at all is treated
+  as unrestricted and is enriched whatever this setting is.
+- **Untrusted text is escaped before it reaches markdown.** File names, YARA
+  rule names, certificate fields, network indicators, WHOIS, DNS answers, and
+  asset names come from sources an attacker can influence, and OpenCTI renders
+  Notes and descriptions as GitHub Flavored Markdown. Identifiers are written
+  as code spans, prose values as escaped text, and WHOIS records as fenced
+  blocks; none can add links, images, or table cells. The AI triage summary
+  keeps its formatting by design, including headings, lists, and blockquotes
+  (so text it quotes from a file can still render as a heading or quote), but
+  its links, images, and bare URLs are disabled.
 - **Manual trigger by default.** Set `CONNECTOR_AUTO=true` to enrich every
   newly-created observable in scope. High-volume tenants should keep this off.
 - **Score writes are monotonic.** A MalEval verdict only raises
@@ -67,9 +81,14 @@ Environment variables override the file.
   search UI; no Notes are created.
 - **Errors** (5xx, network failure, 401) are logged; the source observable is
   left unchanged and no STIX is written.
-- **Sightings** for file observables are aggregated per asset: each unique
-  Stairwell-managed host that has seen the hash becomes one Sighting SDO
-  (`first_seen` / `last_seen` / `count` from the per-asset event window).
+- **Sightings are off by default.** With `STAIRWELL_SIGHTINGS_LIMIT` above
+  `0`, file sightings are aggregated per asset: each unique Stairwell-managed
+  host that has seen the hash becomes one Sighting SDO (`first_seen` /
+  `last_seen` / `count` from the per-asset event window) plus an Identity for
+  the host. Enabling this writes your asset names, Stairwell environment ids,
+  and sample file paths (which often contain usernames) into OpenCTI, at
+  `STAIRWELL_DEFAULT_TLP`, visible to everyone who can read the file
+  observable.
 - **File metadata** from `/v1/objects/{hash}/metadata` is mapped onto the file
   observable: `name`, `size`, `mime_type`, plus custom Stairwell properties
   (`x_stairwell_magic`, `x_stairwell_imphash`, `x_stairwell_tlsh`,

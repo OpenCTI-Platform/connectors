@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
+from connector.file_enricher import DEFAULT_SIGHTINGS_LIMIT
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -48,8 +49,11 @@ class StairwellConfig(BaseConfigModel):
     max_tlp_level: Literal[
         "clear", "white", "green", "amber", "amber+strict", "red"
     ] = Field(
-        description="Max TLP of an observable the connector is allowed to enrich.",
-        default="red",
+        description=(
+            "Highest TLP an observable may carry and still be sent to "
+            "Stairwell; observables marked above it are refused."
+        ),
+        default="amber",
     )
     variant_limit: int = Field(
         description="Max variant SCOs per file enrichment (0 disables).",
@@ -60,8 +64,12 @@ class StairwellConfig(BaseConfigModel):
         default=50,
     )
     sightings_limit: int = Field(
-        description="Max unique assets per file (0 disables sightings).",
-        default=100,
+        description=(
+            "Max unique assets per file; 0 (the default) disables sightings. "
+            "Enabling writes asset names, environment ids, and file paths "
+            "into OpenCTI."
+        ),
+        default=DEFAULT_SIGHTINGS_LIMIT,
     )
 
 

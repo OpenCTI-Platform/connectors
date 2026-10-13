@@ -8,6 +8,8 @@ from .stix_builder import (
     bundle,
     make_external_reference,
     make_note,
+    md_fence,
+    md_text,
     stairwell_identity,
     tlp_marking,
 )
@@ -130,15 +132,14 @@ class AsnEnricher:
 
         note_lines: list[str] = []
         if org:
-            note_lines.append(f"**Organization:** {org}")
+            note_lines.append(f"**Organization:** {md_text(org)}")
         if country:
-            note_lines.append(f"**Country:** {country}")
+            note_lines.append(f"**Country:** {md_text(country)}")
         if registration_date:
-            note_lines.append(f"**Registration:** {registration_date}")
+            note_lines.append(f"**Registration:** {md_text(registration_date)}")
         for ws in whois_strings:
-            note_lines.append("\n```")
-            note_lines.append(ws)
-            note_lines.append("```")
+            note_lines.append("")
+            note_lines.append(md_fence(ws))
 
         objects: list[dict[str, Any]] = [stairwell_identity(), asn_sco]
         if note_lines:

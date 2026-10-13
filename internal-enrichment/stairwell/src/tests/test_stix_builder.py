@@ -1,5 +1,7 @@
 import json
+import re
 
+import pytest
 from connector.stix_builder import (
     bundle,
     make_autonomous_system,
@@ -9,6 +11,10 @@ from connector.stix_builder import (
     make_ipv6,
     make_note,
     make_relationship,
+    md_code,
+    md_fence,
+    md_prose,
+    md_text,
     network_observable_for,
     stix_id,
     tlp_marking,
@@ -96,3 +102,87 @@ def test_make_external_reference():
     assert ref["source_name"] == "Stairwell"
     assert ref["url"] == "https://app.stairwell.com/x"
     assert ref["description"] == "desc"
+
+
+@pytest.mark.parametrize(
+    "value, in_table, want",
+    [
+        ("evil.exe", False, "`evil.exe`"),
+        ("a`b", False, "``a`b``"),
+        ("`x", False, "`` `x ``"),
+        ("a``b", False, "```a``b```"),
+        ("line1\nline2\r\n# heading", False, "`line1 line2 # heading`"),
+        ("a|b", False, "`a|b`"),
+        ("a|b", True, "`a\\|b`"),
+        ("", False, ""),
+    ],
+)
+def test_md_code_keeps_value_inside_one_code_span(value, in_table, want):
+    assert md_code(value, in_table=in_table) == want
+
+
+@pytest.mark.parametrize(
+    "value, want",
+    [
+        ("GOOGLE LLC", "GOOGLE LLC"),
+        ("2000-03-30", "2000-03-30"),
+        ("[click](http://evil.example/x)", "\\[click\\](http\\://evil.example/x)"),
+        ("![i](https://t.example/p.png)", "\\!\\[i\\](https\\://t.example/p.png)"),
+        ("see www.evil.example", "see www\\.evil.example"),
+        ("mail a@evil.example", "mail a\\@evil.example"),
+        ("<img src=x>", "\\<img src=x\\>"),
+        ("a|b *c* _d_ ~e~ `f`", "a\\|b \\*c\\* \\_d\\_ \\~e\\~ \\`f\\`"),
+        ("one\n\n# two", "one # two"),
+        ("back\\[x]", "back\\\\\\[x\\]"),
+    ],
+)
+def test_md_text_neutralises_inline_markdown(value, want):
+    assert md_text(value) == want
+
+
+def test_md_fence_is_longer_than_any_backtick_run_in_content():
+    assert md_fence("plain") == "```\nplain\n```"
+    content = "a\n```\n[x](http://evil)\n````"
+    fenced = md_fence(content)
+    assert fenced == "`````\n" + content + "\n`````"
+
+
+def test_md_prose_keeps_formatting_but_disables_links_and_images():
+    summary = (
+        "## Verdict\n\n**Malicious** dropper.\n\n"
+        "- Beacons to http://c2.example/a and www.c2.example\n"
+        "- [Report](https://evil.example) ![px](https://t.example/p.png)\n"
+        "- <https://auto.example> ops@evil.example\n"
+        "\\[escaped](http://still.example)\n\n"
+        "[ref]: https://ref.example"
+    )
+    out = md_prose(summary)
+    assert out.startswith("## Verdict\n\n**Malicious** dropper.\n\n- Beacons")
+    # Each construct must be absent unless its first character is escaped.
+    for construct in (
+        r"\]\(",
+        r"!\[",
+        r"<http",
+        r"https?:",
+        r"www\.",
+        r"ops@",
+        r"^\[ref",
+    ):
+        assert not re.search(r"(?<!\\)" + construct, out, re.M), construct
+    assert "\\\\\\[escaped\\]" in out
+
+
+@pytest.mark.parametrize("backslashes", [0, 1, 2, 3, 4, 5])
+@pytest.mark.parametrize("opener", ["[", "<"])
+def test_md_prose_brackets_stay_escaped_after_any_backslash_run(backslashes, opener):
+    raw = "\\" * backslashes + opener
+    out = md_prose(raw)
+    # The opener is literal only if an odd number of backslashes precede it.
+    assert out.endswith(opener)
+    before = out[: -len(opener)]
+    run = len(before) - len(before.rstrip("\\"))
+    assert run % 2 == 1, (raw, out)
+
+
+def test_md_prose_leaves_backslashes_elsewhere_alone():
+    assert md_prose("`C:\\Users\\x` and \\*") == "`C:\\Users\\x` and \\*"

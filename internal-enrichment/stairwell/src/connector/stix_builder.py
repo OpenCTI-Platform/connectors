@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Iterable
@@ -25,6 +26,79 @@ STAIRWELL_IDENTITY_ID = (
 
 def stix_id(stix_type: str, seed: str) -> str:
     return f"{stix_type}--{uuid.uuid5(_STIX_NAMESPACE, seed)}"
+
+
+# Markdown helpers. OpenCTI renders Note content and descriptions as GitHub
+# Flavored Markdown, and most values written there come from file contents,
+# WHOIS, or DNS, all of which an attacker can choose. Every such value goes
+# through one of these so it cannot add links, images, or table cells, or
+# break out of the surrounding structure.
+_MD_LINE_BREAKS = re.compile(r"[\r\n\v\f\x85\u2028\u2029]+")
+_MD_INLINE_SPECIALS = re.compile(r"([\\`*_\[\]<>!|~])")
+# A backslash run right before `[`, `]`, or `<` is doubled before the character
+# itself is escaped, so the escape always ends with odd parity.
+_MD_PROSE_SPECIALS = re.compile(r"(\\*)([\[\]<])")
+# GFM turns bare URLs, `www.` hosts, and emails into links without any
+# brackets; escaping the character that completes each trigger stops that.
+_MD_AUTOLINK = re.compile(r"(?i)(?<=[a-z])(:)(?=//)|(?<=www)(\.)|(@)")
+_BACKTICK_RUN = re.compile(r"`+")
+
+
+def _one_line(value: object) -> str:
+    return _MD_LINE_BREAKS.sub(" ", str(value)).strip()
+
+
+def _defang_autolinks(text: str) -> str:
+    return _MD_AUTOLINK.sub(lambda m: "\\" + m.group(0), text)
+
+
+def _longest_backtick_run(text: str) -> int:
+    return max((len(m.group(0)) for m in _BACKTICK_RUN.finditer(text)), default=0)
+
+
+def md_code(value: object, in_table: bool = False) -> str:
+    """Render `value` as a single inline code span.
+
+    Nothing inside a code span is parsed, so this is the default for
+    identifiers (hashes, names, paths, rules). The fence is one backtick
+    longer than any run in the value; GFM still splits table cells on `|`
+    inside code, so pipes are escaped when the span sits in a table.
+    """
+    text = _one_line(value)
+    if not text:
+        return ""
+    if in_table:
+        text = text.replace("|", "\\|")
+    fence = "`" * (_longest_backtick_run(text) + 1)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
+
+
+def md_text(value: object) -> str:
+    """Render `value` as literal inline text (one line, no markup, no links)."""
+    text = _MD_INLINE_SPECIALS.sub(r"\\\1", _one_line(value))
+    return _defang_autolinks(text)
+
+
+def md_fence(value: str) -> str:
+    """Render multi-line `value` as a fenced code block it cannot close."""
+    fence = "`" * max(3, _longest_backtick_run(value) + 1)
+    return f"{fence}\n{value}\n{fence}"
+
+
+def md_prose(value: str) -> str:
+    """Keep markdown formatting in `value` but disable links and images.
+
+    For Stairwell AI triage text, which is markdown by design but can quote
+    attacker-chosen strings from the file. Brackets and `<` are escaped (and
+    every backslash in a run right before one, so it cannot cancel the
+    escape), which
+    removes inline links, images, reference definitions, autolinks, and raw
+    HTML; bare URLs, `www.` hosts, and emails are defanged. Inside code spans
+    the escapes show as literal backslashes.
+    """
+    text = _MD_PROSE_SPECIALS.sub(lambda m: m.group(1) * 2 + "\\" + m.group(2), value)
+    return _defang_autolinks(text)
 
 
 def now_iso() -> str:

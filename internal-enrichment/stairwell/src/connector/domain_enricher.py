@@ -12,6 +12,8 @@ from .stix_builder import (
     make_ipv6,
     make_note,
     make_relationship,
+    md_code,
+    md_text,
     stairwell_identity,
     tlp_marking,
 )
@@ -231,7 +233,7 @@ class DomainEnricher:
         )
         lines: list[str] = []
         if etld:
-            lines.append(f"**eTLD+1:** {etld}")
+            lines.append(f"**eTLD+1:** {md_text(etld)}")
         lines.append(f"**Total resolutions:** {total}")
         lines.append(f"**Displayed:** {displayed}{capped_note}")
 
@@ -240,7 +242,9 @@ class DomainEnricher:
         for entry in all_resolutions:
             by_type[entry["record_type"]] = by_type.get(entry["record_type"], 0) + 1
         if by_type:
-            counts = ", ".join(f"{rt} ({n})" for rt, n in sorted(by_type.items()))
+            counts = ", ".join(
+                f"{md_text(rt)} ({n})" for rt, n in sorted(by_type.items())
+            )
             lines.append(f"**By record type:** {counts}")
 
         lines.append("")
@@ -250,9 +254,11 @@ class DomainEnricher:
             answer = entry["answer"]
             answer_disp = answer if len(answer) <= 60 else f"{answer[:48]}…"
             lines.append(
-                f"| {idx} | {entry['record_type']} | `{answer_disp}` | "
-                f"{entry.get('first_seen') or '—'} | {entry.get('last_seen') or '—'} | "
-                f"{entry.get('observation_count') or '—'} |"
+                f"| {idx} | {md_text(entry['record_type'])} | "
+                f"{md_code(answer_disp, in_table=True)} | "
+                f"{md_text(entry.get('first_seen') or '—')} | "
+                f"{md_text(entry.get('last_seen') or '—')} | "
+                f"{md_text(entry.get('observation_count') or '—')} |"
             )
 
         return make_note(

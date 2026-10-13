@@ -9,7 +9,7 @@ if __name__ == "__main__":
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
             config=settings.to_helper_config(),
-            playbook_compatible=True,  # a STIX bundle is always sent back
+            playbook_compatible=True,
         )
 
         connector = StairwellConnector(config=settings, helper=helper)

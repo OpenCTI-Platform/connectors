@@ -1,4 +1,5 @@
 import json
+import re
 from unittest.mock import MagicMock
 
 from connector.asn_enricher import AsnEnricher
@@ -369,3 +370,108 @@ def test_asn_enricher_parses_rpsl_records():
     assert asn["name"] == "MICROSOFT-CORP-MSN-AS-BLOCK"
     assert asn["x_stairwell_country"] == "US"
     assert asn["x_stairwell_registration_date"] == "2010-01-15"
+
+
+def test_untrusted_whois_and_dns_values_are_markdown_escaped():
+    from connector.stix_builder import md_code, md_fence, md_text
+
+    whois = "OrgName: Evil\n```\n[click](http://evil.example)\n```"
+    org = "Evil [Org](http://evil.example)"
+    rdns = "www.evil.example"
+    answer = "evil|cell`x"
+    first_seen = "2026-01-01 | injected"
+
+    ip_client = _client(
+        {
+            "get_ip": (
+                200,
+                {"geoLocation": {"city": "[c](http://e)"}, "asns": [64500]},
+            ),
+            "get_ip_whois": (
+                200,
+                {"record": {"whoisString": whois, "arinOrg": {"name": org}}},
+            ),
+            "get_ip_hostnames": (200, {"hostnames": [rdns]}),
+        }
+    )
+    helper = _helper()
+    IpEnricher(helper, ip_client, default_tlp="amber").enrich(
+        {
+            "id": "x",
+            "standard_id": "ipv4-addr--1",
+            "entity_type": "IPv4-Addr",
+            "value": "203.0.113.5",
+        }
+    )
+    note = next(
+        o
+        for o in json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+        if o["type"] == "note"
+    )["content"]
+    assert md_fence(whois.strip()) in note
+    assert f"({md_text(org)})" in note
+    assert f"- {md_text(rdns)}" in note
+    assert md_text("[c](http://e)") in note
+
+    asn_client = _client(
+        {
+            "get_asn_whois": (
+                200,
+                {
+                    "asn": 64500,
+                    "records": [{"whoisString": whois, "arinAsn": {"name": org}}],
+                },
+            )
+        }
+    )
+    helper = _helper()
+    AsnEnricher(helper, asn_client, default_tlp="amber").enrich(
+        {
+            "id": "x",
+            "standard_id": "autonomous-system--1",
+            "entity_type": "Autonomous-System",
+            "number": 64500,
+        }
+    )
+    note = next(
+        o
+        for o in json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+        if o["type"] == "note"
+    )["content"]
+    assert md_fence(whois.strip()) in note
+    assert f"**Organization:** {md_text(org)}" in note
+
+    dns_client = _client(
+        {
+            "get_hostname_metadata_v1": (200, {}),
+            "get_hostname_v2": (200, {}),
+            "get_hostname_whitelist_status": (200, {}),
+            "get_hostname_resolutions": (
+                200,
+                {
+                    "resolutions": [
+                        {"recordType": "TXT", "answer": answer, "firstSeen": first_seen}
+                    ]
+                },
+            ),
+        }
+    )
+    helper = _helper()
+    DomainEnricher(helper, dns_client, default_tlp="amber").enrich(
+        {
+            "id": "x",
+            "standard_id": "domain-name--1",
+            "entity_type": "Domain-Name",
+            "value": "evil.example",
+        }
+    )
+    note = next(
+        o
+        for o in json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+        if o["type"] == "note"
+    )["content"]
+    row = next(line for line in note.splitlines() if line.startswith("| 1 |"))
+    assert md_code(answer, in_table=True) in row
+    assert md_text(first_seen) in row
+    # Seven unescaped pipes: six columns, none injected by the values.
+    assert len(re.findall(r"(?<!\\)\|", row)) == 7

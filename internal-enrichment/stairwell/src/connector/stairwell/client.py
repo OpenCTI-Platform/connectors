@@ -211,3 +211,6 @@ class StairwellClient:
 
     def asn_ui_url(self, asn: str | int) -> str:
         return self._search_url(str(asn))
+
+    def url_ui_url(self, url: str) -> str:
+        return self._search_url(url)

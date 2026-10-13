@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock
 
+import pytest
 from connector.file_enricher import FileEnricher
 from connector.stairwell import StairwellClient
 
@@ -335,7 +336,7 @@ def test_sightings_aggregated_per_asset_with_count_first_last():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=100)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -435,7 +436,7 @@ def test_sightings_empty_payload_emits_no_sighting_objects():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=100)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -748,3 +749,167 @@ def test_no_hashes_returns_skip_message():
     )
     assert "No usable hash" in msg
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_untrusted_strings_are_markdown_escaped_in_notes_and_description():
+    from connector.stix_builder import md_code, md_prose, md_text
+
+    name = "x`](http://evil.example)`.exe"
+    yara = "rule`[x](http://evil.example)"
+    host = "www.evil.example"
+    subject = "CN=a`b | c"
+    path = "C:\\`x`\\"
+    asset_name = "[asset](http://evil.example)"
+    family = "Fam [x](http://evil.example)"
+    tldr = "see [here](http://evil.example)"
+    summary = "## Triage\n\n![px](http://t.example/p.png)"
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "name": name,
+        "yaraRuleMatches": [yara],
+        "networkIndicators": {"hostnames": [host]},
+        "objectSignature": {"x509Certificates": [{"subject": subject}]},
+    }
+    variant_sha = "b" * 63 + ")"
+    sightings = {
+        "objectSightings": [
+            {
+                "sightingTime": "2025-04-29T19:42:30.5Z",
+                "environment": "ENV-A",
+                "asset": "assets/A",
+                "assetName": asset_name,
+                "filepath": path,
+                "filename": "f.exe",
+            }
+        ],
+        "nextPageToken": "",
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {"tldr": tldr, "summary": summary}),
+            "get_variants": (
+                200,
+                {
+                    "family": family,
+                    "variants": [{"sha256": variant_sha, "similarity": 0.9}],
+                },
+            ),
+            "list_object_sightings": (200, sightings),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber", sightings_limit=100).enrich(
+        _observable_with_sha256()
+    )
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    notes = {
+        o["abstract"]: o["content"] for o in payload["objects"] if o["type"] == "note"
+    }
+
+    enrichment = notes["Stairwell Enrichment Summary"]
+    assert f"- **Name:** {md_code(name)}" in enrichment
+    assert f"- {md_code(yara)}" in enrichment
+    assert md_code(host) in enrichment
+    assert f"  - Subject: {md_code(subject)}" in enrichment
+
+    assert notes["Stairwell AI File Triage"] == md_prose(summary)
+    file_sco = next(
+        o
+        for o in payload["objects"]
+        if o.get("id") == _observable_with_sha256()["standard_id"]
+    )
+    assert file_sco["x_opencti_description"] == md_prose(tldr)
+
+    variants = notes["Stairwell Variants"]
+    assert f"**Family:** {md_text(family)}" in variants
+    assert "/dashboard/search/knowledge/" + "b" * 63 + "%29)" in variants
+
+    sighting = next(o for o in payload["objects"] if o["type"] == "sighting")
+    assert f"- {md_code(path + 'f.exe')}" in sighting["description"]
+    identity = next(
+        o
+        for o in payload["objects"]
+        if o["type"] == "identity" and o.get("identity_class") == "system"
+    )
+    assert md_text(asset_name) in identity["description"]
+
+
+def _enrich_with_variant_counts(payload_count, metadata_total):
+    metadata = {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}}
+    if metadata_total is not None:
+        metadata["variants"] = {"total": metadata_total}
+    variants_payload = {
+        "variants": [{"sha256": f"{i:064x}", "similarity": 0.9} for i in range(1, 4)],
+    }
+    if payload_count is not None:
+        variants_payload["variant_count"] = payload_count
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, variants_payload),
+        }
+    )
+    helper = _helper()
+    msg = FileEnricher(helper, client, default_tlp="amber", variant_limit=2).enrich(
+        _observable_with_sha256()
+    )
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    note = next(
+        o["content"]
+        for o in payload["objects"]
+        if o["type"] == "note" and o["abstract"] == "Stairwell Variants"
+    )
+    file_sco = next(
+        o
+        for o in payload["objects"]
+        if o.get("id") == _observable_with_sha256()["standard_id"]
+    )
+    return msg, note, file_sco
+
+
+@pytest.mark.parametrize(
+    "payload_count, metadata_total, want_total, want_sco_count",
+    [
+        (42, 42, 42, 42),
+        ("42", "42", 42, 42),  # proto3 JSON encodes int64 as a string
+        ("lots", "n/a", 3, None),  # unparseable: fall back to the list length
+        (None, None, 3, None),
+        (True, True, 3, None),
+        (-1, -1, 3, None),
+        ("\u00b2", "\u00b3", 3, None),  # isdigit() is True for superscripts
+    ],
+)
+def test_variant_counts_tolerate_non_numeric_api_values(
+    payload_count, metadata_total, want_total, want_sco_count
+):
+    msg, note, file_sco = _enrich_with_variant_counts(payload_count, metadata_total)
+    assert msg.startswith("Enriched file")
+    assert f"**Total variants:** {want_total}\n" in note
+    assert "(capped at STAIRWELL_VARIANT_LIMIT=2)" in note
+    assert file_sco.get("x_stairwell_variant_count") == want_sco_count
+
+
+def test_sightings_are_off_unless_configured():
+    from connector.enricher import Dispatcher
+    from connector.file_enricher import DEFAULT_SIGHTINGS_LIMIT
+
+    # main.py reads this constant as the STAIRWELL_SIGHTINGS_LIMIT default.
+    assert DEFAULT_SIGHTINGS_LIMIT == 0
+    client = _client(
+        {
+            "get_object_metadata": (
+                200,
+                {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}},
+            ),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    Dispatcher(helper, client, "amber").file.enrich(_observable_with_sha256())
+    client.list_object_sightings.assert_not_called()
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    assert not [o for o in payload["objects"] if o["type"] == "sighting"]
