@@ -19,5 +19,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_INCIDENTS_IMPORT_START_DATE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P7D"` | How far back to look on the first import (e.g. 'P7D' for 7 days, 'P30D' for 30 days). |
 | CROWDSTRIKE_INCIDENTS_PRODUCTS | `array` |  | string | `["ngsiem"]` | Comma-separated list of CrowdStrike alert products to import. Only 'ngsiem' (Next-Gen SIEM) is supported for now; other values are ignored. |
 | CROWDSTRIKE_INCIDENTS_SEVERITY_MIN | `string` |  | `informational` `low` `medium` `high` `critical` | `null` | Minimum severity of the alerts to import: 'informational', 'low', 'medium', 'high' or 'critical'. All alerts are imported when unset. |
-| CROWDSTRIKE_INCIDENTS_INCLUDE_HIDDEN | `boolean` |  | boolean | `false` | Whether to also import alerts hidden in the Falcon console. |
+| CROWDSTRIKE_INCIDENTS_INCLUDE_HIDDEN | `boolean` |  | boolean | `false` | Whether to also import the alerts hidden in the Falcon console (show_in_ui: false). |
 | CROWDSTRIKE_INCIDENTS_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | TLP marking level applied to every created STIX object. |

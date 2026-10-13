@@ -23,7 +23,7 @@ Table of Contents
 [CrowdStrike Falcon Next-Gen SIEM](https://www.crowdstrike.com/platform/next-gen-siem/) raises
 **alerts** when one of its **correlation rules** matches the logs ingested in the platform.
 
-This connector retrieves these Next-Gen SIEM alerts through the CrowdStrike Falcon **Alerts API v2**
+This connector retrieves these Next-Gen SIEM alerts through the CrowdStrike Falcon **Alerts API**
 and imports each of them into OpenCTI as an **Incident**, together with the hosts, IP addresses and
 user accounts involved, and the MITRE ATT&CK techniques declared by the correlation rule.
 
@@ -65,7 +65,7 @@ In-code constants (not configurable):
 
 | Constant   | Value                                     | Notes                                                                 |
 |------------|-------------------------------------------|-----------------------------------------------------------------------|
-| Page size  | 1000 alerts                               | Alert IDs per query and alerts per detail request.                    |
+| Page size  | 1000 alerts                               | Maximum of `POST /alerts/combined/alerts/v1`.                         |
 | User-Agent | `OpenCTI-CrowdStrike-Incidents-Connector` | Sent on every API call.                                               |
 | Auth       | OAuth2 client credentials                 | Token request, refresh and retries are handled by the official [falconpy](https://github.com/CrowdStrike/falconpy) SDK. |
 
@@ -108,8 +108,7 @@ from `now - import_start_date`.
 
 ```mermaid
 flowchart LR
-    A[CrowdStrike Alerts API v2] -->|GET /alerts/queries/alerts/v2<br/>product + updated_timestamp| B[Client - falconpy]
-    A -->|POST /alerts/entities/alerts/v2| B
+    A[CrowdStrike Alerts API] -->|POST /alerts/combined/alerts/v1<br/>product + updated_timestamp| B[Client - falconpy]
     B -->|pages of alerts, oldest first| C[collect]
     C --> D[transform<br/>alert to Incident + observables]
     D -->|1 bundle per page| E[send]
@@ -119,13 +118,12 @@ flowchart LR
 
 API reference:
 
-| Step               | Endpoint                             | falconpy                    |
-|--------------------|--------------------------------------|-----------------------------|
-| List alert IDs     | `GET /alerts/queries/alerts/v2`      | `Alerts.query_alerts_v2`    |
-| Get alert details  | `POST /alerts/entities/alerts/v2`    | `Alerts.get_alerts_v2`      |
+| Step                                          | Endpoint                          | falconpy                      |
+|-----------------------------------------------|-----------------------------------|-------------------------------|
+| Get alerts (complete payload, 1000 per call)  | `POST /alerts/combined/alerts/v1` | `Alerts.get_alerts_combined`  |
 
-The FQL filter is `product:['ngsiem']+updated_timestamp:>='<cursor>'`, sorted by
-`updated_timestamp|asc`. The `ngsiem` product value is documented in CrowdStrike's
+The FQL filter is `product:['ngsiem']+updated_timestamp:>='<cursor>'+show_in_ui:true`, sorted by
+`updated_timestamp|asc` (`show_in_ui:true` is dropped when `include_hidden` is enabled). The `ngsiem` product value is documented in CrowdStrike's
 [falcon-mcp `detections.py`](https://github.com/CrowdStrike/falcon-mcp/blob/main/falcon_mcp/resources/detections.py).
 
 ### STIX 2.1 mapping
@@ -180,15 +178,16 @@ not cleared for it. The `uses` relationship itself carries the author and the ma
 
 - **Cursor**: `updated_timestamp`. Alerts updated in CrowdStrike after their first import (status
   change, etc.) are fetched again and update the existing Incident.
-- **Pagination**: the Alerts API rejects queries where `offset + limit` exceeds 10 000. The connector
-  therefore paginates by keyset: after each page, the next query restarts at offset 0 from the last
-  `updated_timestamp`. When a full page shares the same timestamp, it falls back to the offset within
-  that timestamp. The IDs of the alerts already sent at the cursor timestamp are stored in the state
-  and skipped on the next query, so they are not re-sent at every run.
-- **Alerts updated during an import**: an alert can be updated between the ID query and the detail
-  call, which makes its `updated_timestamp` jump forward. To never skip the alerts in between, the
-  cursor only advances to timestamps older than the query time minus a 5-minute clock skew margin.
-  The most recent alerts are still imported immediately, and imported once more on the next run.
+- **One call per page**: `POST /alerts/combined/alerts/v1` returns complete alerts, so each page is
+  a consistent snapshot (no gap between listing IDs and reading details).
+- **Pagination by keyset**: CrowdStrike documents that this endpoint paginates "on live data" and
+  that records may appear on several pages, or on none, when sorting on a field that changes over
+  time such as `updated_timestamp`. Pages are therefore chained by keyset instead of by `after`
+  token: each page restarts from the last `updated_timestamp` seen, so an alert updated during the
+  run moves forward and is imported again, but no alert is skipped. The `after` token is only used
+  to page through alerts sharing that exact timestamp.
+- **Boundary alerts**: the IDs of the alerts already sent at the cursor timestamp are stored in the
+  state and skipped on the next query, so they are not re-sent at every run.
 - **Checkpoint after every bundle**: the cursor is saved after each page is sent to OpenCTI, so a
   crash during a large backlog resumes where it stopped instead of restarting.
 - **Per-alert failures**: an alert that cannot be parsed or converted is logged and skipped; the
@@ -215,10 +214,11 @@ not cleared for it. The `uses` relationship itself carries the author and the ma
   stay distinct Incidents because their creation dates differ.
 - **Host changes create a new Incident**: the name includes the first host name, so if CrowdStrike
   changes it on an existing alert, a new Incident is created.
-- **Recent alerts are sent twice**: alerts updated in the last 5 minutes before a run are imported,
-  then imported again on the next run (harmless upsert).
-- **More than 10 000 alerts sharing the exact same `updated_timestamp`** cannot be paginated: the run
-  fails with an explicit error.
+- **Alerts updated during a run are sent twice** (harmless upsert): once at their old position,
+  once at their new `updated_timestamp`.
+- **Hidden alerts filter not verified live**: `include_hidden: false` filters on `show_in_ui:true`
+  (falconpy documents `show_in_ui: false` as "This alert is not displayed in Falcon"); the test
+  tenant had no hidden alert to confirm it.
 - **Unknown severities are always imported**, even when `severity_min` is set.
 - **Alert retention**: alerts older than the CrowdStrike retention period (about 90 days observed)
   cannot be imported, whatever `import_start_date` is.

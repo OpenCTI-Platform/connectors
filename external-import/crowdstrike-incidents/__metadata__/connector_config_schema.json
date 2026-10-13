@@ -102,7 +102,7 @@
     },
     "CROWDSTRIKE_INCIDENTS_INCLUDE_HIDDEN": {
       "default": false,
-      "description": "Whether to also import alerts hidden in the Falcon console.",
+      "description": "Whether to also import the alerts hidden in the Falcon console (show_in_ui: false).",
       "type": "boolean"
     },
     "CROWDSTRIKE_INCIDENTS_TLP_LEVEL": {
