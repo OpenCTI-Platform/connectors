@@ -115,8 +115,9 @@ class CrowdstrikeAlertsClient:
         cursor = since
         offset = 0
         boundary_ids: set[str] = set(skip_ids)
+        has_more = True
 
-        while True:
+        while has_more:
             if offset + self._page_size > MAX_WINDOW:
                 raise CrowdstrikeApiError(
                     None,
@@ -163,8 +164,8 @@ class CrowdstrikeAlertsClient:
 
             if alerts:
                 yield AlertPage(alerts, cursor, frozenset(boundary_ids))
-            if len(ids) < self._page_size:
-                return
+            # A short page means there is nothing left to fetch
+            has_more = len(ids) == self._page_size
 
     def _query_ids(self, fql: str, offset: int, include_hidden: bool) -> list[str]:
         response = self._alerts.query_alerts_v2(
