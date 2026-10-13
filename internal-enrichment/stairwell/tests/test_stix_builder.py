@@ -7,10 +7,13 @@ from connector.stix_builder import (
     make_autonomous_system,
     make_domain,
     make_external_reference,
+    make_file_by_sha256,
+    make_ip,
     make_ipv4,
     make_ipv6,
     make_note,
     make_relationship,
+    make_url,
     md_code,
     md_fence,
     md_prose,
@@ -18,6 +21,7 @@ from connector.stix_builder import (
     network_observable_for,
     stix_id,
     tlp_marking,
+    valid_hash,
 )
 
 
@@ -186,3 +190,77 @@ def test_md_prose_brackets_stay_escaped_after_any_backslash_run(backslashes, ope
 
 def test_md_prose_leaves_backslashes_elsewhere_alone():
     assert md_prose("`C:\\Users\\x` and \\*") == "`C:\\Users\\x` and \\*"
+
+
+@pytest.mark.parametrize(
+    "algo, value, ok",
+    [
+        ("SHA-256", "A" * 64, True),
+        ("SHA-256", "a" * 63, False),
+        ("SHA-256", "g" * 64, False),
+        ("SHA-256", "a" * 63 + ")", False),
+        ("SHA-1", "b" * 40, True),
+        ("SHA-1", "b" * 41, False),
+        ("MD5", "c" * 32, True),
+        ("MD5", "c" * 31 + " ", False),
+        ("MD5", None, False),
+        ("SHA-512", "d" * 128, False),
+    ],
+)
+def test_valid_hash(algo, value, ok):
+    assert valid_hash(algo, value) is ok
+
+
+def test_file_sco_rejects_bad_sha256_and_drops_bad_optional_hashes():
+    with pytest.raises(ValueError):
+        make_file_by_sha256("a" * 63 + ")")
+    sco = make_file_by_sha256("A" * 64, sha1="b" * 39, md5="C" * 32)
+    assert sco["hashes"] == {"SHA-256": "a" * 64, "MD5": "c" * 32}
+
+
+@pytest.mark.parametrize(
+    "value, want_type, want_value",
+    [
+        ("1.2.3.4", "ipv4-addr", "1.2.3.4"),
+        ("2001:DB8::1", "ipv6-addr", "2001:db8::1"),
+        ("1.2.3.4:80", None, None),
+        ("999.1.1.1", None, None),
+        ("not an ip", None, None),
+        ("", None, None),
+    ],
+)
+def test_make_ip_validates_and_normalises(value, want_type, want_value):
+    sco = make_ip(value, tlp="green")
+    if want_type is None:
+        assert sco is None
+    else:
+        assert (sco["type"], sco["value"]) == (want_type, want_value)
+    assert network_observable_for(value, "ip", "green") == sco
+
+
+@pytest.mark.parametrize(
+    "value, ok",
+    [
+        ("http://c2.example.com/a?b=1", True),
+        ("https://Example.com", True),
+        ("ftp://files.example.net/x", True),
+        ("hxxp://defanged.example", False),
+        ("javascript:alert(1)", False),
+        ("http://", False),
+        ("http://exa mple.com/", False),
+        ("http://example.com/\x00", False),
+        ("http://example.com/a b", False),
+        ("not a url", False),
+        pytest.param("http://" + "a" * 2100 + ".com", False, id="overlong"),
+    ],
+)
+def test_make_url_accepts_only_well_formed_urls(value, ok):
+    sco = make_url(value, tlp="green")
+    assert (sco is not None) is ok
+    assert (network_observable_for(value, "url", "green") is not None) is ok
+
+
+def test_make_domain_lowercases_so_one_domain_is_one_object():
+    upper, lower = make_domain("MX1.Example.COM"), make_domain("mx1.example.com")
+    assert upper == lower
+    assert upper["value"] == "mx1.example.com"

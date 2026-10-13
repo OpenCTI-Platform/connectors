@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from connectors_sdk.exceptions.error import DataRetrievalError
+
 from .stairwell import StairwellClient
 from .stix_builder import (
     bundle,
@@ -75,8 +77,13 @@ class IpEnricher:
         # hostnames endpoint is best-effort; ignore failures.
         _, hosts = self.client.get_ip_hostnames(ip_value)
 
-        if ip_status == 404 and whois_status == 404:
-            return f"Stairwell: IP {ip_value} not found"
+        if not any(200 <= s < 300 for s in (ip_status, whois_status)):
+            if ip_status == 404 and whois_status == 404:
+                return f"Stairwell: IP {ip_value} not found"
+            raise DataRetrievalError(
+                "Every Stairwell IP request failed "
+                f"(ip {ip_status}, whois {whois_status})"
+            )
         if not isinstance(ip_data, dict):
             ip_data = {}
 

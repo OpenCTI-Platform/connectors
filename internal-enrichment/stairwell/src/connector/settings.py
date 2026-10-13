@@ -8,7 +8,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -27,7 +27,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
 class StairwellConfig(BaseConfigModel):
     """Stairwell-specific configuration (env prefix `STAIRWELL_`)."""
 
-    api_token: str = Field(description="Stairwell API token (Bearer auth).")
+    api_token: SecretStr = Field(description="Stairwell API token (Bearer auth).")
     api_base_url: HttpUrl = Field(
         description="Stairwell API base URL.",
         default="https://app.stairwell.com",

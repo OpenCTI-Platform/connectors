@@ -9,7 +9,7 @@ AI File Triage, DNS history, IP intelligence, and WHOIS.
 | Observable | Stairwell endpoints |
 |---|---|
 | `StixFile` | `/v1/objects/{hash}/metadata`, `/v1/objects/{hash}:summarize`, `/v202112/variants/{hash}`, `/v1/objects/{hash}/sightings` |
-| `Domain-Name` | `/v1/hostnames/{hostname}/metadata`, `/v2/hostnames/{hostname}`, `/v2/hostnames/{hostname}/whitelist-status` |
+| `Domain-Name` | `/v1/hostnames/{hostname}/metadata`, `/v2/hostnames/{hostname}`, `/v2/hostnames/{hostname}/whitelist-status`, `/v2/hostnames/{hostname}/resolutions` |
 | `IPv4-Addr` / `IPv6-Addr` | `/v2/ips/{ip}`, `/v2/ips/{ip}/whois`, `/v2/ips/{ip}/hostnames` |
 | `Autonomous-System` | `/v2/asns/{asn}/whois` |
 
@@ -50,10 +50,10 @@ Environment variables override the file.
 | API base URL | `stairwell.api_base_url` | `STAIRWELL_API_BASE_URL` | no | `https://app.stairwell.com` | Override for staging |
 | Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
-| Default TLP | `stairwell.default_tlp` | `STAIRWELL_DEFAULT_TLP` | no | `amber` | `clear`, `green`, `amber`, `amber+strict`, `red` |
+| Default TLP | `stairwell.default_tlp` | `STAIRWELL_DEFAULT_TLP` | no | `amber` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 | Max TLP | `stairwell.max_tlp_level` | `STAIRWELL_MAX_TLP_LEVEL` | no | `amber` | Highest TLP an observable may carry and still be sent to Stairwell: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 | Variant limit | `stairwell.variant_limit` | `STAIRWELL_VARIANT_LIMIT` | no | `25` | Max variant SCOs per file enrichment (`0` disables) |
-| Resolutions limit | `stairwell.resolutions_limit` | `STAIRWELL_RESOLUTIONS_LIMIT` | no | `50` | Max DNS resolution rows per domain (`0` disables) |
+| Resolutions limit | `stairwell.resolutions_limit` | `STAIRWELL_RESOLUTIONS_LIMIT` | no | `50` | Max DNS resolution rows per domain (`0` disables resolutions and the DNS history Note) |
 | Sightings limit | `stairwell.sightings_limit` | `STAIRWELL_SIGHTINGS_LIMIT` | no | `0` | Max unique assets per file; `0` (the default) disables sightings. See **Sightings** below before enabling |
 
 ## Behavior
@@ -79,8 +79,15 @@ Environment variables override the file.
 - **Empty results** (hash not in Stairwell corpus) attach a
   `stairwell:not-found` label and an `external_reference` to the Stairwell
   search UI; no Notes are created.
-- **Errors** (5xx, network failure, 401) are logged; the source observable is
-  left unchanged and no STIX is written.
+- **Errors.** If every Stairwell request for an observable fails (5xx, 401,
+  network failure), the enrichment fails with an error and no STIX is
+  written. A partial failure still enriches with whatever was retrieved.
+- **Scope.** Only entity types listed in `CONNECTOR_SCOPE` (and supported by
+  the connector) are sent to Stairwell; anything else is refused.
+- **Playbooks.** In a playbook, the bundle sent back always carries the
+  objects the step received, with the enrichment added when there is one. An
+  out-of-scope entity, a refused TLP, no Stairwell data, or an error hands the
+  incoming bundle on unchanged so the playbook continues.
 - **Sightings are off by default.** With `STAIRWELL_SIGHTINGS_LIMIT` above
   `0`, file sightings are aggregated per asset: each unique Stairwell-managed
   host that has seen the hash becomes one Sighting SDO (`first_seen` /
@@ -120,7 +127,7 @@ python3 main.py
 ## Tests
 
 ```bash
-cd src
-pip install -r requirements.txt -r tests/test-requirements.txt
-PYTHONPATH=. pytest tests/
+# From the connector directory:
+pip install -r tests/test-requirements.txt
+pytest tests/
 ```

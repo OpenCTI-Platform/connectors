@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Iterable
+from urllib.parse import urlsplit
 
 # STIX 2.1 namespace UUID (spec §2.9) for deterministic UUIDv5 IDs.
 _STIX_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
@@ -197,6 +199,8 @@ def make_ipv6(value: str, tlp: str = "amber") -> dict[str, Any]:
 
 
 def make_domain(value: str, tlp: str = "amber") -> dict[str, Any]:
+    # DNS names are case-insensitive; one name must be one object.
+    value = value.lower()
     return {
         "type": "domain-name",
         "spec_version": "2.1",
@@ -206,6 +210,25 @@ def make_domain(value: str, tlp: str = "amber") -> dict[str, Any]:
     }
 
 
+_HASH_LENGTHS = {"SHA-256": 64, "SHA-1": 40, "MD5": 32}
+_HEX = re.compile(r"[0-9a-fA-F]+")
+
+
+def valid_hash(algo: str, value: Any) -> bool:
+    """True when `value` is a well-formed `algo` digest (hex of the right length).
+
+    Hashes come from API responses; one malformed value in a File SCO makes
+    OpenCTI reject the whole bundle it is in.
+    """
+    length = _HASH_LENGTHS.get(algo)
+    return (
+        length is not None
+        and isinstance(value, str)
+        and len(value) == length
+        and bool(_HEX.fullmatch(value))
+    )
+
+
 def make_file_by_sha256(
     sha256: str,
     tlp: str = "amber",
@@ -213,15 +236,19 @@ def make_file_by_sha256(
     sha1: str | None = None,
     md5: str | None = None,
 ) -> dict[str, Any]:
+    """File SCO keyed by SHA-256; invalid optional hashes are left out."""
+    if not valid_hash("SHA-256", sha256):
+        raise ValueError(f"not a SHA-256 digest: {sha256!r}")
+    sha256 = sha256.lower()
     hashes: dict[str, str] = {"SHA-256": sha256}
-    if sha1:
-        hashes["SHA-1"] = sha1
-    if md5:
-        hashes["MD5"] = md5
+    if valid_hash("SHA-1", sha1):
+        hashes["SHA-1"] = sha1.lower()
+    if valid_hash("MD5", md5):
+        hashes["MD5"] = md5.lower()
     sco: dict[str, Any] = {
         "type": "file",
         "spec_version": "2.1",
-        "id": stix_id("file", f"sha256:{sha256.lower()}"),
+        "id": stix_id("file", f"sha256:{sha256}"),
         "hashes": hashes,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -230,7 +257,28 @@ def make_file_by_sha256(
     return sco
 
 
-def make_url(value: str, tlp: str = "amber") -> dict[str, Any]:
+_URL_SCHEMES = {"http", "https", "ftp", "ftps"}
+_URL_MAX_LENGTH = 2048
+
+
+def make_url(value: str, tlp: str = "amber") -> dict[str, Any] | None:
+    """URL SCO for a well-formed http(s)/ftp(s) URL, or None.
+
+    Values come from strings extracted from files; one malformed `url.value`
+    makes OpenCTI reject the whole bundle it is in.
+    """
+    if (
+        not isinstance(value, str)
+        or len(value) > _URL_MAX_LENGTH
+        or any(ch.isspace() or ord(ch) < 32 or ord(ch) == 127 for ch in value)
+    ):
+        return None
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        return None
+    if parts.scheme.lower() not in _URL_SCHEMES or not parts.netloc:
+        return None
     return {
         "type": "url",
         "spec_version": "2.1",
@@ -257,6 +305,21 @@ def make_autonomous_system(
     return obj
 
 
+def make_ip(value: str, tlp: str = "amber") -> dict[str, Any] | None:
+    """IPv4/IPv6 SCO for a valid address (normalised), or None.
+
+    Values come from strings extracted from files, so `1.2.3.4:80` or free
+    text must not become an address SCO.
+    """
+    try:
+        addr = ipaddress.ip_address(str(value).strip())
+    except ValueError:
+        return None
+    if addr.version == 6:
+        return make_ipv6(str(addr), tlp=tlp)
+    return make_ipv4(str(addr), tlp=tlp)
+
+
 def network_observable_for(value: str, kind: str, tlp: str) -> dict[str, Any] | None:
     """Build a STIX SCO for a Stairwell network_indicators entry.
 
@@ -265,9 +328,7 @@ def network_observable_for(value: str, kind: str, tlp: str) -> dict[str, Any] | 
     if not value:
         return None
     if kind == "ip":
-        if ":" in value:
-            return make_ipv6(value, tlp=tlp)
-        return make_ipv4(value, tlp=tlp)
+        return make_ip(value, tlp=tlp)
     if kind == "hostname":
         return make_domain(value, tlp=tlp)
     if kind == "url":

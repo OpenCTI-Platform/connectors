@@ -3,13 +3,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from connectors_sdk.exceptions.error import DataRetrievalError
+
 from .stairwell import StairwellClient
 from .stix_builder import (
     bundle,
     make_domain,
     make_external_reference,
-    make_ipv4,
-    make_ipv6,
+    make_ip,
     make_note,
     make_relationship,
     md_code,
@@ -48,8 +49,12 @@ class DomainEnricher:
         res_status, res = self.client.get_hostname_resolutions(hostname)
 
         statuses = [v1_status, v2_status, wl_status, res_status]
-        if all(s == 404 for s in statuses):
-            return f"Stairwell: hostname {hostname} not found"
+        if not any(200 <= s < 300 for s in statuses):
+            if all(s == 404 for s in statuses):
+                return f"Stairwell: hostname {hostname} not found"
+            raise DataRetrievalError(
+                f"Every Stairwell hostname request failed (statuses {statuses})"
+            )
 
         objects: list[dict[str, Any]] = [stairwell_identity()]
 
@@ -91,11 +96,8 @@ class DomainEnricher:
 
         # Aggregate resolutions across all sources, dedupe, cap.
         all_resolutions = self._collect_resolutions(v1, v2, res)
-        capped = (
-            all_resolutions[: self.resolutions_limit]
-            if self.resolutions_limit
-            else all_resolutions
-        )
+        # A limit of 0 disables resolutions entirely.
+        capped = all_resolutions[: self.resolutions_limit]
 
         # Build the related-observables + relationships.
         for entry in capped:
@@ -117,7 +119,7 @@ class DomainEnricher:
             )
 
         # DNS history Note — markdown table.
-        if all_resolutions:
+        if capped:
             objects.append(
                 self._dns_history_note(
                     entity_id, hostname, etld, all_resolutions, len(capped)
@@ -208,10 +210,12 @@ class DomainEnricher:
     ) -> tuple[dict[str, Any] | None, str]:
         record_type = entry.get("record_type", "A").upper()
         answer = entry.get("answer", "")
-        if record_type in ("A",):
-            return make_ipv4(answer, tlp=self.tlp), "resolves-to"
-        if record_type in ("AAAA",):
-            return make_ipv6(answer, tlp=self.tlp), "resolves-to"
+        if record_type in ("A", "AAAA"):
+            sco = make_ip(answer, tlp=self.tlp)
+            want = "ipv4-addr" if record_type == "A" else "ipv6-addr"
+            if sco is None or sco["type"] != want:
+                return None, "resolves-to"
+            return sco, "resolves-to"
         if record_type in ("MX", "CNAME", "NS", "SOA", "PTR", "SRV"):
             return make_domain(answer, tlp=self.tlp), "related-to"
         # TXT / CAA / unknown — values are usually free-text; skip SCO creation.

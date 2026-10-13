@@ -77,7 +77,7 @@ def test_max_tlp_accepts_short_and_mixed_case_forms(value):
 
 
 def test_invalid_max_tlp_fails_at_construction():
-    with pytest.raises(ValueError, match="CONNECTOR_MAX_TLP"):
+    with pytest.raises(ValueError, match="STAIRWELL_MAX_TLP_LEVEL"):
         _dispatcher(max_tlp="TLP:PURPLE")
 
 

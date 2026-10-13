@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from connectors_sdk.exceptions.error import DataRetrievalError
+
 from .stairwell import StairwellClient
 from .stix_builder import (
     bundle,
@@ -29,18 +31,19 @@ def _get_nested(data: Any, *keys: str) -> Any:
 
 def _extract_org_country_date(
     record: dict[str, Any],
-) -> tuple[str | None, str | None, str | None]:
-    """Pull (org_name, country, registration_date) from a single WhoisRecord.
+) -> tuple[str | None, str | None, str | None, str | None]:
+    """Pull (org_name, country, registration_date, last_modified) from a WhoisRecord.
 
     Tries known structured shapes (ARIN ASN, RPSL AutNum) before falling back
-    to flat keys.
+    to flat keys. RPSL records carry only a last-modified time, which is not a
+    registration date.
     """
     # ARIN ASN record
     org = _get_nested(record, "arinAsn", "name")
     country = None
     date = _get_nested(record, "arinAsn", "registrationDate")
     if org or date:
-        return org, country, date
+        return org, country, date, None
 
     # RPSL AutNum record
     org = _get_nested(record, "rpslAutNum", "asName")
@@ -49,9 +52,9 @@ def _extract_org_country_date(
         country = str(countries[0])
     elif isinstance(countries, str):
         country = countries
-    date = _get_nested(record, "rpslAutNum", "lastModified")
-    if org or date:
-        return org, country, date
+    last_modified = _get_nested(record, "rpslAutNum", "lastModified")
+    if org or last_modified:
+        return org, country, None, last_modified
 
     # Flat fallbacks (older API shapes)
     org = record.get("org") or record.get("organization") or record.get("name")
@@ -61,7 +64,7 @@ def _extract_org_country_date(
         or record.get("registrationDate")
         or record.get("registered")
     )
-    return org, country, date
+    return org, country, date, None
 
 
 class AsnEnricher:
@@ -84,7 +87,9 @@ class AsnEnricher:
         if status == 404:
             return f"Stairwell: ASN {asn_int} not found"
         if not isinstance(whois, dict):
-            return f"Stairwell ASN whois fetch failed for {asn_int} (status {status})"
+            raise DataRetrievalError(
+                f"Stairwell ASN whois request failed for AS{asn_int} (status {status})"
+            )
 
         # V2 response shape: {asn, records: WhoisRecord[]}.
         # Older / flat shapes are also tolerated.
@@ -98,13 +103,15 @@ class AsnEnricher:
         org: str | None = None
         country: str | None = None
         registration_date: str | None = None
+        last_modified: str | None = None
         whois_strings: list[str] = []
 
         for record in records:
-            r_org, r_country, r_date = _extract_org_country_date(record)
+            r_org, r_country, r_date, r_modified = _extract_org_country_date(record)
             org = org or r_org
             country = country or r_country
             registration_date = registration_date or r_date
+            last_modified = last_modified or r_modified
             ws = record.get("whoisString") or record.get("whois_string")
             if isinstance(ws, str) and ws.strip():
                 whois_strings.append(ws.strip())
@@ -129,6 +136,8 @@ class AsnEnricher:
             asn_sco["x_stairwell_country"] = country
         if registration_date:
             asn_sco["x_stairwell_registration_date"] = registration_date
+        if last_modified:
+            asn_sco["x_stairwell_last_modified"] = last_modified
 
         note_lines: list[str] = []
         if org:
@@ -137,6 +146,8 @@ class AsnEnricher:
             note_lines.append(f"**Country:** {md_text(country)}")
         if registration_date:
             note_lines.append(f"**Registration:** {md_text(registration_date)}")
+        if last_modified:
+            note_lines.append(f"**Last modified:** {md_text(last_modified)}")
         for ws in whois_strings:
             note_lines.append("")
             note_lines.append(md_fence(ws))

@@ -2,10 +2,12 @@ import json
 import re
 from unittest.mock import MagicMock
 
+import pytest
 from connector.asn_enricher import AsnEnricher
 from connector.domain_enricher import DomainEnricher
 from connector.ip_enricher import IpEnricher
 from connector.stairwell import StairwellClient
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 
 def _client(responses):
@@ -369,7 +371,13 @@ def test_asn_enricher_parses_rpsl_records():
     asn = next(o for o in payload["objects"] if o["type"] == "autonomous-system")
     assert asn["name"] == "MICROSOFT-CORP-MSN-AS-BLOCK"
     assert asn["x_stairwell_country"] == "US"
-    assert asn["x_stairwell_registration_date"] == "2010-01-15"
+    # RPSL lastModified is when the record changed, not when the ASN was
+    # registered.
+    assert "x_stairwell_registration_date" not in asn
+    assert asn["x_stairwell_last_modified"] == "2010-01-15"
+    note = next(o for o in payload["objects"] if o["type"] == "note")
+    assert "**Last modified:** 2010-01-15" in note["content"]
+    assert "Registration" not in note["content"]
 
 
 def test_untrusted_whois_and_dns_values_are_markdown_escaped():
@@ -475,3 +483,120 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
     assert md_text(first_seen) in row
     # Seven unescaped pipes: six columns, none injected by the values.
     assert len(re.findall(r"(?<!\\)\|", row)) == 7
+
+
+_DOMAIN_OBS = {
+    "id": "x",
+    "standard_id": "domain-name--1",
+    "entity_type": "Domain-Name",
+    "value": "evil.example",
+}
+_IP_OBS = {
+    "id": "x",
+    "standard_id": "ipv4-addr--1",
+    "entity_type": "IPv4-Addr",
+    "value": "203.0.113.5",
+}
+
+
+def _domain_client(statuses, res=None):
+    names = (
+        "get_hostname_metadata_v1",
+        "get_hostname_v2",
+        "get_hostname_whitelist_status",
+        "get_hostname_resolutions",
+    )
+    responses = {}
+    for name, status in zip(names, statuses):
+        body = {} if 200 <= status < 300 else None
+        if name == "get_hostname_resolutions" and res is not None:
+            body = res
+        responses[name] = (status, body)
+    return _client(responses)
+
+
+@pytest.mark.parametrize(
+    "statuses",
+    [(500, 500, 500, 500), (0, 0, 0, 0), (401, 404, 503, 0)],
+)
+def test_domain_fails_when_no_stairwell_request_succeeds(statuses):
+    helper = _helper()
+    with pytest.raises(DataRetrievalError):
+        DomainEnricher(helper, _domain_client(statuses), "amber").enrich(_DOMAIN_OBS)
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_domain_not_found_and_partial_failure_still_handled():
+    helper = _helper()
+    msg = DomainEnricher(helper, _domain_client((404,) * 4), "amber").enrich(
+        _DOMAIN_OBS
+    )
+    assert "not found" in msg
+    helper.send_stix2_bundle.assert_not_called()
+    DomainEnricher(helper, _domain_client((500, 200, 500, 500)), "amber").enrich(
+        _DOMAIN_OBS
+    )
+    helper.send_stix2_bundle.assert_called_once()
+
+
+def test_domain_resolutions_limit_zero_emits_no_resolutions():
+    res = {
+        "resolutions": [
+            {"recordType": "A", "answer": "1.2.3.4"},
+            {"recordType": "AAAA", "answer": "2001:db8::1"},
+        ]
+    }
+    helper = _helper()
+    DomainEnricher(
+        helper, _domain_client((200,) * 4, res), "amber", resolutions_limit=0
+    ).enrich(_DOMAIN_OBS)
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    assert not [o for o in objects if o["type"] in ("ipv4-addr", "ipv6-addr")]
+    assert not [o for o in objects if o["type"] == "relationship"]
+    assert not [o for o in objects if o.get("abstract") == "Stairwell DNS History"]
+
+
+def test_domain_resolution_answers_must_be_valid_addresses():
+    res = {
+        "resolutions": [
+            {"recordType": "A", "answer": "1.2.3.4:80"},
+            {"recordType": "A", "answer": "198.51.100.7"},
+            {"recordType": "AAAA", "answer": "198.51.100.8"},
+        ]
+    }
+    helper = _helper()
+    DomainEnricher(helper, _domain_client((200,) * 4, res), "amber").enrich(_DOMAIN_OBS)
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    ips = [(o["type"], o["value"]) for o in objects if o["type"].startswith("ipv")]
+    assert ips == [("ipv4-addr", "198.51.100.7")]
+
+
+@pytest.mark.parametrize("statuses", [(500, 500), (0, 401), (503, 0)])
+def test_ip_fails_when_neither_ip_nor_whois_request_succeeds(statuses):
+    client = _client(
+        {
+            "get_ip": (statuses[0], None),
+            "get_ip_whois": (statuses[1], None),
+            "get_ip_hostnames": (500, None),
+        }
+    )
+    helper = _helper()
+    with pytest.raises(DataRetrievalError):
+        IpEnricher(helper, client, "amber").enrich(_IP_OBS)
+    helper.send_stix2_bundle.assert_not_called()
+
+
+@pytest.mark.parametrize("status", [500, 401, 0])
+def test_asn_fails_when_the_whois_request_fails(status):
+    helper = _helper()
+    client = _client({"get_asn_whois": (status, None)})
+    with pytest.raises(DataRetrievalError):
+        AsnEnricher(helper, client, "amber").enrich(
+            {
+                "id": "x",
+                "standard_id": "autonomous-system--1",
+                "entity_type": "Autonomous-System",
+                "number": 64500,
+            }
+        )
+    helper.send_stix2_bundle.assert_not_called()

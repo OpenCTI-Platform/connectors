@@ -22,6 +22,7 @@ from .stix_builder import (
     network_observable_for,
     stairwell_identity,
     tlp_marking,
+    valid_hash,
 )
 
 DEFAULT_VARIANT_LIMIT = 25
@@ -381,7 +382,10 @@ class FileEnricher:
             if not isinstance(entry, dict):
                 continue
             sha256 = entry.get("sha256") or entry.get("SHA256") or entry.get("hash")
-            if not sha256 or sha256.lower() == primary_hash.lower():
+            if not valid_hash("SHA-256", sha256):
+                continue
+            sha256 = sha256.lower()
+            if sha256 == primary_hash.lower():
                 continue
             # v202112 variants endpoint returns: similarity, sha256, sha1, md5.
             # Older drafts of this connector also accepted `confidence` as a
@@ -728,12 +732,10 @@ class FileEnricher:
                 stix_hashes["MD5"] = hashed
         # Backfill hashes from the metadata response when the input observable
         # didn't carry them.
-        if metadata.get("sha256") and "SHA-256" not in stix_hashes:
-            stix_hashes["SHA-256"] = metadata["sha256"]
-        if metadata.get("sha1") and "SHA-1" not in stix_hashes:
-            stix_hashes["SHA-1"] = metadata["sha1"]
-        if metadata.get("md5") and "MD5" not in stix_hashes:
-            stix_hashes["MD5"] = metadata["md5"]
+        for algo, key in (("SHA-256", "sha256"), ("SHA-1", "sha1"), ("MD5", "md5")):
+            value = metadata.get(key)
+            if algo not in stix_hashes and valid_hash(algo, value):
+                stix_hashes[algo] = value.lower()
 
         sco: dict[str, Any] = {
             "type": "file",
@@ -824,13 +826,12 @@ class FileEnricher:
     # Sightings
     # ------------------------------------------------------------------
     def _fetch_sightings(self, primary_hash: str) -> tuple[list[dict[str, Any]], bool]:
-        """Page through `/v1/objects/{hash}/sightings` until cap or end.
+        """Page through `/v1/objects/{hash}/sightings` to the end (or max_pages).
 
         Returns (records, truncated). The cap is on UNIQUE assets, not
-        records; we keep paginating as long as we're still discovering new
-        assets, but stop once we've already collected `sightings_limit`
-        distinct assets and the next page only adds more events for assets
-        we've already capped.
+        records: once `sightings_limit` distinct assets are kept, events for
+        new assets are dropped (and `truncated` is set), while events for kept
+        assets are still collected from every later page.
         """
         records: list[dict[str, Any]] = []
         seen_assets: set[str] = set()
@@ -862,15 +863,11 @@ class FileEnricher:
                     seen_assets.add(asset)
                 records.append(record)
 
+            # Keep paging after the asset cap: later pages still carry events
+            # for assets already kept, and dropping them would understate
+            # their count and last_seen. max_pages bounds the cost.
             page_token = body.get("nextPageToken") or body.get("next_page_token")
             if not page_token:
-                break
-            # If we've hit the cap and the rest of the page added nothing new,
-            # the next page is unlikely to either — bail.
-            if truncated and len(seen_assets) >= self.sightings_limit:
-                # One more page in case the truncated flag is for assets at the
-                # very end of THIS page; otherwise stop here.
-                truncated = True
                 break
 
         return records, truncated
@@ -1058,8 +1055,11 @@ class FileEnricher:
             for entry in items:
                 if not isinstance(entry, dict):
                     continue
-                sha = (entry.get("sha256") or "").lower()
-                if not sha or sha == primary_lc:
+                sha = entry.get("sha256")
+                if not valid_hash("SHA-256", sha):
+                    continue
+                sha = sha.lower()
+                if sha == primary_lc:
                     continue
                 related = make_file_by_sha256(
                     sha,

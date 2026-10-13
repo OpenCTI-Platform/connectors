@@ -596,7 +596,7 @@ def test_summary_note_consolidates_all_user_specified_fields():
 
 def test_lineage_emits_parents_and_children_with_derived_from():
     primary = SHA256
-    parent = "p" * 64
+    parent = "e" * 64
     child = "c" * 64
     metadata = {
         "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
@@ -770,7 +770,7 @@ def test_untrusted_strings_are_markdown_escaped_in_notes_and_description():
         "networkIndicators": {"hostnames": [host]},
         "objectSignature": {"x509Certificates": [{"subject": subject}]},
     }
-    variant_sha = "b" * 63 + ")"
+    variant_sha = "b" * 64
     sightings = {
         "objectSightings": [
             {
@@ -823,7 +823,7 @@ def test_untrusted_strings_are_markdown_escaped_in_notes_and_description():
 
     variants = notes["Stairwell Variants"]
     assert f"**Family:** {md_text(family)}" in variants
-    assert "/dashboard/search/knowledge/" + "b" * 63 + "%29)" in variants
+    assert "/dashboard/search/knowledge/" + "b" * 64 + ")" in variants
 
     sighting = next(o for o in payload["objects"] if o["type"] == "sighting")
     assert f"- {md_code(path + 'f.exe')}" in sighting["description"]
@@ -913,3 +913,119 @@ def test_sightings_are_off_unless_configured():
     client.list_object_sightings.assert_not_called()
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     assert not [o for o in payload["objects"] if o["type"] == "sighting"]
+
+
+def test_malformed_variant_and_lineage_hashes_are_skipped():
+    good_variant, good_parent = "a1" * 32, "e" * 64
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "relationships": {
+            "parents": [{"sha256": good_parent}, {"sha256": "p" * 64}],
+            "children": [{"sha256": "c" * 63 + ")"}],
+        },
+    }
+    variants = {
+        "variants": [
+            {"sha256": good_variant, "similarity": 0.9},
+            {"sha256": "b" * 63 + ")", "similarity": 0.8},
+            {"sha256": "not-a-hash", "similarity": 0.7},
+        ]
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, variants),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    file_hashes = sorted(
+        o["hashes"]["SHA-256"]
+        for o in payload["objects"]
+        if o["type"] == "file" and o["id"] != _observable_with_sha256()["standard_id"]
+    )
+    assert file_hashes == sorted([good_variant, good_parent])
+
+
+def test_sightings_keep_paging_for_assets_already_kept():
+    def event(asset, t):
+        return {"asset": asset, "assetName": asset, "sightingTime": t}
+
+    pages = [
+        (
+            200,
+            {
+                "objectSightings": [
+                    event("assets/A", "2026-01-01T00:00:00Z"),
+                    event("assets/B", "2026-01-02T00:00:00Z"),
+                ],
+                "nextPageToken": "p2",
+            },
+        ),
+        (
+            200,
+            {
+                # C is over the limit; A's later event must still be counted.
+                "objectSightings": [
+                    event("assets/C", "2026-01-03T00:00:00Z"),
+                    event("assets/A", "2026-01-04T00:00:00Z"),
+                ],
+                "nextPageToken": "p3",
+            },
+        ),
+        (
+            200,
+            {
+                "objectSightings": [event("assets/A", "2026-01-05T00:00:00Z")],
+                "nextPageToken": "",
+            },
+        ),
+    ]
+    client = _client(
+        {
+            "get_object_metadata": (
+                200,
+                {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}},
+            ),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    client.list_object_sightings = MagicMock(side_effect=pages)
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber", sightings_limit=2).enrich(
+        _observable_with_sha256()
+    )
+    assert client.list_object_sightings.call_count == 3
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    sightings = {
+        s["description"].split("`")[1]: s for s in objects if s["type"] == "sighting"
+    }
+    assert set(sightings) == {"assets/A", "assets/B"}
+    assert sightings["assets/A"]["count"] == 3
+    assert sightings["assets/A"]["last_seen"] == "2026-01-05T00:00:00.000Z"
+    assert any(o.get("abstract") == "Stairwell Sightings Truncation" for o in objects)
+
+
+def test_metadata_hash_backfill_skips_malformed_values():
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "sha1": "z" * 40,
+        "md5": "D" * 32,
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    sco = next(
+        o for o in objects if o["id"] == _observable_with_sha256()["standard_id"]
+    )
+    assert sco["hashes"] == {"SHA-256": SHA256, "MD5": "d" * 32}
