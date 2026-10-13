@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from pycti import OpenCTIConnectorHelper
-
 from connector.import_filter import parse_iso_duration
 from connector.import_runner import ImportRunner
 from connector.settings import ConnectorSettings
 from connector.stairwell import StairwellClient
+from pycti import OpenCTIConnectorHelper
 
 
 class StairwellImportConnector:
@@ -48,6 +47,7 @@ class StairwellImportConnector:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
+        in_error = False
         try:
             message = self.runner.run(work_id=work_id)
         except Exception as err:  # noqa: BLE001
@@ -56,7 +56,8 @@ class StairwellImportConnector:
                 {"error": str(err)},
             )
             message = f"Run failed: {err}"
-        self.helper.api.work.to_processed(work_id, message)
+            in_error = True
+        self.helper.api.work.to_processed(work_id, message, in_error=in_error)
         self.helper.connector_logger.info(
             "[CONNECTOR] Stairwell import run finished", {"message": message}
         )

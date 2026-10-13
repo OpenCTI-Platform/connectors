@@ -1,8 +1,9 @@
 # OpenCTI Stairwell Connector (External Import)
 
-External-import connector that periodically pulls high-confidence Stairwell
-indicators (hashes, domains, IPs, URLs) and ingests them into OpenCTI as
-Indicators with related observables, wrapped in a Grouping or Report.
+External-import connector that periodically pulls MalEval-malicious files
+from Stairwell and ingests them into OpenCTI as file hash Indicators. The
+IPs, domains, and URLs Stairwell extracted from each file come in as related
+observables, not Indicators. Everything is wrapped in a Grouping or Report.
 
 ## Requirements
 
@@ -43,7 +44,7 @@ Environment variables override the file.
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
 | Import TLP | `stairwell.import_tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `green`, `amber`, `amber+strict`, `red` |
 | First-run window | `stairwell.import_first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run |
-| Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Cap per run |
+| Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
 | Page size | `stairwell.import_page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
 | Indicator validity | `stairwell.import_indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
 | Min bucket | `stairwell.import_min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` |
@@ -60,6 +61,24 @@ Environment variables override the file.
   to Stairwell server-side. The minimum-bucket threshold is applied client-side
   after each page is fetched, because the API rejects `in`-operator bucket
   queries (returns HTTP 500).
+- **Lossless watermark.** State holds the committed watermark (`last_run`) and,
+  while a window is being drained, a `pending` cursor (window cutoff, window
+  end, next page token). A run that hits the cap saves the cursor and the next
+  run resumes from it; the watermark advances only after the window's last
+  page is sent. A failed page fetch or bundle send fails the run (shown as an
+  error in the work log) and commits no state, so the next run retries the
+  same window. If Stairwell rejects a saved page token (4xx other than 429),
+  the cursor restarts the window from its first page. Re-sent objects are
+  deduplicated by their deterministic STIX ids.
+- **Network values are observables, not Indicators.** Each IP, domain, and
+  URL Stairwell extracted from a file becomes an observable linked to that
+  file by a `related-to` relationship, with a link to the Stairwell search.
+  Values extracted from malware include benign infrastructure (OS update
+  hosts, public DNS resolvers, XML namespaces), so promoting them to
+  Indicators would put them on blocklists fed from OpenCTI.
+- **Malformed hashes are skipped.** An object whose SHA-256 is not 64 hex
+  characters is not imported, since an invalid Indicator pattern would make
+  OpenCTI reject the whole run's bundle.
 - **Per-run wrapper.** All ingested objects are grouped under a single
   Grouping (default) or Report SDO so reviewers can see exactly what landed in
   one batch.

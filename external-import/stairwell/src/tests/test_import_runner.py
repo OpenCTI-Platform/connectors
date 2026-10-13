@@ -2,8 +2,11 @@ import json
 from datetime import timedelta
 from unittest.mock import MagicMock
 
-from connector.import_runner import ImportRunner
+import pytest
+from connector.import_runner import ImportRunner, StairwellImportError
 from connector.stairwell import StairwellClient
+from stix2patterns.v21.pattern import Pattern
+from stix2patterns.validator import run_validator
 
 
 def _client(pages):
@@ -85,15 +88,17 @@ def test_happy_path_emits_grouping_with_indicators():
     types = [o["type"] for o in payload["objects"]]
 
     assert "grouping" in types
-    assert types.count("indicator") == 5  # 2 file + 1 ip + 1 domain + 1 url
+    # Only files become Indicators; network values are related observables.
+    assert types.count("indicator") == 2
     assert types.count("file") == 2
     assert types.count("ipv4-addr") == 1
     assert types.count("domain-name") == 1
     assert types.count("url") == 1
-    # based-on relationships: 5 indicators → 5 SCOs
     rels = [o for o in payload["objects"] if o["type"] == "relationship"]
-    assert all(r["relationship_type"] == "based-on" for r in rels)
-    assert len(rels) == 5
+    assert (
+        sorted(r["relationship_type"] for r in rels)
+        == ["based-on"] * 2 + ["related-to"] * 3
+    )
 
     # Wrapper Grouping has all the new objects in its object_refs.
     grouping = next(o for o in payload["objects"] if o["type"] == "grouping")
@@ -132,23 +137,191 @@ def test_indicator_validity_window_set():
     assert indicator["confidence"] == 75  # PROBABILITY_HIGH
 
 
-def test_truncation_emits_truncation_note():
-    objs = [_file_obj(f"{i:064x}") for i in range(5)]
-    pages = [(200, {"objectMetadatas": objs, "nextPageToken": ""})]
-    client = _client(pages)
+def _stateful_helper(initial=None):
     helper = _helper()
-    runner = _runner(helper, client, max_indicators=2)
+    store = {"state": initial}
+    helper.get_state = MagicMock(side_effect=lambda: store["state"])
+    helper.set_state = MagicMock(side_effect=lambda st: store.update(state=st))
+    return helper, store
+
+
+def _page(prefix, n, next_token):
+    objs = [_file_obj(f"{prefix}{i:063x}") for i in range(n)]
+    return (200, {"objectMetadatas": objs, "nextPageToken": next_token})
+
+
+def _file_indicator_count(helper, call=-1):
+    payload = json.loads(helper.send_stix2_bundle.call_args_list[call][0][0])
+    return len(
+        [
+            o
+            for o in payload["objects"]
+            if o["type"] == "indicator" and o["pattern"].startswith("[file:")
+        ]
+    )
+
+
+def test_truncation_stops_at_page_boundary_and_emits_note():
+    pages = [_page("a", 2, "p2"), _page("b", 2, "p3"), _page("c", 2, "")]
+    client = _client(pages)
+    helper, _ = _stateful_helper()
+    runner = _runner(helper, client, max_indicators=3)
     msg = runner.run()
     assert "truncated=True" in msg
+    # The cap is checked between pages, so page 2 finishes (4 >= 3).
+    assert client.list_objects_metadata.call_count == 2
+    assert _file_indicator_count(helper) == 4
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     notes = [o for o in payload["objects"] if o["type"] == "note"]
     assert any(n["abstract"] == "Stairwell Import Truncation" for n in notes)
-    indicators = [
+
+
+def test_truncated_run_resumes_from_cursor_without_losing_objects():
+    pages = [_page("a", 2, "p2"), _page("b", 2, "p3"), _page("c", 2, "")]
+    client = _client(pages)
+    helper, store = _stateful_helper({"last_run": "2026-05-04T00:00:00.000Z"})
+    runner = _runner(helper, client, max_indicators=2)
+
+    runner.run()
+    # Watermark held; cursor saved for the next page of the same window.
+    assert store["state"]["last_run"] == "2026-05-04T00:00:00.000Z"
+    pending = store["state"]["pending"]
+    assert pending["page_token"] == "p2"
+    assert pending["cutoff"] == "2026-05-04T00:00:00.000Z"
+    window_end = pending["window_end"]
+
+    runner.run()
+    second = client.list_objects_metadata.call_args_list[1].kwargs
+    assert second["page_token"] == "p2"
+    assert "2026-05-04T00:00:00.000Z" in second["cel_filter"]
+    assert store["state"]["pending"]["page_token"] == "p3"
+
+    runner.run()
+    third = client.list_objects_metadata.call_args_list[2].kwargs
+    assert third["page_token"] == "p3"
+    # Window drained: watermark advances to the end of the first run's window.
+    assert "pending" not in store["state"]
+    assert store["state"]["last_run"] == window_end
+
+    assert [_file_indicator_count(helper, i) for i in range(3)] == [2, 2, 2]
+
+
+def test_pagination_failure_does_not_advance_state_or_send():
+    pages = [_page("a", 2, "p2"), (503, None)]
+    client = _client(pages)
+    helper, store = _stateful_helper({"last_run": "2026-05-04T00:00:00.000Z"})
+    runner = _runner(helper, client)
+    with pytest.raises(StairwellImportError):
+        runner.run()
+    helper.send_stix2_bundle.assert_not_called()
+    assert store["state"] == {"last_run": "2026-05-04T00:00:00.000Z"}
+
+
+def test_first_page_failure_does_not_advance_state():
+    client = _client([(500, None)])
+    helper, store = _stateful_helper(None)
+    runner = _runner(helper, client)
+    with pytest.raises(StairwellImportError):
+        runner.run()
+    helper.set_state.assert_not_called()
+
+
+def test_rejected_resume_cursor_restarts_window_from_first_page():
+    state = {
+        "last_run": "2026-05-04T00:00:00.000Z",
+        "pending": {
+            "cutoff": "2026-05-04T00:00:00.000Z",
+            "window_end": "2026-05-05T00:00:00.000Z",
+            "page_token": "expired",
+        },
+    }
+    client = _client([(400, None), _page("a", 1, "")])
+    helper, store = _stateful_helper(state)
+    runner = _runner(helper, client)
+    with pytest.raises(StairwellImportError):
+        runner.run()
+    assert store["state"]["pending"]["page_token"] is None
+    assert store["state"]["pending"]["cutoff"] == "2026-05-04T00:00:00.000Z"
+
+    runner.run()
+    retry = client.list_objects_metadata.call_args_list[1].kwargs
+    assert retry["page_token"] is None
+    assert "2026-05-04T00:00:00.000Z" in retry["cel_filter"]
+    assert store["state"] == {"last_run": "2026-05-05T00:00:00.000Z"}
+
+
+def test_transient_failure_on_resume_keeps_cursor():
+    state = {
+        "last_run": "2026-05-04T00:00:00.000Z",
+        "pending": {
+            "cutoff": "2026-05-04T00:00:00.000Z",
+            "window_end": "2026-05-05T00:00:00.000Z",
+            "page_token": "p2",
+        },
+    }
+    client = _client([(503, None)])
+    helper, store = _stateful_helper(state)
+    runner = _runner(helper, client)
+    with pytest.raises(StairwellImportError):
+        runner.run()
+    assert store["state"] == state
+
+
+def test_network_values_are_related_observables_not_indicators():
+    url = "http://c2.example.com/a'b?q=1&r=2"
+    obj = _file_obj("f" * 64)
+    obj["networkIndicators"] = {
+        "ipAddresses": ["1.2.3.4", "2001:db8::1"],
+        "hostnames": ["C2.Example.com"],
+        "urls": [url],
+    }
+    client = _client([(200, {"objectMetadatas": [obj], "nextPageToken": ""})])
+    helper = _helper()
+    msg = _runner(helper, client).run()
+    assert "1 indicators emitted" in msg
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    by_id = {o["id"]: o for o in payload["objects"]}
+
+    indicators = [o for o in payload["objects"] if o["type"] == "indicator"]
+    assert [i["pattern"] for i in indicators] == [
+        f"[file:hashes.'SHA-256' = '{'f' * 64}']"
+    ]
+
+    file_id = next(o["id"] for o in payload["objects"] if o["type"] == "file")
+    related = {
+        by_id[r["target_ref"]]["value"]: by_id[r["target_ref"]]
+        for r in payload["objects"]
+        if r["type"] == "relationship"
+        and r["relationship_type"] == "related-to"
+        and r["source_ref"] == file_id
+    }
+    assert set(related) == {"1.2.3.4", "2001:db8::1", "c2.example.com", url}
+    assert related["2001:db8::1"]["type"] == "ipv6-addr"
+    refs = related[url]["external_references"]
+    assert refs[0]["url"] == (
+        "https://app.stairwell.com/search?search-query="
+        "http%3A%2F%2Fc2.example.com%2Fa%27b%3Fq%3D1%26r%3D2"
+    )
+    # Every observable sits in the run's Grouping.
+    grouping = next(o for o in payload["objects"] if o["type"] == "grouping")
+    assert {o["id"] for o in related.values()} <= set(grouping["object_refs"])
+
+
+def test_network_value_shared_by_two_files_is_one_observable_two_links():
+    a, b = _file_obj("a" * 64), _file_obj("b" * 64)
+    for obj in (a, b):
+        obj["networkIndicators"] = {"hostnames": ["c2.example.com"]}
+    client = _client([(200, {"objectMetadatas": [a, b], "nextPageToken": ""})])
+    helper = _helper()
+    _runner(helper, client).run()
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    assert [o["type"] for o in payload["objects"]].count("domain-name") == 1
+    links = [
         o
         for o in payload["objects"]
-        if o["type"] == "indicator" and o["pattern"].startswith("[file:")
+        if o["type"] == "relationship" and o["relationship_type"] == "related-to"
     ]
-    assert len(indicators) == 2  # cap respected
+    assert len({r["source_ref"] for r in links}) == 2
 
 
 def test_state_persisted_after_run():
@@ -219,3 +392,35 @@ def test_empty_result_does_not_emit_bundle():
     assert "No indicators emitted" in msg
     helper.send_stix2_bundle.assert_not_called()
     helper.set_state.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "bad_hash",
+    [
+        "a" * 60 + "'] OR [ipv4-addr:value = '10.0.0.1",
+        "a" * 63,
+        "g" * 64,
+        "",
+    ],
+)
+def test_object_with_invalid_sha256_is_skipped_not_sent(bad_hash):
+    good = "B" * 64
+    client = _client(
+        [
+            (
+                200,
+                {
+                    "objectMetadatas": [_file_obj(bad_hash), _file_obj(good)],
+                    "nextPageToken": "",
+                },
+            )
+        ]
+    )
+    helper = _helper()
+    msg = _runner(helper, client).run()
+    assert "1 indicators emitted" in msg
+    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
+    patterns = [o["pattern"] for o in payload["objects"] if o["type"] == "indicator"]
+    assert patterns == [f"[file:hashes.'SHA-256' = '{good.lower()}']"]
+    assert run_validator(patterns[0]) == []
+    assert list(Pattern(patterns[0]).inspect().comparisons) == ["file"]
