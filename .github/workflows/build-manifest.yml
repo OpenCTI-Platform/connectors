@@ -169,4 +169,5 @@ jobs:
       - name: Warn if manifest commit failed
         if: steps.target.outputs.branch != '' && steps.freshness.outputs.still_head == 'true' && steps.commit.outcome == 'failure'
         run: |
-          echo "::warning::Failed to commit the updated manifest/schemas back to '${{ steps.target.outputs.branch }}' (likely blocked by branch protection rules). This does not fail the build — investigate/commit manually if needed."
+          echo "::error::Failed to commit the updated manifest/schemas back to '${{ steps.target.outputs.branch }}' (likely blocked by branch protection rules). This does not fail the build — investigate/commit manually if needed."
+          exit 1
