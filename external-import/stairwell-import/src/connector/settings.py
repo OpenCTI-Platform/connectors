@@ -8,15 +8,14 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     """`EXTERNAL_IMPORT` connector config with Stairwell defaults.
 
-    `duration_period` is the scheduling interval (ISO-8601). It replaces the
-    previous `STAIRWELL_IMPORT_INTERVAL` env var — scheduling is now owned by
-    the OpenCTI connector helper (`schedule_process`).
+    `duration_period` is the scheduling interval (ISO-8601); the SDK's
+    `ExternalImportConnector` runs the import on it.
     """
 
     name: str = Field(
@@ -32,7 +31,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 class StairwellConfig(BaseConfigModel):
     """Stairwell-specific configuration (env prefix `STAIRWELL_`)."""
 
-    api_token: str = Field(description="Stairwell API token (Bearer auth).")
+    api_token: SecretStr = Field(description="Stairwell API token (Bearer auth).")
     api_base_url: HttpUrl = Field(
         description="Stairwell API base URL.",
         default="https://app.stairwell.com",
@@ -78,7 +77,7 @@ class StairwellConfig(BaseConfigModel):
         ),
         default="environment",
     )
-    import_wrapper: str = Field(
+    import_wrapper: Literal["grouping", "report"] = Field(
         description="Per-run wrapper SDO: 'grouping' or 'report'.",
         default="grouping",
     )

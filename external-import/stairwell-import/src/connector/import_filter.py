@@ -55,23 +55,15 @@ def normalize_min_bucket(value: str | None) -> list[str]:
     return list(_BUCKET_ORDER[idx:])
 
 
-def build_cel_filter(
-    cutoff: datetime | None,
-    min_bucket: str | None = None,
-    scope_environment: bool = False,
-) -> str:
+def build_cel_filter(cutoff: datetime | None) -> str:
     """Build the Stairwell ListObjectMetadata CEL filter.
 
-    Notes on what we DON'T put server-side:
-    - `mal_eval.probability_bucket` isn't queryable via the `in` operator — the
-      API returns 500 "Unable to query objects". Bucket filtering is done
-      client-side in the runner after the page is fetched.
-    - `is_seen_in_environment` (or any per-environment field) isn't a known
-      CEL identifier. Environment scoping is parked until we know the right
-      field; the parameter is retained for forward-compat.
-
-    The CEL we send mirrors the production Deloitte mal_ioc script exactly —
-    it's the only shape we have evidence works against the live API.
+    Only the malicious flag and the time cutoff go server-side:
+    - `mal_eval.probability_bucket` isn't queryable with the `in` operator (the
+      API returns 500 "Unable to query objects"), so the minimum-bucket filter
+      runs client-side after each page is fetched.
+    - There is no known per-environment CEL field, so `import_scope` is
+      accepted in settings but not applied.
     """
     clauses: list[str] = ["mal_eval.malicious==true"]
     if cutoff:
@@ -80,25 +72,18 @@ def build_cel_filter(
     return " && ".join(clauses)
 
 
-def compute_cutoff(
-    state: dict[str, object] | None,
+def window_start(
+    watermark: datetime | None,
     first_run_window: timedelta,
-    now: datetime | None = None,
+    now: datetime,
 ) -> datetime:
-    """Pick the cutoff datetime for this run.
+    """Lower bound of a new import window.
 
-    If state has a previous `last_run` ISO timestamp, use that. Otherwise fall
-    back to `now - first_run_window` so the first run isn't unbounded.
+    The committed watermark when there is one; otherwise `now -
+    first_run_window`, so the first run is not unbounded.
     """
-    current = now or datetime.now(tz=timezone.utc)
-    if isinstance(state, dict):
-        last = state.get("last_run")
-        if isinstance(last, str) and last:
-            try:
-                parsed = datetime.fromisoformat(last.replace("Z", "+00:00"))
-                if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
-                return parsed
-            except ValueError:
-                pass
-    return current - first_run_window
+    if watermark is not None:
+        if watermark.tzinfo is None:
+            watermark = watermark.replace(tzinfo=timezone.utc)
+        return watermark
+    return now - first_run_window

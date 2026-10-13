@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-stairwell-import
 
 # Launch the connector
-python3 main.py
+exec python3 main.py

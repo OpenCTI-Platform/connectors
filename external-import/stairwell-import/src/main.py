@@ -1,16 +1,18 @@
 import traceback
 
-from connector.connector import StairwellImportConnector
-from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from connector import ConnectorSettings, ConnectorState
+from connector.data_processors import MalEvalFilesProcessor
+from connectors_sdk import ExternalImportConnector
 
 if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
-        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-
-        connector = StairwellImportConnector(config=settings, helper=helper)
-        connector.run()
+        connector = ExternalImportConnector(
+            settings=settings,
+            state=ConnectorState(),
+            data_processors=[MalEvalFilesProcessor()],
+        )
+        connector.start()
     except Exception:
         traceback.print_exc()
         exit(1)

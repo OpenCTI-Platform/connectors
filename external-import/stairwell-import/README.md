@@ -42,7 +42,7 @@ Environment variables override the file.
 | API base URL | `stairwell.api_base_url` | `STAIRWELL_API_BASE_URL` | no | `https://app.stairwell.com` | Override for staging |
 | Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
-| Import TLP | `stairwell.import_tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `green`, `amber`, `amber+strict`, `red` |
+| Import TLP | `stairwell.import_tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 | First-run window | `stairwell.import_first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run |
 | Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
 | Page size | `stairwell.import_page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
@@ -53,35 +53,42 @@ Environment variables override the file.
 
 ## Behavior
 
-- **Periodic poll.** Scheduling is owned by the OpenCTI connector helper
-  (`schedule_process`) on the `CONNECTOR_DURATION_PERIOD` interval; each run
-  opens a work item so it appears in the OpenCTI work log. The first-run
-  backfill window prevents re-importing the full history.
+- **Periodic poll.** Built on `connectors_sdk.ExternalImportConnector` with
+  one data processor (`MalEvalFilesProcessor`): the SDK runs it every
+  `CONNECTOR_DURATION_PERIOD`, opens a work item per run, sends the bundle,
+  and saves state only after a successful run. The first-run backfill window
+  prevents re-importing the full history.
 - **Filtering.** A CEL expression pushes the malicious flag and the time cutoff
   to Stairwell server-side. The minimum-bucket threshold is applied client-side
   after each page is fetched, because the API rejects `in`-operator bucket
   queries (returns HTTP 500).
-- **Lossless watermark.** State holds the committed watermark (`last_run`) and,
-  while a window is being drained, a `pending` cursor (window cutoff, window
-  end, next page token). A run that hits the cap saves the cursor and the next
-  run resumes from it; the watermark advances only after the window's last
-  page is sent. A failed page fetch or bundle send fails the run (shown as an
-  error in the work log) and commits no state, so the next run retries the
-  same window. If Stairwell rejects a saved page token (4xx other than 429),
-  the cursor restarts the window from its first page. Re-sent objects are
-  deduplicated by their deterministic STIX ids.
+- **Lossless watermark.** State (`ConnectorState`) holds the committed
+  `watermark` and, while a window is being drained, a pending cursor
+  (`pending_cutoff`, `pending_window_end`, `pending_page_token`). A run that
+  hits the cap saves the cursor and the next run resumes from it; the
+  watermark advances only after the window's last page is sent. A failed page
+  fetch or bundle send fails the run and no state is saved, so the next run
+  retries the same window. If Stairwell rejects a saved page token (4xx other
+  than 429), the run restarts the window from its first page. Re-sent objects
+  are deduplicated by their deterministic STIX ids.
+  State saved by versions of this connector that predate the SDK (`last_run`
+  plus a nested `pending` cursor) is adopted on the first run, so an
+  in-progress backlog resumes instead of restarting.
 - **Network values are observables, not Indicators.** Each IP, domain, and
   URL Stairwell extracted from a file becomes an observable linked to that
   file by a `related-to` relationship, with a link to the Stairwell search.
   Values extracted from malware include benign infrastructure (OS update
   hosts, public DNS resolvers, XML namespaces), so promoting them to
   Indicators would put them on blocklists fed from OpenCTI.
-- **Malformed hashes are skipped.** An object whose SHA-256 is not 64 hex
-  characters is not imported, since an invalid Indicator pattern would make
-  OpenCTI reject the whole run's bundle.
-- **Per-run wrapper.** All ingested objects are grouped under a single
-  Grouping (default) or Report SDO so reviewers can see exactly what landed in
-  one batch.
+- **Input validation.** An object whose SHA-256 is not 64 hex characters is
+  skipped (logged), since an invalid Indicator pattern would make OpenCTI
+  reject the whole run's bundle; malformed SHA-1/MD5 values are left off the
+  file, extracted IPs that are not valid addresses are dropped, and source
+  timestamps are normalised to UTC. Objects without a MalEval bucket at or
+  above `import_min_bucket` are filtered.
+- **Per-run wrapper.** Each run's objects are grouped under their own
+  Grouping (default) or Report SDO, so reviewers can see exactly what landed
+  in one batch; `import_wrapper` accepts only `grouping` or `report`.
 - **Indicator validity.** Each Indicator's `valid_from` is derived from the
   Stairwell first-seen time (falling back to the run start time), and
   `valid_until` = `valid_from + import_indicator_validity_days`.
@@ -108,7 +115,7 @@ python3 main.py
 ## Tests
 
 ```bash
-cd src
-pip install -r requirements.txt -r tests/test-requirements.txt
-PYTHONPATH=. pytest tests/
+# From the connector directory:
+pip install -r tests/test-requirements.txt
+pytest tests/
 ```

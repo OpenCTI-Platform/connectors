@@ -2,5 +2,5 @@
 **/*.pyc
 **/.pytest_cache
 **/.venv
-src/tests
+tests
 src/config.yml

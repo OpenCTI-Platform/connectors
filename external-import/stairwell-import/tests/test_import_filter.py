@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from connector.import_filter import (
     build_cel_filter,
-    compute_cutoff,
     normalize_min_bucket,
     parse_iso_duration,
+    window_start,
 )
 
 
@@ -65,39 +66,28 @@ def test_build_cel_filter_basic_shape():
     assert 'object.global_first_seen_time >= "2026-05-01T12:00:00.000Z"' in f
 
 
-def test_build_cel_filter_no_bucket_clause_ever():
-    # Server-side `probability_bucket in [...]` returns 500; bucket filtering
-    # is done client-side in the runner. CEL must never include it.
-    for arg in (None, "LOW", "MEDIUM", "HIGH", "VERY_HIGH"):
-        assert "probability_bucket" not in build_cel_filter(cutoff=None, min_bucket=arg)
+def test_build_cel_filter_is_only_the_malicious_flag_and_time_cutoff():
+    # Bucket filtering is client-side (server-side `probability_bucket in
+    # [...]` returns 500) and there is no per-environment CEL field yet, so
+    # the filter takes only the cutoff.
+    assert build_cel_filter(cutoff=None) == "mal_eval.malicious==true"
+    with pytest.raises(TypeError):
+        build_cel_filter(cutoff=None, min_bucket="HIGH")
 
 
-def test_build_cel_filter_environment_scope_currently_no_op():
-    f = build_cel_filter(cutoff=None, scope_environment=True)
-    assert "is_seen_in_environment" not in f
-
-
-def test_compute_cutoff_uses_state_when_present():
-    state = {"last_run": "2026-05-05T00:00:00.000Z"}
-    cutoff = compute_cutoff(
-        state,
-        first_run_window=timedelta(days=1),
-        now=datetime(2026, 5, 6, tzinfo=timezone.utc),
-    )
-    assert cutoff == datetime(2026, 5, 5, tzinfo=timezone.utc)
-
-
-def test_compute_cutoff_falls_back_to_now_minus_window():
+def test_window_start_uses_the_watermark():
+    watermark = datetime(2026, 5, 5, tzinfo=timezone.utc)
     now = datetime(2026, 5, 6, tzinfo=timezone.utc)
-    cutoff = compute_cutoff(state=None, first_run_window=timedelta(days=2), now=now)
-    assert cutoff == now - timedelta(days=2)
+    assert window_start(watermark, timedelta(days=1), now) == watermark
 
 
-def test_compute_cutoff_handles_malformed_state():
-    cutoff = compute_cutoff(
-        state={"last_run": "not-a-timestamp"},
-        first_run_window=timedelta(hours=6),
-        now=datetime(2026, 5, 6, tzinfo=timezone.utc),
+def test_window_start_treats_a_naive_watermark_as_utc():
+    now = datetime(2026, 5, 6, tzinfo=timezone.utc)
+    assert window_start(datetime(2026, 5, 5), timedelta(days=1), now) == datetime(
+        2026, 5, 5, tzinfo=timezone.utc
     )
-    # Malformed → fall back to window
-    assert cutoff == datetime(2026, 5, 6, tzinfo=timezone.utc) - timedelta(hours=6)
+
+
+def test_window_start_falls_back_to_now_minus_window():
+    now = datetime(2026, 5, 6, tzinfo=timezone.utc)
+    assert window_start(None, timedelta(days=2), now) == now - timedelta(days=2)
