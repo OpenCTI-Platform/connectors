@@ -62,13 +62,13 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT                   | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                  |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                                 | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
 | Auto Mode       | auto       | `CONNECTOR_AUTO`            | false                                 | No        | Enables or disables automatic enrichment of vulnerabilities.                |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | TLP:AMBER                             | No        | Maximum TLP level for vulnerabilities to be enriched. Replaces the deprecated `FIRST_EPSS_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
 | Parameter     | config.yml              | Docker environment variable  | Default                              | Mandatory | Description                                         |
 |---------------|-------------------------|------------------------------|--------------------------------------|-----------|-----------------------------------------------------|
 | API Base URL  | first_epss.api_base_url | `FIRST_EPSS_API_BASE_URL`    | https://api.first.org/data/v1/epss  | No        | FIRST EPSS API endpoint URL.                        |
-| Max TLP       | first_epss.max_tlp      | `FIRST_EPSS_MAX_TLP`         | TLP:AMBER                           | No        | Maximum TLP level for vulnerabilities to be enriched.|
 
 ## Deployment
 
@@ -93,8 +93,8 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=vulnerability
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=false
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - FIRST_EPSS_API_BASE_URL=https://api.first.org/data/v1/epss
-      - FIRST_EPSS_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -168,7 +168,7 @@ graph LR
 
 1. **Scope Validation**: Verifies entity type is `vulnerability`
 2. **CVE Format Check**: Validates CVE identifier format (CVE-YYYY-NNNNN)
-3. **TLP Validation**: Checks TLP against max_tlp configuration
+3. **TLP Validation**: Checks TLP against the `CONNECTOR_MAX_TLP` configuration
 4. **API Query**: Queries FIRST EPSS API with CVE identifier
 5. **Score Update**: Updates vulnerability with EPSS score and percentile
 

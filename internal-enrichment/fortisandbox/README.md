@@ -80,6 +80,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope | scope          | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
 | Log Level       | log_level      | `CONNECTOR_LOG_LEVEL`       | error           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 | Connector Auto  | auto           | `CONNECTOR_AUTO`            | false           | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Max TLP         | max_tlp        | `CONNECTOR_MAX_TLP`         | TLP:AMBER       | No        | Maximum TLP of the observable the connector is allowed to enrich. Replaces the deprecated `FORTISANDBOX_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
@@ -95,7 +96,6 @@ Below are the parameters you'll need to set for the connector:
 | Submit unknown | submit_unknown | `FORTISANDBOX_SUBMIT_UNKNOWN`   | `true`    | No        | Submit unknown files (carried by the observable) for on-demand analysis.             |
 | Max file size  | max_file_size  | `FORTISANDBOX_MAX_FILE_SIZE`    | `33554432` | No       | Max size (bytes) of a file the connector downloads from OpenCTI and submits (32 MiB).|
 | Submission timeout | submission_timeout | `FORTISANDBOX_SUBMISSION_TIMEOUT` | `600` | No   | Max time (seconds) to wait for a submitted file's verdict.                           |
-| Max TLP        | max_tlp        | `FORTISANDBOX_MAX_TLP`          | `TLP:AMBER` | No      | Maximum TLP of the observable the connector is allowed to enrich.                    |
 
 ## Deployment
 

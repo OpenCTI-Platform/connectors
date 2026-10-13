@@ -93,6 +93,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                   |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error               | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
 | Auto Mode       | auto       | `CONNECTOR_AUTO`            | false               | No        | Enables or disables automatic enrichment of vulnerabilities.                 |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | TLP:AMBER           | No        | Maximum TLP level the connector is allowed to enrich (`TLP:CLEAR` … `TLP:RED`). Replaces the deprecated `VULNERS_MAX_TLP_LEVEL`. |
 
 ### Connector extra parameters environment variables
 
@@ -100,7 +101,6 @@ There are a number of configuration options, which are set either in `docker-com
 |---------------|-----------------------|-----------------------------|---------------------|-----------|---------------------------------------------------------------------------------|
 | API Key       | vulners.api_key       | `VULNERS_API_KEY`           | /                   | Yes       | Your Vulners API key (see [Get a Vulners API key](#get-a-vulners-api-key)).      |
 | API Base URL  | vulners.api_base_url  | `VULNERS_API_BASE_URL`      | https://vulners.com | No        | Vulners API base URL.                                                            |
-| Max TLP Level | vulners.max_tlp_level | `VULNERS_MAX_TLP_LEVEL`     | TLP:AMBER           | No        | Maximum TLP level the connector is allowed to enrich (`TLP:CLEAR` … `TLP:RED`).  |
 
 ## Deployment
 
@@ -126,9 +126,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=Vulnerability
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - VULNERS_API_KEY=ChangeMe
       - VULNERS_API_BASE_URL=https://vulners.com
-      - VULNERS_MAX_TLP_LEVEL=TLP:AMBER
     restart: always
 ```
 
@@ -165,7 +165,7 @@ Select a Vulnerability (CVE), then click the enrichment button and choose Vulner
 
 ## Behavior
 
-On each enrichment request the connector checks the entity's TLP against `VULNERS_MAX_TLP_LEVEL`,
+On each enrichment request the connector checks the entity's TLP against `CONNECTOR_MAX_TLP`,
 fetches the ready-made STIX 2.1 bundle for the CVE from the Vulners backend, and relays it to
 OpenCTI. Because the bundle is built server-side, the exact set of generated objects always
 matches the current Vulners platform output for that CVE.
@@ -233,7 +233,7 @@ CONNECTOR_LOG_LEVEL=debug
 
 Log output includes:
 - The CVE being processed and the resolved `work_id`.
-- TLP validation decisions (entities above `VULNERS_MAX_TLP_LEVEL` are skipped).
+- TLP validation decisions (entities above `CONNECTOR_MAX_TLP` are skipped).
 - Bundle retrieval and sending status.
 
 A warning is logged (and the message skipped) when the Vulners backend returns an empty bundle
