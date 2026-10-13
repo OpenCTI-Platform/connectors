@@ -1,11 +1,11 @@
 import base64
 import copy
-import logging
 from datetime import datetime
 
 import magic
 import pycti
 import stix2
+from connectors_sdk import ConnectorLogger
 from shadowserver.utils import (
     calculate_hashes,
     check_ip_address,
@@ -27,7 +27,7 @@ class ShadowserverStixTransformation:
         report: dict,
         incident: dict = {},
         labels: list = ["Shadowserver"],
-        logger: logging.Logger = None,
+        logger: ConnectorLogger | None = None,
     ):
         """
         Initializes a ShadowserverStixTransformation object with the provided parameters.
@@ -37,6 +37,8 @@ class ShadowserverStixTransformation:
             report_list (list): The list of reports for transformation.
             report (dict): The report details for transformation.
             labels (list): The labels associated with the transformation (default is ['Shadowserver']).
+            logger (ConnectorLogger): The processor's logger. It must accept a `meta` dict:
+                a standard library logger does not.
 
         Returns:
             None
@@ -130,7 +132,7 @@ class ShadowserverStixTransformation:
             self.stix_objects.append(stix_object)
             return stix_object.get("id")
         elif stix_object is None and value:
-            self._logger.warning(f"Failed to create {key}", {"value": value})
+            self._logger.warning(f"Failed to create {key}", meta={"value": value})
 
     def validate_inputs(self, marking_refs, report_list, report):
         """
@@ -229,7 +231,7 @@ class ShadowserverStixTransformation:
         else:
             self._logger.warning(
                 "Failed to create OpenCTI case",
-                {"report_id": self.report.get("id", None)},
+                meta={"report_id": self.report.get("id", None)},
             )
 
     def create_description(self):
@@ -273,7 +275,7 @@ class ShadowserverStixTransformation:
         else:
             self._logger.warning(
                 "Failed to upload Shadowserver report as artifact",
-                {"report": self.report},
+                meta={"report": self.report},
             )
 
     def get_custom_properties(self):
@@ -319,7 +321,7 @@ class ShadowserverStixTransformation:
         else:
             self._logger.warning(
                 "Failed to create OpenCTI case",
-                {"report_id": self.report.get("id", None)},
+                meta={"report_id": self.report.get("id", None)},
             )
 
     def create_author(self):
@@ -586,7 +588,7 @@ class ShadowserverStixTransformation:
         else:
             self._logger.warning(
                 "Failed to create network traffic STIX object",
-                {"stix_object_id": stix_object.id},
+                meta={"stix_object_id": stix_object.id},
             )
         return stix_object_id
 
@@ -633,7 +635,7 @@ class ShadowserverStixTransformation:
         else:
             self._logger.warning(
                 "Failed to create X509 certificate STIX object",
-                {"data": data},
+                meta={"data": data},
             )
         return stix_object_id
 
