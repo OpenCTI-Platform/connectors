@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Hatching Triage Sandbox",
@@ -22,6 +24,7 @@
     "CONNECTOR_SCOPE": {
       "default": [
         "Artifact",
+        "StixFile",
         "Url"
       ],
       "description": "The scope of the connector.",

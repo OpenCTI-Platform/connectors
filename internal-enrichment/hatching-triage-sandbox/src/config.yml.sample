@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'Hatching Triage Sandbox'
-  scope: 'Artifact,Url'
+  scope: 'Artifact,StixFile,Url'
   auto: false # Enable/disable auto-enrichment of observables
   log_level: 'info'
 

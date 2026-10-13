@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Lamis Network IP Intelligence'
+  scope: 'IPv4-Addr,IPv6-Addr'
+  auto: false # Enable/disable auto-enrichment of observables (default: false for quota-based APIs)
+  log_level: 'info'
+
+lamis_network:
+  api_key: 'ChangeMe'
+  api_url: 'https://api.lamisnetwork.com'
+  timeout: 10
+  suspicious_threshold: 75
+  create_indicator: true
+  add_relationships: true
+  default_tlp: 'TLP:CLEAR' # Used when observable carries no explicit marking
+  max_tlp: 'TLP:AMBER' # Observables with a higher TLP are skipped

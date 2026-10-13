@@ -6,11 +6,21 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import requests
-import stix2
-from pycti import OpenCTIConnectorHelper
+from connectors_sdk.models.enums import TLPLevel
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 from settings import ConnectorSettings
 
 __version__ = "0.0.1"
+
+# OpenCTI defines a static marking-definition id for each TLP level.
+TLP_MARKING_IDS = {
+    TLPLevel.CLEAR: MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+    TLPLevel.WHITE: MarkingDefinition.generate_id("TLP", "TLP:WHITE"),
+    TLPLevel.GREEN: MarkingDefinition.generate_id("TLP", "TLP:GREEN"),
+    TLPLevel.AMBER: MarkingDefinition.generate_id("TLP", "TLP:AMBER"),
+    TLPLevel.AMBER_STRICT: MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+    TLPLevel.RED: MarkingDefinition.generate_id("TLP", "TLP:RED"),
+}
 BANNER = f"""
 
 ▄▄▄█████▓ █     █░▓█████ ▓█████▄▄▄█████▓  █████▒▓█████ ▓█████ ▓█████▄ 
@@ -103,6 +113,7 @@ class TweetFeed:
         self.update = self.config.tweetfeed.update_existing_data
         self.org_name = self.config.tweetfeed.org_name
         self.org_desc = self.config.tweetfeed.org_description
+        self.tlp_marking_id = TLP_MARKING_IDS[self.config.tweetfeed.tlp_level]
         external_reference_org = self.helper.api.external_reference.create(
             source_name="TWEETFEEED",
             url="https://tweetfeed.live/",
@@ -277,7 +288,7 @@ class TweetFeed:
                 simple_observable_key=f"{type_observable}",
                 simple_observable_value=observable["value"],
                 simple_observable_description="TWEETFEED IOC " + observable["value"],
-                objectMarking=[stix2.TLP_GREEN["id"]],
+                objectMarking=[self.tlp_marking_id],
                 externalReferences=[external_reference["id"]],
                 createdBy=self.organization["id"],
                 update=self.update,
@@ -307,7 +318,7 @@ class TweetFeed:
                     pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
-                    objectMarking=[stix2.TLP_GREEN["id"]],
+                    objectMarking=[self.tlp_marking_id],
                     objectLabel=tags,
                     value=ioc["value"],
                     valid_from=self.data["Date"],
@@ -324,7 +335,7 @@ class TweetFeed:
                     pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
-                    objectMarking=[stix2.TLP_GREEN["id"]],
+                    objectMarking=[self.tlp_marking_id],
                     value=ioc["value"],
                     valid_from=self.data["Date"],
                     createdBy=self.organization["id"],

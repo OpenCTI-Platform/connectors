@@ -11,7 +11,4 @@ RUN cd /opt/opencti-connector-usta && \
 
 WORKDIR /opt/opencti-connector-usta
 
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "main.py"]

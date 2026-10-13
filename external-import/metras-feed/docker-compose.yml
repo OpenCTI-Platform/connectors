@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-metras-feed:
+    image: opencti/connector-metras-feed:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Metras-Feed
+      - CONNECTOR_SCOPE=Metras
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - METRAS_API_BASE_URL=https://api.metras.sa/api
+      - METRAS_API_KEY=ChangeMe
+      - METRAS_VERIFY_SSL=true
+      - METRAS_IMPORT_ALERTS=true
+      - METRAS_IMPORT_BINARIES=true
+      - METRAS_IMPORT_ENDPOINTS=true
+      - METRAS_BINARY_MALICIOUS_ONLY=true
+      - METRAS_PAGE_SIZE=50
+      - METRAS_TLP_LEVEL=amber
+    restart: always

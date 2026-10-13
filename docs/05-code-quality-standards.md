@@ -251,7 +251,6 @@ from connectors_sdk.models import (
     TLPMarking,
     Relationship
 )
-from connectors_sdk.models.octi import related_to
 
 # Create objects
 author = OrganizationAuthor(name="My Source")
@@ -273,7 +272,7 @@ ip = IPV4Address(
 )
 
 # Create relationship
-relationship =  Relationship(
+relationship = Relationship(
             type="based-on",
             source=indicator.id,
             target=ip.id,
@@ -281,7 +280,7 @@ relationship =  Relationship(
             start_time="2026-01-14T00:00:00Z",
             stop_time="2026-01-14T00:00:00Z",
             markings=[tlp],
-        )
+)
 
 # Convert to STIX
 stix_objects = [
@@ -877,7 +876,7 @@ class MyConnector:
 | `title`                | Official connector name                  | Yes      |
 | `slug`                 | Directory name                           | No       |
 | `description`          | Detailed description                     | Yes      |
-| `short_description`    | Brief summary                            | Yes      |
+| `short_description`    | Brief summary (250 characters max)       | Yes      |
 | `logo`                 | Path to logo (or null)                   | No       |
 | `use_cases`            | List of use cases                        | No       |
 | `solution_categories`  | List of solution categories              | No       |

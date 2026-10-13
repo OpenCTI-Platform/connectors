@@ -38,7 +38,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )

@@ -1,0 +1,36 @@
+# Connector Configurations
+
+Below is an exhaustive enumeration of all configurable parameters available, each accompanied by detailed explanations of their purposes, default behaviors, and usage guidelines to help you understand and utilize them effectively.
+
+### Type: `object`
+
+| Property | Type | Required | Possible values | Default | Description |
+| -------- | ---- | -------- | --------------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
+| ZETALYTICS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Zetalytics API token. |
+| CONNECTOR_NAME | `string` |  | string | `"Zetalytics DNS - Analyst Enrichment"` | Display name for this connector in OpenCTI. The configured zetalytics.lookback_days is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'. |
+| CONNECTOR_SCOPE | `array` |  | string | `["Domain-Name", "Hostname", "IPv4-Addr", "IPv6-Addr"]` | Observable types this connector will enrich. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Minimum log level to emit. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
+| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| ZETALYTICS_REQUEST_TIMEOUT | `integer` |  | `5 <= x ` | `30` | HTTP request timeout in seconds for all Zetalytics API calls. |
+| ZETALYTICS_MODE | `string` |  | `light` `playbook` `manual` `deep` | `"manual"` | Enrichment profile controlling which endpoints are called. Endpoint flags below override mode defaults. |
+| ZETALYTICS_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Maximum TLP level of observables this connector will enrich. |
+| ZETALYTICS_MAX_RESULTS | `integer` |  | `1 <= x ` | `300` | Maximum passive DNS records to retrieve per query. |
+| ZETALYTICS_MAX_SUBDOMAINS | `integer` |  | `0 <= x ` | `300` | Maximum subdomains to retrieve. |
+| ZETALYTICS_MAX_WHOIS_RESULTS | `integer` |  | `0 <= x ` | `5` | Maximum historical WHOIS records to retrieve. |
+| ZETALYTICS_MAX_NS_PIVOT_RESULTS | `integer` |  | `0 <= x ` | `100` | Maximum results for nameserver pivot queries. |
+| ZETALYTICS_MAX_MX_PIVOT_RESULTS | `integer` |  | `0 <= x ` | `100` | Maximum results for MX-to-domain pivot queries. |
+| ZETALYTICS_LOOKBACK_DAYS | `integer` |  | `1 <= x ` | `365` | How many days back to query passive DNS records. |
+| ZETALYTICS_TSFIELD | `string` |  | string | `"all"` | Zetalytics timestamp field to filter on (all, last_seen, first_seen). |
+| ZETALYTICS_INCLUDE_LIVE_DNS | `boolean` |  | boolean | `true` | Perform a live DNS lookup in addition to passive DNS. |
+| ZETALYTICS_INCLUDE_SUBDOMAINS | `boolean` |  | boolean | `true` | Retrieve known subdomains for domain enrichment. |
+| ZETALYTICS_INCLUDE_D8S | `boolean` |  | boolean | `true` | Retrieve structured D8S registration context for domains. |
+| ZETALYTICS_INCLUDE_HISTORICAL_WHOIS | `boolean` |  | boolean | `false` | Retrieve historical raw WHOIS data (disabled by default due to volume). |
+| ZETALYTICS_INCLUDE_NS_GLUE | `boolean` |  | boolean | `true` | Retrieve nameserver glue records. |
+| ZETALYTICS_INCLUDE_NS2DOMAIN | `boolean` |  | boolean | `false` | Pivot from nameserver to hosted domains (deep mode only). |
+| ZETALYTICS_INCLUDE_MX2DOMAIN | `boolean` |  | boolean | `false` | Pivot from MX domain to hosted domains (deep mode only). |
+| ZETALYTICS_CONFIDENCE | `integer` |  | `0 <= x <= 100` | `60` | Confidence score applied to created STIX objects. |
+| ZETALYTICS_MARKING_DEFINITION | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | TLP marking definition to apply to created objects. |
+| ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS | `boolean` |  | boolean | `false` | Create an OpenCTI note on the observable when no results are found. |

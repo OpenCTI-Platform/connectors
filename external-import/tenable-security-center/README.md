@@ -34,62 +34,10 @@ into OpenCTI for further analysis and correlation with other threat intelligence
 
 ## Configuration variables
 
-The connector should be configured via environment variables.
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-For instance using `shell`
-
-directly
-```shell
-export ENV_VAR_NAME="..."
-```
-
-with a .env file
-```shell
-export $(grep -v '^#' .env | xargs -d '\n')
-```
-
-or `docker-compose.yml` in the container `environment` section.
-
-with a config.yaml file (dev purposes):
-
-config.yaml should be composed of 2 levels keys/value such as
-```yaml
-connector: 
-  id: "..."
-```
-you can then alter the `app.py` file to load the config.yaml using the dedicated adapterr:
-
-```python 
-from tenable_security_center.adapters.config import ConfigLoaderYaml
-
-config = ConfigLoaderYaml("path/to/config.yaml")
-```
-
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | Docker environment variable | Mandatory | Description                                          |
-|---------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-| Parameter       | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name  | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `CONNECTOR_LOG_LEVEL`       | warn            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | PT12H | Yes | The interval at which the connector runs, in ISO8601 format. Example: PT30M for 30 minutes. |
-| Queue Threshold | `CONNECTOR_QUEUE_THRESHOLD` | 500 | No | The maximum size of the queue in MBytes. Default is 500MBytes. |
-| Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | False | No | If set to True, the connector will run once and then terminate. Default is False. |
-| Send to Queue | `CONNECTOR_SEND_TO_QUEUE` | True | No | If set to True, the connector will send data to the queue. Default is True. |
-| Send to Directory | `CONNECTOR_SEND_TO_DIRECTORY` | False | No | If set to True, the connector will send data to a directory. Default is False. |
-| Directory Path | `CONNECTOR_SEND_TO_DIRECTORY_PATH` | CHANGEME | No | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is True. |
-| Directory Retention | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | 7 | No | The number of days to retain data in the directory. Default is 7 days. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ### Connector extra parameters environment variables
 

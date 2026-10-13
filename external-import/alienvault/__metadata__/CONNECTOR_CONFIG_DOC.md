@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | ALIENVAULT_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The OTX Key. |
 | CONNECTOR_NAME | `string` |  | string |  | `"AlienVault"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string |  | `["alienvault"]` | The scope of the connector. |
@@ -18,7 +18,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ALIENVAULT_TLP | `string` |  | string |  | `"White"` | The default TLP marking used if the Pulse does not define TLP. |
 | ALIENVAULT_CREATE_OBSERVABLES | `boolean` |  | boolean |  | `true` | If true then observables will be created from Pulse indicators and added to the report. |
 | ALIENVAULT_CREATE_INDICATORS | `boolean` |  | boolean |  | `true` | If true then indicators will be created from Pulse indicators and added to the report. |
-| ALIENVAULT_PULSE_START_TIMESTAMP | `string` |  | string |  | `"2020-05-01T00:00:00"` | The Pulses modified after this timestamp will be imported. Timestamp in ISO 8601 format, UTC. |
+| ALIENVAULT_PULSE_START_TIMESTAMP | `string` |  | string |  | `"2020-05-01T00:00:00Z"` | The Pulses modified after this timestamp will be imported. Timestamp in ISO 8601 format, UTC. |
 | ALIENVAULT_REPORT_TYPE | `string` |  | string |  | `"threat-report"` | The type of imported reports in the OpenCTI. |
 | ALIENVAULT_REPORT_STATUS | `string` |  | string |  | `"New"` | The status of imported reports in the OpenCTI. |
 | ALIENVAULT_GUESS_MALWARE | `boolean` |  | boolean |  | `false` | The Pulse tags are used to guess (queries malwares in the OpenCTI) malwares related to the given Pulse. |

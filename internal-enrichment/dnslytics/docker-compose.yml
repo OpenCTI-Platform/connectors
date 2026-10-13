@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-dnslytics:
+    image: opencti/connector-dnslytics:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=DNSlytics # optional (default: 'DNSlytics')
+      - CONNECTOR_SCOPE=Indicator # optional (default: 'Indicator')
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false). Keep false: each run costs 10 credits
+      # Custom parameters for connector-dnslytics
+      - DNSLYTICS_API_KEY=CHANGEME
+      - DNSLYTICS_RESOLVE_HOSTING=true # optional (default: true)
+      - DNSLYTICS_MAX_TLP_LEVEL=green # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
+      - DNSLYTICS_OUTPUT_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+    restart: always

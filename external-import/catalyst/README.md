@@ -58,13 +58,13 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Name    | name              | `CONNECTOR_NAME`              | CATALYST        | No        | Name of the connector.                                                      |
 | Connector Scope   | scope             | `CONNECTOR_SCOPE`             | catalyst        | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level         | `CONNECTOR_LOG_LEVEL`         | info            | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period   | `CONNECTOR_DURATION_PERIOD`   | PT60M           | Yes       | Time interval between connector runs in ISO 8601 format.                    |
+| Duration Period   | duration_period   | `CONNECTOR_DURATION_PERIOD`   | PT60M           | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
 | Parameter           | config.yml              | Docker environment variable     | Default                               | Mandatory | Description                                                                 |
 |---------------------|-------------------------|---------------------------------|---------------------------------------|-----------|-----------------------------------------------------------------------------|
-| Base URL            | catalyst.base_url       | `CATALYST_BASE_URL`             | https://prod.blindspot.prodaft.com/api | Yes      | The base URL for the CATALYST API.                                          |
+| Base URL            | catalyst.base_url       | `CATALYST_BASE_URL`             | https://prod.blindspot.prodaft.com/api | No       | The base URL for the CATALYST API.                                          |
 | API Key             | catalyst.api_key        | `CATALYST_API_KEY`              |                                       | No        | Your CATALYST API key. If not provided, public endpoint will be used.       |
 | TLP Level           | catalyst.tlp_level      | `CATALYST_TLP_LEVEL`            | white                                 | No        | Default TLP marking for imported data.                                      |
 | TLP Filter          | catalyst.tlp_filter     | `CATALYST_TLP_FILTER`           | ALL                                   | No        | Filter by TLP: `CLEAR`, `GREEN`, `AMBER`, `RED`, or `ALL`.                  |
@@ -92,17 +92,18 @@ Configure the connector in `docker-compose.yml`:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=CATALYST
-      - CONNECTOR_SCOPE=catalyst
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT60M
-      - CATALYST_BASE_URL=https://prod.blindspot.prodaft.com/api
-      - CATALYST_API_KEY=ChangeMe
-      - CATALYST_TLP_FILTER=ALL
-      - CATALYST_CATEGORY_FILTER=ALL
-      - CATALYST_SYNC_DAYS_BACK=730
-      - CATALYST_CREATE_OBSERVABLES=true
-      - CATALYST_CREATE_INDICATORS=false
+      # - CONNECTOR_NAME=CATALYST
+      # - CONNECTOR_SCOPE=catalyst
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT60M
+      # - CATALYST_BASE_URL=https://prod.blindspot.prodaft.com/api
+      # - CATALYST_API_KEY=ChangeMe
+      # - CATALYST_TLP_LEVEL=white
+      # - CATALYST_TLP_FILTER=ALL
+      # - CATALYST_CATEGORY_FILTER=ALL
+      # - CATALYST_SYNC_DAYS_BACK=730
+      # - CATALYST_CREATE_OBSERVABLES=true
+      # - CATALYST_CREATE_INDICATORS=false
     restart: always
 ```
 

@@ -46,7 +46,9 @@ class TestCatalystConnector:
         self.mock_config_class.assert_called_once()
 
         # Check that OpenCTIConnectorHelper was created with the correct config
-        self.mock_helper_class.assert_called_once_with(self.mock_config.load)
+        self.mock_helper_class.assert_called_once_with(
+            config=self.mock_config.to_helper_config.return_value
+        )
 
         # Check that ConnectorClient was created with the correct parameters
         self.mock_client_class.assert_called_once_with(

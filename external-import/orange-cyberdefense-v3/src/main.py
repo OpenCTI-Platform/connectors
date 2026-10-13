@@ -7,13 +7,13 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import Iterable
 
-import html2text
 import requests
 import stix2
 import utils
 import yaml
 from datalake import Datalake, Output
 from dateutil.parser import parse
+from markdownify import markdownify
 from pycti import (
     Note,
     OpenCTIConnectorHelper,
@@ -1031,18 +1031,9 @@ class OrangeCyberdefense:
         self.helper.log_info(f"{prefix} Processing the report description...")
         html_content = self.get_html_content_block(report["id"]) or ""
         # Convert HTML to Markdown
-        text_maker = html2text.HTML2Text()
-        text_maker.body_width = 0
-        text_maker.ignore_links = False
-        text_maker.ignore_images = False
-        text_maker.ignore_tables = False
-        text_maker.ignore_emphasis = False
-        text_maker.skip_internal_links = False
-        text_maker.inline_links = True
-        text_maker.protect_links = True
-        text_maker.mark_code = True
-        # Generate the report
-        report_md = text_maker.handle(html_content)
+        report_md = markdownify(
+            html_content, heading_style="ATX", table_infer_header=True
+        )
 
         report_object_refs = (
             [self.identity["standard_id"]]  # id from orange cyberdefense default entity

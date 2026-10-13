@@ -131,7 +131,7 @@ class TestPydanticConfig:
 
         config = ConnectorSettings()
         assert str(config.opencti.url).rstrip("/") == "http://localhost:8080"
-        assert config.opencti.token == "test-token"
+        assert config.opencti.token.get_secret_value() == "test-token"
         assert config.polyswarm.api_key.get_secret_value() == "test-api-key"
 
     def test_config_defaults(self, monkeypatch):

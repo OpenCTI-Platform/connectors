@@ -99,3 +99,40 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_convert_to_markdown(mock_opencti_connector_helper):
+    """
+    Test that `Silobreaker._convert_to_markdown` converts HTML to Markdown and applies
+    the Silobreaker-specific post-processing:
+        - headings MUST use the ATX style (`#`), as html2text produced before the migration
+        - a headerless table MUST keep its first row as the header
+        - defanged `hxxps` links MUST be restored to `https`
+        - protocol-relative links MUST be made absolute with `https://`
+
+    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = Silobreaker(config=settings, helper=helper)
+
+    html = (
+        "<h1>Title</h1>"
+        "<p>Some <strong>bold</strong> text.</p>"
+        "<table><tr><td>IOC</td><td>Type</td></tr>"
+        "<tr><td>1.2.3.4</td><td>ip</td></tr></table>"
+        '<p><a href="hxxps://evil.example/payload">defanged</a> '
+        '<a href="//cdn.example/asset">relative</a></p>'
+    )
+
+    markdown = connector._convert_to_markdown(html)
+
+    assert "# Title" in markdown
+    assert "**bold**" in markdown
+    assert "| IOC | Type |" in markdown
+    assert "| --- | --- |" in markdown
+    assert "| 1.2.3.4 | ip |" in markdown
+    assert "[defanged](https://evil.example/payload)" in markdown
+    assert "[relative](https://cdn.example/asset)" in markdown
+    assert "hxxps" not in markdown
+    assert "](//" not in markdown

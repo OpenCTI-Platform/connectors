@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description | Examples |
 | -------- | ---- | -------- | --------------- | ------- | ----------- | -------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |  |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |  |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |  |
 | WHISPER_API_URL | `string` | ✅ | string |  | Base URL of the Whisper graph API, e.g. 'https://graph.whisper.security'. The connector POSTs Cypher to '<api_url>/api/query'. | ```https://graph.whisper.security``` |
 | WHISPER_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Whisper API key, sent in the X-API-Key header. Never logged. | ```whisper-0123456789abcdef0123456789abcdef``` |
 | CONNECTOR_NAME | `string` |  | string | `"Whisper"` | Connector display name. |  |

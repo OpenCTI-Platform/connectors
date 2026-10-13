@@ -1,0 +1,11 @@
+[project]
+name = "threatmatch"
+version = "0.1.0"
+description = "Imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.connector-linter]
+# Skip these checks (same as --ignore, merged with CLI --ignore)
+ignore = ["VC302"]

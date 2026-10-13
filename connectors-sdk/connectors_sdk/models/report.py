@@ -51,10 +51,6 @@ class Report(BaseIdentifiedEntity):
         default=None,
         description="Report types.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the report",
-    )
     reliability: Reliability | None = Field(
         default=None,
         description="Reliability of the report.",
@@ -79,7 +75,6 @@ class Report(BaseIdentifiedEntity):
             published=self.publication_date,
             description=self.description,
             report_types=self.report_types,
-            labels=self.labels,
             object_refs=[obj.id for obj in self.objects or []],
             allow_custom=True,
             x_opencti_reliability=self.reliability,

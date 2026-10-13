@@ -334,7 +334,7 @@ class RansomLookConfig(BaseConfigModel):
 class ConnectorSettings(BaseConnectorSettings):
     """Load OpenCTI, connector, and RansomLook settings from supported sources."""
 
-    model_config = ConfigDict(hide_input_in_errors=True, extra="forbid")
+    model_config = ConfigDict(hide_input_in_errors=True, extra="ignore")
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig

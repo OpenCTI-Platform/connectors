@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | THEHIVE_URL | `string` | ✅ | string |  |  | The URL of the TheHive instance. |
 | THEHIVE_API_KEY | `string` | ✅ | string |  |  | The API key to authenticate to TheHive. |
 | THEHIVE_ORGANIZATION_NAME | `string` | ✅ | string |  |  | The name of the organization in TheHive, used to create the identity in OpenCTI. |
@@ -22,7 +22,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | THEHIVE_IMPORT_ALERTS | `boolean` |  | boolean |  | `true` | Whether to import alerts from TheHive. |
 | THEHIVE_IMPORT_ATTACHMENTS | `boolean` |  | boolean |  | `false` | Whether to import attachments from TheHive cases. |
 | THEHIVE_SEVERITY_MAPPING | `array` |  | string |  | `["1:01 - low", "2:02 - medium", "3:03 - high", "4:04 - critical"]` | Comma-separated mapping of TheHive severity levels to OpenCTI severity labels (e.g. 1:low,2:medium,3:high,4:critical). |
-| THEHIVE_CASE_STATUS_MAPPING | `array` |  | string |  | `[]` | Comma-separated mapping of TheHive case extended status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1). |
+| THEHIVE_CASE_STATUS_MAPPING | `array` |  | string |  | `[]` | Comma-separated mapping of TheHive case status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1). |
 | THEHIVE_CASE_TAG_WHITELIST | `array` |  | string |  | `[]` | Comma-separated list of tags to whitelist for case import. If set, only cases with these tags are imported. |
 | THEHIVE_TASK_STATUS_MAPPING | `array` |  | string |  | `[]` | Comma-separated mapping of TheHive task status to OpenCTI workflow status IDs (e.g. Waiting:status-id-1,InProgress:status-id-2). |
 | THEHIVE_ALERT_STATUS_MAPPING | `array` |  | string |  | `[]` | Comma-separated mapping of TheHive alert extended status to OpenCTI workflow status IDs. |

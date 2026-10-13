@@ -7,10 +7,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| USTA_API_KEY | `string` | ✅ | string |  | USTA API bearer token for authentication. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
+| USTA_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | USTA API bearer token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"USTA"` | The name of the connector. |
-| CONNECTOR_SCOPE | `string` |  | string | `"indicator,observable,malware,identity,incident,user-account,report,threat-actor"` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["indicator", "observable", "malware", "identity", "incident", "user-account", "report", "threat-actor"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT30M"` | The period of time to await between two runs. |

@@ -5,10 +5,12 @@
   "short_description": "Imports cloud security threat intelligence from Wiz (threats.wiz.io) into OpenCTI, including cloud incidents, threat actor profiles, attack techniques, tools, targeted technologies, and defensive measures.",
   "logo": "external-import/wiz/__metadata__/logo.png",
   "use_cases": [
-    "Adversary & Campaign Insights"
+    "Adversary & Campaign Insights",
+    "Cloud, SaaS & Platform Security"
   ],
   "solution_categories": [
-    "Threat Intelligence Feed"
+    "Threat Intelligence Feed",
+    "Cloud Security"
   ],
   "license_type": "Free",
   "contact": null,

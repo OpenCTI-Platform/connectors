@@ -16,9 +16,6 @@ Table of Contents
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -40,38 +37,13 @@ Table of Contents
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
 
-### OpenCTI environment variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-Below are the parameters you'll need to set for OpenCTI:
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-| ------------ | ------------ | --------------------------- | ------- | --------- | ----------- |
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
 
 ## Deployment
 
@@ -136,6 +108,25 @@ Describe how the connector functions:
 * Important considerations for users when utilizing this connector
 * Additional relevant details
 -->
+
+## How to adapt this template
+
+To turn this template into your own external-import connector:
+
+1. **Settings** (`src/connector/settings.py`): rename `TemplateConfig`/`ExternalImportConnectorConfig`
+   fields to match your source. Replace `id`/`name`/`scope` defaults, and adjust the
+   `Auth`/`Incremental import`/`Feature flags` field groups for your API.
+2. **Client** (`src/template_client/`): implement `session_headers` for your API's auth
+   scheme, and one fetch method per endpoint (`api_client.py`). Add one Pydantic model
+   per raw entity type (`models.py`) so payloads are validated as soon as they're fetched.
+3. **State** (`src/connector/state.py`): add one checkpoint field per processor that
+   needs to resume (timestamp, page number, cursor, etc.).
+4. **Processors** (`src/connector/data_processors/`): one processor per data type/feature
+   flag. Implement `collect()` (fetch + resume params), `transform()` (map + skip invalid
+   items + update checkpoint), and a private `_convert_*()` mapping method per entity.
+5. **Entry point** (`src/main.py`): register your processors behind their feature flags.
+6. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md`
+   from the settings model — never edit these generated files by hand.
 
 ## Debugging
 

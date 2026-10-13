@@ -5,6 +5,7 @@ import pytest
 import titan_client
 import verity471
 from intel471.backend import BackendName, ClientWrapper, get_client
+from intel471.streams.verity471 import Verity471AlertsStream
 from pydantic import HttpUrl
 
 BACKENDS = [
@@ -160,3 +161,15 @@ class TestRealClientInstantiation:
             assert client.config.proxy == str(proxy_url)
         else:
             assert client.config.proxy is None
+
+
+def test_alerts_stream_is_registered_for_verity471_only():
+    """
+    The alerts stream is Verity471-only (like YARA is Titan-only): it must appear in
+    the verity471 backend's stream tuple and not in the titan one.
+    """
+    verity = get_client(backend_name="verity471", api_username="u", api_key="k")
+    titan = get_client(backend_name="titan", api_username="u", api_key="k")
+
+    assert Verity471AlertsStream in verity.streams
+    assert Verity471AlertsStream not in titan.streams

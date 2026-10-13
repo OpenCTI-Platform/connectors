@@ -227,8 +227,8 @@ class GTIFileToSTIXFile(BaseMapper):
         """Get score from file attributes.
 
         Priority order:
-        1. contributing_factors.mandiant_confidence_score
-        2. threat_score.value
+        1. threat_score.value
+        2. contributing_factors.mandiant_confidence_score
 
         Returns:
             int | None: The score if available, None otherwise

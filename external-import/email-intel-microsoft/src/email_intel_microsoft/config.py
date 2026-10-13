@@ -6,6 +6,7 @@ from base_connector.config import BaseConnectorSettings, ConnectorConfig, ListFr
 from base_connector.enums import LogLevelType
 from pydantic import BaseModel, EmailStr, Field, SecretStr
 from pydantic_settings import SettingsConfigDict
+from stix2.v21.vocab import REPORT_TYPE, REPORT_TYPE_THREAT_REPORT
 
 _FILE_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,6 +27,14 @@ class _EmailIntelMicrosoftConfig(BaseModel):
     )
     relative_import_start_date: datetime.timedelta = Field(
         default=datetime.timedelta(days=30)
+    )
+
+    report_type: Literal[tuple(REPORT_TYPE)] = Field(  # type: ignore[valid-type]
+        default=REPORT_TYPE_THREAT_REPORT,
+        description=(
+            "The report type to assign to imported reports "
+            "(a value from the report_type_ov vocabulary)."
+        ),
     )
 
     tenant_id: str

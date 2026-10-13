@@ -48,6 +48,7 @@ class Intel471Connector:
                         initial_history,
                         update_existing_data,
                         ioc_score,
+                        self.config.intel471,
                     ),
                     interval,
                 )

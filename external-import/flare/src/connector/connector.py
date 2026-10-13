@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from connector.converter_to_stix import FlareToStixMapper
+from connector.events import UnsupportedEventTypeError
 from connector.settings import ConnectorSettings
 from flare_client.api_client import FlareClient
 from pycti import OpenCTIConnectorHelper
@@ -58,6 +59,7 @@ class FlareConnector:
                 from_date,
                 event_types=self.config.flare.event_types,
                 event_actions=self.config.flare.event_actions,
+                severities=self.config.flare.severities,
             )
 
             imported_count = self.process_events(events)
@@ -144,6 +146,17 @@ class FlareConnector:
                 self.helper.connector_logger.debug(
                     "Imported event",
                     {"event_index": processed_count, "incident_name": incident.name},
+                )
+
+            except UnsupportedEventTypeError as e:
+                data = event.get("data", {})
+                self.helper.connector_logger.debug(
+                    "Skipping unsupported event",
+                    {
+                        "uid": data.get("uid"),
+                        "index": data.get("index"),
+                        "reason": str(e),
+                    },
                 )
 
             except Exception as e:

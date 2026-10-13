@@ -4,23 +4,39 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
+
+# TLP levels accepted in configuration. Lowercase because this is the form the
+# connectors-sdk `TLPMarking` model expects; `pycti` uses the canonical
+# `TLP:XXX` form instead (see `connector.utils.to_canonical_tlp_marking`).
+TLPLevel = Literal[
+    "clear",
+    "green",
+    "amber",
+    "amber+strict",
+    "red",
+]
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """
     Connector-level configuration for the VisionHeight internal enrichment connector.
-    Overrides the base class to set our defaults for `name` and `scope`.
+    Overrides the base class to set our defaults for `id`, `name` and `scope`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="72de5a27-4619-4189-a66b-ad89819b200a",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="VisionHeight",
     )
-    scope: str = Field(
+    scope: ListFromString = Field(
         description="Comma-separated list of OpenCTI entity types this connector enriches.",
-        default="IPv4-Addr,Domain-Name",
+        default=["IPv4-Addr", "Domain-Name"],
     )
 
 
@@ -36,13 +52,7 @@ class VisionHeightConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="VisionHeight API key used to authenticate requests (sent as the x-api-key header).",
     )
-    max_tlp_level: Literal[
-        "clear",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
+    max_tlp_level: TLPLevel = Field(
         description="Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged.",
         default="amber+strict",
     )

@@ -10,7 +10,6 @@ Tweetfeed connect is a project aimed to collect evidences from Tweetfeed project
 
 This connector ingests [Tweetfeed](https://tweetfeed.live/) IOC in order to import Observables and Indicator collected from different researchers. Tweetfeed was developed by [Daniel López](https://twitter.com/0xDanielLopez).  
 This connector was built using the TAXII2 connector for [OpenCTI](https://github.com/OpenCTI-Platform/opencti) as a base.
-> **IMPORTANT**: Due to changes in the Twitter/X API, TweetFeed is no longer maintainable. Be aware that no new information beyond July 19, 2023 will be retrieved via this connector.
 
 ### Prerequisites
 
@@ -33,6 +32,7 @@ There are a number of configuration options, which are set either in `docker-com
 | TWEETFEED_UPDATE_EXISTING_DATA | update_existing_data |      |True or False , updates the data
 | TWEETFEED_ORG_DESCRIPTION      | org_description      | X    |Organization description, which will be refered to data injected
 | TWEETFEED_ORG_NAME             | org_name             | X    |Organization name, which will be refered to data injected
+| TWEETFEED_TLP_LEVEL            | tlp_level            |      |TLP marking applied to the imported observables and indicators. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red` - default is `green`
 
 The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 

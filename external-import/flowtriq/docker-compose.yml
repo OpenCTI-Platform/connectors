@@ -1,0 +1,25 @@
+version: "3"
+services:
+  connector-flowtriq:
+    image: opencti/connector-flowtriq:latest
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Flowtriq DDoS Incidents
+      - CONNECTOR_SCOPE=flowtriq
+      - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's custom execution parameters
+      # - FLOWTRIQ_API_URL=https://app.flowtriq.com
+      - FLOWTRIQ_API_KEY=ChangeMe
+      # - FLOWTRIQ_INCIDENT_STATUS=resolved
+      # - FLOWTRIQ_INCIDENT_SEVERITY=
+      # - FLOWTRIQ_CREATE_INDICATOR=true
+      # - FLOWTRIQ_TLP_LEVEL=green
+      # - FLOWTRIQ_IMPORT_LIMIT=100
+      # - FLOWTRIQ_MIN_SEVERITY=
+    restart: always
