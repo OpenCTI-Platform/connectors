@@ -101,8 +101,13 @@ graph LR
 | Vulnerability CVSS v2 / v3 / v4 | `cvssv2` / `cvssv3` / `cvssv4`, with `score` as the v3 base score |
 | Vulnerability `epss_score` / `epss_percentile` | `epssProbability` / `epssPercentile`, converted from percentages |
 | Vulnerability `is_cisa_kev` | `hasCisaKevExploit` |
+| Vulnerability `ssvc_exploitation` | `active` when `hasCisaKevExploit`, otherwise `proof_of_concept` or `none` from `hasExploit`, unset when unknown |
+| Vulnerability `ssvc_automatable` | `isEffectiveSsvcAutomatable` as `yes` / `no` |
+| Vulnerability `ssvc_technical_impact` | `effectiveSsvcTechnicalImpact`, lower-cased |
 | Vulnerability external reference | `portalUrl` + finding `id` |
 | Relationship | System or Software `has` Vulnerability, `start_time` from `firstDetectedAt` |
+
+The SSVC values come from Wiz's "effective" assessment: CISA-ADP when available, otherwise VulnCheck. They require an OpenCTI version that supports the SSVC attributes on vulnerabilities.
 
 An issue and the vulnerabilities of its resource are therefore committed together, in one bundle, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once even when several issues share it, so a run that imports no issue performs no vulnerability call at all.
 

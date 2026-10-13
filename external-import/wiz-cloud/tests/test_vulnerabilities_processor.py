@@ -250,3 +250,100 @@ def test_skips_a_finding_the_sdk_model_rejects(
     assert len(_of_type(objects, Vulnerability)) == 1
     assert vulnerabilities_processor._logger.warning.called
     assert vulnerabilities_processor.failures == 0
+
+
+# -- SSVC -------------------------------------------------------------------
+
+
+def _ssvc_vulnerability(vulnerabilities_processor, system, data: dict):
+    vulnerabilities_processor._client.paginate.return_value = iter([[data]])
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
+    return _of_type(objects, Vulnerability)[0]
+
+
+@pytest.mark.parametrize(
+    ("has_cisa_kev_exploit", "has_exploit", "expected"),
+    [
+        (True, True, "active"),
+        (True, None, "active"),
+        (False, True, "proof_of_concept"),
+        (None, True, "proof_of_concept"),
+        (False, False, "none"),
+        (False, None, None),
+    ],
+)
+def test_derives_ssvc_exploitation_from_the_exploit_flags(
+    vulnerabilities_processor,
+    system,
+    vulnerability_finding_data,
+    has_cisa_kev_exploit,
+    has_exploit,
+    expected,
+):
+    data = {
+        **vulnerability_finding_data,
+        "hasCisaKevExploit": has_cisa_kev_exploit,
+        "hasExploit": has_exploit,
+    }
+
+    vulnerability = _ssvc_vulnerability(vulnerabilities_processor, system, data)
+
+    assert vulnerability.ssvc_exploitation == expected
+
+
+@pytest.mark.parametrize(
+    ("automatable", "expected"), [(True, "yes"), (False, "no"), (None, None)]
+)
+def test_maps_ssvc_automatable(
+    vulnerabilities_processor, system, vulnerability_finding_data, automatable, expected
+):
+    data = {**vulnerability_finding_data, "isEffectiveSsvcAutomatable": automatable}
+
+    vulnerability = _ssvc_vulnerability(vulnerabilities_processor, system, data)
+
+    assert vulnerability.ssvc_automatable == expected
+
+
+@pytest.mark.parametrize(
+    ("impact", "expected"),
+    [("PARTIAL", "partial"), ("TOTAL", "total"), (None, None), ("UNKNOWN", None)],
+)
+def test_maps_ssvc_technical_impact(
+    vulnerabilities_processor, system, vulnerability_finding_data, impact, expected
+):
+    data = {**vulnerability_finding_data, "effectiveSsvcTechnicalImpact": impact}
+
+    vulnerability = _ssvc_vulnerability(vulnerabilities_processor, system, data)
+
+    assert vulnerability.ssvc_technical_impact == expected
+
+
+def test_writes_ssvc_as_opencti_attributes(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    # CVE-2021-33560 as returned by the tenant.
+    data = {
+        **vulnerability_finding_data,
+        "hasCisaKevExploit": False,
+        "hasExploit": True,
+        "isEffectiveSsvcAutomatable": True,
+        "effectiveSsvcTechnicalImpact": "PARTIAL",
+    }
+
+    vulnerability = _ssvc_vulnerability(vulnerabilities_processor, system, data)
+    stix_object = vulnerability.to_stix2_object()
+
+    assert stix_object["x_opencti_ssvc_exploitation"] == "proof_of_concept"
+    assert stix_object["x_opencti_ssvc_automatable"] == "yes"
+    assert stix_object["x_opencti_ssvc_technical_impact"] == "partial"
+    # Same deterministic id as a plain SDK Vulnerability with that name.
+    assert stix_object.id == Vulnerability(name=vulnerability.name).id
+    assert stix_object["x_opencti_epss_percentile"] == 0.724
+
+
+def test_leaves_unknown_ssvc_values_out_of_the_stix_object(converted):
+    stix_object = _of_type(converted, Vulnerability)[0].to_stix2_object()
+
+    assert "x_opencti_ssvc_exploitation" not in stix_object
+    assert "x_opencti_ssvc_automatable" not in stix_object
+    assert "x_opencti_ssvc_technical_impact" not in stix_object

@@ -19,7 +19,6 @@ from connectors_sdk.models import (
     Software,
     System,
     TLPMarking,
-    Vulnerability,
 )
 from connectors_sdk.models.enums import CvssSeverity, RelationshipType
 from pydantic import ValidationError
@@ -27,6 +26,7 @@ from requests.exceptions import RequestException
 from wiz_cloud.client_api import WizApiClient, WizGraphQLError
 from wiz_cloud.models import WizVulnerabilityFinding
 from wiz_cloud.settings import WizCloudConfig
+from wiz_cloud.ssvc_vulnerability import SsvcVulnerability
 
 VULNERABILITIES_QUERY = (
     resources.files("wiz_cloud.queries")
@@ -79,6 +79,50 @@ def _cvss_severity(severity: str | None) -> CvssSeverity | None:
         return CvssSeverity(severity.upper())
     except ValueError:
         return None
+
+
+def _ssvc_exploitation(finding: WizVulnerabilityFinding) -> str | None:
+    """Derive the SSVC Exploitation decision point from the exploit flags.
+
+    Args:
+        finding: Parsed Wiz vulnerability finding.
+
+    Returns:
+        "active" for a CISA KEV exploit, "proof_of_concept" for a known
+        exploit, "none" when Wiz states there is none, or None when unknown.
+    """
+    if finding.has_cisa_kev_exploit:
+        return "active"
+    if finding.has_exploit is None:
+        return None
+    return "proof_of_concept" if finding.has_exploit else "none"
+
+
+def _ssvc_automatable(automatable: bool | None) -> str | None:
+    """Convert the Wiz boolean into the SSVC Automatable value.
+
+    Args:
+        automatable: Whether the exploitation is automatable, or None.
+
+    Returns:
+        "yes", "no", or None when unknown.
+    """
+    if automatable is None:
+        return None
+    return "yes" if automatable else "no"
+
+
+def _ssvc_technical_impact(impact: str | None) -> str | None:
+    """Convert a Wiz SsvcTechnicalImpact into the OpenCTI value.
+
+    Args:
+        impact: "PARTIAL" or "TOTAL", or None.
+
+    Returns:
+        The lower-case value, or None when it is unknown to OpenCTI.
+    """
+    value = (impact or "").lower()
+    return value if value in ("partial", "total") else None
 
 
 class WizVulnerabilitiesProcessor:
@@ -248,11 +292,11 @@ class WizVulnerabilitiesProcessor:
             ),
         ]
 
-    def _vulnerability(self, finding: WizVulnerabilityFinding) -> Vulnerability:
+    def _vulnerability(self, finding: WizVulnerabilityFinding) -> SsvcVulnerability:
         cvss_v2 = finding.cvss_v2
         cvss_v3 = finding.cvss_v3
         cvss_v4 = finding.cvss_v4
-        return Vulnerability(
+        return SsvcVulnerability(
             # The OpenCTI id derives from the name alone, so it must be the
             # CVE id.
             name=finding.name,
@@ -304,6 +348,11 @@ class WizVulnerabilitiesProcessor:
             epss_score=_ratio(finding.epss_probability),
             epss_percentile=_ratio(finding.epss_percentile),
             is_cisa_kev=finding.has_cisa_kev_exploit,
+            ssvc_exploitation=_ssvc_exploitation(finding),
+            ssvc_automatable=_ssvc_automatable(finding.is_effective_ssvc_automatable),
+            ssvc_technical_impact=_ssvc_technical_impact(
+                finding.effective_ssvc_technical_impact
+            ),
             external_references=self._finding_references(finding),
             author=self._author,
             markings=[self._marking],

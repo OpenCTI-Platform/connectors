@@ -175,6 +175,14 @@ class WizVulnerabilityFinding(_WizModel):
     severity: str | None = None
     status: str | None = None
     has_cisa_kev_exploit: bool | None = Field(default=None, alias="hasCisaKevExploit")
+    has_exploit: bool | None = Field(default=None, alias="hasExploit")
+    # SSVC, CISA-ADP when available, otherwise VulnCheck.
+    is_effective_ssvc_automatable: bool | None = Field(
+        default=None, alias="isEffectiveSsvcAutomatable"
+    )
+    effective_ssvc_technical_impact: str | None = Field(
+        default=None, alias="effectiveSsvcTechnicalImpact"
+    )
     portal_url: str | None = Field(default=None, alias="portalUrl")
     first_detected_at: datetime | None = Field(default=None, alias="firstDetectedAt")
     last_detected_at: datetime | None = Field(default=None, alias="lastDetectedAt")
