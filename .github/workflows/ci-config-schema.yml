@@ -3,8 +3,10 @@ name: Config Schema
 # Generates the config schemas of manager-supported connectors.
 #
 # On pull requests and in the merge queue it covers the connectors changed
-# since the merge base (all of them when the generation tooling changes), so a
-# connector whose schema cannot be generated is caught before merge. The
+# since the merge base (all of them when the generation tooling or the
+# connectors-sdk changes), so a connector whose schema cannot be generated is
+# caught before merge. The schemas are generated against the checked-out
+# connectors-sdk, so an SDK change is exercised before it reaches master. The
 # generated files are not compared with the committed ones.
 #
 # build-manifest.yml calls it with all_connectors and upload_schemas to
@@ -92,8 +94,14 @@ jobs:
         env:
           CONNECTOR_PATHS: ${{ matrix.connector_paths }}
           RELEASE_REF: ${{ inputs.release_ref }}
+          # Pull requests and the merge queue install the checked-out SDK. The
+          # regeneration of build-manifest.yml keeps the SDK of its release ref.
+          USE_LOCAL_SDK: ${{ !inputs.all_connectors }}
         run: |
           set -euo pipefail
+          if [ "$USE_LOCAL_SDK" = "true" ]; then
+            export CONNECTORS_SDK_PATH="$GITHUB_WORKSPACE/connectors-sdk"
+          fi
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
             echo "::group::Generating schema for ${connector_path}"
