@@ -266,9 +266,8 @@ class DomainEnricher:
             )
 
         return make_note(
-            seed=f"stairwell-dns-history|{entity_id}",
             abstract="Stairwell DNS History",
-            content="\n".join(lines),
+            content="\n".join([f"**Hostname:** {md_code(hostname)}", *lines]),
             object_refs=[entity_id],
             tlp=self.tlp,
         )

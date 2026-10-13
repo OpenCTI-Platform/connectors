@@ -8,26 +8,42 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 from urllib.parse import urlsplit
 
-# STIX 2.1 namespace UUID (spec §2.9) for deterministic UUIDv5 IDs.
-_STIX_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
-
-# Canonical STIX 2.1 TLP marking-definition IDs (spec §7.2.1.4).
-TLP_IDS: dict[str, str] = {
-    "clear": "marking-definition--613f2e26-407d-48c7-9eca-b8e91ba519f6",
-    "white": "marking-definition--613f2e26-407d-48c7-9eca-b8e91ba519f6",
-    "green": "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da",
-    "amber": "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82",
-    "amber+strict": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
-    "red": "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed",
-}
-
-STAIRWELL_IDENTITY_ID = (
-    f"identity--{uuid.uuid5(_STIX_NAMESPACE, 'stairwell-connector-identity')}"
+import stix2
+from connectors_sdk.models import TLPMarking
+from pycti import (
+    Grouping,
+    Identity,
+    Indicator,
+    Note,
+    Report,
+    StixCoreRelationship,
+    StixSightingRelationship,
 )
 
+# IDs are OpenCTI's canonical ones: pycti's type-specific generate_id() for
+# SDOs and SROs, and the STIX 2.1 spec's deterministic IDs (computed by the
+# stix2 library from each type's ID-contributing properties) for SCOs. The
+# same entity imported by another connector therefore gets the same ID.
 
-def stix_id(stix_type: str, seed: str) -> str:
-    return f"{stix_type}--{uuid.uuid5(_STIX_NAMESPACE, seed)}"
+# TLP marking definitions as the SDK builds them, keyed by level. Every bundle
+# carries the definitions its objects reference.
+_TLP_OBJECTS: dict[str, dict[str, Any]] = {
+    level: json.loads(TLPMarking(level=level).to_stix2_object().serialize())
+    for level in ("clear", "white", "green", "amber", "amber+strict", "red")
+}
+TLP_IDS: dict[str, str] = {level: obj["id"] for level, obj in _TLP_OBJECTS.items()}
+# TLP:CLEAR and TLP:WHITE share one ID; a bundle that references it carries
+# the CLEAR definition, OpenCTI's current name for that level.
+_TLP_BY_ID: dict[str, dict[str, Any]] = {
+    obj["id"]: obj for level, obj in _TLP_OBJECTS.items() if level != "white"
+}
+
+STAIRWELL_IDENTITY_ID = Identity.generate_id("Stairwell", "organization")
+
+
+def _sco_id(sco_class: type, **properties: Any) -> str:
+    """Spec-deterministic SCO ID (UUIDv5 over the ID-contributing properties)."""
+    return sco_class(**properties).id
 
 
 # Markdown helpers. OpenCTI renders Note content and descriptions as GitHub
@@ -111,6 +127,11 @@ def tlp_marking(tlp: str) -> str:
     return TLP_IDS.get(tlp.lower(), TLP_IDS["amber"])
 
 
+def tlp_marking_object(tlp: str) -> dict[str, Any]:
+    """The SDK's marking-definition object for `tlp` (amber if unknown)."""
+    return _TLP_OBJECTS.get(tlp.lower(), _TLP_OBJECTS["amber"])
+
+
 def stairwell_identity() -> dict[str, Any]:
     return {
         "type": "identity",
@@ -134,13 +155,17 @@ def make_external_reference(
 
 
 def make_note(
-    seed: str,
     abstract: str,
     content: str,
     object_refs: Iterable[str],
     tlp: str,
 ) -> dict[str, Any]:
-    note_id = stix_id("note", seed)
+    """Note whose ID derives from its abstract and content (never a timestamp).
+
+    Content must name its subject (the hash, host, IP, or ASN), or identical
+    notes about different observables would share one ID.
+    """
+    note_id = Note.generate_id(None, content, abstract)
     ts = now_iso()
     return {
         "type": "note",
@@ -162,7 +187,7 @@ def make_relationship(
     relationship_type: str = "related-to",
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    rel_id = stix_id("relationship", f"{relationship_type}|{source_id}|{target_id}")
+    rel_id = StixCoreRelationship.generate_id(relationship_type, source_id, target_id)
     ts = now_iso()
     return {
         "type": "relationship",
@@ -182,7 +207,7 @@ def make_ipv4(value: str, tlp: str = "amber") -> dict[str, Any]:
     return {
         "type": "ipv4-addr",
         "spec_version": "2.1",
-        "id": stix_id("ipv4-addr", value),
+        "id": _sco_id(stix2.IPv4Address, value=value),
         "value": value,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -192,7 +217,7 @@ def make_ipv6(value: str, tlp: str = "amber") -> dict[str, Any]:
     return {
         "type": "ipv6-addr",
         "spec_version": "2.1",
-        "id": stix_id("ipv6-addr", value),
+        "id": _sco_id(stix2.IPv6Address, value=value),
         "value": value,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -204,7 +229,7 @@ def make_domain(value: str, tlp: str = "amber") -> dict[str, Any]:
     return {
         "type": "domain-name",
         "spec_version": "2.1",
-        "id": stix_id("domain-name", value),
+        "id": _sco_id(stix2.DomainName, value=value),
         "value": value,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -248,7 +273,10 @@ def make_file_by_sha256(
     sco: dict[str, Any] = {
         "type": "file",
         "spec_version": "2.1",
-        "id": stix_id("file", f"sha256:{sha256}"),
+        # Anchored to SHA-256 alone: the spec's File ID uses the first of MD5,
+        # SHA-1, SHA-256 present, so the ID would change whenever an optional
+        # hash appears or disappears.
+        "id": _sco_id(stix2.File, hashes={"SHA-256": sha256}),
         "hashes": hashes,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -282,7 +310,7 @@ def make_url(value: str, tlp: str = "amber") -> dict[str, Any] | None:
     return {
         "type": "url",
         "spec_version": "2.1",
-        "id": stix_id("url", value),
+        "id": _sco_id(stix2.URL, value=value),
         "value": value,
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -296,7 +324,7 @@ def make_autonomous_system(
     obj = {
         "type": "autonomous-system",
         "spec_version": "2.1",
-        "id": stix_id("autonomous-system", str(number)),
+        "id": _sco_id(stix2.AutonomousSystem, number=int(number)),
         "number": int(number),
         "object_marking_refs": [tlp_marking(tlp)],
     }
@@ -339,7 +367,6 @@ def network_observable_for(value: str, kind: str, tlp: str) -> dict[str, Any] | 
 def make_indicator(
     pattern: str,
     name: str,
-    seed: str,
     valid_from: str,
     valid_until: str | None = None,
     indicator_types: Iterable[str] = ("malicious-activity",),
@@ -348,7 +375,7 @@ def make_indicator(
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    indicator_id = stix_id("indicator", seed)
+    indicator_id = Indicator.generate_id(pattern)
     obj: dict[str, Any] = {
         "type": "indicator",
         "spec_version": "2.1",
@@ -393,58 +420,32 @@ def make_identity_system(
 ) -> dict[str, Any]:
     """Identity SDO for a host/asset (identity_class='system').
 
-    `asset_id` is the opaque Stairwell asset token (e.g. `assets/EAGJSW-...`)
-    and is the seed for the deterministic UUIDv5 id so re-enrichment of any
-    object that this asset has seen reuses the same Identity row.
+    Named by the stable Stairwell asset token (e.g. `assets/EAGJSW-...`), so
+    the ID (OpenCTI's for that name and class) survives a rename or a response
+    without the display name, and two assets sharing a display name stay
+    distinct. The display name is kept as an alias.
     """
     ts = now_iso()
+    display_name = name if name and name != asset_id else None
     obj: dict[str, Any] = {
         "type": "identity",
         "spec_version": "2.1",
-        "id": stix_id("identity", f"stairwell-asset|{asset_id}"),
+        "id": Identity.generate_id(asset_id, "system"),
         "created_by_ref": STAIRWELL_IDENTITY_ID,
         "created": ts,
         "modified": ts,
-        "name": name or asset_id,
+        "name": asset_id,
         "identity_class": "system",
         "object_marking_refs": [tlp_marking(tlp)],
     }
+    if display_name:
+        obj["x_opencti_aliases"] = [display_name]
     if description:
         obj["description"] = description
     return obj
 
 
-def make_x509_certificate(
-    cert: dict[str, Any], tlp: str = "amber"
-) -> dict[str, Any] | None:
-    """Map a Stairwell x509Certificate entry to a STIX x509-certificate SCO.
-
-    Stairwell shape: {signature, issuer, subject, earliestValidTime, latestValidTime}.
-    The `signature` value is the cert thumbprint and is the deterministic seed.
-    """
-    signature = cert.get("signature") or ""
-    if not signature:
-        return None
-    obj: dict[str, Any] = {
-        "type": "x509-certificate",
-        "spec_version": "2.1",
-        "id": stix_id("x509-certificate", f"stairwell-cert|{signature}"),
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
-    if cert.get("subject"):
-        obj["subject"] = cert["subject"]
-    if cert.get("issuer"):
-        obj["issuer"] = cert["issuer"]
-    if cert.get("earliestValidTime"):
-        obj["validity_not_before"] = cert["earliestValidTime"]
-    if cert.get("latestValidTime"):
-        obj["validity_not_after"] = cert["latestValidTime"]
-    obj["x_stairwell_certificate_signature"] = signature
-    return obj
-
-
 def make_sighting(
-    seed: str,
     sighting_of_ref: str,
     where_sighted_refs: Iterable[str],
     first_seen: str,
@@ -455,7 +456,11 @@ def make_sighting(
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    sighting_id = stix_id("sighting", seed)
+    # No first/last seen in the ID: they move on every enrichment, and the
+    # sighting of one file on one asset must stay one object.
+    sighting_id = StixSightingRelationship.generate_id(
+        sighting_of_ref, list(where_sighted_refs)
+    )
     ts = now_iso()
     obj: dict[str, Any] = {
         "type": "sighting",
@@ -482,15 +487,15 @@ def make_sighting(
 
 def _container_sdo(
     sdo_type: str,
-    seed: str,
+    container_id: str,
     name: str,
     object_refs: Iterable[str],
     description: str | None,
     tlp: str,
     extra: dict[str, Any] | None = None,
+    created: str | None = None,
 ) -> dict[str, Any]:
-    container_id = stix_id(sdo_type, seed)
-    ts = now_iso()
+    ts = created or now_iso()
     obj: dict[str, Any] = {
         "type": sdo_type,
         "spec_version": "2.1",
@@ -510,16 +515,18 @@ def _container_sdo(
 
 
 def make_grouping(
-    seed: str,
     name: str,
     object_refs: Iterable[str],
+    created: str,
     description: str | None = None,
     context: str = "malware-analysis",
     tlp: str = "amber",
 ) -> dict[str, Any]:
+    """Grouping whose ID derives from name, context, and `created`."""
     return _container_sdo(
         sdo_type="grouping",
-        seed=seed,
+        container_id=Grouping.generate_id(name, context, created),
+        created=created,
         name=name,
         object_refs=object_refs,
         description=description,
@@ -529,7 +536,6 @@ def make_grouping(
 
 
 def make_report(
-    seed: str,
     name: str,
     object_refs: Iterable[str],
     published: str,
@@ -539,7 +545,7 @@ def make_report(
 ) -> dict[str, Any]:
     return _container_sdo(
         sdo_type="report",
-        seed=seed,
+        container_id=Report.generate_id(name, published),
         name=name,
         object_refs=object_refs,
         description=description,
@@ -551,12 +557,26 @@ def make_report(
     )
 
 
+def with_markings(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """`objects` plus the TLP marking definitions they reference.
+
+    Without the definition in the bundle, OpenCTI can reject the objects that
+    reference it (MISSING_REFERENCE_ERROR).
+    """
+    out = [obj for obj in objects if obj]
+    present = {obj["id"] for obj in out}
+    for obj in list(out):
+        for ref in obj.get("object_marking_refs") or []:
+            if ref in _TLP_BY_ID and ref not in present:
+                out.append(_TLP_BY_ID[ref])
+                present.add(ref)
+    return out
+
+
 def bundle(objects: Iterable[dict[str, Any]]) -> str:
-    """Serialize a STIX 2.1 bundle to JSON."""
+    """Serialize a STIX 2.1 bundle to JSON, with its TLP marking definitions."""
     deduped: dict[str, dict[str, Any]] = {}
-    for obj in objects:
-        if not obj:
-            continue
+    for obj in with_markings(objects):
         deduped[obj["id"]] = obj
     payload = {
         "type": "bundle",

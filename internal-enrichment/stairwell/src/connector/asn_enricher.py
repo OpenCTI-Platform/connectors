@@ -156,9 +156,8 @@ class AsnEnricher:
         if note_lines:
             objects.append(
                 make_note(
-                    seed=f"stairwell-asn-whois|{entity_id}",
                     abstract="Stairwell ASN WHOIS",
-                    content="\n".join(note_lines),
+                    content="\n".join([f"**ASN:** AS{asn_int}", *note_lines]),
                     object_refs=[entity_id],
                     tlp=self.tlp,
                 )

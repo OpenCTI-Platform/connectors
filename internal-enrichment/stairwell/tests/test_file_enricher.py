@@ -366,7 +366,8 @@ def test_sightings_aggregated_per_asset_with_count_first_last():
     riser_identity = next(
         i for i in identities if i["id"] == riser["where_sighted_refs"][0]
     )
-    assert riser_identity["name"] == "RISER"
+    assert riser_identity["name"] == "assets/RISER-ID"
+    assert riser_identity["x_opencti_aliases"] == ["RISER"]
 
 
 def test_sightings_truncation_emits_note_and_stops_at_limit():
@@ -517,7 +518,7 @@ def test_summary_note_consolidates_all_user_specified_fields():
         "objectSignature": {
             "x509Certificates": [
                 {
-                    "signature": "SIG-1",
+                    "signature": "MEQCIGNlcnQtc2lnbmF0dXJlLWJ5dGVzLWV4YW1wbGU=",
                     "issuer": "CN=Evil CA",
                     "subject": "CN=Bad",
                     "earliestValidTime": "2024-01-01T00:00:00Z",
@@ -649,22 +650,22 @@ def test_lineage_emits_parents_and_children_with_derived_from():
     assert rel_from_child["target_ref"] == primary_id
 
 
-def test_x509_certificates_emitted_with_relationship():
+def test_signing_certificates_are_listed_in_the_note_not_as_observables():
+    """Stairwell's X509Certificate carries signature bytes (base64 in JSON),
+    issuer, subject, and validity, with no fingerprint or serial number, so a
+    certificate has no stable STIX ID; it is reported in the summary Note."""
+    signature = "MEUCIQDf3s4Yb2h0aGlzaXNub3RhcmVhbHNpZ25hdHVyZQ=="
     metadata = {
         "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
         "objectSignature": {
             "x509Certificates": [
                 {
-                    "signature": "SIG-FINGERPRINT-1",
+                    "signature": signature,
                     "issuer": "CN=Evil CA",
                     "subject": "CN=Bad Subject",
                     "earliestValidTime": "2024-01-01T00:00:00Z",
                     "latestValidTime": "2025-01-01T00:00:00Z",
-                },
-                {
-                    # No signature → filtered
-                    "subject": "CN=Phantom",
-                },
+                }
             ],
             "pkcs7VerificationResult": "PKCS7_VERIFICATION_RESULT_VALID",
         },
@@ -677,23 +678,16 @@ def test_x509_certificates_emitted_with_relationship():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
-    enricher.enrich(_observable_with_sha256())
-
-    payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
-    certs = [o for o in payload["objects"] if o["type"] == "x509-certificate"]
-    assert len(certs) == 1
-    assert certs[0]["issuer"] == "CN=Evil CA"
-    assert certs[0]["subject"] == "CN=Bad Subject"
-    assert certs[0]["validity_not_before"] == "2024-01-01T00:00:00Z"
-    cert_rels = [
-        r
-        for r in payload["objects"]
-        if r["type"] == "relationship"
-        and r["target_ref"] == certs[0]["id"]
-        and r["relationship_type"] == "related-to"
-    ]
-    assert len(cert_rels) == 1
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    assert not [o for o in objects if o["type"] == "x509-certificate"]
+    note = next(
+        o["content"]
+        for o in objects
+        if o["type"] == "note" and o["abstract"] == "Stairwell Enrichment Summary"
+    )
+    for text in ("CN=Bad Subject", "CN=Evil CA", "2024-01-01T00:00:00Z", signature):
+        assert text in note
 
 
 def test_detonation_data_is_not_in_bundle():
@@ -813,7 +807,7 @@ def test_untrusted_strings_are_markdown_escaped_in_notes_and_description():
     assert md_code(host) in enrichment
     assert f"  - Subject: {md_code(subject)}" in enrichment
 
-    assert notes["Stairwell AI File Triage"] == md_prose(summary)
+    assert notes["Stairwell AI File Triage"].endswith(md_prose(summary))
     file_sco = next(
         o
         for o in payload["objects"]

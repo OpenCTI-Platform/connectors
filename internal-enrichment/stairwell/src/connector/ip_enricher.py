@@ -12,6 +12,7 @@ from .stix_builder import (
     make_external_reference,
     make_note,
     make_relationship,
+    md_code,
     md_fence,
     md_text,
     stairwell_identity,
@@ -249,9 +250,8 @@ class IpEnricher:
         if note_lines:
             objects.append(
                 make_note(
-                    seed=f"stairwell-ip-intelligence|{entity_id}",
                     abstract="Stairwell IP Intelligence",
-                    content="\n".join(note_lines),
+                    content="\n".join([f"**IP:** {md_code(ip_value)}", *note_lines]),
                     object_refs=[entity_id],
                     tlp=self.tlp,
                 )

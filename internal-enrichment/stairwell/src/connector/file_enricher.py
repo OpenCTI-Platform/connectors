@@ -15,7 +15,6 @@ from .stix_builder import (
     make_note,
     make_relationship,
     make_sighting,
-    make_x509_certificate,
     md_code,
     md_prose,
     md_text,
@@ -297,8 +296,10 @@ class FileEnricher:
         # Lineage from relationships.parents/children
         objects.extend(self._lineage_objects(entity_id, primary_hash, metadata))
 
-        # x509 certificate observables from objectSignature
-        objects.extend(self._certificate_objects(entity_id, metadata))
+        # Signing certificates are reported in the summary Note only: Stairwell
+        # gives signature bytes, issuer, subject, and validity, but no
+        # fingerprint or serial number, so there is no stable STIX ID for an
+        # x509-certificate observable.
 
         # Consolidated "Stairwell Enrichment Summary" Note covering hashes,
         # file properties, MalEval, YARA, network indicators, and signature
@@ -316,9 +317,9 @@ class FileEnricher:
         if full_summary:
             objects.append(
                 make_note(
-                    seed=f"stairwell-ai-triage|{entity_id}",
                     abstract="Stairwell AI File Triage",
-                    content=md_prose(full_summary),
+                    content=f"**SHA-256:** {md_code(primary_hash)}\n\n"
+                    + md_prose(full_summary),
                     object_refs=[entity_id],
                     tlp=self.tlp,
                 )
@@ -496,9 +497,8 @@ class FileEnricher:
             )
 
         return make_note(
-            seed=f"stairwell-variants|{entity_id}",
             abstract="Stairwell Variants",
-            content="\n".join(lines),
+            content="\n".join([f"**Source:** {md_code(primary_hash)}", *lines]),
             object_refs=[entity_id],
             tlp=self.tlp,
         )
@@ -685,7 +685,6 @@ class FileEnricher:
             return None
 
         return make_note(
-            seed=f"stairwell-enrichment-summary|{entity_id}",
             abstract="Stairwell Enrichment Summary",
             content="\n".join(lines).rstrip(),
             object_refs=[entity_id],
@@ -953,7 +952,6 @@ class FileEnricher:
             out.append(identity)
 
             sighting = make_sighting(
-                seed=f"stairwell-sighting|{primary_hash.lower()}|{asset_id}",
                 sighting_of_ref=entity_id,
                 where_sighted_refs=[identity["id"]],
                 first_seen=first_seen,
@@ -975,10 +973,9 @@ class FileEnricher:
         if truncated:
             out.append(
                 make_note(
-                    seed=f"stairwell-sightings-truncation|{entity_id}",
                     abstract="Stairwell Sightings Truncation",
                     content=(
-                        f"Sightings were truncated at "
+                        f"Sightings of {primary_hash} were truncated at "
                         f"STAIRWELL_SIGHTINGS_LIMIT={self.sightings_limit} "
                         f"unique assets. Additional assets exist but were "
                         f"dropped from this enrichment run."
@@ -1092,33 +1089,6 @@ class FileEnricher:
 
         _emit(rels.get("parents") or [], direction="parent")
         _emit(rels.get("children") or [], direction="child")
-        return out
-
-    def _certificate_objects(
-        self, entity_id: str, metadata: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        sig = metadata.get("objectSignature") or {}
-        if not isinstance(sig, dict):
-            return []
-        certs = sig.get("x509Certificates") or []
-        if not isinstance(certs, list):
-            return []
-        out: list[dict[str, Any]] = []
-        for cert in certs:
-            if not isinstance(cert, dict):
-                continue
-            cert_obj = make_x509_certificate(cert, tlp=self.tlp)
-            if not cert_obj:
-                continue
-            out.append(cert_obj)
-            out.append(
-                make_relationship(
-                    source_id=entity_id,
-                    target_id=cert_obj["id"],
-                    relationship_type="related-to",
-                    tlp=self.tlp,
-                )
-            )
         return out
 
     def _network_indicator_objects(

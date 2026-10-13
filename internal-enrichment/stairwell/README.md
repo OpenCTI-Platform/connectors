@@ -102,6 +102,14 @@ Environment variables override the file.
   `x_stairwell_shannon_entropy`, `x_stairwell_first_seen`,
   `x_stairwell_environments`). Stairwell analyst tags become labels prefixed
   `stairwell:tag:`. **Detonation data is intentionally excluded.**
+- **IDs are OpenCTI's canonical ones.** SDOs and relationships use pycti's
+  `generate_id()`, and observables use spec-standard IDs, so entities from
+  other connectors merge with ours. Notes are keyed by their content, which
+  always names the observable. Signing certificates are listed in the
+  enrichment summary Note (subject, issuer, validity, signature), not created
+  as `x509-certificate` observables: Stairwell provides no fingerprint or
+  serial number, so a certificate has no stable STIX ID. Every bundle carries
+  the TLP marking definitions it references.
 
 ## Installation
 

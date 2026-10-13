@@ -2,34 +2,140 @@ import json
 import re
 
 import pytest
+import stix2
 from connector.stix_builder import (
+    STAIRWELL_IDENTITY_ID,
     bundle,
     make_autonomous_system,
     make_domain,
     make_external_reference,
     make_file_by_sha256,
+    make_grouping,
+    make_identity_system,
+    make_indicator,
     make_ip,
     make_ipv4,
     make_ipv6,
     make_note,
     make_relationship,
+    make_report,
+    make_sighting,
     make_url,
     md_code,
     md_fence,
     md_prose,
     md_text,
     network_observable_for,
-    stix_id,
     tlp_marking,
+    tlp_marking_object,
     valid_hash,
+)
+from connectors_sdk.models import TLPMarking
+from pycti import (
+    Grouping,
+    Identity,
+    Indicator,
+    Note,
+    Report,
+    StixCoreRelationship,
+    StixSightingRelationship,
 )
 
 
-def test_stix_id_is_deterministic():
-    a = stix_id("note", "stairwell-ai-triage|file--abc")
-    b = stix_id("note", "stairwell-ai-triage|file--abc")
-    assert a == b
-    assert a.startswith("note--")
+def test_sdo_and_sro_ids_are_opencti_canonical():
+    """Every SDO/SRO ID is the one pycti generates for that object."""
+    rel = make_relationship("file--x", "ipv4-addr--y", "related-to")
+    assert rel["id"] == StixCoreRelationship.generate_id(
+        "related-to", "file--x", "ipv4-addr--y"
+    )
+    note = make_note("Abstract", "body", ["file--x"], "green")
+    assert note["id"] == Note.generate_id(None, "body", "Abstract")
+    pattern = "[file:hashes.'SHA-256' = '" + "a" * 64 + "']"
+    assert make_indicator(pattern, "n", "2026-01-01T00:00:00.000Z")["id"] == (
+        Indicator.generate_id(pattern)
+    )
+    assert STAIRWELL_IDENTITY_ID == Identity.generate_id("Stairwell", "organization")
+    asset = make_identity_system("assets/X1", name="RISER")
+    assert asset["id"] == Identity.generate_id("assets/X1", "system")
+    sighting = make_sighting(
+        "file--x",
+        [asset["id"]],
+        "2026-01-01T00:00:00.000Z",
+        "2026-01-02T00:00:00.000Z",
+        2,
+    )
+    assert sighting["id"] == StixSightingRelationship.generate_id(
+        "file--x", [asset["id"]]
+    )
+    created = "2026-05-06T01:02:03.456789+00:00"
+    grouping = make_grouping("G", ["file--x"], created, context="malware-analysis")
+    assert grouping["id"] == Grouping.generate_id("G", "malware-analysis", created)
+    report = make_report("R", ["file--x"], "2026-05-06T00:00:00.000Z")
+    assert report["id"] == Report.generate_id("R", "2026-05-06T00:00:00.000Z")
+
+
+def test_sco_ids_follow_the_stix_spec():
+    """SCO IDs match what the stix2 library derives from the same properties."""
+    assert make_ipv4("8.8.8.8")["id"] == stix2.IPv4Address(value="8.8.8.8").id
+    assert make_ipv6("2001:db8::1")["id"] == stix2.IPv6Address(value="2001:db8::1").id
+    assert make_domain("evil.com")["id"] == stix2.DomainName(value="evil.com").id
+    assert (
+        make_url("http://evil.com/x")["id"] == stix2.URL(value="http://evil.com/x").id
+    )
+    assert (
+        make_autonomous_system(64500)["id"] == stix2.AutonomousSystem(number=64500).id
+    )
+    sco = make_file_by_sha256("a" * 64, md5="b" * 32)
+    assert sco["id"] == stix2.File(hashes={"SHA-256": "a" * 64}).id
+
+
+def test_sighting_id_ignores_moving_first_and_last_seen():
+    a = make_sighting(
+        "file--x",
+        ["identity--y"],
+        "2026-01-01T00:00:00.000Z",
+        "2026-01-02T00:00:00.000Z",
+        1,
+    )
+    b = make_sighting(
+        "file--x",
+        ["identity--y"],
+        "2026-01-01T00:00:00.000Z",
+        "2026-03-09T00:00:00.000Z",
+        7,
+    )
+    assert a["id"] == b["id"]
+
+
+@pytest.mark.parametrize(
+    "level", ["clear", "white", "green", "amber", "amber+strict", "red"]
+)
+def test_tlp_ids_and_objects_are_the_sdk_marking_definitions(level):
+    sdk = json.loads(TLPMarking(level=level).to_stix2_object().serialize())
+    ours = tlp_marking_object(level)
+    assert tlp_marking(level) == sdk["id"] == ours["id"]
+    # The SDK stamps clear/amber+strict definitions with the time they were built.
+    skip = {"created", "modified"}
+    assert {k: v for k, v in ours.items() if k not in skip} == {
+        k: v for k, v in sdk.items() if k not in skip
+    }
+
+
+def test_tlp_clear_uses_the_standard_stix_marking_id():
+    assert (
+        tlp_marking("clear")
+        == "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+    )
+
+
+def test_bundle_carries_the_marking_definitions_its_objects_reference():
+    payload = json.loads(
+        bundle([make_ipv4("8.8.8.8", tlp="green"), make_domain("a.example", tlp="red")])
+    )
+    markings = {
+        o["id"] for o in payload["objects"] if o["type"] == "marking-definition"
+    }
+    assert markings == {tlp_marking("green"), tlp_marking("red")}
 
 
 def test_tlp_marking_default_amber():
@@ -78,7 +184,6 @@ def test_make_relationship_deterministic_id():
 
 def test_make_note_includes_object_refs_and_tlp():
     note = make_note(
-        seed="stairwell-test|file--x",
         abstract="Test",
         content="body",
         object_refs=["file--x"],
@@ -97,7 +202,7 @@ def test_bundle_dedupes_by_id_and_serializes():
     ]
     payload = json.loads(bundle(objs))
     assert payload["type"] == "bundle"
-    ids = {o["id"] for o in payload["objects"]}
+    ids = {o["id"] for o in payload["objects"] if o["type"] != "marking-definition"}
     assert len(ids) == 2  # ipv4 dedup'd
 
 
@@ -264,3 +369,33 @@ def test_make_domain_lowercases_so_one_domain_is_one_object():
     upper, lower = make_domain("MX1.Example.COM"), make_domain("mx1.example.com")
     assert upper == lower
     assert upper["value"] == "mx1.example.com"
+
+
+def test_file_id_is_anchored_to_sha256_whatever_other_hashes_are_known():
+    bare = make_file_by_sha256("a" * 64)
+    full = make_file_by_sha256("a" * 64, sha1="c" * 40, md5="b" * 32)
+    assert bare["id"] == full["id"] == stix2.File(hashes={"SHA-256": "a" * 64}).id
+    assert full["hashes"] == {"SHA-256": "a" * 64, "SHA-1": "c" * 40, "MD5": "b" * 32}
+
+
+def test_grouping_created_matches_the_id_inputs():
+    created = "2026-05-06T01:02:03.456789+00:00"
+    grouping = make_grouping("G", ["file--x"], created, context="malware-analysis")
+    assert grouping["created"] == created
+    assert grouping["id"] == Grouping.generate_id(
+        "G", "malware-analysis", grouping["created"]
+    )
+
+
+def test_asset_identity_is_keyed_by_its_stable_token():
+    named = make_identity_system("assets/A1", name="DESKTOP")
+    renamed = make_identity_system("assets/A1", name="LAPTOP")
+    unnamed = make_identity_system("assets/A1")
+    other = make_identity_system("assets/B2", name="DESKTOP")
+    # A rename, or a response without the name, keeps one identity per asset;
+    # two assets sharing a display name stay distinct.
+    assert named["id"] == renamed["id"] == unnamed["id"] != other["id"]
+    assert named["id"] == Identity.generate_id("assets/A1", "system")
+    assert named["name"] == "assets/A1"
+    assert named["x_opencti_aliases"] == ["DESKTOP"]
+    assert "x_opencti_aliases" not in unnamed

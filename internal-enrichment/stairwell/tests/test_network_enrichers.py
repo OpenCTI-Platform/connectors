@@ -600,3 +600,27 @@ def test_asn_fails_when_the_whois_request_fails(status):
             }
         )
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_identical_intelligence_on_two_ips_gives_two_notes():
+    notes = []
+    for ip in ("203.0.113.5", "203.0.113.6"):
+        client = _client(
+            {
+                "get_ip": (200, {"geoLocation": {"country": "US"}}),
+                "get_ip_whois": (200, {"record": {"arinOrg": {"name": "Same Org"}}}),
+                "get_ip_hostnames": (200, {"hostnames": []}),
+            }
+        )
+        helper = _helper()
+        IpEnricher(helper, client, "amber").enrich(
+            {
+                "id": ip,
+                "standard_id": f"ipv4-addr--{ip}",
+                "entity_type": "IPv4-Addr",
+                "value": ip,
+            }
+        )
+        objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+        notes += [o for o in objects if o["type"] == "note"]
+    assert len({n["id"] for n in notes}) == 2
