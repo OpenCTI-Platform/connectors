@@ -94,7 +94,7 @@ class CrowdstrikeIncidentsConfig(BaseConfigModel):
         default=None,
     )
     include_hidden: bool = Field(
-        description="Whether to also import alerts hidden in the Falcon console.",
+        description="Whether to also import the alerts hidden in the Falcon console (show_in_ui: false).",
         default=False,
     )
     tlp_level: TLPLevel = Field(

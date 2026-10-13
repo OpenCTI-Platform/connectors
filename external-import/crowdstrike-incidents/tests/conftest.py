@@ -30,5 +30,5 @@ def mock_env(monkeypatch) -> None:
 
 @pytest.fixture
 def ngsiem_alert_data() -> dict[str, Any]:
-    """A complete, anonymised NG-SIEM alert as returned by /alerts/entities/alerts/v2."""
+    """A complete, anonymised NG-SIEM alert as returned by /alerts/combined/alerts/v1."""
     return load_resource("ngsiem_alert.json")
