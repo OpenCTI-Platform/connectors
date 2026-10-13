@@ -3,6 +3,9 @@ import time
 from typing import Any, Dict, Optional
 
 import requests
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
+
 from connector.utils import (
     _IOC_GENERIC_PATH,
     _IOC_TAILORED_PATH,
@@ -15,8 +18,7 @@ from connector.utils import (
     get_request_headers,
     get_request_params,
 )
-from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
+
 
 _RETRY_STATUS = {429, 500, 502, 503, 504}
 _MAX_ATTEMPTS = 5

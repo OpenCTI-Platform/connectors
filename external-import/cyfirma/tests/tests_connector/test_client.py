@@ -1,16 +1,10 @@
 from unittest.mock import MagicMock, patch
 
-import connector
 import pytest
 import requests
+from connector.utils import _IOC_TAILORED_PATH
 from cyfirma_client import CyfirmaClient
 from pydantic import HttpUrl
-
-# Constants for API paths and parameters
-_BASE_PREFIX_PATH = "/api/ex/v3/da"
-_STIX_PATH = "/stix/2.1"
-_IOC_TAILORED_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/indicators/tailored"
-_IOC_GENERIC_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/indicators/all"
 
 
 @pytest.fixture
