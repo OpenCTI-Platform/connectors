@@ -1,9 +1,8 @@
-"""Pydantic models of the CrowdStrike Alerts API v2 payloads.
+"""Pydantic models of the CrowdStrike Alerts API payloads.
 
 Only the fields used by the connector are modelled; every other field of the
-alert is ignored. Reference: GET /alerts/queries/alerts/v2 and
-POST /alerts/entities/alerts/v2 (falconpy ``Alerts.query_alerts_v2`` and
-``Alerts.get_alerts_v2``).
+alert is ignored. Reference: POST /alerts/combined/alerts/v1
+(falconpy ``Alerts.get_alerts_combined``).
 """
 
 from typing import Any
@@ -59,7 +58,7 @@ class MitreAttack(_Model):
 
 
 class CrowdstrikeAlert(_Model):
-    """A CrowdStrike Falcon alert, as returned by /alerts/entities/alerts/v2."""
+    """A CrowdStrike Falcon alert, as returned by /alerts/combined/alerts/v1."""
 
     composite_id: str = Field(min_length=1)
     name: str | None = None

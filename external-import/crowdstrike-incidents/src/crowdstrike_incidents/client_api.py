@@ -1,33 +1,30 @@
-"""CrowdStrike Falcon Alerts API v2 client.
+"""CrowdStrike Falcon Alerts API client.
 
 The connector uses falconpy, the official CrowdStrike SDK, instead of the
 connectors-sdk ``BaseClientApi``: falconpy handles the OAuth2 client-credentials
 flow, token refresh and cloud regions.
 
-Pagination: the Alerts API rejects queries where ``offset + limit`` exceeds
-10 000, so alerts are paginated by keyset on ``updated_timestamp`` (ascending),
-restarting at offset 0 from the last seen timestamp after every page.
+Alerts are retrieved with ``POST /alerts/combined/alerts/v1``, which returns
+complete alerts in a single call per page.
 
-An alert can be updated between the ID query and the detail call: its
-``updated_timestamp`` then jumps forward and must not move the cursor, or the
-alerts between the two timestamps would be skipped. The cursor only advances
-to timestamps older than the query time minus ``CLOCK_SKEW_MARGIN``; more
-recent alerts are still yielded and fetched again on the next query.
+Pagination: the endpoint paginates "on live data", and records may appear on
+several pages or on none when sorting on a field that changes over time, such
+as ``updated_timestamp``. Pages are therefore chained by keyset rather than by
+``after`` token: each page restarts from the last ``updated_timestamp`` seen,
+which can never skip an alert. The ``after`` token is only used to page through
+alerts sharing that exact timestamp.
 """
 
-from collections.abc import Callable, Generator, Iterable
+from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from falconpy import Alerts
 
 USER_AGENT = "OpenCTI-CrowdStrike-Incidents-Connector"
-# Server-side limit on offset + limit for GET /alerts/queries/alerts/v2.
-MAX_WINDOW = 10_000
 SORT = "updated_timestamp|asc"
-# Tolerated clock difference between the connector host and CrowdStrike.
-CLOCK_SKEW_MARGIN = timedelta(minutes=5)
+# Maximum page size of POST /alerts/combined/alerts/v1.
+MAX_PAGE_SIZE = 1000
 
 
 def timestamp_sort_key(timestamp: str) -> str:
@@ -39,11 +36,6 @@ def timestamp_sort_key(timestamp: str) -> str:
     """
     base, _, fraction = timestamp.rstrip("Z").partition(".")
     return f"{base}.{fraction.ljust(9, '0')}"
-
-
-def format_timestamp(value: datetime) -> str:
-    """Format a datetime as an FQL timestamp (UTC, second precision)."""
-    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass(frozen=True)
@@ -73,7 +65,7 @@ class CrowdstrikeApiError(Exception):
 class CrowdstrikeAlertsClient:
     """Thin wrapper around falconpy ``Alerts`` for incremental collection."""
 
-    DEFAULT_PAGE_SIZE = 1000
+    DEFAULT_PAGE_SIZE = MAX_PAGE_SIZE
 
     def __init__(
         self,
@@ -81,7 +73,6 @@ class CrowdstrikeAlertsClient:
         client_id: str,
         client_secret: str,
         page_size: int = DEFAULT_PAGE_SIZE,
-        now: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
     ) -> None:
         self._alerts = Alerts(
             client_id=client_id,
@@ -90,7 +81,6 @@ class CrowdstrikeAlertsClient:
             user_agent=USER_AGENT,
         )
         self._page_size = page_size
-        self._now = now
 
     def iter_alert_pages(
         self,
@@ -105,85 +95,64 @@ class CrowdstrikeAlertsClient:
             since: ISO 8601 timestamp; alerts with ``updated_timestamp >= since``
                 are returned.
             products: Alert products to filter on (FQL ``product`` field).
-            include_hidden: Whether to include alerts hidden in the console.
+            include_hidden: Whether to include the alerts hidden in the console
+                (``show_in_ui:false``).
             skip_ids: Composite IDs already processed at the ``since`` timestamp.
 
         Yields:
             ``AlertPage`` objects, each with the cursor to checkpoint after it.
         """
         product_filter = ",".join(f"'{product}'" for product in products)
+        hidden_filter = "" if include_hidden else "+show_in_ui:true"
         cursor = since
-        offset = 0
+        after: str | None = None
         boundary_ids: set[str] = set(skip_ids)
         has_more = True
 
         while has_more:
-            if offset + self._page_size > MAX_WINDOW:
-                raise CrowdstrikeApiError(
-                    None,
-                    f"More than {MAX_WINDOW} alerts share the same updated_timestamp "
-                    f"({cursor}); cannot paginate further. Restart the connector "
-                    "from a later point by resetting its state.",
-                )
-            stable_limit = timestamp_sort_key(
-                format_timestamp(self._now() - CLOCK_SKEW_MARGIN)
+            alerts, next_after = self._get_page(
+                fql=(
+                    f"product:[{product_filter}]"
+                    f"+updated_timestamp:>='{cursor}'{hidden_filter}"
+                ),
+                after=after,
             )
-            ids = self._query_ids(
-                fql=f"product:[{product_filter}]+updated_timestamp:>='{cursor}'",
-                offset=offset,
-                include_hidden=include_hidden,
-            )
-            new_ids = [i for i in ids if i not in boundary_ids]
-            alerts = self._get_alerts(new_ids, include_hidden) if new_ids else []
             alerts.sort(
                 key=lambda alert: timestamp_sort_key(alert["updated_timestamp"])
             )
-            # Only alerts older than the query time can move the cursor: a more
-            # recent timestamp may come from an update made after the query.
-            stable = [
-                alert
-                for alert in alerts
-                if timestamp_sort_key(alert["updated_timestamp"]) <= stable_limit
-            ]
-            next_cursor = stable[-1]["updated_timestamp"] if stable else cursor
+            new_alerts = [a for a in alerts if a["composite_id"] not in boundary_ids]
 
-            if timestamp_sort_key(next_cursor) == timestamp_sort_key(cursor):
-                # Keyset cannot move forward (every alert shares the cursor
-                # timestamp or is too recent): page by offset instead.
-                offset += self._page_size
+            last_timestamp = alerts[-1]["updated_timestamp"] if alerts else cursor
+            if timestamp_sort_key(last_timestamp) == timestamp_sort_key(cursor):
+                # The whole page shares the cursor timestamp: keyset cannot move
+                # forward, page through that timestamp with the after token.
+                after = next_after
             else:
-                cursor = next_cursor
-                offset = 0
+                cursor = last_timestamp
+                after = None
                 boundary_ids = set()
             boundary_ids.update(
                 alert["composite_id"]
-                for alert in stable
+                for alert in alerts
                 if timestamp_sort_key(alert["updated_timestamp"])
                 == timestamp_sort_key(cursor)
             )
 
-            if alerts:
-                yield AlertPage(alerts, cursor, frozenset(boundary_ids))
-            # A short page means there is nothing left to fetch
-            has_more = len(ids) == self._page_size
+            if new_alerts:
+                yield AlertPage(new_alerts, cursor, frozenset(boundary_ids))
+            # The API returns an after token only when more results are available
+            has_more = next_after is not None and bool(alerts)
 
-    def _query_ids(self, fql: str, offset: int, include_hidden: bool) -> list[str]:
-        response = self._alerts.query_alerts_v2(
-            filter=fql,
-            sort=SORT,
-            limit=self._page_size,
-            offset=offset,
-            include_hidden=include_hidden,
-        )
-        return self._resources(response)
-
-    def _get_alerts(
-        self, composite_ids: list[str], include_hidden: bool
-    ) -> list[dict[str, Any]]:
-        response = self._alerts.get_alerts_v2(
-            composite_ids=composite_ids, include_hidden=include_hidden
-        )
-        return self._resources(response)
+    def _get_page(
+        self, fql: str, after: str | None
+    ) -> tuple[list[dict[str, Any]], str | None]:
+        body: dict[str, Any] = {"filter": fql, "sort": SORT, "limit": self._page_size}
+        if after:
+            body["after"] = after
+        response = self._alerts.get_alerts_combined(body=body)
+        resources = self._resources(response)
+        pagination = (response.get("body") or {}).get("meta", {}).get("pagination", {})
+        return resources, pagination.get("after") or None
 
     @staticmethod
     def _resources(response: dict[str, Any]) -> list[Any]:
