@@ -82,13 +82,13 @@ Incremental behavior: on the first run, issues created within the `since` window
 
 ### Vulnerabilities
 
-When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of the cloud asset **while it converts each issue**, and sends them in the same bundle as that issue. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
+When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of the cloud asset **while it converts each issue**, and sends them in the same bundle as that issue. Each finding becomes a `Vulnerability` named after its CVE, linked with a `has` relationship to the asset's `System` (virtual machine) or `Software` (container image). OpenCTI lets no other entity type have a vulnerability, so the other resource types (service account, access key, and so on) are not scanned.
 
 ```mermaid
 graph LR
     A[Wiz issuesV2] --> B[Incident]
-    A --> S[System<br/>entitySnapshot]
-    B -- targets --> S
+    A --> S[System / Software<br/>entitySnapshot]
+    B -- targets / related-to --> S
     A -. per issue .-> F[Wiz vulnerabilityFindings<br/>assetIdV2 of that issue]
     F --> V[Vulnerability<br/>CVE]
     S -- has --> V
@@ -102,7 +102,7 @@ graph LR
 | Vulnerability `epss_score` / `epss_percentile` | `epssProbability` / `epssPercentile`, converted from percentages |
 | Vulnerability `is_cisa_kev` | `hasCisaKevExploit` |
 | Vulnerability external reference | `portalUrl` + finding `id` |
-| Relationship | System `has` Vulnerability, `start_time` from `firstDetectedAt` |
+| Relationship | System or Software `has` Vulnerability, `start_time` from `firstDetectedAt` |
 
 An issue and the vulnerabilities of its resource are therefore committed together, in one bundle, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once even when several issues share it, so a run that imports no issue performs no vulnerability call at all.
 

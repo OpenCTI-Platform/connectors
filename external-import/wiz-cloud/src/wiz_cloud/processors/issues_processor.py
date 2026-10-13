@@ -22,15 +22,15 @@ from connectors_sdk.models import (
     Software,
     System,
     TLPMarking,
-    Vulnerability,
     UserAccount,
+    Vulnerability,
 )
 from connectors_sdk.models.enums import IncidentSeverity, IncidentType, RelationshipType
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
-from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 from wiz_cloud.observables import Credential
+from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 
 ISSUES_QUERY = (
     resources.files("wiz_cloud.queries").joinpath("issues.graphql").read_text("utf-8")
@@ -183,10 +183,16 @@ class WizIssuesProcessor(BaseDataProcessor):
                     continue
 
                 vulnerabilities = 0
-                if issue.entity_snapshot is not None:
+                asset = (
+                    entities_cache.get(issue.entity_snapshot.id)
+                    if issue.entity_snapshot is not None
+                    else None
+                )
+                # OpenCTI only lets a System or a Software have a
+                # vulnerability; service accounts and access keys carry none.
+                if isinstance(asset, (System, Software)):
                     found = self._vulnerabilities.objects_for_asset(
-                        issue.entity_snapshot.id,
-                        systems_cache[issue.entity_snapshot.id],
+                        issue.entity_snapshot.id, asset
                     )
                     vulnerabilities = sum(
                         1 for obj in found if isinstance(obj, Vulnerability)

@@ -11,11 +11,16 @@ the models are exercised here, no I/O.
 """
 
 from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
 from unittest.mock import MagicMock, patch
 
-from connectors_sdk.models import OrganizationAuthor, TLPMarking, Vulnerability
-from connectors_sdk.models import Software, System, UserAccount
+from connectors_sdk.models import (
+    OrganizationAuthor,
+    Software,
+    System,
+    TLPMarking,
+    UserAccount,
+    Vulnerability,
+)
 from connectors_sdk.models.enums import RelationshipType
 from wiz_cloud.models import WizIssue
 from wiz_cloud.observables import Credential
@@ -277,6 +282,8 @@ class TestPostInit:
                 client_secret="secret",
             )
         )
+        # Injected by the SDK before post_init() in a real run.
+        processor.logger = MagicMock()
 
         with patch("wiz_cloud.processors.issues_processor.WizApiClient") as client:
             processor.post_init()
@@ -286,6 +293,7 @@ class TestPostInit:
         assert kwargs["auth_url"] == "https://auth.app.wiz.io/oauth/token"
         assert kwargs["client_id"] == "id"
         assert kwargs["client_secret"] == "secret"
+        assert kwargs["logger"] is processor.logger
         assert processor._author.name == "Wiz"
         assert processor._marking is not None
 
@@ -428,6 +436,31 @@ class TestInterleavedVulnerabilities:
         assert asset_id == "8728411e-1a43-55a2-801e-44ffcb5a3dfa"
         # The relationship must point at the object already in the bundle.
         assert system.name == "tivan-eleonore-vm"
+
+    def test_a_container_image_gets_its_vulnerabilities_on_its_software(
+        self, processor, empty_description_issue_data
+    ):
+        vulnerabilities = self._enable(processor, {})
+        empty_description_issue_data["entitySnapshot"].update(
+            type="CONTAINER_IMAGE", name="nginx:1.27"
+        )
+
+        list(processor.transform(iter([[empty_description_issue_data]])))
+
+        _, asset = vulnerabilities.objects_for_asset.call_args[0]
+        assert isinstance(asset, Software)
+        assert asset.name == "nginx:1.27"
+
+    def test_an_asset_that_cannot_have_a_vulnerability_is_not_scanned(
+        self, processor, signin_issue_data
+    ):
+        """OpenCTI only lets a System or a Software have a vulnerability."""
+        vulnerabilities = self._enable(processor, {})
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        vulnerabilities.objects_for_asset.assert_not_called()
+        assert len(bundles) == 1
 
     def test_author_and_marking_ride_with_the_first_issue_bundle(
         self, processor, signin_issue_data, empty_description_issue_data

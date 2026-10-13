@@ -6,7 +6,8 @@ vulnerabilities of the resource it was raised on are converted together and
 sent in the same bundle, and the two can never be committed apart.
 
 Each finding becomes a Vulnerability keyed on its CVE id, linked with a has
-relationship to the System the issue already built for that asset.
+relationship to the System or Software the issue already built for that
+asset.
 """
 
 from importlib import resources
@@ -15,6 +16,7 @@ from connectors_sdk.models import (
     ExternalReference,
     OrganizationAuthor,
     Relationship,
+    Software,
     System,
     TLPMarking,
     Vulnerability,
@@ -110,7 +112,7 @@ class WizVulnerabilitiesProcessor:
         self._seen_assets: set[str] = set()
         self.failures = 0
 
-    def objects_for_asset(self, asset_id: str, system: System) -> list:
+    def objects_for_asset(self, asset_id: str, asset: System | Software) -> list:
         """Convert every vulnerability of one asset into bundle objects.
 
         A Wiz failure is logged and counted rather than raised: the issue this
@@ -120,8 +122,9 @@ class WizVulnerabilitiesProcessor:
 
         Args:
             asset_id: The entitySnapshot id of the cloud resource.
-            system: The System the issues processor built for that asset, so
-                the relationship points at the very object in the bundle.
+            asset: The System or Software the issues processor built for
+                that resource, so the relationship points at the very object
+                in the bundle.
 
         Returns:
             Vulnerabilities and their has relationships. Empty when the asset
@@ -155,7 +158,7 @@ class WizVulnerabilitiesProcessor:
                         )
                         continue
                     try:
-                        finding_objects = self._convert(finding, system)
+                        finding_objects = self._convert(finding, asset)
                     except ValidationError as err:
                         # A single rejected finding must never cost us the
                         # incident travelling in the same bundle.
@@ -181,7 +184,7 @@ class WizVulnerabilitiesProcessor:
             "[WIZ-CLOUD] Collected vulnerabilities for an asset",
             {
                 "asset_id": asset_id,
-                "asset": system.name,
+                "asset": asset.name,
                 "findings_returned": findings,
                 "vulnerabilities": converted,
                 "skipped": findings - converted,
@@ -206,12 +209,14 @@ class WizVulnerabilitiesProcessor:
 
     # -- conversion ----------------------------------------------------------
 
-    def _convert(self, finding: WizVulnerabilityFinding, system: System) -> list:
+    def _convert(
+        self, finding: WizVulnerabilityFinding, asset: System | Software
+    ) -> list:
         """Convert one finding into its bundle objects.
 
         Args:
             finding: Parsed Wiz vulnerability finding.
-            system: The System carrying the vulnerability.
+            asset: The System or Software carrying the vulnerability.
 
         Returns:
             The Vulnerability and its has Relationship, or an empty list when
@@ -229,7 +234,7 @@ class WizVulnerabilitiesProcessor:
             vulnerability,
             Relationship(
                 type=RelationshipType.HAS,
-                source=system,
+                source=asset,
                 target=vulnerability,
                 description=(
                     f"Wiz finding {finding.id}, "
