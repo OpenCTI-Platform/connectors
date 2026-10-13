@@ -26,6 +26,10 @@ PYTHON_VERSION="3.12"
 # Ref the connectors-sdk is installed from. Release/LTS builds set RELEASE_REF
 # so their schemas are generated against the matching SDK instead of master.
 SDK_REF="${RELEASE_REF:-master}"
+# Set CONNECTORS_SDK_PATH to a local connectors-sdk checkout to install it
+# instead of the remote $SDK_REF. Pull request CI does, so that a change to the
+# SDK is exercised by the schema generation of the connectors.
+CONNECTORS_SDK_PATH="${CONNECTORS_SDK_PATH:-}"
 
 CONNECTOR_DIRECTORY="${1:-$(pwd)}"
 CONNECTOR_NAME=$(basename "$CONNECTOR_DIRECTORY")
@@ -67,8 +71,18 @@ activate_venv() {
     fi
 
     # Ensure connectors-sdk is available for script generation
-    echo "🔄 Installing connectors-sdk ($SDK_REF) for schema generation..."
-    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${SDK_REF}#subdirectory=connectors-sdk"
+    if [ -n "$CONNECTORS_SDK_PATH" ]; then
+        local sdk_path
+        sdk_path=$(cd "$CONNECTORS_SDK_PATH" && pwd) || {
+            log_error "❌ CONNECTORS_SDK_PATH is not a directory: $CONNECTORS_SDK_PATH"
+            return 1
+        }
+        echo "🔄 Installing local connectors-sdk ($sdk_path) for schema generation..."
+        uv pip install "$sdk_path"
+    else
+        echo "🔄 Installing connectors-sdk ($SDK_REF) for schema generation..."
+        uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${SDK_REF}#subdirectory=connectors-sdk"
+    fi
 
     popd > /dev/null
 

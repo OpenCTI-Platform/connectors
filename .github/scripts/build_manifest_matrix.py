@@ -10,7 +10,8 @@ and correct even for connectors that weren't touched in the latest push.
 With CHANGED_ONLY=true (ci-config-schema.yml, on pull requests) it keeps
 only the connectors changed since the merge base, so a connector whose
 schema cannot be generated is caught before it reaches master. A change to
-the schema generation tooling selects every connector.
+the schema generation tooling, or to the connectors-sdk the generator imports,
+selects every connector.
 
 Shared git/manifest/output/batching helpers live in _matrix_common.py.
 """
@@ -20,8 +21,11 @@ import os
 
 import _matrix_common as common
 
-# Changing any of these can break schema generation for every connector.
+# Changing any of these can break schema generation for every connector. The
+# generator imports connectors_sdk.settings.json_schema_generator and the task
+# installs the SDK into every connector's venv.
 SCHEMA_TOOLING_PATHS = (
+    "connectors-sdk",
     ".mise/tasks/generate_config_schema.sh",
     ".mise/tasks/_helpers.sh",
     "shared/tools/composer/generate_connectors_config_schemas",
