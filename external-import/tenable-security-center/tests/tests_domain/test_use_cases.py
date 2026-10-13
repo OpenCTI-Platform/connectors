@@ -476,6 +476,28 @@ def test_converter_should_process_an_asset_chunk(
     )
 
 
+def test_converter_should_include_the_tlp_marking_definition(
+    mock_logger, mock_assets_chunk_without_finding
+):
+    # Given a ConverterToStix Instance with a TLP marking
+    converter = ConverterToStix(logger=mock_logger, tlp_marking=TLP_WHITE)
+
+    # When processing an asset chunk
+    results = converter.process_assets_chunk(
+        assets_chunk=mock_assets_chunk_without_finding,
+        process_systems_without_vulnerabilities=True,
+    )
+
+    # Then the marking definition referenced by the objects should be part of the results
+    # (otherwise the bundle cleanup strips the marking refs)
+    assert results[TLP_WHITE["id"]] == TLP_WHITE
+    assert all(
+        value["object_marking_refs"] == [TLP_WHITE["id"]]
+        for _, value in results.items()
+        if "object_marking_refs" in value
+    )
+
+
 def test_converter_should_process_an_asset_with_finding(
     mock_logger, mock_assets_chunk_with_finding
 ):

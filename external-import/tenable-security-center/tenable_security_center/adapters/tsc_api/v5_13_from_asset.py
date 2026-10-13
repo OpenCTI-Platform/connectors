@@ -187,7 +187,7 @@ class _CVEsAPI:  # pylint: disable=too-few-public-methods
                 # when it has no data for this CVE id (e.g. unknown/withdrawn CVE).
                 self.logger.warning(
                     f"Empty response received while fetching CVE {cve_id} "
-                    "from Tenable Security Center; skipping it."
+                    "from Tenable Security Center; importing it with its identifier only."
                 )
                 return None
             cve_response: dict[str, Any] = raw_response.json()

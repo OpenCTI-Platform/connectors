@@ -60,6 +60,7 @@ class ConverterToStix:
             x_opencti_aliases=None,
             x_opencti_reliability=None,
         )
+        self._tlp_marking = tlp_marking
         self._object_marking_refs: list[str] = [tlp_marking["id"]]
 
     def _system_from_asset(
@@ -351,4 +352,8 @@ class ConverterToStix:
             return {}
 
         bundle.append(self._author)
-        return {obj.id: obj.to_stix2_object() for obj in bundle}
+        stix_objects = {obj.id: obj.to_stix2_object() for obj in bundle}
+        # Every object references the TLP marking: its definition must be in the bundle,
+        # otherwise `cleanup_inconsistent_bundle` strips the marking refs on send.
+        stix_objects[self._tlp_marking["id"]] = self._tlp_marking
+        return stix_objects
