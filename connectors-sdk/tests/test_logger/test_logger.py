@@ -8,8 +8,15 @@ import connectors_sdk.logger
 import pytest
 from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger, set_log_level
 from connectors_sdk.logger._logger import configure_logging
+from pycti.connector.opencti_connector_helper import get_config_variable
 from pycti.utils.opencti_logger import CustomJsonFormatter
 from pycti.utils.opencti_logger import logger as pycti_logger
+
+
+@pytest.fixture(autouse=True)
+def default_json_logging(monkeypatch):
+    """Run every test with pycti's default JSON logging, whatever the shell sets."""
+    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
 
 
 def _json_handlers() -> list[logging.Handler]:
@@ -185,6 +192,65 @@ def test_logger_json_output_should_match_pycti(caplog):
         "message": "Hello",
         "attributes": {"count": 42},
     }
+
+
+@pytest.mark.parametrize(
+    "env_value",
+    [None, "", "true", "True", "yes", "0", "1", "FALSE", "false", "False", "no"],
+)
+def test_configure_logging_should_choose_json_logging_like_pycti(
+    monkeypatch, env_value
+):
+    """Test that `OPENCTI_JSON_LOGGING` enables JSON exactly when pycti's helper does."""
+    if env_value is None:
+        monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
+    else:
+        monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
+    # What `OpenCTIConnectorHelper` does, then passes to pycti's `logger()`
+    pycti_json_logging = get_config_variable(
+        "OPENCTI_JSON_LOGGING", ["opencti", "json_logging"], {}, False, True
+    )
+    root_logger = logging.getLogger()
+    saved_handlers = list(root_logger.handlers)
+    # `logging.basicConfig()` only configures a root logger that has no handler yet
+    root_logger.handlers.clear()
+    try:
+        configure_logging()
+
+        assert bool(_json_handlers()) is bool(pycti_json_logging)
+    finally:
+        root_logger.handlers[:] = saved_handlers
+
+
+@pytest.mark.parametrize("env_value", ["false", "False", "no"])
+def test_configure_logging_should_write_plain_text_when_json_logging_is_disabled(
+    monkeypatch, env_value
+):
+    """Test that disabling JSON logging gives pycti's plain text format for the run."""
+    monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
+    root_logger = logging.getLogger()
+    saved_handlers = list(root_logger.handlers)
+    third_party_levels = {
+        name: logging.getLogger(name).level for name in ("urllib3", "pika")
+    }
+    # `logging.basicConfig()` only configures a root logger that has no handler yet
+    root_logger.handlers.clear()
+    try:
+        configure_logging()
+        [handler] = root_logger.handlers
+        assert not isinstance(handler.formatter, CustomJsonFormatter)
+        assert handler.formatter._fmt == logging.BASIC_FORMAT
+
+        # What `OpenCTIConnectorHelper` does on creation, in non-JSON mode
+        pycti_logger(logging.INFO, False)
+
+        assert root_logger.handlers == [handler]
+    finally:
+        root_logger.handlers[:] = saved_handlers
+        for name, level in third_party_levels.items():
+            logging.getLogger(name).setLevel(level)
 
 
 def test_configure_logging_should_add_a_single_json_handler(monkeypatch):

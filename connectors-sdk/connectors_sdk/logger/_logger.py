@@ -9,9 +9,9 @@ is needed:
 
     logger.info("Fetched indicators", meta={"count": 42})
 
-It also sets up the root logger, with the same handler and format as pycti, so that
-every record of the process (SDK, connector, third-party libraries) is written once and
-in the format OpenCTI expects.
+It also sets up the root logger, with the same handler and format as pycti (JSON, unless
+`OPENCTI_JSON_LOGGING` env var disables it), so that every record of the process
+(SDK, connector, third-party libraries) is written once and in the same format.
 """
 
 from __future__ import annotations
@@ -27,6 +27,10 @@ from pycti.utils.opencti_logger import CustomJsonFormatter
 
 # Pycti's hardcoded format (not exposed by pycti, that's why we repeat it here)
 _PYCTI_LOG_RECORD_FORMAT = "%(timestamp)s %(level)s %(name)s %(message)s"
+
+_JSON_LOGGING_ENV_VAR = "OPENCTI_JSON_LOGGING"
+# The only values pycti's `get_config_variable` turns into `False`
+_PYCTI_FALSY_VALUES = ("no", "false", "False")
 
 _LOG_LEVEL_ENV_VAR = "CONNECTOR_LOG_LEVEL"
 # Same default as `connector.log_level` in `connectors_sdk.settings` (and pycti)
@@ -102,7 +106,10 @@ def get_logger(name: str) -> ConnectorLoggerAdapter:
 
 
 def configure_logging() -> None:
-    """Add the OpenCTI JSON handler to the root logger and set its level.
+    """Add a handler to the root logger and set its level, as pycti does.
+
+    The handler writes JSON records, unless the `OPENCTI_JSON_LOGGING` environment
+    variable disables it, then it writes plain text.
 
     The level is read from the `CONNECTOR_LOG_LEVEL` environment variable. The
     connector's settings are not validated yet when this function is called, so a level
@@ -110,19 +117,25 @@ def configure_logging() -> None:
     When the variable is not set, a Python warning (`warnings.warn`, not a log record)
     says that the default level applies until then.
 
-    The handler is added only when the root logger has no handler with pycti's JSON
+    The JSON handler is added only when the root logger has no handler with pycti's JSON
     formatter yet, so this function is idempotent. It also prevents duplicate records:
     pycti replaces the root handlers with its own, using the same formatter, when an
     `OpenCTIConnectorHelper` is created.
     """
     root_logger = logging.getLogger()
-    if not any(
-        isinstance(handler.formatter, CustomJsonFormatter)
-        for handler in root_logger.handlers
-    ):
-        handler = logging.StreamHandler()
-        handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
-        root_logger.addHandler(handler)
+
+    json_logging = os.environ.get(_JSON_LOGGING_ENV_VAR) not in _PYCTI_FALSY_VALUES
+    if json_logging:
+        if not any(
+            isinstance(handler.formatter, CustomJsonFormatter)
+            for handler in root_logger.handlers
+        ):
+            handler = logging.StreamHandler()
+            handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
+            root_logger.addHandler(handler)
+    else:
+        # Use the default handler: a stderr `StreamHandler` with `logging.BASIC_FORMAT`
+        logging.basicConfig()
 
     env_log_level = os.environ.get(_LOG_LEVEL_ENV_VAR)
     if not env_log_level:
