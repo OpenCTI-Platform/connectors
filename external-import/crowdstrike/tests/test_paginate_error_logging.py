@@ -57,30 +57,31 @@ def test_paginate_falls_back_to_raw_error_when_no_message(monkeypatch):
 def test_paginate_handles_non_dict_error_entries(monkeypatch):
     calls = _error_log_calls(monkeypatch, ["plain string error"])
     assert any(c.args[1] == "plain string error" and c.args[2] is None for c in calls)
-
-def test_paginate_handles_missing_pagination_on_api_error(monkeypatch):
-    mock_logger = MagicMock()
-    monkeypatch.setattr(utils, "logger", mock_logger)
-
-    @utils.paginate
-    def query(*args, limit=25, offset=0, **kwargs):
-        return {
-            "errors": [
-                {
-                    "code": 401,
-                    "message": "Unauthorized",
-                }
-            ],
-            "meta": {
-                "trace_id": "test-trace-id",
-            },
-            "resources": [],
-        }
-
-    assert list(query()) == []
-
-    assert any(
-        call.args[1] == "Unauthorized" and call.args[2] == 401
-        for call in mock_logger.error.call_args_list
-        if call.args and call.args[0] == "Error: %s (code: %s)"
-    )
+
+
+def test_paginate_handles_missing_pagination_on_api_error(monkeypatch):
+    mock_logger = MagicMock()
+    monkeypatch.setattr(utils, "logger", mock_logger)
+
+    @utils.paginate
+    def query(*args, limit=25, offset=0, **kwargs):
+        return {
+            "errors": [
+                {
+                    "code": 401,
+                    "message": "Unauthorized",
+                }
+            ],
+            "meta": {
+                "trace_id": "test-trace-id",
+            },
+            "resources": [],
+        }
+
+    assert list(query()) == []
+
+    assert any(
+        call.args[1] == "Unauthorized" and call.args[2] == 401
+        for call in mock_logger.error.call_args_list
+        if call.args and call.args[0] == "Error: %s (code: %s)"
+    )
