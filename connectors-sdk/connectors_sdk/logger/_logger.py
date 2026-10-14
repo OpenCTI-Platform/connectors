@@ -177,3 +177,8 @@ def _configure_logging() -> None:
         )
 
     set_log_level(env_log_level or _DEFAULT_LOG_LEVEL)
+
+
+# Set up the root logger at import time, so that the SDK's modules and the connector
+# use the same log level, handler and formatter at runtime.
+_configure_logging()

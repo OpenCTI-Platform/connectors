@@ -23,15 +23,10 @@ same name:
 
 No `OpenCTIConnectorHelper` is needed. Records look exactly like the ones a helper
 produces, because the same pycti formatter is used.
-
-Importing this module sets up the root logger, with the level read from the
-`CONNECTOR_LOG_LEVEL` environment variable. `BaseConnectorSettings` then replaces it with
-the validated `connector.log_level` value.
 """
 
 from connectors_sdk.logger._logger import (
     ConnectorLoggerAdapter,
-    _configure_logging,
     get_logger,
     set_log_level,
 )
@@ -41,5 +36,3 @@ __all__ = [
     "get_logger",
     "set_log_level",
 ]
-
-_configure_logging()

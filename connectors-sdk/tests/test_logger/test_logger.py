@@ -1,8 +1,10 @@
 """Tests for `connectors_sdk.logger`."""
 
-import importlib
 import json
 import logging
+import os
+import subprocess
+import sys
 
 import connectors_sdk.logger
 import pytest
@@ -348,16 +350,29 @@ def test_configure_logging_should_not_warn_when_env_var_is_set(monkeypatch, recw
     assert [w for w in recwarn if w.category is UserWarning] == []
 
 
-def test_importing_the_module_should_configure_logging(monkeypatch):
+def test_importing_the_module_should_configure_logging():
     """Test that logging is set up as soon as `connectors_sdk.logger` is imported."""
-    for handler in _json_handlers():
-        logging.getLogger().removeHandler(handler)
-    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "info")
+    # A fresh interpreter, since this process imported the module long ago
+    script = (
+        "import logging\n"
+        "from pycti.utils.opencti_logger import CustomJsonFormatter\n"
+        "import connectors_sdk.logger\n"
+        "root = logging.getLogger()\n"
+        "json_handlers = [\n"
+        "    h for h in root.handlers if isinstance(h.formatter, CustomJsonFormatter)\n"
+        "]\n"
+        "print(len(json_handlers), logging.getLevelName(root.level))\n"
+    )
 
-    importlib.reload(connectors_sdk.logger)
+    result = subprocess.run(  # noqa: S603 - fixed script, current interpreter
+        [sys.executable, "-c", script],
+        env={**os.environ, "CONNECTOR_LOG_LEVEL": "info"},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-    assert len(_json_handlers()) == 1
-    assert logging.getLogger().level == logging.INFO
+    assert result.stdout.split() == ["1", "INFO"]
 
 
 @pytest.mark.parametrize(
