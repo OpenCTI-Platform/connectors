@@ -71,8 +71,9 @@
       "type": "string"
     },
     "THREATMATCH_IMPORT_FROM_DATE": {
+      "default": "P30D",
       "description": "Relative ISO-8601 duration (e.g., 'P30D') used to set the first import window. Applied on the first run only. Defaults to 30 days ago from the current date. ",
-      "format": "date-time",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "THREATMATCH_IMPORT_PROFILES": {

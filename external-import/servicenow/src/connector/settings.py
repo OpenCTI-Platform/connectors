@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Annotated, Literal, Optional
 
 from connectors_sdk import (
@@ -90,8 +90,8 @@ class _ServiceNowConfig(BaseConfigModel):
         description="Exponential backoff duration between API retries (ISO 8601 duration format).",
     )
     import_start_date: DatetimeFromIsoString = Field(
-        description="Start date of first import (ISO date format) - Default to 30 days ago.",
-        default_factory=lambda: datetime.now(tz=timezone.utc) - timedelta(days=30),
+        description="Start date of first import, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+        default="P30D",
     )
     state_to_exclude: Optional[list[str]] = Field(
         default=None,

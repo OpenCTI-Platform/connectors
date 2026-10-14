@@ -1,5 +1,5 @@
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Annotated, Literal, Self
 
 from connectors_sdk import (
@@ -7,51 +7,15 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
     ConfigValidationError,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from pydantic import (
     AliasChoices,
     BeforeValidator,
     Field,
-    PlainSerializer,
-    TypeAdapter,
     model_validator,
 )
-
-
-def parse_iso_string(value: str | datetime) -> datetime:
-    """Convert ISO string into a datetime object.
-
-    Example:
-        > value = parse_iso_string("2023-10-01T00:00:00Z")
-        > print(value) # 2023-10-01 00:00:00+00:00
-
-        # If today is 2023-10-01:
-        > value = parse_iso_string("P30D")
-        > print(value) # 2023-09-01 00:00:00+00:00
-    """
-    if isinstance(value, str):
-        try:
-            # Convert presumed ISO string to datetime object
-            parsed_datetime = datetime.fromisoformat(value)
-            if parsed_datetime.tzinfo:
-                return parsed_datetime.astimezone(tz=timezone.utc)
-            else:
-                return parsed_datetime.replace(tzinfo=timezone.utc)
-        except ValueError:
-            # If not a datetime ISO string, try to parse it as timedelta with pydantic first
-            duration = TypeAdapter(timedelta).validate_python(value)
-            # Then return a datetime minus the value
-            return datetime.now(timezone.utc) - duration
-    return value
-
-
-DatetimeFromIsoString = Annotated[
-    datetime,
-    BeforeValidator(parse_iso_string),
-    # Replace the default JSON serializer, in order to use +00:00 offset instead of Z prefix
-    PlainSerializer(datetime.isoformat, when_used="json"),
-]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -110,7 +74,7 @@ class MispFeedConfig(BaseConfigModel):
         default=None,
     )
     import_from_date: DatetimeFromIsoString | None = Field(
-        description="Start date for importing data from the MISP feed.",
+        description="Start date for importing data from the MISP feed, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
         default=None,
     )
     create_reports: bool = Field(

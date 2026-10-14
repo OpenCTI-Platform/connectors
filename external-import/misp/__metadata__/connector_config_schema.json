@@ -171,8 +171,8 @@
     },
     "MISP_IMPORT_FROM_DATE": {
       "default": null,
-      "description": "A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
-      "format": "date-time",
+      "description": "The date from which to start importing MISP events (based on events creation date), as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "MISP_IMPORT_TAGS": {

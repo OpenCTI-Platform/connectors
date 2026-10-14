@@ -85,8 +85,9 @@
       "type": "array"
     },
     "HONEYLABS_IMPORT_SINCE": {
+      "default": "P7D",
       "description": "Start date for the first import (ISO 8601, absolute like '2026-01-01T00:00:00Z' or relative like 'P7D'). Later runs resume from the connector state. The free plan serves 7 days of history, paid plans 30.",
-      "format": "date-time",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "HONEYLABS_PAGE_SIZE": {

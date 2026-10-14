@@ -89,9 +89,9 @@
       "type": "array"
     },
     "SILOBREAKER_IMPORT_START_DATE": {
-      "default": "2025-12-01T00:00:00Z",
-      "description": "The start date for importing Silobreaker data. (Default: 01/12/2025).",
-      "format": "date-time",
+      "default": "P30D",
+      "description": "The start date for importing Silobreaker data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     }
   },
