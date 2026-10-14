@@ -21,7 +21,6 @@ from whoisfreaks_client.models import ThreatFeedRecord
 from whoisfreaks_client.status import WhoisFreaksStatus
 
 _TLP_MARKINGS = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -236,8 +235,8 @@ class ThreatFeedProcessor(BaseDataProcessor):
         key = str(raw).lower().replace("tlp:", "")
 
         # TLP:AMBER+STRICT — use stix2 built-in if available, else AMBER.
-        if key == "amber+strict":
-            return TLPMarking(level="amber+strict").to_stix2_object()
+        if key in {"clear", "amber+strict"}:
+            return TLPMarking(level=key).to_stix2_object()
 
         return _TLP_MARKINGS.get(
             key,

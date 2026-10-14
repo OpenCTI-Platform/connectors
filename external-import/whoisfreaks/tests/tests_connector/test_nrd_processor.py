@@ -178,7 +178,8 @@ def test_nrd_ordered_whois_items_preserves_extra_columns():
 def test_nrd_tlp_marking():
     processor = NRDProcessor("nrd_gtld_with_whois")
 
-    assert processor._get_tlp_marking("clear") == stix2.TLP_WHITE
+    clear = processor._get_tlp_marking("clear")
+    assert clear.x_opencti_definition == "TLP:CLEAR"
     assert processor._get_tlp_marking("white") == stix2.TLP_WHITE
     assert processor._get_tlp_marking("green") == stix2.TLP_GREEN
     assert processor._get_tlp_marking("amber") == stix2.TLP_AMBER

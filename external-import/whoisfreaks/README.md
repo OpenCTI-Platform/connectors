@@ -14,7 +14,7 @@ Ingests **WhoisFreaks** commercial domain threat intelligence and newly register
 - **NRD feeds**: gTLD/ccTLD, with or without WHOIS enrichment
 - **Per-feed toggle**: enable only the endpoints covered by your subscription
 - **Scalable ingestion**: streamed CSV parsing, configurable page size, retries with backoff, and resumable state after successful runs
-- **Clear subscription errors**: 401/403 produce actionable log messages; other feeds continue
+- **Clear subscription errors**: 401/403 produce actionable log messages and are skipped; other enabled feeds continue. Other processor failures abort the callback without saving state
 - **Resumable**: day-level state plus per-day record offsets; failed feeds resume from the most recently saved offset, while abrupt termination may replay pages from the last completed callback
 
 
@@ -99,7 +99,7 @@ Valid NRD values:
 - `nrd_gtld_without_whois`
 - `nrd_cctld_without_whois`
 
-If a feed returns HTTP 401/403, the connector logs a clear subscription message and continues with the remaining enabled feeds.
+If a feed returns HTTP 401/403, the connector logs a clear subscription message and skips that feed while continuing with the remaining enabled feeds. Other processor failures stop the callback and prevent state from being saved.
 
 ## Deployment
 
@@ -134,9 +134,9 @@ python3 main.py
    - Skips if that day is not yet available according to status.
    - Paginates the stream API from the stored offset.
    - Transforms each page to STIX and sends bundles via the SDK.
-     - Updates the in-memory offset every `checkpoint_every_pages` pages; the connector persists state at callback end, including after an isolated feed failure.
+     - Updates the in-memory offset every `checkpoint_every_pages` pages; the connector persists state at callback end only after all processors succeed.
    - When a day is complete, advances the day checkpoint and clears the offset.
-4. Per-feed failures are isolated; other feeds still run.
+4. Subscription denials (401/403) are isolated; other processor failures abort the callback and prevent state persistence.
 
 ### Scale guidance
 
@@ -173,7 +173,7 @@ Set `CONNECTOR_LOG_LEVEL=info` or `debug`. Subscription denials and checkpoint m
 
 ### Architecture & Design Notes
 
-- **State persistence**: Processors update offsets in memory and the connector saves shared state at callback end, including after isolated feed failures. Abrupt termination can replay pages from the last completed callback; deterministic STIX IDs make replay idempotent.
+- **State persistence**: Processors update offsets in memory and the connector saves shared state only after all processors succeed. Subscription denials are handled within their processor; other failures abort the callback without saving. Abrupt termination can replay pages from the last completed callback; deterministic STIX IDs make replay idempotent.
 - **Latest day only**: Both threat-feed and NRD processors ingest only the status `last_update` date. Older platform objects are not purged by the connector; use OpenCTI retention policies for cleanup.
 - **Deterministic IDs**: Both Indicators and Notes use deterministic IDs (`Note.generate_id(None, content)`), ensuring full idempotency across re-runs without duplicate object creation in OpenCTI.
 

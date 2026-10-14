@@ -85,6 +85,11 @@
       ],
       "description": "Threat feeds to import (subset of: malware, phishing, spam). Leave empty or omit feeds you are not subscribed to.",
       "items": {
+        "enum": [
+          "malware",
+          "phishing",
+          "spam"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -98,6 +103,12 @@
       ],
       "description": "NRD feeds to import. Valid values: nrd_gtld_with_whois, nrd_cctld_with_whois, nrd_gtld_without_whois, nrd_cctld_without_whois. Only enable feeds covered by your subscription.",
       "items": {
+        "enum": [
+          "nrd_gtld_with_whois",
+          "nrd_cctld_with_whois",
+          "nrd_gtld_without_whois",
+          "nrd_cctld_without_whois"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -149,6 +160,7 @@
       "type": "integer"
     },
     "WHOISFREAKS_IMPORT_SINCE": {
+      "default": "P1D",
       "description": "Latest-snapshot floor date; snapshots older than this date are skipped. This does not trigger historical backfill. Accepts an ISO-8601 date-time or relative duration such as P7D.",
       "format": "date-time",
       "type": "string"

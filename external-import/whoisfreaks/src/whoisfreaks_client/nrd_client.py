@@ -189,6 +189,13 @@ class WhoisFreaksNRDClient:
                         f"upgrade the subscription."
                     ) from exc
 
+                if status_code is not None and status_code < 500:
+                    if exc.response is not None:
+                        exc.response.close()
+                    raise WhoisFreaksNRDError(
+                        f"WhoisFreaks NRD request returned HTTP {status_code}"
+                    ) from exc
+
                 if attempt < self._max_retries:
                     delay = self._retry_backoff * (2**attempt)
                     time.sleep(delay)

@@ -2,7 +2,14 @@ from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
 
-from whoisfreaks_client.nrd_client import NRDPage, WhoisFreaksNRDClient
+import pytest
+import requests
+
+from whoisfreaks_client.nrd_client import (
+    NRDPage,
+    WhoisFreaksNRDClient,
+    WhoisFreaksNRDError,
+)
 
 
 def test_parse_whois_csv():
@@ -210,6 +217,31 @@ def test_iter_retries_rate_limit_then_succeeds(monkeypatch):
     assert get.call_count == 2
     rate_limited.close.assert_called_once()
     sleep.assert_called_once_with(0.5)
+
+
+@pytest.mark.parametrize("status_code", [400, 404])
+def test_iter_does_not_retry_permanent_http_errors(monkeypatch, status_code):
+    response = _fake_response("", status_code=status_code)
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client = WhoisFreaksNRDClient("test-api-key", max_retries=3)
+    get = MagicMock(return_value=response)
+    monkeypatch.setattr(client._session, "get", get)
+    sleep = MagicMock()
+    monkeypatch.setattr("whoisfreaks_client.nrd_client.time.sleep", sleep)
+
+    with pytest.raises(WhoisFreaksNRDError, match=f"HTTP {status_code}"):
+        list(
+            client.iter_feed(
+                feed_type="gtld",
+                whois=False,
+                feed_date=date(2026, 9, 1),
+                limit=10,
+            )
+        )
+
+    assert get.call_count == 1
+    sleep.assert_not_called()
+    response.close.assert_called_once()
 
 
 def test_iter_continues_after_malformed_only_page():

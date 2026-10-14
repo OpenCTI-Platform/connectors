@@ -182,6 +182,14 @@ class WhoisFreaksClient:
                         f"the subscription."
                     ) from exc
 
+                if status_code is not None and status_code < 500:
+                    if exc.response is not None:
+                        exc.response.close()
+                    raise WhoisFreaksClientError(
+                        f"WhoisFreaks returned HTTP {status_code} "
+                        f"for {feed_type} on {date_value}"
+                    ) from exc
+
                 if attempt < self._max_retries:
                     delay = self._retry_backoff * (2**attempt)
                     time.sleep(delay)

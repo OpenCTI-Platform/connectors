@@ -99,6 +99,12 @@ def test_threat_feed_note_includes_every_source_column():
     assert "empty_column" not in note.content  # empty columns are dropped
 
 
+def test_threat_feed_clear_uses_clear_marking():
+    marking = ThreatFeedProcessor._get_tlp_marking("clear")
+
+    assert marking.x_opencti_definition == "TLP:CLEAR"
+
+
 def test_transform_yields_pages_with_author():
     processor = ThreatFeedProcessor("malware")
     processor._author = stix2.Identity(

@@ -1,6 +1,7 @@
 """WhoisFreaks connector configuration."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
+from typing import Annotated, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -10,7 +11,30 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import BeforeValidator, Field, HttpUrl, SecretStr
+
+
+def _parse_comma_separated_feed_types(value: object) -> object:
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return value
+
+
+_FeedTypes = Annotated[
+    list[Literal["malware", "phishing", "spam"]],
+    BeforeValidator(_parse_comma_separated_feed_types),
+]
+_NRDFeedTypes = Annotated[
+    list[
+        Literal[
+            "nrd_gtld_with_whois",
+            "nrd_cctld_with_whois",
+            "nrd_gtld_without_whois",
+            "nrd_cctld_without_whois",
+        ]
+    ],
+    BeforeValidator(_parse_comma_separated_feed_types),
+]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -57,7 +81,7 @@ class WhoisFreaksConfig(BaseConfigModel):
         description="WhoisFreaks API status base URL.",
         default="https://files.whoisfreaks.com",
     )
-    feed_types: ListFromString = Field(
+    feed_types: _FeedTypes = Field(
         description=(
             "Threat feeds to import (subset of: malware, phishing, spam). "
             "Leave empty or omit feeds you are not subscribed to."
@@ -68,7 +92,7 @@ class WhoisFreaksConfig(BaseConfigModel):
             "spam",
         ],
     )
-    nrd_feed_types: ListFromString = Field(
+    nrd_feed_types: _NRDFeedTypes = Field(
         description=(
             "NRD feeds to import. Valid values: "
             "nrd_gtld_with_whois, nrd_cctld_with_whois, "
@@ -131,7 +155,8 @@ class WhoisFreaksConfig(BaseConfigModel):
             "This does not trigger historical backfill. Accepts an ISO-8601 "
             "date-time or relative duration such as P7D."
         ),
-        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=1),
+        default="P1D",
+        validate_default=True,
     )
     tlp_level: TLPLevel = Field(
         description="TLP marking applied to imported STIX objects.",
