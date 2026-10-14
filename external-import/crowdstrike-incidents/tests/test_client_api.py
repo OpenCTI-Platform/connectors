@@ -379,7 +379,7 @@ def test_source_events_query(make_events_client):
     assert query["queryString"] == (
         'Ngsiem.event.type="ngsiem-rule-match-event"'
         ' | in(field="Ngsiem.indicator.id", values=["a","b"])'
-        " | head(limit=2)"
+        " | head(limit=6)"
     )
     assert query["start"] == int(SINCE.timestamp() * 1000)
     assert query["end"] == "now"
@@ -395,8 +395,8 @@ def test_source_events_are_searched_by_batches(make_events_client):
     )
 
     assert len(fake.queries) == 2
-    assert f"head(limit={MAX_IDS_PER_SEARCH})" in fake.queries[0]["queryString"]
-    assert "head(limit=5)" in fake.queries[1]["queryString"]
+    assert f"head(limit={MAX_IDS_PER_SEARCH * 3})" in fake.queries[0]["queryString"]
+    assert "head(limit=15)" in fake.queries[1]["queryString"]
     # 1000 indicator IDs stay below the 66 000 characters query limit
     assert len(fake.queries[0]["queryString"]) < 66_000
 
@@ -446,3 +446,59 @@ def test_source_events_forbidden_mentions_the_ngsiem_scope(
 
     assert error.value.status_code == 403
     assert "scope not permitted" in str(error.value)
+
+
+def test_cancelled_search_raises(make_events_client):
+    fake = FakeNgsiem()
+    fake.get_search_status.side_effect = None
+    fake.get_search_status.return_value = {
+        "status_code": 200,
+        "body": {"done": False, "cancelled": True, "events": []},
+    }
+    client, _ = make_events_client(fake)
+
+    with pytest.raises(CrowdstrikeApiError, match="cancelled"):
+        client.get_source_events(["a"], since=SINCE)
+
+
+def test_stop_search_failure_does_not_hide_the_timeout(make_events_client):
+    fake = FakeNgsiem(polls_before_done=10**6)
+    fake.stop_search.side_effect = RuntimeError("network down")
+    client, _ = make_events_client(fake, clock_step=EVENT_SEARCH_TIMEOUT_SECONDS / 3)
+
+    with pytest.raises(CrowdstrikeApiError, match="not completed"):
+        client.get_source_events(["a"], since=SINCE)
+
+
+def test_unexpected_indicator_ids_are_not_sent(make_events_client):
+    fake = FakeNgsiem()
+    client, _ = make_events_client(fake)
+
+    client.get_source_events(["abc123", 'bad"id', "bad\\", "", "ok_id-1"], since=SINCE)
+
+    assert 'values=["abc123","ok_id-1"]' in fake.queries[0]["queryString"]
+
+
+def test_cursor_never_moves_backwards(make_client):
+    """If the API returned alerts older than a high-precision cursor, the page
+    must not move the cursor back (which would loop on the same page)."""
+    cursor = "2025-01-01T00:00:01.123456789Z"
+    client, fake, _ = make_client([])
+    fake.get_alerts_combined.side_effect = None
+    fake.get_alerts_combined.return_value = {
+        "status_code": 200,
+        "body": {
+            "meta": {"pagination": {"total": 2}},
+            "resources": [
+                _alert(1, "2025-01-01T00:00:01.123Z"),
+                _alert(2, "2025-01-01T00:00:01.1Z"),
+            ],
+            "errors": [],
+        },
+    }
+
+    pages = _pages(client, since=cursor)
+
+    assert all(
+        timestamp_sort_key(page.cursor) >= timestamp_sort_key(cursor) for page in pages
+    )

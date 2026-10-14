@@ -283,3 +283,33 @@ def test_no_search_when_every_alert_is_filtered(ngsiem_alert_data):
     list(proc.transform(iter([page])))
 
     events_client.get_source_events.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "key, value",
+    [
+        ("process.hash.sha256", "abc"),
+        ("process.hash.md5", "N/A"),
+        ("process.hash.sha1", "z" * 40),
+    ],
+)
+def test_malformed_hash_is_dropped_and_the_incident_kept(
+    ngsiem_alert_data, source_event_data, key, value
+):
+    source_event_data[key] = value
+
+    objects = _convert_with_event(ngsiem_alert_data, source_event_data)
+
+    assert len(_of_type(objects, "incident")) == 1
+    (file,) = _of_type(objects, "file")
+    assert value not in (file.hashes or {}).values()
+
+
+def test_uppercase_hashes_are_accepted(ngsiem_alert_data, source_event_data):
+    source_event_data["process.hash.sha256"] = "A" * 64
+
+    (file,) = _of_type(
+        _convert_with_event(ngsiem_alert_data, source_event_data), "file"
+    )
+
+    assert file.hashes["SHA-256"] == "A" * 64

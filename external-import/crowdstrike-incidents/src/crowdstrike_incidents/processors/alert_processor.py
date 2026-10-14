@@ -100,6 +100,19 @@ class CrowdstrikeIncidentsState(ExternalImportConnectorState):
         super().load(force=force)
 
 
+HASH_LENGTHS: dict[HashAlgorithm, int] = {
+    HashAlgorithm.MD5: 32,
+    HashAlgorithm.SHA1: 40,
+    HashAlgorithm.SHA256: 64,
+}
+HEX = re.compile(r"^[0-9a-fA-F]+$")
+
+
+def _is_valid_hash(algorithm: HashAlgorithm, value: str) -> bool:
+    """Whether a hash is hexadecimal and has the length of its algorithm."""
+    return len(value) == HASH_LENGTHS[algorithm] and bool(HEX.match(value))
+
+
 def _is_placeholder_hash(value: str) -> bool:
     """Whether a hash is a placeholder made only of zeros."""
     return set(value) == {"0"}
@@ -262,7 +275,8 @@ class AlertProcessor(BaseDataProcessor):
                 continue
             events.setdefault(event.indicator_id, event)
         self.logger.info(
-            f"Found the source event of {len(events)} of {len(alerts)} alerts."
+            f"Found the source event of {len(events)} of {len(alerts)} alerts.",
+            {"search_window_start": since.isoformat()},
         )
         return events
 
@@ -410,28 +424,44 @@ class AlertProcessor(BaseDataProcessor):
         Placeholder hashes made only of zeros (e.g. the SHA-1 CrowdStrike sends
         when it did not compute it) are dropped: OpenCTI matches Files on any of
         their hashes, so a shared placeholder would merge unrelated binaries.
+        Malformed hashes are dropped too, as stix2 rejects them and the whole
+        Incident would be lost. Enrichment is best effort: a File that cannot
+        be built is logged and skipped, the Incident is kept.
         """
         if event is None:
             return []
-        hashes = {
-            algorithm: value
-            for algorithm, value in (
-                (HashAlgorithm.SHA256, event.sha256),
-                (HashAlgorithm.MD5, event.md5),
-                (HashAlgorithm.SHA1, event.sha1),
-            )
-            if value and not _is_placeholder_hash(value)
-        }
+        hashes: dict[HashAlgorithm, str] = {}
+        for algorithm, value in (
+            (HashAlgorithm.SHA256, event.sha256),
+            (HashAlgorithm.MD5, event.md5),
+            (HashAlgorithm.SHA1, event.sha1),
+        ):
+            if not value or _is_placeholder_hash(value):
+                continue
+            if not _is_valid_hash(algorithm, value):
+                self.logger.warning(
+                    "Malformed hash skipped",
+                    {"indicator_id": event.indicator_id, "algorithm": algorithm.value},
+                )
+                continue
+            hashes[algorithm] = value
         if not hashes and not event.file_name:
             return []
-        return [
-            File(
-                name=event.file_name,
-                hashes=hashes or None,
-                author=AUTHOR,
-                markings=[self._marking],
+        try:
+            return [
+                File(
+                    name=event.file_name,
+                    hashes=hashes or None,
+                    author=AUTHOR,
+                    markings=[self._marking],
+                )
+            ]
+        except Exception as err:  # noqa: BLE001
+            self.logger.warning(
+                "Failed to build the File of the source event",
+                {"indicator_id": event.indicator_id, "error": str(err)},
             )
-        ]
+            return []
 
     def _build_attack_patterns(self, alert: CrowdstrikeAlert) -> list[AttackPattern]:
         attack_patterns: dict[str, AttackPattern] = {}
