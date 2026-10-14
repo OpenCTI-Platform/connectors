@@ -21,10 +21,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Generator
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 
 if TYPE_CHECKING:
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 
-class BaseDataProcessor(ABC):
+class BaseDataProcessor(_ClassLoggerMixin, ABC):
     """Abstract base class defining the data processing contract.
 
     Each ``BaseDataProcessor`` is responsible for:
@@ -71,17 +71,10 @@ class BaseDataProcessor(ABC):
         state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
     """
 
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
     work_name: str
     settings: BaseConnectorSettings
     work_manager: WorkManager
     state: ExternalImportConnectorState
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(self) -> None:
         """Initialize the processor."""

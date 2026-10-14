@@ -17,27 +17,20 @@ from __future__ import annotations
 import warnings
 from abc import ABC
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_serializer
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 
-class _StateClient:
+class _StateClient(_ClassLoggerMixin):
     """State client for managing states on OpenCTI.
     It is used internally by `BaseConnectorState` to handle the actual communication with OpenCTI.
     Connector developers should not interact with this class directly.
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     _helper: OpenCTIConnectorHelper
 
@@ -70,7 +63,7 @@ class _StateClient:
         self.logger.debug("State saved to OpenCTI", meta={"state": state_dict})
 
 
-class BaseConnectorState(BaseModel, ABC):
+class BaseConnectorState(_ClassLoggerMixin, BaseModel, ABC):
     """Base class for connectors states.
     It must be subclassed per connectors types.
     All fields defined in this model MUST be JSON serializable as they will be stored as JSON
@@ -86,15 +79,8 @@ class BaseConnectorState(BaseModel, ABC):
         validate_assignment=True,
     )
 
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
     _client: _StateClient | None = PrivateAttr(default=None)
     _can_be_loaded: bool = PrivateAttr(default=False)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     @field_serializer("*", mode="wrap", when_used="json")
     def _serialize_datetimes(self, value: Any, handler: Any) -> Any:

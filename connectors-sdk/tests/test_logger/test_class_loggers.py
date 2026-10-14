@@ -4,6 +4,7 @@ import importlib
 
 import pytest
 from connectors_sdk.logger import ConnectorLoggerAdapter
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 
 # Every SDK class logging through `self.logger` / `cls.logger`
 CLASSES_WITH_LOGGER = [
@@ -47,3 +48,20 @@ def test_subclass_logger_should_be_named_after_the_subclass_module(
     assert isinstance(subclass.logger, ConnectorLoggerAdapter)
     assert subclass.logger.name == "connector.my_module"
     assert cls.logger.name == module_name  # the parent class keeps its own logger
+
+
+def test_class_logger_mixin_should_name_loggers_after_their_module():
+    """Test that a class and its subclasses get a logger named after their module."""
+
+    class SdkClass(_ClassLoggerMixin):
+        pass
+
+    connector_class = type(
+        "ConnectorClass", (SdkClass,), {"__module__": "connector.my_module"}
+    )
+
+    assert isinstance(SdkClass.logger, ConnectorLoggerAdapter)
+    assert SdkClass.logger.name == __name__
+    assert connector_class.logger.name == "connector.my_module"
+    assert connector_class().logger.name == "connector.my_module"
+    assert SdkClass.logger.name == __name__  # the parent class keeps its own logger

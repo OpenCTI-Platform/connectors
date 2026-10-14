@@ -19,13 +19,13 @@ Architecture::
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from pycti import OpenCTIConnectorHelper
 
 
-class _Work:
+class _Work(_ClassLoggerMixin):
     """Manage the lifecycle of a single work in OpenCTI.
 
     A ``_Work`` is created by ``WorkManager`` via the ``create`` classmethod
@@ -36,13 +36,6 @@ class _Work:
         id: The OpenCTI work identifier.
         name: The human-readable name of the work, displayed in the OpenCTI UI.
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(
         self,
@@ -158,7 +151,7 @@ class _Work:
         ]
 
 
-class WorkManager:
+class WorkManager(_ClassLoggerMixin):
     """Manage the lifecycle of works in OpenCTI.
 
     Used as a context manager: creates a work lazily on ``send()``, and
@@ -187,13 +180,6 @@ class WorkManager:
             work_manager.send(reports, "Import reports")  # closes previous, new work
         # work auto-closed
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(self, helper: OpenCTIConnectorHelper) -> None:
         """Initialize the work manager.

@@ -4,9 +4,9 @@ import sys
 from copy import deepcopy
 from pathlib import Path
 from types import UnionType
-from typing import TYPE_CHECKING, Any, ClassVar, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from pydantic import BaseModel, create_model
 from pydantic_settings import (
     BaseSettings,
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
 
 
-class _SettingsLoader(BaseSettings):
+class _SettingsLoader(_ClassLoggerMixin, BaseSettings):
     model_config = SettingsConfigDict(
         frozen=True,
         extra="allow",
@@ -28,13 +28,6 @@ class _SettingsLoader(BaseSettings):
         env_nested_max_split=1,
         enable_decoding=False,
     )
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     @classmethod
     def _get_connector_main_path(cls) -> Path:

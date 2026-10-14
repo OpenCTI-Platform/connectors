@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal
+from typing import Any, Literal
 
 import requests
 from connectors_sdk.client.exceptions import ApiRateLimitError
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from limits import parse, storage, strategies
 from requests.adapters import HTTPAdapter
 
@@ -36,7 +36,7 @@ class RateLimit:
         return f"{self.limit}/{self.period}"
 
 
-class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
+class _RateLimitAdapter(_ClassLoggerMixin, HTTPAdapter):  # type: ignore[misc]
     """HTTPAdapter that enforces a proactive rate limit before every send.
 
     This applies to each attempt including urllib3 retries, ensuring we never
@@ -49,13 +49,6 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
             when the limit is exceeded. If False, sleep until the window resets.
         **kwargs: Passed to ``HTTPAdapter``.
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(
         self,

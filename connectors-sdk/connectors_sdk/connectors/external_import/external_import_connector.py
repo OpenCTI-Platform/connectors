@@ -16,18 +16,17 @@ Architecture::
 
 import sys
 from datetime import datetime, timezone
-from typing import Any, ClassVar
 
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from connectors_sdk.settings.base_settings import BaseConnectorSettings
 from connectors_sdk.states.states import ExternalImportConnectorState
 from pycti import OpenCTIConnectorHelper
 
 
-class ExternalImportConnector:
+class ExternalImportConnector(_ClassLoggerMixin):
     """Base class for external import connectors.
 
     This class provides the common orchestration logic for external import connectors:
@@ -66,13 +65,6 @@ class ExternalImportConnector:
         ... )
         >>> connector.start()
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(
         self,

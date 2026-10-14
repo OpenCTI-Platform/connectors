@@ -13,7 +13,7 @@ Provides a reusable foundation that handles:
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable
 from urllib.parse import urljoin
 
 import requests
@@ -26,7 +26,7 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit, _RateLimitAdapter
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from requests.adapters import Retry
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ from requests.adapters import Retry
 # ---------------------------------------------------------------------------
 
 
-class BaseClientApi:
+class BaseClientApi(_ClassLoggerMixin):
     """Base HTTP client providing common API interaction patterns.
 
     Subclass this to create a connector-specific client. Override
@@ -67,13 +67,6 @@ class BaseClientApi:
             when the proactive rate limit is exceeded. If False, the client
             will sleep until the window resets.
     """
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(
         self,

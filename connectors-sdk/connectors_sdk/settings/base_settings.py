@@ -11,7 +11,8 @@ from datetime import timedelta
 from types import UnionType
 from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
-from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger, set_log_level
+from connectors_sdk.logger import set_log_level
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
@@ -163,7 +164,7 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
 
 
-class BaseConnectorSettings(BaseConfigModel, ABC):
+class BaseConnectorSettings(_ClassLoggerMixin, BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
 
     This class centralizes settings related to OpenCTI and the connector,
@@ -204,13 +205,6 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         default_factory=_BaseConnectorConfig,  # type: ignore[arg-type]
         description="Connector configurations.",
     )
-
-    logger: ClassVar[ConnectorLoggerAdapter] = get_logger(__name__)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Attach a logger named after the module defining the subclass."""
-        super().__init_subclass__(**kwargs)
-        cls.logger = get_logger(cls.__module__)
 
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""
