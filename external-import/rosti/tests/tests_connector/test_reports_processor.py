@@ -439,3 +439,23 @@ def test_large_reports_are_sent_in_bounded_bundles(fake_logger, monkeypatch):
     assert processor.state.last_report_updated == dt.datetime(
         2026, 10, 1, 10, tzinfo=UTC
     )
+
+
+def test_skipped_iocs_are_logged_as_warnings(fake_logger):
+    def ioc(i, ioc_type, value):
+        return {
+            "id": i,
+            "type": ioc_type,
+            "value": value,
+            "date": "2026-10-06",
+            "report": "r",
+        }
+
+    iocs = [ioc("a", "md5", "not-a-hash"), ioc("b", "port", "4444")]
+    processor = make_processor(FakeClient([]), fake_logger=fake_logger)
+    processor.convert_bundle(ReportBundle(report=_report(), iocs=iocs))
+    skipped = [
+        level for level, message in fake_logger.messages if message == "IOC skipped"
+    ]
+    # invalid value: warning; a type that is never imported: debug
+    assert skipped == ["warning", "debug"]

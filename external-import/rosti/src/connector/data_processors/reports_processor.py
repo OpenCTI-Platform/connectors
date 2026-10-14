@@ -18,7 +18,7 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from connector.converter import RostiConverter
+from connector.converter import UNSUPPORTED_IOC_TYPES, RostiConverter
 from connector.yara_rules import prepare_yara_patterns
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import BaseIdentifiedEntity, Reference
@@ -222,7 +222,22 @@ class ReportsProcessor(BaseDataProcessor):
             result = self.converter.convert_ioc_group(kept)
             for ioc, reason in result.skipped:
                 skipped[ioc.type] = skipped.get(ioc.type, 0) + 1
-                self.logger.debug("IOC skipped", {"ioc_id": ioc.id, "reason": reason})
+                # Types that are never imported (e.g. a bare port) are expected.
+                log = (
+                    self.logger.debug
+                    if ioc.type in UNSUPPORTED_IOC_TYPES
+                    else self.logger.warning
+                )
+                log(
+                    "IOC skipped",
+                    {
+                        "report_id": report.id,
+                        "ioc_id": ioc.id,
+                        "type": ioc.type,
+                        "value": ioc.value,
+                        "reason": reason,
+                    },
+                )
             for warning in result.warnings:
                 self.logger.warning(
                     "IOC group not combined",

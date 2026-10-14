@@ -30,7 +30,7 @@ This connector brings that corpus into OpenCTI. Each Rösti report becomes an Op
 
 ## Introduction
 
-On every run the connector asks the Rösti API for reports that were published or changed since its last run, oldest change first, and sends one STIX 2.1 bundle per report. What you get in OpenCTI:
+On every run the connector asks the Rösti API for reports that were published or changed since its last run, oldest change first, and sends each report to OpenCTI as STIX 2.1 bundles: its IOCs in bundles of at most 5,000 objects, followed by a last bundle with the report itself (see [Updates and removed IOCs](#updates-and-removed-iocs)). What you get in OpenCTI:
 
 - **Reports** with the original title, publication date, publisher, authors and links to the original article and to `rosti.dev/reports/<id>`.
 - **Indicators and observables** for 19 IOC types, scored by their false-positive risk, labelled with the Rösti tags and flagged for detection when Rösti marks them as IDS-ready. IOCs that describe the same thing, such as the MD5, SHA-1 and SHA-256 of one file, are combined into one observable and one indicator.
@@ -44,7 +44,7 @@ Use cases: block and detect infrastructure from fresh public reporting, hunt wit
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261002.0
+- OpenCTI Platform >= 7.261008.0
 - A Rösti API key: <https://rosti.dev/api>
 - Rösti API version 2 (`https://api.rosti.dev/v2`). The connector supports all features of Rösti API v2.10.0.
 - Recommended: the [MITRE ATT&CK connector](https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre), needed to link ATT&CK software (see [What is imported](#what-is-imported))
@@ -208,7 +208,7 @@ OpenCTI rejects indicators and observables it considers malformed. The connector
 
 ## Debugging
 
-Set `CONNECTOR_LOG_LEVEL=debug` to see every skipped IOC and every MITRE software entry that could not be linked. Skipped YARA rules are logged as warnings at any level. Each run is also listed with its status under *Data → Ingestion → Connectors* in OpenCTI.
+Skipped IOCs (with value and reason), skipped YARA rules and IOC groups that could not be combined are logged as warnings: set `CONNECTOR_LOG_LEVEL=warn` (the default is `error`) to see them. `CONNECTOR_LOG_LEVEL=debug` also shows every MITRE software entry that could not be linked. Each run is also listed with its status under *Data → Ingestion → Connectors* in OpenCTI.
 
 ## Additional information
 
