@@ -105,52 +105,6 @@ def get_logger(name: str) -> ConnectorLoggerAdapter:
     return ConnectorLoggerAdapter(logging.getLogger(name))
 
 
-def configure_logging() -> None:
-    """Add a handler to the root logger and set its level, as pycti does.
-
-    The handler writes JSON records, unless the `OPENCTI_JSON_LOGGING` environment
-    variable disables it, then it writes plain text.
-
-    The level is read from the `CONNECTOR_LOG_LEVEL` environment variable. The
-    connector's settings are not validated yet when this function is called, so a level
-    set in `config.yml` or `.env` only applies once `BaseConnectorSettings` is created.
-    When the variable is not set, a Python warning (`warnings.warn`, not a log record)
-    says that the default level applies until then.
-
-    The JSON handler is added only when the root logger has no handler with pycti's JSON
-    formatter yet, so this function is idempotent. It also prevents duplicate records:
-    pycti replaces the root handlers with its own, using the same formatter, when an
-    `OpenCTIConnectorHelper` is created.
-    """
-    root_logger = logging.getLogger()
-
-    json_logging = os.environ.get(_JSON_LOGGING_ENV_VAR) not in _PYCTI_FALSY_VALUES
-    if json_logging:
-        if not any(
-            isinstance(handler.formatter, CustomJsonFormatter)
-            for handler in root_logger.handlers
-        ):
-            handler = logging.StreamHandler()
-            handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
-            root_logger.addHandler(handler)
-    else:
-        # Use the default handler: a stderr `StreamHandler` with `logging.BASIC_FORMAT`
-        logging.basicConfig()
-
-    env_log_level = os.environ.get(_LOG_LEVEL_ENV_VAR)
-    if not env_log_level:
-        # Development only: deployed connectors always receive `CONNECTOR_LOG_LEVEL`
-        warnings.warn(
-            f"{_LOG_LEVEL_ENV_VAR} is not set: the default log level "
-            f"('{_DEFAULT_LOG_LEVEL.lower()}') applies until the connector's settings "
-            "are validated.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    set_log_level(env_log_level or _DEFAULT_LOG_LEVEL)
-
-
 def set_log_level(level: str) -> None:
     """Set the level of the root logger.
 
@@ -165,3 +119,61 @@ def set_log_level(level: str) -> None:
         level_name = _DEFAULT_LOG_LEVEL
 
     logging.getLogger().setLevel(level_name)
+
+
+def _set_log_handler(json_logging: bool) -> None:
+    """Add the handler writing the records to the root logger, unless one is there.
+
+    This makes the function idempotent:
+
+    - JSON: the handler is added only when the root logger has no handler with pycti's
+      JSON formatter yet. This also prevents duplicate records: pycti replaces the root
+      handlers with its own (same formatter) when an `OpenCTIConnectorHelper` is created.
+    - Plain text: `logging.basicConfig()` does nothing when the root logger already
+      has a handler.
+
+    Args:
+        json_logging (bool): Whether records are written as JSON, with pycti's
+            formatter, or as plain text.
+    """
+    if json_logging:
+        root_logger = logging.getLogger()
+        if not any(
+            isinstance(handler.formatter, CustomJsonFormatter)
+            for handler in root_logger.handlers
+        ):
+            handler = logging.StreamHandler()
+            handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
+            root_logger.addHandler(handler)
+    else:
+        # Use the default handler: a stderr `StreamHandler` with `logging.BASIC_FORMAT`
+        logging.basicConfig()
+
+
+def configure_logging() -> None:
+    """Add a handler to the root logger and set its level, as pycti does.
+
+    The handler writes JSON records, unless the `OPENCTI_JSON_LOGGING` environment
+    variable disables it, then it writes plain text (see `_set_log_handler()`).
+
+    The level is read from the `CONNECTOR_LOG_LEVEL` environment variable. This function
+    runs at import time, before the connector's settings are validated, so a level set
+    in `config.yml` or `.env` only applies once `BaseConnectorSettings` is created.
+    When the variable is not set or empty, a Python warning (`warnings.warn`, not a log
+    record) says that the default level applies until then.
+    """
+    json_logging = os.environ.get(_JSON_LOGGING_ENV_VAR) not in _PYCTI_FALSY_VALUES
+    _set_log_handler(json_logging)
+
+    env_log_level = os.environ.get(_LOG_LEVEL_ENV_VAR)
+    if not env_log_level:
+        # Development only: deployed connectors always receive `CONNECTOR_LOG_LEVEL`
+        warnings.warn(
+            f"{_LOG_LEVEL_ENV_VAR} is not set: the default log level "
+            f"('{_DEFAULT_LOG_LEVEL.lower()}') applies until the connector's settings "
+            "are validated.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    set_log_level(env_log_level or _DEFAULT_LOG_LEVEL)
