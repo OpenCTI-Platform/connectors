@@ -1,6 +1,7 @@
 import base64
 import copy
 import datetime
+import heapq
 import json
 import re
 import time
@@ -8,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import ClassVar
 
 import boto3
-import pytz
 import stix2
 from connectors_sdk.models.enums import TLPLevel
 from pycti import (
@@ -60,7 +60,8 @@ INVISIBLE_CHARS_PATTERN = re.compile(
 MAX_FILES_PER_RUN = 1000
 S3_DOWNLOAD_WORKERS = 8
 PLATFORM_LOOKUP_BATCH_SIZE = 100
-# A previous work that makes no progress for this long is not waited for anymore
+# A previous work that makes no progress for this long is considered stalled: it is
+# released once the connector queue holds no message anymore
 WORK_STALL_TIMEOUT = datetime.timedelta(hours=1)
 PENDING_WORKS_STATE_KEY = "pending_works"
 # What an outdated vulnerability is reduced to: enough to resolve the references of its
@@ -76,11 +77,28 @@ REFERENCE_KEYS = (
 
 
 def parse_stix_timestamp(value):
-    """Parse a STIX timestamp into a timezone-aware datetime (UTC when no offset)."""
+    """
+    Parse a STIX timestamp into a timezone-aware datetime (UTC when no offset).
+
+    Raises TypeError when the value is not a string and ValueError when it is not a
+    timestamp, so that callers can treat both as an unreadable version.
+    """
+    if not isinstance(value, str):
+        raise TypeError(f"Timestamp must be a string, got {type(value).__name__}")
     parsed = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=datetime.timezone.utc)
     return parsed
+
+
+def is_reference_key(key):
+    """
+    Tell whether a STIX property is the ID of the object or a reference to another one.
+
+    The IDs of a file are local to it until `rewrite_stix_ids` runs on that file alone,
+    so a reference taken from another file's version of an object could not resolve.
+    """
+    return key == "id" or key.endswith("_ref") or key.endswith("_refs")
 
 
 def union_lists(newest, older):
@@ -102,10 +120,14 @@ def merge_versions(versions):
     This is the result the platform would reach by applying the versions in order:
     single values come from the newest version that has them, list values (labels,
     external references, aliases, history entries...) are the union of all versions.
+    The ID and the references (`*_ref`, `*_refs`) are left out: they are local to the
+    file of each version (see `is_reference_key`).
     """
     merged = {}
     for version in versions:
         for key, value in version.items():
+            if is_reference_key(key):
+                continue
             previous = merged.get(key)
             if isinstance(value, list) and isinstance(previous, list):
                 merged[key] = union_lists(value, previous)
@@ -169,8 +191,9 @@ class S3Connector:
             )
             self.s3_marking = self.S3_MARKINGS[marking_level]
         except (KeyError, ValueError):
-            self.helper.log_warning(
-                f"Unrecognized marking definition {self.config.s3.marking}, defaulting to TLP:GREEN"
+            self.helper.connector_logger.warning(
+                "Unrecognized marking definition, defaulting to TLP:GREEN",
+                {"marking": self.config.s3.marking},
             )
             self.s3_marking = stix2.TLP_GREEN
         self.s3_attach_original_file = self.config.s3.attach_original_file
@@ -218,8 +241,9 @@ class S3Connector:
             notes = self.helper.api.note.list(filters=filters, first=1)
             return len(notes) > 0
         except Exception as e:
-            self.helper.log_warning(
-                f"Failed to check for existing note with abstract '{abstract}': {e}"
+            self.helper.connector_logger.warning(
+                "Failed to check for an existing note, using the simple note key",
+                {"abstract": abstract, "error": str(e)},
             )
             # On error, default to using simple key (consolidate behavior)
             return True
@@ -254,9 +278,9 @@ class S3Connector:
         try:
             modified = parse_stix_timestamp(obj["modified"])
         except (TypeError, ValueError):
-            self.helper.log_warning(
-                f"[VERSIONING] Unreadable 'modified' on {obj.get('id')}: "
-                f"{obj.get('modified')!r}, sent as received"
+            self.helper.connector_logger.warning(
+                "Unreadable 'modified' on an object, sent as received",
+                {"id": obj.get("id"), "modified": repr(obj.get("modified"))},
             )
             return None
         return self.generate_standard_id(obj) or obj.get("id"), modified
@@ -270,7 +294,9 @@ class S3Connector:
         so the order of arrival on the platform is not the order of sending. Every copy
         is therefore replaced by the merge of all the versions of the run (see
         `merge_versions`): whatever the order, the newest version wins. Each copy keeps
-        its file-local ID so that the relationships of its file still resolve.
+        its file-local ID and references (author, markings, object refs...) so that
+        every reference of its file still resolves once the IDs of that file are
+        rewritten.
 
         Args:
             bundles: Parsed STIX bundles of the run, oldest file first. Objects are
@@ -290,17 +316,23 @@ class S3Connector:
             # sorted() is stable: on equal `modified`, the most recent file wins
             ordered = [obj for _, obj in sorted(versions, key=lambda v: v[0])]
             merged = merge_versions(ordered)
-            self.helper.log_info(
-                f"[VERSIONING] '{merged.get('name', entity_id)}' ({entity_id}): "
-                f"{len(versions)} versions in this run "
-                f"(modified: {', '.join(obj['modified'] for obj in ordered)}), "
-                f"all copies sent with the newest one"
+            self.helper.connector_logger.info(
+                "Several versions of an entity in this run, all copies sent with the "
+                "newest content",
+                {
+                    "name": merged.get("name"),
+                    "entity_id": entity_id,
+                    "versions": len(versions),
+                    "modified": [obj["modified"] for obj in ordered],
+                },
             )
             for obj in ordered:
-                local_id = obj["id"]
+                local = {
+                    key: value for key, value in obj.items() if is_reference_key(key)
+                }
                 obj.clear()
                 obj.update(copy.deepcopy(merged))
-                obj["id"] = local_id
+                obj.update(local)
 
     def fetch_platform_modified_at(self, standard_ids):
         """
@@ -333,9 +365,9 @@ class S3Connector:
                     """,
                 )
             except Exception as e:
-                self.helper.log_warning(
-                    f"[VERSIONING] Failed to read {len(batch)} vulnerability(ies) from the "
-                    f"platform, sent as received: {type(e).__name__}: {e}"
+                self.helper.connector_logger.warning(
+                    "Failed to read vulnerabilities from the platform, sent as received",
+                    {"count": len(batch), "error": f"{type(e).__name__}: {e}"},
                 )
                 continue
             # A standard ID match wins over a match on an alias STIX ID
@@ -396,18 +428,21 @@ class S3Connector:
                 if not is_outdated:
                     continue
                 outdated += 1
-                self.helper.log_info(
-                    f"[VERSIONING] '{obj['name']}': the platform holds a newer version "
-                    f"(x_opencti_modified_at={platform_modified}) than the received one "
-                    f"(modified={obj['modified']}), only its relationships and related "
-                    f"objects are sent"
+                self.helper.connector_logger.info(
+                    "The platform holds a newer version of a vulnerability, only its "
+                    "relationships and related objects are sent",
+                    {
+                        "name": obj["name"],
+                        "platform_modified_at": platform_modified,
+                        "received_modified": obj["modified"],
+                    },
                 )
                 reference = {key: obj[key] for key in REFERENCE_KEYS if key in obj}
                 obj.clear()
                 obj.update(reference)
-        self.helper.log_info(
-            f"[VERSIONING] {len(received)} vulnerability(ies) checked against the "
-            f"platform, {outdated} outdated copy(ies) reduced to a reference"
+        self.helper.connector_logger.info(
+            "Vulnerabilities checked against the platform",
+            {"checked": len(received), "outdated_copies": outdated},
         )
 
     @staticmethod
@@ -470,8 +505,8 @@ class S3Connector:
         try:
             return json.loads(content)
         except json.JSONDecodeError as e:
-            self.helper.log_warning(
-                f"Invalid JSON in file '{file_name}', skipping: {e}"
+            self.helper.connector_logger.warning(
+                "Invalid JSON in file, skipping", {"file": file_name, "error": str(e)}
             )
             return None
 
@@ -498,7 +533,9 @@ class S3Connector:
                 return None
 
         if "objects" not in data or not data["objects"]:
-            self.helper.log_warning("Bundle has no objects to process")
+            self.helper.connector_logger.warning(
+                "Bundle has no objects to process", {"file": file_name}
+            )
             return None
 
         # Prepare file attachment if enabled
@@ -522,7 +559,8 @@ class S3Connector:
                     obj["x_opencti_files"] = []
                 obj["x_opencti_files"].append(file_attachment)
                 self.helper.connector_logger.debug(
-                    f"Attached original file '{file_attachment['name']}' to vulnerability '{obj.get('name')}'"
+                    "Attached original file to vulnerability",
+                    {"file": file_attachment["name"], "name": obj.get("name")},
                 )
 
             for key in obj:
@@ -531,7 +569,9 @@ class S3Connector:
                     and key not in mapped_keys
                     and key not in ignored_keys
                 ):
-                    self.helper.log_error("Found non-mapped custom key: " + key)
+                    self.helper.connector_logger.error(
+                        "Found non-mapped custom key", {"key": key}
+                    )
 
             # Ensure modification date
             if "modified" in obj:
@@ -757,7 +797,12 @@ class S3Connector:
                     r.get("source_name", "unknown") for r in obj["external_references"]
                 ]
                 self.helper.connector_logger.debug(
-                    f"Vulnerability '{obj.get('name')}' has {ext_ref_count} external_references: {ext_ref_sources}"
+                    "External references of a vulnerability",
+                    {
+                        "name": obj.get("name"),
+                        "count": ext_ref_count,
+                        "sources": ext_ref_sources,
+                    },
                 )
 
             # x_credit mapping
@@ -825,20 +870,18 @@ class S3Connector:
                 obj["type"] == "relationship"
                 and obj["source_ref"] not in included_entities
             ):
-                self.helper.log_warning(
-                    "Removing relationship from "
-                    + obj["source_ref"]
-                    + " because object is not in bundle"
+                self.helper.connector_logger.warning(
+                    "Removing relationship because its source is not in the bundle",
+                    {"source_ref": obj["source_ref"], "file": file_name},
                 )
                 continue
             if (
                 obj["type"] == "relationship"
                 and obj["target_ref"] not in included_entities
             ):
-                self.helper.log_warning(
-                    "Removing relationship to "
-                    + obj["target_ref"]
-                    + " because object is not in bundle"
+                self.helper.connector_logger.warning(
+                    "Removing relationship because its target is not in the bundle",
+                    {"target_ref": obj["target_ref"], "file": file_name},
                 )
                 continue
             new_bundle_objects.append(obj)
@@ -872,25 +915,99 @@ class S3Connector:
         List the files of a prefix, oldest first, at most MAX_FILES_PER_RUN.
 
         S3 lists keys in alphabetical order, 1000 per call: ordering on the upload date
-        keeps the files of a large push in publication order across runs.
+        keeps the files of a large push in publication order across runs. Only the
+        MAX_FILES_PER_RUN oldest entries are kept while the pages are read, so the
+        memory used does not grow with the backlog of the prefix.
         """
         paginator = self.s3_client.get_paginator("list_objects_v2")
-        files = []
-        for page in paginator.paginate(Bucket=self.s3_bucket_name, Prefix=prefix):
-            files.extend(page.get("Contents", []))
-        files.sort(key=lambda f: (f["LastModified"], f["Key"]))
-        self.helper.log_info(f"{len(files)} file(s) found in S3 prefix '{prefix}'")
-        if len(files) > MAX_FILES_PER_RUN:
-            self.helper.log_info(
-                f"Processing the {MAX_FILES_PER_RUN} oldest file(s) of S3 prefix "
-                f"'{prefix}' in this run, the next runs will take the rest"
+        total = 0
+
+        def listed_files():
+            nonlocal total
+            for page in paginator.paginate(Bucket=self.s3_bucket_name, Prefix=prefix):
+                for listed_file in page.get("Contents", []):
+                    total += 1
+                    yield listed_file
+
+        files = heapq.nsmallest(
+            MAX_FILES_PER_RUN,
+            listed_files(),
+            key=lambda f: (f["LastModified"], f["Key"]),
+        )
+        self.helper.connector_logger.info(
+            "Files found in S3 prefix", {"prefix": prefix, "count": total}
+        )
+        if total > MAX_FILES_PER_RUN:
+            self.helper.connector_logger.info(
+                "Processing the oldest files of the S3 prefix in this run, the next "
+                "runs will take the rest",
+                {"prefix": prefix, "processed": len(files), "total": total},
             )
-        return files[:MAX_FILES_PER_RUN]
+        return files
 
     def download_file(self, key):
         return self.s3_client.get_object(Bucket=self.s3_bucket_name, Key=key)[
             "Body"
         ].read()
+
+    def get_queue_messages_number(self):
+        """
+        Return the number of messages waiting in the queue of this connector.
+
+        None when the platform does not report it (older platform, RabbitMQ management
+        API unreachable, request failure).
+        """
+        try:
+            connector = self.helper.api.connector.read(self.helper.connect_id) or {}
+            messages_number = (connector.get("connector_queue_details") or {}).get(
+                "messages_number"
+            )
+            return None if messages_number is None else int(messages_number)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Failed to read the connector queue size",
+                {"error": f"{type(e).__name__}: {e}"},
+            )
+            return None
+
+    def is_stalled_work_released(self, entry, work_id, processed, expected):
+        """
+        Decide whether a work with no progress for WORK_STALL_TIMEOUT is waited for.
+
+        Its messages may still be in the queue (workers down or far behind): releasing
+        it would let newer files be sent while older versions still wait, the very
+        race the wait prevents. The work is therefore released only once the queue is
+        empty, which means its messages are gone (lost or dead-lettered). When the
+        platform does not report the queue size, the timeout alone decides.
+        """
+        details = {
+            "work_id": work_id,
+            "progress_at": entry.get("progress_at"),
+            "processed": processed,
+            "expected": expected,
+        }
+        messages_number = self.get_queue_messages_number()
+        if messages_number is None:
+            self.helper.connector_logger.warning(
+                "Work made no progress for too long and the queue size is unknown, "
+                "not waiting for it anymore",
+                details,
+            )
+            return True
+        if messages_number > 0:
+            self.helper.connector_logger.warning(
+                "Work made no progress for too long but the queue still holds "
+                "messages, waiting for them to be processed or reset the connector "
+                "state to stop waiting",
+                {**details, "queue_messages": messages_number},
+            )
+            return False
+        self.helper.connector_logger.warning(
+            "Work made no progress for too long and the queue is empty, its remaining "
+            "messages are lost: not waiting for it anymore",
+            details,
+        )
+        return True
 
     def has_pending_works(self):
         """
@@ -900,14 +1017,15 @@ class S3Connector:
         one still waits in the queue can be applied first, and then overwritten. New
         files therefore stay in the bucket until the previous works are complete. The
         next run compares them with what the platform then holds.
-        A work that makes no progress for WORK_STALL_TIMEOUT is not waited for anymore.
+        A work that makes no progress for WORK_STALL_TIMEOUT is released once the
+        connector queue is empty (see `is_stalled_work_released`).
         """
         state = self.helper.get_state() or {}
         pending = state.get(PENDING_WORKS_STATE_KEY) or []
         if not pending:
             return False
 
-        now = datetime.datetime.now(pytz.UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
         still_pending = []
         for entry in pending:
             work_id = entry.get("work_id")
@@ -921,20 +1039,20 @@ class S3Connector:
             if processed >= expected:
                 continue
             progress_at = entry.get("progress_at")
+            stalled = False
             if processed != entry.get("processed") or not progress_at:
                 entry["processed"] = processed
                 entry["progress_at"] = now.isoformat()
-            elif now - parse_stix_timestamp(progress_at) > WORK_STALL_TIMEOUT:
-                self.helper.log_warning(
-                    f"Work {work_id} made no progress since {progress_at} "
-                    f"({processed}/{expected} bundle(s) processed), not waiting for it "
-                    f"anymore"
+            else:
+                stalled = now - parse_stix_timestamp(progress_at) > WORK_STALL_TIMEOUT
+            if stalled:
+                if self.is_stalled_work_released(entry, work_id, processed, expected):
+                    continue
+            else:
+                self.helper.connector_logger.info(
+                    "Work of a previous run is still in progress",
+                    {"work_id": work_id, "processed": processed, "expected": expected},
                 )
-                continue
-            self.helper.log_info(
-                f"Work {work_id} of a previous run is still in progress "
-                f"({processed}/{expected} bundle(s) processed)"
-            )
             still_pending.append(entry)
 
         state[PENDING_WORKS_STATE_KEY] = still_pending
@@ -949,7 +1067,7 @@ class S3Connector:
             {
                 "work_id": work_id,
                 "processed": 0,
-                "progress_at": datetime.datetime.now(pytz.UTC).isoformat(),
+                "progress_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             }
         )
         self.helper.set_state(state)
@@ -976,7 +1094,7 @@ class S3Connector:
         - Platform team will be alerted when the connector crashes
         """
         if self.has_pending_works():
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "Waiting for the works of the previous run to complete before "
                 "processing new files"
             )
@@ -985,7 +1103,8 @@ class S3Connector:
         files_by_prefix = {}
         for prefix in self.s3_bucket_prefixes:
             self.helper.connector_logger.info(
-                f"Listing files in S3 bucket '{self.s3_bucket_name}' with prefix '{prefix}'"
+                "Listing files in S3 bucket",
+                {"bucket": self.s3_bucket_name, "prefix": prefix},
             )
             listed = self.list_files(prefix)
             # If a download fails, connector crashes - no file is deleted
@@ -1038,16 +1157,14 @@ class S3Connector:
             for s3_file in files:
                 file_key = s3_file["key"]
                 fixed_bundle = s3_file["bundle"]
-                self.helper.log_info(f"Processing file: '{file_key}'")
+                self.helper.connector_logger.info("Processing file", {"file": file_key})
 
                 # Only process valid bundles (fix_bundle returns None or JSON string)
                 if fixed_bundle is not None:
                     # Create work job only on first valid bundle (lazy initialization)
                     if work_id is None:
-                        now = datetime.datetime.now(pytz.UTC)
-                        friendly_name = (
-                            f"S3/{prefix} run @ " + now.astimezone(pytz.UTC).isoformat()
-                        )
+                        now = datetime.datetime.now(datetime.timezone.utc)
+                        friendly_name = f"S3/{prefix} run @ " + now.isoformat()
                         # Multipart: the work completes once every bundle is processed
                         work_id = self.helper.api.work.initiate_work(
                             self.helper.connect_id, friendly_name, is_multipart=True
@@ -1056,7 +1173,9 @@ class S3Connector:
 
                     # Send bundle to OpenCTI
                     # If this fails, connector crashes - file is NOT deleted
-                    self.helper.log_info(f"Sending STIX bundle from file: '{file_key}'")
+                    self.helper.connector_logger.info(
+                        "Sending STIX bundle from file", {"file": file_key}
+                    )
                     self.helper.send_stix2_bundle(
                         bundle=fixed_bundle,
                         work_id=work_id,
@@ -1066,29 +1185,35 @@ class S3Connector:
 
                     # Optionally delete file from S3 after successful processing
                     if self.s3_delete_after_import:
-                        self.helper.log_info(f"Deleting processed file: '{file_key}'")
+                        self.helper.connector_logger.info(
+                            "Deleting processed file", {"file": file_key}
+                        )
                         self.s3_client.delete_object(
                             Bucket=self.s3_bucket_name, Key=file_key
                         )
-                        self.helper.log_info(
-                            f"Successfully processed and deleted file: '{file_key}'"
+                        self.helper.connector_logger.info(
+                            "Successfully processed and deleted file",
+                            {"file": file_key},
                         )
                     else:
-                        self.helper.log_info(
-                            f"Successfully processed file: '{file_key}' (kept in bucket for debug)"
+                        self.helper.connector_logger.info(
+                            "Successfully processed file (kept in bucket for debug)",
+                            {"file": file_key},
                         )
                 else:
                     # Empty/invalid bundle - optionally delete the file
                     if self.s3_delete_after_import:
-                        self.helper.log_warning(
-                            f"File '{file_key}' has no valid STIX content, deleting"
+                        self.helper.connector_logger.warning(
+                            "File has no valid STIX content, deleting",
+                            {"file": file_key},
                         )
                         self.s3_client.delete_object(
                             Bucket=self.s3_bucket_name, Key=file_key
                         )
                     else:
-                        self.helper.log_warning(
-                            f"File '{file_key}' has no valid STIX content (kept in bucket for debug)"
+                        self.helper.connector_logger.warning(
+                            "File has no valid STIX content (kept in bucket for debug)",
+                            {"file": file_key},
                         )
 
             # Only finalize work if we actually processed something
@@ -1097,16 +1222,19 @@ class S3Connector:
                     f"Connector successfully processed S3 prefix '{prefix}': "
                     f"{processed_files} file(s) ingested"
                 )
-                self.helper.log_info(message)
+                self.helper.connector_logger.info(
+                    "Connector successfully processed S3 prefix",
+                    {"prefix": prefix, "files": processed_files},
+                )
                 self.helper.api.work.to_processed(work_id, message)
             else:
-                self.helper.log_info(
-                    f"No valid STIX content found in S3 prefix '{prefix}'"
+                self.helper.connector_logger.info(
+                    "No valid STIX content found in S3 prefix", {"prefix": prefix}
                 )
 
     def run(self):
-        self.helper.log_info(
-            f"Starting S3 connector with {self.get_interval():g} seconds interval"
+        self.helper.connector_logger.info(
+            "Starting S3 connector", {"interval_seconds": self.get_interval()}
         )
         if self.helper.get_run_and_terminate():
             self.process()

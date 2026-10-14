@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 import s3
 from pycti import Vulnerability
-from s3 import S3Connector, merge_versions
+from s3 import S3Connector, is_reference_key, merge_versions
 from settings import ConnectorSettings
 
 CVE = "CVE-2026-12345"
@@ -55,7 +55,16 @@ def connector(monkeypatch):
     connector.helper.api.vulnerability.list.return_value = []
     connector.helper.api.work.initiate_work.return_value = "work-1"
     connector.helper.api.work.get_work.return_value = None
+    set_queue_messages(connector, 0)
     return connector
+
+
+def set_queue_messages(connector, messages_number):
+    """Make the platform report `messages_number` messages in the connector queue."""
+    connector.helper.api.connector.read.return_value = {
+        "id": "connector-id",
+        "connector_queue_details": {"messages_number": messages_number},
+    }
 
 
 def aci_vulnerability_bundle(
@@ -221,6 +230,8 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
         "x_first_seen_active": "2026-09-30T00:00:00Z",
         "labels": ["accenture"],
         "x_history": [FIRST_ENTRY],
+        "created_by_ref": "identity--older",
+        "object_marking_refs": ["marking-definition--older"],
     }
     newer = {
         "id": "vulnerability--newer",
@@ -229,6 +240,8 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
         "x_cvss_v3_temporal_score": 9.4,
         "labels": ["zero-day"],
         "x_history": [SECOND_ENTRY, FIRST_ENTRY],
+        "created_by_ref": "identity--newer",
+        "object_marking_refs": ["marking-definition--newer"],
     }
 
     merged = merge_versions([older, newer])
@@ -241,8 +254,84 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
     # Multi-valued fields keep every value, newest first
     assert merged["labels"] == ["zero-day", "accenture"]
     assert merged["x_history"] == [SECOND_ENTRY, FIRST_ENTRY]
+    # IDs and references are local to the file of each version: never merged
+    assert not [key for key in merged if is_reference_key(key)]
     # The inputs are left untouched
     assert older["labels"] == ["accenture"]
+
+
+def test_each_copy_keeps_the_references_of_its_own_file(connector):
+    """
+    References point to objects of the same file, under IDs that only exist there.
+    Merging them would make a copy reference objects of another file.
+    """
+    older_marking = "marking-definition--00000001-0000-4000-8000-00000000000a"
+    newer_marking = "marking-definition--00000002-0000-4000-8000-00000000000a"
+    older = {
+        "type": "vulnerability",
+        "id": "vulnerability--00000001-0000-4000-8000-000000000000",
+        "modified": OLDER,
+        "name": CVE,
+        "description": "Initial analysis",
+        "created_by_ref": "identity--00000001-0000-4000-8000-00000000000b",
+        "object_marking_refs": [older_marking],
+    }
+    newer = {
+        "type": "vulnerability",
+        "id": "vulnerability--00000002-0000-4000-8000-000000000000",
+        "modified": NEWER,
+        "name": CVE,
+        "description": "Exploited in the wild",
+        "created_by_ref": "identity--00000002-0000-4000-8000-00000000000b",
+        "object_marking_refs": [newer_marking],
+    }
+    note = {
+        "type": "note",
+        "id": "note--00000003-0000-4000-8000-000000000000",
+        "modified": NEWER,
+        "content": "Analyst note",
+        "object_refs": [newer["id"]],
+    }
+
+    connector.resolve_versions([{"objects": [older]}, {"objects": [newer, note]}])
+
+    assert older["description"] == newer["description"] == "Exploited in the wild"
+    assert older["modified"] == newer["modified"] == NEWER
+    assert older["id"] == "vulnerability--00000001-0000-4000-8000-000000000000"
+    assert older["created_by_ref"] == "identity--00000001-0000-4000-8000-00000000000b"
+    assert older["object_marking_refs"] == [older_marking]
+    assert newer["created_by_ref"] == "identity--00000002-0000-4000-8000-00000000000b"
+    assert newer["object_marking_refs"] == [newer_marking]
+    assert "object_refs" not in older
+    assert note["object_refs"] == [newer["id"]]
+
+
+def test_unreadable_modified_is_sent_as_received(connector):
+    """A non-string or malformed `modified` neither crashes the run nor is versioned."""
+    connector.helper.api.vulnerability.list.return_value = [
+        {
+            "standard_id": CVE_ID,
+            "x_opencti_stix_ids": [],
+            "x_opencti_modified_at": NEWER,
+        }
+    ]
+    bundle = aci_vulnerability_bundle(OLDER, "U", 8.5, [FIRST_ENTRY], False, 3)
+    [vulnerability] = objects_of_type(bundle, "vulnerability")
+    vulnerability["modified"] = [20261001]
+    put_files(
+        connector,
+        [("ACI_Vuln/a.json", datetime.datetime(2026, 10, 2, 2, 0, tzinfo=UTC), bundle)],
+    )
+
+    assert connector.get_version(vulnerability) is None
+    connector.process()
+
+    # Not reduced to a reference: the version cannot be compared with the platform's
+    [sent] = sent_bundles(connector)
+    [vulnerability] = objects_of_type(sent, "vulnerability")
+    assert vulnerability["id"] == CVE_ID
+    assert vulnerability["x_opencti_cvss_temporal_score"] == 8.5
+    assert deleted_keys(connector) == ["ACI_Vuln/a.json"]
 
 
 def test_vulnerability_older_than_the_platform_is_reduced_to_a_reference(connector):
@@ -490,7 +579,8 @@ def test_finished_works_are_released(connector, work):
     assert connector.helper.get_state()["pending_works"] == []
 
 
-def test_stalled_work_is_not_waited_for_forever(connector):
+def stall_work(connector):
+    """A work of a previous run with no progress for twice the stall timeout."""
     stalled_since = datetime.datetime.now(UTC) - s3.WORK_STALL_TIMEOUT * 2
     connector.helper.set_state(
         {
@@ -507,8 +597,78 @@ def test_stalled_work_is_not_waited_for_forever(connector):
         "status": "progress",
         "tracking": {"import_expected_number": 2, "import_processed_number": 1},
     }
+    return stalled_since
+
+
+def test_stalled_work_is_released_once_the_queue_is_empty(connector):
+    """Its messages are gone: nothing older can be applied after the new files."""
+    stall_work(connector)
+    set_queue_messages(connector, 0)
 
     assert connector.has_pending_works() is False
+    assert connector.helper.get_state()["pending_works"] == []
+
+
+def test_stalled_work_is_waited_for_while_the_queue_holds_messages(connector):
+    """
+    Workers down for more than the timeout: the messages of the work are still in
+    the queue and would be applied after the new files, so the wait goes on.
+    """
+    stalled_since = stall_work(connector)
+    set_queue_messages(connector, 3)
+
+    assert connector.has_pending_works() is True
+    [pending] = connector.helper.get_state()["pending_works"]
+    assert pending["work_id"] == "work-0"
+    # The stall is not reset: the next run checks the queue again
+    assert pending["progress_at"] == stalled_since.isoformat()
+
+
+@pytest.mark.parametrize(
+    "connector_details",
+    [
+        pytest.param(None, id="no_connector"),
+        pytest.param({"id": "connector-id"}, id="no_queue_details"),
+        pytest.param(
+            {"connector_queue_details": {"messages_number": None}},
+            id="no_messages_number",
+        ),
+        pytest.param(Exception("API unreachable"), id="read_fails"),
+    ],
+)
+def test_stalled_work_is_released_when_the_queue_size_is_unknown(
+    connector, connector_details
+):
+    stall_work(connector)
+    if isinstance(connector_details, Exception):
+        connector.helper.api.connector.read.side_effect = connector_details
+    else:
+        connector.helper.api.connector.read.return_value = connector_details
+
+    assert connector.has_pending_works() is False
+
+
+def test_queue_is_only_read_for_a_stalled_work(connector):
+    stall_work(connector)
+    connector.helper.api.work.get_work.return_value = {
+        "status": "progress",
+        "tracking": {"import_expected_number": 2, "import_processed_number": 1},
+    }
+    # Fresh progress: not stalled
+    connector.helper.set_state(
+        {
+            "pending_works": [
+                {
+                    "work_id": "work-0",
+                    "processed": 1,
+                    "progress_at": datetime.datetime.now(UTC).isoformat(),
+                }
+            ]
+        }
+    )
+
+    assert connector.has_pending_works() is True
+    connector.helper.api.connector.read.assert_not_called()
 
 
 def test_progressing_work_is_waited_for(connector):
