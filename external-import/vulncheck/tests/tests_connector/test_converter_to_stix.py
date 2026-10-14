@@ -44,6 +44,17 @@ def test_create_vulnerability_deterministic_id(helper):
     assert vuln_a.id == vuln_b.id  # deterministic
 
 
+def test_create_vulnerability_labels(helper):
+    converter = ConverterToStix(helper)
+    assert "labels" not in converter.create_vulnerability(cve="CVE-2024-12345")
+    labeled = converter.create_vulnerability(cve="CVE-2024-12345", labels=["x"])
+    described = converter.create_vulnerability(
+        cve="CVE-2024-12345", description="desc", labels=["x"]
+    )
+    assert labeled.labels == ["x"]
+    assert described.labels == ["x"]
+
+
 def test_create_software(helper):
     converter = ConverterToStix(helper)
     software = converter.create_software(
