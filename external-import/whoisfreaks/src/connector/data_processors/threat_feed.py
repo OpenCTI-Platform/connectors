@@ -32,9 +32,7 @@ _MAX_BUNDLE_OBJECTS = 10_000
 
 
 class ThreatFeedProcessor(BaseDataProcessor):
-    """Import one WhoisFreaks threat feed with offset-resumable pagination.
-
-    """
+    """Import one WhoisFreaks threat feed with offset-resumable pagination."""
 
     def __init__(self, feed_type: str) -> None:
         if feed_type not in {"malware", "phishing", "spam"}:

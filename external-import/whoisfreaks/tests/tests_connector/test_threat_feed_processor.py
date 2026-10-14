@@ -91,9 +91,7 @@ def test_threat_feed_note_includes_every_source_column():
     }
 
     note = next(
-        obj
-        for obj in processor._to_stix(record, stix2.TLP_WHITE)
-        if obj.type == "note"
+        obj for obj in processor._to_stix(record, stix2.TLP_WHITE) if obj.type == "note"
     )
 
     assert "response_detail" in note.content
