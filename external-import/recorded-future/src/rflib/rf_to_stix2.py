@@ -427,7 +427,13 @@ class FileHash(Indicator):
         raise ConversionError(msg)
 
     def _create_pattern(self):
-        return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
+        # Only quote hash keys that require it (e.g. SHA-256), so the pattern, and
+        # thus the indicator id, matches the form OpenCTI normalizes patterns to
+        if "-" in self.algorithm:
+            hash_key = f"'{self.algorithm}'"
+        else:
+            hash_key = self.algorithm
+        return f"[file:hashes.{hash_key} = '{self.name}']"
 
     def _create_obs(self):
         return stix2.File(
