@@ -291,3 +291,158 @@ def test_default_page_size_is_the_api_maximum():
 )
 def test_timestamp_sort_key_handles_variable_precision(earlier, later):
     assert timestamp_sort_key(earlier) < timestamp_sort_key(later)
+
+
+# ---------------------------------------------------------------------------
+# LogScale source events client
+# ---------------------------------------------------------------------------
+
+from datetime import datetime, timezone  # noqa: E402
+
+from crowdstrike_incidents.client_api import (  # noqa: E402
+    EVENT_SEARCH_TIMEOUT_SECONDS,
+    EVENT_SEARCH_VIEW,
+    MAX_IDS_PER_SEARCH,
+    CrowdstrikeEventsClient,
+)
+
+SINCE = datetime(2025, 1, 15, 9, 0, tzinfo=timezone.utc)
+
+
+class FakeNgsiem:
+    """Stand-in for falconpy.NGSIEM: start_search answers under ``resources``,
+    get_search_status under ``body``, like the real API."""
+
+    def __init__(self, events=None, polls_before_done=0):
+        self.events = events or []
+        self.polls_before_done = polls_before_done
+        self.queries: list[dict] = []
+        self.start_search = MagicMock(side_effect=self._start)
+        self.get_search_status = MagicMock(side_effect=self._status)
+        self.stop_search = MagicMock(return_value={"status_code": 204})
+
+    def _start(self, repository, body):
+        self.queries.append({"repository": repository, **body})
+        return {"status_code": 200, "resources": {"id": f"job-{len(self.queries)}"}}
+
+    def _status(self, repository, search_id):
+        if self.polls_before_done > 0:
+            self.polls_before_done -= 1
+            return {"status_code": 200, "body": {"done": False, "events": []}}
+        return {"status_code": 200, "body": {"done": True, "events": self.events}}
+
+
+@pytest.fixture
+def make_events_client(mocker):
+    def _make(fake: FakeNgsiem, clock_step: float = 1.0) -> tuple:
+        ngsiem_cls = mocker.patch(
+            "crowdstrike_incidents.client_api.NGSIEM", return_value=fake
+        )
+        now = {"t": 0.0}
+
+        def monotonic():
+            now["t"] += clock_step
+            return now["t"]
+
+        client = CrowdstrikeEventsClient(
+            base_url="https://api.example.org",
+            client_id="synthetic-id",
+            client_secret="synthetic-secret",
+            sleep=lambda _: None,
+            monotonic=monotonic,
+        )
+        return client, ngsiem_cls
+
+    return _make
+
+
+def test_events_client_is_configured(make_events_client):
+    _, ngsiem_cls = make_events_client(FakeNgsiem())
+
+    ngsiem_cls.assert_called_once_with(
+        client_id="synthetic-id",
+        client_secret="synthetic-secret",
+        base_url="https://api.example.org",
+        user_agent=USER_AGENT,
+    )
+
+
+def test_source_events_query(make_events_client):
+    fake = FakeNgsiem(events=[{"Ngsiem.indicator.id": "a"}])
+    client, _ = make_events_client(fake)
+
+    events = client.get_source_events(["a", "b", "a"], since=SINCE)
+
+    assert events == [{"Ngsiem.indicator.id": "a"}]
+    (query,) = fake.queries
+    assert query["repository"] == EVENT_SEARCH_VIEW == "search-all"
+    assert query["queryString"] == (
+        'Ngsiem.event.type="ngsiem-rule-match-event"'
+        ' | in(field="Ngsiem.indicator.id", values=["a","b"])'
+        " | head(limit=2)"
+    )
+    assert query["start"] == int(SINCE.timestamp() * 1000)
+    assert query["end"] == "now"
+    assert query["isLive"] is False
+
+
+def test_source_events_are_searched_by_batches(make_events_client):
+    fake = FakeNgsiem()
+    client, _ = make_events_client(fake)
+
+    client.get_source_events(
+        [f"{i:032x}" for i in range(MAX_IDS_PER_SEARCH + 5)], since=SINCE
+    )
+
+    assert len(fake.queries) == 2
+    assert f"head(limit={MAX_IDS_PER_SEARCH})" in fake.queries[0]["queryString"]
+    assert "head(limit=5)" in fake.queries[1]["queryString"]
+    # 1000 indicator IDs stay below the 66 000 characters query limit
+    assert len(fake.queries[0]["queryString"]) < 66_000
+
+
+def test_source_events_search_is_polled_until_done(make_events_client):
+    fake = FakeNgsiem(events=[{"Ngsiem.indicator.id": "a"}], polls_before_done=3)
+    client, _ = make_events_client(fake)
+
+    assert client.get_source_events(["a"], since=SINCE) == [
+        {"Ngsiem.indicator.id": "a"}
+    ]
+    assert fake.get_search_status.call_count == 4
+
+
+def test_source_events_search_timeout_stops_the_search(make_events_client):
+    fake = FakeNgsiem(polls_before_done=10**6)
+    client, _ = make_events_client(fake, clock_step=EVENT_SEARCH_TIMEOUT_SECONDS / 3)
+
+    with pytest.raises(CrowdstrikeApiError, match="not completed"):
+        client.get_source_events(["a"], since=SINCE)
+
+    fake.stop_search.assert_called_once_with(repository="search-all", id="job-1")
+
+
+def test_no_search_without_ids(make_events_client):
+    fake = FakeNgsiem()
+    client, _ = make_events_client(fake)
+
+    assert client.get_source_events([], since=SINCE) == []
+    fake.start_search.assert_not_called()
+
+
+@pytest.mark.parametrize("status_code", [403, "403"])
+def test_source_events_forbidden_mentions_the_ngsiem_scope(
+    make_events_client, status_code
+):
+    fake = FakeNgsiem()
+    fake.start_search.side_effect = None
+    fake.start_search.return_value = {
+        "status_code": status_code,
+        "resources": {"errors": [{"code": 403, "message": "scope not permitted"}]},
+    }
+    client, _ = make_events_client(fake)
+
+    with pytest.raises(CrowdstrikeApiError, match="NGSIEM: Write") as error:
+        client.get_source_events(["a"], since=SINCE)
+
+    assert error.value.status_code == 403
+    assert "scope not permitted" in str(error.value)

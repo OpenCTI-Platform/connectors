@@ -97,6 +97,14 @@ class CrowdstrikeIncidentsConfig(BaseConfigModel):
         description="Whether to also import the alerts hidden in the Falcon console (show_in_ui: false).",
         default=False,
     )
+    enrich_from_events: bool = Field(
+        description=(
+            "Whether to enrich each Incident with the threat observables (executed file, "
+            "hashes, execution context) of the alert's source event in Next-Gen SIEM. "
+            "Requires the 'NGSIEM: Write' scope, needed to run LogScale searches."
+        ),
+        default=False,
+    )
     tlp_level: TLPLevel = Field(
         description="TLP marking level applied to every created STIX object.",
         default=TLPLevel.AMBER_STRICT,

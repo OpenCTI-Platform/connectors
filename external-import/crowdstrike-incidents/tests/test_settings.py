@@ -102,3 +102,13 @@ def test_invalid_severity_is_rejected(mock_env, monkeypatch):
 )
 def test_severity_ordering(severity_name, threshold, expected):
     assert (Severity(severity_name.lower()) >= threshold) is expected
+
+
+def test_enrichment_is_disabled_by_default(mock_env):
+    assert ConnectorSettings().crowdstrike_incidents.enrich_from_events is False
+
+
+def test_enrichment_can_be_enabled(mock_env, monkeypatch):
+    monkeypatch.setenv("CROWDSTRIKE_INCIDENTS_ENRICH_FROM_EVENTS", "true")
+
+    assert ConnectorSettings().crowdstrike_incidents.enrich_from_events is True

@@ -17,13 +17,14 @@ from __future__ import annotations
 import ipaddress
 import re
 from collections.abc import Generator, Iterable
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from connectors_sdk import BaseDataProcessor, ExternalImportConnectorState
 from connectors_sdk.models import (
     AttackPattern,
     ExternalReference,
+    File,
     Hostname,
     Incident,
     IPV4Address,
@@ -34,12 +35,17 @@ from connectors_sdk.models import (
     UserAccount,
 )
 from connectors_sdk.models.enums import (
+    HashAlgorithm,
     IncidentSeverity,
     IncidentType,
     RelationshipType,
 )
-from crowdstrike_incidents.client_api import AlertPage, CrowdstrikeAlertsClient
-from crowdstrike_incidents.models import CrowdstrikeAlert
+from crowdstrike_incidents.client_api import (
+    AlertPage,
+    CrowdstrikeAlertsClient,
+    CrowdstrikeEventsClient,
+)
+from crowdstrike_incidents.models import CrowdstrikeAlert, SourceEvent
 from crowdstrike_incidents.settings import Severity
 from pydantic import Field, ValidationError
 
@@ -59,6 +65,10 @@ SEVERITY_MAP: dict[Severity, IncidentSeverity] = {
     Severity.HIGH: IncidentSeverity.HIGH,
     Severity.CRITICAL: IncidentSeverity.CRITICAL,
 }
+
+# Source events can predate their alert by the rule lookback; the search window
+# starts from the oldest detection window of the page, minus this margin.
+EVENT_SEARCH_MARGIN = timedelta(hours=1)
 
 # MITRE ATT&CK technique or sub-technique ID; CrowdStrike also uses
 # proprietary technique IDs, which are not mapped to Attack Patterns.
@@ -88,6 +98,16 @@ class CrowdstrikeIncidentsState(ExternalImportConnectorState):
             for name, model_field in type(self).model_fields.items():
                 setattr(self, name, model_field.get_default(call_default_factory=True))
         super().load(force=force)
+
+
+def _is_placeholder_hash(value: str) -> bool:
+    """Whether a hash is a placeholder made only of zeros."""
+    return set(value) == {"0"}
+
+
+def _indicator_id(alert: CrowdstrikeAlert) -> str:
+    """Last segment of the alert composite ID, which keys its source event."""
+    return alert.composite_id.rsplit(":", 1)[-1]
 
 
 def _escape_cell(value: Any) -> str:
@@ -120,6 +140,15 @@ class AlertProcessor(BaseDataProcessor):
             client_secret=self._config.client_secret.get_secret_value(),
         )
         self._marking = TLPMarking(level=self._config.tlp_level.value)
+        self._events_client = (
+            CrowdstrikeEventsClient(
+                base_url=str(self._config.api_base_url).rstrip("/"),
+                client_id=self._config.client_id,
+                client_secret=self._config.client_secret.get_secret_value(),
+            )
+            if self._config.enrich_from_events
+            else None
+        )
 
     # ------------------------------------------------------------------
     # DataProcessor pipeline
@@ -156,6 +185,7 @@ class AlertProcessor(BaseDataProcessor):
         """
         for page in data:
             objects: list[Any] = []
+            alerts: list[CrowdstrikeAlert] = []
             for raw_alert in page.alerts:
                 try:
                     alert = CrowdstrikeAlert.model_validate(raw_alert)
@@ -168,10 +198,15 @@ class AlertProcessor(BaseDataProcessor):
                         },
                     )
                     continue
-                if not self._is_wanted(alert):
-                    continue
+                if self._is_wanted(alert):
+                    alerts.append(alert)
+
+            events = self._source_events(alerts)
+            for alert in alerts:
                 try:
-                    objects.extend(self._convert_alert(alert))
+                    objects.extend(
+                        self._convert_alert(alert, events.get(_indicator_id(alert)))
+                    )
                 except Exception as err:  # noqa: BLE001
                     self.logger.error(
                         "Failed to convert alert",
@@ -194,13 +229,56 @@ class AlertProcessor(BaseDataProcessor):
     # Conversion
     # ------------------------------------------------------------------
 
-    def _convert_alert(self, alert: CrowdstrikeAlert) -> list[Any]:
-        """Convert an alert into the Incident and its related objects."""
-        incident = self._build_incident(alert)
+    def _source_events(self, alerts: list[CrowdstrikeAlert]) -> dict[str, SourceEvent]:
+        """Fetch the source events of the alerts, keyed by indicator ID.
+
+        Enrichment is best effort: when the search fails, the Incidents are
+        still created, without their threat observables.
+        """
+        if self._events_client is None or not alerts:
+            return {}
+        since = (
+            min(alert.start_time or alert.created_timestamp for alert in alerts)
+            - EVENT_SEARCH_MARGIN
+        )
+        try:
+            raw_events = self._events_client.get_source_events(
+                [_indicator_id(alert) for alert in alerts], since=since
+            )
+        except Exception as err:  # noqa: BLE001
+            self.logger.warning(
+                "Source events search failed, Incidents are created without "
+                "their threat observables",
+                {"alerts": len(alerts), "error": str(err)},
+            )
+            return {}
+
+        events: dict[str, SourceEvent] = {}
+        for raw_event in raw_events:
+            try:
+                event = SourceEvent.model_validate(raw_event)
+            except ValidationError as err:
+                self.logger.warning("Failed to parse source event", {"error": str(err)})
+                continue
+            events.setdefault(event.indicator_id, event)
+        self.logger.info(
+            f"Found the source event of {len(events)} of {len(alerts)} alerts."
+        )
+        return events
+
+    def _convert_alert(
+        self, alert: CrowdstrikeAlert, event: SourceEvent | None = None
+    ) -> list[Any]:
+        """Convert an alert, and its source event if any, into the Incident and
+        its related objects."""
+        incident = self._build_incident(alert, event)
         related: list[Any] = []
         relationships: list[Relationship] = []
 
-        for observable in self._build_observables(alert):
+        for observable in [
+            *self._build_observables(alert, event),
+            *self._build_threat_observables(event),
+        ]:
             related.append(observable)
             relationships.append(
                 self._relationship(RelationshipType.RELATED_TO, incident, observable)
@@ -213,13 +291,15 @@ class AlertProcessor(BaseDataProcessor):
 
         return [AUTHOR, self._marking, incident, *related, *relationships]
 
-    def _build_incident(self, alert: CrowdstrikeAlert) -> Incident:
+    def _build_incident(
+        self, alert: CrowdstrikeAlert, event: SourceEvent | None = None
+    ) -> Incident:
         source = SOURCE_NAMES.get(alert.product or "", "CrowdStrike Falcon")
         severity = _parse_severity(alert.severity_name)
         tactics = list(dict.fromkeys(t.tactic for t in alert.mitre_attack if t.tactic))
         return Incident(
             name=self._incident_name(alert),
-            description=self._incident_description(alert),
+            description=self._incident_description(alert, event),
             created=alert.created_timestamp,
             first_seen=alert.start_time,
             last_seen=alert.end_time,
@@ -258,8 +338,10 @@ class AlertProcessor(BaseDataProcessor):
         return list(dict.fromkeys(names))
 
     @classmethod
-    def _incident_description(cls, alert: CrowdstrikeAlert) -> str:
-        rows = [
+    def _incident_description(
+        cls, alert: CrowdstrikeAlert, event: SourceEvent | None = None
+    ) -> str:
+        rows: list[tuple[str, Any]] = [
             ("Users", ", ".join(cls._user_names(alert))),
             ("Product", alert.product),
             ("Type", alert.type),
@@ -269,6 +351,15 @@ class AlertProcessor(BaseDataProcessor):
             ("Detection ID", alert.detection_id),
             ("Event IDs", ", ".join(alert.event_ids)),
         ]
+        if event:
+            # Temporary: to be replaced by a Process observable once the
+            # connectors-sdk provides one (OpenCTI-Platform/connectors#7968).
+            chain = [event.grandparent_name, event.parent_name, event.file_name]
+            rows += [
+                ("Command line", event.command_line),
+                ("Executable", event.executable),
+                ("Process chain", " → ".join(name for name in chain if name)),
+            ]
         table = "\n".join(
             f"| {label} | {_escape_cell(value)} |"
             for label, value in rows
@@ -278,14 +369,20 @@ class AlertProcessor(BaseDataProcessor):
         parts.append(f"| Attribute | Value |\n| --- | --- |\n{table}")
         return "\n\n".join(parts)
 
-    def _build_observables(self, alert: CrowdstrikeAlert) -> list[Any]:
+    def _build_observables(
+        self, alert: CrowdstrikeAlert, event: SourceEvent | None = None
+    ) -> list[Any]:
+        """Build the victim-side observables (host, IPs, user accounts)."""
         common = {"author": AUTHOR, "markings": [self._marking]}
         observables: list[Any] = []
 
         for host in dict.fromkeys(alert.host_names):
             observables.append(Hostname(value=host, **common))
 
-        for value in dict.fromkeys(alert.source_ips):
+        ips = [*alert.source_ips]
+        if event and event.agent_public_ip:
+            ips.append(event.agent_public_ip)
+        for value in dict.fromkeys(ips):
             try:
                 ip = ipaddress.ip_address(value)
             except ValueError:
@@ -306,6 +403,35 @@ class AlertProcessor(BaseDataProcessor):
             )
 
         return observables
+
+    def _build_threat_observables(self, event: SourceEvent | None) -> list[Any]:
+        """Build the threat-side observables of the source event (executed file).
+
+        Placeholder hashes made only of zeros (e.g. the SHA-1 CrowdStrike sends
+        when it did not compute it) are dropped: OpenCTI matches Files on any of
+        their hashes, so a shared placeholder would merge unrelated binaries.
+        """
+        if event is None:
+            return []
+        hashes = {
+            algorithm: value
+            for algorithm, value in (
+                (HashAlgorithm.SHA256, event.sha256),
+                (HashAlgorithm.MD5, event.md5),
+                (HashAlgorithm.SHA1, event.sha1),
+            )
+            if value and not _is_placeholder_hash(value)
+        }
+        if not hashes and not event.file_name:
+            return []
+        return [
+            File(
+                name=event.file_name,
+                hashes=hashes or None,
+                author=AUTHOR,
+                markings=[self._marking],
+            )
+        ]
 
     def _build_attack_patterns(self, alert: CrowdstrikeAlert) -> list[AttackPattern]:
         attack_patterns: dict[str, AttackPattern] = {}
