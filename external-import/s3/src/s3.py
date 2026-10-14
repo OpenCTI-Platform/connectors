@@ -372,15 +372,17 @@ class S3Connector:
                 obj.update(copy.deepcopy(merged))
                 obj.update(local)
 
-    def fetch_platform_modified_at(self, standard_ids):
+    def fetch_platform_versions(self, standard_ids):
         """
-        Read x_opencti_modified_at of the vulnerabilities already in the platform.
+        Read the version the platform holds of vulnerabilities: x_opencti_modified_at
+        and created.
 
         One query per PLATFORM_LOOKUP_BATCH_SIZE vulnerabilities. When a query fails, its
         vulnerabilities are treated as absent from the platform and sent as received.
 
         Returns:
-            dict: standard ID -> x_opencti_modified_at, for the vulnerabilities that have one
+            dict: standard ID -> {"x_opencti_modified_at": ..., "created": ...}, for
+                the vulnerabilities found in the platform (values may be None)
         """
         wanted = set(standard_ids)
         found = {}
@@ -400,6 +402,7 @@ class S3Connector:
                         standard_id
                         x_opencti_stix_ids
                         x_opencti_modified_at
+                        created
                     """,
                 )
             except Exception as e:
@@ -412,15 +415,16 @@ class S3Connector:
             for vulnerability in sorted(
                 vulnerabilities or [], key=lambda v: v.get("standard_id") in wanted
             ):
-                modified_at = vulnerability.get("x_opencti_modified_at")
-                if not modified_at:
-                    continue
+                version = {
+                    "x_opencti_modified_at": vulnerability.get("x_opencti_modified_at"),
+                    "created": vulnerability.get("created"),
+                }
                 for candidate in [
                     *(vulnerability.get("x_opencti_stix_ids") or []),
                     vulnerability.get("standard_id"),
                 ]:
                     if candidate in wanted:
-                        found[candidate] = modified_at
+                        found[candidate] = version
         return found
 
     def supersede_outdated_vulnerabilities(self, bundles):
@@ -433,6 +437,10 @@ class S3Connector:
         its file, which the platform only adds. Its Title, Analysis and History notes
         are not generated: their IDs do not change between versions, so they would
         overwrite the newer notes.
+
+        A newer vulnerability takes the `created` the platform holds when it is older
+        than its own: the platform keeps the oldest creation date anyway, and the IDs
+        of the notes derive from it, so the notes of every run are the same notes.
 
         Args:
             bundles: Parsed STIX bundles of the run. Objects are updated in place.
@@ -450,13 +458,19 @@ class S3Connector:
         if not received:
             return
 
-        platform_versions = self.fetch_platform_modified_at(list(received))
+        platform_versions = self.fetch_platform_versions(list(received))
         outdated = 0
         for standard_id, objs in received.items():
-            platform_modified = platform_versions.get(standard_id)
-            if not platform_modified:
+            platform_version = platform_versions.get(standard_id)
+            if not platform_version:
                 continue
+            platform_modified = platform_version.get("x_opencti_modified_at")
+            platform_created = platform_version.get("created")
             for obj in objs:
+                if platform_created and obj.get("created"):
+                    obj["created"] = oldest_timestamp(platform_created, obj["created"])
+                if not platform_modified:
+                    continue
                 try:
                     is_outdated = parse_stix_timestamp(
                         platform_modified
@@ -607,7 +621,7 @@ class S3Connector:
                     and key not in mapped_keys
                     and key not in ignored_keys
                 ):
-                    self.helper.connector_logger.error(
+                    self.helper.connector_logger.warning(
                         "Found non-mapped custom key", {"key": key}
                     )
 
