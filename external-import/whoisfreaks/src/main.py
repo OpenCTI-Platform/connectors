@@ -83,22 +83,7 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
             )
 
             for processor in self.data_processors:
-                try:
-                    processor.process()
-                except Exception as proc_err:
-                    # Isolate per-feed failures so one subscription gap
-                    # or transient error does not abort remaining feeds.
-                    self.logger.error(
-                        "[CONNECTOR] Processor failed",
-                        {
-                            "work_name": getattr(
-                                processor,
-                                "work_name",
-                                type(processor).__name__,
-                            ),
-                            "error": str(proc_err),
-                        },
-                    )
+                processor.process()
 
             self.state.last_run = datetime.now(tz=timezone.utc)
             self.state.save()

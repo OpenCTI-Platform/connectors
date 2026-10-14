@@ -25,6 +25,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | WHOISFREAKS_MAX_RETRIES | `integer` |  | `0 <= x <= 20` | `5` | Max HTTP retries on transient errors (429/5xx). |
 | WHOISFREAKS_RETRY_BACKOFF_SECONDS | `number` |  | `0.1 <= x ` | `2.0` | Base seconds for exponential backoff between retries. |
 | WHOISFREAKS_CHECKPOINT_EVERY_PAGES | `integer` |  | `1 <= x ` | `10` | Update the in-memory offset every N pages; the connector persists state at the end of its callback. |
-| WHOISFREAKS_IMPORT_SINCE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Initial date for historical daily-feed import (ISO-8601 date-time or relative duration such as P7D). Subsequent runs continue from persisted connector state. |
+| WHOISFREAKS_IMPORT_SINCE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Latest-snapshot floor date; snapshots older than this date are skipped. This does not trigger historical backfill. Accepts an ISO-8601 date-time or relative duration such as P7D. |
 | WHOISFREAKS_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | TLP marking applied to imported STIX objects. |
 | WHOISFREAKS_CREATE_INDICATORS_FOR_NRD | `boolean` |  | boolean | `false` | When true, create Indicator + based-on for NRD domains. When false, only Domain-Name observables are created (recommended for high-volume NRD feeds). |

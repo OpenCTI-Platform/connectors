@@ -208,6 +208,7 @@ class NRDProcessor(BaseDataProcessor):
         # (see set_next_nrd_date(feed_date + 1)). An empty value means never run.
         next_date_str = self.state.get_next_nrd_date(self.feed_name, "")
         start_offset = self.state.get_nrd_offset(self.feed_name)
+        offset_date = self.state.get_nrd_offset_date(self.feed_name)
 
         import_floor = config.import_since.date()
         if latest_available_date < import_floor:
@@ -234,10 +235,8 @@ class NRDProcessor(BaseDataProcessor):
                     },
                 )
                 return []
-            # Resume mid-day only when the next pointer is still on last_update.
-            if next_date != latest_available_date:
-                start_offset = 0
-        else:
+        # Reuse an offset only for the snapshot it was checkpointed against.
+        if start_offset > 0 and offset_date != latest_iso:
             start_offset = 0
 
         self.logger.info(
@@ -284,7 +283,11 @@ class NRDProcessor(BaseDataProcessor):
                 pages_since_checkpoint += 1
 
                 if pages_since_checkpoint >= checkpoint_every:
-                    self.state.set_nrd_offset(self.feed_name, offset)
+                    self.state.set_nrd_offset(
+                        self.feed_name,
+                        offset,
+                        snapshot_date=feed_date.isoformat(),
+                    )
                     pages_since_checkpoint = 0
                     self.logger.debug(
                         "[NRD] Updated offset",
@@ -322,7 +325,7 @@ class NRDProcessor(BaseDataProcessor):
         create_indicators = config.create_indicators_for_nrd
 
         for page in data:
-            objects: list[Any] = [self._author]
+            objects: list[Any] = [self._author, tlp]
 
             for record in page:
                 try:
@@ -346,10 +349,10 @@ class NRDProcessor(BaseDataProcessor):
 
                 if len(objects) + len(record_objects) > _MAX_BUNDLE_OBJECTS:
                     yield objects
-                    objects = [self._author]
+                    objects = [self._author, tlp]
                 objects.extend(record_objects)
 
-            if len(objects) > 1:
+            if len(objects) > 2:
                 yield objects
 
     @staticmethod

@@ -127,9 +127,9 @@ class WhoisFreaksConfig(BaseConfigModel):
     )
     import_since: DatetimeFromIsoString = Field(
         description=(
-            "Initial date for historical daily-feed import "
-            "(ISO-8601 date-time or relative duration such as P7D). "
-            "Subsequent runs continue from persisted connector state."
+            "Latest-snapshot floor date; snapshots older than this date are skipped. "
+            "This does not trigger historical backfill. Accepts an ISO-8601 "
+            "date-time or relative duration such as P7D."
         ),
         default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=1),
     )

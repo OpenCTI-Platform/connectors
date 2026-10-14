@@ -19,17 +19,19 @@ def test_state_set_and_get_threat_date():
 
 def test_state_set_next_date_clears_offset():
     state = ConnectorState()
-    state.set_threat_offset("malware", 5000)
+    state.set_threat_offset("malware", 5000, snapshot_date="2026-09-27")
     assert state.get_threat_offset("malware") == 5000
     # Setting a new date must clear the offset so the next run starts at 0.
     state.set_next_date("malware", "2026-09-28")
     assert state.get_threat_offset("malware") == 0
+    assert state.get_threat_offset_date("malware") == ""
 
 
 def test_state_set_and_get_threat_offset():
     state = ConnectorState()
-    state.set_threat_offset("phishing", 12345)
+    state.set_threat_offset("phishing", 12345, snapshot_date="2026-09-27")
     assert state.get_threat_offset("phishing") == 12345
+    assert state.get_threat_offset_date("phishing") == "2026-09-27"
 
 
 def test_state_threat_offset_cannot_go_negative():
@@ -52,17 +54,27 @@ def test_state_set_and_get_nrd_date():
 
 def test_state_set_nrd_date_clears_offset():
     state = ConnectorState()
-    state.set_nrd_offset("nrd_cctld_with_whois", 9999)
+    state.set_nrd_offset(
+        "nrd_cctld_with_whois",
+        9999,
+        snapshot_date="2026-09-27",
+    )
     assert state.get_nrd_offset("nrd_cctld_with_whois") == 9999
     # Setting a new date must clear the offset.
     state.set_next_nrd_date("nrd_cctld_with_whois", "2026-09-28")
     assert state.get_nrd_offset("nrd_cctld_with_whois") == 0
+    assert state.get_nrd_offset_date("nrd_cctld_with_whois") == ""
 
 
 def test_state_set_and_get_nrd_offset():
     state = ConnectorState()
-    state.set_nrd_offset("nrd_gtld_without_whois", 42)
+    state.set_nrd_offset(
+        "nrd_gtld_without_whois",
+        42,
+        snapshot_date="2026-09-27",
+    )
     assert state.get_nrd_offset("nrd_gtld_without_whois") == 42
+    assert state.get_nrd_offset_date("nrd_gtld_without_whois") == "2026-09-27"
 
 
 def test_state_nrd_offset_cannot_go_negative():

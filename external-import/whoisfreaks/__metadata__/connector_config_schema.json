@@ -149,7 +149,7 @@
       "type": "integer"
     },
     "WHOISFREAKS_IMPORT_SINCE": {
-      "description": "Initial date for historical daily-feed import (ISO-8601 date-time or relative duration such as P7D). Subsequent runs continue from persisted connector state.",
+      "description": "Latest-snapshot floor date; snapshots older than this date are skipped. This does not trigger historical backfill. Accepts an ISO-8601 date-time or relative duration such as P7D.",
       "format": "date-time",
       "type": "string"
     },

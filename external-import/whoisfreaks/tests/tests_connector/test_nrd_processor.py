@@ -189,7 +189,7 @@ def test_nrd_tlp_marking():
 
 
 def test_nrd_transform_splits_bundles_at_object_limit(monkeypatch):
-    monkeypatch.setattr("connector.data_processors.nrd._MAX_BUNDLE_OBJECTS", 3)
+    monkeypatch.setattr("connector.data_processors.nrd._MAX_BUNDLE_OBJECTS", 4)
     processor = NRDProcessor("nrd_gtld_without_whois")
     processor._author = stix2.Identity(
         id="identity--11111111-1111-4111-8111-111111111111",
@@ -212,4 +212,6 @@ def test_nrd_transform_splits_bundles_at_object_limit(monkeypatch):
 
     bundles = list(processor.transform(iter([records])))
 
-    assert [len(bundle) for bundle in bundles] == [3, 2]
+    assert [len(bundle) for bundle in bundles] == [4, 3]
+    for bundle in bundles:
+        assert any(obj.type == "marking-definition" for obj in bundle)

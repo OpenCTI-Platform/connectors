@@ -72,6 +72,22 @@ def test_parse_csv_logs_malformed_record_and_keeps_valid_ones(caplog):
     assert "Skipping malformed" in caplog.text
 
 
+def test_parse_csv_skips_row_with_missing_timestamp(caplog):
+    payload = (
+        "domain,threat_type,confidence,first_seen,last_seen,"
+        "No_of_threat_matched_pivots\n"
+        "example.com,malware,0.9\n"
+        "example.org,malware,0.9,2026-09-01 11:00:00+00,"
+        "2026-09-02 11:00:00+00,2\n"
+    )
+
+    records = WhoisFreaksClient._parse_csv(payload)
+
+    assert [record.domain for record in records] == ["example.org"]
+    assert records.source_record_count == 2
+    assert "Skipping malformed" in caplog.text
+
+
 def test_iter_retries_rate_limit_then_succeeds(monkeypatch):
     payload = (
         "domain,threat_type,confidence,first_seen,last_seen,"

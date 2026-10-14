@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import stix2
@@ -92,6 +92,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         # floor for the latest snapshot date.
         last_completed = self.state.get_next_date(self.feed_type, "")
         start_offset = self.state.get_threat_offset(self.feed_type)
+        offset_date = self.state.get_threat_offset_date(self.feed_type)
 
         # Floor: do not pull a last_update older than import_since.
         import_floor = config.import_since.date()
@@ -117,17 +118,9 @@ class ThreatFeedProcessor(BaseDataProcessor):
             )
             return []
 
-        # Keep mid-day offset only when it belongs to last_update (i.e. the
-        # day immediately after last_completed, or the same day if state is
-        # mid-snapshot). If last_update jumped ahead, reset to 0.
-        if start_offset > 0 and last_completed:
-            completed = date.fromisoformat(last_completed)
-            offset_belongs_to_target = (
-                completed == latest_available_date
-                or completed + timedelta(days=1) == latest_available_date
-            )
-            if not offset_belongs_to_target:
-                start_offset = 0
+        # Reuse an offset only for the snapshot it was checkpointed against.
+        if start_offset > 0 and offset_date != latest_iso:
+            start_offset = 0
 
         self.logger.info(
             "[THREAT_FEED] Fetching WhoisFreaks threat-feed snapshot",
@@ -170,7 +163,11 @@ class ThreatFeedProcessor(BaseDataProcessor):
                 pages_since_checkpoint += 1
 
                 if pages_since_checkpoint >= checkpoint_every:
-                    self.state.set_threat_offset(self.feed_type, offset)
+                    self.state.set_threat_offset(
+                        self.feed_type,
+                        offset,
+                        snapshot_date=feed_date.isoformat(),
+                    )
                     pages_since_checkpoint = 0
                     self.logger.debug(
                         "[THREAT_FEED] Updated offset",
@@ -207,7 +204,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         tlp = self._get_tlp_marking(config.tlp_level)
 
         for page in data:
-            objects: list[Any] = [self._author]
+            objects: list[Any] = [self._author, tlp]
 
             for record in page:
                 try:
@@ -227,10 +224,10 @@ class ThreatFeedProcessor(BaseDataProcessor):
 
                 if len(objects) + len(record_objects) > _MAX_BUNDLE_OBJECTS:
                     yield objects
-                    objects = [self._author]
+                    objects = [self._author, tlp]
                 objects.extend(record_objects)
 
-            if len(objects) > 1:
+            if len(objects) > 2:
                 yield objects
 
     @staticmethod

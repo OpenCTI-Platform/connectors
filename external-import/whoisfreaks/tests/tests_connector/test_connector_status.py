@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from main import WhoisFreaksExternalImportConnector
 from whoisfreaks_client.status import FeedStatus, WhoisFreaksStatus
 
@@ -113,3 +115,18 @@ def test_callback_does_not_fetch_status_per_processor() -> None:
     for processor in processors:
         processor.set_status.assert_called_once_with(status)
         processor.process.assert_called_once_with()
+
+
+def test_callback_does_not_save_state_when_processor_fails() -> None:
+    processor = MagicMock()
+    processor.process.side_effect = RuntimeError("processor failed")
+    connector = _build_connector([processor])
+
+    with patch.object(
+        connector.status_client, "get_status", return_value=_build_status()
+    ):
+        with pytest.raises(RuntimeError, match="processor failed"):
+            connector.callback()
+
+    connector.state.save.assert_not_called()
+    assert connector.state.last_run is None

@@ -244,8 +244,8 @@ class WhoisFreaksClient:
                         domain=domain,
                         threat_type=(raw.get("threat_type") or "").strip(),
                         confidence_score=float(raw.get("confidence") or 0),
-                        first_seen=cls._parse_datetime(raw["first_seen"]),
-                        last_seen=cls._parse_datetime(raw["last_seen"]),
+                        first_seen=cls._parse_datetime(raw.get("first_seen") or ""),
+                        last_seen=cls._parse_datetime(raw.get("last_seen") or ""),
                         No_of_threat_matched_pivots=int(
                             raw.get("No_of_threat_matched_pivots") or 0
                         ),

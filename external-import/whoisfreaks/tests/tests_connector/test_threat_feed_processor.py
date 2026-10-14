@@ -123,9 +123,10 @@ def test_transform_yields_pages_with_author():
     bundles = list(processor.transform(iter(pages)))
 
     assert len(bundles) == 2
-    # author + domain + note + indicator + relationship
-    assert len(bundles[0]) == 5
+    # author + TLP marking + domain + note + indicator + relationship
+    assert len(bundles[0]) == 6
     assert any(obj.type == "identity" for obj in bundles[0])
+    assert any(obj.type == "marking-definition" for obj in bundles[0])
     assert any(obj.type == "note" for obj in bundles[0])
 
 
@@ -152,7 +153,7 @@ def test_transform_does_not_crash_on_empty_page():
 def test_transform_splits_bundles_at_object_limit(monkeypatch):
     monkeypatch.setattr(
         "connector.data_processors.threat_feed._MAX_BUNDLE_OBJECTS",
-        5,
+        6,
     )
     processor = ThreatFeedProcessor("malware")
     processor._author = stix2.Identity(
@@ -175,4 +176,6 @@ def test_transform_splits_bundles_at_object_limit(monkeypatch):
         )
     )
 
-    assert [len(bundle) for bundle in bundles] == [5, 5]
+    assert [len(bundle) for bundle in bundles] == [6, 6]
+    for bundle in bundles:
+        assert any(obj.type == "marking-definition" for obj in bundle)

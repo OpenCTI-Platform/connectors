@@ -20,6 +20,8 @@ class ConnectorState(ExternalImportConnectorState):
     # feed_key -> next offset to request (record count from start of that day)
     threat_feed_offsets: dict[str, int] = Field(default_factory=dict)
     nrd_offsets: dict[str, int] = Field(default_factory=dict)
+    threat_feed_offset_dates: dict[str, str] = Field(default_factory=dict)
+    nrd_offset_dates: dict[str, str] = Field(default_factory=dict)
 
     def get_next_date(self, feed_type: str, default: str) -> str:
         """Return the next date to process for a threat feed."""
@@ -29,14 +31,33 @@ class ConnectorState(ExternalImportConnectorState):
         """Set the next date for a threat feed and clear its offset."""
         self.threat_feed_dates[feed_type] = next_date
         self.threat_feed_offsets.pop(feed_type, None)
+        self.threat_feed_offset_dates.pop(feed_type, None)
 
     def get_threat_offset(self, feed_type: str) -> int:
         """Return the record offset for the current threat-feed day."""
         return int(self.threat_feed_offsets.get(feed_type, 0))
 
-    def set_threat_offset(self, feed_type: str, offset: int) -> None:
+    def get_threat_offset_date(self, feed_type: str) -> str:
+        """Return the snapshot date associated with the threat-feed offset."""
+        return self.threat_feed_offset_dates.get(feed_type, "")
+
+    def set_threat_offset(
+        self,
+        feed_type: str,
+        offset: int,
+        snapshot_date: str | None = None,
+    ) -> None:
         """Set the next record offset for a threat feed day."""
-        self.threat_feed_offsets[feed_type] = max(0, int(offset))
+        normalized_offset = max(0, int(offset))
+        if normalized_offset:
+            self.threat_feed_offsets[feed_type] = normalized_offset
+            if snapshot_date is not None:
+                self.threat_feed_offset_dates[feed_type] = snapshot_date
+            else:
+                self.threat_feed_offset_dates.pop(feed_type, None)
+        else:
+            self.threat_feed_offsets.pop(feed_type, None)
+            self.threat_feed_offset_dates.pop(feed_type, None)
 
     def get_next_nrd_date(self, feed_type: str, default: str) -> str:
         """Return the next date to process for an NRD feed."""
@@ -46,11 +67,30 @@ class ConnectorState(ExternalImportConnectorState):
         """Set the next date for an NRD feed and clear its offset."""
         self.nrd_dates[feed_type] = next_date
         self.nrd_offsets.pop(feed_type, None)
+        self.nrd_offset_dates.pop(feed_type, None)
 
     def get_nrd_offset(self, feed_type: str) -> int:
         """Return the record offset for the current NRD feed day."""
         return int(self.nrd_offsets.get(feed_type, 0))
 
-    def set_nrd_offset(self, feed_type: str, offset: int) -> None:
+    def get_nrd_offset_date(self, feed_type: str) -> str:
+        """Return the snapshot date associated with the NRD offset."""
+        return self.nrd_offset_dates.get(feed_type, "")
+
+    def set_nrd_offset(
+        self,
+        feed_type: str,
+        offset: int,
+        snapshot_date: str | None = None,
+    ) -> None:
         """Set the next record offset for an NRD feed day."""
-        self.nrd_offsets[feed_type] = max(0, int(offset))
+        normalized_offset = max(0, int(offset))
+        if normalized_offset:
+            self.nrd_offsets[feed_type] = normalized_offset
+            if snapshot_date is not None:
+                self.nrd_offset_dates[feed_type] = snapshot_date
+            else:
+                self.nrd_offset_dates.pop(feed_type, None)
+        else:
+            self.nrd_offsets.pop(feed_type, None)
+            self.nrd_offset_dates.pop(feed_type, None)

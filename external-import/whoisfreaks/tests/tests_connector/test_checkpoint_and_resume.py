@@ -72,6 +72,7 @@ class TestThreatFeedCheckpoint:
         *,
         last_completed: str = "",
         start_offset: int = 0,
+        offset_date: str = "",
         checkpoint_every: int = 2,
     ) -> ThreatFeedProcessor:
         processor = ThreatFeedProcessor("malware")
@@ -81,6 +82,7 @@ class TestThreatFeedCheckpoint:
         processor.state = MagicMock(spec=ConnectorState)
         processor.state.get_next_date.return_value = last_completed
         processor.state.get_threat_offset.return_value = start_offset
+        processor.state.get_threat_offset_date.return_value = offset_date
         processor.logger = MagicMock()
         processor.client = MagicMock()
         processor.work_manager = MagicMock()
@@ -110,7 +112,11 @@ class TestThreatFeedCheckpoint:
     def test_resume_from_saved_offset(self):
         """Processor must forward the saved start_offset to the client."""
         # Same date as status -> resuming existing date with saved offset
-        processor = self._prepare(start_offset=5000, last_completed="2026-09-26")
+        processor = self._prepare(
+            start_offset=5000,
+            last_completed="2026-09-26",
+            offset_date=AVAILABLE_DATE,
+        )
 
         processor.client.iter_threat_feed.return_value = iter([])
 
@@ -121,7 +127,11 @@ class TestThreatFeedCheckpoint:
 
     def test_resume_offset_is_preserved_for_next_day(self):
         """A checkpoint resumes the incomplete day after the last completed day."""
-        processor = self._prepare(start_offset=9999, last_completed="2026-09-26")
+        processor = self._prepare(
+            start_offset=9999,
+            last_completed="2026-09-26",
+            offset_date=AVAILABLE_DATE,
+        )
 
         processor.client.iter_threat_feed.return_value = iter([])
 
@@ -131,6 +141,25 @@ class TestThreatFeedCheckpoint:
         kwargs = processor.client.iter_threat_feed.call_args.kwargs
         assert kwargs["start_offset"] == 9999
 
+    def test_initial_partial_run_resumes_from_matching_snapshot_date(self):
+        processor = self._prepare(start_offset=5000, offset_date=AVAILABLE_DATE)
+        processor.client.iter_threat_feed.return_value = iter([])
+
+        list(processor.collect())
+
+        assert (
+            processor.client.iter_threat_feed.call_args.kwargs["start_offset"] == 5000
+        )
+
+    def test_offset_resets_when_status_advances(self):
+        processor = self._prepare(start_offset=5000, offset_date=AVAILABLE_DATE)
+        processor.set_status(_build_status("2026-09-28"))
+        processor.client.iter_threat_feed.return_value = iter([])
+
+        list(processor.collect())
+
+        assert processor.client.iter_threat_feed.call_args.kwargs["start_offset"] == 0
+
     def test_checkpoint_counts_skipped_source_rows(self):
         processor = self._prepare(checkpoint_every=1)
         processor.client.iter_threat_feed.return_value = iter(
@@ -139,7 +168,11 @@ class TestThreatFeedCheckpoint:
 
         list(processor.collect())
 
-        processor.state.set_threat_offset.assert_called_once_with("malware", 3)
+        processor.state.set_threat_offset.assert_called_once_with(
+            "malware",
+            3,
+            snapshot_date=AVAILABLE_DATE,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +186,7 @@ class TestNRDCheckpoint:
         *,
         next_date: str = AVAILABLE_DATE,
         start_offset: int = 0,
+        offset_date: str = "",
         checkpoint_every: int = 2,
     ) -> NRDProcessor:
         processor = NRDProcessor("nrd_gtld_without_whois")
@@ -162,6 +196,7 @@ class TestNRDCheckpoint:
         processor.state = MagicMock(spec=ConnectorState)
         processor.state.get_next_nrd_date.return_value = next_date
         processor.state.get_nrd_offset.return_value = start_offset
+        processor.state.get_nrd_offset_date.return_value = offset_date
         processor.logger = MagicMock()
         processor.client = MagicMock()
         processor.set_status(_build_status())
@@ -184,7 +219,7 @@ class TestNRDCheckpoint:
 
     def test_resume_from_saved_offset(self):
         """Processor must forward the saved start_offset to the client."""
-        processor = self._prepare(start_offset=3000)
+        processor = self._prepare(start_offset=3000, offset_date=AVAILABLE_DATE)
 
         processor.client.iter_feed.return_value = iter([])
 
@@ -192,6 +227,27 @@ class TestNRDCheckpoint:
 
         kwargs = processor.client.iter_feed.call_args.kwargs
         assert kwargs["start_offset"] == 3000
+
+    def test_initial_partial_run_resumes_from_matching_snapshot_date(self):
+        processor = self._prepare(
+            next_date="",
+            start_offset=3000,
+            offset_date=AVAILABLE_DATE,
+        )
+        processor.client.iter_feed.return_value = iter([])
+
+        list(processor.collect())
+
+        assert processor.client.iter_feed.call_args.kwargs["start_offset"] == 3000
+
+    def test_offset_resets_when_status_advances(self):
+        processor = self._prepare(start_offset=3000, offset_date=AVAILABLE_DATE)
+        processor.set_status(_build_status("2026-09-28"))
+        processor.client.iter_feed.return_value = iter([])
+
+        list(processor.collect())
+
+        assert processor.client.iter_feed.call_args.kwargs["start_offset"] == 0
 
     def test_fetches_only_last_update_day(self):
         """collect() fetches only status last_update, even if next_date is older."""
@@ -217,6 +273,7 @@ class TestNRDCheckpoint:
         processor.state.set_nrd_offset.assert_called_once_with(
             "nrd_gtld_without_whois",
             3,
+            snapshot_date=AVAILABLE_DATE,
         )
 
 
