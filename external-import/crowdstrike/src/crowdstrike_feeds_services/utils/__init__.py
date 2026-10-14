@@ -159,7 +159,7 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 
 
 class CrowdStrikeAPIError(RuntimeError):
-    """CrowdStrike API failure surfaced during pagination."""
+    """CrowdStrike API failure that should stop the current import."""
 
     def __init__(self, message: Any, code: Any = None) -> None:
         self.code = code
@@ -216,28 +216,9 @@ def paginate(func):
                         error_code = None
                     logger.error("Error: %s (code: %s)", error_message, error_code)
 
-                meta = response.get("meta") or {}
-                if "pagination" not in meta:
-                    first_error = error_list[0]
-
-                    if isinstance(first_error, dict):
-                        error_message = first_error.get("message") or first_error
-                        error_code = first_error.get("code")
-                    else:
-                        error_message = first_error
-                        error_code = None
-
-                    raise CrowdStrikeAPIError(error_message, error_code)
-
             meta = response.get("meta") or {}
-            if "pagination" not in meta:
-                raise CrowdStrikeAPIError(
-                    "CrowdStrike API response is missing pagination metadata"
-                )
-
-            if meta["pagination"] is not None:
-                pagination = meta["pagination"]
-
+            pagination = meta.get("pagination")
+            if pagination is not None:
                 _meta_limit = pagination["limit"]
                 _meta_offset = pagination["offset"]
                 _meta_total = pagination["total"]
@@ -252,7 +233,7 @@ def paginate(func):
                 _offset = _offset + _limit
                 _total = _meta_total
 
-            resources = response["resources"]
+            resources = response.get("resources")
 
             if resources is not None:
                 resources_count = len(resources)
@@ -264,6 +245,13 @@ def paginate(func):
                 yield resources
             else:
                 total_count = 0
+
+            if pagination is None:
+                # Without pagination metadata the next offset cannot be
+                # computed, so treat this response as the last page instead
+                # of re-querying the same offset forever.
+                logger.info("Query returned no pagination info, stopping")
+                break
 
         logger.info("Fetched %s resources in total", total_count)
 

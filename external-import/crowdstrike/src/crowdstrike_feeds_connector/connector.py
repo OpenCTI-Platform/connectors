@@ -356,7 +356,9 @@ class CrowdStrike:
                         str(e),
                         in_error=True,
                     )
-                    return
+                    # keep running the other importers; this one's state is
+                    # not updated, so it retries the same range next run
+                    continue
 
                 new_state.update(importer_state)
 

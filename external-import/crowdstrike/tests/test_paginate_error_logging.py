@@ -59,32 +59,24 @@ def test_paginate_handles_non_dict_error_entries(monkeypatch):
     assert any(c.args[1] == "plain string error" and c.args[2] is None for c in calls)
 
 
-def test_paginate_handles_missing_pagination_on_api_error(monkeypatch):
+def test_paginate_stops_on_error_response_without_pagination(monkeypatch):
+    # A 401 envelope from FalconPy carries no ``meta.pagination``; the
+    # paginator must log the error and stop instead of raising ``KeyError``
+    # or re-querying the same offset forever.
     mock_logger = MagicMock()
     monkeypatch.setattr(utils, "logger", mock_logger)
+    calls = []
 
     @utils.paginate
     def query(*args, limit=25, offset=0, **kwargs):
+        calls.append(offset)
         return {
-            "errors": [
-                {
-                    "code": 401,
-                    "message": "Unauthorized",
-                }
-            ],
-            "meta": {
-                "trace_id": "test-trace-id",
-            },
-            "resources": [],
+            "errors": [{"code": 401, "message": "Unauthorized"}],
+            "meta": {"trace_id": "test-trace-id"},
         }
 
-    try:
-        list(query())
-    except utils.CrowdStrikeAPIError as exc:
-        assert str(exc) == "Unauthorized (401)"
-    else:
-        raise AssertionError("Expected CrowdStrikeAPIError")
-
+    assert list(query()) == []
+    assert calls == [0]
     assert any(
         call.args[1] == "Unauthorized" and call.args[2] == 401
         for call in mock_logger.error.call_args_list
@@ -92,16 +84,13 @@ def test_paginate_handles_missing_pagination_on_api_error(monkeypatch):
     )
 
 
-def test_paginate_raises_controlled_error_when_metadata_is_missing():
+def test_paginate_yields_last_page_without_pagination_then_stops():
+    calls = []
+
     @utils.paginate
     def query(*args, limit=25, offset=0, **kwargs):
-        return {}
+        calls.append(offset)
+        return {"resources": [{"id": 1}]}
 
-    try:
-        list(query())
-    except utils.CrowdStrikeAPIError as exc:
-        assert str(exc) == (
-            "CrowdStrike API response is missing pagination metadata"
-        )
-    else:
-        raise AssertionError("Expected CrowdStrikeAPIError")
+    assert list(query()) == [[{"id": 1}]]
+    assert calls == [0]
