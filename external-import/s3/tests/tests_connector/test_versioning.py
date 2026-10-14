@@ -278,6 +278,55 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
     assert older["labels"] == ["accenture"]
 
 
+def test_source_fields_mapped_to_additive_platform_fields_are_accumulated():
+    """
+    `x_alias` becomes aliases and the flags become labels, which the platform only
+    adds: an alias or a flag of an older version is kept, whatever the newest says.
+    """
+    older = {"x_alias": "Old name", "x_zero_day": True, "x_wormable": False}
+    middle = {"x_alias": ["Middle name", "Old name"], "x_zero_day": False}
+    newer = {"x_alias": "New name", "x_zero_day": False, "x_wormable": False}
+
+    merged = merge_versions([older, middle, newer])
+
+    assert merged["x_alias"] == ["New name", "Middle name", "Old name"]
+    assert merged["x_zero_day"] is True
+    assert merged["x_wormable"] is False
+    # A single version keeps its scalar form, `fix_bundle` accepts both
+    assert merge_versions([newer])["x_alias"] == "New name"
+
+
+def test_a_label_raised_by_an_older_version_stays_on_every_copy(connector):
+    older = aci_vulnerability_bundle(OLDER, "U", 8.5, [FIRST_ENTRY], True, 1)
+    newer = aci_vulnerability_bundle(
+        NEWER, "H", 9.4, [FIRST_ENTRY, SECOND_ENTRY], False, 2
+    )
+    put_files(
+        connector,
+        [
+            (
+                "ACI_Vuln/a.json",
+                datetime.datetime(2026, 10, 1, 20, 1, tzinfo=UTC),
+                older,
+            ),
+            (
+                "ACI_Vuln/b.json",
+                datetime.datetime(2026, 10, 1, 20, 11, tzinfo=UTC),
+                newer,
+            ),
+        ],
+    )
+
+    connector.process()
+
+    bundles = sent_bundles(connector)
+    assert len(bundles) == 2
+    for bundle in bundles:
+        [vulnerability] = objects_of_type(bundle, "vulnerability")
+        assert vulnerability["x_opencti_modified_at"] == NEWER
+        assert "zero-day" in vulnerability["labels"]
+
+
 @pytest.mark.parametrize(
     ("first", "second", "expected"),
     [

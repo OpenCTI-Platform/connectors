@@ -50,6 +50,16 @@ mapped_keys = [
     "x_credit",
 ]
 ignored_keys = ["x_acti_guid", "x_version", "x_vendor", "x_opencti_files"]
+# Source fields that `fix_bundle` turns into labels: the platform only adds labels, so
+# a flag raised by any version of an entity stays raised
+ADDITIVE_FLAG_KEYS = (
+    "x_wormable",
+    "x_zero_day",
+    "x_notable_vuln",
+    "x_and_prior_versions",
+)
+# Source field that `fix_bundle` turns into aliases, given as a string or a list
+ALIASES_SOURCE_KEY = "x_alias"
 
 # Pattern to match invisible/zero-width Unicode characters that can break URLs
 INVISIBLE_CHARS_PATTERN = re.compile(
@@ -123,6 +133,11 @@ def oldest_timestamp(first, second):
     return second
 
 
+def as_list(value):
+    """A list value as is, any other value as a one-item list."""
+    return value if isinstance(value, list) else [value]
+
+
 def merge_versions(versions):
     """
     Merge the versions of one STIX object, given oldest first.
@@ -130,9 +145,11 @@ def merge_versions(versions):
     This is the result the platform would reach by applying the versions in order:
     single values come from the newest version that has them, list values (labels,
     external references, aliases, history entries...) are the union of all versions
-    and `created` keeps its oldest value. The ID and the references (`*_ref`,
-    `*_refs`) are left out: they are local to the file of each version (see
-    `is_reference_key`).
+    and `created` keeps its oldest value. The source fields that `fix_bundle` turns
+    into additive platform fields follow the same rule: `x_alias` values are
+    accumulated whether given as a string or a list, and a label flag raised by any
+    version stays raised. The ID and the references (`*_ref`, `*_refs`) are left
+    out: they are local to the file of each version (see `is_reference_key`).
     """
     merged = {}
     for version in versions:
@@ -140,8 +157,12 @@ def merge_versions(versions):
             if is_reference_key(key):
                 continue
             previous = merged.get(key)
-            if isinstance(value, list) and isinstance(previous, list):
+            if key == ALIASES_SOURCE_KEY and previous is not None:
+                merged[key] = union_lists(as_list(value), as_list(previous))
+            elif isinstance(value, list) and isinstance(previous, list):
                 merged[key] = union_lists(value, previous)
+            elif key in ADDITIVE_FLAG_KEYS and previous:
+                continue
             elif key == "created" and previous is not None:
                 merged[key] = oldest_timestamp(previous, value)
             else:
