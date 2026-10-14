@@ -16,6 +16,7 @@ alerts sharing that exact timestamp.
 """
 
 import ast
+import re
 import time
 from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass, field
@@ -36,6 +37,9 @@ EVENT_SEARCH_VIEW = "search-all"
 # each) take about 35 000 characters.
 MAX_IDS_PER_SEARCH = 1000
 EVENT_SEARCH_TIMEOUT_SECONDS = 300
+EVENTS_PER_ALERT_MARGIN = 3
+# Indicator IDs are hexadecimal; anything else is not sent in the query.
+INDICATOR_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 EVENT_SEARCH_POLL_SECONDS = 2
 
 
@@ -135,9 +139,10 @@ class CrowdstrikeAlertsClient:
             new_alerts = [a for a in alerts if a["composite_id"] not in boundary_ids]
 
             last_timestamp = alerts[-1]["updated_timestamp"] if alerts else cursor
-            if timestamp_sort_key(last_timestamp) == timestamp_sort_key(cursor):
-                # The whole page shares the cursor timestamp: keyset cannot move
-                # forward, page through that timestamp with the after token.
+            if timestamp_sort_key(last_timestamp) <= timestamp_sort_key(cursor):
+                # The whole page shares the cursor timestamp (or is not newer):
+                # keyset cannot move forward, page through it with the after
+                # token. The cursor never moves backwards.
                 after = next_after
             else:
                 cursor = last_timestamp
@@ -220,7 +225,7 @@ class CrowdstrikeEventsClient:
         Returns:
             Raw LogScale events (flattened field names).
         """
-        ids = [i for i in dict.fromkeys(indicator_ids) if i and '"' not in i]
+        ids = [i for i in dict.fromkeys(indicator_ids) if i and INDICATOR_ID.match(i)]
         events: list[dict[str, Any]] = []
         for start in range(0, len(ids), MAX_IDS_PER_SEARCH):
             chunk = ids[start : start + MAX_IDS_PER_SEARCH]
@@ -228,8 +233,9 @@ class CrowdstrikeEventsClient:
             query = (
                 'Ngsiem.event.type="ngsiem-rule-match-event"'
                 f' | in(field="Ngsiem.indicator.id", values=[{values}])'
-                # Search results are limited to 200 events by default
-                f" | head(limit={len(chunk)})"
+                # Search results are limited to 200 events by default; the margin
+                # leaves room for alerts having several events.
+                f" | head(limit={len(chunk) * EVENTS_PER_ALERT_MARGIN})"
             )
             events.extend(self._search(query, since))
         return events
@@ -257,11 +263,16 @@ class CrowdstrikeEventsClient:
                     repository=EVENT_SEARCH_VIEW, search_id=search_id
                 )
             )
+            if status.get("cancelled"):
+                raise CrowdstrikeApiError(None, "LogScale search was cancelled.")
             if status.get("done"):
                 return status.get("events") or []
             self._sleep(EVENT_SEARCH_POLL_SECONDS)
 
-        self._ngsiem.stop_search(repository=EVENT_SEARCH_VIEW, id=search_id)
+        try:
+            self._ngsiem.stop_search(repository=EVENT_SEARCH_VIEW, id=search_id)
+        except Exception:  # noqa: BLE001 - the timeout is the error to report
+            pass
         raise CrowdstrikeApiError(
             None,
             f"LogScale search not completed after {EVENT_SEARCH_TIMEOUT_SECONDS} s.",

@@ -34,7 +34,7 @@ and imports each of them into OpenCTI as an **Incident**, with:
 ```
 Incident « <rule> on <host> »
 ├── Victim      : Hostname · IPv4/IPv6 (internal and public) · User-Account
-├── Threat      : File (name, SHA-256, MD5)                  ← enrich_from_events
+├── Threat      : File (name, SHA-256, MD5, SHA-1)            ← enrich_from_events
 ├── TTP         : Attack-Pattern (MITRE ATT&CK), if declared by the rule
 └── Description : alert context + command line and process chain  ← enrich_from_events
 ```
@@ -86,6 +86,7 @@ In-code constants (not configurable):
 | Auth       | OAuth2 client credentials                 | Token request, refresh and retries are handled by the official [falconpy](https://github.com/CrowdStrike/falconpy) SDK. |
 | Event search view | `search-all`                       | LogScale view used for the source events (searching the repositories directly is forbidden). |
 | Alerts per event search | 1000                         | One search per page of alerts; LogScale queries are limited to 66 000 characters. |
+| Events per alert (search result margin) | 3                | The search returns at most 3 events per alert (search results are capped by `head`). |
 | Event search timeout | 300 s, polled every 2 s           | A search not completed in time is stopped; the page is imported without enrichment. |
 
 ## Deployment
@@ -206,7 +207,7 @@ a source event can predate its alert by days (correlation rule lookback).
 | Source event field | OpenCTI | Relationship / notes |
 |---|---|---|
 | `Vendor.FileName` | `File` name | Incident `related-to` File (threat) |
-| `process.hash.sha256`, `process.hash.md5`, `process.hash.sha1` | `File` hashes | Hashes made only of zeros are dropped (see Known caveats) |
+| `process.hash.sha256`, `process.hash.md5`, `process.hash.sha1` | `File` hashes | Hashes made only of zeros, and malformed hashes (not hexadecimal or wrong length), are dropped (see Known caveats) |
 | `Vendor.aip` | `IPv4-Addr` / `IPv6-Addr` | Incident `related-to` IP: public IP of the affected host (victim) |
 | `process.command_line` | Incident description, "Command line" row | Temporary, see Known caveats |
 | `process.executable` | Incident description, "Executable" row | |
@@ -246,7 +247,7 @@ No Indicator is created from the file hashes.
 - **API errors**: a non-success response stops the run with an explicit error (a `403` mentions the
   `Alerts: Read` scope); the next scheduled run retries from the last saved cursor.
 - **Source events search failures** (`enrich_from_events`): enrichment is best effort. When the
-  search fails (e.g. `403` without the NGSIEM: Write scope) or times out, the Incidents of the page
+  search fails (e.g. `403` without the NGSIEM: Write scope), is cancelled or times out, the Incidents of the page
   are still created with their victim observables, and a warning is logged. Alerts whose source event
   is not found are imported without threat observables.
 - **State reset**: resetting the connector state in OpenCTI clears the cursor, even while the
