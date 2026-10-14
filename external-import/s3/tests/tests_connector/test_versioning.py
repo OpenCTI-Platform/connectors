@@ -388,8 +388,8 @@ def test_note_ids_do_not_depend_on_the_creation_date_of_the_version(connector):
 
 def test_every_bundle_of_the_run_is_built_before_the_first_one_is_sent(connector):
     """
-    The note keys of non-CVE vulnerabilities depend on the notes already in the
-    platform: building after a send would make them depend on worker timing.
+    A file that cannot be processed stops the run before anything is sent or deleted,
+    whatever the prefix it belongs to.
     """
     connector.s3_bucket_prefixes = ["ACI_TI", "ACI_Vuln"]
     put_files(
