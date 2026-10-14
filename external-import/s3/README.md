@@ -19,13 +19,22 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 The connector uses a **fail-fast** strategy:
 
-1. **List** all files in the S3 bucket with the configured prefix(es)
-2. For each file:
-   - **Fetch** the STIX bundle from S3
-   - **Parse and validate** the bundle
-   - **Send** to OpenCTI
+1. **Wait** until the ingestion works sent by the previous run are complete
+2. **List** the files of each configured prefix, **oldest upload first**, at most 1,000 files per prefix and per run (the next runs take the rest)
+3. **Fetch and parse** these files
+4. **Resolve versions** across all the files of the run (see below)
+5. For each file:
+   - **Send** its bundle to OpenCTI
    - **Delete** the file from S3 only after successful processing
-3. If **any error occurs** at any step, the connector **crashes immediately**
+6. If **any error occurs** at any step, the connector **crashes immediately**
+
+### Versioning
+
+The same entity, typically a vulnerability, can be published several times in a short window. OpenCTI workers apply bundles in parallel, and an upsert of equal confidence overwrites the fields of an entity whatever its `modified` date. The connector therefore makes sure that the newest version of an entity always wins:
+
+- **Within a run**: all the versions of an entity found in the files of the run are merged, and every bundle that contains the entity carries the result. Single-valued fields come from the newest version (highest `modified`), multi-valued fields (labels, external references, aliases, history entries) keep the values of all versions, as OpenCTI does when the versions are applied in order. Whatever order the bundles are applied in, the entity ends up with its newest content.
+- **Against the platform**: a vulnerability whose `modified` date is older than the `x_opencti_modified_at` already stored in OpenCTI is reduced to a reference (type, ID, name, author and markings). Its fields and its Title, Analysis and History notes are not sent, so they cannot overwrite the newer version. Its relationships and the other objects of its file are still sent.
+- **Across runs**: a run starts only once the works sent by the previous run are complete, so a version is never applied before an older one still waiting in the queue. New files stay in the bucket in the meantime. A work that makes no progress for one hour is not waited for anymore. Resetting the connector state in OpenCTI also clears the wait.
 
 ### Multi-Platform Setup
 
