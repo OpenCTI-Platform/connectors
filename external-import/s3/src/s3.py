@@ -137,33 +137,32 @@ class S3Connector:
     def get_interval(self):
         return self.config.connector.duration_period.total_seconds()
 
-    def note_exists_by_abstract(self, abstract):
+    @staticmethod
+    def generate_note_ids(obj, note_type):
         """
-        Check if a note with the given abstract already exists in the API.
+        Return the STIX ID of a Title, Analysis or History note of `obj`, and its aliases.
 
-        :param abstract: The abstract to search for
-        :return: True if a note with this abstract exists, False otherwise
+        Notes are matched on this ID while their content changes from one version to
+        the next, so it only depends on the vulnerability, never on the platform state:
+        - CVE notes are keyed on the ACTI UUID
+        - other notes are also keyed on the vulnerability name, so that entries sharing
+          an ACTI UUID keep their own notes. Their ACTI UUID only ID, used by older
+          versions of the connector, is sent as an alias so those notes are updated in
+          place instead of being duplicated
+
+        :param obj: The vulnerability the note belongs to
+        :param note_type: "Title", "Analysis" or "History"
+        :return: The note STIX ID and the list of its alias STIX IDs
         """
-        try:
-            filters = {
-                "mode": "and",
-                "filters": [
-                    {
-                        "key": "attribute_abstract",
-                        "values": [abstract],
-                        "operator": "eq",
-                    }
-                ],
-                "filterGroups": [],
-            }
-            notes = self.helper.api.note.list(filters=filters, first=1)
-            return len(notes) > 0
-        except Exception as e:
-            self.helper.log_warning(
-                f"Failed to check for existing note with abstract '{abstract}': {e}"
-            )
-            # On error, default to using simple key (consolidate behavior)
-            return True
+        acti_uuid = obj["x_acti_uuid"]
+        obj_name = obj.get("name", "")
+        uuid_note_id = Note.generate_id(obj["created"], f"{acti_uuid} - {note_type}")
+        if obj_name.startswith("CVE-"):
+            return uuid_note_id, []
+        name_note_id = Note.generate_id(
+            obj["created"], f"{acti_uuid} - {obj_name} - {note_type}"
+        )
+        return name_note_id, [uuid_note_id]
 
     def filter_outdated_vulnerabilities(self, data):
         """
@@ -549,21 +548,11 @@ class S3Connector:
 
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
-                # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                note_abstract = obj_name + " - Title"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - Title"
-                elif self.note_exists_by_abstract(note_abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - Title"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
+                note_id, note_aliases = self.generate_note_ids(obj, "Title")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=note_abstract,
+                    abstract=obj.get("name", "") + " - Title",
                     content=obj.get("x_title"),
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -572,27 +561,18 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
 
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
-                # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                note_abstract = obj_name + " - Analysis"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - Analysis"
-                elif self.note_exists_by_abstract(note_abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - Analysis"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
+                note_id, note_aliases = self.generate_note_ids(obj, "Analysis")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=note_abstract,
+                    abstract=obj.get("name", "") + " - Analysis",
                     content=obj["x_analysis"],
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -601,6 +581,7 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
@@ -619,20 +600,11 @@ class S3Connector:
                     timestamp = (history.get("timestamp") or "").strip()
                     note_content += f"| {timestamp} | {comment} |\n"
 
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                abstract = obj_name + " - History"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - History"
-                elif self.note_exists_by_abstract(abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - History"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - History"
+                note_id, note_aliases = self.generate_note_ids(obj, "History")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=abstract,
+                    abstract=obj.get("name", "") + " - History",
                     content=note_content,
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -641,6 +613,7 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
