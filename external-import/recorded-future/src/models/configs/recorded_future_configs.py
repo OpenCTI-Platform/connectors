@@ -101,6 +101,14 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=False,
         description="Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
     )
+    analyst_notes_include_context_entities: bool = Field(
+        default=False,
+        description=(
+            "Whether to also import the context entities of analyst notes, "
+            "i.e. entities referenced in the note's context but not tagged as primary. "
+            "Disabled by default as they can add a lot of noise and false positives."
+        ),
+    )
 
     # Risk List configuration
     pull_risk_list: bool = Field(
