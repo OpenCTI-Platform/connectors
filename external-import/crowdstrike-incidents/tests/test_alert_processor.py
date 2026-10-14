@@ -26,6 +26,7 @@ from crowdstrike_incidents.settings import Severity
 def _make_processor(
     severity_min: Severity | None = None,
     last_updated_timestamp: str | None = None,
+    events_client: MagicMock | None = None,
 ) -> AlertProcessor:
     proc = AlertProcessor.__new__(AlertProcessor)
     proc._config = SimpleNamespace(
@@ -36,6 +37,7 @@ def _make_processor(
     )
     proc._marking = TLPMarking(level="amber+strict")
     proc._client = MagicMock()
+    proc._events_client = events_client
     proc.logger = MagicMock()
     proc.work_manager = MagicMock()
     proc.state = CrowdstrikeIncidentsState(

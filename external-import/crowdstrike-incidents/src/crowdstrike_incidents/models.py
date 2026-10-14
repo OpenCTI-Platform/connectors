@@ -119,3 +119,46 @@ class CrowdstrikeAlert(_Model):
         if isinstance(value, str):
             value = [value]
         return _clean_string_list(value)
+
+
+class SourceEvent(_Model):
+    """The NG-SIEM ``ngsiem-rule-match-event`` behind an alert.
+
+    Retrieved from the LogScale search API (view ``search-all``). It carries the
+    threat side of the detection, absent from the alert payload: the executed
+    file, its hashes and its execution context. Field names are the flattened
+    LogScale field names.
+    """
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    indicator_id: str = Field(alias="Ngsiem.indicator.id", min_length=1)
+    file_name: str | None = Field(default=None, alias="Vendor.FileName")
+    file_path: str | None = Field(default=None, alias="Vendor.FilePath")
+    executable: str | None = Field(default=None, alias="process.executable")
+    command_line: str | None = Field(default=None, alias="process.command_line")
+    sha256: str | None = Field(default=None, alias="process.hash.sha256")
+    md5: str | None = Field(default=None, alias="process.hash.md5")
+    sha1: str | None = Field(default=None, alias="process.hash.sha1")
+    parent_name: str | None = Field(default=None, alias="process.parent.name")
+    grandparent_name: str | None = Field(
+        default=None, alias="Vendor.GrandParentBaseFileName"
+    )
+    agent_public_ip: str | None = Field(default=None, alias="Vendor.aip")
+
+    @field_validator(
+        "file_name",
+        "file_path",
+        "executable",
+        "command_line",
+        "sha256",
+        "md5",
+        "sha1",
+        "parent_name",
+        "grandparent_name",
+        "agent_public_ip",
+        mode="before",
+    )
+    @classmethod
+    def _clean(cls, value: Any) -> Any:
+        return _clean_string(value)

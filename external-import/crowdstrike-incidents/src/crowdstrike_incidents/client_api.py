@@ -15,16 +15,28 @@ which can never skip an alert. The ``after`` token is only used to page through
 alerts sharing that exact timestamp.
 """
 
-from collections.abc import Generator, Iterable
+import ast
+import time
+from collections.abc import Callable, Generator, Iterable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
-from falconpy import Alerts
+from falconpy import NGSIEM, Alerts
 
 USER_AGENT = "OpenCTI-CrowdStrike-Incidents-Connector"
 SORT = "updated_timestamp|asc"
 # Maximum page size of POST /alerts/combined/alerts/v1.
 MAX_PAGE_SIZE = 1000
+
+# LogScale search (POST /humio/api/v1/repositories/{repository}/queryjobs).
+# Searching the repositories directly is forbidden; the search-all view is not.
+EVENT_SEARCH_VIEW = "search-all"
+# Queries are limited to 66 000 characters: 1000 indicator IDs (32 characters
+# each) take about 35 000 characters.
+MAX_IDS_PER_SEARCH = 1000
+EVENT_SEARCH_TIMEOUT_SECONDS = 300
+EVENT_SEARCH_POLL_SECONDS = 2
 
 
 def timestamp_sort_key(timestamp: str) -> str:
@@ -167,3 +179,118 @@ class CrowdstrikeAlertsClient:
                 message += " - check that the API client has the 'Alerts: Read' scope."
             raise CrowdstrikeApiError(status_code, message)
         return body.get("resources") or []
+
+
+class CrowdstrikeEventsClient:
+    """Thin wrapper around falconpy ``NGSIEM`` to read the source events of alerts.
+
+    Each NG-SIEM alert has a ``ngsiem-rule-match-event`` in LogScale, keyed by
+    ``Ngsiem.indicator.id`` (the last segment of the alert ``composite_id``).
+    A search is asynchronous: it is started, then polled until done.
+    The API client needs the 'NGSIEM: Write' scope to start a search.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        client_id: str,
+        client_secret: str,
+        sleep: Callable[[float], None] = time.sleep,
+        monotonic: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._ngsiem = NGSIEM(
+            client_id=client_id,
+            client_secret=client_secret,
+            base_url=base_url,
+            user_agent=USER_AGENT,
+        )
+        self._sleep = sleep
+        self._monotonic = monotonic
+
+    def get_source_events(
+        self, indicator_ids: Iterable[str], since: datetime
+    ) -> list[dict[str, Any]]:
+        """Return the ``ngsiem-rule-match-event`` of the given alerts.
+
+        Args:
+            indicator_ids: Last segment of the alerts ``composite_id``.
+            since: Start of the search window; it must cover the oldest
+                detection window, as events can predate the alert by days.
+
+        Returns:
+            Raw LogScale events (flattened field names).
+        """
+        ids = [i for i in dict.fromkeys(indicator_ids) if i and '"' not in i]
+        events: list[dict[str, Any]] = []
+        for start in range(0, len(ids), MAX_IDS_PER_SEARCH):
+            chunk = ids[start : start + MAX_IDS_PER_SEARCH]
+            values = ",".join(f'"{i}"' for i in chunk)
+            query = (
+                'Ngsiem.event.type="ngsiem-rule-match-event"'
+                f' | in(field="Ngsiem.indicator.id", values=[{values}])'
+                # Search results are limited to 200 events by default
+                f" | head(limit={len(chunk)})"
+            )
+            events.extend(self._search(query, since))
+        return events
+
+    def _search(self, query: str, since: datetime) -> list[dict[str, Any]]:
+        started = self._payload(
+            self._ngsiem.start_search(
+                repository=EVENT_SEARCH_VIEW,
+                body={
+                    "queryString": query,
+                    "start": int(since.timestamp() * 1000),
+                    "end": "now",
+                    "isLive": False,
+                },
+            )
+        )
+        search_id = started.get("id")
+        if not search_id:
+            raise CrowdstrikeApiError(None, "LogScale search did not return an ID.")
+
+        deadline = self._monotonic() + EVENT_SEARCH_TIMEOUT_SECONDS
+        while self._monotonic() < deadline:
+            status = self._payload(
+                self._ngsiem.get_search_status(
+                    repository=EVENT_SEARCH_VIEW, search_id=search_id
+                )
+            )
+            if status.get("done"):
+                return status.get("events") or []
+            self._sleep(EVENT_SEARCH_POLL_SECONDS)
+
+        self._ngsiem.stop_search(repository=EVENT_SEARCH_VIEW, id=search_id)
+        raise CrowdstrikeApiError(
+            None,
+            f"LogScale search not completed after {EVENT_SEARCH_TIMEOUT_SECONDS} s.",
+        )
+
+    @staticmethod
+    def _payload(response: dict[str, Any]) -> dict[str, Any]:
+        """Return the response payload, raising on a non-success status.
+
+        falconpy returns the payload under ``body`` or ``resources`` depending on
+        the endpoint, and the status code as an int or a string.
+        """
+        payload = response.get("body") or response.get("resources") or {}
+        if isinstance(payload, str):
+            try:
+                payload = ast.literal_eval(payload)
+            except (ValueError, SyntaxError):
+                payload = {}
+        status_code = int(response.get("status_code") or 0)
+        if not 200 <= status_code < 300:
+            errors = "; ".join(
+                str(error.get("message"))
+                for error in (
+                    payload.get("errors") if isinstance(payload, dict) else None
+                )
+                or []
+            )
+            message = f"CrowdStrike LogScale error (HTTP {status_code}): {errors}"
+            if status_code == 403:
+                message += " - check that the API client has the 'NGSIEM: Write' scope."
+            raise CrowdstrikeApiError(status_code, message)
+        return payload if isinstance(payload, dict) else {}
