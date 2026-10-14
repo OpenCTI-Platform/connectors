@@ -24,11 +24,11 @@ CONFIG_DICT: dict[str, Any] = {
         "scope": "IPv4-Addr,IPv6-Addr,Domain-Name",
         "log_level": "info",
         "auto": False,
+        "max_tlp": "TLP:AMBER",
     },
     "ismalicious": {
         "api_url": "https://api.ismalicious.com",
         "api_key": "test-api-key",
-        "max_tlp": "TLP:AMBER",
         "enrich_ipv4": True,
         "enrich_ipv6": True,
         "enrich_domain": True,

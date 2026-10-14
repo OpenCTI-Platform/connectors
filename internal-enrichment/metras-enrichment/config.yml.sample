@@ -8,9 +8,9 @@ connector:
   scope: 'IPv4-Addr,StixFile'
   log_level: 'error'
   auto: false
+  max_tlp: 'TLP:AMBER+STRICT'
 
 metras:
   api_base_url: 'https://api.metras.sa/api'
   api_key: 'ChangeMe'
   verify_ssl: true
-  max_tlp: 'amber+strict'

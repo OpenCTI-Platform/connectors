@@ -6,6 +6,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -42,16 +43,11 @@ class IsMaliciousConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="The isMalicious API key.",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level of the observables to enrich.",
-        default="TLP:AMBER",
     )
     enrich_ipv4: bool = Field(
         description="Whether to enrich IPv4 addresses.",

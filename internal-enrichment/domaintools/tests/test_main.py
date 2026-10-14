@@ -40,11 +40,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "domaintools": {
                     "api_username": "test-username",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )

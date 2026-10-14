@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from connector.connector import HatchingTriageSandboxConnector
+from connectors_sdk.models.enums import TLPLevel
 from triage.client import ServerError
 
 
@@ -16,7 +17,7 @@ def connector(mock_opencti_connector_helper):
     config.hatching_triage_sandbox.botnet_color = "#f79e00"
     config.hatching_triage_sandbox.campaign_color = "#7a01e5"
     config.hatching_triage_sandbox.tag_color = "#54483b"
-    config.hatching_triage_sandbox.max_tlp = "TLP:AMBER"
+    config.connector.max_tlp = TLPLevel.AMBER
 
     helper = MagicMock()
     helper.api.identity.create.return_value = {"standard_id": "identity--fake"}
