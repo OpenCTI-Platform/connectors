@@ -68,7 +68,13 @@ def set_queue_messages(connector, messages_number):
 
 
 def aci_vulnerability_bundle(
-    modified, exploit_maturity, temporal_score, history, zero_day, suffix
+    modified,
+    exploit_maturity,
+    temporal_score,
+    history,
+    zero_day,
+    suffix,
+    created="2026-10-01T19:55:00.000Z",
 ):
     """An ACI vulnerability publication: its STIX IDs differ from one file to another."""
     vulnerability_id = f"vulnerability--0000000{suffix}-0000-4000-8000-000000000000"
@@ -81,7 +87,7 @@ def aci_vulnerability_bundle(
                 "type": "vulnerability",
                 "spec_version": "2.1",
                 "id": vulnerability_id,
-                "created": "2026-10-01T19:55:00.000Z",
+                "created": created,
                 "modified": modified,
                 "name": CVE,
                 "x_cvss_v3": 9.8,
@@ -125,9 +131,17 @@ NEWER_BUNDLE = aci_vulnerability_bundle(
 
 def put_files(connector, files):
     """Serve `files` ((key, last_modified, bundle) tuples) from the mocked bucket."""
-    connector.s3_client.get_paginator.return_value.paginate.return_value = [
-        {"Contents": [{"Key": key, "LastModified": date} for key, date, _ in files]}
-    ]
+    connector.s3_client.get_paginator.return_value.paginate.side_effect = (
+        lambda Bucket, Prefix: [
+            {
+                "Contents": [
+                    {"Key": key, "LastModified": date}
+                    for key, date, _ in files
+                    if key.startswith(Prefix)
+                ]
+            }
+        ]
+    )
     bodies = {key: json.dumps(bundle).encode() for key, _, bundle in files}
     connector.s3_client.get_object.side_effect = lambda Bucket, Key: {
         "Body": io.BytesIO(bodies[Key])
@@ -224,6 +238,7 @@ def test_two_versions_in_one_run_send_the_newest_version_in_every_bundle(
 def test_versions_are_merged_like_the_platform_applies_them_in_order():
     older = {
         "id": "vulnerability--older",
+        "created": "2026-10-01T19:55:00.000Z",
         "modified": OLDER,
         "description": "Initial analysis",
         "x_cvss_v3_temporal_score": 8.5,
@@ -235,6 +250,7 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
     }
     newer = {
         "id": "vulnerability--newer",
+        "created": "2026-10-01T20:11:00Z",
         "modified": NEWER,
         "description": "Exploited in the wild",
         "x_cvss_v3_temporal_score": 9.4,
@@ -251,6 +267,8 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
     assert merged["x_cvss_v3_temporal_score"] == 9.4
     # A field the newer version does not carry is not cleared by the platform either
     assert merged["x_first_seen_active"] == "2026-09-30T00:00:00Z"
+    # The platform keeps the oldest creation date
+    assert merged["created"] == "2026-10-01T19:55:00.000Z"
     # Multi-valued fields keep every value, newest first
     assert merged["labels"] == ["zero-day", "accenture"]
     assert merged["x_history"] == [SECOND_ENTRY, FIRST_ENTRY]
@@ -258,6 +276,104 @@ def test_versions_are_merged_like_the_platform_applies_them_in_order():
     assert not [key for key in merged if is_reference_key(key)]
     # The inputs are left untouched
     assert older["labels"] == ["accenture"]
+
+
+@pytest.mark.parametrize(
+    ("first", "second", "expected"),
+    [
+        (
+            "2026-10-01T19:55:00.000Z",
+            "2026-10-01T20:11:00Z",
+            "2026-10-01T19:55:00.000Z",
+        ),
+        (
+            "2026-10-01T20:11:00Z",
+            "2026-10-01T19:55:00.000Z",
+            "2026-10-01T19:55:00.000Z",
+        ),
+        ("2026-10-01T19:55:00Z", "2026-10-01T19:55:00.000Z", "2026-10-01T19:55:00Z"),
+        ("not a date", "2026-10-01T19:55:00Z", "2026-10-01T19:55:00Z"),
+        ("2026-10-01T19:55:00Z", None, None),
+    ],
+)
+def test_oldest_timestamp(first, second, expected):
+    assert s3.oldest_timestamp(first, second) == expected
+
+
+def test_note_ids_do_not_depend_on_the_creation_date_of_the_version(connector):
+    """
+    Note IDs derive from `created`: every copy must carry the same (oldest) one, or
+    the notes of the two copies would be different notes with the same content.
+    """
+    republished = aci_vulnerability_bundle(
+        NEWER, "H", 9.4, [FIRST_ENTRY, SECOND_ENTRY], True, 2, created=NEWER
+    )
+    put_files(
+        connector,
+        [
+            (
+                "ACI_Vuln/a.json",
+                datetime.datetime(2026, 10, 1, 20, 1, 10, tzinfo=UTC),
+                OLDER_BUNDLE,
+            ),
+            (
+                "ACI_Vuln/b.json",
+                datetime.datetime(2026, 10, 1, 20, 11, 30, tzinfo=UTC),
+                republished,
+            ),
+        ],
+    )
+
+    connector.process()
+
+    [first, second] = sent_bundles(connector)
+    for bundle in (first, second):
+        [vulnerability] = objects_of_type(bundle, "vulnerability")
+        assert vulnerability["created"] == "2026-10-01T19:55:00.000Z"
+        assert vulnerability["x_opencti_modified_at"] == NEWER
+    first_note_ids = sorted(note["id"] for note in objects_of_type(first, "note"))
+    second_note_ids = sorted(note["id"] for note in objects_of_type(second, "note"))
+    assert first_note_ids == second_note_ids
+    assert len(first_note_ids) == 2
+
+
+def test_every_bundle_of_the_run_is_built_before_the_first_one_is_sent(connector):
+    """
+    The note keys of non-CVE vulnerabilities depend on the notes already in the
+    platform: building after a send would make them depend on worker timing.
+    """
+    connector.s3_bucket_prefixes = ["ACI_TI", "ACI_Vuln"]
+    put_files(
+        connector,
+        [
+            (
+                "ACI_TI/a.json",
+                datetime.datetime(2026, 10, 1, 20, 1, 10, tzinfo=UTC),
+                aci_vulnerability_bundle(OLDER, "U", 8.5, [FIRST_ENTRY], False, 4),
+            ),
+            (
+                "ACI_Vuln/b.json",
+                datetime.datetime(2026, 10, 1, 20, 11, 30, tzinfo=UTC),
+                NEWER_BUNDLE,
+            ),
+        ],
+    )
+    events = []
+    fix_bundle = connector.fix_bundle
+    connector.fix_bundle = lambda *args, **kwargs: (
+        events.append("build"),
+        fix_bundle(*args, **kwargs),
+    )[1]
+    connector.helper.send_stix2_bundle.side_effect = lambda **kwargs: events.append(
+        "send"
+    )
+
+    connector.process()
+
+    assert events == ["build", "build", "send", "send"]
+    # One work per prefix, both recorded
+    assert connector.helper.api.work.initiate_work.call_count == 2
+    assert len(connector.helper.get_state()["pending_works"]) == 2
 
 
 def test_each_copy_keeps_the_references_of_its_own_file(connector):

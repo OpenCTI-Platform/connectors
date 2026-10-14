@@ -113,15 +113,26 @@ def union_lists(newest, older):
     return merged
 
 
+def oldest_timestamp(first, second):
+    """The older of two STIX timestamps, `second` when either one is unreadable."""
+    try:
+        if parse_stix_timestamp(first) <= parse_stix_timestamp(second):
+            return first
+    except (TypeError, ValueError):
+        pass
+    return second
+
+
 def merge_versions(versions):
     """
     Merge the versions of one STIX object, given oldest first.
 
     This is the result the platform would reach by applying the versions in order:
     single values come from the newest version that has them, list values (labels,
-    external references, aliases, history entries...) are the union of all versions.
-    The ID and the references (`*_ref`, `*_refs`) are left out: they are local to the
-    file of each version (see `is_reference_key`).
+    external references, aliases, history entries...) are the union of all versions
+    and `created` keeps its oldest value. The ID and the references (`*_ref`,
+    `*_refs`) are left out: they are local to the file of each version (see
+    `is_reference_key`).
     """
     merged = {}
     for version in versions:
@@ -131,6 +142,8 @@ def merge_versions(versions):
             previous = merged.get(key)
             if isinstance(value, list) and isinstance(previous, list):
                 merged[key] = union_lists(value, previous)
+            elif key == "created" and previous is not None:
+                merged[key] = oldest_timestamp(previous, value)
             else:
                 merged[key] = copy.deepcopy(value)
     return merged
@@ -915,8 +928,9 @@ class S3Connector:
         List the files of a prefix, oldest first, at most MAX_FILES_PER_RUN.
 
         S3 lists keys in alphabetical order, 1000 per call: ordering on the upload date
-        keeps the files of a large push in publication order across runs. Only the
-        MAX_FILES_PER_RUN oldest entries are kept while the pages are read, so the
+        keeps the files of a large push in publication order across runs (the next
+        runs reach the rest of the backlog as the processed files are deleted). Only
+        the MAX_FILES_PER_RUN oldest entries are kept while the pages are read, so the
         memory used does not grow with the backlog of the prefix.
         """
         paginator = self.s3_client.get_paginator("list_objects_v2")
@@ -939,8 +953,7 @@ class S3Connector:
         )
         if total > MAX_FILES_PER_RUN:
             self.helper.connector_logger.info(
-                "Processing the oldest files of the S3 prefix in this run, the next "
-                "runs will take the rest",
+                "Processing only the oldest files of the S3 prefix in this run",
                 {"prefix": prefix, "processed": len(files), "total": total},
             )
         return files
@@ -1134,21 +1147,22 @@ class S3Connector:
         self.resolve_versions(bundles)
         self.supersede_outdated_vulnerabilities(bundles)
 
+        # Every bundle of the run is built before the first one is sent: the note keys
+        # of non-CVE vulnerabilities depend on the notes already in the platform
+        for s3_file in run_files:
+            s3_file["bundle"] = (
+                self.fix_bundle(
+                    s3_file["data"],
+                    file_name=s3_file["key"],
+                    original_content=s3_file["content"],
+                )
+                if isinstance(s3_file["data"], dict)
+                else None
+            )
+
         for prefix, files in files_by_prefix.items():
             if not files:
                 continue
-
-            # Built before the first send: note keys depend on the notes in the platform
-            for s3_file in files:
-                s3_file["bundle"] = (
-                    self.fix_bundle(
-                        s3_file["data"],
-                        file_name=s3_file["key"],
-                        original_content=s3_file["content"],
-                    )
-                    if isinstance(s3_file["data"], dict)
-                    else None
-                )
 
             # Work ID created lazily - only when we have valid content to send
             work_id = None
