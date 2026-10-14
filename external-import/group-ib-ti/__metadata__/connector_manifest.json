@@ -21,7 +21,7 @@
   "support_version": ">=7.260811.0",
   "subscription_link": "https://www.group-ib.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/group-ib-ti",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-group-ib-ti",
   "container_type": "EXTERNAL_IMPORT"

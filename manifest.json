@@ -3257,6 +3257,16 @@
             "type": "string",
             "deprecated": true
           },
+          "CONNECTOR_HUNT_UI_API_VERSION": {
+            "default": "v2",
+            "description": "Use HUNT_IO_API_VERSION instead.",
+            "enum": [
+              "v2",
+              "v3"
+            ],
+            "type": "string",
+            "deprecated": true
+          },
           "CONNECTOR_HUNT_UI_API_KEY": {
             "description": "Use HUNT_IO_API_KEY instead.",
             "format": "password",
@@ -3287,6 +3297,16 @@
             "type": "string",
             "deprecated": true
           },
+          "CONNECTOR_HUNT_IO_API_VERSION": {
+            "default": "v2",
+            "description": "Use HUNT_IO_API_VERSION instead.",
+            "enum": [
+              "v2",
+              "v3"
+            ],
+            "type": "string",
+            "deprecated": true
+          },
           "CONNECTOR_HUNT_IO_API_KEY": {
             "description": "Use HUNT_IO_API_KEY instead.",
             "format": "password",
@@ -3314,6 +3334,15 @@
             "format": "uri",
             "maxLength": 2083,
             "minLength": 1,
+            "type": "string"
+          },
+          "HUNT_IO_API_VERSION": {
+            "default": "v2",
+            "description": "Which Hunt.io C2 feed API to target. 'v2' authenticates with a 'token' header against https://api.hunt.io/v1/feeds/c2. 'v3' authenticates with 'Authorization: Bearer' against https://a.hunt.io/feeds/c2 and requires an 'ak_'-prefixed key. The two APIs are mutually exclusive: set api_base_url to match the version, as changing one without the other returns HTTP 401",
+            "enum": [
+              "v2",
+              "v3"
+            ],
             "type": "string"
           },
           "HUNT_IO_API_KEY": {
@@ -3750,11 +3779,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "FT3 Framework",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -3767,6 +3798,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -3798,11 +3830,13 @@
           "FT3_TACTICS_URL": {
             "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Tactics.json",
             "description": "URL to the FT3 Tactics JSON file. This dataset includes fraud tactics from the FT3 framework.",
+            "minLength": 1,
             "type": "string"
           },
           "FT3_TECHNIQUES_URL": {
             "default": "https://raw.githubusercontent.com/stripe/ft3/refs/heads/master/FT3_Techniques.json",
             "description": "URL to the FT3 Techniques JSON file. Contains fraud techniques and their relationships to tactics.",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -5146,6 +5180,7 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The API token to connect to OpenCTI.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_TYPE": {
@@ -5156,6 +5191,7 @@
           "CONNECTOR_NAME": {
             "default": "GreyNoise Feed",
             "description": "The name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -5164,6 +5200,7 @@
             ],
             "description": "The scope of the connector, e.g. 'greynoise'.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -5189,6 +5226,7 @@
           "GREYNOISE_FEED_API_KEY": {
             "description": "The API key to connect to Greynoise.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -5262,10 +5300,116 @@
       "support_version": ">=5.12.0",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crtsh",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-crtsh",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/crtsh_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "crt.sh",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "crtsh"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT1H",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "CONNECTOR_RUN_EVERY": {
+            "default": null,
+            "deprecated": true,
+            "type": "string",
+            "description": "Use CONNECTOR_DURATION_PERIOD instead."
+          },
+          "CRTSH_DOMAIN": {
+            "description": "Domain to search certificates for (e.g. 'google.com').",
+            "type": "string"
+          },
+          "CRTSH_LABELS": {
+            "default": [
+              "crtsh",
+              "osint"
+            ],
+            "description": "Comma-separated list of labels to add to the imported objects (e.g. 'crtsh,osint').",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CRTSH_MARKING_REFS": {
+            "default": null,
+            "description": "TLP marking to apply to the imported objects. If not set, no marking is applied.",
+            "enum": [
+              "TLP:WHITE",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "CRTSH_IS_EXPIRED": {
+            "default": false,
+            "description": "Whether to exclude expired certificates from the search.",
+            "type": "boolean"
+          },
+          "CRTSH_IS_WILDCARD": {
+            "default": false,
+            "description": "Whether to apply a wildcard expression to the domain (search its subdomains).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "CRTSH_DOMAIN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Cofense (Deprecated)",
@@ -8371,11 +8515,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "MITRE ATT&CK",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -8397,6 +8543,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -8433,21 +8580,25 @@
           "MITRE_ENTERPRISE_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json",
             "description": "URL to the MITRE ATT&CK Enterprise JSON file. This dataset includes tactics, techniques, and procedures (TTPs) for enterprise IT environments.",
+            "minLength": 1,
             "type": "string"
           },
           "MITRE_MOBILE_ATTACK_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json",
             "description": "URL to the MITRE Mobile ATT&CK JSON file. Contains mobile-specific attack techniques and mappings.",
+            "minLength": 1,
             "type": "string"
           },
           "MITRE_ICS_ATTACK_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json",
             "description": "URL to the MITRE ICS ATT&CK JSON file. Pertains to attack techniques targeting industrial control systems.",
+            "minLength": 1,
             "type": "string"
           },
           "MITRE_CAPEC_FILE_URL": {
             "default": "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json",
             "description": "URL to the CAPEC (Common Attack Pattern Enumeration and Classification) JSON file. Provides a comprehensive dictionary of known attack patterns used by adversaries.",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -11456,11 +11607,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "NIST NVD CVE",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -11469,6 +11622,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -11494,11 +11648,13 @@
           "CVE_BASE_URL": {
             "default": "https://services.nvd.nist.gov/rest/json/cves",
             "description": "URL for the CVE API.",
+            "minLength": 1,
             "type": "string"
           },
           "CVE_API_KEY": {
             "description": "API Key for the CVE API.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -12121,11 +12277,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "CISA Known Exploited Vulnerabilities",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -12134,6 +12292,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -12165,6 +12324,7 @@
           "CISA_CATALOG_URL": {
             "default": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
             "description": "The URL that hosts the KEV Catalog https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json.",
+            "minLength": 1,
             "type": "string"
           },
           "CISA_CREATE_INFRASTRUCTURES": {
@@ -15347,11 +15507,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Recorded Future",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -15367,6 +15529,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -15398,6 +15561,7 @@
           "RECORDED_FUTURE_TOKEN": {
             "description": "Recorded Future API token for authentication.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -15450,6 +15614,7 @@
             ],
             "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead), wJv-Gk (Vulnerability Intelligence).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -15516,6 +15681,7 @@
             ],
             "description": "Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -15559,6 +15725,7 @@
             ],
             "description": "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence.Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -16016,11 +16183,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Abuse.ch | ThreatFox",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -16029,6 +16198,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -16054,6 +16224,7 @@
           "THREATFOX_CSV_URL": {
             "default": "https://threatfox.abuse.ch/export/csv/recent/",
             "description": "The Threat Fox URL",
+            "minLength": 1,
             "type": "string"
           },
           "THREATFOX_IMPORT_OFFLINE": {
@@ -16099,6 +16270,7 @@
           "THREATFOX_IOC_TO_IMPORT": {
             "default": "all_types",
             "description": "List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -18151,11 +18323,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Aerospace SPARTA",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -18167,6 +18341,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -18198,6 +18373,7 @@
           "SPARTA_BASE_URL": {
             "default": "https://sparta.aerospace.org/download/STIX?f=latest",
             "description": "SPARTA base url used for retrieving SPARTA STIX",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -18458,11 +18634,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Mandiant",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -18471,6 +18649,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -18502,12 +18681,14 @@
           "MANDIANT_API_V4_KEY_ID": {
             "description": "Mandiant API v4 Key ID for authentication.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
           "MANDIANT_API_V4_KEY_SECRET": {
             "description": "Mandiant API v4 Key Secret for authentication.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -18536,6 +18717,7 @@
           },
           "MANDIANT_IMPORT_START_DATE": {
             "description": "Date to start collect data (Format: YYYY-MM-DD). Defaults to 30 days ago before first run the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_IMPORT_PERIOD": {
@@ -18546,6 +18728,7 @@
           },
           "MANDIANT_INDICATOR_IMPORT_START_DATE": {
             "description": "Date to start collect indicators (Format: YYYY-MM-DD). Defaults to 30 days ago before first run the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_INDICATOR_MINIMUM_SCORE": {
@@ -18643,6 +18826,7 @@
           "MANDIANT_ACTOR_PROFILE_REPORT_TYPE": {
             "default": "actor-profile",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_COUNTRY_PROFILE_REPORT": {
@@ -18653,6 +18837,7 @@
           "MANDIANT_COUNTRY_PROFILE_REPORT_TYPE": {
             "default": "country-profile",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT": {
@@ -18663,6 +18848,7 @@
           "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT_TYPE": {
             "default": "event-coverage",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT": {
@@ -18673,6 +18859,7 @@
           "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT_TYPE": {
             "default": "executive-perspective",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT": {
@@ -18683,6 +18870,7 @@
           "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT_TYPE": {
             "default": "ics-security-roundup",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_INDUSTRY_REPORTING_REPORT": {
@@ -18693,6 +18881,7 @@
           "MANDIANT_INDUSTRY_REPORTING_REPORT_TYPE": {
             "default": "industry",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_MALWARE_PROFILE_REPORT": {
@@ -18703,6 +18892,7 @@
           "MANDIANT_MALWARE_PROFILE_REPORT_TYPE": {
             "default": "malware-profile",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_NETWORK_ACTIVITY_REPORT": {
@@ -18713,6 +18903,7 @@
           "MANDIANT_NETWORK_ACTIVITY_REPORT_TYPE": {
             "default": "network-activity",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_PATCH_REPORT": {
@@ -18723,6 +18914,7 @@
           "MANDIANT_PATCH_REPORT_TYPE": {
             "default": "patch",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_TTP_DEEP_DIVE_REPORT": {
@@ -18733,6 +18925,7 @@
           "MANDIANT_TTP_DEEP_DIVE_REPORT_TYPE": {
             "default": "ttp-deep-dive",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT": {
@@ -18743,6 +18936,7 @@
           "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT_TYPE": {
             "default": "threat-alert",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_THREAT_ACTIVITY_REPORT": {
@@ -18753,6 +18947,7 @@
           "MANDIANT_THREAT_ACTIVITY_REPORT_TYPE": {
             "default": "threat-activity",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_TRENDS_AND_FORECASTING_REPORT": {
@@ -18763,6 +18958,7 @@
           "MANDIANT_TRENDS_AND_FORECASTING_REPORT_TYPE": {
             "default": "trends-forecasting",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_VULNERABILITY_REPORT": {
@@ -18773,6 +18969,7 @@
           "MANDIANT_VULNERABILITY_REPORT_TYPE": {
             "default": "vulnerability",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_VULNERABILITY_IMPORT_SOFTWARE_CPE": {
@@ -18794,6 +18991,7 @@
           "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT_TYPE": {
             "default": "vulnerability-exploitation",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_NEWS_ANALYSIS_REPORT": {
@@ -18804,11 +19002,13 @@
           "MANDIANT_NEWS_ANALYSIS_REPORT_TYPE": {
             "default": "news-analysis",
             "description": "Report type on vocabulary 'report_types_ov'.",
+            "minLength": 1,
             "type": "string"
           },
           "MANDIANT_GUESS_RELATIONSHIPS_REPORTS": {
             "default": "Actor Profile, Malware Profile, Vulnerability Report",
             "description": "Enable the capability to guess the relationships in selected reports type. Valid values: 'All, None, Actor Profile, Country Profile, Event Coverage/Implication, Executive Perspective, ICS Security Roundup, Industry Reporting, Malware Profile, Network Activity Reports, Patch Report, TTP Deep Dive, Threat Activity Alert, Threat Activity Report, Trends and Forecasting, Vulnerability Report, Weekly Vulnerability Exploitation Report, News Analysis'. Multiple values can be given in a string comma separated. If All or None is in the string it will override any other values. None is used before All.",
+            "minLength": 1,
             "type": "string"
           }
         },
@@ -19131,11 +19331,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "SEKOIA.IO",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -19156,6 +19358,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -19187,22 +19390,26 @@
           "SEKOIA_API_KEY": {
             "description": "API key used to authenticate requests to the Sekoia service.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
           "SEKOIA_BASE_URL": {
             "default": "https://api.sekoia.io",
             "description": "Base URL for accessing the Sekoia API.",
+            "minLength": 1,
             "type": "string"
           },
           "SEKOIA_COLLECTION": {
             "default": "d6092c37-d8d7-45c3-8aff-c4dc26030608",
             "description": "Allows you to specify the collection to query in order to retrieve or manage indicators of compromise.",
+            "minLength": 1,
             "type": "string"
           },
           "SEKOIA_START_DATE": {
             "default": null,
             "description": "The date to start consuming data from. May be in the formats YYYY-MM-DD or YYYY-MM-DDT00:00:00.",
+            "minLength": 1,
             "type": "string"
           },
           "SEKOIA_LIMIT": {
@@ -19311,11 +19518,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Feedly",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -19324,6 +19533,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -19356,6 +19566,7 @@
             "default": [],
             "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -19369,6 +19580,7 @@
           "FEEDLY_API_KEY": {
             "description": "Feedly API key for authentication. Generate your API key at https://feedly.com/i/team/api",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -22824,11 +23036,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "VirusTotal Downloader",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -22837,6 +23051,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -22867,6 +23082,7 @@
           "VIRUSTOTAL_DOWNLOADER_API_KEY": {
             "description": "API key used to authenticate requests to the VirusTotal Downloader service.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           }
@@ -23253,10 +23469,121 @@
       "support_version": ">=6.9.17",
       "subscription_link": "https://ismalicious.com",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ismalicious",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-ismalicious",
-      "container_type": "INTERNAL_ENRICHMENT"
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/ismalicious_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "isMalicious",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "IPv4-Addr",
+              "IPv6-Addr",
+              "Domain-Name"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "info",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "ISMALICIOUS_API_URL": {
+            "default": "https://api.ismalicious.com",
+            "description": "The base URL of the isMalicious API.",
+            "type": "string"
+          },
+          "ISMALICIOUS_API_KEY": {
+            "description": "The isMalicious API key.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "ISMALICIOUS_MAX_TLP": {
+            "default": "TLP:AMBER",
+            "description": "Maximum TLP level of the observables to enrich.",
+            "enum": [
+              "TLP:CLEAR",
+              "TLP:WHITE",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:AMBER+STRICT",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "ISMALICIOUS_ENRICH_IPV4": {
+            "default": true,
+            "description": "Whether to enrich IPv4 addresses.",
+            "type": "boolean"
+          },
+          "ISMALICIOUS_ENRICH_IPV6": {
+            "default": true,
+            "description": "Whether to enrich IPv6 addresses.",
+            "type": "boolean"
+          },
+          "ISMALICIOUS_ENRICH_DOMAIN": {
+            "default": true,
+            "description": "Whether to enrich domain names.",
+            "type": "boolean"
+          },
+          "ISMALICIOUS_MIN_SCORE": {
+            "default": 0,
+            "description": "Minimum risk score (0-100) required to report a finding.",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "ISMALICIOUS_API_KEY"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "DomainTools",
@@ -24601,11 +24928,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "IPInfo",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -24615,6 +24944,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -24645,6 +24975,7 @@
           "IPINFO_TOKEN": {
             "description": "API token used to authenticate requests to the IPInfo service.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -24677,8 +25008,8 @@
     {
       "title": "Hatching Triage Sandbox",
       "slug": "hatching-triage-sandbox",
-      "description": "Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.\n\nThis connector submits files (Artifacts) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the results including:\n\n- Malware family identification\n- C2 server addresses and URLs\n- Network indicators (domains, IPs)\n- Extracted credentials\n- MITRE ATT&CK TTPs\n- Dropped files and configurations\n- Botnet and campaign information",
-      "short_description": "Hatching Triage connector detonates files and URLs in a malware sandbox, extracting malware families, C2 infrastructure, network indicators, and MITRE ATT&CK TTPs.",
+      "description": "Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.\n\nThis connector submits Artifact files and URLs to Hatching Triage for dynamic analysis. File SCOs are enriched only when a matching existing analysis is found using a supported hash; their attached files are not used or submitted. OpenCTI is enriched with the analysis results including:\n\n- Malware family identification\n- C2 server addresses and URLs\n- Network indicators (domains, IPs)\n- Extracted credentials\n- MITRE ATT&CK TTPs\n- Dropped files and configurations\n- Botnet and campaign information",
+      "short_description": "Hatching Triage connector detonates Artifact files and URLs in a malware sandbox and enriches File SCOs from matching existing analyses.",
       "logo": "data:image/png;base64,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",
       "use_cases": [
         "Detection & Response Enablement"
@@ -24725,6 +25056,7 @@
           "CONNECTOR_SCOPE": {
             "default": [
               "Artifact",
+              "StixFile",
               "Url"
             ],
             "description": "The scope of the connector.",
@@ -25223,11 +25555,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "VirusTotal",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -25242,6 +25576,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -25272,6 +25607,7 @@
           "VIRUSTOTAL_TOKEN": {
             "description": "VirusTotal API token for authentication.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -25383,6 +25719,7 @@
               "^news",
               "press"
             ],
+            "minLength": 1,
             "type": "string"
           },
           "VIRUSTOTAL_API_REQUESTS_PER_MINUTE": {
@@ -26018,6 +26355,237 @@
       }
     },
     {
+      "title": "Zetalytics DNS",
+      "slug": "zetalytics-dns",
+      "description": "The Zetalytics DNS connector enriches Domain-Name, Hostname, IPv4-Addr, and IPv6-Addr observables using the Zetalytics ZoneCruncher API. It retrieves passive DNS, live DNS, ASN/ownership context, subdomains, registration (D8S), and nameserver glue records, and converts them into STIX 2.1 objects. The connector is designed to be deployed multiple times from the same image with different configuration profiles (manual, playbook, light/auto, deep) to support different enrichment workflows without duplicating code.",
+      "short_description": "Enriches domains, hostnames, and IP addresses with passive DNS, live DNS, ASN, subdomain, and registration context from the Zetalytics ZoneCruncher API.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Infrastructure & Attack Surface Visibility",
+        "Detection & Response Enablement"
+      ],
+      "solution_categories": [
+        "Enrichment & Reputation",
+        "Attack Surface Management"
+      ],
+      "contact": "https://github.com/FIying-Scotsman",
+      "license_type": "Commercial",
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": true,
+      "max_confidence_level": 60,
+      "support_version": ">=7.261008.0",
+      "subscription_link": "https://zetalytics.com",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/zetalytics",
+      "manager_supported": true,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-zetalytics",
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/zetalytics_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Zetalytics DNS - Analyst Enrichment",
+            "description": "Display name for this connector in OpenCTI. The configured zetalytics.lookback_days is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "Domain-Name",
+              "Hostname",
+              "IPv4-Addr",
+              "IPv6-Addr"
+            ],
+            "description": "Observable types this connector will enrich.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "Minimum log level to emit.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "ZETALYTICS_TOKEN": {
+            "description": "Zetalytics API token.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "ZETALYTICS_REQUEST_TIMEOUT": {
+            "default": 30,
+            "description": "HTTP request timeout in seconds for all Zetalytics API calls.",
+            "minimum": 5,
+            "type": "integer"
+          },
+          "ZETALYTICS_MODE": {
+            "default": "manual",
+            "description": "Enrichment profile controlling which endpoints are called. Endpoint flags below override mode defaults.",
+            "enum": [
+              "light",
+              "playbook",
+              "manual",
+              "deep"
+            ],
+            "type": "string"
+          },
+          "ZETALYTICS_MAX_TLP": {
+            "default": "TLP:AMBER",
+            "description": "Maximum TLP level of observables this connector will enrich.",
+            "enum": [
+              "TLP:WHITE",
+              "TLP:CLEAR",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:AMBER+STRICT",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "ZETALYTICS_MAX_RESULTS": {
+            "default": 300,
+            "description": "Maximum passive DNS records to retrieve per query.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ZETALYTICS_MAX_SUBDOMAINS": {
+            "default": 300,
+            "description": "Maximum subdomains to retrieve.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ZETALYTICS_MAX_WHOIS_RESULTS": {
+            "default": 5,
+            "description": "Maximum historical WHOIS records to retrieve.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ZETALYTICS_MAX_NS_PIVOT_RESULTS": {
+            "default": 100,
+            "description": "Maximum results for nameserver pivot queries.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ZETALYTICS_MAX_MX_PIVOT_RESULTS": {
+            "default": 100,
+            "description": "Maximum results for MX-to-domain pivot queries.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ZETALYTICS_LOOKBACK_DAYS": {
+            "default": 365,
+            "description": "How many days back to query passive DNS records.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ZETALYTICS_TSFIELD": {
+            "default": "all",
+            "description": "Zetalytics timestamp field to filter on (all, last_seen, first_seen).",
+            "type": "string"
+          },
+          "ZETALYTICS_INCLUDE_LIVE_DNS": {
+            "default": true,
+            "description": "Perform a live DNS lookup in addition to passive DNS.",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_SUBDOMAINS": {
+            "default": true,
+            "description": "Retrieve known subdomains for domain enrichment.",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_D8S": {
+            "default": true,
+            "description": "Retrieve structured D8S registration context for domains.",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_HISTORICAL_WHOIS": {
+            "default": false,
+            "description": "Retrieve historical raw WHOIS data (disabled by default due to volume).",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_NS_GLUE": {
+            "default": true,
+            "description": "Retrieve nameserver glue records.",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_NS2DOMAIN": {
+            "default": false,
+            "description": "Pivot from nameserver to hosted domains (deep mode only).",
+            "type": "boolean"
+          },
+          "ZETALYTICS_INCLUDE_MX2DOMAIN": {
+            "default": false,
+            "description": "Pivot from MX domain to hosted domains (deep mode only).",
+            "type": "boolean"
+          },
+          "ZETALYTICS_CONFIDENCE": {
+            "default": 60,
+            "description": "Confidence score applied to created STIX objects.",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ZETALYTICS_MARKING_DEFINITION": {
+            "default": "TLP:AMBER",
+            "description": "TLP marking definition to apply to created objects.",
+            "enum": [
+              "TLP:WHITE",
+              "TLP:CLEAR",
+              "TLP:GREEN",
+              "TLP:AMBER",
+              "TLP:AMBER+STRICT",
+              "TLP:RED"
+            ],
+            "type": "string"
+          },
+          "ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS": {
+            "default": false,
+            "description": "Create an OpenCTI note on the observable when no results are found.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "ZETALYTICS_TOKEN"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "IPQS",
       "slug": "ipqs",
       "description": "IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives three IPQS API families with a single API key:\n\n- Fraud-and-risk-scoring endpoints (/ip, /url, /email, /phone) for IPv4-Addr, Email-Addr, Phone-Number, Domain-Name, and Url observables\n- Darkweb-Leak endpoints (/leaked/email, /leaked/username, /leaked/password) for User-Account observables\n- Malware-file-scanner endpoints (/malware/scan, /malware/lookup, /postback) for Artifact observables\n\nKey features:\n\n- IP address fraud scoring and proxy detection\n- Email address validation and risk assessment\n- Phone number verification and fraud detection\n- URL and domain reputation analysis\n- Artifact malware scanning with cache-first lookup\n- Malware and phishing detection\n- Darkweb-Leak lookup for User-Account observables",
@@ -26209,11 +26777,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Hygiene",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -26227,6 +26797,7 @@
             ],
             "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -26262,21 +26833,25 @@
           "HYGIENE_LABEL_NAME": {
             "default": "hygiene",
             "description": "Set the label name.",
+            "minLength": 1,
             "type": "string"
           },
           "HYGIENE_LABEL_COLOR": {
             "default": "#fc0341",
             "description": "Color to use for the label.",
+            "minLength": 1,
             "type": "string"
           },
           "HYGIENE_LABEL_PARENT_NAME": {
             "default": "hygiene_parent",
             "description": "Label name to be used when enriching sub-domains.",
+            "minLength": 1,
             "type": "string"
           },
           "HYGIENE_LABEL_PARENT_COLOR": {
             "default": "#fc0341",
             "description": "Color to use for the label when enriching subdomains.",
+            "minLength": 1,
             "type": "string"
           },
           "HYGIENE_ENRICH_SUBDOMAINS": {
@@ -27399,11 +27974,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "AbuseIPDB",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -27412,6 +27989,7 @@
             ],
             "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -27442,6 +28020,7 @@
           "ABUSEIPDB_API_KEY": {
             "description": "API key used to authenticate requests to the AbuseIPDB service.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -27953,11 +28532,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "Google DNS",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -27967,6 +28548,7 @@
             ],
             "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -30648,11 +31230,13 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_NAME": {
             "default": "MISP Intel",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -30661,6 +31245,7 @@
             ],
             "description": "The scope or type of data the connector is processing.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
@@ -30692,6 +31277,7 @@
           },
           "CONNECTOR_LIVE_STREAM_ID": {
             "description": "The ID of the live stream to listen to.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
@@ -30714,17 +31300,20 @@
             ],
             "description": "List of container types to process.",
             "items": {
+              "minLength": 1,
               "type": "string"
             },
             "type": "array"
           },
           "MISP_URL": {
             "description": "MISP instance URL (e.g., https://misp.example.com).",
+            "minLength": 1,
             "type": "string"
           },
           "MISP_API_KEY": {
             "description": "MISP API key for authentication.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -30736,6 +31325,7 @@
           "MISP_OWNER_ORG": {
             "default": null,
             "description": "Organization that will own the events in MISP",
+            "minLength": 1,
             "type": "string"
           },
           "MISP_DISTRIBUTION_LEVEL": {
@@ -30775,6 +31365,7 @@
           "MISP_TAG_PREFIX": {
             "default": "opencti:",
             "description": "Prefix for OpenCTI tags in MISP.",
+            "minLength": 1,
             "type": "string"
           },
           "MISP_HARD_DELETE": {
@@ -33192,12 +33783,14 @@
           "OPENCTI_TOKEN": {
             "description": "The token of the user who represents the connector in the OpenCTI platform.",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
           "CONNECTOR_NAME": {
             "default": "Splunk SOAR Push",
             "description": "Name of the connector.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
@@ -33208,6 +33801,7 @@
             "items": {
               "type": "string"
             },
+            "minLength": 1,
             "type": "array"
           },
           "CONNECTOR_TYPE": {
@@ -33238,6 +33832,7 @@
           "CONNECTOR_LIVE_STREAM_ID": {
             "default": "ChangeMe",
             "description": "The ID of the live stream to listen to.",
+            "minLength": 1,
             "type": "string"
           },
           "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
@@ -33252,24 +33847,28 @@
           },
           "SPLUNK_SOAR_URL": {
             "description": "The Splunk SOAR platform URL.",
+            "minLength": 1,
             "type": "string"
           },
           "SPLUNK_SOAR_API_TOKEN": {
             "default": null,
             "description": "API token for Splunk SOAR authentication (preferred).",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
           "SPLUNK_SOAR_USERNAME": {
             "default": null,
             "description": "Username for Splunk SOAR (if not using token).",
+            "minLength": 1,
             "type": "string"
           },
           "SPLUNK_SOAR_PASSWORD": {
             "default": null,
             "description": "Password for Splunk SOAR (if not using token).",
             "format": "password",
+            "minLength": 1,
             "type": "string",
             "writeOnly": true
           },
@@ -33281,6 +33880,7 @@
           "SPLUNK_SOAR_PROXY_URL": {
             "default": null,
             "description": "Proxy URL if needed for SOAR connection.",
+            "minLength": 1,
             "type": "string"
           },
           "SPLUNK_SOAR_DELETE_ON_REMOVAL": {
@@ -33291,11 +33891,13 @@
           "SPLUNK_SOAR_DEFAULT_SEVERITY": {
             "default": "medium",
             "description": "Default severity for SOAR entities.",
+            "minLength": 1,
             "type": "string"
           },
           "SPLUNK_SOAR_DEFAULT_STATUS": {
             "default": "new",
             "description": "Default status for SOAR entities.",
+            "minLength": 1,
             "type": "string"
           },
           "SPLUNK_SOAR_MAX_ARTIFACTS_PER_CONTAINER": {
@@ -33311,16 +33913,19 @@
           "PROXY_HTTP": {
             "default": null,
             "description": "HTTP proxy URL.",
+            "minLength": 1,
             "type": "string"
           },
           "PROXY_HTTPS": {
             "default": null,
             "description": "HTTPS proxy URL.",
+            "minLength": 1,
             "type": "string"
           },
           "PROXY_NO_PROXY": {
             "default": null,
             "description": "Comma-separated list of hosts that should not use proxy.",
+            "minLength": 1,
             "type": "string"
           }
         },

@@ -4,11 +4,13 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
-TLPLevel = Literal["clear", "white", "green", "amber", "amber+strict", "red"]
+OutputTLPLevel = Literal["clear", "white", "green", "amber", "amber+strict", "red"]
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -30,6 +32,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The entity types the connector enriches. Only Indicators with pattern type `dnslytics` are processed.",
         default=["Indicator"],
         examples=["Indicator"],
+    )
+    max_tlp: TLPLevel = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLPLevel.GREEN,
     )
 
 
@@ -59,12 +68,13 @@ class DnslyticsConfig(BaseConfigModel):
         default=True,
         examples=[True, False],
     )
-    max_tlp_level: TLPLevel = Field(
+    max_tlp_level: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Do not enrich Indicators marked above this TLP level.",
-        default="green",
-        examples=["green", "amber"],
     )
-    output_tlp_level: TLPLevel = Field(
+    output_tlp_level: OutputTLPLevel = Field(
         description="TLP marking applied to every object created by the connector.",
         default="clear",
         examples=["clear", "green"],

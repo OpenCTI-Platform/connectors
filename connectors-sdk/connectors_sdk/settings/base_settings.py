@@ -9,8 +9,9 @@ These models can be extended to create specific configurations for different typ
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
+from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -69,7 +70,8 @@ class BaseConfigModel(BaseModel, ABC):
                         field.annotation = annotation | None  # type: ignore[assignment]
                     elif annotation is not None and get_origin(annotation) is not None:
                         # Handle typing wrappers (e.g. SkipJsonSchema[X], Annotated[X, ...])
-                        field.annotation = annotation | None
+                        # cast: annotation type differs across pydantic versions
+                        field.annotation = cast(Any, annotation | None)
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False
@@ -429,12 +431,20 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
         auto (bool): Whether the connector should run automatically when an entity is created or updated.
+        max_tlp (TLPLevel): The highest TLP of the entities the connector is allowed to enrich.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
     auto: bool = Field(
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+    max_tlp: TLPLevel = Field(
+        default=TLPLevel.AMBER,
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
     )
 
 

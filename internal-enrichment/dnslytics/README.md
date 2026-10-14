@@ -80,9 +80,9 @@ See [`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.m
 
 | Variable | Default | Meaning |
 |---|---|---|
+| `CONNECTOR_MAX_TLP` | `TLP:GREEN` | Do not enrich Indicators marked above this level. Replaces the deprecated `DNSLYTICS_MAX_TLP_LEVEL` |
 | `DNSLYTICS_API_KEY` | required | DNSlytics API key |
 | `DNSLYTICS_RESOLVE_HOSTING` | `true` | Resolve IPs, look up the AS, set the `provider:` label. `false`: domains and active/dropped label only. |
-| `DNSLYTICS_MAX_TLP_LEVEL` | `green` | Do not enrich Indicators marked above this level |
 | `DNSLYTICS_OUTPUT_TLP_LEVEL` | `clear` | Marking on every created object |
 | `DNSLYTICS_API_BASE_URL` | `https://api.dnslytics.net` | Leave unchanged. For tests only: point it at the local mock server (see below). |
 

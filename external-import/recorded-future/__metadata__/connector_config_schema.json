@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Recorded Future",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -32,6 +34,7 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -63,6 +66,7 @@
     "RECORDED_FUTURE_TOKEN": {
       "description": "Recorded Future API token for authentication.",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
@@ -115,6 +119,7 @@
       ],
       "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead), wJv-Gk (Vulnerability Intelligence).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -181,6 +186,7 @@
       ],
       "description": "Comma-separated list of entity types to import from risk lists. Available choices: Malware, Hash, URL, Threat Actor, MitreAttackIdentifier.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -224,6 +230,7 @@
       ],
       "description": "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence.Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"

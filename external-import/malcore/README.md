@@ -20,7 +20,7 @@ The connector creates the following OpenCTI entity types:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261002.0
+- OpenCTI Platform >= 7.261008.0
 
 ### Configuration
 

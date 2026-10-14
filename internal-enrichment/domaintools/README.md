@@ -67,6 +67,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Log Level          | log_level        | `CONNECTOR_LOG_LEVEL`         | info               | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.    |
 | Confidence Level   | confidence_level | `CONNECTOR_CONFIDENCE_LEVEL`  | 80                 | No        | The default confidence level for created relationships (1-100).               |
 | Auto Mode          | auto             | `CONNECTOR_AUTO`              | false              | No        | Enables or disables automatic enrichment of observables.                      |
+| Max TLP            | max_tlp          | `CONNECTOR_MAX_TLP`           | TLP:AMBER          | No        | Maximum TLP level for observables to be enriched. Replaces the deprecated `DOMAINTOOLS_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
@@ -74,7 +75,6 @@ There are a number of configuration options, which are set either in `docker-com
 |----------------|--------------------------|--------------------------------|------------|-----------|-----------------------------------------------------------------|
 | API Username   | domaintools.api_username | `DOMAINTOOLS_API_USERNAME`     |            | Yes       | DomainTools API username for authentication.                    |
 | API Key        | domaintools.api_key      | `DOMAINTOOLS_API_KEY`          |            | Yes       | DomainTools API key for authentication.                         |
-| Max TLP        | domaintools.max_tlp      | `DOMAINTOOLS_MAX_TLP`          | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.               |
 
 ## Deployment
 
@@ -99,9 +99,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=false
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
-      - DOMAINTOOLS_MAX_TLP=TLP:AMBER
     restart: always
 ```
 

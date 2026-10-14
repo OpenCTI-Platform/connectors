@@ -40,11 +40,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "ipv4-addr, ipv6-addr, domain-name, url, stixfile, vulnerability",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "recorded_future": {
                     "token": "SecretStr",
                     "create_indicator_threshold": 42,
-                    "info_max_tlp": "TLP:CLEAR",
                     "vulnerability_enrichment_optional_fields": [
                         "aiInsights",
                         "cpe",

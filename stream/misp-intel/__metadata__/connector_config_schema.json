@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "MISP Intel",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -25,6 +27,7 @@
       ],
       "description": "The scope or type of data the connector is processing.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -56,6 +59,7 @@
     },
     "CONNECTOR_LIVE_STREAM_ID": {
       "description": "The ID of the live stream to listen to.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
@@ -78,17 +82,20 @@
       ],
       "description": "List of container types to process.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
     },
     "MISP_URL": {
       "description": "MISP instance URL (e.g., https://misp.example.com).",
+      "minLength": 1,
       "type": "string"
     },
     "MISP_API_KEY": {
       "description": "MISP API key for authentication.",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
@@ -100,6 +107,7 @@
     "MISP_OWNER_ORG": {
       "default": null,
       "description": "Organization that will own the events in MISP",
+      "minLength": 1,
       "type": "string"
     },
     "MISP_DISTRIBUTION_LEVEL": {
@@ -139,6 +147,7 @@
     "MISP_TAG_PREFIX": {
       "default": "opencti:",
       "description": "Prefix for OpenCTI tags in MISP.",
+      "minLength": 1,
       "type": "string"
     },
     "MISP_HARD_DELETE": {

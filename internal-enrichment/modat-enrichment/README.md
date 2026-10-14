@@ -64,6 +64,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Scope | `connector.scope`  | `CONNECTOR_SCOPE`           | `IPv4-Addr`                            | No        | The scope of observables the connector enriches.                           |
 | Log Level       | `connector.log_level` | `CONNECTOR_LOG_LEVEL`    | `info`                                 | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`. |
 | Auto Mode       | `connector.auto`   | `CONNECTOR_AUTO`            | `false`                                | No        | Enables or disables automatic enrichment of observables.                   |
+| Max TLP         | `connector.max_tlp` | `CONNECTOR_MAX_TLP`        | `TLP:AMBER`                            | No        | Maximum TLP of the observable that the connector is allowed to enrich. Replaces the deprecated `MODAT_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
@@ -71,7 +72,6 @@ There are a number of configuration options, which are set either in `docker-com
 |-------------------------|--------------------------------|---------------------------------|----------------------------------|-----------|---------------------------------------------------------------------------------------------------|
 | API Base URL            | `modat.api_base_url`           | `MODAT_API_BASE_URL`            | `https://api.magnify.modat.io`   | No        | Modat API base URL.                                                                               |
 | API Key                 | `modat.api_key`                | `MODAT_API_KEY`                 |                                  | Yes       | Your Modat API key. Sent as a `Bearer` token (the `Bearer ` prefix is added automatically).       |
-| Max TLP                 | `modat.max_tlp`                | `MODAT_MAX_TLP`                 | `TLP:AMBER`                      | No        | Maximum TLP of the observable that the connector is allowed to enrich.                            |
 | Default Score           | `modat.default_score`          | `MODAT_DEFAULT_SCORE`           | `50`                             | No        | Score applied to the enriched observable and to the objects created from it.                      |
 | Create Note             | `modat.create_note`            | `MODAT_CREATE_NOTE`             | `true`                           | No        | Create a single Note summarizing the host record (overview, services, domains, optional CVEs).    |
 | Include CVEs            | `modat.include_cves`           | `MODAT_INCLUDE_CVES`            | `false`                          | No        | When `true`, include CVE data in the note and create STIX `Vulnerability` objects. Disabled by default because Modat-reported CVEs are not validated. |
@@ -101,9 +101,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - MODAT_API_BASE_URL=https://api.magnify.modat.io
       - MODAT_API_KEY=ChangeMe
-      - MODAT_MAX_TLP=TLP:AMBER
       - MODAT_DEFAULT_SCORE=50
       - MODAT_CREATE_NOTE=true
       - MODAT_INCLUDE_CVES=false
@@ -200,7 +200,7 @@ The input observable is also updated with a score, an external reference to the 
 
 ### Processing Details
 
-1. **TLP Check**: validates the observable TLP against `max_tlp`; observables above it are never sent to Modat.
+1. **TLP Check**: validates the observable TLP against `connector.max_tlp`; observables above it are never sent to Modat.
 2. **Scope Check**: only `IPv4-Addr` observables with a value are processed.
 3. **API Query**: a single call to `GET /host/{ip}/v1`. A `404` returns the original bundle unchanged.
 4. **Observable Update**: score, labels (including Modat tags), and the Modat Magnify external reference.
@@ -222,7 +222,7 @@ Log output includes the outbound Modat request, the parsed host record counts, a
 
 If the connector enriches nothing, check that:
 - the observable is an `IPv4-Addr`
-- the observable TLP is not above `MODAT_MAX_TLP`
+- the observable TLP is not above `CONNECTOR_MAX_TLP`
 - `MODAT_API_KEY` is valid and the connector can reach `https://api.magnify.modat.io`
 - OpenCTI trigger filters are not excluding the connector
 
@@ -230,7 +230,7 @@ If the connector enriches nothing, check that:
 
 - **API Reference**: [Modat Magnify](https://magnify.modat.io/) — host page at `https://magnify.modat.io/hosts/<ip>`.
 - **Authentication**: the Modat API key is sent in the `Authorization` header as a `Bearer` token; the `Bearer ` prefix is added automatically if absent.
-- **TLP Handling**: observables with a TLP above `MODAT_MAX_TLP` are not sent to Modat.
+- **TLP Handling**: observables with a TLP above `CONNECTOR_MAX_TLP` are not sent to Modat.
 - **CVE Data**: Modat-reported CVE attributions are **not validated**. Keep `MODAT_INCLUDE_CVES=false` unless you have a reason to ingest them.
 - **Data Freshness**: Modat continuously scans the internet; data freshness depends on Modat's scan frequency.
 - **Playbook Support**: this connector supports OpenCTI playbook automation.

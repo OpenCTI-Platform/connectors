@@ -1,4 +1,4 @@
-pycti==7.261002.0
+pycti==7.261008.0
 matrix-nio==0.26.0
 # matrix-nio's ``[e2e]`` extra pins ``cachetools~=5.3`` which conflicts with
 # pycti's ``cachetools~=7.0.1`` (the pip resolver fails the install). Matrix-nio
