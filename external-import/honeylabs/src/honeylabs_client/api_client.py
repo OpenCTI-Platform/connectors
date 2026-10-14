@@ -98,7 +98,7 @@ class HoneyLabsTaxiiClient(BaseClientApi):
                 except Exception as exc:  # noqa: BLE001
                     self.logger.warning(
                         "Skipping an object the server sent in an unexpected shape",
-                        {"error": str(exc), "id": obj.get("id")},
+                        meta={"error": str(exc), "id": obj.get("id")},
                     )
             yield TaxiiPage(objects=page, date_added_last=date_added_last)
             if not envelope.more:

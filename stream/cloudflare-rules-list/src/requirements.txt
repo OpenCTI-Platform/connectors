@@ -5,7 +5,7 @@ pycti==7.261008.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 
 # Configuration
-pydantic~=2.13.5
+pydantic==2.14.0
 pydantic-settings~=2.15.0
 
 # HTTP client
