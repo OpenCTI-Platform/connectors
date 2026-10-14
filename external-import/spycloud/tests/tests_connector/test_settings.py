@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from pydantic import HttpUrl
 from spycloud_connector.settings import ConnectorSettings
 
 MINIMAL_VALID_SETTINGS_DICT = {
@@ -115,16 +116,6 @@ def test_settings_should_default_connector_id():
     "spycloud_overrides, expected",
     [
         pytest.param(
-            {"api_base_url": "https://api.spycloud.io/enterprise-v2"},
-            {"api_base_url": "https://api.spycloud.io/enterprise-v2/"},
-            id="api_base_url_without_trailing_slash",
-        ),
-        pytest.param(
-            {"api_base_url": "https://api.spycloud.io/enterprise-v2/"},
-            {"api_base_url": "https://api.spycloud.io/enterprise-v2/"},
-            id="api_base_url_with_trailing_slash",
-        ),
-        pytest.param(
             {"severity_levels": " 2, 5 ,20,25, "},
             {"severity_levels": [2, 5, 20, 25]},
             id="severity_levels_from_comma_separated_string",
@@ -170,6 +161,13 @@ def test_settings_should_parse_spycloud_values(spycloud_overrides, expected):
 
     for field_name, expected_value in expected.items():
         assert getattr(settings.spycloud, field_name) == expected_value
+
+
+def test_settings_should_keep_api_base_url_as_http_url():
+    """The API base URL MUST stay an `HttpUrl` (no str returned by a validator)."""
+    settings = build_fake_connector_settings(MINIMAL_VALID_SETTINGS_DICT)()
+
+    assert isinstance(settings.spycloud.api_base_url, HttpUrl)
 
 
 def test_settings_should_parse_relative_import_start_date():

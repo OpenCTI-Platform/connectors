@@ -100,8 +100,8 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
     assert isinstance(connector.helper, OpenCTIConnectorHelper)
     assert connector.helper.connect_id == "connector-id"
 
-    assert connector.config.spycloud.api_base_url == (
-        "https://api.spycloud.io/enterprise-v2/"
+    assert str(connector.config.spycloud.api_base_url) == (
+        "https://api.spycloud.io/enterprise-v2"
     )
     assert connector.config.spycloud.severity_levels == [20, 25]
     assert connector.config.spycloud.watchlist_types == ["domain", "subdomain"]

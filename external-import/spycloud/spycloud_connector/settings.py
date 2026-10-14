@@ -9,7 +9,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.settings.annotated_types import parse_comma_separated_list
-from pydantic import BeforeValidator, Field, HttpUrl, SecretStr, field_validator
+from pydantic import BeforeValidator, Field, HttpUrl, SecretStr
 from spycloud_connector.models.opencti import TLPMarkingLevel
 from spycloud_connector.models.spycloud import (
     BreachRecordSeverity,
@@ -99,17 +99,6 @@ class SpyCloudConfig(BaseConfigModel):
         ),
         default_factory=lambda: datetime.now(UTC) - timedelta(days=30),
     )
-
-    # `HttpUrl` adds a trailing slash only when the URL has no path, so
-    # `https://api.spycloud.io/enterprise-v2` keeps none and `urljoin` would drop
-    # `enterprise-v2`. `urljoin` also rejects a mix of `HttpUrl` and `str`, so the
-    # value is returned as a `str`.
-    @field_validator("api_base_url", mode="after")
-    @classmethod
-    def _add_trailing_slash(cls, value: HttpUrl) -> str:
-        """Return the validated URL as a string ending with a slash, so that endpoints can be joined to it."""
-        url = str(value)
-        return url if url.endswith("/") else f"{url}/"
 
 
 class ConnectorSettings(BaseConnectorSettings):
