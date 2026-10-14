@@ -7,7 +7,7 @@ import logging
 import connectors_sdk.logger
 import pytest
 from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger, set_log_level
-from connectors_sdk.logger._logger import configure_logging
+from connectors_sdk.logger._logger import _configure_logging
 from pycti.connector.opencti_connector_helper import get_config_variable
 from pycti.utils.opencti_logger import CustomJsonFormatter
 from pycti.utils.opencti_logger import logger as pycti_logger
@@ -216,7 +216,7 @@ def test_configure_logging_should_choose_json_logging_like_pycti(
     # `logging.basicConfig()` only configures a root logger that has no handler yet
     root_logger.handlers.clear()
     try:
-        configure_logging()
+        _configure_logging()
 
         assert bool(_json_handlers()) is bool(pycti_json_logging)
     finally:
@@ -238,7 +238,7 @@ def test_configure_logging_should_write_plain_text_when_json_logging_is_disabled
     # `logging.basicConfig()` only configures a root logger that has no handler yet
     root_logger.handlers.clear()
     try:
-        configure_logging()
+        _configure_logging()
         [handler] = root_logger.handlers
         assert not isinstance(handler.formatter, CustomJsonFormatter)
         assert handler.formatter._fmt == logging.BASIC_FORMAT
@@ -254,13 +254,13 @@ def test_configure_logging_should_write_plain_text_when_json_logging_is_disabled
 
 
 def test_configure_logging_should_add_a_single_json_handler(monkeypatch):
-    """Test that `configure_logging` is idempotent."""
+    """Test that `_configure_logging` is idempotent."""
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
     for handler in _json_handlers():
         logging.getLogger().removeHandler(handler)
 
-    configure_logging()
-    configure_logging()
+    _configure_logging()
+    _configure_logging()
 
     [handler] = _json_handlers()
     assert isinstance(handler, logging.StreamHandler)
@@ -277,7 +277,7 @@ def test_configure_logging_should_not_duplicate_pycti_handler(monkeypatch):
         pycti_logger(logging.INFO)
         [pycti_handler] = _json_handlers()
 
-        configure_logging()
+        _configure_logging()
 
         assert _json_handlers() == [pycti_handler]
     finally:
@@ -302,7 +302,7 @@ def test_configure_logging_should_read_level_from_env(
     """Test that the level comes from `CONNECTOR_LOG_LEVEL`, with pycti's default."""
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", env_value)
 
-    configure_logging()
+    _configure_logging()
 
     assert logging.getLogger().level == expected_level
 
@@ -312,7 +312,7 @@ def test_configure_logging_should_default_to_error_without_env(monkeypatch):
     monkeypatch.delenv("CONNECTOR_LOG_LEVEL", raising=False)
 
     with pytest.warns(UserWarning, match="CONNECTOR_LOG_LEVEL is not set"):
-        configure_logging()
+        _configure_logging()
 
     assert logging.getLogger().level == logging.ERROR
 
@@ -328,7 +328,7 @@ def test_configure_logging_should_warn_when_env_var_is_missing(
         monkeypatch.setenv("CONNECTOR_LOG_LEVEL", env_value)
 
     with pytest.warns(UserWarning) as warning_records:
-        configure_logging()
+        _configure_logging()
 
     [warning] = warning_records
     assert str(warning.message) == (
@@ -343,7 +343,7 @@ def test_configure_logging_should_not_warn_when_env_var_is_set(monkeypatch, recw
     """Test that no warning is emitted when `CONNECTOR_LOG_LEVEL` is set."""
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
 
-    configure_logging()
+    _configure_logging()
 
     assert [w for w in recwarn if w.category is UserWarning] == []
 

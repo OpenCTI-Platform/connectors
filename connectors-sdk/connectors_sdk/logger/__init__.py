@@ -31,7 +31,7 @@ the validated `connector.log_level` value.
 
 from connectors_sdk.logger._logger import (
     ConnectorLoggerAdapter,
-    configure_logging,
+    _configure_logging,
     get_logger,
     set_log_level,
 )
@@ -42,4 +42,4 @@ __all__ = [
     "set_log_level",
 ]
 
-configure_logging()
+_configure_logging()

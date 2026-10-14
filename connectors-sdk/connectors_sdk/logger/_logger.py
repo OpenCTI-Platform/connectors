@@ -150,7 +150,7 @@ def _set_log_handler(json_logging: bool) -> None:
         logging.basicConfig()
 
 
-def configure_logging() -> None:
+def _configure_logging() -> None:
     """Add a handler to the root logger and set its level, as pycti does.
 
     The handler writes JSON records, unless the `OPENCTI_JSON_LOGGING` environment
