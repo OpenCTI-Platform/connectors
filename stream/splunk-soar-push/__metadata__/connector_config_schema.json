@@ -13,12 +13,14 @@
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Splunk SOAR Push",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -29,6 +31,7 @@
       "items": {
         "type": "string"
       },
+      "minLength": 1,
       "type": "array"
     },
     "CONNECTOR_TYPE": {
@@ -59,6 +62,7 @@
     "CONNECTOR_LIVE_STREAM_ID": {
       "default": "ChangeMe",
       "description": "The ID of the live stream to listen to.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
@@ -73,24 +77,28 @@
     },
     "SPLUNK_SOAR_URL": {
       "description": "The Splunk SOAR platform URL.",
+      "minLength": 1,
       "type": "string"
     },
     "SPLUNK_SOAR_API_TOKEN": {
       "default": null,
       "description": "API token for Splunk SOAR authentication (preferred).",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
     "SPLUNK_SOAR_USERNAME": {
       "default": null,
       "description": "Username for Splunk SOAR (if not using token).",
+      "minLength": 1,
       "type": "string"
     },
     "SPLUNK_SOAR_PASSWORD": {
       "default": null,
       "description": "Password for Splunk SOAR (if not using token).",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },
@@ -102,6 +110,7 @@
     "SPLUNK_SOAR_PROXY_URL": {
       "default": null,
       "description": "Proxy URL if needed for SOAR connection.",
+      "minLength": 1,
       "type": "string"
     },
     "SPLUNK_SOAR_DELETE_ON_REMOVAL": {
@@ -112,11 +121,13 @@
     "SPLUNK_SOAR_DEFAULT_SEVERITY": {
       "default": "medium",
       "description": "Default severity for SOAR entities.",
+      "minLength": 1,
       "type": "string"
     },
     "SPLUNK_SOAR_DEFAULT_STATUS": {
       "default": "new",
       "description": "Default status for SOAR entities.",
+      "minLength": 1,
       "type": "string"
     },
     "SPLUNK_SOAR_MAX_ARTIFACTS_PER_CONTAINER": {
@@ -132,16 +143,19 @@
     "PROXY_HTTP": {
       "default": null,
       "description": "HTTP proxy URL.",
+      "minLength": 1,
       "type": "string"
     },
     "PROXY_HTTPS": {
       "default": null,
       "description": "HTTPS proxy URL.",
+      "minLength": 1,
       "type": "string"
     },
     "PROXY_NO_PROXY": {
       "default": null,
       "description": "Comma-separated list of hosts that should not use proxy.",
+      "minLength": 1,
       "type": "string"
     }
   },

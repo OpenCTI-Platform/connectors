@@ -1,15 +1,9 @@
 name: Connector Verified Linter
 
 on:
+  # No paths filter on pull_request, so the workflow always reports. The
+  # matrix scripts already select only the connectors changed by the PR.
   pull_request:
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
   merge_group:
     branches:
       - master
@@ -31,6 +25,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+      connector_count: ${{ steps.set-matrix.outputs.connector_count }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -132,30 +127,23 @@ jobs:
       - name: Install connector-linter
         run: uv pip install ./shared/tools/connector_linter
 
-      # Verified connectors must stay error-free (blocking): the step fails
-      # and the PR check goes red. Manager-supported-only connectors are
-      # allowed to have errors (non-blocking): findings are still surfaced as
-      # annotations and in the PR comment (see vclint-comment), but the step
-      # always exits 0 for them.
+      # Findings are surfaced as annotations and in the PR comment (see
+      # vclint-comment), but this step never fails the check: connector
+      # errors stay visible without turning the PR red. VC105/VC305 on new
+      # connectors (see vclint-new-connector-settings below) remain blocking.
       - name: Run connector-linter
         run: |
           set -o pipefail
-          exit_code=0
           : > annotations.txt
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
             echo "::group::Linting ${connector_path}"
-            uv run connector-linter check "$connector_path" --format github | tee -a annotations.txt || exit_code=$?
+            uv run connector-linter check "$connector_path" --format github | tee -a annotations.txt || true
             uv run connector-linter check "$connector_path" --format markdown --verbose >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
-
-          if [ "${{ matrix.verified }}" != "true" ]; then
-            echo "Connector(s) not fully verified (manager-supported only): errors are non-blocking."
-            exit 0
-          fi
-          exit "$exit_code"
+          exit 0
 
       - name: Upload linter annotations
         if: always()
@@ -171,6 +159,10 @@ jobs:
   # each error's code, message, and a permalink to the offending line. Kept
   # separate from the blocking pass/fail logic above so manager-supported
   # connectors' errors stay visible even though they don't fail the check.
+  # Above MAX_COMMENTED_CONNECTORS linted connectors (bulk changes such as a
+  # dependency bump), no comment is posted: the error list would exceed the
+  # environment and comment size limits. Annotations and step summaries of
+  # the vclint jobs still report every error.
   vclint-comment:
     name: Comment connector-linter errors on PR
     needs:
@@ -195,13 +187,18 @@ jobs:
 
       - name: Build error list
         id: build-errors
+        env:
+          CONNECTOR_COUNT: ${{ needs.detect-connectors.outputs.connector_count }}
+          MAX_COMMENTED_CONNECTORS: 20
         run: |
           errors=""
           count=0
           repo="${{ github.repository }}"
           sha="${{ github.event.pull_request.head.sha }}"
 
-          if [ -d annotations ]; then
+          if [ "${CONNECTOR_COUNT:-0}" -gt "$MAX_COMMENTED_CONNECTORS" ]; then
+            echo "::notice::${CONNECTOR_COUNT} connectors linted (more than ${MAX_COMMENTED_CONNECTORS}): no PR comment, see the vclint job annotations and summaries."
+          elif [ -d annotations ]; then
             while IFS= read -r line; do
               [ -z "$line" ] && continue
               file=$(echo "$line" | sed -E 's/^::error file=([^,]+),line=([0-9]+)::.*/\1/')
@@ -319,3 +316,44 @@ jobs:
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
           exit "$exit_code"
+
+  # Single, stable job name to set as a required status check. Matrix entries
+  # can't be required (their names change with the matrix content) and both
+  # matrices are skipped when there is nothing to lint, so this job always runs
+  # and gives one go/no-go. Same pattern as Tests Summary.
+  linter-summary:
+    name: Connector Linter Summary
+    needs:
+      - detect-connectors
+      - detect-new-connectors
+      - vclint
+      - vclint-new-connector-settings
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix results
+        env:
+          DETECT_RESULT: ${{ needs.detect-connectors.result }}
+          HAS_CONNECTORS: ${{ needs.detect-connectors.outputs.has_connectors }}
+          VCLINT_RESULT: ${{ needs.vclint.result }}
+          DETECT_NEW_RESULT: ${{ needs.detect-new-connectors.result }}
+          HAS_NEW_CONNECTORS: ${{ needs.detect-new-connectors.outputs.has_connectors }}
+          VCLINT_NEW_RESULT: ${{ needs.vclint-new-connector-settings.result }}
+        run: |
+          fail=0
+          # A matrix may only be skipped when its detector succeeded and found
+          # nothing to lint. A failed detection leaves has_connectors empty.
+          check() {
+            local label="$1" detect="$2" has="$3" matrix="$4"
+            if [ "$detect" != "success" ]; then
+              echo "::error::${label}: detection did not succeed (result: ${detect})."
+              fail=1
+            elif [ "$has" = "true" ] && [ "$matrix" != "success" ]; then
+              echo "::error::${label}: matrix did not succeed (result: ${matrix})."
+              fail=1
+            fi
+          }
+          check "Lint" "$DETECT_RESULT" "$HAS_CONNECTORS" "$VCLINT_RESULT"
+          check "VC305 (new connector)" "$DETECT_NEW_RESULT" "$HAS_NEW_CONNECTORS" "$VCLINT_NEW_RESULT"
+          [ "$fail" -eq 0 ] && echo "Connector linter checks passed."
+          exit "$fail"

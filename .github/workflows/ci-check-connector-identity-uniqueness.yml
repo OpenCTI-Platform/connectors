@@ -8,9 +8,9 @@ on:
       - 'lts/*'
     paths:
       - '**/connector_manifest.json'
+  # No paths filter on pull_request: the check is cheap and must always report
+  # so it can be a required status check.
   pull_request:
-    paths:
-      - '**/connector_manifest.json'
   merge_group:
     branches:
       - master

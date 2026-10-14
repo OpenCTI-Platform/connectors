@@ -115,6 +115,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 #### Enrichment Settings
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `CONNECTOR_MAX_TLP` | `TLP:AMBER` | Max TLP of the artifacts to enrich. Replaces the deprecated `POLYSWARM_MAX_TLP` |
 | `POLYSWARM_MIN_POLYSCORE` | `50` | Min score for indicators (0-100) |
 | `POLYSWARM_CREATE_INDICATORS` | `true` | Create indicator objects |
 | `POLYSWARM_CREATE_OBSERVABLES` | `true` | Create network IOCs |
