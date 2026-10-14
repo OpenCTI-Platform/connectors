@@ -13,6 +13,24 @@ FIRST_ENTRY = {"timestamp": "2026-09-15T08:00:00Z", "comment": "Initial publicat
 SECOND_ENTRY = {"timestamp": "2026-10-01T10:00:00Z", "comment": "CVSS 3.0 -> 3.1"}
 NOTE_TYPES = ["Title", "Analysis", "History"]
 
+# IDs the notes of ACTI_UUID, created on CREATED, hold in the platforms fed by previous
+# versions of the connector. Pinned as literals: a change of these keys or of
+# `Note.generate_id` would leave those notes unmatched, and duplicated.
+# `Note.generate_id(CREATED, f"{ACTI_UUID} - {note_type}")`: every version before
+# 2026-01-28, then every run after the first import, and CVE entries to this day
+UUID_ONLY_IDS = {
+    "Title": "note--856c6b5b-5668-50f6-99aa-aedc56f0c437",
+    "Analysis": "note--7216b06b-0287-5818-89d7-e2ecffa955af",
+    "History": "note--db17d8eb-0570-53cd-aeb1-7a51dae5c6e7",
+}
+# `Note.generate_id(CREATED, f"{ACTI_UUID} - {ACTI_UUID} - {note_type}")`: the first
+# import of a non-CVE entry named by its ACTI UUID since 2026-01-28
+UUID_AND_NAME_IDS = {
+    "Title": "note--79d3852a-0e0c-5cc5-a16b-f215d51ffff4",
+    "Analysis": "note--13d57fd1-7474-59ff-8fff-640fd339e6d9",
+    "History": "note--34d0f47b-d079-560d-9402-b378e8b1a405",
+}
+
 
 class NoteIdsConnectorSettings(ConnectorSettings):
     @classmethod
@@ -76,6 +94,11 @@ def notes_by_abstract(connector, bundle):
     }
 
 
+def matching_ids(note):
+    """Every ID the platform matches an incoming note on: its STIX ID and its aliases."""
+    return {note["id"], *note.get("x_opencti_stix_ids", [])}
+
+
 def test_non_cve_note_ids_do_not_change_when_the_vulnerability_is_updated(connector):
     """
     #7830: the first import created the notes with one ID, the first update looked
@@ -111,10 +134,12 @@ def test_non_cve_notes_match_the_notes_created_by_previous_versions(
 
     note = notes[f"{ACTI_UUID} - {note_type}"]
     # ID given by previous versions on the first import of the vulnerability
+    assert note["id"] == UUID_AND_NAME_IDS[note_type]
     assert note["id"] == Note.generate_id(
         CREATED, f"{ACTI_UUID} - {ACTI_UUID} - {note_type}"
     )
     # ID given by previous versions on the updates, and before 2026-01-28
+    assert note["x_opencti_stix_ids"] == [UUID_ONLY_IDS[note_type]]
     assert note["x_opencti_stix_ids"] == [
         Note.generate_id(CREATED, f"{ACTI_UUID} - {note_type}")
     ]
@@ -125,16 +150,31 @@ def test_cve_note_ids_are_unchanged(connector, note_type):
     notes = notes_by_abstract(connector, acti_bundle("CVE-2026-12345", [FIRST_ENTRY]))
 
     note = notes[f"CVE-2026-12345 - {note_type}"]
+    assert note["id"] == UUID_ONLY_IDS[note_type]
     assert note["id"] == Note.generate_id(CREATED, f"{ACTI_UUID} - {note_type}")
     assert "x_opencti_stix_ids" not in note
 
 
 def test_non_cve_entries_sharing_an_acti_uuid_keep_their_own_notes(connector):
+    """
+    The platform matches an incoming note on its ID and on its aliases, so the notes
+    of entries sharing an ACTI UUID must not have a single ID in common, or the
+    platform would collapse them into one note. The ACTI UUID only ID that previous
+    versions gave to all of them is claimed by the entry named by its ACTI UUID alone.
+    """
+    by_uuid = notes_by_abstract(connector, acti_bundle(ACTI_UUID, [FIRST_ENTRY]))
     first = notes_by_abstract(connector, acti_bundle("ACME-2026-0001", [FIRST_ENTRY]))
     second = notes_by_abstract(connector, acti_bundle("ACME-2026-0002", [FIRST_ENTRY]))
 
     for note_type in NOTE_TYPES:
-        assert (
-            first[f"ACME-2026-0001 - {note_type}"]["id"]
-            != second[f"ACME-2026-0002 - {note_type}"]["id"]
-        )
+        notes = [
+            by_uuid[f"{ACTI_UUID} - {note_type}"],
+            first[f"ACME-2026-0001 - {note_type}"],
+            second[f"ACME-2026-0002 - {note_type}"],
+        ]
+        ids = [matching_ids(note) for note in notes]
+        # Pairwise disjoint: no ID, STIX ID or alias, is shared by two entries
+        assert len(set().union(*ids)) == sum(len(note_ids) for note_ids in ids)
+        assert notes[0]["x_opencti_stix_ids"] == [UUID_ONLY_IDS[note_type]]
+        assert "x_opencti_stix_ids" not in notes[1]
+        assert "x_opencti_stix_ids" not in notes[2]

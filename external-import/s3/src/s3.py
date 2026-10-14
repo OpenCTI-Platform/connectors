@@ -146,9 +146,14 @@ class S3Connector:
         the next, so it only depends on the vulnerability, never on the platform state:
         - CVE notes are keyed on the ACTI UUID
         - other notes are also keyed on the vulnerability name, so that entries sharing
-          an ACTI UUID keep their own notes. Their ACTI UUID only ID, used by older
-          versions of the connector, is sent as an alias so those notes are updated in
-          place instead of being duplicated
+          an ACTI UUID keep their own notes
+
+        Older versions of the connector keyed the notes of non-CVE entries on the ACTI
+        UUID only. That ID is sent as an alias so those notes are updated in place
+        instead of being duplicated, but only by the entry named by its ACTI UUID: the
+        platform matches incoming entities on their aliases too, so an alias shared by
+        entries sharing an ACTI UUID would collapse their notes into one. A name
+        identifies a single vulnerability, so at most one entry claims that alias.
 
         :param obj: The vulnerability the note belongs to
         :param note_type: "Title", "Analysis" or "History"
@@ -162,7 +167,8 @@ class S3Connector:
         name_note_id = Note.generate_id(
             obj["created"], f"{acti_uuid} - {obj_name} - {note_type}"
         )
-        return name_note_id, [uuid_note_id]
+        note_aliases = [uuid_note_id] if obj_name == acti_uuid else []
+        return name_note_id, note_aliases
 
     def filter_outdated_vulnerabilities(self, data):
         """
