@@ -105,6 +105,11 @@
       "description": "Whether to also import the alerts hidden in the Falcon console (show_in_ui: false).",
       "type": "boolean"
     },
+    "CROWDSTRIKE_INCIDENTS_ENRICH_FROM_EVENTS": {
+      "default": false,
+      "description": "Whether to enrich each Incident with the threat observables (executed file, hashes, execution context) of the alert's source event in Next-Gen SIEM. Requires the 'NGSIEM: Write' scope, needed to run LogScale searches.",
+      "type": "boolean"
+    },
     "CROWDSTRIKE_INCIDENTS_TLP_LEVEL": {
       "description": "TLP marking level applied to every created STIX object.",
       "enum": [

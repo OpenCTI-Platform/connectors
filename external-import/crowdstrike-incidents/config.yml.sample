@@ -17,4 +17,5 @@ crowdstrike_incidents:
   #products: 'ngsiem'
   #severity_min: 'low'
   #include_hidden: false
+  #enrich_from_events: false
   #tlp_level: 'amber+strict'
