@@ -118,8 +118,10 @@ class WizTtpsProcessor:
                     for phase in phases
                 ]
                 or None,
-                author=self._author,
-                markings=[self._marking],
+                # No author and no marking either: this is public ATT&CK data
+                # owned by the MITRE connector. On upsert, the Wiz author
+                # would replace MITRE's and the TLP would restrict who can see
+                # the technique. The Wiz claim lives on the uses relationship.
             )
             objects.append(attack_pattern)
             objects.append(

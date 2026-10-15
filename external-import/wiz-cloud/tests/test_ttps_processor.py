@@ -57,6 +57,32 @@ def test_emits_a_uses_relationship_from_the_incident(
     assert relationships[0].target is _of_type(objects, AttackPattern)[0]
 
 
+def test_leaves_the_mitre_reference_data_unauthored_and_unmarked(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    # The pattern upserts onto the MITRE connector's entity: a Wiz author
+    # would replace MITRE's and the TLP would hide the technique.
+    issue = _issue(signin_issue_data, [mitre_sub_category])
+
+    objects = ttps_processor.objects_for_issue(issue, incident)
+
+    stix = _of_type(objects, AttackPattern)[0].to_stix2_object()
+    assert "created_by_ref" not in stix
+    assert "object_marking_refs" not in stix
+
+
+def test_keeps_the_wiz_author_and_marking_on_the_uses_relationship(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    issue = _issue(signin_issue_data, [mitre_sub_category])
+
+    objects = ttps_processor.objects_for_issue(issue, incident)
+
+    stix = _of_type(objects, Relationship)[0].to_stix2_object()
+    assert stix["created_by_ref"] == ttps_processor._author.id
+    assert stix["object_marking_refs"] == [ttps_processor._marking.id]
+
+
 def test_ignores_the_wiz_proprietary_frameworks(
     ttps_processor, incident, signin_issue_data, wiz_sub_category
 ):
