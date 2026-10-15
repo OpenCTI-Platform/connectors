@@ -234,9 +234,13 @@ def build_ioc_lookup(
         )
         for ioc in batch.iocs
     )
+    # mvappend() refuses a single argument on Splunk (9.4.3: "The arguments to
+    # the 'mvappend' function are invalid"): a batch of one value assigns its
+    # attribution directly.
+    attribution = f"mvappend({attributions})" if len(batch.iocs) > 1 else attributions
     return (
         f"({terms}) "
-        f"| eval ioc=mvappend({attributions}) "
+        f"| eval ioc={attribution} "
         "| where isnotnull(ioc) "
         f'| eval host=coalesce({host}, ""), event_id=index.":"._cd '
         "| stats count as hits min(_time) as first_seen max(_time) as last_seen "
