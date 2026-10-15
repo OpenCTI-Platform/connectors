@@ -176,6 +176,53 @@ def test_converts_the_user_interaction_boolean_to_a_string(
     assert _of_type(objects, Vulnerability)[0].cvss_v3_user_interaction == "REQUIRED"
 
 
+def test_drops_a_cvss_v2_block_using_v3_impact_words(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    # Seen on CVE-2026-42009: OpenCTI rejects the whole vulnerability on
+    # "Unknown CVSS component value HIGH for component A".
+    data = {
+        **vulnerability_finding_data,
+        "cvssv2": {
+            "attackVector": "NETWORK",
+            "attackComplexity": "LOW",
+            "confidentialityImpact": "NONE",
+            "integrityImpact": "NONE",
+            "availabilityImpact": "HIGH",
+        },
+    }
+    vulnerabilities_processor._client.paginate.return_value = iter([[data]])
+
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
+
+    vulnerability = _of_type(objects, Vulnerability)[0]
+    assert vulnerability.cvss_v2_access_vector is None
+    assert vulnerability.cvss_v2_availability_impact is None
+    assert vulnerability.cvss_v3_attack_vector == "LOCAL"
+
+
+def test_keeps_a_cvss_v2_block_using_v2_impact_words(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    data = {
+        **vulnerability_finding_data,
+        "cvssv2": {
+            "attackVector": "NETWORK",
+            "attackComplexity": "LOW",
+            "confidentialityImpact": "PARTIAL",
+            "integrityImpact": "none",
+            "availabilityImpact": "COMPLETE",
+        },
+    }
+    vulnerabilities_processor._client.paginate.return_value = iter([[data]])
+
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
+
+    vulnerability = _of_type(objects, Vulnerability)[0]
+    assert vulnerability.cvss_v2_access_vector == "NETWORK"
+    assert vulnerability.cvss_v2_availability_impact == "COMPLETE"
+
+
 def test_falls_back_to_the_finding_description(
     vulnerabilities_processor, system, empty_cve_description_finding_data
 ):

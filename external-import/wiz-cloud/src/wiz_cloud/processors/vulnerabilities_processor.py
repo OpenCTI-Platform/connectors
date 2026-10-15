@@ -24,7 +24,7 @@ from connectors_sdk.models.enums import CvssSeverity, RelationshipType
 from pydantic import ValidationError
 from requests.exceptions import RequestException
 from wiz_cloud.client_api import WizApiClient, WizGraphQLError
-from wiz_cloud.models import WizVulnerabilityFinding
+from wiz_cloud.models import WizCvssV2, WizVulnerabilityFinding
 from wiz_cloud.settings import WizCloudConfig
 from wiz_cloud.ssvc_vulnerability import SsvcVulnerability
 
@@ -33,6 +33,11 @@ VULNERABILITIES_QUERY = (
     .joinpath("vulnerability_findings.graphql")
     .read_text("utf-8")
 )
+
+# CVSS v2 impacts are NONE / PARTIAL / COMPLETE. Wiz sometimes fills the v2
+# block with v3 words (LOW, HIGH), and OpenCTI then rejects the whole
+# vulnerability, so such a block is dropped rather than translated.
+_CVSS_V2_IMPACTS = frozenset({"NONE", "PARTIAL", "COMPLETE"})
 
 
 def _ratio(percentage: float | None) -> float | None:
@@ -62,6 +67,28 @@ def _user_interaction(required: bool | None) -> str | None:
     if required is None:
         return None
     return "REQUIRED" if required else "NONE"
+
+
+def _usable_cvss_v2(cvss_v2: WizCvssV2 | None) -> WizCvssV2 | None:
+    """Keep the CVSS v2 metrics only when their impacts use the v2 vocabulary.
+
+    Args:
+        cvss_v2: The v2 metrics of a finding, or None.
+
+    Returns:
+        The metrics unchanged, or None when an impact is not NONE, PARTIAL or
+        COMPLETE (case-insensitive).
+    """
+    if cvss_v2 is None:
+        return None
+    impacts = (
+        cvss_v2.confidentiality_impact,
+        cvss_v2.integrity_impact,
+        cvss_v2.availability_impact,
+    )
+    if any(value and value.upper() not in _CVSS_V2_IMPACTS for value in impacts):
+        return None
+    return cvss_v2
 
 
 def _cvss_severity(severity: str | None) -> CvssSeverity | None:
@@ -293,7 +320,7 @@ class WizVulnerabilitiesProcessor:
         ]
 
     def _vulnerability(self, finding: WizVulnerabilityFinding) -> SsvcVulnerability:
-        cvss_v2 = finding.cvss_v2
+        cvss_v2 = _usable_cvss_v2(finding.cvss_v2)
         cvss_v3 = finding.cvss_v3
         cvss_v4 = finding.cvss_v4
         return SsvcVulnerability(

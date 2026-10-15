@@ -119,7 +119,12 @@ class WizVulnerableAsset(_WizModel):
 
 
 class WizCvssV2(_WizModel):
-    """CVSS v2 metrics of a finding. Observed entirely null in practice."""
+    """CVSS v2 metrics of a finding.
+
+    Usually entirely null. Some findings carry v3 impact words (LOW, HIGH)
+    here instead of NONE / PARTIAL / COMPLETE: the vulnerabilities processor
+    drops such a block.
+    """
 
     attack_vector: str | None = Field(default=None, alias="attackVector")
     attack_complexity: str | None = Field(default=None, alias="attackComplexity")
