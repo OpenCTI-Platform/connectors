@@ -39,12 +39,12 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "Artifact,Url,StixFile,File",
                     "log_level": "error",
+                    "max_tlp": "TLP:AMBER",
                 },
                 "reversinglabs_spectra_intel_submission": {
                     "url": "data.reversinglabs.com",
                     "username": "test-user",
                     "password": "test-password",
-                    "max_tlp": "TLP:AMBER",
                     "sandbox_os": "windows10",
                     "sandbox_internet_sim": False,
                     "create_indicators": True,

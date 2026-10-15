@@ -4,8 +4,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pycti import Identity as PyctiIdentity
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
+from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
 from rflib.rf_to_stix2 import StixNote
+from rflib.rf_to_stix2 import ThreatActor as RFThreatActor
 from rflib.rf_to_stix2 import Vulnerability as RFVulnerability
 from stix2 import (
     URL,
@@ -369,6 +371,188 @@ def test_from_json_skips_invalid_attachment_and_keeps_processing_valid_ones():
     assert len(detection_rule_indicators) == 1
 
 
+# Scenario: A Recorded Future Threat Actor carries its "AKA" aliases (issue #7118)
+def test_threat_actor_maps_recorded_future_aliases():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And a Threat Actor with Recorded Future alias data (including its own name)
+    threat_actor = RFThreatActor(
+        "APT28",
+        "Organization",
+        author,
+        tlp,
+        aliases=["Fancy Bear", "APT28", "Fancy Bear", "Sofacy"],
+    )
+
+    # When the entity is converted to a STIX object
+    stix_obj = threat_actor.to_stix_objects()[0]
+
+    # Then the STIX aliases exclude the primary name and duplicates
+    assert stix_obj.aliases == ["Fancy Bear", "Sofacy"]
+
+
+# Scenario: A Recorded Future Intrusion Set carries its "AKA" aliases (issue #7118)
+def test_intrusion_set_maps_recorded_future_aliases():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And an Intrusion Set with Recorded Future alias data
+    intrusion_set = RFIntrusionSet(
+        "Everest Ransomware Group",
+        "Organization",
+        author,
+        tlp,
+        aliases=["Everest", "Everest Locker"],
+    )
+
+    # When the entity is converted to a STIX object
+    stix_obj = intrusion_set.to_stix_objects()[0]
+
+    # Then the STIX aliases carry the bridging short names
+    assert stix_obj.aliases == ["Everest", "Everest Locker"]
+
+
+# Scenario: A Threat Actor without alias data omits the STIX aliases property (issue #7118)
+def test_threat_actor_without_aliases_omits_property():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And a Threat Actor with no alias data
+    threat_actor = RFThreatActor("Lone Wolf", "Organization", author, tlp)
+
+    # When the entity is converted to a STIX object
+    stix_obj = threat_actor.to_stix_objects()[0]
+
+    # Then no aliases property is emitted
+    assert "aliases" not in stix_obj
+
+
+# Scenario: Analyst note Threat Actor entities are enriched with their aliases (issue #7118)
+def test_analyst_note_threat_actor_is_enriched_with_aliases():
+    # Given a StixNote whose RF client resolves aliases for the threat actor entity
+    rfapi = MagicMock()
+    rfapi.get_entity_aliases.return_value = ["Fancy Bear", "Sofacy"]
+    note = StixNote(opencti_helper=MagicMock(), tas=["ta-entity"], rfapi=rfapi)
+
+    # And an analyst note referencing a known Threat Actor entity
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "ta-entity", "type": "Organization", "name": "APT28"},
+    ]
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then the RF aliases were requested for the threat actor entity
+    rfapi.get_entity_aliases.assert_called_once_with("ta-entity")
+    # And the resulting Threat Actor carries those aliases
+    threat_actors = [obj for obj in note.objects if obj["type"] == "threat-actor"]
+    assert len(threat_actors) == 1
+    assert threat_actors[0].aliases == ["Fancy Bear", "Sofacy"]
+
+
+# Scenario: An event adversary resolving to an Identity must not create relationships (issue OCTI2-2428)
+def test_create_event_relations_skips_adversary_resolved_as_identity():
+    # Given an analyst note whose adversary Organization is NOT in the Threat Actor list
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {
+            "id": "org-1",
+            "type": "Organization",
+            "name": "Government of Republic of Hungary",
+        },
+        {"id": "ap-1", "type": "MitreAttackIdentifier", "name": "T1566.002"},
+    ]
+    _when_note_converted_from_json(note, note_json)
+    # And the Organization was therefore converted to a STIX Identity
+    adversary = [obj for obj in note.objects if obj["type"] == "identity"]
+    assert any(obj["name"] == "Government of Republic of Hungary" for obj in adversary)
+    objects_before = list(note.objects)
+
+    # When events referencing that Organization as the adversary are processed
+    events = [
+        {
+            "type": "CyberAttack",
+            "attributes": {
+                "adversary": [
+                    {
+                        "type": "Organization",
+                        "name": "Government of Republic of Hungary",
+                    }
+                ],
+                "capabilities": [
+                    {"type": "MitreAttackIdentifier", "name": "T1566.002"}
+                ],
+            },
+        }
+    ]
+    note.create_event_relations(events=events)
+
+    # Then no relationship is created (Identity -> uses -> Attack-Pattern is invalid)
+    assert note.objects == objects_before
+    relationships = [obj for obj in note.objects if obj["type"] == "relationship"]
+    assert len(relationships) == 0
+
+
+# Scenario: Context entities are ignored unless explicitly enabled
+def test_analyst_note_ignores_context_entities_by_default():
+    # Given an analyst note whose note_entities holds a Malware, and whose
+    # context_entities holds a Threat Actor referenced only in context
+    note = _given_stix_note()
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_context_entities()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then only the primary entity is referenced, the context-only one is left out
+    assert len(report.object_refs) == 1
+    _then_contains_threat_actor(stix_objects, expected_count=0)
+
+
+# Scenario: An entity present only in context_entities is not dropped (issue #6943)
+def test_analyst_note_includes_context_entities_when_enabled():
+    # Given context entities ingestion is enabled, and an analyst note whose
+    # note_entities holds a Malware and whose context_entities holds a
+    # Threat Actor referenced only in context
+    note = _given_stix_note(include_context_entities=True)
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_context_entities()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the context-only entity is present among the report's referenced objects
+    assert len(report.object_refs) == 2
+    _then_contains_threat_actor(stix_objects)
+
+
+# Scenario: An entity present in both note_entities and context_entities is not duplicated
+def test_analyst_note_deduplicates_entities_shared_between_both_arrays():
+    # Given context entities ingestion is enabled, and an analyst note where
+    # the same entity id appears in both note_entities and context_entities
+    note = _given_stix_note(include_context_entities=True)
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_duplicate_entity()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the entity is only referenced once by the report
+    assert len(report.object_refs) == 1
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -396,8 +580,13 @@ def _given_ip_indicator(ip, author, tlp):
     return RFIPAddress(ip, "IpAddress", author, tlp)
 
 
-def _given_stix_note():
-    return StixNote(opencti_helper=MagicMock(), tas=[], rfapi=MagicMock())
+def _given_stix_note(include_context_entities=False):
+    return StixNote(
+        opencti_helper=MagicMock(),
+        tas=[],
+        rfapi=MagicMock(),
+        analyst_notes_include_context_entities=include_context_entities,
+    )
 
 
 def _given_analyst_note_json():
@@ -422,6 +611,44 @@ def _given_analyst_note_json_with_attachments(attachments):
     note_json["attributes"]["attachments"] = attachments
     note_json["attributes"]["note_entities"] = []
     return note_json
+
+
+def _given_analyst_note_json_with_context_entities():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-2", "type": "Threat Actor", "name": "APT99"},
+            ],
+        },
+    }
+
+
+def _given_analyst_note_json_with_duplicate_entity():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+        },
+    }
 
 
 def _given_vuln_risk_row(risk, threat_actor_name):

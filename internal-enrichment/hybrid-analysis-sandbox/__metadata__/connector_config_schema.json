@@ -57,6 +57,19 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
     "HYBRID_ANALYSIS_SANDBOX_TOKEN": {
       "description": "Hybrid Analysis API token.",
       "format": "password",
@@ -79,15 +92,9 @@
       "type": "string"
     },
     "HYBRID_ANALYSIS_SANDBOX_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "Maximum TLP for submission.",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
       "type": "string"
     },
     "HYBRID_ANALYSIS_SANDBOX_API_KEY": {
@@ -122,17 +129,10 @@
       "deprecated": true
     },
     "HYBRID_ANALYSIS_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "Use HYBRID_ANALYSIS_SANDBOX_MAX_TLP instead. (removal scheduled for 2026-12-31)",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
-      "type": "string",
-      "deprecated": true
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead. (removal scheduled for 2026-12-31)",
+      "type": "string"
     },
     "HYBRID_ANALYSIS_API_KEY": {
       "default": null,

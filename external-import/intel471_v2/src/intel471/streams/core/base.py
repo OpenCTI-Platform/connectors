@@ -10,6 +10,7 @@ from stix2 import Bundle
 
 if TYPE_CHECKING:
     from intel471.backend import ClientWrapper
+    from intel471.settings import Intel471_V2Config
 
 version = get_version()
 
@@ -60,6 +61,7 @@ class Intel471Stream(ABC):
         initial_history: int = None,
         update_existing_data: bool = False,
         ioc_score: Union[int, None] = None,
+        connector_config: "Intel471_V2Config | None" = None,
     ) -> None:
         self.client_wrapper = client_wrapper
         self.helper = helper
@@ -67,6 +69,11 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
+        # The Intel471-specific connector config. Only streams that need extra,
+        # per-stream settings read from it (e.g. the alerts stream's watcher/status
+        # filters); the others ignore it. Optional so direct instantiation in tests
+        # keeps working.
+        self.connector_config = connector_config
         # Whether the "not entitled to this report type" warning has already been
         # emitted in this process. The connector creates each stream once and the
         # scheduler reuses the instance every interval, so this flag persists across

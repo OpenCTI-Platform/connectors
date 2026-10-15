@@ -4,9 +4,8 @@ from io import BytesIO
 import requests
 import stix2
 import stix2.exceptions  # Exceptions are not exposed in public api root
-
-from .settings import ConnectorSettings
-from .util import deduplicate_bundle_objects, filter_relationship_triplets
+from import_doc_ai.settings import ConnectorSettings
+from import_doc_ai.util import deduplicate_bundle_objects, filter_relationship_triplets
 
 
 class ImportDocumentAIClient:

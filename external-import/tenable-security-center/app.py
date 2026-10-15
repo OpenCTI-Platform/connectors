@@ -17,10 +17,10 @@ from pycti import (  # type: ignore[import-untyped] # pycti does not provide stu
 from tenable_security_center.domain.use_case import ConverterToStix
 
 from tenable_security_center.ports.errors import DataRetrievalError
+from tenable_security_center.settings import ConnectorSettings
 
 if TYPE_CHECKING:
     from tenable_security_center.ports.asset import AssetsPort, AssetsChunkPort
-    from tenable_security_center.ports.config import ConfigLoaderPort
 
 
 class Connector:
@@ -35,7 +35,7 @@ class Connector:
 
     def __init__(
         self,
-        config: "ConfigLoaderPort",
+        config: ConnectorSettings,
         assets: "AssetsPort",
         helper: OpenCTIConnectorHelper,
     ):
@@ -46,7 +46,7 @@ class Connector:
         self.logger = helper.connector_logger
         self.assets = assets
         self.converter_to_stix = ConverterToStix(
-            self.logger, self.config.tenable_security_center.marking_definition
+            self.logger, self.config.tsc.tlp_marking
         )
         self.work_id = None
         self._expected_stix_objects = 0
@@ -89,7 +89,7 @@ class Connector:
             self.logger.info(
                 "[CONNECTOR] Connector last run", {"last_run_start_datetime": last_run}
             )
-            previous_since = str(self.config.tenable_security_center.export_since)
+            previous_since = str(self.config.tsc.export_since)
 
             self.logger.warning(
                 "[CONNECTOR] Connector acquisition SINCE parameter overwritten",
@@ -98,9 +98,7 @@ class Connector:
             self.assets.since_datetime = datetime.fromisoformat(last_successful_run)
         else:
             self.logger.info("[CONNECTOR] Connector has never run successfully...")
-            self.assets.since_datetime = (
-                self.config.tenable_security_center.export_since
-            )
+            self.assets.since_datetime = self.config.tsc.export_since
 
         # Initiate a new work
         self.work_id = self.helper.api.work.initiate_work(
@@ -169,10 +167,9 @@ class Connector:
     def _process(self, chunk: "AssetsChunkPort") -> bool:
         """Fetch data, transform and send bundle."""
         try:
-
             stix_objects = self.converter_to_stix.process_assets_chunk(
                 chunk,
-                process_systems_without_vulnerabilities=self.config.tenable_security_center.process_systems_without_vulnerabilities,
+                process_systems_without_vulnerabilities=self.config.tsc.process_systems_without_vulnerabilities,
             )
             self.logger.info(
                 "STIX objects incoming.",
@@ -201,9 +198,7 @@ class Connector:
 
             self._initiate_work()
 
-            with ThreadPoolExecutor(
-                self.config.tenable_security_center.num_threads
-            ) as executor:
+            with ThreadPoolExecutor(self.config.tsc.number_threads) as executor:
                 results = list(executor.map(self._process, self.assets.chunks))
 
             error_flag = (
@@ -249,26 +244,25 @@ class Connector:
 if __name__ == "__main__":
     import traceback
 
-    from tenable_security_center.adapters.config.env import ConfigLoaderEnv
     from tenable_security_center.adapters.tsc_api.v5_13_from_asset import (
         AssetsAPI,
     )
 
     # Configuration
     try:
-        config = ConfigLoaderEnv()
-        helper = OpenCTIConnectorHelper(config.to_dict())
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         assets = AssetsAPI(
-            url=config.tenable_security_center.api_base_url,
-            access_key=config.tenable_security_center.api_access_key,
-            secret_key=config.tenable_security_center.api_secret_key,
-            retries=config.tenable_security_center.api_retries,
-            backoff=config.tenable_security_center.api_backoff,
-            timeout=config.tenable_security_center.api_timeout,
-            since_datetime=config.tenable_security_center.export_since,
-            num_threads=config.tenable_security_center.num_threads,
+            url=config.tsc.api_base_url,
+            access_key=config.tsc.api_access_key.get_secret_value(),
+            secret_key=config.tsc.api_secret_key.get_secret_value(),
+            retries=config.tsc.api_retries,
+            backoff=config.tsc.api_backoff,
+            timeout=config.tsc.api_timeout,
+            since_datetime=config.tsc.export_since,
+            num_threads=config.tsc.number_threads,
             logger=helper.connector_logger,
-            findings_min_severity=config.tenable_security_center.severity_min_level,
+            findings_min_severity=config.tsc.severity_min_level,
         )
     except (
         Exception

@@ -1,9 +1,12 @@
 import configparser
+import logging
 import re
 from typing import Dict, List
 
 import ioc_finder
 from dateparser.search import search_dates
+
+logger = logging.getLogger(__name__)
 
 
 class MyConfigParser(configparser.ConfigParser):
@@ -39,6 +42,7 @@ def library_mapping() -> Dict:
         "File.hashes.MD5": ioc_finder.parse_md5s,
         "File.hashes.SHA-1": ioc_finder.parse_sha1s,
         "File.hashes.SHA-256": ioc_finder.parse_sha256s,
+        "File.hashes.SHA-512": ioc_finder.parse_sha512s,
         "Url.value": ioc_finder.parse_urls,
         "Vulnerability.name": ioc_finder.parse_cves,
         "Windows-Registry-Key.key": ioc_finder.parse_registry_key_paths,
@@ -54,12 +58,12 @@ def custom_asnparse(text: str) -> List:
             try:
                 asn_value = int(asn_value[0])
                 output.append(asn_value)
-            except SyntaxError:
-                print(
-                    f"Error ReportParser: Could not convert ASN match to int from {value}"
+            except ValueError:
+                logger.error(
+                    "Could not convert ASN match to int", extra={"value": value}
                 )
         else:
-            print(f"Error ReportParser: Could not extract ASN number from {value}")
+            logger.error("Could not extract ASN number", extra={"value": value})
 
     return output
 

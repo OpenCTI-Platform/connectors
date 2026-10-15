@@ -62,6 +62,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
+    # No concurrency group: groups resolve conflicts by job arrival order (set
+    # by lint/tests duration), not commit order, so they could cancel the newer
+    # commit's build, or both runs' builds. Overlapping runs build independently;
+    # the merge job keeps older commits from overwriting newer ones.
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -205,12 +209,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
+    # No concurrency group: it orders by arrival and can drop a waiting job.
+    # merge_connector_manifest.sh enforces tag ordering instead.
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: .github/scripts
           sparse-checkout-cone-mode: true
+          # Commit history (no blobs) for the staleness guard's ancestry check.
+          fetch-depth: 0
+          filter: blob:none
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -246,4 +255,7 @@ jobs:
           IMAGE_TAGS: ${{ inputs.image_tags }}
           DIGESTS_DIR_AMD64: /tmp/digests-amd64
           DIGESTS_DIR_ARM64: /tmp/digests-arm64
+          # Moving tags (rolling/prerelease) must never go backwards. Release
+          # tags are left unguarded.
+          GUARD_STALE: ${{ inputs.build_mode != 'release' }}
         run: bash .github/scripts/merge_connector_manifest.sh
