@@ -5,6 +5,8 @@ from collections.abc import Sequence
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
+    HOST_FIELDS,
+    HitFields,
     HuntEvent,
     HuntExecutionError,
     HuntLimits,
@@ -20,6 +22,13 @@ from connectors_sdk.connectors.internal_hunt import (
 )
 from sigma.backends.splunk import SplunkBackend
 from sigma.pipelines.splunk import pipelines as splunk_pipelines
+from splunk_hunt.cim import (
+    ATTRIBUTED_HOST_FIELD,
+    EVENT_ADDRESS_FIELD,
+    attributed_host,
+    event_address,
+    host_eval_spl,
+)
 from splunk_hunt.client import SplunkClient
 from splunk_hunt.settings import ConnectorSettings
 
@@ -52,6 +61,12 @@ SPLUNK_INTERNAL_FIELDS = frozenset(
     }
 )
 """Raw event and Splunk bookkeeping fields, never sampled as evidence."""
+
+CIM_HIT_FIELDS = HitFields(
+    event_id=(EVENT_ADDRESS_FIELD, *HitFields().event_id),
+    host=(ATTRIBUTED_HOST_FIELD, *HOST_FIELDS),
+)
+"""Hit fields reading the endpoint and the event address the connector attributes first."""
 
 TSTATS_RE = re.compile(r"^\|\s*tstats\b", re.IGNORECASE)
 
@@ -184,7 +199,9 @@ def spl_string(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
+def build_ioc_lookup(
+    batch: IocBatch, host_field: str = "host", host_expression: str | None = None
+) -> str:
     """Build the SPL lookup of a batch of indicator values, one result row per value and host.
 
     The search keeps the events whose raw text holds one of the values (phrase
@@ -198,11 +215,14 @@ def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
     Args:
         batch: Values of one observable type.
         host_field: Field naming the host of an event.
+        host_expression: SPL expression attributing the host of an event
+            (e.g. ``host_eval_spl()``), taking precedence over ``host_field``.
 
     Returns:
         The SPL query, to run within the run window.
     """
     terms = " OR ".join(spl_string(value) for value in batch.values)
+    host = host_expression or host_field
     attributions = ", ".join(
         "if(match(_raw, {pattern}), {key}, null())".format(
             pattern=spl_string(
@@ -218,7 +238,7 @@ def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
         f"({terms}) "
         f"| eval ioc=mvappend({attributions}) "
         "| where isnotnull(ioc) "
-        f'| eval host=coalesce({host_field}, ""), event_id=index.":"._cd '
+        f'| eval host=coalesce({host}, ""), event_id=index.":"._cd '
         "| stats count as hits min(_time) as first_seen max(_time) as last_seen "
         "values(event_id) as event_ids by ioc host "
         "| eval first_seen=floor(first_seen), last_seen=floor(last_seen), "
@@ -273,7 +293,10 @@ class SplunkHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma, SPL and indicator hunts on Splunk."""
 
     languages = ("spl",)
-    evidence_excluded_fields = SPLUNK_INTERNAL_FIELDS
+    evidence_excluded_fields = SPLUNK_INTERNAL_FIELDS | {
+        ATTRIBUTED_HOST_FIELD,
+        EVENT_ADDRESS_FIELD,
+    }
     # The lookup of indicator values aggregates them in Splunk: exact counts per value
     ioc_aggregated = True
     required_permissions = REQUIRED_PERMISSIONS
@@ -293,6 +316,10 @@ class SplunkHuntConnector(InternalHuntConnector):
             else self.splunk_config.output_format
         )
         self.client: SplunkClient | None = None
+        self.cim_attribution = self.splunk_config.host_attribution == "cim"
+        if self.cim_attribution:
+            self.hit_fields = CIM_HIT_FIELDS
+            self.ioc_host_fields = (ATTRIBUTED_HOST_FIELD, *HOST_FIELDS)
 
     def post_init(self) -> None:
         """Create the Splunk REST API client."""
@@ -334,7 +361,12 @@ class SplunkHuntConnector(InternalHuntConnector):
         Returns:
             The aggregating SPL lookup (one row per value found).
         """
-        return NativeQuery(language="spl", query=build_ioc_lookup(batch))
+        return NativeQuery(
+            language="spl",
+            query=build_ioc_lookup(
+                batch, host_expression=host_eval_spl() if self.cim_attribution else None
+            ),
+        )
 
     def combine_queries(self, queries: Sequence[str]) -> str:
         """Join several plain searches with ``OR`` (generating commands cannot be joined).
@@ -385,12 +417,25 @@ class SplunkHuntConnector(InternalHuntConnector):
             id(native_query),
         )
         events = [
-            HuntEvent(timestamp=parse_timestamp(row.get("_time")), fields=row)
+            HuntEvent(
+                timestamp=parse_timestamp(row.get("_time")),
+                fields=self._attribute(row),
+            )
             for row in rows
         ]
         return HuntResult(
             events=events, total_hits=total, truncated=total > len(events)
         )
+
+    def _attribute(self, row: dict) -> dict:
+        """Add the attributed endpoint and the event address to a result row (CIM mode)."""
+        if not self.cim_attribution:
+            return row
+        added = {
+            ATTRIBUTED_HOST_FIELD: attributed_host(row),
+            EVENT_ADDRESS_FIELD: event_address(row),
+        }
+        return {**row, **{name: value for name, value in added.items() if value}}
 
     def on_timeout(self, native_query: NativeQuery) -> None:
         """Cancel the Splunk search job of a timed out run.
