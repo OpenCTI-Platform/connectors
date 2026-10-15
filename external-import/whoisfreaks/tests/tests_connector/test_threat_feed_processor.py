@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 import stix2
-
 from connector.data_processors.threat_feed import ThreatFeedProcessor
 from whoisfreaks_client.models import ThreatFeedRecord
 

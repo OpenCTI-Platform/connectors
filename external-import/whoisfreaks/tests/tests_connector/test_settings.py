@@ -4,9 +4,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import pytest
-from connectors_sdk import BaseConfigModel, ConfigValidationError
-
 from connector import ConnectorSettings
+from connectors_sdk import BaseConfigModel, ConfigValidationError
 
 VALID = {
     "opencti": {"url": "http://localhost:8080", "token": "test-token"},

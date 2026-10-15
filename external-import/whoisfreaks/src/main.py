@@ -7,10 +7,9 @@ import traceback
 from datetime import datetime, timezone
 from typing import Any
 
-from connectors_sdk import ExternalImportConnector
-
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import NRDProcessor, ThreatFeedProcessor
+from connectors_sdk import ExternalImportConnector
 from whoisfreaks_client.status import (
     WhoisFreaksStatus,
     WhoisFreaksStatusClient,

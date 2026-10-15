@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.data_processors.nrd import NRDProcessor
 from connector.data_processors.threat_feed import ThreatFeedProcessor
 from whoisfreaks_client.status import FeedStatus, WhoisFreaksStatus

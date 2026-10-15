@@ -7,12 +7,11 @@ from datetime import date
 from typing import Any
 
 import stix2
+from connector.author import AUTHOR_ID as _AUTHOR_ID
+from connector.author import SHARED_AUTHOR as _SHARED_AUTHOR
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import TLPMarking
 from pycti import Indicator, Note, StixCoreRelationship
-
-from connector.author import AUTHOR_ID as _AUTHOR_ID
-from connector.author import SHARED_AUTHOR as _SHARED_AUTHOR
 from whoisfreaks_client import (
     WhoisFreaksClient,
     WhoisFreaksSubscriptionError,

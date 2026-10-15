@@ -13,7 +13,6 @@ from typing import Any
 
 import requests
 from connectors_sdk.exceptions.error import DataRetrievalError
-
 from whoisfreaks_client.models import ThreatFeedRecord
 
 _LOGGER = logging.getLogger(__name__)

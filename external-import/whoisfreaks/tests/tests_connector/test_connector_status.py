@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from main import WhoisFreaksExternalImportConnector
 from whoisfreaks_client.status import FeedStatus, WhoisFreaksStatus
 

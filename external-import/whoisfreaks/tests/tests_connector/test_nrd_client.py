@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-
 from whoisfreaks_client.nrd_client import (
     NRDPage,
     WhoisFreaksNRDClient,

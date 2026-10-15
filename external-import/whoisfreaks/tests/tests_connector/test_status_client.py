@@ -2,7 +2,6 @@ from unittest.mock import Mock
 
 import pytest
 import requests
-
 from whoisfreaks_client.status import (
     FeedStatus,
     WhoisFreaksStatusClient,

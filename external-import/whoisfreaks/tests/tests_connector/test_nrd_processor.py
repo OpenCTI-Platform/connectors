@@ -1,6 +1,5 @@
 import pytest
 import stix2
-
 from connector.data_processors.nrd import NRDProcessor
 from whoisfreaks_client.nrd_client import NRDRecord
 
