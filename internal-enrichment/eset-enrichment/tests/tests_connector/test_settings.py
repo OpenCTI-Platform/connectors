@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from eset.settings import ConnectorSettings
 
 MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
@@ -34,12 +35,12 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
                     "scope": "report",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "eset": {
                     "api_key": "test-api-key",
                     "api_secret": "test-api-secret",
                     "api_host": "https://eti.eset.com/",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -95,8 +96,8 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["report"]
     assert settings.connector.type == "INTERNAL_ENRICHMENT"
     assert settings.connector.auto is False
+    assert settings.connector.max_tlp == TLPLevel.RED
     assert str(settings.eset.api_host) == "https://eti.eset.com/"
-    assert settings.eset.max_tlp is None
     assert settings.eset.api_key.get_secret_value() == "test-api-key"
     assert settings.eset.api_secret.get_secret_value() == "test-api-secret"
 
@@ -156,14 +157,15 @@ def test_settings_should_apply_defaults():
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
+                "connector": {
+                    "max_tlp": "bogus",
+                },
                 "eset": {
                     "api_key": "test-api-key",
                     "api_secret": "test-api-secret",
-                    "max_tlp": "amber",
                 },
             },
-            id="invalid_eset_max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -216,34 +218,34 @@ def _settings_from(settings_dict: dict[str, Any]) -> ConnectorSettings:
 
 
 def test_settings_should_migrate_deprecated_connector_template_max_tlp():
-    """`CONNECTOR_TEMPLATE_MAX_TLP` MUST be migrated to `ESET_MAX_TLP`."""
+    """`CONNECTOR_TEMPLATE_MAX_TLP` MUST be migrated to `CONNECTOR_MAX_TLP`."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
         "connector_template": {"max_tlp": "TLP:GREEN"},
     }
 
-    with pytest.warns(UserWarning, match="Migrating to 'eset.max_tlp'"):
+    with pytest.warns(UserWarning, match="Migrating to 'connector.max_tlp'"):
         settings = _settings_from(settings_dict)
 
-    assert settings.eset.max_tlp == "TLP:GREEN"
+    assert settings.connector.max_tlp == TLPLevel.GREEN
 
 
-def test_settings_should_prefer_eset_max_tlp_over_deprecated_one():
-    """`ESET_MAX_TLP` MUST win when both variables are set."""
+def test_settings_should_prefer_connector_max_tlp_over_deprecated_one():
+    """`CONNECTOR_MAX_TLP` MUST win when both variables are set."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
-        "eset": {**MINIMAL_VALID_SETTINGS_DICT["eset"], "max_tlp": "TLP:RED"},
+        "connector": {"max_tlp": "TLP:AMBER"},
         "connector_template": {"max_tlp": "TLP:GREEN"},
     }
 
-    with pytest.warns(UserWarning, match="Using only 'eset.max_tlp'"):
+    with pytest.warns(UserWarning, match="Using only 'connector.max_tlp'"):
         settings = _settings_from(settings_dict)
 
-    assert settings.eset.max_tlp == "TLP:RED"
+    assert settings.connector.max_tlp == TLPLevel.AMBER
 
 
 def test_settings_should_reject_invalid_deprecated_connector_template_max_tlp():
-    """A migrated value MUST be validated like `ESET_MAX_TLP`."""
+    """A migrated value MUST be validated like `CONNECTOR_MAX_TLP`."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
         "connector_template": {"max_tlp": "bogus"},
@@ -251,3 +253,15 @@ def test_settings_should_reject_invalid_deprecated_connector_template_max_tlp():
 
     with pytest.warns(UserWarning), pytest.raises(ConfigValidationError):
         _settings_from(settings_dict)
+
+
+def test_settings_should_not_migrate_other_connector_template_variables():
+    """Only `CONNECTOR_TEMPLATE_MAX_TLP` MUST be migrated, other legacy variables are ignored."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "connector_template": {"api_key": "stale-api-key"},
+    }
+
+    settings = _settings_from(settings_dict)
+
+    assert settings.eset.api_key.get_secret_value() == "test-api-key"

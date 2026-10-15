@@ -41,12 +41,12 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "report",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "eset": {
                     "api_key": "test-api-key",
                     "api_secret": "test-api-secret",
                     "api_host": "https://eti.eset.com/",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )

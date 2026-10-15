@@ -1,5 +1,3 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -7,6 +5,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -28,6 +27,13 @@ class EsetConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The scope of the connector.",
         default=["report"],
     )
+    max_tlp: TLPLevel = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLPLevel.RED,
+    )
 
 
 class EsetConfig(BaseConfigModel):
@@ -45,34 +51,19 @@ class EsetConfig(BaseConfigModel):
         description="ESET Threat Intelligence API base URL.",
         default=HttpUrl("https://eti.eset.com/"),
     )
-    max_tlp: (
-        Literal[
-            "TLP:CLEAR",
-            "TLP:WHITE",
-            "TLP:GREEN",
-            "TLP:AMBER",
-            "TLP:AMBER+STRICT",
-            "TLP:RED",
-        ]
-        | None
-    ) = Field(
-        description=(
-            "Max TLP level of the reports to enrich. "
-            "If not set, reports are enriched whatever their TLP."
-        ),
-        default=None,
-    )
 
 
 class LegacyConnectorTemplateConfig(BaseConfigModel):
     """
     Legacy `connector_template` section, left over from the connector template.
-    Its variables are migrated to the `eset` section.
+    Only its `max_tlp` variable is migrated, to `connector.max_tlp`.
     """
 
-    max_tlp: str | None = Field(
-        description="Deprecated, use `ESET_MAX_TLP` instead.",
-        default=None,
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
+        description="Max TLP level of the reports to enrich.",
     )
 
 
@@ -85,7 +76,6 @@ class ConnectorSettings(BaseConnectorSettings):
     eset: EsetConfig = Field(default_factory=EsetConfig)
 
     # Legacy `CONNECTOR_TEMPLATE_*` env vars prefix
-    connector_template: LegacyConnectorTemplateConfig = DeprecatedField(
-        deprecated="Use the 'eset' section instead (e.g. 'ESET_MAX_TLP').",
-        new_namespace="eset",
+    connector_template: LegacyConnectorTemplateConfig = Field(
+        default_factory=LegacyConnectorTemplateConfig
     )

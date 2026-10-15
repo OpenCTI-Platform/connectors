@@ -51,7 +51,7 @@ class EsetConnector:
         """
         self.config = ConnectorSettings()
 
-        self.max_tlp = self.config.eset.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.eset_api_key = self.config.eset.api_key.get_secret_value()
         self.eset_api_secret = self.config.eset.api_secret.get_secret_value()
         self.host = str(self.config.eset.api_host)

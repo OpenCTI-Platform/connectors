@@ -73,8 +73,8 @@ Configure the connector in `docker-compose.yml`:
       # Optional
       # - CONNECTOR_AUTO=false
       # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_MAX_TLP=TLP:RED
       # - ESET_API_HOST=https://eti.eset.com/
-      # - ESET_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -145,7 +145,7 @@ graph LR
 |------|--------------------------------------------------|-------------------------------------------------------|
 | 1    | Scope Check                                      | Verify entity type is in connector scope              |
 | 2    | Creator Check                                    | Confirm report was created by ESET                    |
-| 3    | TLP Check                                        | Validate TLP against `ESET_MAX_TLP`                   |
+| 3    | TLP Check                                        | Validate TLP against `CONNECTOR_MAX_TLP`              |
 | 4    | Attachment Check                                 | Skip if PDF already attached                          |
 | 5    | URL Extraction                                   | Find ETI portal download link                         |
 | 6    | PDF Download                                     | Download report via ETI API                           |
@@ -167,7 +167,7 @@ These URLs are converted to API calls:
 
 1. **Scope Validation**: Ensures the entity type matches the configured scope (`report`)
 2. **Creator Validation**: Only processes reports created by "ESET"
-3. **TLP Validation**: Respects TLP markings and the `ESET_MAX_TLP` setting (`CONNECTOR_TEMPLATE_MAX_TLP` is deprecated)
+3. **TLP Validation**: Respects TLP markings and the `CONNECTOR_MAX_TLP` setting (`CONNECTOR_TEMPLATE_MAX_TLP` is deprecated)
 4. **Duplicate Prevention**: Skips reports that already have the PDF attached
 5. **URL Discovery**: Searches report's related objects for ETI portal links
 6. **API Authentication**: Uses Bearer token with format `{api_key}|{api_secret}`

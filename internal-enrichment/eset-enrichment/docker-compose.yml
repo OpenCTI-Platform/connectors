@@ -12,9 +12,9 @@ services:
       # - CONNECTOR_SCOPE=report
       # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=TLP:RED
       # ESET Threat Intelligence platform API key and secret - REQUIRED
       - ESET_API_KEY=ChangeMe
       - ESET_API_SECRET=ChangeMe
       # - ESET_API_HOST=https://eti.eset.com/
-      # - ESET_MAX_TLP=TLP:AMBER
     restart: always
