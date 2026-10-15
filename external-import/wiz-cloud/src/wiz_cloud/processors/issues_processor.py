@@ -59,6 +59,20 @@ class WizIssuesProcessor(BaseDataProcessor):
     # so conversion works on a processor whose post_init() was skipped.
     _vulnerabilities: WizVulnerabilitiesProcessor | None = None
 
+    def process(self) -> None:
+        """Run the full processing pipeline: collect → transform → send.
+
+        Opens a work via the ``WorkManager`` context manager, then
+        composes ``send(transform(collect()))``.
+
+        The work is automatically closed on exit (success, fail, or delete).
+        """
+        super().process()
+
+        if self._vulnerabilities is not None:
+            self._vulnerabilities._seen_assets = set()
+            self._vulnerabilities.failures = 0
+
     # -- lifecycle -----------------------------------------------------------
 
     def post_init(self) -> None:
