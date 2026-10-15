@@ -34,6 +34,8 @@ NETWORK_SOURCETYPE_PREFIXES: tuple[str, ...] = (
     "snort",
     "suricata",
     "bro:",
+    # Cloud flow logs: host is the log group or a placeholder ("serverless")
+    "aws:cloudwatchlogs:vpcflow",
     # Common network sourcetypes not yet in that map (proxy / dns / zeek)
     "zeek:",
     "bluecoat",
@@ -66,6 +68,13 @@ reporting computer before ``host``, which is the collector under WEF or EDR pull
 
 PRIVATE_NETWORKS: tuple[str, ...] = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
 """Internal ranges (RFC 1918): the side of a flow in them is the endpoint."""
+
+HOSTNAME_DOMAIN_RE = r"^(?!\d+\.\d+\.\d+\.\d+$)([^.:\s]+)\..*$"
+"""A hostname with a DNS suffix, capturing its first label. IPv4 addresses are
+excluded by the lookahead and IPv6 addresses never match (``:`` before any ``.``).
+The same PCRE runs in Python ``re`` and in SPL ``replace()``, so both paths agree."""
+
+_HOSTNAME_DOMAIN = re.compile(HOSTNAME_DOMAIN_RE)
 
 _PRIVATE = tuple(ipaddress.ip_network(network) for network in PRIVATE_NETWORKS)
 
@@ -107,6 +116,18 @@ def _first(fields: Mapping[str, Any], *names: str) -> str | None:
     return None
 
 
+def normalize_host(value: str | None) -> str | None:
+    """Return a hostname without its DNS suffix (``WS-01.corp.local`` -> ``WS-01``).
+
+    Sources name the same endpoint differently: Windows ``ComputerName`` is the
+    FQDN while the forwarder ``host`` is usually the short name, so the same
+    machine would otherwise be reported as two victims. IP addresses are kept.
+    """
+    if value is None:
+        return None
+    return _HOSTNAME_DOMAIN.sub(r"\1", value)
+
+
 def attributed_host(fields: Mapping[str, Any]) -> str | None:
     """Return the endpoint an event is about, from its sourcetype and CIM fields.
 
@@ -116,9 +137,13 @@ def attributed_host(fields: Mapping[str, Any]) -> str | None:
       (configuration or system events).
     - Endpoint telemetry: the reporting computer before ``host``.
     - Unknown sourcetypes: ``host``, as before.
+
+    Host names (``host``, ``ComputerName``...) lose their DNS suffix
+    (``normalize_host``); network peers (``src``/``dest``) are kept as logged,
+    since they may be domains (proxy and DNS destinations).
     """
     kind = sourcetype_class(_first(fields, "sourcetype"))
-    host = _first(fields, "host")
+    host = normalize_host(_first(fields, "host"))
     if kind == "network":
         src = _first(fields, "src_ip", "src")
         dest = _first(fields, "dest_ip", "dest")
@@ -131,7 +156,7 @@ def attributed_host(fields: Mapping[str, Any]) -> str | None:
             return dest
         return src or dest or host
     if kind == "endpoint":
-        return _first(fields, *ENDPOINT_HOST_FIELDS)
+        return normalize_host(_first(fields, *ENDPOINT_HOST_FIELDS))
     return host
 
 
@@ -149,20 +174,33 @@ def _cidr(field: str) -> str:
 
 def host_eval_spl() -> str:
     """Return the SPL expression equivalent to ``attributed_host()``."""
+    host = _normalize_spl("host")
     src = "coalesce(src_ip, src)"
     dest = "coalesce(dest_ip, dest)"
     network = (
         f'case(lower(direction)=="inbound" AND isnotnull({dest}), {dest}, '
         f"{_cidr(src)}, {src}, "
         f"{_cidr(dest)}, {dest}, "
-        f"true(), coalesce({src}, {dest}, host))"
+        f"true(), coalesce({src}, {dest}, {host}))"
     )
-    endpoint = f"coalesce({', '.join(ENDPOINT_HOST_FIELDS)})"
+    endpoint = _normalize_spl(f"coalesce({', '.join(ENDPOINT_HOST_FIELDS)})")
     return (
         f"case({_prefix_match(NETWORK_SOURCETYPE_PREFIXES)}, {network}, "
         f"{_prefix_match(ENDPOINT_SOURCETYPE_PREFIXES)}, {endpoint}, "
-        "true(), host)"
+        f"true(), {host})"
     )
+
+
+def _normalize_spl(expression: str) -> str:
+    """Return the SPL equivalent of ``normalize_host()`` applied to an expression."""
+    pattern, group = _spl_string(HOSTNAME_DOMAIN_RE), _spl_string("\\1")
+    return f"replace({expression}, {pattern}, {group})"
+
+
+def _spl_string(value: str) -> str:
+    """Return an SPL string literal (backslashes and quotes escaped)."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 def event_address(fields: Mapping[str, Any]) -> str | None:

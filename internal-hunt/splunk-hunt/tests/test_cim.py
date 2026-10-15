@@ -2,9 +2,13 @@ import pytest
 from conftest import NAMESPACE
 from connectors_sdk.connectors.internal_hunt import HuntIoc, IocBatch
 from splunk_hunt.cim import (
+    HOSTNAME_DOMAIN_RE,
+    _normalize_spl,
+    _spl_string,
     attributed_host,
     event_address,
     host_eval_spl,
+    normalize_host,
     sourcetype_class,
 )
 from splunk_hunt.connector import build_ioc_lookup
@@ -106,8 +110,9 @@ def test_host_eval_spl_mirrors_python_rules():
     assert 'lower(direction)=="inbound"' in spl
     assert 'cidrmatch("10.0.0.0/8", coalesce(src_ip, src))' in spl
     assert "coalesce(ComputerName, Computer, dest_nt_host, host)" in spl
-    assert spl.endswith("true(), host)")
-    assert spl.count("(") == spl.count(")")
+    assert spl.endswith(f"true(), {_normalize_spl('host')})")
+    without_patterns = spl.replace(_spl_string(HOSTNAME_DOMAIN_RE), '""')
+    assert without_patterns.count("(") == without_patterns.count(")")
 
 
 def test_ioc_lookup_uses_the_attribution_expression():
@@ -196,3 +201,52 @@ def test_raw_mode_keeps_the_previous_behavior(
     # The appliance is reported, and the two events collapse into one hit key
     assert [o["host"] for o in kwargs["observations"]] == ["pa-fw01"]
     assert len(kwargs["hit_keys"]) == 1
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("FYODOR-L.froth.ly", "FYODOR-L"),
+        ("FYODOR-L", "FYODOR-L"),
+        ("10.1.2.3", "10.1.2.3"),
+        ("fe80::1", "fe80::1"),
+        ("2001:db8::1.2.3.4", "2001:db8::1.2.3.4"),
+        (None, None),
+    ],
+)
+def test_normalize_host(value, expected):
+    assert normalize_host(value) == expected
+
+
+def test_windows_fqdn_and_short_host_are_one_endpoint():
+    # ComputerName is the FQDN, the forwarder host the short name: one machine
+    fqdn = {
+        "sourcetype": "WinEventLog:Security",
+        "host": "FYODOR-L",
+        "ComputerName": "FYODOR-L.froth.ly",
+    }
+    short = {"sourcetype": "custom:app", "host": "FYODOR-L"}
+    assert attributed_host(fqdn) == attributed_host(short) == "FYODOR-L"
+
+
+def test_network_peers_keep_their_domain():
+    # A proxy destination is a domain, not a hostname to shorten
+    row = {"sourcetype": "squid", "host": "proxy.corp", "dest": "evil.example.com"}
+    assert attributed_host(row) == "evil.example.com"
+
+
+def test_vpc_flow_logs_are_network_data():
+    row = {
+        "sourcetype": "aws:cloudwatchlogs:vpcflow",
+        "host": "serverless",
+        "src_ip": "172.16.0.178",
+        "dest_ip": "52.95.110.1",
+    }
+    assert sourcetype_class(row["sourcetype"]) == "network"
+    assert attributed_host(row) == "172.16.0.178"
+
+
+def test_host_eval_spl_normalizes_host_names_only():
+    spl = host_eval_spl()
+    assert "replace(coalesce(ComputerName, Computer, dest_nt_host, host)," in spl
+    assert "replace(coalesce(dest_ip, dest)" not in spl
