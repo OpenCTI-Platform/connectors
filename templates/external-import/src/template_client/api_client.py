@@ -155,7 +155,7 @@ class TemplateClient(BaseClientApi):
 
             self._logger.info(
                 "[API] HTTP Get Request to endpoint",
-                {"endpoint": endpoint, "params": params},
+                meta={"endpoint": endpoint, "params": params},
             )
 
             # Validate response
@@ -163,7 +163,7 @@ class TemplateClient(BaseClientApi):
         except ApiClientError as err:
             self._logger.error(
                 "[API] Error while fetching reports",
-                {"endpoint": endpoint, "error": str(err)},
+                meta={"endpoint": endpoint, "error": str(err)},
             )
             raise
 
@@ -213,13 +213,13 @@ class TemplateClient(BaseClientApi):
             for cves_page in self._paginate_offset(endpoint, params=params):
                 self._logger.info(
                     "[API] HTTP Get Request to endpoint",
-                    {"endpoint": endpoint, "params": params},
+                    meta={"endpoint": endpoint, "params": params},
                 )
                 # Validate response page by page.
                 yield [CVE(**cve) for cve in cves_page]
         except ApiClientError as err:
             self._logger.error(
                 "[API] Error while fetching CVEs",
-                {"endpoint": endpoint, "error": str(err)},
+                meta={"endpoint": endpoint, "error": str(err)},
             )
             raise

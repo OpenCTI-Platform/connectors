@@ -167,7 +167,10 @@ class ReportsProcessor(BaseDataProcessor):
             except ReportConversionError as e:
                 self.logger.warning(
                     "Failed to convert report, skipping it",
-                    {"report_id": report.id if report else "unknown", "error": str(e)},
+                    meta={
+                        "report_id": report.id if report else "unknown",
+                        "error": str(e),
+                    },
                 )
 
         if stix_objects:

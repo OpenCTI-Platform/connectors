@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,StixFile
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=false
+      - CONNECTOR_MAX_TLP=TLP:AMBER+STRICT
       - METRAS_API_BASE_URL=https://api.metras.sa/api
       - METRAS_API_KEY=ChangeMe
       - METRAS_VERIFY_SSL=true
-      - METRAS_MAX_TLP=amber+strict
     restart: always

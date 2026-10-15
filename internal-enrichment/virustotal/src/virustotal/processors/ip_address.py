@@ -16,6 +16,8 @@ _RESOLUTIONS_PAGE_SIZE = 40
 class IPProcessor(EntityProcessor):
     """Enriches IPv4-Addr observables and Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "ip_addresses"
+
     def process(self) -> str | None:
         """Run the IP enrichment, then import the resolved domains when enabled.
 
@@ -33,6 +35,7 @@ class IPProcessor(EntityProcessor):
         self._check_response(json_data)
         builder = self._make_builder(json_data)
         self._enrich(builder, json_data)
+        self._enrich_gti_relationships(builder)
 
         if self.helper.playbook is not None:
             summary = self._import_resolutions(builder, builder.bundle.extend)

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.connector import VulnersConnector
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import SecretStr
 
 
@@ -46,7 +47,7 @@ def _make_settings() -> MagicMock:
     settings = MagicMock()
     settings.vulners.api_key = SecretStr("test-api-key")
     settings.vulners.api_base_url = "https://vulners.com"
-    settings.vulners.max_tlp_level = "TLP:AMBER"
+    settings.connector.max_tlp = TLPLevel.AMBER
     return settings
 
 

@@ -14,6 +14,8 @@ from uuid import uuid4
 
 from pymisp import MISPEvent, MISPObject, MISPSighting
 
+from .event_tags import build_marking_lookup
+
 
 class STIXtoMISPConverter:
     """Converts STIX 2.1 bundles to MISP events with comprehensive entity support"""
@@ -143,6 +145,8 @@ class STIXtoMISPConverter:
         self.config = config
         # Track added attribute values to prevent duplicates
         self.added_attributes = {}
+        # Marking definition id -> MISP tag, rebuilt for each bundle
+        self.marking_lookup: Dict[str, str] = {}
 
     def _should_add_attribute(self, attr_type: str, value: str) -> bool:
         """
@@ -189,6 +193,11 @@ class STIXtoMISPConverter:
             if not container:
                 self.helper.connector_logger.warning("No container found in bundle")
                 return None
+
+            # Map marking definitions to MISP tags (allow-listed types only)
+            self.marking_lookup = build_marking_lookup(
+                stix_bundle, self.config.misp.get_marking_types_allowlist()
+            )
 
             # Create MISP event (pass bundle for score calculation)
             misp_event = self._create_base_event(container, custom_uuid, stix_bundle)
@@ -443,6 +452,16 @@ class STIXtoMISPConverter:
         # Process labels as tags
         for label in container.get("labels", []):
             event.add_tag(label)
+
+        # Process container markings (allow-listed types) as tags
+        for marking_ref in container.get("object_marking_refs") or []:
+            tag = self.marking_lookup.get(marking_ref)
+            if tag:
+                event.add_tag(tag)
+
+        # Process report types as tags
+        for report_type in container.get("report_types") or []:
+            event.add_tag(f"report-type:{report_type}")
 
         return event
 

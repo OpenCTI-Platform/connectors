@@ -157,7 +157,7 @@ class VulnerabilitiesProcessor(BaseDataProcessor):
                     except CVEConversionError as e:
                         self.logger.warning(
                             "Failed to convert CVE, skipping it",
-                            {"cve_id": cve.cveId, "error": str(e)},
+                            meta={"cve_id": cve.cveId, "error": str(e)},
                         )
 
                 if stix_objects:
@@ -172,7 +172,7 @@ class VulnerabilitiesProcessor(BaseDataProcessor):
             # instead of re-importing everything from scratch.
             self.logger.error(
                 "An error occurred while processing CVE pages. Saving the current page to resume on next run.",
-                {"error": str(e)},
+                meta={"error": str(e)},
             )
             self.state.vulnerabilities_current_page = current_page
 

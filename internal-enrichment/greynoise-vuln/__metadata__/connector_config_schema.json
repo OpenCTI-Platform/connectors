@@ -53,6 +53,19 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
     "GREYNOISE_VULN_KEY": {
       "description": "The GreyNoise API key.",
       "format": "password",
@@ -60,16 +73,9 @@
       "writeOnly": true
     },
     "GREYNOISE_VULN_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "The maximal TLP of the vulnerability being enriched.",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
       "type": "string"
     },
     "GREYNOISE_VULN_NAME": {
