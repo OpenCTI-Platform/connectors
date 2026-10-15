@@ -21,6 +21,9 @@
 #
 # Optional environment variables:
 #   PUSH         - "true" to push, anything else to build only (default: false)
+#   PUSH_BY_DIGEST - "true" (with PUSH=true) to push by digest only, without
+#                  tags. TAGS then only names the repositories to push to; the
+#                  caller tags the digest later.
 #   PULL         - "true" to always pull base images (default: true)
 #   BUILD_ARGS   - Newline-separated list of KEY=VALUE build args
 #   LABELS       - Newline-separated list of KEY=VALUE OCI labels
@@ -32,7 +35,7 @@
 #                  single-manifest for the imagetools merge)
 #   DIGEST_OUT   - File path to write the resulting image digest to
 #   MAX_ATTEMPTS - Maximum number of attempts (default: 5)
-#   INITIAL_DELAY- Initial backoff delay in seconds (default: 15)
+#   INITIAL_DELAY- Initial backoff delay in seconds (default: 60)
 set -euo pipefail
 
 : "${CONTEXT:?CONTEXT is required}"
@@ -41,6 +44,11 @@ set -euo pipefail
 : "${TAGS:?TAGS is required}"
 
 PUSH="${PUSH:-false}"
+PUSH_BY_DIGEST="${PUSH_BY_DIGEST:-false}"
+by_digest=false
+if [ "$PUSH" = "true" ] && [ "$PUSH_BY_DIGEST" = "true" ]; then
+  by_digest=true
+fi
 PULL="${PULL:-true}"
 PROVENANCE="${PROVENANCE:-false}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-5}"
@@ -58,9 +66,17 @@ if [ "$PULL" = "true" ]; then
   base_args+=(--pull)
 fi
 
+# Repositories to push to, derived from TAGS (used for push-by-digest only).
+repos=""
 while IFS= read -r tag; do
-  [ -n "$tag" ] && base_args+=(--tag "$tag")
+  [ -n "$tag" ] || continue
+  if [ "$by_digest" = "true" ]; then
+    repos="${repos:+${repos},}${tag%:*}"
+  else
+    base_args+=(--tag "$tag")
+  fi
 done <<< "$TAGS"
+repos="$(tr ',' '\n' <<< "$repos" | sort -u | paste -sd, -)"
 
 if [ -n "${BUILD_ARGS:-}" ]; then
   while IFS= read -r ba; do
@@ -136,7 +152,10 @@ run_with_retry() {
 
 # Step 1: build + push the actual image. Must succeed.
 image_args=("${base_args[@]}")
-if [ "$PUSH" = "true" ]; then
+if [ "$by_digest" = "true" ]; then
+  # CSV-quoted so the comma-separated repository list stays one attribute.
+  image_args+=(--output "type=image,\"name=${repos}\",push-by-digest=true,name-canonical=true,push=true")
+elif [ "$PUSH" = "true" ]; then
   image_args+=(--push)
 fi
 if ! run_with_retry "${image_args[@]}"; then

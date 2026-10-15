@@ -292,12 +292,12 @@ def _make_click_event(**overrides: Any) -> dict[str, Any]:
             id="quoted local part in fromAddress",
         ),
         pytest.param(
-            {"replyToAddress": ["Some. Name <info@example.co.za>"]},
+            {"replyToAddress": ["undisclosed-recipients:;"]},
             {
                 "field": "reply_to_address",
-                "value": ["Some. Name <info@example.co.za>"],
+                "value": ["undisclosed-recipients:;"],
             },
-            id="unquoted display name with period in replyToAddress",
+            id="empty group syntax in replyToAddress",
         ),
     ],
 )

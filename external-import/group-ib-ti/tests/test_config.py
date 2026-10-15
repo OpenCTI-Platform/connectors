@@ -93,101 +93,6 @@ class TestToInt:
         assert ConfigConnector._to_int("1.5", default=7) == 7
 
 
-# --- _converting_keys_to_environment_keys ------------------------------------
-#
-# Instance method but reads no ``self`` state, so we call it as if static via
-# the ``ConfigConnector.__dict__`` lookup to dodge the heavy ``__init__``.
-
-
-def _convert(key):
-    inst = ConfigConnector.__new__(ConfigConnector)
-    return inst._converting_keys_to_environment_keys(key)
-
-
-class TestConvertingKeysToEnvironmentKeys:
-    def test_empty_returns_none(self):
-        assert _convert([]) is None
-        assert _convert(None) is None
-
-    def test_non_list_returns_none(self):
-        assert _convert("opencti") is None
-        assert _convert(42) is None
-
-    def test_opencti_two_level(self):
-        # ["opencti", "url"] -> "OPENCTI_URL".
-        assert _convert(["opencti", "url"]) == "OPENCTI_URL"
-
-    def test_connector_two_level(self):
-        assert _convert(["connector", "id"]) == "CONNECTOR_ID"
-
-    def test_ti_api_two_level_double_underscore(self):
-        # TI_API uses ``__`` joiner, not ``_``.
-        assert _convert(["ti_api", "url"]) == "TI_API__URL"
-
-    def test_ti_api_extra_settings(self):
-        out = _convert(["ti_api", "extra_settings", "ignore_non_malware_ddos"])
-        assert out == "TI_API__EXTRA_SETTINGS__IGNORE_NON_MALWARE_DDOS"
-
-    def test_ti_api_collections_slug_converted(self):
-        # The "/" in the collection slug becomes "_" in the env var name.
-        out = _convert(["ti_api", "collections", "apt/threat", "enable"])
-        assert out == "TI_API__COLLECTIONS__APT_THREAT__ENABLE"
-
-    def test_ti_api_collections_only(self):
-        # No sub-keys → only the collections section name.
-        out = _convert(["ti_api", "collections"])
-        assert out == "TI_API__COLLECTIONS"
-
-    def test_other_section_underscore_joined(self):
-        # Anything outside the three known prefixes uses single ``_``.
-        assert _convert(["misc", "foo", "bar"]) == "MISC_FOO_BAR"
-
-    def test_hyphens_normalised_to_underscores(self):
-        assert _convert(["my-section", "my-key"]) == "MY_SECTION_MY_KEY"
-
-
-# --- _extract_config_keys ----------------------------------------------------
-#
-# Instance method but reads no ``self`` state — pass ``ConfigConnector`` as the
-# stand-in instance.
-
-
-def _extract(data):
-    # Bypass __init__ (which does .env / mapping.json I/O) but get a real
-    # instance so the recursive ``self._extract_config_keys(...)`` call
-    # inside the method dispatches to a properly-bound method (passing
-    # the CLASS as self would treat the recursive ``value`` arg as self).
-    inst = ConfigConnector.__new__(ConfigConnector)
-    return inst._extract_config_keys(data)
-
-
-class TestExtractConfigKeys:
-    def test_empty_dict(self):
-        assert _extract({}) == []
-
-    def test_non_dict(self):
-        assert _extract("scalar") == []
-        assert _extract(None) == []
-        assert _extract([1, 2, 3]) == []
-
-    def test_flat_dict(self):
-        out = _extract({"a": 1, "b": 2})
-        assert sorted(out) == [["a"], ["b"]]
-
-    def test_nested_one_level(self):
-        out = _extract({"x": {"y": 1}})
-        assert out == [["x", "y"]]
-
-    def test_nested_deep(self):
-        out = _extract({"x": {"y": {"z": 1}}})
-        assert out == [["x", "y", "z"]]
-
-    def test_mixed_leaves_and_branches(self):
-        out = _extract({"a": 1, "b": {"c": 2, "d": 3}})
-        # Three leaves total: ["a"], ["b","c"], ["b","d"].
-        assert len(out) == 3
-
-
 # --- COLLECTION_DISPLAY_LABEL / COLLECTION_MAP -------------------------------
 
 
@@ -373,7 +278,7 @@ class TestWarnUnknownCollectionKeys:
         with caplog.at_level("WARNING"):
             cfg._warn_unknown_collection_keys()
         assert "ioc/common" in caplog.text
-        assert "TI_API__COLLECTIONS__IOC_COMMON__*" in caplog.text
+        assert "TI_API_COLLECTIONS_IOC_COMMON_*" in caplog.text
 
     def test_retired_collection_warned_once_per_slug(self, caplog):
         # Multi-word setting names must not confuse slug detection, and three

@@ -658,6 +658,24 @@ class TLPLevel(StrEnum):
     AMBER_STRICT = "amber+strict"
     RED = "red"
 
+    @classmethod
+    def _missing_(cls, value: object) -> TLPLevel | None:
+        """Find the member of a TLP level given in any case, with or without prefix.
+
+        Accepts the OpenCTI marking form (`TLP:AMBER+STRICT`) as well as the level
+        itself (`amber+strict`), in any case.
+
+        Args:
+            value: The value that did not match any member exactly.
+
+        Returns:
+            The matching member, or `None` to let the lookup fail.
+        """
+        if not isinstance(value, str):
+            return None
+        level = value.strip().lower().removeprefix("tlp:")
+        return next((member for member in cls if member.value == level), None)
+
 
 class ToolType(_PermissiveEnum):
     """Tool Type Open Vocabulary Enum.

@@ -40,10 +40,10 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "first_epss": {
                     "api_base_url": "https://api.first.org/data/v1/epss",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )
