@@ -41,7 +41,9 @@ class StubConnectorSettings(ConnectorSettings):
 
 
 @pytest.fixture
-def connector(mock_opencti_connector_helper):
+def connector(mock_opencti_connector_helper, monkeypatch):
+    # Skip the delay before sending the bundle
+    monkeypatch.setattr("connector.connector.time.sleep", MagicMock())
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
     # Only the RabbitMQ send is replaced: it records the bundles instead of publishing them

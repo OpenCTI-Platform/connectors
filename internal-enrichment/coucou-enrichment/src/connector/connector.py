@@ -1,3 +1,5 @@
+import time
+
 import stix2
 from connector.settings import ConnectorSettings
 from pycti import Malware, OpenCTIConnectorHelper, StixCoreRelationship
@@ -5,6 +7,8 @@ from pycti import Malware, OpenCTIConnectorHelper, StixCoreRelationship
 ENRICHED_DESCRIPTION = "coucou from enrichment"
 ENRICHED_LABEL = "enriched"
 LINKED_MALWARE_NAME = "supra coucou"
+# Delay before sending the bundle, to observe the work while it is in progress
+SEND_BUNDLE_DELAY_SECONDS = 15
 
 
 class CoucouEnrichmentConnector:
@@ -126,6 +130,14 @@ class CoucouEnrichmentConnector:
             )
 
     def _send_bundle(self, stix_objects: list) -> str:
+        """
+        Wait SEND_BUNDLE_DELAY_SECONDS, then send the objects as a STIX bundle for worker import.
+        """
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Waiting before sending the bundle",
+            {"delay_seconds": SEND_BUNDLE_DELAY_SECONDS},
+        )
+        time.sleep(SEND_BUNDLE_DELAY_SECONDS)
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
         return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
