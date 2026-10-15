@@ -124,6 +124,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Search prefix | `splunk_hunt.search_prefix` | `SPLUNK_HUNT_SEARCH_PREFIX` | | No | SPL constraint added to every search, e.g. `index=wineventlog OR index=sysmon`, or `` `opencti_hunt_scope` ``. |
 | Sigma pipeline | `splunk_hunt.sigma_pipeline` | `SPLUNK_HUNT_SIGMA_PIPELINE` | `splunk_windows` | No | pySigma pipeline(s), chained with `+`: `splunk_windows`, `splunk_sysmon_acceleration`, `splunk_cim` or `none`. |
 | Output format | `splunk_hunt.output_format` | `SPLUNK_HUNT_OUTPUT_FORMAT` | `default` | No | `default` (plain searches) or `data_model` (CIM `tstats` searches, requires `splunk_cim`). |
+| Host attribution | `splunk_hunt.host_attribution` | `SPLUNK_HUNT_HOST_ATTRIBUTION` | `cim` | No | `cim` (the endpoint, resolved from the sourcetype and CIM fields) or `raw` (the Splunk `host` field, the device that logged the event). See [Host attribution](#host-attribution). |
 | Poll interval | `splunk_hunt.poll_interval` | `SPLUNK_HUNT_POLL_INTERVAL` | `2` | No | Seconds between two search job status checks. |
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other
@@ -210,7 +211,9 @@ text. The connector registers as supporting indicator lookups and, for each run:
 
 1. groups the values by observable type in batches of `limits.ioc_batch_size` values (50 by default);
 2. runs one search per batch over the run window, within the search prefix:
-   `search (<prefix>) ("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(if(match(_raw, ...), "<key>", null()), ...) | eval host=coalesce(host, ""), event_id=index.":"._cd | stats count as hits min(_time) as first_seen max(_time) as last_seen values(event_id) as event_ids by ioc host`.
+   `search (<prefix>) ("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(if(match(_raw, ...), "<key>", null()), ...) | eval host=coalesce(<endpoint>, ""), event_id=index.":"._cd | stats count as hits min(_time) as first_seen max(_time) as last_seen values(event_id) as event_ids by ioc host`,
+   where `<endpoint>` is the [host attribution](#host-attribution) expression (`host` with `SPLUNK_HUNT_HOST_ATTRIBUTION=raw`)
+   and a batch holding a single value uses its `if(match(...))` directly, without `mvappend`.
    Each event is credited to every value its raw text holds as a whole token (`198.51.100.7` never matches
    `198.51.100.70`, `evil.com` matches `cdn.evil.com` but not `evil.com.au`), so the counts are exact;
 3. reports, for every value, whether it was seen, its hits, its first and last event and its hosts, and for every
@@ -222,6 +225,27 @@ text. The connector registers as supporting indicator lookups and, for each run:
    lookup unidentified, and OpenCTI then counts them from the totals.
 
 Preview the query in OpenCTI shows the searches of every batch without running them.
+
+### Host attribution
+
+In Splunk, `host` is the device that logged the event: for a firewall, IDS, proxy or DNS server it is the appliance, and
+for forwarded Windows logs (WEF) or EDR API pulls it is the collector. With `SPLUNK_HUNT_HOST_ATTRIBUTION=cim` (the
+default), the hosts of a run, of every indicator lookup row and of the sightings are the endpoints the events are about,
+resolved from the sourcetype and the CIM fields, the same way for rule hunts (in the connector) and indicator lookups
+(as an SPL `eval`):
+
+| Sourcetype class | Matching sourcetypes (prefixes) | Host |
+|---|---|---|
+| Network appliances | `pan:`, `cisco:asa`, `cisco:firepower`, `cisco:estreamer`, `cisco:meraki`, `cisco:ios`, `fgt_`, `fwsnort`, `snort`, `suricata`, `bro:`, `zeek:`, `bluecoat`, `squid`, `infoblox:`, `aws:cloudwatchlogs:vpcflow` | The destination of inbound traffic (`direction=inbound`); otherwise the internal side of the flow (RFC 1918, `src` first); otherwise `src`, then `dest`; `host` only when the event has neither. |
+| Endpoint telemetry | `wineventlog`, `xmlwineventlog`, `crowdstrike:event`, `carbonblack:`, `bit9:carbonblack`, `osquery:`, `linux:audit`, `linux_secure`, `symantec:ep:` | `ComputerName`, then `Computer`, `dest_nt_host`, `host`. |
+| Other | | `host`. |
+
+Host names (`host`, `ComputerName`...) lose their DNS suffix, so `FYODOR-L.froth.ly` and `FYODOR-L` are one endpoint;
+IP addresses and the `src` / `dest` values (which may be domains on proxy and DNS data) are kept as logged.
+`src` / `dest` only exist when the add-on of the data source extracts them (for example the Cisco ASA add-on for
+`cisco:asa`): without it, network events fall back to `host`, as in `raw` mode.
+
+Set `SPLUNK_HUNT_HOST_ATTRIBUTION=raw` to attribute every hit to the Splunk `host` field, as logged.
 
 ## Quotas and limits
 

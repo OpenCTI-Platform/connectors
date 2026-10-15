@@ -24,4 +24,5 @@ splunk_hunt:
   # search_prefix: 'index=wineventlog' # optional (default: none)
   # sigma_pipeline: 'splunk_windows' # optional (default: 'splunk_windows')
   # output_format: 'default' # optional, 'default' or 'data_model' (default: 'default')
+  # host_attribution: 'cim' # optional, 'cim' or 'raw' (default: 'cim')
   # poll_interval: 2 # optional (default: 2)
