@@ -41,6 +41,9 @@ services:
       CONNECTOR_AUTO: "false"
       # optional: debug | info | warn | error (default info)
       CONNECTOR_LOG_LEVEL: "info"
+      # Maximum TLP level of observables to enrich. Observables above this are silently skipped.
+      # optional: TLP:CLEAR | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED (default TLP:AMBER)
+      CONNECTOR_MAX_TLP: "TLP:AMBER"
 
       # --- Zetalytics API (required) ---
       ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
@@ -48,10 +51,6 @@ services:
       # Enrichment profile label. Informational only; individual flags below control behaviour.
       # optional: light | playbook | manual | deep (default manual)
       ZETALYTICS_MODE: "manual"
-
-      # Maximum TLP level of observables to enrich. Observables above this are silently skipped.
-      # optional: TLP:CLEAR | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED (default TLP:AMBER)
-      ZETALYTICS_MAX_TLP: "TLP:AMBER"
 
       # --- Data volume controls ---
       # Maximum passive DNS records returned per query (optional, default 300)
@@ -113,9 +112,9 @@ services:
       CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
       CONNECTOR_AUTO: "false"
       CONNECTOR_LOG_LEVEL: "info"
+      CONNECTOR_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
       ZETALYTICS_MODE: "playbook"
-      ZETALYTICS_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_MAX_RESULTS: "100"
       ZETALYTICS_MAX_SUBDOMAINS: "0"
       ZETALYTICS_LOOKBACK_DAYS: "180"
@@ -152,9 +151,9 @@ services:
       # Runs automatically on every new in-scope observable
       CONNECTOR_AUTO: "true"
       CONNECTOR_LOG_LEVEL: "info"
+      CONNECTOR_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
       ZETALYTICS_MODE: "light"
-      ZETALYTICS_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_MAX_RESULTS: "25"
       ZETALYTICS_MAX_SUBDOMAINS: "0"
       ZETALYTICS_LOOKBACK_DAYS: "90"
@@ -191,9 +190,9 @@ services:
       # Must remain false - deep investigation is analyst-triggered only
       CONNECTOR_AUTO: "false"
       CONNECTOR_LOG_LEVEL: "info"
+      CONNECTOR_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
       ZETALYTICS_MODE: "deep"
-      ZETALYTICS_MAX_TLP: "TLP:AMBER"
       ZETALYTICS_MAX_RESULTS: "500"
       ZETALYTICS_MAX_SUBDOMAINS: "1000"
       ZETALYTICS_MAX_WHOIS_RESULTS: "10"

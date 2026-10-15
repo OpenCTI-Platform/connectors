@@ -1,5 +1,63 @@
 from datetime import datetime
 
+# Source values -> OpenCTI SSVC enum values; anything else is dropped.
+SSVC_EXPLOITATION_VALUES = {
+    "none": "none",
+    "poc": "proof_of_concept",
+    "public_poc": "proof_of_concept",
+    "proof_of_concept": "proof_of_concept",
+    "active": "active",
+}
+SSVC_AUTOMATABLE_VALUES = {"yes": "yes", "no": "no"}
+SSVC_TECHNICAL_IMPACT_VALUES = {"partial": "partial", "total": "total"}
+SSVC_SOURCE_PREFERENCE = ["vulncheck", "cisa-adp"]
+
+
+def _ssvc_value(value: str | None, allowed: dict) -> str | None:
+    if not value:
+        return None
+    return allowed.get(value.strip().lower().replace(" ", "_").replace("-", "_"))
+
+
+def _ssvc_properties(
+    exploitation: str | None, automatable: str | None, technical_impact: str | None
+) -> dict:
+    values = {
+        "x_opencti_ssvc_exploitation": _ssvc_value(
+            exploitation, SSVC_EXPLOITATION_VALUES
+        ),
+        "x_opencti_ssvc_automatable": _ssvc_value(automatable, SSVC_AUTOMATABLE_VALUES),
+        "x_opencti_ssvc_technical_impact": _ssvc_value(
+            technical_impact, SSVC_TECHNICAL_IMPACT_VALUES
+        ),
+    }
+    return {key: value for key, value in values.items() if value is not None}
+
+
+def get_vulncheck_ssvc_properties(ssvc: list | None) -> dict:
+    """SSVC properties from vulncheck-nvd2 `metrics.ssvc`: the VulnCheck entry, else CISA-ADP."""
+    by_source = {(entry.source or "").lower(): entry for entry in ssvc or []}
+    entry = next((by_source[s] for s in SSVC_SOURCE_PREFERENCE if s in by_source), None)
+    if entry is None:
+        return {}
+    return _ssvc_properties(
+        entry.exploitation, entry.automatable, entry.technical_impact
+    )
+
+
+def get_nvd_ssvc_properties(ssvc_v203: list | None) -> dict:
+    """SSVC properties from nist-nvd2 `metrics.ssvcV203` decision options."""
+    if not ssvc_v203 or ssvc_v203[0].ssvc_data is None:
+        return {}
+    options = ssvc_v203[0].ssvc_data.options or []
+
+    def pick(field: str) -> str | None:
+        return next((v for o in options if (v := getattr(o, field, None))), None)
+
+    return _ssvc_properties(
+        pick("exploitation"), pick("automatable"), pick("technical_impact")
+    )
+
 
 def check_vuln_description(descriptions: list) -> str:
     for d in descriptions:

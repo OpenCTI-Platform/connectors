@@ -76,7 +76,6 @@ class StubConfig:
         self.api_key = os.environ.get("POLYSWARM_API_KEY", "test-key-placeholder")
         self.community = "default"
         self.polykg_api_url = "http://fake-polykg:8000"
-        self.max_tlp = ""
         self.replace_with_lower_score = True
         self.max_polling_time = 120
         self.ioc_enabled = True

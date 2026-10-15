@@ -180,6 +180,7 @@ def test_vckev(converter):
     entity = SimpleNamespace(cve=["CVE-2024-0001"])
     objs = vckev._extract_stix_from_vckev(converter, [entity], LOG)
     assert _types(objs) == ["vulnerability"]
+    assert objs[0].labels == [vckev.VULNCHECK_KEV_LABEL]
 
 
 def test_vcnvd2_full(converter):
@@ -302,6 +303,25 @@ def _metrics():
         cvss_metric_v30=None,
         cvss_metric_v40=[SimpleNamespace(cvss_data=_cvss_v4())],
         epss=SimpleNamespace(epss_score=0.5, epss_percentile=0.9),
+        ssvc=[
+            SimpleNamespace(
+                source="VulnCheck",
+                exploitation="ACTIVE",
+                automatable="YES",
+                technical_impact="TOTAL",
+            )
+        ],
+        ssvc_v203=[
+            SimpleNamespace(
+                ssvc_data=SimpleNamespace(
+                    options=[
+                        SimpleNamespace(exploitation="poc"),
+                        SimpleNamespace(automatable="no"),
+                        SimpleNamespace(technical_impact="partial"),
+                    ]
+                )
+            )
+        ],
     )
 
 
@@ -326,6 +346,9 @@ def test_nistnvd2_with_full_metrics(converter):
     assert vuln["x_opencti_cvss_base_score"] == 7.5
     assert vuln["x_opencti_cvss_v4_base_score"] == 8.0
     assert vuln["x_opencti_cwe"] == ["CWE-79"]
+    assert vuln["x_opencti_ssvc_exploitation"] == "proof_of_concept"
+    assert vuln["x_opencti_ssvc_automatable"] == "no"
+    assert vuln["x_opencti_ssvc_technical_impact"] == "partial"
 
 
 def test_vcnvd2_with_full_metrics(converter):
@@ -346,3 +369,6 @@ def test_vcnvd2_with_full_metrics(converter):
     assert vuln["x_opencti_cvss_base_score"] == 7.5
     assert vuln["x_opencti_cvss_v4_base_score"] == 8.0
     assert vuln["x_opencti_epss_score"] == 0.5
+    assert vuln["x_opencti_ssvc_exploitation"] == "active"
+    assert vuln["x_opencti_ssvc_automatable"] == "yes"
+    assert vuln["x_opencti_ssvc_technical_impact"] == "total"

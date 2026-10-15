@@ -18,7 +18,6 @@ class IndicatorImporterConfig(NamedTuple):
     author: stix2.Identity
     create_observables: bool
     create_indicators: bool
-    update_existing_data: bool
     enable_relationships: bool
     fetch_size: int
 
@@ -40,7 +39,6 @@ class IndicatorImporter:
         self.author = config.author
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
-        self.update_existing_data = config.update_existing_data
         self.enable_relationships = config.enable_relationships
         self.limit = config.fetch_size
 
@@ -182,6 +180,4 @@ class IndicatorImporter:
 
     def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(
-            serialized_bundle, update=self.update_existing_data, work_id=self.work_id
-        )
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)

@@ -136,9 +136,11 @@ class KasperskyConnector:
                 if object_marking["definition_type"] == "TLP":
                     tlp = object_marking["definition"]
 
-            if not self.helper.check_max_tlp(tlp, self.config.kaspersky.max_tlp):
+            if not self.helper.check_max_tlp(
+                tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+            ):
                 message = f"""Do not send any data, TLP of the entity is ({tlp}), which
-                  is greater than MAX TLP: ({self.config.kaspersky.max_tlp})"""
+                  is greater than MAX TLP: (TLP:{self.config.connector.max_tlp.upper()})"""
                 self.helper.connector_logger.warning(
                     message,
                     {

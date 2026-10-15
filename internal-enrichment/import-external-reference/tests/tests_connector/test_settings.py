@@ -124,3 +124,17 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         f"Expected a validation error for field {field_name!r}, "
         f"got errors for: {error_fields}"
     )
+
+
+def test_config_json_schema_should_not_expose_connector_max_tlp():
+    """
+    Test that `CONNECTOR_MAX_TLP` is hidden from the config schema: external references carry no TLP marking.
+    """
+
+    # Given/When: The config JSON schema is generated
+    schema = ConnectorSettings.config_json_schema(
+        connector_name="import-external-reference"
+    )
+
+    # Then: The max TLP setting is not offered
+    assert "CONNECTOR_MAX_TLP" not in schema["properties"]
