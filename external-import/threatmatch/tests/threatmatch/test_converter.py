@@ -125,24 +125,31 @@ def test_converter_maps_associated_content_to_related_to() -> None:
     converter = _build_converter(threat_actor_to_intrusion_set=True)
     actor_id = "threat-actor--01234567-89ab-cdef-0123-456789abcdef"
     campaign_id = "campaign--01234567-89ab-cdef-0123-456789abcdef"
+    relationship_id = "relationship--01234567-89ab-cdef-0123-456789abcdef"
     stix_object = {
         "type": "relationship",
-        "id": "relationship--01234567-89ab-cdef-0123-456789abcdef",
+        "id": relationship_id,
         "relationship_type": "associated-content",
         "source_ref": actor_id,
         "target_ref": campaign_id,
     }
+    report_object = {
+        "type": "report",
+        "id": "report--01234567-89ab-cdef-0123-456789abcdef",
+        "name": "Associated content report",
+        "object_refs": [relationship_id],
+    }
 
     converted = list(converter.process(stix_object))
+    converted_report = list(converter.process(report_object))
     assert len(converted) == 1
     relationship = converted[0]
     expected_source_ref = actor_id.replace("threat-actor", "intrusion-set")
     assert relationship["relationship_type"] == "related-to"
+    assert relationship["id"] == relationship_id
     assert relationship["source_ref"] == expected_source_ref
     assert relationship["target_ref"] == campaign_id
-    assert relationship["id"] == pycti.StixCoreRelationship.generate_id(
-        "related-to", expected_source_ref, campaign_id
-    )
+    assert converted_report[0]["object_refs"] == [relationship["id"]]
 
 
 def test_converter_converts_attck_labels_to_attack_patterns() -> None:
@@ -591,3 +598,21 @@ def test_converter_extracts_description_footer_targets_and_cleans_labels() -> No
         assert relationship["id"] == pycti.StixCoreRelationship.generate_id(
             "targets", main_object["id"], target["id"]
         )
+
+
+def test_converter_retains_geography_and_sector_labels_on_unsupported_types() -> None:
+    converter = _build_converter()
+    report_object = {
+        "type": "report",
+        "id": "report--01234567-89ab-cdef-0123-456789abcdef",
+        "name": "Sector Report",
+        "description": (
+            "<p>Report body.</p> " "Target geography: Belgium. Sectors: Healthcare."
+        ),
+        "labels": ["Belgium", "Healthcare", "Unknown"],
+    }
+
+    converted = list(converter.process(report_object))
+
+    assert len(converted) == 1
+    assert converted[0]["labels"] == ["Belgium", "Healthcare"]

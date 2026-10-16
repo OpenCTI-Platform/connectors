@@ -110,12 +110,6 @@ class Converter:
             "associated-content",
         }:
             stix_object["relationship_type"] = "related-to"
-            if stix_object.get("source_ref") and stix_object.get("target_ref"):
-                stix_object["id"] = pycti.StixCoreRelationship.generate_id(
-                    "related-to",
-                    stix_object["source_ref"],
-                    stix_object["target_ref"],
-                )
 
     # ThreatMatch profiles reference their IOCs through `object_refs`, which OpenCTI
     # only supports on containers. They are converted into `indicates` relationships
@@ -263,6 +257,10 @@ class Converter:
     def _extract_description_footer_targets(
         self, stix_object: dict[str, Any]
     ) -> list[dict[str, Any]]:
+        source_id = stix_object.get("id")
+        if not source_id or stix_object.get("type") not in self.TTP_USER_TYPES:
+            return []
+
         description = stix_object.get("description")
         if not isinstance(description, str) or not description:
             return []
@@ -299,10 +297,6 @@ class Converter:
                 if not isinstance(label, str)
                 or label.strip().lower() not in labels_to_strip
             ]
-
-        source_id = stix_object.get("id")
-        if not source_id or stix_object.get("type") not in self.TTP_USER_TYPES:
-            return []
 
         relationship_created = stix_object.get(
             "created", datetime.now(tz=UTC).isoformat(timespec="seconds")
