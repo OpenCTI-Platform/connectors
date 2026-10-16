@@ -9,8 +9,10 @@ from connectors_sdk.models import (
     File,
     Indicator,
     IntrusionSet,
+    IPV4Address,
     IPV6Address,
     Malware,
+    Note,
     Organization,
     Relationship,
     Sighting,
@@ -26,51 +28,112 @@ def _build_converter() -> IndicatorConverterToStix:
     return IndicatorConverterToStix(helper=helper)
 
 
-def test_convert_extracted_config_indicator_to_stix_should_create_text_indicator():
-    converter = _build_converter()
-    indicator = {
-        "id": "ind-anon-001",
+def _build_extracted_config(value: str, tags: list[str] | None = None) -> dict:
+    sighting = {
+        "id": "sight-ec-001",
+        "source": "flashpoint_extraction",
+        "sighted_at": "2026-03-06T11:00:00Z",
+        "tags": tags or ["extracted_config:true", "malware:mirai", "type:botnet"],
+    }
+    return {
+        "id": "ind-ec-001",
         "type": "extracted_config",
-        "value": '{"Hosts":"203.0.113.10,,example.org","urls":["http://example.com/path/config"],"c2":["198.51.100.21","https://example.net/endpoint"]}',
+        "value": value,
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
-        "score": {"value": "malicious"},
+        "score": {"value": "informational"},
+        "sightings": [sighting],
+        "latest_sighting": sighting,
     }
+
+
+def test_convert_extracted_config_should_not_create_indicator_or_text():
+    converter = _build_converter()
+    indicator = _build_extracted_config('{"type": "botnet", "Domains": "tyzoh.us"}')
 
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
-    assert len(octi_objects) > 0
-    indicator_obj = next(obj for obj in octi_objects if isinstance(obj, Indicator))
-    assert "text:value" in indicator_obj.pattern
-    text_objects = [obj for obj in octi_objects if isinstance(obj, Text)]
-    assert len(text_objects) == 1
-    assert any(
-        isinstance(obj, Relationship) and obj.type == RelationshipType.BASED_ON
+    assert not any(isinstance(obj, (Indicator, Text)) for obj in octi_objects)
+
+
+def test_convert_extracted_config_should_create_malware_observables_and_relationships():
+    converter = _build_converter()
+    indicator = _build_extracted_config(
+        '{"type": "botnet", "Domains": "mir.anonplus.org,rep.anonplus.org"}'
+    )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    malwares = [obj for obj in octi_objects if isinstance(obj, Malware)]
+    domains = [obj for obj in octi_objects if isinstance(obj, DomainName)]
+    communicates_with = [
+        obj
         for obj in octi_objects
-    )
+        if isinstance(obj, Relationship)
+        and obj.type == RelationshipType.COMMUNICATES_WITH
+    ]
+    assert [malware.name for malware in malwares] == ["mirai"]
+    assert sorted(domain.value for domain in domains) == [
+        "mir.anonplus.org",
+        "rep.anonplus.org",
+    ]
+    assert len(communicates_with) == 2
 
 
-def test_convert_extracted_config_indicator_to_stix_should_support_json_string_value():
+def test_convert_extracted_config_should_handle_host_key_variants_and_lists():
     converter = _build_converter()
-    indicator = {
-        "id": "ind-anon-002",
-        "type": "extracted_config",
-        "value": '{"type":"stealer","urls":["http://example.org/collector"],"Hosts":"one.example.com"}',
-        "created_at": "2026-03-06T12:00:00Z",
-        "modified_at": "2026-03-06T12:00:00Z",
-    }
+    indicator = _build_extracted_config(
+        '{"HOSTS": "Example.COM,,example.com", "ip": ["162.216.243.56"], '
+        '"gateway": ["172.86.117.36"], "urls": ["http://example.net/c"], '
+        '"Server": "not a host"}',
+        tags=["malware:strrat", "type:trojan"],
+    )
 
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
-    assert len(octi_objects) > 0
-    indicator_obj = next(obj for obj in octi_objects if isinstance(obj, Indicator))
-    assert "text:value" in indicator_obj.pattern
-    text_objects = [obj for obj in octi_objects if isinstance(obj, Text)]
-    assert len(text_objects) == 1
-    assert (
-        text_objects[0].value
-        == '{"type":"stealer","urls":["http://example.org/collector"],"Hosts":"one.example.com"}'
+    domains = [obj.value for obj in octi_objects if isinstance(obj, DomainName)]
+    ips = [obj.value for obj in octi_objects if isinstance(obj, IPV4Address)]
+    urls = [obj.value for obj in octi_objects if isinstance(obj, URL)]
+    assert domains == ["example.com"]
+    assert sorted(ips) == ["162.216.243.56", "172.86.117.36"]
+    assert urls == ["http://example.net/c"]
+
+
+def test_convert_extracted_config_should_keep_parameters_in_note():
+    converter = _build_converter()
+    indicator = _build_extracted_config(
+        '{"Ports": "443,80", "Mutex": "DcRatMutex_x", "Empty": "", '
+        '"Hosts": ["example.com"], "type": "trojan"}',
+        tags=["malware:dcrat"],
     )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    note = octi_objects[0]
+    assert isinstance(note, Note)
+    assert "- **Ports**: `443,80`" in note.content
+    assert "- **Mutex**: `DcRatMutex_x`" in note.content
+    assert "Empty" not in note.content
+    assert "Hosts" not in note.content
+    assert {obj.id for obj in note.objects} == {
+        obj.id for obj in octi_objects if isinstance(obj, (Malware, DomainName))
+    }
+
+
+def test_convert_extracted_config_should_skip_invalid_json():
+    converter = _build_converter()
+
+    assert (
+        converter.convert_indicator_to_stix(_build_extracted_config("not json")) == []
+    )
+    assert converter.convert_indicator_to_stix(_build_extracted_config("[1, 2]")) == []
+
+
+def test_convert_extracted_config_should_return_nothing_without_malware_or_hosts():
+    converter = _build_converter()
+    indicator = _build_extracted_config('{"Ports": "443"}', tags=["type:trojan"])
+
+    assert converter.convert_indicator_to_stix(indicator) == []
 
 
 def test_convert_indicator_to_stix_should_use_md5_pattern_for_file_hash():
@@ -114,7 +177,7 @@ def test_convert_indicator_to_stix_should_use_sha1_pattern_for_file_hash():
 
 def test_convert_indicator_to_stix_should_use_sha256_pattern_for_file_hash():
     converter = _build_converter()
-    sha256_hash = "e3b0c44298fc1c149afbf4c8996fb924" "27ae41e4649b934ca495991b7852b855"
+    sha256_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     indicator = {
         "id": "ind-file-sha256",
         "type": "file",
@@ -224,7 +287,7 @@ def test_convert_indicator_to_stix_should_create_malware_from_sighting_tags():
     indicator = {
         "id": "ind-tag-malware-001",
         "type": "file",
-        "value": "e3b0c44298fc1c149afbf4c899" "6fb92427ae41e4649b934ca495991b7852b855",
+        "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
         "sightings": [
@@ -304,7 +367,7 @@ def test_convert_indicator_to_stix_should_add_malware_description_from_html():
     indicator = {
         "id": "ind-mw-desc-001",
         "type": "file",
-        "value": "e3b0c44298fc1c149afbf4c899" "6fb92427ae41e4649b934ca495991b7852b855",
+        "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
         "malware_description": "<p>A <b>backdoor</b> trojan used by APT groups.</p>",
@@ -391,7 +454,7 @@ def test_convert_indicator_to_stix_should_create_related_iocs_with_related_to():
     assert len(domain_objects) == 1
 
 
-def test_convert_indicator_to_stix_should_create_text_observable_for_extracted_config_related_ioc():
+def test_convert_indicator_to_stix_should_ignore_extracted_config_related_ioc():
     converter = _build_converter()
     indicator = {
         "id": "ind-related-ec-001",
@@ -413,16 +476,11 @@ def test_convert_indicator_to_stix_should_create_text_observable_for_extracted_c
 
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
-    text_objects = [obj for obj in octi_objects if isinstance(obj, Text)]
-    assert len(text_objects) == 1
-    assert text_objects[0].value == '{"c2":"evil.example.com"}'
-
-    related_to_rels = [
-        obj
+    assert not any(isinstance(obj, (Text, Indicator)) for obj in octi_objects[1:])
+    assert not any(
+        isinstance(obj, Relationship) and obj.type == RelationshipType.RELATED_TO
         for obj in octi_objects
-        if isinstance(obj, Relationship) and obj.type == RelationshipType.RELATED_TO
-    ]
-    assert len(related_to_rels) == 1
+    )
 
 
 def test_convert_indicator_to_stix_should_handle_tactics_plural():

@@ -17,6 +17,7 @@ from connectors_sdk.models import (
     IPV6Address,
     KillChainPhase,
     Malware,
+    Note,
     Organization,
     OrganizationAuthor,
     Relationship,
@@ -24,9 +25,20 @@ from connectors_sdk.models import (
     Text,
     TLPMarking,
 )
-from connectors_sdk.models.enums import HashAlgorithm, RelationshipType, TLPLevel
+from connectors_sdk.models.enums import (
+    HashAlgorithm,
+    NoteType,
+    RelationshipType,
+    TLPLevel,
+)
 from pycti import OpenCTIConnectorHelper
 
+from .extracted_config import (
+    NetworkKind,
+    extract_network_indicators,
+    extract_parameters,
+    parse_extracted_config,
+)
 from .utils import is_domain
 
 
@@ -249,7 +261,6 @@ class IndicatorConverterToStix:
             "file-name": ("file", "name", "StixFile"),
             "asn": ("autonomous-system", "number", "Autonomous-System"),
             "autonomous-system": ("autonomous-system", "number", "Autonomous-System"),
-            "extracted_config": ("text", "value", "Text"),
             "text": ("text", "value", "Text"),
         }
         return mapping.get(ioc_type.lower())
@@ -307,7 +318,7 @@ class IndicatorConverterToStix:
         Returns:
             Any | None: SDK observable object, else `None`.
         """
-        common_properties = {
+        common_properties: dict = {
             "labels": labels,
             "author": self.author,
             "markings": [self.marking],
@@ -608,6 +619,14 @@ class IndicatorConverterToStix:
 
         return actor_names, malware_names
 
+    @classmethod
+    def _resolve_malware_description(cls, indicator: dict) -> str | None:
+        """Return the malware description without HTML, if any."""
+        raw_description = indicator.get("malware_description")
+        if raw_description and raw_description.strip():
+            return cls._strip_html(raw_description) or None
+        return None
+
     def _build_tag_entities_objects(
         self,
         indicator: dict,
@@ -617,10 +636,7 @@ class IndicatorConverterToStix:
         octi_objects = []
         actor_names, malware_names = self._extract_entities_from_tags(indicator)
 
-        raw_malware_description = indicator.get("malware_description")
-        malware_description = None
-        if raw_malware_description and raw_malware_description.strip():
-            malware_description = self._strip_html(raw_malware_description) or None
+        malware_description = self._resolve_malware_description(indicator)
 
         for name in actor_names:
             intrusion_set = IntrusionSet(
@@ -855,6 +871,108 @@ class IndicatorConverterToStix:
         )
         return octi_objects
 
+    def _create_network_observable(
+        self, kind: NetworkKind, value: str, labels: list[str]
+    ) -> DomainName | IPV4Address | IPV6Address | URL:
+        """Create a network observable without score to not override feed scores."""
+        common_properties: dict = {
+            "labels": labels,
+            "author": self.author,
+            "markings": [self.marking],
+        }
+        if kind == "ipv4":
+            return IPV4Address(value=value, **common_properties)
+        if kind == "ipv6":
+            return IPV6Address(value=value, **common_properties)
+        if kind == "url":
+            return URL(value=value, **common_properties)
+
+        return DomainName(value=value, **common_properties)
+
+    @staticmethod
+    def _build_config_note_content(parameters: dict[str, str]) -> str:
+        """Render config parameters as a markdown list."""
+        return "\n".join(f"- **{key}**: `{value}`" for key, value in parameters.items())
+
+    def _convert_extracted_config(self, indicator: dict) -> list:
+        """Convert an `extracted_config` indicator into malware, observables and a note.
+
+        The JSON blob is not a usable detection pattern, so no Indicator is created.
+        Network endpoints become observables linked to the malware families found
+        in the sighting tags, other parameters are kept in a note.
+
+        Args:
+            indicator: Raw `extracted_config` indicator payload.
+
+        Returns:
+            list: Generated objects, the note first. Empty when the config is
+            unparsable or yields nothing to attach to.
+        """
+        config = parse_extracted_config(indicator.get("value"))
+        if config is None:
+            self.helper.connector_logger.warning(
+                "Skipping extracted_config with invalid JSON value",
+                {"indicator_id": indicator.get("id")},
+            )
+            return []
+
+        _, malware_names = self._extract_entities_from_tags(indicator)
+        malware_description = self._resolve_malware_description(indicator)
+        malwares = [
+            Malware(
+                name=name,
+                is_family=True,
+                description=malware_description,
+                author=self.author,
+                markings=[self.marking],
+            )
+            for name in sorted(malware_names)
+        ]
+
+        labels = sorted(
+            {
+                tag
+                for tag in self._collect_sighting_tags(indicator)
+                if tag.startswith(("malware:", "type:"))
+            }
+        )
+        observables = [
+            self._create_network_observable(kind, value, labels)
+            for kind, value in extract_network_indicators(config)
+        ]
+
+        attached_objects = [*malwares, *observables]
+        if not attached_objects:
+            return []
+
+        relationships = [
+            Relationship(
+                type=RelationshipType.COMMUNICATES_WITH,
+                source=malware,
+                target=observable,
+                author=self.author,
+                markings=[self.marking],
+            )
+            for malware in malwares
+            for observable in observables
+        ]
+
+        parameters = extract_parameters(config)
+        title = ", ".join(sorted(malware_names)) or "unknown malware"
+        note = Note(
+            abstract=f"Extracted configuration ({title})",
+            content=self._build_config_note_content(parameters)
+            or "No additional parameters.",
+            note_types=[NoteType.EXTERNAL],
+            objects=attached_objects,
+            created=self._parse_datetime(indicator.get("created_at")),
+            external_references=self._build_external_references(indicator),
+            author=self.author,
+            markings=[self.marking],
+        )
+
+        return [note, *attached_objects, *relationships]
+
     def convert_indicator_to_stix(self, indicator: dict) -> list:
         """Convert a Flashpoint indicator payload into STIX objects.
 
@@ -868,6 +986,9 @@ class IndicatorConverterToStix:
         ioc_type = self._extract_ioc_type(indicator)
         if ioc_type is None:
             return []
+
+        if ioc_type.lower() == "extracted_config":
+            return self._convert_extracted_config(indicator)
 
         forced_file_stix_path = None
         if ioc_type.lower() == "file":
