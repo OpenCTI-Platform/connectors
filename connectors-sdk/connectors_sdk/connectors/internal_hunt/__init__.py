@@ -105,8 +105,6 @@ from connectors_sdk.connectors.internal_hunt.models import (
 from connectors_sdk.connectors.internal_hunt.observables import (
     ObservableValue,
     extract_observables,
-    is_public_domain,
-    is_public_ip,
     to_observable_model,
 )
 from connectors_sdk.connectors.internal_hunt.stix_mapping import (
@@ -210,8 +208,6 @@ __all__ = [
     # Observables and STIX mapping
     "ObservableValue",
     "extract_observables",
-    "is_public_domain",
-    "is_public_ip",
     "to_observable_model",
     "build_observed_data",
     "build_telemetry_objects",

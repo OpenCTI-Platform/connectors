@@ -578,19 +578,6 @@ def test_base_internal_hunt_connector_config_defaults():
     assert config.max_observables == 100
 
 
-def test_base_internal_hunt_connector_config_accepts_internet_without_platform_name():
-    """Test that the 'internet' hunt platform needs no Security Platform name."""
-
-    # Given/When: An internet hunt connector config without Security Platform name
-    config = BaseInternalHuntConnectorConfig(
-        id="connector--uid", name="Test", scope="internet"
-    )
-
-    # Then: The config is valid
-    assert config.platform == "internet"
-    assert config.security_platform_name is None
-
-
 @pytest.mark.parametrize(
     "overrides",
     [
@@ -598,7 +585,7 @@ def test_base_internal_hunt_connector_config_accepts_internet_without_platform_n
         pytest.param({"scope": ["splunk", "opensearch"]}, id="several_platforms"),
         pytest.param({"security_platform_name": None}, id="missing_platform_name"),
         pytest.param({"security_platform_name": "  "}, id="blank_platform_name"),
-        pytest.param({"scope": ["internet"]}, id="platform_name_for_internet_platform"),
+        pytest.param({"scope": ["internet"]}, id="internet_platform"),
         pytest.param({"observable_types": ["Process"]}, id="unsupported_observable"),
         pytest.param({"max_concurrent_runs": 0}, id="null_concurrency"),
         pytest.param({"max_observables": -1}, id="negative_observables"),

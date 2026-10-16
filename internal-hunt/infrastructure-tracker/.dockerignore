@@ -1,9 +1,0 @@
-__metadata__
-**/__pycache__
-**/.venv
-**/venv
-**/logs
-**/config.yml
-**/.env
-**/*.egg-info
-tests

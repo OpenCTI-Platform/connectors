@@ -27,10 +27,10 @@ Table of Contents
 
 ## Introduction
 
-Connectors of type `INTERNAL_HUNT` execute the hunts of OpenCTI on a telemetry platform (SIEM, EDR, data lake) or on
-internet scanning APIs. OpenCTI dispatches one message per hunt run; the connector translates the canonical Sigma rule
-of the hunt with [pySigma](https://github.com/SigmaHQ/pySigma) (or executes the native query written for its platform),
-runs it over the time window of the run, sends the resulting knowledge and reports the run outcome.
+Connectors of type `INTERNAL_HUNT` execute the hunts of OpenCTI on a telemetry platform (SIEM, EDR, data lake).
+OpenCTI dispatches one message per hunt run; the connector translates the canonical Sigma rule of the hunt with
+[pySigma](https://github.com/SigmaHQ/pySigma) (or executes the native query written for its platform), runs it over
+the time window of the run, sends the resulting knowledge and reports the run outcome.
 
 ## Installation
 

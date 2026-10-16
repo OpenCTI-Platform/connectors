@@ -6,8 +6,8 @@
 
 This document describes `InternalHuntConnector`, the base class of the new connector type `INTERNAL_HUNT`, and
 `BaseInternalHuntConnectorConfig`, its settings model. A hunt connector executes the hunts dispatched by OpenCTI
-(one message per hunt run) against exactly one telemetry platform (a SIEM, an EDR, a data lake) or against internet
-scanning APIs, sends the resulting knowledge and reports the run outcome.
+(one message per hunt run) against exactly one telemetry platform (a SIEM, an EDR, a data lake), sends the resulting
+knowledge and reports the run outcome.
 
 The message format, the run report and the result bundle are defined by the OpenCTI hunt contract (OpenCTI-Platform/opencti#18671).
 
@@ -48,8 +48,8 @@ the contract would be re-implemented, and could drift, in each connector.
 
 | Setting | Purpose |
 | --- | --- |
-| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `clickhouse`, `s3-ocsf`, `internet`). |
-| `security_platform_name` / `security_platform_type` | Security Platform identity the hunts run against (required, except for `internet`). |
+| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `clickhouse`, `s3-ocsf`). |
+| `security_platform_name` / `security_platform_type` | Security Platform identity the hunts run against (required). |
 | `max_concurrent_runs` | Connector-side concurrency limit, sent at registration. |
 | `observable_types` | Observable types the connector may create; IOC types by default, widened explicitly. |
 | `max_observables` | Cap of observables per run. |
@@ -73,7 +73,7 @@ class SplunkHuntConnector(InternalHuntConnector):
 | `execute(native_query, time_window, limits, deadline)` | Abstract: the query execution, every call bounded by the run `deadline` the base class waits for. |
 | `translate(sigma_rule, pipeline)` | pySigma conversion with `sigma_backend`, detection field names kept for evidence ranking. |
 | `combine_queries(queries)` | Single query, or joined with `query_join` when a Sigma document yields several. |
-| `to_stix(request, result)` | Telemetry mapping (observables + observed-data, no sighting: OpenCTI owns them); outside-in connectors override it. |
+| `to_stix(request, result)` | Telemetry mapping (observables + observed-data, no sighting: OpenCTI owns them), overridable. |
 | `on_timeout(native_query)` | No-op; cancels the platform job when overridden. |
 | `post_init()` | No-op; creates the platform client when overridden. |
 

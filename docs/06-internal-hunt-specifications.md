@@ -9,7 +9,6 @@
 - [Implementing a hunt connector](#implementing-a-hunt-connector)
 - [Knowledge produced](#knowledge-produced)
 - [Evidence and privacy](#evidence-and-privacy)
-- [Outside-in (internet) hunt connectors](#outside-in-internet-hunt-connectors)
 - [Testing](#testing)
 - [Compatibility](#compatibility)
 
@@ -33,10 +32,8 @@ Each connector instance executes against exactly one platform, identified by a s
 | `opensearch` | OpenSearch (OCSF data) |
 | `clickhouse` | ClickHouse |
 | `s3-ocsf` | OCSF data lake on S3 |
-| `internet` | Internet scanning APIs (outside-in hunts, no Security Platform) |
 
-Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`, `sql`,
-`internet`.
+Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`, `sql`.
 
 ## Architecture
 
@@ -67,7 +64,7 @@ Settings inherit `BaseInternalHuntConnectorConfig` (connector namespace, `CONNEC
 | Variable | Description |
 |---|---|
 | `CONNECTOR_SCOPE` | Exactly one platform slug. |
-| `CONNECTOR_SECURITY_PLATFORM_NAME` | Security Platform identity the hunts run against (created by OpenCTI when missing). Required, except for `internet`. |
+| `CONNECTOR_SECURITY_PLATFORM_NAME` | Security Platform identity the hunts run against (created by OpenCTI when missing). Required. |
 | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM` (default `SIEM`). |
 | `CONNECTOR_MAX_CONCURRENT_RUNS` | Connector-side concurrency limit, sent at registration. |
 | `CONNECTOR_OBSERVABLE_TYPES` | Observable types the connector may create (IOC types by default: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`; can be widened with `Hostname`, `User-Account`, `Mac-Addr`). |
@@ -227,17 +224,6 @@ escalation threshold of the new hits of the hunt.
   widens the observable types.
 - Private, loopback and reserved IP addresses, and internal domain suffixes (`.local`, `.corp`, `.internal`...), are
   never turned into observables.
-
-## Outside-in (internet) hunt connectors
-
-Connectors with the `internet` platform hunt adversary infrastructure on internet scanning APIs from fingerprint
-rules stored as hunt native queries (`platform: internet`, `language: internet`). They have no Security Platform and
-override `to_stix()` to produce `infrastructure`, observables (`ipv4-addr`, `domain-name`, `x509-certificate`) and
-detection indicators, linked with `consists-of`, `based-on`, `related-to` and `indicates` relationships, plus the
-run-scoped observed-data of the observables found (`build_observed_data`, one per observable, `number_observed` being
-the number of hosts holding it) as the link to the run (see `internal-hunt/infrastructure-tracker`). The observables,
-indicators and relationships keep their standard ids and the infrastructure takes an id seeded from the hunt id alone,
-so every run of a hunt, renamed or not, grows the same infrastructure.
 
 ## Testing
 

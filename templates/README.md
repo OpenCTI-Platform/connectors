@@ -438,10 +438,10 @@ self.helper.listen_stream(message_callback=self.process_message)
 
 #### Internal hunt connectors specifications
 
-Execute the hunts dispatched by OpenCTI (one message per hunt run) on a telemetry platform or on internet scanning
-APIs. Build the connector on `InternalHuntConnector` from the connectors-sdk: it registers the hunt platform, listens
-to the hunt runs, enforces the run limits, maps the results to STIX and reports every run. Implement the query
-languages, the pySigma backend and the query execution (see the `internal-hunt` folder of this directory and
+Execute the hunts dispatched by OpenCTI (one message per hunt run) on a telemetry platform (SIEM, EDR, data lake).
+Build the connector on `InternalHuntConnector` from the connectors-sdk: it registers the hunt platform, listens to the
+hunt runs, enforces the run limits, maps the results to STIX and reports every run. Implement the query languages, the
+pySigma backend and the query execution (see the `internal-hunt` folder of this directory and
 [the internal hunt specifications](../docs/06-internal-hunt-specifications.md)).
 
 ```python

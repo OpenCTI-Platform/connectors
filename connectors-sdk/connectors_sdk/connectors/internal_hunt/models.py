@@ -145,7 +145,7 @@ class HuntDefinition(_HuntRequestModel):
     standard_id: str = Field(description="STIX id of the hunt.")
     name: str = Field(description="Name of the hunt.")
     hypothesis: str | None = Field(default=None, description="Hunt hypothesis.")
-    hunt_type: Literal["telemetry", "indicators", "infrastructure"] = Field(
+    hunt_type: Literal["telemetry", "indicators"] = Field(
         default="telemetry", description="Kind of hunt."
     )
     sigma_rule: str | None = Field(
@@ -280,7 +280,7 @@ class HuntRequest(_HuntRequestModel):
     )
     security_platform: HuntSecurityPlatform | None = Field(
         default=None,
-        description="Security Platform the hunt runs against (null for internet hunts).",
+        description="Security Platform the hunt runs against.",
     )
 
     @field_validator("limits", mode="before")

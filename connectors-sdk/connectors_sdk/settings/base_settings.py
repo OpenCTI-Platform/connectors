@@ -560,12 +560,8 @@ HUNT_PLATFORMS: tuple[str, ...] = (
     "opensearch",
     "clickhouse",
     "s3-ocsf",
-    "internet",
 )
 """Hunt platform slugs accepted as `CONNECTOR_SCOPE` by internal hunt connectors."""
-
-HUNT_INTERNET_PLATFORM = "internet"
-"""Platform slug of the outside-in hunt connectors (no Security Platform identity)."""
 
 HUNT_IOC_OBSERVABLE_TYPES: tuple[str, ...] = (
     "IPv4-Addr",
@@ -590,13 +586,13 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
     """Settings class for internal hunt connectors.
 
     An internal hunt connector executes the hunts dispatched by OpenCTI against exactly one
-    telemetry platform (a SIEM, an EDR, a data lake) or against internet scanning APIs.
+    telemetry platform (a SIEM, an EDR, a data lake).
 
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_HUNT" for internal hunt connectors.
         scope (ListFromString): Exactly one hunt platform slug (see `HUNT_PLATFORMS`).
         security_platform_name (str | None): Name of the OpenCTI Security Platform identity the connector
-            executes against. Created by OpenCTI when missing. Must be empty only for the "internet" platform.
+            executes against (required). Created by OpenCTI when missing.
         security_platform_type (str): Type of the Security Platform identity.
         max_concurrent_runs (int | None): Connector-side limit of concurrent hunt runs.
         observable_types (ListFromString): Observable types the connector may create from hunt results.
@@ -614,7 +610,7 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
         default=None,
         description=(
             "Name of the OpenCTI Security Platform the hunts are executed against "
-            "(created when missing). Leave empty only for the 'internet' platform."
+            "(created when missing)."
         ),
     )
     security_platform_type: Literal["SIEM", "EDR", "XDR", "SOAR", "NDR", "ISPM"] = (
@@ -670,18 +666,10 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
 
     @model_validator(mode="after")
     def _validate_security_platform(self) -> Self:
-        """Require a Security Platform name for every platform except 'internet'."""
-        is_internet = self.scope[0] == HUNT_INTERNET_PLATFORM
-        has_name = bool(
-            self.security_platform_name and self.security_platform_name.strip()
-        )
-        if not is_internet and not has_name:
+        """Require the name of the Security Platform the hunts run against."""
+        if not (self.security_platform_name and self.security_platform_name.strip()):
             raise ValueError(
                 f"security_platform_name is required for the '{self.scope[0]}' hunt platform."
-            )
-        if is_internet and has_name:
-            raise ValueError(
-                "security_platform_name must be empty for the 'internet' hunt platform."
             )
         return self
 

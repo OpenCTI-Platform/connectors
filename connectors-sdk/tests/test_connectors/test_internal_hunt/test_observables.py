@@ -7,12 +7,12 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntEvent,
     ObservableValue,
     extract_observables,
-    is_public_domain,
-    is_public_ip,
     to_observable_model,
 )
 from connectors_sdk.connectors.internal_hunt.observables import (
     field_tokens,
+    is_public_domain,
+    is_public_ip,
     observables_from_value,
 )
 from connectors_sdk.models import (
@@ -61,7 +61,7 @@ def test_field_tokens(field, expected):
 
 
 def test_public_ip_and_domain_filters():
-    # Given/When/Then only internet infrastructure passes the filters
+    # Given/When/Then only public addresses and domains pass the filters
     assert is_public_ip("8.8.8.8") == "IPv4-Addr"
     assert is_public_ip("2001:4860:4860::8888") == "IPv6-Addr"
     assert is_public_ip("10.0.0.1") is None
