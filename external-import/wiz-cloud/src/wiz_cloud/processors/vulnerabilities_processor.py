@@ -19,6 +19,7 @@ from connectors_sdk.models import (
     Software,
     System,
     TLPMarking,
+    Vulnerability,
 )
 from connectors_sdk.models.enums import CvssSeverity, RelationshipType
 from pydantic import ValidationError
@@ -26,7 +27,6 @@ from requests.exceptions import RequestException
 from wiz_cloud.client_api import WizApiClient, WizGraphQLError
 from wiz_cloud.models import WizCvssV2, WizVulnerabilityFinding
 from wiz_cloud.settings import WizCloudConfig
-from wiz_cloud.ssvc_vulnerability import SsvcVulnerability
 
 VULNERABILITIES_QUERY = (
     resources.files("wiz_cloud.queries")
@@ -319,11 +319,11 @@ class WizVulnerabilitiesProcessor:
             ),
         ]
 
-    def _vulnerability(self, finding: WizVulnerabilityFinding) -> SsvcVulnerability:
+    def _vulnerability(self, finding: WizVulnerabilityFinding) -> Vulnerability:
         cvss_v2 = _usable_cvss_v2(finding.cvss_v2)
         cvss_v3 = finding.cvss_v3
         cvss_v4 = finding.cvss_v4
-        return SsvcVulnerability(
+        return Vulnerability(
             # The OpenCTI id derives from the name alone, so it must be the
             # CVE id.
             name=finding.name,
