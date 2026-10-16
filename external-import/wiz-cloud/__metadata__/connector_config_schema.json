@@ -100,6 +100,11 @@
       },
       "type": "array"
     },
+    "WIZ_CLOUD_IMPORT_TTPS": {
+      "default": true,
+      "description": "Whether to import the MITRE ATT&CK techniques mapped to the source rules of the imported issues. They are returned by the issues query itself, so importing them costs no extra API call.",
+      "type": "boolean"
+    },
     "WIZ_CLOUD_IMPORT_VULNERABILITIES": {
       "default": false,
       "description": "Whether to import vulnerability findings for the cloud assets referenced by the imported issues.",

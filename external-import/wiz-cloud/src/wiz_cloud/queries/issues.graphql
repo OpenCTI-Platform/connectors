@@ -31,6 +31,18 @@ query IssuesV2($after: String, $first: Int, $orderBy: IssueOrder, $filterBy: Iss
 
       sourceRules {
         name          # the human-readable headline the Wiz UI shows as title
+        securitySubCategories {
+          title
+          externalId  # "TA0042-T1587.001" for MITRE, "3.1" for Wiz frameworks
+          description
+          category {
+            name      # the MITRE tactic, for the kill chain phase
+            description
+            framework {
+              name    # only the MITRE matrices are converted
+            }
+          }
+        }
       }
 
       # Parsed and stored in the domain model, not converted to STIX yet
