@@ -9,6 +9,7 @@ connector:
   log_level: 'error' # optional (default: 'error')
   auto: false # must remain false when scope includes Incident
   auto_update: false # must remain false when scope includes Incident
+  max_tlp: 'TLP:RED' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:RED')
 
 doppel_alert_takedown:
   api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
@@ -30,4 +31,3 @@ doppel_alert_takedown:
 
   tags: [] # optional, list of tags added to created alerts (default: empty)
   takedown_comment: 'Confirmed by OpenCTI — requesting takedown.' # optional
-  max_tlp: 'TLP:RED' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:RED')
