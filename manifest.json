@@ -29645,6 +29645,33 @@
       "container_type": "INTERNAL_ENRICHMENT"
     },
     {
+      "title": "IPGeolocation.io",
+      "slug": "ipgeolocation",
+      "description": "IPGeolocation.io enriches IPv4 and IPv6 observables with IP intelligence from one API request: geolocation, autonomous system, company, threat intelligence and abuse contact.\n\nKey features:\n\n- Threat score and VPN, proxy, residential proxy, Tor, relay, bot, spam and known attacker signals, turned into an OpenCTI score and labels\n- Country and city with located-at relationships, autonomous system with belongs-to, operating organization and cloud provider\n- Hostname with a resolves-to relationship\n- Optional indicator for addresses whose risk score reaches a threshold\n- A note with the full enrichment report, including the abuse contact\n- TLP checked before any data leaves OpenCTI; works on free plans (location and ASN) and paid plans",
+      "short_description": "Enriches IPv4 and IPv6 observables with geolocation, ASN, company, threat score, VPN, proxy and Tor signals, and abuse contacts from IPGeolocation.io.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Infrastructure & Attack Surface Visibility",
+        "Detection & Response Enablement"
+      ],
+      "solution_categories": [
+        "Enrichment & Reputation"
+      ],
+      "license_type": "Commercial",
+      "contact": "support@ipgeolocation.io",
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": true,
+      "max_confidence_level": 50,
+      "support_version": ">=7.261016.0",
+      "subscription_link": "https://ipgeolocation.io/pricing.html",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipgeolocation",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-ipgeolocation",
+      "container_type": "INTERNAL_ENRICHMENT"
+    },
+    {
       "title": "PolySwarm Scan & Sandbox",
       "slug": "polyswarm-sandbox",
       "description": "Submits Artifact observables to PolySwarm for multi-engine scanning and sandbox analysis (CAPE, Triage, or both). Creates STIX Notes with scan verdicts, sandbox behavioral reports, LLM threat summaries, and network IOCs. Optionally enriches with malware family profiles (threat actors, CVEs, ATT&CK patterns) via polykg. Attaches JSON, PDF, and LLM reports as files to the observable.",
@@ -34407,6 +34434,14 @@
             "format": "password",
             "type": "string",
             "writeOnly": true
+          },
+          "ZSCALER_API_BASE_URL": {
+            "default": "https://zsapi.zscalertwo.net/",
+            "description": "Base URL of the Zscaler ZIA API for your Zscaler cloud, without the `/api/v1` path (e.g. `https://zsapi.zscalerone.net`).",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
           },
           "ZSCALER_BLACKLIST_NAME": {
             "default": "BLACK_LIST_DYNDNS",
