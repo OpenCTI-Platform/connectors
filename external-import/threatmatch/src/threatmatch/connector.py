@@ -3,6 +3,8 @@ import traceback
 from datetime import UTC, datetime
 from typing import Any
 
+import pycti
+import stix2
 from pycti import OpenCTIConnectorHelper
 from threatmatch.client import ThreatMatchClient
 from threatmatch.config import ConnectorSettings
@@ -30,14 +32,28 @@ class Connector:
         return stix_objects
 
     @staticmethod
-    def _score_stix_object(stix_object: dict[str, Any]) -> tuple[int, str]:
+    def _parse_modified(stix_object: dict[str, Any]) -> tuple[int, float]:
+        modified = stix_object.get("modified")
+        if isinstance(modified, str) and modified:
+            try:
+                return (
+                    1,
+                    datetime.fromisoformat(modified.replace("Z", "+00:00")).timestamp(),
+                )
+            except ValueError:
+                pass
+        return (0, 0.0)
+
+    @classmethod
+    def _score_stix_object(cls, stix_object: dict[str, Any]) -> tuple[int, float, int]:
         meaningful_values = [
             value
             for key, value in stix_object.items()
             if key not in {"id", "type", "spec_version"}
             and value not in (None, "", [], {})
         ]
-        return (len(meaningful_values), stix_object.get("modified", ""))
+        has_modified, modified_ts = cls._parse_modified(stix_object)
+        return (has_modified, modified_ts, len(meaningful_values))
 
     # Labels are not unioned by the generic scoring above: the same indicator
     # can be reported by ThreatMatch through both a profile export (carrying
@@ -54,6 +70,39 @@ class Connector:
                     merged.append(label)
         return merged
 
+    _TLP_RANK_BY_ID = {
+        stix2.TLP_WHITE.id: 0,
+        pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR"): 0,
+        stix2.TLP_GREEN.id: 1,
+        stix2.TLP_AMBER.id: 2,
+        pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"): 3,
+        stix2.TLP_RED.id: 4,
+    }
+
+    @classmethod
+    def _merge_markings(cls, stix_objects: list[dict[str, Any]]) -> list[str]:
+        all_markings = list(
+            dict.fromkeys(
+                marking
+                for stix_object in stix_objects
+                for marking in stix_object.get("object_marking_refs") or []
+                if isinstance(marking, str) and marking
+            )
+        )
+        tlp_markings = [m for m in all_markings if m in cls._TLP_RANK_BY_ID]
+        if len(tlp_markings) <= 1:
+            return all_markings
+
+        most_restrictive_tlp = max(tlp_markings, key=cls._TLP_RANK_BY_ID.__getitem__)
+        merged: list[str] = []
+        for marking in all_markings:
+            if marking in cls._TLP_RANK_BY_ID:
+                if marking == most_restrictive_tlp and marking not in merged:
+                    merged.append(marking)
+            else:
+                merged.append(marking)
+        return merged
+
     def _deduplicate_processed_objects(
         self, processed_objects: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
@@ -63,13 +112,64 @@ class Connector:
 
         deduplicated = []
         for stix_objects in grouped.values():
-            best = max(stix_objects, key=self._score_stix_object)
+            best = dict(max(stix_objects, key=self._score_stix_object))
             if len(stix_objects) > 1:
+                for candidate in sorted(
+                    stix_objects, key=self._score_stix_object, reverse=True
+                ):
+                    for key, value in candidate.items():
+                        if best.get(key) in (None, "", [], {}) and value not in (
+                            None,
+                            "",
+                            [],
+                            {},
+                        ):
+                            best[key] = value
                 merged_labels = self._merge_labels(stix_objects)
                 if merged_labels:
-                    best = {**best, "labels": merged_labels}
+                    best["labels"] = merged_labels
+                merged_markings = self._merge_markings(stix_objects)
+                if merged_markings:
+                    best["object_marking_refs"] = merged_markings
             deduplicated.append(best)
         return deduplicated
+
+    def _add_report_observables(
+        self, processed_objects: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        indicators = {
+            obj["id"]: obj for obj in processed_objects if obj["type"] == "indicator"
+        }
+        existing_objects = {obj["id"]: obj for obj in processed_objects}
+        observables: dict[str, dict[str, Any]] = {}
+        for report in processed_objects:
+            if report["type"] != "report":
+                continue
+            refs = report.get("object_refs", [])
+            additional_refs = []
+            for ref in refs:
+                indicator = indicators.get(ref)
+                if indicator is None:
+                    continue
+                observable = self.converter.create_observable(indicator)
+                if observable is None:
+                    continue
+                previous = observables.get(observable["id"]) or existing_objects.get(
+                    observable["id"]
+                )
+                if previous:
+                    previous["object_marking_refs"] = self._merge_markings(
+                        [previous, observable]
+                    )
+                else:
+                    observables[observable["id"]] = observable
+                if (
+                    observable["id"] not in refs
+                    and observable["id"] not in additional_refs
+                ):
+                    additional_refs.append(observable["id"])
+            report["object_refs"] = refs + additional_refs
+        return processed_objects + list(observables.values())
 
     def _get_all_content_group_id(self, taxii_groups: list[dict[str, Any]]) -> str:
         id_by_group = {group["name"]: group["id"] for group in taxii_groups}
@@ -191,6 +291,7 @@ class Connector:
                     for processed_stix_object in self.converter.process(stix_object)
                 ]
             )
+            processed_stix_object = self._add_report_observables(processed_stix_object)
             bundle = self.helper.stix2_create_bundle(
                 items=[self.converter.author, self.converter.tlp_marking]
                 + processed_stix_object

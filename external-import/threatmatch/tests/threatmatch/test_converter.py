@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock
 
 import pycti
+import pytest
+import stix2
 from threatmatch.converter import Converter
 
 
@@ -134,12 +136,13 @@ def test_converter_maps_associated_content_to_related_to() -> None:
     converted = list(converter.process(stix_object))
     assert len(converted) == 1
     relationship = converted[0]
+    expected_source_ref = actor_id.replace("threat-actor", "intrusion-set")
     assert relationship["relationship_type"] == "related-to"
-    assert relationship["id"] == stix_object["id"]
-    assert relationship["source_ref"] == actor_id.replace(
-        "threat-actor", "intrusion-set"
-    )
+    assert relationship["source_ref"] == expected_source_ref
     assert relationship["target_ref"] == campaign_id
+    assert relationship["id"] == pycti.StixCoreRelationship.generate_id(
+        "related-to", expected_source_ref, campaign_id
+    )
 
 
 def test_converter_converts_attck_labels_to_attack_patterns() -> None:
@@ -332,6 +335,92 @@ def test_converter_omits_redundant_indicator_description() -> None:
     assert "description" not in converted[0]
 
 
+@pytest.mark.parametrize(
+    ("pattern", "observable_type", "field", "value"),
+    [
+        (
+            "[file:hashes.'SHA-256'='55a06694bb96ecc422a7a6c731053b1ef5a35b5f5bac78752ca60b729cf7441f']",
+            "file",
+            "hashes",
+            {
+                "SHA-256": "55a06694bb96ecc422a7a6c731053b1ef5a35b5f5bac78752ca60b729cf7441f"
+            },
+        ),
+        (
+            "[url:value='https://example.org/path']",
+            "url",
+            "value",
+            "https://example.org/path",
+        ),
+        (
+            "[email-addr:value='analyst@example.org']",
+            "email-addr",
+            "value",
+            "analyst@example.org",
+        ),
+        ("[domain-name:value='example.org']", "domain-name", "value", "example.org"),
+        ("[ipv4-addr:value='192.0.2.1']", "ipv4-addr", "value", "192.0.2.1"),
+        ("[ipv6-addr:value='2001:db8::1']", "ipv6-addr", "value", "2001:db8::1"),
+    ],
+)
+def test_converter_creates_deterministic_observable_for_supported_indicator(
+    pattern: str, observable_type: str, field: str, value: str | dict[str, str]
+) -> None:
+    converter = _build_converter()
+    source_author_id = "identity--11111111-1111-4111-8111-111111111111"
+    indicator = {
+        "type": "indicator",
+        "pattern_type": "stix",
+        "pattern": pattern,
+        "created_by_ref": source_author_id,
+        "object_marking_refs": [converter.tlp_marking.id],
+    }
+
+    observable = converter.create_observable(indicator)
+
+    assert observable is not None
+    assert observable["type"] == observable_type
+    assert observable[field] == value
+    assert observable["id"] == converter.create_observable(indicator)["id"]
+    assert observable["object_marking_refs"] == indicator["object_marking_refs"]
+    assert observable["x_opencti_created_by_ref"] == source_author_id
+    assert stix2.parse(observable, allow_custom=True).id == observable["id"]
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "[file:name='invoice.docm']",
+        "[file:hashes.'SHA-256'='abc']",
+        "[file:hashes.'SHA-256'='abc' AND url:value='https://example.org']",
+        r"[url:value='https://example.org/\\'quoted']",
+        "[url:value='not-a-url']",
+        "[url:value='https://[invalid']",
+        "[url:value='https://example.org:not-a-port']",
+        "[email-addr:value='invalid-email']",
+        "[domain-name:value='not a domain']",
+        "[ipv4-addr:value='999.0.0.1']",
+        "[ipv6-addr:value='192.0.2.1']",
+    ],
+)
+def test_converter_does_not_create_observable_for_unsupported_pattern(
+    pattern: str,
+) -> None:
+    converter = _build_converter()
+    assert (
+        converter.create_observable(
+            {"type": "indicator", "pattern_type": "stix", "pattern": pattern}
+        )
+        is None
+    )
+    assert (
+        converter.create_observable(
+            {"type": "indicator", "pattern_type": "yara", "pattern": pattern}
+        )
+        is None
+    )
+
+
 def test_converter_does_not_create_attack_patterns_for_reports() -> None:
     converter = _build_converter()
     stix_object = {
@@ -427,3 +516,78 @@ def test_converter_inherits_source_marking_on_derived_objects() -> None:
         obj["object_marking_refs"] == stix_object["object_marking_refs"]
         for obj in derived_objects
     )
+
+
+def test_converter_extracts_description_footer_targets_and_cleans_labels() -> None:
+    converter = _build_converter(threat_actor_to_intrusion_set=True)
+    stix_object = {
+        "type": "threat-actor",
+        "id": "threat-actor--01234567-89ab-cdef-0123-456789abcdef",
+        "created": "2025-05-27T15:29:48.000Z",
+        "modified": "2026-07-30T13:12:12.000Z",
+        "name": "KillSec",
+        "goals": ["Extortion"],
+        "description": (
+            "<p>Overview of KillSec.</p> "
+            "Target geography: Global, North America, Belgium, United States of America (USA), Unknown. "
+            "Language: English. "
+            "Sectors: Aerospace, defence & security, Energy, utilities & mining, Healthcare, All."
+        ),
+        "labels": [
+            "Hacker Group",
+            "Organised Crime Group (OCG)",
+            "Hacktivist",
+            "Financial gain",
+            "Unknown",
+            "Global",
+            "North America",
+            "Belgium",
+            "United States of America (USA)",
+            "English",
+            "Extortion",
+        ],
+    }
+
+    converted = list(converter.process(stix_object))
+    main_object = converted[0]
+    assert main_object["type"] == "intrusion-set"
+    assert main_object["labels"] == [
+        "Hacker Group",
+        "Organised Crime Group (OCG)",
+        "Hacktivist",
+        "Financial gain",
+    ]
+
+    locations = [obj for obj in converted if obj["type"] == "location"]
+    assert [(loc["name"], loc["x_opencti_location_type"]) for loc in locations] == [
+        ("North America", "Region"),
+        ("Belgium", "Country"),
+        ("United States of America (USA)", "Country"),
+    ]
+    assert locations[0]["id"] == pycti.Location.generate_id(
+        name="North America", x_opencti_location_type="Region"
+    )
+    assert locations[1]["id"] == pycti.Location.generate_id(
+        name="Belgium", x_opencti_location_type="Country"
+    )
+
+    sectors = [obj for obj in converted if obj["type"] == "identity"]
+    assert [sec["name"] for sec in sectors] == [
+        "Aerospace, defence & security",
+        "Energy, utilities & mining",
+        "Healthcare",
+    ]
+    assert all(sec["identity_class"] == "class" for sec in sectors)
+    assert sectors[0]["id"] == pycti.Identity.generate_id(
+        name="Aerospace, defence & security", identity_class="class"
+    )
+
+    relationships = [obj for obj in converted if obj["type"] == "relationship"]
+    assert len(relationships) == len(locations) + len(sectors)
+    for relationship, target in zip(relationships, [*locations, *sectors]):
+        assert relationship["relationship_type"] == "targets"
+        assert relationship["source_ref"] == main_object["id"]
+        assert relationship["target_ref"] == target["id"]
+        assert relationship["id"] == pycti.StixCoreRelationship.generate_id(
+            "targets", main_object["id"], target["id"]
+        )
