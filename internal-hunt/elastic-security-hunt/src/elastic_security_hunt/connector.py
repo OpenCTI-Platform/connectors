@@ -232,6 +232,7 @@ class ElasticSecurityHuntConnector(InternalHuntConnector):
             events=events,
             total_hits=result.total,
             truncated=result.partial or result.total > returned,
+            queries_count=result.queries,
         )
 
     def on_timeout(self, native_query: NativeQuery) -> None:

@@ -30,6 +30,14 @@ class SplunkHuntConnectorConfig(BaseInternalHuntConnectorConfig):
         description="Name of the OpenCTI Security Platform the hunts are executed against.",
         default="Splunk",
     )
+    max_concurrent_runs: int | None = Field(
+        description="Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time "
+        "(a run holds one query on the platform at a time). The platform budget is the minimum of its own "
+        "setting and this value. Defaults to 3, the default concurrent search quota of a Splunk role "
+        "('srchJobsQuota').",
+        default=3,
+        ge=1,
+    )
 
 
 class SplunkHuntConfig(BaseConfigModel):

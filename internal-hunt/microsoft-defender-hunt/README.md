@@ -58,7 +58,7 @@ Table of Contents
   - [Query languages](#query-languages)
   - [Indicator hunts](#indicator-hunts)
   - [Behavior](#behavior)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -111,7 +111,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `Microsoft Defender XDR` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per tenant. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `XDR` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `2` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). Defaults to 2: the advanced hunting call and CPU quotas are shared by the whole tenant. |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | Tenant ID | `microsoft_defender_hunt.tenant_id` | `MICROSOFT_DEFENDER_HUNT_TENANT_ID` | | Yes | Microsoft Entra tenant ID of the app registration. |
@@ -221,7 +221,17 @@ Other types (`Mac-Addr`, `User-Account`, SHA-512 hashes...) are reported not sea
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Per query | 100,000 rows, 64 MB of results and 10 minutes of running time. | [Advanced hunting quotas and usage parameters](https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-overview#quotas-and-usage-parameters) |
+| CPU | Allocated per tenant from its size and refreshed every 15 minutes: queries are blocked at 100% until the next cycle. | [Advanced hunting quotas and usage parameters](https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-overview#quotas-and-usage-parameters) |
+| Calls | At least 45 calls per minute per tenant, depending on its size; the Defender for Endpoint API also states 1,500 calls per hour. The Microsoft Graph page of `runHuntingQuery` states no call rate. | [Advanced hunting API](https://learn.microsoft.com/en-us/defender-xdr/api-advanced-hunting), [Defender for Endpoint advanced hunting API](https://learn.microsoft.com/en-us/defender-endpoint/api/run-advanced-query-api) |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|

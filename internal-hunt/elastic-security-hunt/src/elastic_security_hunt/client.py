@@ -43,6 +43,7 @@ class SearchResult:
         partial: True when Elasticsearch flagged the results as partial.
         sequences: For each row, the EQL sequence it belongs to (``None``
             outside a sequence): the events of one sequence are one hit.
+        queries: Queries sent to Elasticsearch (two when the matches were counted).
     """
 
     def __init__(
@@ -51,6 +52,7 @@ class SearchResult:
         total: int,
         partial: bool,
         sequences: list[str | None] | None = None,
+        queries: int = 1,
     ) -> None:
         """Initialize the result.
 
@@ -59,11 +61,13 @@ class SearchResult:
             total: Total number of matches.
             partial: Whether the results are partial.
             sequences: EQL sequence of each row, ``None`` outside a sequence.
+            queries: Queries sent to Elasticsearch.
         """
         self.rows = rows
         self.total = total
         self.partial = partial
         self.sequences = sequences or [None] * len(rows)
+        self.queries = queries
 
 
 class ElasticsearchClient(HuntApiClient):
@@ -169,7 +173,9 @@ class ElasticsearchClient(HuntApiClient):
         rows = esql_rows(answer)
         total = len(rows)
         partial = bool(answer.get("is_partial"))
+        queries = 1
         if total >= cap:
+            queries = 2
             counted = self._esql_rows(
                 f"{query}\n| stats {COUNT_COLUMN} = count(*)",
                 start,
@@ -187,7 +193,7 @@ class ElasticsearchClient(HuntApiClient):
                 # below the page size) cannot prove that every match was
                 # returned: the page size is kept as a lower bound.
                 partial = True
-        return SearchResult(rows, total, partial)
+        return SearchResult(rows, total, partial, queries=queries)
 
     def _esql_rows(
         self,

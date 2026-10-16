@@ -212,4 +212,5 @@ class OpenSearchOcsfHuntConnector(InternalHuntConnector):
             events=events,
             total_hits=result.total,
             truncated=result.partial or result.total > len(events),
+            queries_count=result.queries,
         )

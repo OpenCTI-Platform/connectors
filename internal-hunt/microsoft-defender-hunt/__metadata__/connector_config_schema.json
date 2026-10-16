@@ -67,8 +67,8 @@
       "type": "string"
     },
     "CONNECTOR_MAX_CONCURRENT_RUNS": {
-      "default": null,
-      "description": "Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time. The platform budget is the minimum of its own setting and this value.",
+      "default": 2,
+      "description": "Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time (a run holds one query on the platform at a time). The platform budget is the minimum of its own setting and this value. Defaults to 2: the advanced hunting call and CPU quotas are shared by the whole tenant.",
       "minimum": 1,
       "type": "integer"
     },

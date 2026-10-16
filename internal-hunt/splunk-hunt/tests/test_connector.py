@@ -369,7 +369,7 @@ def test_start_registers_the_splunk_platform_and_listens():
         security_platform_name="Splunk",
         security_platform_type="SIEM",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=3,
         supports_indicators=True,
         required_permissions=[
             {"name": name, "purpose": purpose}

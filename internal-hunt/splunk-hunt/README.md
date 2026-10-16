@@ -60,7 +60,7 @@ Table of Contents
   - [Query languages](#query-languages)
   - [Behavior](#behavior)
     - [Indicator hunts](#indicator-hunts)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -111,7 +111,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `Splunk` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per Splunk deployment. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `3` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). Defaults to 3: the default concurrent search quota of a Splunk role (`srchJobsQuota`). |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | Splunk URL | `splunk_hunt.url` | `SPLUNK_HUNT_URL` | | Yes | URL of the Splunk REST API, e.g. `https://splunk.example.com:8089`. |
@@ -223,7 +223,17 @@ text. The connector registers as supporting indicator lookups and, for each run:
 
 Preview the query in OpenCTI shows the searches of every batch without running them.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Concurrent searches | 3 historical searches at a time per user of a role by default (`srchJobsQuota`). | [authorize.conf](https://help.splunk.com/en/data-management/splunk-enterprise-admin-manual/10.4/configuration-file-reference/10.4.2-configuration-file-reference/authorize.conf) |
+| Events per search | 50,000 by default (`[searchresults] maxresultrows`), up to 1,000,000 on Splunk Cloud Platform. | [Manage limits.conf configurations in Splunk Cloud Platform](https://help.splunk.com/en/splunk-cloud-platform/administer/admin-config-service-manual/10.5.2605/administer-splunk-cloud-platform-using-the-admin-config-service-acs-api/manage-limits.conf-configurations-in-splunk-cloud-platform) |
+| Request rate | Not documented by the vendor. | - |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|

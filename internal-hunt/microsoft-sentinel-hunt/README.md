@@ -56,7 +56,7 @@ Table of Contents
   - [Usage](#usage)
   - [Query languages](#query-languages)
   - [Behavior](#behavior)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -106,7 +106,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `Microsoft Sentinel` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per workspace. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `5` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). Defaults to 5: the concurrent queries of a Log Analytics user. |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | Authentication | `microsoft_sentinel_hunt.auth_type` | `MICROSOFT_SENTINEL_HUNT_AUTH_TYPE` | `app_registration` | No | `app_registration` (client secret) or `azure_credential` (managed identity, workload identity or `az login`). |
@@ -191,7 +191,17 @@ The connector executes `kql`.
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Request rate | 200 requests per 30 seconds per Microsoft Entra user or client IP address. | [Azure Monitor service limits](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/service-limits#query-api) |
+| Concurrent queries | 5 per user; up to 200 more wait in a queue for 3 minutes at most, then fail with HTTP 429. | [Azure Monitor service limits](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/service-limits#user-query-throttling) |
+| Per query | 500,000 records, about 100 MiB of data (64 MB compressed) and 10 minutes of running time. | [Azure Monitor service limits](https://learn.microsoft.com/en-us/azure/azure-monitor/fundamentals/service-limits#query-api) |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|

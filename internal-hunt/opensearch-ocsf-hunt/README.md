@@ -59,7 +59,7 @@ Table of Contents
   - [Usage](#usage)
   - [Query languages](#query-languages)
   - [Behavior](#behavior)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -110,7 +110,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `OpenSearch` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per cluster. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `3` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | OpenSearch URL | `opensearch_ocsf_hunt.url` | `OPENSEARCH_OCSF_HUNT_URL` | | Yes | URL of the cluster, e.g. `https://opensearch.example.com:9200`. |
@@ -199,7 +199,17 @@ The connector executes `ppl` and `opensearch-lucene`.
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Hits per search | 10,000 by default (`index.max_result_window`). | [Index settings](https://docs.opensearch.org/latest/install-and-configure/configuring-opensearch/index-settings/) |
+| PPL rows and timeout | 10,000 rows (`plugins.query.size_limit`) and 5 minutes (`plugins.ppl.query.timeout`) by default. | [SQL settings](https://docs.opensearch.org/latest/search-plugins/sql/settings/) |
+| Request rate | Not documented by the vendor: the resources of the cluster bound it. | - |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|

@@ -41,6 +41,9 @@ class InternalHuntConnectorConfig(BaseInternalHuntConnectorConfig):
             `s3-ocsf`).
         - [ ] Replace `security_platform_name` default with the name of the
             Security Platform identity the hunts run against.
+        - [ ] Set the `max_concurrent_runs` default from the concurrency quota
+            the platform vendor documents (one run holds one query at a time),
+            and list the quotas, with their sources, in the README.
     """
 
     id: str = Field(
@@ -58,6 +61,13 @@ class InternalHuntConnectorConfig(BaseInternalHuntConnectorConfig):
     security_platform_name: str | None = Field(
         description="Name of the OpenCTI Security Platform the hunts are executed against.",
         default="Template SIEM",
+    )
+    max_concurrent_runs: int | None = Field(
+        description="Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time "
+        "(a run holds one query on the platform at a time). The platform budget is the minimum of its own "
+        "setting and this value.",
+        default=3,  # replace with a default fitting the documented quotas of the platform
+        ge=1,
     )
 
 

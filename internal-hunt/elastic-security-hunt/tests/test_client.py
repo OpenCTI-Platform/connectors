@@ -117,6 +117,7 @@ def test_esql_is_polled_then_deleted(requests_mock):
     # Then it is long-polled until done, then deleted
     assert result.rows == [{"a": 1}]
     assert result.partial is True
+    assert result.queries == 1
     assert delete.call_count == 1
     assert requests_mock.request_history[1].qs["wait_for_completion_timeout"] == ["30s"]
 
@@ -140,7 +141,7 @@ def test_esql_counts_when_the_cap_is_reached(requests_mock):
         "from x\n| limit 2",
         "from x\n| stats opencti_hit_count = count(*)",
     ]
-    assert (result.total, result.partial) == (57, False)
+    assert (result.total, result.partial, result.queries) == (57, False, 2)
 
 
 def test_esql_propagates_a_partial_count(requests_mock):

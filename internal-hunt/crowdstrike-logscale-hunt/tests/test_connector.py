@@ -96,7 +96,7 @@ def test_execute_caps_and_maps_events(connector_factory, requests_mock):
     assert _queries(requests_mock) == [
         "#event_simpleName=ProcessRollup2\n| tail(limit=1000)"
     ]
-    assert result.hits_count == 1
+    assert (result.hits_count, result.queries_count) == (1, 1)
     assert result.truncated is False
     assert result.events[0].timestamp == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
 
@@ -141,6 +141,7 @@ def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock
     # Then the total comes from the count query
     assert _queries(requests_mock) == ["q\n| tail(limit=1)", "q\n| count()"]
     assert (result.hits_count, result.truncated) == (42, True)
+    assert result.queries_count == 2
     assert result.events[0].timestamp == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
 
 
@@ -446,7 +447,7 @@ def test_start_registers_the_logscale_platform_and_listens():
         security_platform_name="CrowdStrike Falcon",
         security_platform_type="SIEM",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=3,
         supports_indicators=True,
         required_permissions=[
             {"name": name, "purpose": purpose}
