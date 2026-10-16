@@ -30,10 +30,11 @@ Each connector instance executes against exactly one platform, identified by a s
 | `crowdstrike-logscale` | CrowdStrike Falcon LogScale |
 | `google-secops` | Google Security Operations (Chronicle) |
 | `opensearch` | OpenSearch (OCSF data) |
+| `sentinelone` | SentinelOne Singularity (Singularity Data Lake PowerQuery) |
 | `clickhouse` | ClickHouse |
 | `s3-ocsf` | OCSF data lake on S3 |
 
-Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`, `sql`.
+Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`, `powerquery`, `sql`.
 
 ## Architecture
 

@@ -558,6 +558,7 @@ HUNT_PLATFORMS: tuple[str, ...] = (
     "crowdstrike-logscale",
     "google-secops",
     "opensearch",
+    "sentinelone",
     "clickhouse",
     "s3-ocsf",
 )
