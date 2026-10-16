@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/darkmoon_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Darkmoon",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Vulnerability",
+        "Note",
+        "Report",
+        "Attack-Pattern"
+      ],
+      "description": "The scope of the connector, i.e. the type of entities it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour).",
+      "format": "duration",
+      "type": "string"
+    },
+    "DARKMOON_EXPORT_PATH": {
+      "description": "Absolute path, inside the connector container, to the Darkmoon OSS data directory. This is the host directory the Darkmoon stack mounts at `/root/.local/share/opencode` (named `darkmoon-settings` in the reference docker-compose). It must contain the `campaigns/`, `vulnerabilities/` subdirectories and, optionally, a `targets.json` file.",
+      "examples": [
+        "/opt/darkmoon-data"
+      ],
+      "format": "path",
+      "type": "string"
+    },
+    "DARKMOON_IMPORT_SINCE": {
+      "description": "The start date (ISO 8601) for importing campaigns. Can be absolute (e.g. '2026-01-01T00:00:00Z') or relative (e.g. 'P30D' meaning '30 days ago'). Used as the initial checkpoint on the connector's first run; subsequent runs resume from the connector state.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "DARKMOON_IMPORT_FINDINGS": {
+      "default": true,
+      "description": "Enable/disable the import of findings (vulnerabilities + evidence notes).",
+      "type": "boolean"
+    },
+    "DARKMOON_IMPORT_ATTACK_PATTERNS": {
+      "default": true,
+      "description": "Create an Attack Pattern (and a relationship to the vulnerability) for each finding that carries a MITRE ATT&CK technique id.",
+      "type": "boolean"
+    },
+    "DARKMOON_TLP_LEVEL": {
+      "description": "Default TLP (Traffic Light Protocol) marking applied to every object this connector creates. Darkmoon findings describe your own infrastructure, so a restrictive marking is recommended.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "red"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "DARKMOON_EXPORT_PATH"
+  ],
+  "additionalProperties": true
+}
