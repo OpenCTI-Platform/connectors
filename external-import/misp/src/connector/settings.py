@@ -12,6 +12,7 @@ from connectors_sdk import (
 from datasize import DataSize
 from pydantic import (
     AfterValidator,
+    AliasChoices,
     BeforeValidator,
     Field,
     HttpUrl,
@@ -273,6 +274,10 @@ class MispConfig(BaseConfigModel):
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
         default="",
         alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
+        validation_alias=AliasChoices(
+            "report_description_attribute_filters",
+            "report_description_attribute_filter",
+        ),
     )
     create_tags_as_labels: bool = Field(
         description="Whether to create labels from MISP tags or not.",
@@ -282,6 +287,9 @@ class MispConfig(BaseConfigModel):
         description="Whether to **guess** and create Threats from MISP tags or not.",
         default=False,
         alias="guess_threat_from_tags",  # backward compatibility with mispelled env var
+        validation_alias=AliasChoices(
+            "guess_threats_from_tags", "guess_threat_from_tags"
+        ),
     )
     author_from_tags: bool = Field(
         description="Whether to create Authors from MISP tags or not.",
