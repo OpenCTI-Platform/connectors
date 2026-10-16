@@ -5,7 +5,7 @@ from datetime import datetime
 import magic
 import pycti
 import stix2
-from connectors_sdk import ConnectorLogger
+from connectors_sdk import ConnectorLoggerAdapter
 from shadowserver.utils import (
     calculate_hashes,
     check_ip_address,
@@ -27,7 +27,7 @@ class ShadowserverStixTransformation:
         report: dict,
         incident: dict = {},
         labels: list = ["Shadowserver"],
-        logger: ConnectorLogger | None = None,
+        logger: ConnectorLoggerAdapter | None = None,
     ):
         """
         Initializes a ShadowserverStixTransformation object with the provided parameters.
@@ -37,7 +37,7 @@ class ShadowserverStixTransformation:
             report_list (list): The list of reports for transformation.
             report (dict): The report details for transformation.
             labels (list): The labels associated with the transformation (default is ['Shadowserver']).
-            logger (ConnectorLogger): The processor's logger. It must accept a `meta` dict:
+            logger (ConnectorLoggerAdapter): The processor's logger. It must accept a `meta` dict:
                 a standard library logger does not.
 
         Returns:

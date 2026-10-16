@@ -10,6 +10,7 @@ import traceback
 from typing import TYPE_CHECKING
 
 import pycti
+from connectors_sdk.logger import get_logger
 from connectors_sdk.models import (
     ExternalReference,
     Indicator,
@@ -23,6 +24,7 @@ from connectors_sdk.models import (
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseObject
 
+logger = get_logger(__name__)
 
 class ConnectorExample:
     """Example OpenCTI connector using connectors-sdk."""
@@ -131,13 +133,14 @@ class ConnectorExample:
                 self.helper.api.work.to_processed(work_id, "Done")
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+            logger.info(
+                "Connector stopped",
+                meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            # Inside `except`, `error()` also logs the traceback
+            logger.error("Unexpected error", meta={"error": str(err)})
 
     def run(self) -> None:
         """Run the connector."""

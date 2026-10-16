@@ -24,7 +24,7 @@ from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 
 if TYPE_CHECKING:
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 
-class BaseDataProcessor(ABC):
+class BaseDataProcessor(_ClassLoggerMixin, ABC):
     """Abstract base class defining the data processing contract.
 
     Each ``BaseDataProcessor`` is responsible for:
@@ -44,7 +44,7 @@ class BaseDataProcessor(ABC):
     ``transform()`` can either return a list (single bundle) or yield
     multiple lists (streaming). ``send()`` detects this and acts accordingly.
 
-    The ``work_manager``, ``logger`` and ``state`` attributes are injected by
+    The ``settings``, ``work_manager`` and ``state`` attributes are injected by
     ``ExternalImportConnector`` via ``inject_dependencies()``.
 
     The processor can read and write state fields (e.g. cursors, checkpoints)
@@ -61,21 +61,24 @@ class BaseDataProcessor(ABC):
         4. ``process()`` — called by the base connector (runs the pipeline)
 
     Attributes:
+        logger: A logger named after the module defining the processor class.
         work_name: A human-readable name for the work created by this processor.
             Changing ``work_name`` between calls to ``send()`` (or between iterations
             in a generator-based ``transform()``) will close the current work and
             open a new one with the updated name.
         settings: The connector settings, injected via ``inject_dependencies()``.
         work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
-        logger: The ``ConnectorLogger`` instance, injected via ``inject_dependencies()``.
         state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
     """
 
     work_name: str
     settings: BaseConnectorSettings
     work_manager: WorkManager
-    logger: ConnectorLogger
     state: ExternalImportConnectorState
+
+    def __init__(self) -> None:
+        """Initialize the processor."""
+        self.logger.debug("Data processor instantiated")
 
     def inject_dependencies(
         self,
@@ -86,7 +89,7 @@ class BaseDataProcessor(ABC):
         """Inject dependencies from the base connector and create the WorkManager.
 
         Called by ``ExternalImportConnector`` after helper initialization.
-        Sets ``settings``, ``logger`` and ``state``, and creates the ``WorkManager``
+        Sets ``settings`` and ``state``, and creates the ``WorkManager``
         for this processor.
 
         Args:
@@ -96,14 +99,15 @@ class BaseDataProcessor(ABC):
         """
         self.settings = settings
         self.work_manager = WorkManager(helper)
-        self.logger = ConnectorLogger(helper)
         self.state = state
+
+        self.logger.debug("Dependencies injected into data processor")
 
     def post_init(self) -> None:  # noqa: B027
         """Hook called after ``inject_dependencies()`` wires up dependencies.
 
         Override this method to perform initialization that requires
-        the injected dependencies (logger, state, settings, etc.).
+        the injected dependencies (state, settings, etc.).
         Called by ``ExternalImportConnector._init_dependencies()``.
 
         By default, does nothing.

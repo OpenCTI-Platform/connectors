@@ -1283,6 +1283,9 @@ def test_process_events_first_run(
     config_dict = deepcopy(minimal_config_dict)
     config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
     config_dict["misp"]["import_from_date"] = import_from_date
+    # The settings apply the configured log level: without it, the default ("error")
+    # would override `caplog.set_level()` and filter out the expected debug logs
+    config_dict["connector"]["log_level"] = "debug"
     connector = fake_misp_connector(config_dict)
 
     # And an event
