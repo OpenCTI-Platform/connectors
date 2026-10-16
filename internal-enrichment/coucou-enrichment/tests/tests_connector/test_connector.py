@@ -44,6 +44,8 @@ class StubConnectorSettings(ConnectorSettings):
 def connector(mock_opencti_connector_helper, monkeypatch):
     # Skip the delay before sending the bundle
     monkeypatch.setattr("connector.connector.time.sleep", MagicMock())
+    # Draw above the error probability, so the bundle is always ingested without error
+    monkeypatch.setattr("connector.connector.random.random", lambda: 0.99)
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
     # Only the RabbitMQ send is replaced: it records the bundles instead of publishing them
@@ -196,3 +198,22 @@ def test_enrichment_skips_entity_above_max_tlp(connector):
     # The connector logger comes from the mocked API client: the skip reason is read from its call
     _, meta = connector.helper.connector_logger.error.call_args.args
     assert "TLP of the observable is greater than MAX TLP" in meta["error_message"]
+
+
+def test_enrichment_sends_no_broken_indicator_on_success_draw(connector):
+    connector.process_message(_message(_ipv4_from_manual_trigger([])))
+
+    types = [o["type"] for o in connector.helper.sent_bundles[0]["objects"]]
+    assert "indicator" not in types
+
+
+def test_enrichment_sends_only_broken_indicator_on_error_draw(connector, monkeypatch):
+    monkeypatch.setattr("connector.connector.random.random", lambda: 0.1)
+
+    connector.process_message(_message(_ipv4_from_manual_trigger([])))
+
+    # Nothing from the enrichment is sent, so the backend rejects the whole bundle
+    [indicator] = connector.helper.sent_bundles[0]["objects"]
+    assert indicator["type"] == "indicator"
+    assert indicator["pattern"] == "[ipv4-addr:value = "
+    assert indicator["pattern_type"] == "stix"

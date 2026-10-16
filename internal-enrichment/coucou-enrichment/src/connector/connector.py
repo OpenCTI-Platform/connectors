@@ -1,14 +1,19 @@
+import random
 import time
 
 import stix2
 from connector.settings import ConnectorSettings
-from pycti import Malware, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import Indicator, Malware, OpenCTIConnectorHelper, StixCoreRelationship
 
 ENRICHED_DESCRIPTION = "coucou from enrichment"
 ENRICHED_LABEL = "enriched"
 LINKED_MALWARE_NAME = "supra coucou"
 # Delay before sending the bundle, to observe the work while it is in progress
 SEND_BUNDLE_DELAY_SECONDS = 15
+# Chance that the enrichment bundle is replaced by one the backend rejects at ingestion
+INGESTION_ERROR_PROBABILITY = 0.5
+# Invalid STIX pattern: the backend refuses the indicator, so the work gets an ingestion error
+BROKEN_INDICATOR_PATTERN = "[ipv4-addr:value = "
 
 
 class CoucouEnrichmentConnector:
@@ -71,6 +76,34 @@ class CoucouEnrichmentConnector:
         )
         return [malware, relationship]
 
+    @staticmethod
+    def _broken_indicator() -> dict:
+        """
+        Build an indicator with an invalid STIX pattern, rejected by the backend at ingestion.
+        It is a plain dict because the stix2 library would refuse the pattern before sending.
+        """
+        return {
+            "type": "indicator",
+            "spec_version": "2.1",
+            "id": Indicator.generate_id(BROKEN_INDICATOR_PATTERN),
+            "name": "coucou broken indicator",
+            "pattern": BROKEN_INDICATOR_PATTERN,
+            "pattern_type": "stix",
+            "valid_from": "2026-01-01T00:00:00.000Z",
+        }
+
+    def _maybe_replace_with_ingestion_error(self, stix_objects: list) -> list:
+        """
+        With a INGESTION_ERROR_PROBABILITY chance, replace the objects to send by the broken indicator only,
+        so nothing from the enrichment is ingested and the whole bundle fails.
+        """
+        if random.random() >= INGESTION_ERROR_PROBABILITY:
+            return stix_objects
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Sending a bundle the backend will reject at ingestion"
+        )
+        return [self._broken_indicator()]
+
     def entity_in_scope(self, data: dict) -> bool:
         """
         Security to limit playbook triggers to something other than the initial scope
@@ -115,8 +148,10 @@ class CoucouEnrichmentConnector:
             if self.entity_in_scope(data):
                 entity_id = data["stix_entity"]["id"]
                 return self._send_bundle(
-                    self._enrich(stix_objects, entity_id)
-                    + self._link_to_malware(entity_id)
+                    self._maybe_replace_with_ingestion_error(
+                        self._enrich(stix_objects, entity_id)
+                        + self._link_to_malware(entity_id)
+                    )
                 )
             if not data.get("event_type"):
                 # Not in scope AND bundle passed through playbook: return the original bundle unchanged
