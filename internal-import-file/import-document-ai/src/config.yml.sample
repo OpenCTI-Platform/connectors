@@ -14,5 +14,6 @@ connector:
 # import_document_ai:
   # include_relationships: true # Include relationships extracted from the document
   # create_indicator: false # Flag extracted observables for indicator creation
+  # resolve_existing_entities: true # Bind extracted entities to the existing OpenCTI ones (curationResolve)
   # api_base_url: 'ChangeMe' # Base URL of the Import Document AI web service (legacy direct mode)
   # api_key: 'ChangeMe' # PEM licence/certificate key for the web service (legacy direct mode)

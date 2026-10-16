@@ -238,8 +238,9 @@ def test_large_extraction_is_sent_exactly_as_with_the_per_object_rebuild(
         obj.get("x_opencti_create_indicator") is (True if create_indicator else None)
         for obj in observables
     )
+    # A city also naming its country is a city, as its id says
     assert {obj["x_opencti_location_type"] for obj in locations} == {
-        "Country",
+        "City",
         "Region",
     }
 
