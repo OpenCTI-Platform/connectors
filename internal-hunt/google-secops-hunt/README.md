@@ -62,7 +62,7 @@ Table of Contents
   - [Query languages](#query-languages)
   - [Indicator hunts](#indicator-hunts)
   - [Behavior](#behavior)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -112,7 +112,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `Google SecOps` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per instance. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `5` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). Defaults to 5, within the 2,000 searches per hour of a SecOps instance. |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | Project ID | `google_secops_hunt.project_id` | `GOOGLE_SECOPS_HUNT_PROJECT_ID` | | Yes | Google Cloud project ID of the SecOps instance. |
@@ -246,7 +246,18 @@ resource name SecOps gives the event, so a hit found again by a later run adds n
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Searches per hour | 2,000 per instance for programmatic access. | [Understand search](https://cloud.google.com/chronicle/docs/investigation/udm-search#search-limits-and-quotas) |
+| Concurrent searches | 180 simple and 180 complex per instance. | [Understand search](https://cloud.google.com/chronicle/docs/investigation/udm-search#search-limits-and-quotas) |
+| Events per UDM search | 10,000 (a larger limit is coerced). | [udmSearch](https://docs.cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances/udmSearch) |
+| UDM search timeout | 10 minutes from an API. | [Search API reference](https://cloud.google.com/chronicle/docs/reference/search-api#udm-search-timeout-limits) |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|

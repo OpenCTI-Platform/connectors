@@ -30,6 +30,13 @@ class MicrosoftDefenderHuntConnectorConfig(BaseInternalHuntConnectorConfig):
         description="Name of the OpenCTI Security Platform the hunts are executed against.",
         default="Microsoft Defender XDR",
     )
+    max_concurrent_runs: int | None = Field(
+        description="Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time "
+        "(a run holds one query on the platform at a time). The platform budget is the minimum of its own "
+        "setting and this value. Defaults to 2: the advanced hunting call and CPU quotas are shared by the whole tenant.",
+        default=2,
+        ge=1,
+    )
     security_platform_type: Literal["SIEM", "EDR", "XDR", "SOAR", "NDR", "ISPM"] = (
         Field(
             description="Type of the OpenCTI Security Platform the hunts are executed against.",

@@ -69,7 +69,7 @@ Settings inherit `BaseInternalHuntConnectorConfig` (connector namespace, `CONNEC
 | `CONNECTOR_SCOPE` | Exactly one platform slug. |
 | `CONNECTOR_SECURITY_PLATFORM_NAME` | Security Platform identity the hunts run against (created by OpenCTI when missing). Required, except for `internet`. |
 | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM` (default `SIEM`). |
-| `CONNECTOR_MAX_CONCURRENT_RUNS` | Connector-side concurrency limit, sent at registration. |
+| `CONNECTOR_MAX_CONCURRENT_RUNS` | Connector-side concurrency limit, sent at registration. A run holds one platform query at a time, so each connector defaults it from the concurrency quota its vendor documents (see the "Quotas and limits" section of its README). |
 | `CONNECTOR_OBSERVABLE_TYPES` | Observable types the connector may create (IOC types by default: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`; can be widened with `Hostname`, `User-Account`, `Mac-Addr`). |
 | `CONNECTOR_MAX_OBSERVABLES` | Maximum number of observables per run (default 100). |
 
@@ -110,6 +110,8 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    every hit read grouped by rule (or indicator value) and victim host, with the count, the first and last hit time and
    the keys of the hits of each group. OpenCTI counts and dates the observed data and the sightings from the
    observations, never from the evidence sample. `truncated` means the platform returned part of the results only.
+   Every report also says how many queries the run sent to the platform (`queries_count`): one per execution, a
+   failed or timed out query included, none for a preview.
    Or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
    work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
    report the run a second time. A failed run also says whether running it again can succeed (`retryable`):
@@ -162,7 +164,8 @@ Rules:
   masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in
   `on_timeout()`.
 - Fetch at most `limits.max_results` events in total for the run (shared by every query when a run issues several)
-  and report the platform total when it is available.
+  and report the platform total when it is available. When one execution sends more than one query (a count query
+  after a full page), set `HuntResult.queries_count` so that the run reports what it cost the platform quota.
 - When the platform groups matching events into detections (a YARA-L rule), a hit is a detection: name it on each of
   its events (`HuntEvent.detection`) and report the detection count as `total_hits`, so the events one detection
   references count once in `hits_count` and after benign suppression.
@@ -250,5 +253,5 @@ so every run of a hunt, renamed or not, grows the same infrastructure.
 `INTERNAL_HUNT`, `listen_hunt`, `register_hunt_platform` and `report_hunt_run` ship with the pycti release of the
 OpenCTI platform providing hunts. `start()` checks them and stops with an explicit message when the installed pycti
 is older. The report fields added since (`rule_results`, `observations`, `first_hit_at`, `last_hit_at`, `hit_keys`,
-`hits_sample`) are sent only when the installed pycti takes them; a message without `sigma_rules` runs its
+`hits_sample`, `queries_count`) are sent only when the installed pycti takes them; a message without `sigma_rules` runs its
 `sigma_rule` as before.

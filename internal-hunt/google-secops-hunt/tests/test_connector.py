@@ -600,7 +600,7 @@ def test_start_registers_the_secops_platform_and_listens():
         security_platform_name="Google SecOps",
         security_platform_type="SIEM",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=5,
         supports_indicators=True,
         required_permissions=[
             {"name": name, "purpose": purpose}

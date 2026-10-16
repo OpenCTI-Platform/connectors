@@ -233,7 +233,9 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
                 "[SENTINEL] Partial query results",
                 {"error": result.partial_error},
             )
+        queries = 1
         if total >= limits.max_results:
+            queries = 2
             counted = self.client.query(
                 f"{query}\n| count", time_window.start, time_window.end, deadline
             )
@@ -258,7 +260,12 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
             HuntEvent(timestamp=_event_time(row), fields=flatten_fields(row))
             for row in result.rows
         ]
-        return HuntResult(events=events, total_hits=total, truncated=truncated)
+        return HuntResult(
+            events=events,
+            total_hits=total,
+            truncated=truncated,
+            queries_count=queries,
+        )
 
 
 def _event_time(row: dict[str, Any]) -> Any:

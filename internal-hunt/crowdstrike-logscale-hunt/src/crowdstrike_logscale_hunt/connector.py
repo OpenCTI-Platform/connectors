@@ -212,7 +212,9 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
         warnings = list(result.warnings)
         total = len(result.events)
         count_unknown = False
+        queries = 1
         if total >= cap:
+            queries = 2
             counted = self.client.query(
                 f"{query}\n| count()", start, end, deadline, job_key
             )
@@ -236,6 +238,7 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
             events=events,
             total_hits=total,
             truncated=total > len(events) or count_unknown or bool(warnings),
+            queries_count=queries,
         )
 
     def on_timeout(self, native_query: NativeQuery) -> None:

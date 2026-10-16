@@ -30,6 +30,13 @@ class MicrosoftSentinelHuntConnectorConfig(BaseInternalHuntConnectorConfig):
         description="Name of the OpenCTI Security Platform the hunts are executed against.",
         default="Microsoft Sentinel",
     )
+    max_concurrent_runs: int | None = Field(
+        description="Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time "
+        "(a run holds one query on the platform at a time). The platform budget is the minimum of its own "
+        "setting and this value. Defaults to 5, the concurrent queries of a Log Analytics user.",
+        default=5,
+        ge=1,
+    )
 
 
 class MicrosoftSentinelHuntConfig(BaseConfigModel):

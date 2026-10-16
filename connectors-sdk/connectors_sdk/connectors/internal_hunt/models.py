@@ -356,6 +356,11 @@ class HuntResult(BaseModel):
             "an exhausted result budget. The hit count is then a lower bound."
         ),
     )
+    queries_count: int = Field(
+        default=1,
+        ge=0,
+        description="Queries sent to the platform to produce the result.",
+    )
 
     @property
     def hits_count(self) -> int:
@@ -579,4 +584,11 @@ class HuntRunReport(BaseModel):
     )
     last_hit_at: AwareDatetime | None = Field(
         default=None, description="Time of the last hit of the run."
+    )
+    queries_count: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Queries the run sent to the platform; counted by the connector when omitted."
+        ),
     )

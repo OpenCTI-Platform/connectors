@@ -356,6 +356,9 @@ class InternalHuntConnector(ABC):
         self.config: BaseInternalHuntConnectorConfig = settings.connector
         self._helper: Any = None
         self._logger: ConnectorLogger | None = None
+        # Runs are processed concurrently: the queries of each run are counted apart
+        self._queries_sent: dict[str, int] = {}
+        self._queries_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -717,6 +720,8 @@ class InternalHuntConnector(ABC):
             },
         )
         native_query: NativeQuery | None = None
+        with self._queries_lock:
+            self._queries_sent[run_id] = 0
         try:
             if request.hunt.hunt_type == INDICATOR_HUNT:
                 return self._complete_indicator_run(request, started)
@@ -735,6 +740,9 @@ class InternalHuntConnector(ABC):
             )
             self._report_failure(run_id, native_query, started, err)
             raise
+        finally:
+            with self._queries_lock:
+                self._queries_sent.pop(run_id, None)
 
     def _complete_preview(
         self, request: HuntRequest, native_query: NativeQuery, started: float
@@ -1285,6 +1293,12 @@ class InternalHuntConnector(ABC):
         worker.start()
         worker.join(deadline.remaining())
         alive = worker.is_alive()
+        # A query that failed or timed out was still sent to the platform
+        sent = outcome.get("result")
+        self._count_queries(
+            request.hunt_run.id,
+            sent.queries_count if isinstance(sent, HuntResult) else 1,
+        )
         if alive or outcome.get("late"):
             if alive:
                 self._cancel_in_background(request, native_query)
@@ -1301,8 +1315,14 @@ class InternalHuntConnector(ABC):
                 events=result.events[:limit],
                 total_hits=result.hits_count,
                 truncated=True,
+                queries_count=result.queries_count,
             )
         return result
+
+    def _count_queries(self, run_id: str, queries: int) -> None:
+        """Add queries sent to the platform to the count of a run."""
+        with self._queries_lock:
+            self._queries_sent[run_id] = self._queries_sent.get(run_id, 0) + queries
 
     def _cancel_in_background(
         self, request: HuntRequest, native_query: NativeQuery
@@ -1394,8 +1414,13 @@ class InternalHuntConnector(ABC):
             extra["hits_sample"] = [
                 hit.model_dump(mode="json") for hit in report.hits_sample
             ]
+        queries_count = report.queries_count
+        if queries_count is None:
+            with self._queries_lock:
+                queries_count = self._queries_sent.get(run_id, 0)
         # An older pycti or OpenCTI reads the run as the result of its first rule, its
-        # observed data and sightings from the run totals, the hits dated by the sample
+        # observed data and sightings from the run totals, the hits dated by the sample,
+        # and does not show the queries the run sent
         optional: dict[str, Any] = {
             "rule_results": (
                 [result.model_dump(mode="json") for result in report.rule_results]
@@ -1419,6 +1444,7 @@ class InternalHuntConnector(ABC):
             "last_hit_at": (
                 report.last_hit_at.isoformat() if report.last_hit_at else None
             ),
+            "queries_count": queries_count,
         }
         for keyword, value in optional.items():
             if value is not None and _accepts_keyword(

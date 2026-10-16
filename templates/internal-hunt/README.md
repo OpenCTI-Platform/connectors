@@ -130,8 +130,11 @@ and internal domain names are never turned into observables.
    `documentation_url`, shown in the setup of hunts in OpenCTI; and set `client.access_denied_hints`
    (`{401: ..., 403: ...}`) so that a refused call names what the account lacks. Start the README with a "Before you
    start" block: credential, console steps, permissions table, configuration example.
-6. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
-7. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
+6. **Quotas**: list the quotas of the platform in a "Quotas and limits" section of the README, each value with the
+   URL of the vendor page that states it (or "Not documented by the vendor"), and set the `max_concurrent_runs`
+   default of the settings from them: a run holds one query on the platform at a time.
+7. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
+8. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
    edit these generated files by hand.
 
 ## Debugging

@@ -40,19 +40,28 @@ class SearchResult:
         rows: Matching documents (``_source``) or PPL rows.
         total: Total number of matches.
         partial: True when OpenSearch flagged the results as partial.
+        queries: Queries sent to OpenSearch (two when the matches were counted).
     """
 
-    def __init__(self, rows: list[dict[str, Any]], total: int, partial: bool) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]],
+        total: int,
+        partial: bool,
+        queries: int = 1,
+    ) -> None:
         """Initialize the result.
 
         Args:
             rows: Matching documents or rows.
             total: Total number of matches.
             partial: Whether the results are partial.
+            queries: Queries sent to OpenSearch.
         """
         self.rows = rows
         self.total = total
         self.partial = partial
+        self.queries = queries
 
 
 class OpenSearchClient(HuntApiClient):
@@ -142,8 +151,10 @@ class OpenSearchClient(HuntApiClient):
         rows = ppl_rows(self._ppl(f"{filtered} | head {cap}", deadline))
         total = len(rows)
         partial = False
+        queries = 1
         # Fewer rows than the cap is already the exact count: only a full page needs the count query
         if len(rows) >= cap:
+            queries = 2
             counted = ppl_rows(
                 self._ppl(f"{filtered} | stats count() as {COUNT_COLUMN}", deadline)
             )
@@ -155,7 +166,7 @@ class OpenSearchClient(HuntApiClient):
                 # below the page size) cannot prove that every match was
                 # returned: the page size is kept as a lower bound.
                 partial = True
-        return SearchResult(rows, total, partial)
+        return SearchResult(rows, total, partial, queries)
 
     def _ppl(self, query: str, deadline: RunDeadline) -> dict[str, Any]:
         """Run one PPL query and return its answer."""
