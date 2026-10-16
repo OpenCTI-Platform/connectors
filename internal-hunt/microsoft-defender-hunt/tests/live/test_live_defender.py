@@ -101,13 +101,15 @@ def _sample(connector, query: str) -> list[str]:
     return [str(value) for row in rows for value in row.values() if value]
 
 
-def test_live_token_and_device_query(live):
-    # Given/When a token is requested and one advanced hunting query runs
+def test_live_token_and_connection_checks(live):
+    # Given/When a token is requested and the connection is tested
     assert live.client.tokens.access_token(RunDeadline(60))
-    rows = _sample(live, "DeviceInfo | take 1")
+    checks = live.connection_checks(RunDeadline(120))
 
-    # Then the tenant answers
-    print(f"\nLIVE DeviceInfo rows: {len(rows)}")
+    # Then both checks pass
+    for check in checks:
+        print(f"\nLIVE connection check {check.name}: ok={check.ok} ({check.message})")
+    assert all(check.ok for check in checks)
 
 
 def test_live_sigma_rule_over_7_days(live):
