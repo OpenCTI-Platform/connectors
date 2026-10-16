@@ -153,6 +153,15 @@
       ],
       "type": "string"
     },
+    "SPLUNK_HUNT_HOST_ATTRIBUTION": {
+      "default": "cim",
+      "description": "How hits are attributed to a host: 'cim' resolves the endpoint from the sourcetype and CIM fields (src/dest for network appliances, ComputerName for forwarded endpoint logs); 'raw' uses the Splunk 'host' field (the device that logged the event).",
+      "enum": [
+        "cim",
+        "raw"
+      ],
+      "type": "string"
+    },
     "SPLUNK_HUNT_POLL_INTERVAL": {
       "default": 2.0,
       "description": "Seconds between two status checks of a search job.",

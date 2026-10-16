@@ -79,6 +79,19 @@ def test_build_ioc_lookup_attributes_each_value_as_a_whole_token():
     assert not regex.search("dst=198.51.100.70")
 
 
+def test_build_ioc_lookup_of_a_single_value_skips_mvappend():
+    # Splunk refuses mvappend() with a single argument
+    batch = IocBatch(
+        "IPv4-Addr",
+        None,
+        (HuntIoc(key="k1", observable_type="IPv4-Addr", value="198.51.100.7"),),
+    )
+    query = build_ioc_lookup(batch)
+    assert "mvappend" not in query
+    assert query.startswith('("198.51.100.7") | eval ioc=if(match(_raw, ')
+    assert '"k1", null()) | where isnotnull(ioc) ' in query
+
+
 def test_registers_indicator_lookups(connector_factory):
     connector = connector_factory()
     assert connector.supports_indicators is True
