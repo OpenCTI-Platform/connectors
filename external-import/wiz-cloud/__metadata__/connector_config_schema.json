@@ -133,9 +133,8 @@
       "type": "boolean"
     },
     "WIZ_CLOUD_SINCE": {
-      "default": "P30D",
       "description": "Relative import start on first run (ISO 8601 duration)",
-      "format": "duration",
+      "format": "date-time",
       "type": "string"
     },
     "WIZ_CLOUD_PAGE_SIZE": {
