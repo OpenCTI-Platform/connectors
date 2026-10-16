@@ -1,0 +1,27 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'CrowdStrike Falcon Custom IOA Rules'
+  scope: 'Indicator,Attack-Pattern,SecurityPlatform'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+crowdstrike_ioa_rules:
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  # base_url: 'https://api.crowdstrike.com'
+  # member_cid: ''
+  # rule_group_filter: ''
+  # check_prevention_policies: true
+  # import_disabled_rules: true
+  # page_size: 100
+  # request_timeout: 60
+  # max_retries: 5
+  # platform_name: 'CrowdStrike Falcon'
+  # platform_id: 'ChangeMe'
+  # platform_type: 'EDR'
+  # tlp_level: 'amber'

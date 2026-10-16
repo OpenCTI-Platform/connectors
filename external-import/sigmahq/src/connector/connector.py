@@ -75,6 +75,12 @@ class SigmaHQConnector:
                 )
                 break
 
+        # One platform lookup for every technique tagged in the package, so
+        # ``indicates`` targets that MITRE ATT&CK already imported keep their
+        # name (see ``AttackPatternResolver``).
+        if rules:
+            self.converter_to_stix.prepare_attack_patterns(rules)
+
         for rule in rules:
             try:
                 stix_entities = self.converter_to_stix.convert_sigma_rule(rule)

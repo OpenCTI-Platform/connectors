@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Elastic Security Detection Rules'
+  scope: 'Indicator,Attack-Pattern,SecurityPlatform'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+elastic_detection_rules:
+  kibana_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  # space_id: 'default'
+  # rule_filter: 'alert.attributes.tags:"Production"'
+  # import_disabled_rules: true
+  # page_size: 100
+  # request_timeout: 60
+  # max_retries: 5
+  # verify_ssl: true
+  # platform_name: 'Elastic Security'
+  # platform_id: 'ChangeMe'
+  # platform_type: 'SIEM'
+  # tlp_level: 'amber'
