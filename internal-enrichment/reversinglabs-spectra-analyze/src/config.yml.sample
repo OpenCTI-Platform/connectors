@@ -9,10 +9,10 @@ connector:
   scope: 'Artifact,IPv4-Addr,Domain-Name'
   #log_level: 'info'
   #auto: false
+  #max_tlp: 'TLP:AMBER'
 
 reversinglabs-spectra_analyze:
   url: 'ChangeMe'
   token: 'ChangeMe'
-  #max_tlp: 'TLP:AMBER'
   #sandbox_os: 'windows10'
   #cloud_analysis: true

@@ -1,12 +1,14 @@
 import base64
+import copy
 import datetime
+import heapq
 import json
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import ClassVar
 
 import boto3
-import pytz
 import stix2
 from connectors_sdk.models.enums import TLPLevel
 from pycti import (
@@ -48,11 +50,124 @@ mapped_keys = [
     "x_credit",
 ]
 ignored_keys = ["x_acti_guid", "x_version", "x_vendor", "x_opencti_files"]
+# Source fields that `fix_bundle` turns into labels: the platform only adds labels, so
+# a flag raised by any version of an entity stays raised
+ADDITIVE_FLAG_KEYS = (
+    "x_wormable",
+    "x_zero_day",
+    "x_notable_vuln",
+    "x_and_prior_versions",
+)
+# Source field that `fix_bundle` turns into aliases, given as a string or a list
+ALIASES_SOURCE_KEY = "x_alias"
 
 # Pattern to match invisible/zero-width Unicode characters that can break URLs
 INVISIBLE_CHARS_PATTERN = re.compile(
     r"[\u200b\u200c\u200d\u200e\u200f\ufeff\u00a0\u2060\u2061\u2062\u2063\u2064]"
 )
+
+# Files are all held in memory during a run so that versions can be compared
+MAX_FILES_PER_RUN = 1000
+S3_DOWNLOAD_WORKERS = 8
+PLATFORM_LOOKUP_BATCH_SIZE = 100
+# A previous work that makes no progress for this long is considered stalled: it is
+# released once the connector queue holds no message anymore
+WORK_STALL_TIMEOUT = datetime.timedelta(hours=1)
+PENDING_WORKS_STATE_KEY = "pending_works"
+# What an outdated vulnerability is reduced to: enough to resolve the references of its
+# file, nothing the platform would overwrite
+REFERENCE_KEYS = (
+    "type",
+    "spec_version",
+    "id",
+    "name",
+    "created_by_ref",
+    "object_marking_refs",
+)
+
+
+def parse_stix_timestamp(value):
+    """
+    Parse a STIX timestamp into a timezone-aware datetime (UTC when no offset).
+
+    Raises TypeError when the value is not a string and ValueError when it is not a
+    timestamp, so that callers can treat both as an unreadable version.
+    """
+    if not isinstance(value, str):
+        raise TypeError(f"Timestamp must be a string, got {type(value).__name__}")
+    parsed = datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+    return parsed
+
+
+def is_reference_key(key):
+    """
+    Tell whether a STIX property is the ID of the object or a reference to another one.
+
+    The IDs of a file are local to it until `rewrite_stix_ids` runs on that file alone,
+    so a reference taken from another file's version of an object could not resolve.
+    """
+    return key == "id" or key.endswith("_ref") or key.endswith("_refs")
+
+
+def union_lists(newest, older):
+    """Items of `newest` first, then the items of `older` that `newest` lacks."""
+    merged = []
+    seen = set()
+    for item in [*newest, *older]:
+        marker = json.dumps(item, sort_keys=True, default=str)
+        if marker not in seen:
+            seen.add(marker)
+            merged.append(copy.deepcopy(item))
+    return merged
+
+
+def oldest_timestamp(first, second):
+    """The older of two STIX timestamps, `second` when either one is unreadable."""
+    try:
+        if parse_stix_timestamp(first) <= parse_stix_timestamp(second):
+            return first
+    except (TypeError, ValueError):
+        pass
+    return second
+
+
+def as_list(value):
+    """A list value as is, any other value as a one-item list."""
+    return value if isinstance(value, list) else [value]
+
+
+def merge_versions(versions):
+    """
+    Merge the versions of one STIX object, given oldest first.
+
+    This is the result the platform would reach by applying the versions in order:
+    single values come from the newest version that has them, list values (labels,
+    external references, aliases, history entries...) are the union of all versions
+    and `created` keeps its oldest value. The source fields that `fix_bundle` turns
+    into additive platform fields follow the same rule: `x_alias` values are
+    accumulated whether given as a string or a list, and a label flag raised by any
+    version stays raised. The ID and the references (`*_ref`, `*_refs`) are left
+    out: they are local to the file of each version (see `is_reference_key`).
+    """
+    merged = {}
+    for version in versions:
+        for key, value in version.items():
+            if is_reference_key(key):
+                continue
+            previous = merged.get(key)
+            if key == ALIASES_SOURCE_KEY and previous is not None:
+                merged[key] = union_lists(as_list(value), as_list(previous))
+            elif isinstance(value, list) and isinstance(previous, list):
+                merged[key] = union_lists(value, previous)
+            elif key in ADDITIVE_FLAG_KEYS and previous:
+                continue
+            elif key == "created" and previous is not None:
+                merged[key] = oldest_timestamp(previous, value)
+            else:
+                merged[key] = copy.deepcopy(value)
+    return merged
 
 
 def sanitize_url(url):
@@ -110,8 +225,9 @@ class S3Connector:
             )
             self.s3_marking = self.S3_MARKINGS[marking_level]
         except (KeyError, ValueError):
-            self.helper.log_warning(
-                f"Unrecognized marking definition {self.config.s3.marking}, defaulting to TLP:GREEN"
+            self.helper.connector_logger.warning(
+                "Unrecognized marking definition, defaulting to TLP:GREEN",
+                {"marking": self.config.s3.marking},
             )
             self.s3_marking = stix2.TLP_GREEN
         self.s3_attach_original_file = self.config.s3.attach_original_file
@@ -137,184 +253,249 @@ class S3Connector:
     def get_interval(self):
         return self.config.connector.duration_period.total_seconds()
 
-    def note_exists_by_abstract(self, abstract):
+    @staticmethod
+    def generate_note_ids(obj, note_type):
         """
-        Check if a note with the given abstract already exists in the API.
+        Return the STIX ID of a Title, Analysis or History note of `obj`, and its aliases.
 
-        :param abstract: The abstract to search for
-        :return: True if a note with this abstract exists, False otherwise
+        Notes are matched on this ID while their content changes from one version to
+        the next, so it only depends on the vulnerability, never on the platform state:
+        - CVE notes are keyed on the ACTI UUID
+        - other notes are also keyed on the vulnerability name, so that entries sharing
+          an ACTI UUID keep their own notes
+
+        Older versions of the connector keyed the notes of non-CVE entries on the ACTI
+        UUID only. That ID is sent as an alias so those notes are updated in place
+        instead of being duplicated, but only by the entry named by its ACTI UUID: the
+        platform matches incoming entities on their aliases too, so an alias shared by
+        entries sharing an ACTI UUID would collapse their notes into one. A name
+        identifies a single vulnerability, so at most one entry claims that alias.
+
+        :param obj: The vulnerability the note belongs to
+        :param note_type: "Title", "Analysis" or "History"
+        :return: The note STIX ID and the list of its alias STIX IDs
         """
+        acti_uuid = obj["x_acti_uuid"]
+        obj_name = obj.get("name", "")
+        uuid_note_id = Note.generate_id(obj["created"], f"{acti_uuid} - {note_type}")
+        if obj_name.startswith("CVE-"):
+            return uuid_note_id, []
+        name_note_id = Note.generate_id(
+            obj["created"], f"{acti_uuid} - {obj_name} - {note_type}"
+        )
+        note_aliases = [uuid_note_id] if obj_name == acti_uuid else []
+        return name_note_id, note_aliases
+
+    @staticmethod
+    def generate_standard_id(obj):
+        """Return the deterministic STIX ID `obj` is sent under, None to keep its own."""
+        obj_type = obj.get("type")
+        if obj_type == "vulnerability":
+            return Vulnerability.generate_id(obj["name"])
+        if obj_type == "infrastructure":
+            return Infrastructure.generate_id(obj["name"])
+        if obj_type == "identity":
+            return Identity.generate_id(obj["name"], obj["identity_class"])
+        if obj_type == "course-of-action":
+            return CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
+        if obj_type == "malware":
+            return Malware.generate_id(obj["name"])
+        if obj_type == "indicator":
+            return Indicator.generate_id(obj["pattern"])
+        return None
+
+    def get_version(self, obj):
+        """
+        Return (entity id, modified) for an object that carries a version, None otherwise.
+
+        Relationships are left out: their final ID only exists once `fix_bundle` has
+        rewritten them, and the platform only adds them.
+        """
+        if obj.get("type") == "relationship" or not obj.get("modified"):
+            return None
         try:
-            filters = {
-                "mode": "and",
-                "filters": [
-                    {
-                        "key": "attribute_abstract",
-                        "values": [abstract],
-                        "operator": "eq",
-                    }
-                ],
-                "filterGroups": [],
-            }
-            notes = self.helper.api.note.list(filters=filters, first=1)
-            return len(notes) > 0
-        except Exception as e:
-            self.helper.log_warning(
-                f"Failed to check for existing note with abstract '{abstract}': {e}"
+            modified = parse_stix_timestamp(obj["modified"])
+        except (TypeError, ValueError):
+            self.helper.connector_logger.warning(
+                "Unreadable 'modified' on an object, sent as received",
+                {"id": obj.get("id"), "modified": repr(obj.get("modified"))},
             )
-            # On error, default to using simple key (consolidate behavior)
-            return True
+            return None
+        return self.generate_standard_id(obj) or obj.get("id"), modified
 
-    def filter_outdated_vulnerabilities(self, data):
+    def resolve_versions(self, bundles):
         """
-        Pre-process the bundle to filter out vulnerabilities that are outdated
-        compared to what already exists in the OpenCTI platform.
+        Make every copy of an entity found in the run carry the newest content.
 
-        For each vulnerability in the bundle, query the platform for its
-        x_opencti_modified_at value. If the platform's value is more recent
-        than the bundle vulnerability's 'modified' field, the vulnerability
-        is considered outdated and is removed along with all relationships
-        pointing to or from it.
+        The same entity can be published several times before a run picks the files
+        up. Each file is sent as its own bundle and workers apply bundles in parallel,
+        so the order of arrival on the platform is not the order of sending. Every copy
+        is therefore replaced by the merge of all the versions of the run (see
+        `merge_versions`): whatever the order, the newest version wins. Each copy keeps
+        its file-local ID and references (author, markings, object refs...) so that
+        every reference of its file still resolves once the IDs of that file are
+        rewritten.
 
         Args:
-            data: Parsed JSON dict of the STIX bundle
+            bundles: Parsed STIX bundles of the run, oldest file first. Objects are
+                updated in place.
+        """
+        copies = {}
+        for data in bundles:
+            for obj in data.get("objects") or []:
+                version = self.get_version(obj)
+                if version is not None:
+                    entity_id, modified = version
+                    copies.setdefault(entity_id, []).append((modified, obj))
+
+        for entity_id, versions in copies.items():
+            if len(versions) < 2:
+                continue
+            # sorted() is stable: on equal `modified`, the most recent file wins
+            ordered = [obj for _, obj in sorted(versions, key=lambda v: v[0])]
+            merged = merge_versions(ordered)
+            self.helper.connector_logger.info(
+                "Several versions of an entity in this run, all copies sent with the "
+                "newest content",
+                {
+                    "name": merged.get("name"),
+                    "entity_id": entity_id,
+                    "versions": len(versions),
+                    "modified": [obj["modified"] for obj in ordered],
+                },
+            )
+            for obj in ordered:
+                local = {
+                    key: value for key, value in obj.items() if is_reference_key(key)
+                }
+                obj.clear()
+                obj.update(copy.deepcopy(merged))
+                obj.update(local)
+
+    def fetch_platform_versions(self, standard_ids):
+        """
+        Read the version the platform holds of vulnerabilities: x_opencti_modified_at
+        and created.
+
+        One query per PLATFORM_LOOKUP_BATCH_SIZE vulnerabilities. When a query fails, its
+        vulnerabilities are treated as absent from the platform and sent as received.
 
         Returns:
-            dict: The filtered bundle data
+            dict: standard ID -> {"x_opencti_modified_at": ..., "created": ...}, for
+                the vulnerabilities found in the platform (values may be None)
         """
-        if "objects" not in data or not data["objects"]:
-            return data
-
-        # Count vulnerabilities in the bundle for context
-        all_vulns = [o for o in data["objects"] if o.get("type") == "vulnerability"]
-        total_objects = len(data["objects"])
-        self.helper.log_info(
-            f"[PRE-PROCESS] Starting outdated vulnerability check: "
-            f"{len(all_vulns)} vulnerability(ies) in bundle ({total_objects} total objects)"
-        )
-
-        outdated_vuln_ids = set()
-
-        for obj in data["objects"]:
-            if obj.get("type") != "vulnerability":
-                continue
-
-            vuln_name = obj.get("name")
-            vuln_modified = obj.get("modified")
-
-            if not vuln_name or not vuln_modified:
-                self.helper.log_info(
-                    f"[PRE-PROCESS] Vulnerability '{vuln_name}' has no 'modified' field, "
-                    f"skipping outdated check, will be ingested"
-                )
-                continue
-
-            # Generate the deterministic STIX ID for this vulnerability
-            vuln_standard_id = Vulnerability.generate_id(vuln_name)
-            self.helper.log_info(
-                f"[PRE-PROCESS] Checking '{vuln_name}': "
-                f"bundle_id={obj['id']}, standard_id={vuln_standard_id}, "
-                f"received_modified={vuln_modified}"
-            )
-
+        wanted = set(standard_ids)
+        found = {}
+        for start in range(0, len(standard_ids), PLATFORM_LOOKUP_BATCH_SIZE):
+            batch = standard_ids[start : start + PLATFORM_LOOKUP_BATCH_SIZE]
             try:
-                existing_vuln = self.helper.api.vulnerability.read(
-                    id=vuln_standard_id,
+                vulnerabilities = self.helper.api.vulnerability.list(
+                    filters={
+                        "mode": "and",
+                        "filters": [{"key": "ids", "values": batch, "mode": "or"}],
+                        "filterGroups": [],
+                    },
+                    first=PLATFORM_LOOKUP_BATCH_SIZE,
+                    getAll=True,
                     customAttributes="""
                         id
+                        standard_id
+                        x_opencti_stix_ids
                         x_opencti_modified_at
+                        created
                     """,
                 )
-
-                if existing_vuln is None:
-                    self.helper.log_info(
-                        f"[PRE-PROCESS] '{vuln_name}': does not exist in platform "
-                        f"(read returned None) -> KEPT, will be ingested"
-                    )
-                    continue
-
-                platform_modified = existing_vuln.get("x_opencti_modified_at")
-
-                if not platform_modified:
-                    self.helper.log_info(
-                        f"[PRE-PROCESS] '{vuln_name}': exists in platform but has no "
-                        f"x_opencti_modified_at (returned keys: {list(existing_vuln.keys())}) "
-                        f"-> KEPT, will be ingested"
-                    )
-                    continue
-
-                # Parse to datetime for safe comparison (handles Z, +00:00, milliseconds, etc.)
-                platform_dt = datetime.datetime.fromisoformat(
-                    platform_modified.replace("Z", "+00:00")
-                )
-                received_dt = datetime.datetime.fromisoformat(
-                    vuln_modified.replace("Z", "+00:00")
-                )
-                is_outdated = platform_dt > received_dt
-
-                self.helper.log_info(
-                    f"[PRE-PROCESS] '{vuln_name}': "
-                    f"platform_x_opencti_modified_at='{platform_modified}' (parsed={platform_dt}), "
-                    f"received_modified='{vuln_modified}' (parsed={received_dt}), "
-                    f"is_outdated={is_outdated} "
-                    f"-> {'FILTERED OUT' if is_outdated else 'KEPT'}"
-                )
-
-                if is_outdated:
-                    outdated_vuln_ids.add(obj["id"])
-
             except Exception as e:
-                self.helper.log_warning(
-                    f"[PRE-PROCESS] '{vuln_name}': failed to check against platform: "
-                    f"{type(e).__name__}: {e} -> KEPT, will proceed with ingestion"
-                )
-
-        if not outdated_vuln_ids:
-            self.helper.log_info(
-                f"[PRE-PROCESS] Complete: no outdated vulnerabilities found, "
-                f"all {len(all_vulns)} vulnerability(ies) will be ingested"
-            )
-            return data
-
-        # Filter out outdated vulnerabilities and their relationships
-        filtered_objects = []
-        removed_rels = 0
-
-        for obj in data["objects"]:
-            obj_id = obj.get("id", "unknown")
-            obj_type = obj.get("type", "unknown")
-
-            if obj_id in outdated_vuln_ids:
-                self.helper.log_info(
-                    f"[PRE-PROCESS] Removing vulnerability: '{obj.get('name')}' (id={obj_id})"
+                self.helper.connector_logger.warning(
+                    "Failed to read vulnerabilities from the platform, sent as received",
+                    {"count": len(batch), "error": f"{type(e).__name__}: {e}"},
                 )
                 continue
+            # A standard ID match wins over a match on an alias STIX ID
+            for vulnerability in sorted(
+                vulnerabilities or [], key=lambda v: v.get("standard_id") in wanted
+            ):
+                version = {
+                    "x_opencti_modified_at": vulnerability.get("x_opencti_modified_at"),
+                    "created": vulnerability.get("created"),
+                }
+                for candidate in [
+                    *(vulnerability.get("x_opencti_stix_ids") or []),
+                    vulnerability.get("standard_id"),
+                ]:
+                    if candidate in wanted:
+                        found[candidate] = version
+        return found
 
-            if obj_type == "relationship":
-                source_ref = obj.get("source_ref", "")
-                target_ref = obj.get("target_ref", "")
-                rel_type = obj.get("relationship_type", "unknown")
-                if source_ref in outdated_vuln_ids or target_ref in outdated_vuln_ids:
-                    self.helper.log_info(
-                        f"[PRE-PROCESS] Removing relationship: type='{rel_type}', "
-                        f"source={source_ref}, target={target_ref}, id={obj_id}"
-                    )
-                    removed_rels += 1
+    def supersede_outdated_vulnerabilities(self, bundles):
+        """
+        Reduce the vulnerabilities that are older than the platform's to a reference.
+
+        The platform overwrites the fields of an entity with any upsert of equal or
+        higher confidence, whatever its version, so an outdated vulnerability must not
+        be sent. Its reference still carries the relationships and the other objects of
+        its file, which the platform only adds. Its Title, Analysis and History notes
+        are not generated: their IDs do not change between versions, so they would
+        overwrite the newer notes.
+
+        A newer vulnerability takes the `created` the platform holds when it is older
+        than its own: the platform keeps the oldest creation date anyway, and the IDs
+        of the notes derive from it, so the notes of every run are the same notes.
+
+        Args:
+            bundles: Parsed STIX bundles of the run. Objects are updated in place.
+        """
+        received = {}
+        for data in bundles:
+            for obj in data.get("objects") or []:
+                if (
+                    obj.get("type") == "vulnerability"
+                    and obj.get("name")
+                    and obj.get("modified")
+                ):
+                    standard_id = Vulnerability.generate_id(obj["name"])
+                    received.setdefault(standard_id, []).append(obj)
+        if not received:
+            return
+
+        platform_versions = self.fetch_platform_versions(list(received))
+        outdated = 0
+        for standard_id, objs in received.items():
+            platform_version = platform_versions.get(standard_id)
+            if not platform_version:
+                continue
+            platform_modified = platform_version.get("x_opencti_modified_at")
+            platform_created = platform_version.get("created")
+            for obj in objs:
+                if platform_created and obj.get("created"):
+                    obj["created"] = oldest_timestamp(platform_created, obj["created"])
+                if not platform_modified:
                     continue
-
-            filtered_objects.append(obj)
-
-        kept_vulns = len(all_vulns) - len(outdated_vuln_ids)
-        self.helper.log_info(
-            f"[PRE-PROCESS] Complete: "
-            f"{len(outdated_vuln_ids)} vulnerability(ies) filtered out, "
-            f"{kept_vulns} vulnerability(ies) kept, "
-            f"{removed_rels} relationship(s) removed, "
-            f"{len(filtered_objects)}/{total_objects} objects remaining in bundle"
+                try:
+                    is_outdated = parse_stix_timestamp(
+                        platform_modified
+                    ) > parse_stix_timestamp(obj["modified"])
+                except (TypeError, ValueError):
+                    continue
+                if not is_outdated:
+                    continue
+                outdated += 1
+                self.helper.connector_logger.info(
+                    "The platform holds a newer version of a vulnerability, only its "
+                    "relationships and related objects are sent",
+                    {
+                        "name": obj["name"],
+                        "platform_modified_at": platform_modified,
+                        "received_modified": obj["modified"],
+                    },
+                )
+                reference = {key: obj[key] for key in REFERENCE_KEYS if key in obj}
+                obj.clear()
+                obj.update(reference)
+        self.helper.connector_logger.info(
+            "Vulnerabilities checked against the platform",
+            {"checked": len(received), "outdated_copies": outdated},
         )
-
-        data["objects"] = filtered_objects
-        return data
 
     @staticmethod
     def rewrite_stix_ids(objects):
@@ -322,37 +503,9 @@ class S3Connector:
         id_mapping = {}
 
         for obj in objects:
-            obj_type = obj.get("type")
-
-            if obj_type == "vulnerability":
-                old_id = obj["id"]
-                new_id = Vulnerability.generate_id(obj["name"])
-                id_mapping[old_id] = new_id
-
-            elif obj_type == "infrastructure":
-                old_id = obj["id"]
-                new_id = Infrastructure.generate_id(obj["name"])
-                id_mapping[old_id] = new_id
-
-            elif obj_type == "identity":
-                old_id = obj["id"]
-                new_id = Identity.generate_id(obj["name"], obj["identity_class"])
-                id_mapping[old_id] = new_id
-
-            elif obj_type == "course-of-action":
-                old_id = obj["id"]
-                new_id = CourseOfAction.generate_id(obj["name"], obj.get("x_mitre_id"))
-                id_mapping[old_id] = new_id
-
-            elif obj_type == "malware":
-                old_id = obj["id"]
-                new_id = Malware.generate_id(obj["name"])
-                id_mapping[old_id] = new_id
-
-            elif obj_type == "indicator":
-                old_id = obj["id"]
-                new_id = Indicator.generate_id(obj["pattern"])
-                id_mapping[old_id] = new_id
+            new_id = S3Connector.generate_standard_id(obj)
+            if new_id is not None:
+                id_mapping[obj["id"]] = new_id
 
         # Second pass: Update all objects with new IDs and references
         for obj in objects:
@@ -398,12 +551,23 @@ class S3Connector:
 
         return objects
 
+    def parse_bundle(self, content, file_name=None):
+        """Parse a file's content, None when it is not valid JSON."""
+        # Skip invalid JSON files (Accenture sometimes sends bad data)
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            self.helper.connector_logger.warning(
+                "Invalid JSON in file, skipping", {"file": file_name, "error": str(e)}
+            )
+            return None
+
     def fix_bundle(self, bundle, file_name=None, original_content=None):
         """
         Process and fix a STIX bundle.
 
         Args:
-            bundle: The STIX bundle content (bytes or string)
+            bundle: The STIX bundle, parsed (dict) or as content (bytes or string)
             file_name: Original S3 file name (used for x_opencti_files attachment)
             original_content: Original file content as bytes (used for x_opencti_files attachment)
 
@@ -413,24 +577,16 @@ class S3Connector:
         included_entities = []
         new_bundle_objects = []
 
-        # Parse bundle - skip invalid JSON files (Accenture sometimes sends bad data)
-        try:
-            data = json.loads(bundle)
-        except json.JSONDecodeError as e:
-            self.helper.log_warning(
-                f"Invalid JSON in file '{file_name}', skipping: {e}"
-            )
-            return None
+        if isinstance(bundle, dict):
+            data = bundle
+        else:
+            data = self.parse_bundle(bundle, file_name)
+            if data is None:
+                return None
 
         if "objects" not in data or not data["objects"]:
-            self.helper.log_warning("Bundle has no objects to process")
-            return None
-
-        # Pre-process: filter out vulnerabilities that are outdated compared to the platform
-        data = self.filter_outdated_vulnerabilities(data)
-        if not data.get("objects"):
-            self.helper.log_info(
-                "All objects were filtered out during pre-processing, nothing to ingest"
+            self.helper.connector_logger.warning(
+                "Bundle has no objects to process", {"file": file_name}
             )
             return None
 
@@ -455,7 +611,8 @@ class S3Connector:
                     obj["x_opencti_files"] = []
                 obj["x_opencti_files"].append(file_attachment)
                 self.helper.connector_logger.debug(
-                    f"Attached original file '{file_attachment['name']}' to vulnerability '{obj.get('name')}'"
+                    "Attached original file to vulnerability",
+                    {"file": file_attachment["name"], "name": obj.get("name")},
                 )
 
             for key in obj:
@@ -464,7 +621,9 @@ class S3Connector:
                     and key not in mapped_keys
                     and key not in ignored_keys
                 ):
-                    self.helper.log_error("Found non-mapped custom key: " + key)
+                    self.helper.connector_logger.warning(
+                        "Found non-mapped custom key", {"key": key}
+                    )
 
             # Ensure modification date
             if "modified" in obj:
@@ -549,21 +708,11 @@ class S3Connector:
 
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
-                # generate a unique note identifier that don't change in the time even of the obj_name change or x_title change
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                note_abstract = obj_name + " - Title"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - Title"
-                elif self.note_exists_by_abstract(note_abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - Title"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
+                note_id, note_aliases = self.generate_note_ids(obj, "Title")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=note_abstract,
+                    abstract=obj.get("name", "") + " - Title",
                     content=obj.get("x_title"),
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -572,27 +721,18 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
 
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
-                # generate a unique note identifier that don't change in the time even of the obj_name change or x_analysis change
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                note_abstract = obj_name + " - Analysis"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - Analysis"
-                elif self.note_exists_by_abstract(note_abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - Analysis"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
+                note_id, note_aliases = self.generate_note_ids(obj, "Analysis")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=note_abstract,
+                    abstract=obj.get("name", "") + " - Analysis",
                     content=obj["x_analysis"],
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -601,6 +741,7 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
@@ -619,20 +760,11 @@ class S3Connector:
                     timestamp = (history.get("timestamp") or "").strip()
                     note_content += f"| {timestamp} | {comment} |\n"
 
-                # For non-CVE entries, include the name in the key to ensure uniqueness (unless a note with same abstract already exists)
-                obj_name = obj.get("name", "")
-                abstract = obj_name + " - History"
-                if obj_name.startswith("CVE-"):
-                    note_key = obj.get("x_acti_uuid") + " - History"
-                elif self.note_exists_by_abstract(abstract):
-                    # Note already exists with this abstract, use simple key to consolidate
-                    note_key = obj.get("x_acti_uuid") + " - History"
-                else:
-                    note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - History"
+                note_id, note_aliases = self.generate_note_ids(obj, "History")
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key),
+                    id=note_id,
                     created=obj["created"],
-                    abstract=abstract,
+                    abstract=obj.get("name", "") + " - History",
                     content=note_content,
                     object_refs=[obj["id"]],
                     object_marking_refs=[self.s3_marking["id"]],
@@ -641,6 +773,7 @@ class S3Connector:
                         if self.identity is not None
                         else None
                     ),
+                    custom_properties={"x_opencti_stix_ids": note_aliases},
                 )
                 # Serialize to dict so object_refs can be rewritten later
                 new_bundle_objects.append(json.loads(note.serialize()))
@@ -690,7 +823,12 @@ class S3Connector:
                     r.get("source_name", "unknown") for r in obj["external_references"]
                 ]
                 self.helper.connector_logger.debug(
-                    f"Vulnerability '{obj.get('name')}' has {ext_ref_count} external_references: {ext_ref_sources}"
+                    "External references of a vulnerability",
+                    {
+                        "name": obj.get("name"),
+                        "count": ext_ref_count,
+                        "sources": ext_ref_sources,
+                    },
                 )
 
             # x_credit mapping
@@ -758,20 +896,18 @@ class S3Connector:
                 obj["type"] == "relationship"
                 and obj["source_ref"] not in included_entities
             ):
-                self.helper.log_warning(
-                    "Removing relationship from "
-                    + obj["source_ref"]
-                    + " because object is not in bundle"
+                self.helper.connector_logger.warning(
+                    "Removing relationship because its source is not in the bundle",
+                    {"source_ref": obj["source_ref"], "file": file_name},
                 )
                 continue
             if (
                 obj["type"] == "relationship"
                 and obj["target_ref"] not in included_entities
             ):
-                self.helper.log_warning(
-                    "Removing relationship to "
-                    + obj["target_ref"]
-                    + " because object is not in bundle"
+                self.helper.connector_logger.warning(
+                    "Removing relationship because its target is not in the bundle",
+                    {"target_ref": obj["target_ref"], "file": file_name},
                 )
                 continue
             new_bundle_objects.append(obj)
@@ -800,70 +936,273 @@ class S3Connector:
 
         return None
 
+    def list_files(self, prefix):
+        """
+        List the files of a prefix, oldest first, at most MAX_FILES_PER_RUN.
+
+        S3 lists keys in alphabetical order, 1000 per call: ordering on the upload date
+        keeps the files of a large push in publication order across runs (the next
+        runs reach the rest of the backlog as the processed files are deleted). Only
+        the MAX_FILES_PER_RUN oldest entries are kept while the pages are read, so the
+        memory used does not grow with the backlog of the prefix.
+        """
+        paginator = self.s3_client.get_paginator("list_objects_v2")
+        total = 0
+
+        def listed_files():
+            nonlocal total
+            for page in paginator.paginate(Bucket=self.s3_bucket_name, Prefix=prefix):
+                for listed_file in page.get("Contents", []):
+                    total += 1
+                    yield listed_file
+
+        files = heapq.nsmallest(
+            MAX_FILES_PER_RUN,
+            listed_files(),
+            key=lambda f: (f["LastModified"], f["Key"]),
+        )
+        self.helper.connector_logger.info(
+            "Files found in S3 prefix", {"prefix": prefix, "count": total}
+        )
+        if total > MAX_FILES_PER_RUN:
+            self.helper.connector_logger.info(
+                "Processing only the oldest files of the S3 prefix in this run",
+                {"prefix": prefix, "processed": len(files), "total": total},
+            )
+        return files
+
+    def download_file(self, key):
+        return self.s3_client.get_object(Bucket=self.s3_bucket_name, Key=key)[
+            "Body"
+        ].read()
+
+    def get_queue_messages_number(self):
+        """
+        Return the number of messages waiting in the queue of this connector.
+
+        None when the platform does not report it (older platform, RabbitMQ management
+        API unreachable, request failure).
+        """
+        try:
+            connector = self.helper.api.connector.read(self.helper.connect_id) or {}
+            messages_number = (connector.get("connector_queue_details") or {}).get(
+                "messages_number"
+            )
+            return None if messages_number is None else int(messages_number)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Failed to read the connector queue size",
+                {"error": f"{type(e).__name__}: {e}"},
+            )
+            return None
+
+    def is_stalled_work_released(self, entry, work_id, processed, expected):
+        """
+        Decide whether a work with no progress for WORK_STALL_TIMEOUT is waited for.
+
+        Its messages may still be in the queue (workers down or far behind): releasing
+        it would let newer files be sent while older versions still wait, the very
+        race the wait prevents. The work is therefore released only once the queue is
+        empty, which means its messages are gone (lost or dead-lettered). When the
+        platform does not report the queue size, the timeout alone decides.
+        """
+        details = {
+            "work_id": work_id,
+            "progress_at": entry.get("progress_at"),
+            "processed": processed,
+            "expected": expected,
+        }
+        messages_number = self.get_queue_messages_number()
+        if messages_number is None:
+            self.helper.connector_logger.warning(
+                "Work made no progress for too long and the queue size is unknown, "
+                "not waiting for it anymore",
+                details,
+            )
+            return True
+        if messages_number > 0:
+            self.helper.connector_logger.warning(
+                "Work made no progress for too long but the queue still holds "
+                "messages, waiting for them to be processed or reset the connector "
+                "state to stop waiting",
+                {**details, "queue_messages": messages_number},
+            )
+            return False
+        self.helper.connector_logger.warning(
+            "Work made no progress for too long and the queue is empty, its remaining "
+            "messages are lost: not waiting for it anymore",
+            details,
+        )
+        return True
+
+    def has_pending_works(self):
+        """
+        Tell whether a work sent by a previous run is still being ingested.
+
+        Workers apply the bundles of a queue in parallel: a version sent while an older
+        one still waits in the queue can be applied first, and then overwritten. New
+        files therefore stay in the bucket until the previous works are complete. The
+        next run compares them with what the platform then holds.
+        A work that makes no progress for WORK_STALL_TIMEOUT is released once the
+        connector queue is empty (see `is_stalled_work_released`).
+        """
+        state = self.helper.get_state() or {}
+        pending = state.get(PENDING_WORKS_STATE_KEY) or []
+        if not pending:
+            return False
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        still_pending = []
+        for entry in pending:
+            work_id = entry.get("work_id")
+            work = self.helper.api.work.get_work(work_id) if work_id else None
+            if not work or work.get("status") == "complete":
+                continue
+            tracking = work.get("tracking") or {}
+            expected = int(tracking.get("import_expected_number") or 0)
+            processed = int(tracking.get("import_processed_number") or 0)
+            # The run that sent this work is over: every bundle it sent is expected
+            if processed >= expected:
+                continue
+            progress_at = entry.get("progress_at")
+            stalled = False
+            if processed != entry.get("processed") or not progress_at:
+                entry["processed"] = processed
+                entry["progress_at"] = now.isoformat()
+            else:
+                stalled = now - parse_stix_timestamp(progress_at) > WORK_STALL_TIMEOUT
+            if stalled:
+                if self.is_stalled_work_released(entry, work_id, processed, expected):
+                    continue
+            else:
+                self.helper.connector_logger.info(
+                    "Work of a previous run is still in progress",
+                    {"work_id": work_id, "processed": processed, "expected": expected},
+                )
+            still_pending.append(entry)
+
+        state[PENDING_WORKS_STATE_KEY] = still_pending
+        self.helper.set_state(state)
+        return len(still_pending) > 0
+
+    def register_pending_work(self, work_id):
+        if work_id is None:
+            return
+        state = self.helper.get_state() or {}
+        state.setdefault(PENDING_WORKS_STATE_KEY, []).append(
+            {
+                "work_id": work_id,
+                "processed": 0,
+                "progress_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            }
+        )
+        self.helper.set_state(state)
+        # The state is otherwise saved on the next ping, after bundles were sent
+        self.helper.force_ping()
+
     def process(self):
         """
-        Process all STIX files from the S3 bucket.
+        Process the STIX files of the S3 bucket.
+
+        VERSIONING STRATEGY:
+        - A run starts only once the works sent by the previous run are complete, so a
+          version is never applied before an older one still waiting in the queue
+        - Each prefix is processed oldest file first, at most MAX_FILES_PER_RUN per run
+        - All the versions of an entity found in the run are merged: every bundle that
+          contains the entity carries its newest content
+        - Vulnerabilities older than the version held by the platform are reduced to a
+          reference, their relationships and related objects are still sent
 
         FAIL-FAST STRATEGY:
-        - Each file is processed and deleted immediately after successful ingestion
+        - Each file is deleted only after its bundle was successfully sent
         - If ANY error occurs during processing, the connector crashes completely
         - This ensures no file is ever deleted without successful processing
         - Platform team will be alerted when the connector crashes
         """
+        if self.has_pending_works():
+            self.helper.connector_logger.info(
+                "Waiting for the works of the previous run to complete before "
+                "processing new files"
+            )
+            return
+
+        files_by_prefix = {}
         for prefix in self.s3_bucket_prefixes:
             self.helper.connector_logger.info(
-                f"Listing files in S3 bucket '{self.s3_bucket_name}' with prefix '{prefix}'"
+                "Listing files in S3 bucket",
+                {"bucket": self.s3_bucket_name, "prefix": prefix},
+            )
+            listed = self.list_files(prefix)
+            # If a download fails, connector crashes - no file is deleted
+            with ThreadPoolExecutor(max_workers=S3_DOWNLOAD_WORKERS) as executor:
+                contents = list(
+                    executor.map(self.download_file, [f["Key"] for f in listed])
+                )
+            files_by_prefix[prefix] = [
+                {
+                    "key": listed_file["Key"],
+                    "last_modified": listed_file["LastModified"],
+                    "content": content if self.s3_attach_original_file else None,
+                    "data": self.parse_bundle(content, listed_file["Key"]),
+                }
+                for listed_file, content in zip(listed, contents)
+            ]
+
+        run_files = sorted(
+            (s3_file for files in files_by_prefix.values() for s3_file in files),
+            key=lambda s3_file: (s3_file["last_modified"], s3_file["key"]),
+        )
+        bundles = [
+            s3_file["data"]
+            for s3_file in run_files
+            if isinstance(s3_file["data"], dict)
+        ]
+        self.resolve_versions(bundles)
+        self.supersede_outdated_vulnerabilities(bundles)
+
+        # Every bundle of the run is built before the first one is sent: a file that
+        # cannot be processed stops the run before anything is sent or deleted
+        for s3_file in run_files:
+            s3_file["bundle"] = (
+                self.fix_bundle(
+                    s3_file["data"],
+                    file_name=s3_file["key"],
+                    original_content=s3_file["content"],
+                )
+                if isinstance(s3_file["data"], dict)
+                else None
             )
 
-            # List all objects in the bucket with the given prefix
-            objects = self.s3_client.list_objects(
-                Bucket=self.s3_bucket_name, Prefix=prefix
-            )
-
-            contents = objects.get("Contents", [])
-            self.helper.log_info(
-                f"{len(contents)} file(s) found in S3 prefix '{prefix}'"
-            )
-
-            if not contents:
+        for prefix, files in files_by_prefix.items():
+            if not files:
                 continue
 
             # Work ID created lazily - only when we have valid content to send
             work_id = None
             processed_files = 0
 
-            for obj in contents:
-                file_key = obj.get("Key")
-                self.helper.log_info(f"Processing file: '{file_key}'")
-
-                # Step 1: Fetch file content from S3
-                # If this fails, connector crashes - file is NOT deleted
-                data = self.s3_client.get_object(
-                    Bucket=self.s3_bucket_name, Key=file_key
-                )
-                content = data["Body"].read()
-
-                # Step 2: Parse and fix the STIX bundle
-                # Pass file_key and content for optional file attachment to vulnerabilities
-                fixed_bundle = self.fix_bundle(
-                    content, file_name=file_key, original_content=content
-                )
+            for s3_file in files:
+                file_key = s3_file["key"]
+                fixed_bundle = s3_file["bundle"]
+                self.helper.connector_logger.info("Processing file", {"file": file_key})
 
                 # Only process valid bundles (fix_bundle returns None or JSON string)
                 if fixed_bundle is not None:
                     # Create work job only on first valid bundle (lazy initialization)
                     if work_id is None:
-                        now = datetime.datetime.now(pytz.UTC)
-                        friendly_name = (
-                            f"S3/{prefix} run @ " + now.astimezone(pytz.UTC).isoformat()
-                        )
+                        now = datetime.datetime.now(datetime.timezone.utc)
+                        friendly_name = f"S3/{prefix} run @ " + now.isoformat()
+                        # Multipart: the work completes once every bundle is processed
                         work_id = self.helper.api.work.initiate_work(
-                            self.helper.connect_id, friendly_name
+                            self.helper.connect_id, friendly_name, is_multipart=True
                         )
+                        self.register_pending_work(work_id)
 
-                    # Step 3: Send bundle to OpenCTI
+                    # Send bundle to OpenCTI
                     # If this fails, connector crashes - file is NOT deleted
-                    self.helper.log_info(f"Sending STIX bundle from file: '{file_key}'")
+                    self.helper.connector_logger.info(
+                        "Sending STIX bundle from file", {"file": file_key}
+                    )
                     self.helper.send_stix2_bundle(
                         bundle=fixed_bundle,
                         work_id=work_id,
@@ -871,31 +1210,37 @@ class S3Connector:
                     )
                     processed_files += 1
 
-                    # Step 4: Optionally delete file from S3 after successful processing
+                    # Optionally delete file from S3 after successful processing
                     if self.s3_delete_after_import:
-                        self.helper.log_info(f"Deleting processed file: '{file_key}'")
+                        self.helper.connector_logger.info(
+                            "Deleting processed file", {"file": file_key}
+                        )
                         self.s3_client.delete_object(
                             Bucket=self.s3_bucket_name, Key=file_key
                         )
-                        self.helper.log_info(
-                            f"Successfully processed and deleted file: '{file_key}'"
+                        self.helper.connector_logger.info(
+                            "Successfully processed and deleted file",
+                            {"file": file_key},
                         )
                     else:
-                        self.helper.log_info(
-                            f"Successfully processed file: '{file_key}' (kept in bucket for debug)"
+                        self.helper.connector_logger.info(
+                            "Successfully processed file (kept in bucket for debug)",
+                            {"file": file_key},
                         )
                 else:
                     # Empty/invalid bundle - optionally delete the file
                     if self.s3_delete_after_import:
-                        self.helper.log_warning(
-                            f"File '{file_key}' has no valid STIX content, deleting"
+                        self.helper.connector_logger.warning(
+                            "File has no valid STIX content, deleting",
+                            {"file": file_key},
                         )
                         self.s3_client.delete_object(
                             Bucket=self.s3_bucket_name, Key=file_key
                         )
                     else:
-                        self.helper.log_warning(
-                            f"File '{file_key}' has no valid STIX content (kept in bucket for debug)"
+                        self.helper.connector_logger.warning(
+                            "File has no valid STIX content (kept in bucket for debug)",
+                            {"file": file_key},
                         )
 
             # Only finalize work if we actually processed something
@@ -904,16 +1249,19 @@ class S3Connector:
                     f"Connector successfully processed S3 prefix '{prefix}': "
                     f"{processed_files} file(s) ingested"
                 )
-                self.helper.log_info(message)
+                self.helper.connector_logger.info(
+                    "Connector successfully processed S3 prefix",
+                    {"prefix": prefix, "files": processed_files},
+                )
                 self.helper.api.work.to_processed(work_id, message)
             else:
-                self.helper.log_info(
-                    f"No valid STIX content found in S3 prefix '{prefix}'"
+                self.helper.connector_logger.info(
+                    "No valid STIX content found in S3 prefix", {"prefix": prefix}
                 )
 
     def run(self):
-        self.helper.log_info(
-            f"Starting S3 connector with {self.get_interval():g} seconds interval"
+        self.helper.connector_logger.info(
+            "Starting S3 connector", {"interval_seconds": self.get_interval()}
         )
         if self.helper.get_run_and_terminate():
             self.process()

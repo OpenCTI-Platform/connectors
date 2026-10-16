@@ -49,14 +49,8 @@ class _StateClient:
 
     def save_state(self, state: BaseConnectorState) -> None:
         """Save state's fields as connector's state on OpenCTI."""
-        declared_fields = set(type(state).model_fields)
-
-        state_dump = state.model_dump(mode="json", include=declared_fields)
-        # Send both declared _and_ extra fields to not delete any connector state's attributes on OpenCTI
-        if state.model_extra:
-            state_dump.update(state.model_extra)
-
-        self._helper.set_state(state_dump)
+        # Send both declared and extra fields (but not private attributes)
+        self._helper.set_state(state.to_json())
         # Ensure the state is updated immediately on OpenCTI (instead of waiting for the next ping)
         self._helper.force_ping()
 
@@ -117,6 +111,20 @@ class BaseConnectorState(BaseModel, ABC):
         """
         # Wrap the helper to prepare state API calls properly
         self._client = _StateClient(helper)
+
+    def to_json(self) -> dict[str, Any]:
+        """Get the state as a JSON-serializable dict.
+        Used before saving the state to OpenCTI, or for logging purposes.
+        """
+        # Include declared and extra fields (but not private attributes),
+        # to not delete any connector state's attributes on OpenCTI
+        declared_fields = set(type(self).model_fields)
+
+        state_dump = self.model_dump(mode="json", include=declared_fields)
+        if self.model_extra:
+            state_dump.update(self.model_extra)
+
+        return state_dump
 
     def load(self, force: bool = False) -> None:
         """Load the state from OpenCTI.

@@ -24,6 +24,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "Artifact, StixFile, Url",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hatching_triage_sandbox": {
                     "token": "test-api-token",
@@ -33,7 +34,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "botnet_color": "#f79e00",
                     "campaign_color": "#7a01e5",
                     "tag_color": "#54483b",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )

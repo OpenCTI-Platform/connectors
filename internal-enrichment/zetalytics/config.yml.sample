@@ -8,11 +8,11 @@ connector:
   scope: 'Domain-Name,Hostname,IPv4-Addr,IPv6-Addr' # optional
   log_level: 'info' # optional, shown here for visibility (default: 'error')
   auto: false # optional (default: false)
+  max_tlp: 'TLP:AMBER' # optional (default: 'TLP:AMBER')
 
 zetalytics:
   token: 'ChangeMe'
   mode: 'manual' # optional (default: 'manual'), available values: 'light', 'playbook', 'manual', 'deep'
-  max_tlp: 'TLP:AMBER' # optional (default: 'TLP:AMBER')
   max_results: 300 # optional (default: 300)
   lookback_days: 365 # optional (default: 365)
   include_live_dns: true # optional (default: true)

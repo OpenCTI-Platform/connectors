@@ -49,7 +49,7 @@ def build_settings(premium="false", max_tlp=None):
     if premium is not None:
         settings_dict["osint_industries"]["premium"] = premium
     if max_tlp is not None:
-        settings_dict["osint_industries"]["max_tlp"] = max_tlp
+        settings_dict["connector"]["max_tlp"] = max_tlp
 
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
@@ -299,7 +299,7 @@ def test_playbook_receives_untouched_bundle_when_tlp_above_max():
 
     msg = conn._process_callback(data)
 
-    assert "greater than OSINT_INDUSTRIES_MAX_TLP" in msg
+    assert "greater than CONNECTOR_MAX_TLP" in msg
     conn.client.query.assert_not_called()
     conn.helper.stix2_create_bundle.assert_called_once_with(former)
     conn.helper.send_stix2_bundle.assert_called_once()
@@ -442,7 +442,7 @@ def test_process_message_blocks_observable_above_max_tlp():
 
     msg = conn._process_callback({"enrichment_entity": obs})
 
-    assert "greater than OSINT_INDUSTRIES_MAX_TLP" in msg
+    assert "greater than CONNECTOR_MAX_TLP" in msg
     conn.client.query.assert_not_called()
     conn.helper.send_stix2_bundle.assert_not_called()
 

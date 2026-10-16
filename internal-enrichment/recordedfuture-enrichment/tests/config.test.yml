@@ -7,8 +7,8 @@ connector:
   name: "Test connector"
   scope: "domain-name,url"
   log_level: "error"
+  max_tlp: "TLP:CLEAR"
 
 recorded_future:
   token: "recorded-future-token"
   create_indicator_threshold: 0
-  info_max_tlp: "TLP:CLEAR"

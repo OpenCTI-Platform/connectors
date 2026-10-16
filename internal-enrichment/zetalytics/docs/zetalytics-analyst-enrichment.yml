@@ -9,11 +9,11 @@ connector:
   scope: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
   auto: false
   log_level: "info"
+  max_tlp: "TLP:AMBER"
 
 zetalytics:
   token: "${ZETALYTICS_TOKEN}"
   mode: "manual"
-  max_tlp: "TLP:AMBER"
   max_results: 300
   max_subdomains: 500
   max_whois_results: 5
