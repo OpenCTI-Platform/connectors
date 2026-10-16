@@ -189,6 +189,29 @@ def test_register_platform_for_internet_connectors(hunt_settings, hunt_helper):
     assert registration == {}
 
 
+def test_registers_the_permissions_and_the_documentation_it_declares(
+    hunt_settings, hunt_helper
+):
+    # Given a connector declaring its permissions and its setup documentation
+    class _DocumentedConnector(DummyHuntConnector):
+        required_permissions = (("search", "Run the hunt searches"),)
+        documentation_url = "https://docs.example.com/hunt"
+
+    connector = _DocumentedConnector(hunt_settings)
+    connector._helper = hunt_helper
+    connector._logger = MagicMock()
+
+    # When the connector registers its platform
+    connector.register_platform()
+
+    # Then OpenCTI receives what the account needs and where it is documented
+    kwargs = hunt_helper.register_hunt_platform.call_args.kwargs
+    assert kwargs["required_permissions"] == [
+        {"name": "search", "purpose": "Run the hunt searches"}
+    ]
+    assert kwargs["documentation_url"] == "https://docs.example.com/hunt"
+
+
 def test_start_fails_fast_with_an_old_pycti(hunt_settings):
     # Given the installed pycti without hunt support
     connector = DummyHuntConnector(hunt_settings)

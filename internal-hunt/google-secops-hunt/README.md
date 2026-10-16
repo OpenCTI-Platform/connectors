@@ -44,7 +44,7 @@ GOOGLE_SECOPS_HUNT_CLIENT_EMAIL=opencti-hunt@my-project.iam.gserviceaccount.com
 GOOGLE_SECOPS_HUNT_CLIENT_ID=ChangeMe
 ```
 
-Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It requests a token and runs one UDM search. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+A hunt run refused by the platform names the missing permission in plain words, with what to grant.
 
 Table of Contents
 

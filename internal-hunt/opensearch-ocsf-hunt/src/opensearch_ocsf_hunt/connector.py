@@ -105,10 +105,6 @@ class OpenSearchOcsfHuntConnector(InternalHuntConnector):
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
 
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search: one event of the hunted indices."""
-        return NativeQuery(language="opensearch-lucene", query="*")
-
     def sigma_backend(self, pipeline: str | None) -> Backend:
         """Create the pySigma backend of the configured query language.
 

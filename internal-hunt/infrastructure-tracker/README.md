@@ -45,7 +45,7 @@ INFRASTRUCTURE_TRACKER_URLSCAN_API_KEY=ChangeMe
 INFRASTRUCTURE_TRACKER_INTERNETDB_ENABLED=true
 ```
 
-Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one search per source with a key, unlikely to match, which counts against the quota of the source. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+A hunt run refused by a source names the key to fix or the missing permission in plain words, with what to grant.
 
 Table of Contents
 

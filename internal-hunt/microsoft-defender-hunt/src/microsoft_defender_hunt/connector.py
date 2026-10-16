@@ -8,10 +8,8 @@ from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
     DEFAULT_ENTITY_FIELDS,
     HitFields,
-    HuntConnectionCheck,
     HuntEvent,
     HuntLimits,
-    HuntQueryRejectedError,
     HuntRequest,
     HuntResult,
     HuntSigmaRule,
@@ -110,10 +108,6 @@ SCHEMA_COLUMNS = frozenset(
 """Columns of the advanced hunting tables a native query may reference."""
 
 _IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
-
-CONNECTION_TEST_QUERY = "DeviceInfo | take 1"
-
-CONNECTION_TEST_TIMESPAN = "P7D"
 
 DOCUMENTATION_URL = (
     "https://docs.opencti.io/latest/usage/hunt-connectors/#microsoft-defender-xdr"
@@ -221,66 +215,6 @@ class MicrosoftDefenderHuntConnector(InternalHuntConnector):
         if self.client is None:
             raise RuntimeError("The advanced hunting client is created by start().")
         return self.client
-
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search: one device of the tenant."""
-        return NativeQuery(language="kql", query=CONNECTION_TEST_QUERY)
-
-    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
-        """Check the credentials, then the advanced hunting permission with one query.
-
-        Args:
-            deadline: Deadline of the connection test.
-
-        Returns:
-            The authentication check, then the permission check.
-        """
-        client = self._require_client()
-        authentication = self.run_check(
-            "Microsoft Entra ID",
-            lambda: client.tokens.access_token(deadline),
-            "Microsoft Entra ID issued a Microsoft Graph token to the app registration.",
-        )
-        if not authentication.ok:
-            return [authentication]
-        answer: dict[str, Any] = {}
-
-        def _query() -> None:
-            try:
-                answer["rows"] = client.run_query(
-                    CONNECTION_TEST_QUERY, CONNECTION_TEST_TIMESPAN, deadline
-                ).rows
-            except HuntQueryRejectedError as err:
-                answer["rejected"] = str(err)
-
-        name = REQUIRED_PERMISSIONS[0][0]
-        search = self.run_check(
-            name,
-            _query,
-            "Advanced hunting answered: the app registration can run hunting queries, "
-            "and the tenant holds device telemetry (DeviceInfo).",
-        )
-        if search.ok and "rejected" in answer:
-            search = HuntConnectionCheck(
-                name=name,
-                ok=True,
-                message=(
-                    "Advanced hunting answered, but the tenant holds no DeviceInfo table "
-                    "(no Microsoft Defender for Endpoint): hunts can still query the email, "
-                    f"identity and cloud app tables it holds. {answer['rejected']}"
-                )[:2048],
-            )
-        elif search.ok and not answer.get("rows"):
-            search = HuntConnectionCheck(
-                name=name,
-                ok=True,
-                message=(
-                    "Advanced hunting answered, but DeviceInfo holds no device over the last "
-                    "7 days: onboard devices to Microsoft Defender for Endpoint, or hunt the "
-                    "email, identity and cloud app tables the tenant holds."
-                ),
-            )
-        return [authentication, search]
 
     def sigma_backend(self, pipeline: str | None) -> KustoBackend:
         """Create the pySigma Kusto backend.

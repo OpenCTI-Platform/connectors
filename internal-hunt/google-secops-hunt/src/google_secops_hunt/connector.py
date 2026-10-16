@@ -199,12 +199,6 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
 
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search: one UDM event."""
-        return NativeQuery(
-            language="udm", query='metadata.event_type != "EVENTTYPE_UNSPECIFIED"'
-        )
-
     def sigma_backend(self, pipeline: str | None) -> SecOpsBackend:
         """Create the pySigma SecOps backend.
 

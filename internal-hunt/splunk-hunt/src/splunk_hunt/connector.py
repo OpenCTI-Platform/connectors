@@ -5,7 +5,6 @@ from collections.abc import Sequence
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
-    HuntConnectionCheck,
     HuntEvent,
     HuntExecutionError,
     HuntLimits,
@@ -310,48 +309,6 @@ class SplunkHuntConnector(InternalHuntConnector):
             logger=self.logger,
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
-
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search: one event of the configured search scope."""
-        return NativeQuery(language="spl", query="index=* | head 1")
-
-    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
-        """Check the credentials, the search capability, then run the test search.
-
-        Args:
-            deadline: Deadline of the connection test.
-
-        Returns:
-            The checks, stopping at the first failure.
-        """
-        if self.client is None:
-            raise RuntimeError("The Splunk client is created by start().")
-        client = self.client
-        context: dict[str, object] = {}
-        authentication = self.run_check(
-            "Authentication",
-            lambda: context.update(client.current_context(deadline)),
-            "Splunk accepted the credentials of the connector.",
-        )
-        if not authentication.ok:
-            return [authentication]
-        user = context.get("username") or "the account"
-        capabilities = context.get("capabilities")
-        if isinstance(capabilities, list) and "search" not in capabilities:
-            return [
-                authentication,
-                HuntConnectionCheck(
-                    name="search",
-                    ok=False,
-                    message=f"Access denied: the roles of {user} lack the search capability: add it to one of its roles in Settings > Roles.",
-                ),
-            ]
-        capability = HuntConnectionCheck(
-            name="search",
-            ok=True,
-            message=f"The roles of {user} hold the search capability.",
-        )
-        return [authentication, capability, *super().connection_checks(deadline)]
 
     def sigma_backend(self, pipeline: str | None) -> SplunkBackend:
         """Create the pySigma Splunk backend.

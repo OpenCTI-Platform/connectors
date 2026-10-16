@@ -8,7 +8,6 @@ from typing import Any, NoReturn
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
     HitFields,
-    HuntConnectionCheck,
     HuntEvent,
     HuntExecutionError,
     HuntLimits,
@@ -163,13 +162,6 @@ REQUIRED_PERMISSIONS = (
 )
 """What each source needs, as (name, purpose): a source without a key is disabled."""
 
-SOURCE_LABELS = {
-    "censys": "Censys Platform",
-    "silentpush": "Silent Push",
-    "urlscan": "urlscan.io",
-    "cymru_scout": "Team Cymru Scout",
-}
-
 ACCESS_DENIED_HINTS = {
     "censys": {
         401: "Censys refused the personal access token: check INFRASTRUCTURE_TRACKER_CENSYS_TOKEN",
@@ -189,14 +181,6 @@ ACCESS_DENIED_HINTS = {
     },
 }
 """What a refused source account lacks, by source and HTTP status."""
-
-CONNECTION_TEST_QUERIES = {
-    "censys": 'host.services.endpoints.http.html_title = "OpenCTI connection test"',
-    "silentpush": 'htmltitle = "OpenCTI connection test"',
-    "urlscan": 'page.title:"OpenCTI connection test"',
-    "cymru_scout": "0" * 62,
-}
-"""One search per source, unlikely to match: it proves the key can search (and counts in its quota)."""
 
 
 class InfrastructureTrackerConnector(InternalHuntConnector):
@@ -249,28 +233,6 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
             self.clients[source].access_denied_hints = dict(ACCESS_DENIED_HINTS[source])
         if config.internetdb_enabled and config.internetdb_max_lookups > 0:
             self.internetdb = InternetDbClient(base_url=str(config.internetdb_url))
-
-    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
-        """Run one search per source with a key (a source without one is disabled).
-
-        Args:
-            deadline: Deadline of the connection test.
-
-        Returns:
-            One check per source.
-        """
-        end = datetime.now(timezone.utc)
-        window = HuntTimeWindow(start=end - timedelta(days=1), end=end)
-        return [
-            self.run_check(
-                SOURCE_LABELS[source],
-                lambda source=source: self._search(
-                    source, CONNECTION_TEST_QUERIES[source], window, 1, deadline
-                ),
-                f"{SOURCE_LABELS[source]} accepted the key and ran a search.",
-            )
-            for source in self.tracker_config.sources
-        ]
 
     def sigma_backend(self, pipeline: str | None) -> NoReturn:
         """Reject Sigma rules: infrastructure hunts search fingerprints.

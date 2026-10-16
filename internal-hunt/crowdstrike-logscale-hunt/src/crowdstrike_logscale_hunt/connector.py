@@ -145,10 +145,6 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
             )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
 
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search: one event of the repository."""
-        return NativeQuery(language="logscale", query="*")
-
     def sigma_backend(self, pipeline: str | None) -> LogScaleBackend:
         """Create the pySigma LogScale backend.
 
