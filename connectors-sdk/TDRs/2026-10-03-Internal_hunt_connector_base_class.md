@@ -48,8 +48,8 @@ the contract would be re-implemented, and could drift, in each connector.
 
 | Setting | Purpose |
 | --- | --- |
-| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `sentinelone`, `clickhouse`, `s3-ocsf`, `internet`). |
-| `security_platform_name` / `security_platform_type` | Security Platform identity the hunts run against (required, except for `internet`). |
+| `scope` | Exactly one hunt platform slug (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`, `crowdstrike-logscale`, `google-secops`, `opensearch`, `sentinelone`, `clickhouse`, `s3-ocsf`, or an internet scanning service: `censys`, `silentpush`, `urlscan`, `cymru-scout`, `shodan`). |
+| `security_platform_name` / `security_platform_type` | Security Platform identity the hunts run against (required, except for the internet scanning services, where it must stay empty). |
 | `max_concurrent_runs` | Connector-side concurrency limit, sent at registration. |
 | `observable_types` | Observable types the connector may create; IOC types by default, widened explicitly. |
 | `max_observables` | Cap of observables per run. |
@@ -73,7 +73,7 @@ class SplunkHuntConnector(InternalHuntConnector):
 | `execute(native_query, time_window, limits, deadline)` | Abstract: the query execution, every call bounded by the run `deadline` the base class waits for. |
 | `translate(sigma_rule, pipeline)` | pySigma conversion with `sigma_backend`, detection field names kept for evidence ranking. |
 | `combine_queries(queries)` | Single query, or joined with `query_join` when a Sigma document yields several. |
-| `to_stix(request, result)` | Telemetry mapping (observables + observed-data, no sighting: OpenCTI owns them); outside-in connectors override it. |
+| `to_stix(request, result)` | Telemetry mapping (observables + observed-data, no sighting: OpenCTI owns them); `InfrastructureHuntConnector` overrides it for the internet scanning services. |
 | `on_timeout(native_query)` | No-op; cancels the platform job when overridden. |
 | `post_init()` | No-op; creates the platform client when overridden. |
 
@@ -90,6 +90,16 @@ OpenCTI marks the work in error.
 `HuntExecutionError` / `HuntTimeoutError` whose message carries the (size-capped) platform error, so that the run
 report says why the platform refused the query. `cleanup_request()` cancels or deletes platform jobs (search jobs,
 async queries) without ever masking the run outcome.
+
+### Internet scanning services
+
+Infrastructure hunts run on one connector per internet scanning service (Censys Platform, Silent Push, urlscan.io,
+Team Cymru Scout, Shodan), each registered for its own hunt platform with its own credential, quotas and concurrency
+default, rather than on one connector querying every service: a quota, an outage or a refused key then stays local
+to its service, and OpenCTI dispatches and reports every run per service. The parts they share live in the SDK:
+the `fingerprint` language (`parse_fingerprint_rule`), the query plan, the budgeted execution of the queries
+(`InfrastructureHuntConnector.execute`), the host records (`Host`, `HostSearchResult`, `within_window`) and the
+infrastructure STIX mapping. A service connector implements `search()` and its field map only.
 
 ### pycti compatibility
 

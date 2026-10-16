@@ -170,10 +170,10 @@ def test_start_registers_the_platform_and_listens(hunt_settings):
     assert helper.callback == connector.process_message
 
 
-def test_register_platform_for_internet_connectors(hunt_settings, hunt_helper):
-    # Given an internet hunt connector
+def test_register_platform_for_internet_scanning_services(hunt_settings, hunt_helper):
+    # Given a hunt connector of an internet scanning service
     hunt_settings.connector = make_hunt_config(
-        scope=["internet"], security_platform_name=None, max_concurrent_runs=2
+        scope=["censys"], security_platform_name=None, max_concurrent_runs=2
     )
     connector = DummyHuntConnector(hunt_settings)
     connector._helper = hunt_helper
@@ -185,7 +185,7 @@ def test_register_platform_for_internet_connectors(hunt_settings, hunt_helper):
 
     # Then no Security Platform is requested
     kwargs = hunt_helper.register_hunt_platform.call_args.kwargs
-    assert kwargs["platform"] == "internet"
+    assert kwargs["platform"] == "censys"
     assert kwargs["security_platform_name"] is None
     assert kwargs["max_concurrent_runs"] == 2
     assert registration == {}

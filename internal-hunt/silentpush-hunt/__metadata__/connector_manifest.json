@@ -1,0 +1,29 @@
+{
+  "title": "Silent Push Hunt",
+  "slug": "silentpush-hunt",
+  "description": "Executes OpenCTI infrastructure hunts on Silent Push. An infrastructure hunt lists the fingerprints of adversary infrastructure as a fingerprint rule for the silentpush hunt platform. For every hunt run, the connector searches the Silent Push web scan data (SPQL) on the JARM, certificate SHA-256, HTTP title, HTML body hash and Server header fingerprints of the rule within the run timeout and result limit, keeps the hosts Silent Push last scanned within the run window, and creates in OpenCTI an infrastructure consisting of the public IPv4 addresses, domain names and X.509 certificates found, each with a detection indicator, related to the threats the hunt targets, plus one observed-data per observable stamped with the hunt run. OpenCTI receives the hit count, the queries run and a hashed, truncated evidence sample. Quotas: API calls count against the subscription of the account, Silent Push emails the account when it reaches its daily limit and does not publish the limits; the connector reads up to 1,000 scans per request, sends one request at a time and holds 2 runs at a time by default (CONNECTOR_MAX_CONCURRENT_RUNS). Before you start: a Silent Push API key whose subscription includes the Explore web scan data API. The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#silent-push.",
+  "short_description": "Tracks adversary infrastructure fingerprints (JARM, certificate SHA-256, HTTP title, body hash, Server header) in Silent Push web scan data for OpenCTI infrastructure hunts.",
+  "logo": "internal-hunt/silentpush-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.silentpush.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/silentpush-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-silentpush-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

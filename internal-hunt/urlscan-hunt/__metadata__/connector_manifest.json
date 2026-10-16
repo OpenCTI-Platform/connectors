@@ -1,0 +1,29 @@
+{
+  "title": "urlscan.io Hunt",
+  "slug": "urlscan-hunt",
+  "description": "Executes OpenCTI infrastructure hunts on urlscan.io. An infrastructure hunt lists the fingerprints of adversary infrastructure as a fingerprint rule for the urlscan hunt platform. For every hunt run, the connector searches the urlscan.io scans of the days of the run window (Search API) on the HTTP title, Server header, TLS issuer, body hash and ASN fingerprints of the rule within the run timeout and result limit, keeps the scans within the run window, and creates in OpenCTI an infrastructure consisting of the public IPv4 addresses and domain names found, each with a detection indicator, related to the threats the hunt targets, plus one observed-data per observable stamped with the hunt run. OpenCTI receives the hit count, the queries run and a hashed, truncated evidence sample. Quotas: searches are limited per minute, per hour and per day depending on the plan (the quotas of a key are at https://urlscan.io/user/quotas/), only successful searches count, and urlscan.io answers HTTP 429 beyond; the connector reads 100 scans per request, sends one request at a time and holds 2 runs at a time by default (CONNECTOR_MAX_CONCURRENT_RUNS). Before you start: a urlscan.io API key with search access. The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#urlscan.",
+  "short_description": "Tracks adversary infrastructure fingerprints (HTTP title, Server header, TLS issuer, body hash, ASN) in urlscan.io scans for OpenCTI infrastructure hunts and creates the infrastructure found.",
+  "logo": "internal-hunt/urlscan-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://urlscan.io/pricing/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/urlscan-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-urlscan-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

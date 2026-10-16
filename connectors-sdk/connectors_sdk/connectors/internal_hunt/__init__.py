@@ -3,6 +3,8 @@
 This package provides the building blocks of the connectors of type ``INTERNAL_HUNT``:
 
 - ``InternalHuntConnector``: base class (translation, execution limits, STIX mapping, reporting)
+- ``InfrastructureHuntConnector``: base class of the internet scanning services (fingerprint
+  documents, ``Host`` records, infrastructure STIX mapping)
 - Protocol models: ``HuntRequest`` and its parts, ``NativeQuery``, ``HuntEvent``, ``HuntResult``,
   ``HuntEvidence``, ``HuntRunReport``
 - pySigma helpers: ``build_pipeline``, ``parse_sigma_rule``, ``convert_sigma``, ``detection_fields``
@@ -55,6 +57,20 @@ from connectors_sdk.connectors.internal_hunt.errors import (
     HuntUnsupportedPyctiError,
     is_retryable,
 )
+from connectors_sdk.connectors.internal_hunt.fingerprints import (
+    FINGERPRINT_FIELDS,
+    FINGERPRINT_LANGUAGE,
+    MAX_FINGERPRINTS,
+    Fingerprint,
+    FingerprintKind,
+    FingerprintRule,
+    describe_fingerprints,
+    join_matches,
+    load_queries,
+    parse_fingerprint_rule,
+    quote_value,
+    render_queries,
+)
 from connectors_sdk.connectors.internal_hunt.indicators import (
     AGGREGATED_FIELDS,
     IocBatch,
@@ -69,6 +85,32 @@ from connectors_sdk.connectors.internal_hunt.indicators import (
     value_hit_keys,
     value_hits,
     value_pattern,
+)
+from connectors_sdk.connectors.internal_hunt.infrastructure import (
+    CERTIFICATE,
+    CERTIFICATES_FIELD,
+    DOMAIN,
+    INFRASTRUCTURE_OBSERVABLE_TYPES,
+    IPV4,
+    Certificate,
+    Host,
+    HostSearchResult,
+    HuntInfrastructure,
+    InfrastructureObservable,
+    as_list,
+    as_mapping,
+    build_infrastructure_objects,
+    collect_infrastructure_observables,
+    infrastructure_name,
+    infrastructure_stix_id,
+    json_object,
+    new_host,
+    parse_asn,
+    text_value,
+    within_window,
+)
+from connectors_sdk.connectors.internal_hunt.infrastructure_connector import (
+    InfrastructureHuntConnector,
 )
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
     InternalHuntConnector,
@@ -125,8 +167,43 @@ from connectors_sdk.connectors.internal_hunt.translation import (
 
 __all__ = [
     # Connector
+    "InfrastructureHuntConnector",
     "InternalHuntConnector",
     "ensure_pycti_hunt_support",
+    # Infrastructure hunts
+    "CERTIFICATE",
+    "CERTIFICATES_FIELD",
+    "DOMAIN",
+    "FINGERPRINT_FIELDS",
+    "FINGERPRINT_LANGUAGE",
+    "INFRASTRUCTURE_OBSERVABLE_TYPES",
+    "IPV4",
+    "MAX_FINGERPRINTS",
+    "Certificate",
+    "Fingerprint",
+    "FingerprintKind",
+    "FingerprintRule",
+    "Host",
+    "HostSearchResult",
+    "HuntInfrastructure",
+    "InfrastructureObservable",
+    "as_list",
+    "as_mapping",
+    "build_infrastructure_objects",
+    "collect_infrastructure_observables",
+    "describe_fingerprints",
+    "infrastructure_name",
+    "infrastructure_stix_id",
+    "join_matches",
+    "json_object",
+    "load_queries",
+    "new_host",
+    "parse_asn",
+    "parse_fingerprint_rule",
+    "quote_value",
+    "render_queries",
+    "text_value",
+    "within_window",
     # Protocol models
     "HuntDefinition",
     "HuntEvent",

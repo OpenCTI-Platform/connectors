@@ -381,7 +381,7 @@ This guide is organized into multiple documents:
 - Run limits (timeout, max results) and benign suppression
 - Sightings and observed-data mapping
 - Evidence redaction and privacy guarantees
-- Outside-in (internet) hunt connectors
+- Outside-in hunt connectors (one per internet scanning service)
 
 **[Code Quality & Standards](./docs/05-code-quality-standards.md)**
 - Code style requirements
