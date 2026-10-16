@@ -1,0 +1,26 @@
+{
+  "title": "ORKL",
+  "slug": "orkl",
+  "description": "ORKL (https://orkl.eu) is a free, community-driven library of publicly released Cyber Threat Intelligence reports, sponsored by Sunet. It aggregates PDF and web reports from major sources (MITRE, MISP Galaxy, ETDA, Secureworks, and others), extracting full text and tagging the threat actors and sources referenced in each report.\n\nThis connector periodically polls the ORKL REST API (no authentication required) and imports library entries into OpenCTI as STIX Reports. Threat actors tagged on each report are created as Intrusion Sets (or Threat Actors, depending on configuration) and referenced in the report's object_refs, and their associated tools can optionally be imported as STIX Tool objects.\n\nWith ORKL's ~29,000 report entries and ~1,900 tracked threat actors, this connector provides a broad, continuously updated, and freely accessible source of structured threat intelligence for OpenCTI.",
+  "short_description": "Imports the ORKL open-source threat intelligence library as STIX Reports, with tagged threat actors as Intrusion Sets and their tools, into OpenCTI.",
+  "logo": "external-import/orkl/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-08-26",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/orkl",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-orkl",
+  "container_type": "EXTERNAL_IMPORT"
+}

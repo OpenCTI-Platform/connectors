@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'ORKL'
+  scope: 'orkl'
+  log_level: 'info'
+  duration_period: 'P1D'
+
+orkl:
+  api_base_url: 'https://orkl.eu/api/v1'
+  import_start_date: 'P30D'
+  tlp_level: 'clear'
+  threat_actor_as_intrusion_set: true
+  ingest_tools: false
