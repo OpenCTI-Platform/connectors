@@ -67,20 +67,6 @@ class XposedOrNotConfig(BaseConfigModel):
         default="https://api.xposedornot.com",
         json_schema_extra={"pattern": "^https://"},
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
-        description=(
-            "Maximum TLP of an observable the connector is allowed to enrich. The"
-            " observable's email address is sent to the XposedOrNot API."
-        ),
-        default="TLP:AMBER",
-    )
     max_note_breaches: int = Field(
         description=(
             "Maximum number of breaches rendered in the summary note's table,"

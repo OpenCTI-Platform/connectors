@@ -62,7 +62,7 @@ def test_tlp_above_the_maximum_is_skipped(markings):
 
 
 def test_tlp_within_the_maximum_is_enriched():
-    connector, helper, client = make_connector(max_tlp="TLP:RED")
+    connector, helper, client = make_connector(max_tlp="red")
     connector._message_callback(make_data(markings=("TLP:RED",)))
     client.lookup.assert_called_once_with(EMAIL)
     helper.send_stix2_bundle.assert_called_once()

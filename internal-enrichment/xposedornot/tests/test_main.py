@@ -24,7 +24,7 @@ def mock_opencti_connector_helper(monkeypatch):
 
 
 def test_settings_feed_the_helper_and_the_connector(mock_opencti_connector_helper):
-    settings = make_settings(api_key="test-api-key", max_tlp="TLP:AMBER+STRICT")
+    settings = make_settings(api_key="test-api-key", max_tlp="amber+strict")
     assert isinstance(settings, ConnectorSettings)
     helper = OpenCTIConnectorHelper(
         config=settings.to_helper_config(), playbook_compatible=True
@@ -34,7 +34,7 @@ def test_settings_feed_the_helper_and_the_connector(mock_opencti_connector_helpe
     assert helper.connect_scope == "Email-Addr"
     assert helper.connect_type == "INTERNAL_ENRICHMENT"
     connector = XposedOrNotConnector(config=settings, helper=helper)
-    assert connector.config.xposedornot.max_tlp == "TLP:AMBER+STRICT"
+    assert connector.config.connector.max_tlp == "amber+strict"
     assert connector.client.api_key == "test-api-key"
 
 

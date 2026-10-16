@@ -21,7 +21,7 @@
   "support_version": ">=7.261014.0",
   "subscription_link": "https://console.xposedornot.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/xposedornot",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-xposedornot",
   "container_type": "INTERNAL_ENRICHMENT"

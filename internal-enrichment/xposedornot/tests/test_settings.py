@@ -7,9 +7,9 @@ OWN_VARS = (
     "CONNECTOR_NAME",
     "CONNECTOR_SCOPE",
     "CONNECTOR_AUTO",
+    "CONNECTOR_MAX_TLP",
     "XPOSEDORNOT_API_KEY",
     "XPOSEDORNOT_API_BASE_URL",
-    "XPOSEDORNOT_MAX_TLP",
     "XPOSEDORNOT_TLP_LEVEL",
     "XPOSEDORNOT_MAX_NOTE_BREACHES",
     "XPOSEDORNOT_UPDATE_SCORE",
@@ -34,7 +34,7 @@ def test_defaults_are_the_documented_ones(monkeypatch):
     assert str(settings.xposedornot.api_base_url).startswith(
         "https://api.xposedornot.com"
     )
-    assert settings.xposedornot.max_tlp == "TLP:AMBER"
+    assert settings.connector.max_tlp == "amber"
     assert settings.xposedornot.tlp_level == "amber"
     assert settings.xposedornot.max_note_breaches == 50
     assert settings.xposedornot.update_score is False
@@ -62,7 +62,7 @@ def test_environment_overrides_are_read(monkeypatch):
         ("XPOSEDORNOT_API_BASE_URL", "http://api.xposedornot.com"),
         ("XPOSEDORNOT_MAX_NOTE_BREACHES", "-1"),
         ("XPOSEDORNOT_TLP_LEVEL", "purple"),
-        ("XPOSEDORNOT_MAX_TLP", "TLP:PINK"),
+        ("CONNECTOR_MAX_TLP", "TLP:PINK"),
         ("CONNECTOR_ID", ""),
     ],
 )

@@ -1,7 +1,7 @@
 """XposedOrNot internal-enrichment connector.
 
 Enriches Email-Addr observables with their data-breach exposure. The email
-address is sent over TLS to xposedornot.com; XPOSEDORNOT_MAX_TLP gates what
+address is sent over TLS to xposedornot.com; CONNECTOR_MAX_TLP gates what
 may leave the platform.
 """
 
@@ -119,7 +119,7 @@ class XposedOrNotConnector:
         return values
 
     def _validate_tlp(self, values: list[Any]) -> None:
-        max_tlp = self.config.xposedornot.max_tlp
+        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         for tlp in values:
             if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
                 raise MaxTlpError(

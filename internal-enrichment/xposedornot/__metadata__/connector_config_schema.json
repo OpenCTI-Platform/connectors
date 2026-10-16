@@ -53,6 +53,19 @@
       "description": "Enables or disables automatic enrichment of observables. The keyless community API is rate limited (2/s, 25/hour per IP); keep disabled or configure an API key before enabling on busy platforms.",
       "type": "boolean"
     },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
     "XPOSEDORNOT_API_KEY": {
       "default": null,
       "description": "Optional XposedOrNot API key (console.xposedornot.com). When set, the connector uses the commercial Plus API with higher rate limits. The connector is fully functional without it.",
@@ -67,19 +80,6 @@
       "maxLength": 2083,
       "minLength": 1,
       "pattern": "^https://",
-      "type": "string"
-    },
-    "XPOSEDORNOT_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "Maximum TLP of an observable the connector is allowed to enrich. The observable's email address is sent to the XposedOrNot API.",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
       "type": "string"
     },
     "XPOSEDORNOT_MAX_NOTE_BREACHES": {

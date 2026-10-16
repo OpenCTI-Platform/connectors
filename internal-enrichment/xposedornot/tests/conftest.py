@@ -67,7 +67,6 @@ def _check_max_tlp(tlp: str | None, max_tlp: str | None) -> bool:
 def make_settings(**overrides: Any) -> ConnectorSettings:
     xon: dict[str, Any] = {
         "api_base_url": "https://api.xposedornot.com",
-        "max_tlp": "TLP:AMBER",
         "tlp_level": "amber",
         "max_note_breaches": 50,
         "update_score": True,
@@ -78,6 +77,7 @@ def make_settings(**overrides: Any) -> ConnectorSettings:
         "scope": "Email-Addr",
         "log_level": "error",
         "auto": False,
+        "max_tlp": "amber",
     }
     for key, value in overrides.items():
         (connector if key in connector else xon)[key] = value
