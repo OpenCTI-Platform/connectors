@@ -1,0 +1,49 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+
+gti:
+  api_key: 'ChangeMe'
+  # x_tool: Header value required for gti_assessment (threat_score, severity) in API responses
+  x_tool: 'OpenCTI.GTIConnector.v1.0'
+  # indicator_scoring: How to compute indicator scores
+  #   - gti_derived: Score derived from GTI verdict + severity (from gti_assessment)
+  #   - average_detection: Score calculated from last_analysis_stats detection counts
+  indicator_scoring: 'gti_derived'
+  # import_reports: Whether to import reports from GTI
+  import_reports: true
+  # import_campaigns: Whether to import campaigns from GTI (standalone)
+  import_campaigns: false
+  # import_threat_actors: Whether to import standalone threat actors from GTI
+  # These are imported directly from the collections endpoint, separate from report relationships
+  import_threat_actors: false
+  # import_malware_families: Whether to import standalone malware families from GTI
+  # These are imported directly from the collections endpoint, separate from report relationships
+  import_malware_families: false
+  # import_vulnerabilities: Whether to import standalone vulnerabilities from GTI
+  # These are imported directly from the collections endpoint, separate from report relationships
+  import_vulnerabilities: false
+  # campaign_origins: Comma-separated list of campaign origins to import
+  # Allowed values: All, partner, crowdsourced, google threat intelligence
+  campaign_origins: 'google threat intelligence'
+  # threat_actor_origins: Comma-separated list of threat actor origins to import
+  # Allowed values: All, partner, crowdsourced, google threat intelligence
+  threat_actor_origins: 'google threat intelligence'
+  # malware_family_origins: Comma-separated list of malware family origins to import
+  # Allowed values: All, partner, crowdsourced, google threat intelligence
+  malware_family_origins: 'google threat intelligence'
+  # vulnerability_origins: Comma-separated list of vulnerability origins to import
+  # Allowed values: All, partner, crowdsourced, google threat intelligence
+  vulnerability_origins: 'google threat intelligence'
+  # enrich_iocs_with_threat_actors_and_malware: Whether to fetch and create relationships between
+  # IOCs (domains, files, URLs, IPs) and their associated threat actors (intrusion-sets)
+  # and malware families. Note: Enabling this will make additional API calls per IOC,
+  # increasing API usage significantly.
+  enrich_iocs_with_threat_actors_and_malware: false
+  # ioc_enrichment_threshold: Skip IOC enrichment for reports with more IOCs than this threshold.
+  # Reports with >threshold IOCs will still be imported but without fetching detailed IOC data.
+  # Set to 0 to disable threshold (enrich all reports regardless of IOC count).
+  ioc_enrichment_threshold: 250

@@ -1,0 +1,240 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections",
+    "query_params": {
+      "filter": "collection_type:report last_modification_date:2024-06-03T09:30:31+",
+      "limit": 40,
+      "order": "last_modification_date+"
+    },
+    "entity_type": "reports",
+    "method": "GET"
+  },
+  "response": {
+    "data": [
+      {
+        "id": "report--24-10020775",
+        "type": "collection",
+        "links": {
+          "self": "https://www.virustotal.com/api/v3/collections/report--24-10020775",
+          "next": null
+        },
+        "attributes": {
+          "report_id": "24-10020775",
+          "name": "Cyber Physical Threat Actor Spotlight: Hunt3rKill3rs",
+          "author": "",
+          "collection_type": "report",
+          "creation_date": 1720728301,
+          "last_modification_date": 1720728301,
+          "content": "<p>Hunt3rKill3rs is a hacktivist threat group actively targeting and compromising internet-accessible operational technology (OT) devices across various industries and countries. They gain unauthorized access to OT devices directly via the browser (HTTP) and/or through remote services, likely by exploiting weak or default credentials. With this access they alter device configurations, including changing passwords, creating new users, and manipulating human-machine interface (HMI) controls. They also deface compromised devices by changing text fields and creating users with their group's name or political messaging. Their operations span multiple countries, including European nations, Israel, and the United States. We assess this group poses a moderate risk to OT assets due to their explicit targeting of OT and limited capabilities that we have so far seen demonstrated against what are probably improperly secured and internet-accessible OT assets.</p><p></p><ul><li><p>We have observed Hunt3rKill3rs' claims of accessing and manipulating OT assets since mid-2024. To date, their claims are normally posted to their Telegram channel (https://t.me/Hunt3rkill3rs1) and include politically motivated messaging and screenshots showing a threat actor interacting with HMIs, programmable logic controllers (PLC), IP cameras, and a variety of other internet-exposed devices. The posts often contain a mixture of both Russian and English language.</p></li><li><p>The interactions with the devices are frequently haphazard; the operator appears to be discovering the control panel in real time as they make mistakes changing settings and click buttons just to change the state of various components. The screenshots included in their posts often include configuration details and defacement.</p></li><li><p>Hunt3rKill3rs has conducted this type of operation against water and wastewater systems, building automation, and a variety of miscellaneous ICS/OT oriented devices. The group has unlikely achieved impactful real-world effects, and their claims are often overstated.</p></li></ul><p></p><p style=\"text-align: center;\"><img src=\"https://api.intelligence.mandiant.com/v4/reports/assets/a1-4388a88f5f787f4f1d1e2ec8fc0db9885f6d0b74.png?reportId=24-10020775&amp;version=1.0\" width=\"624\"/></p><p style=\"text-align: center;\">Figure 1: Hunt3rKill3rs' OT risk level</p><p></p><p><strong>OT Threat Activity</strong></p><p></p><p>We track and assess threat activity impacting OT environments to determine the actor's motivation and capacity to impact control systems and physical processes. See our <a href=\"https://www.virustotal.com/gui/collection/report--19-00002159\">Operational Technology Cyber Security Incident Ontology (OT-CSIO)</a> for more information on our methodology for assessing OT incidents.\u00a0</p><p></p><table class=\"table mt-3\"><tbody><tr><td><p style=\"text-align: center;\"><strong>Date</strong></p></td>\n<td><p style=\"text-align: center;\"><strong>Description</strong></p></td>\n</tr>\n<tr><td><p>6/28/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised an HMI used to control a greenhouse likely located in Germany. The actor's Telegram post included multiple screenshots of the HMI's display, and the device's language was set to German.</p></td>\n</tr>\n<tr><td><p>6/26/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised various make/model Bosch IP cameras and likely a Schneider Electric Easergy T200P RTU. The actor's Telegram post included multiple screenshots of configuration details for the RTU and suggests that the device may be located in a French-speaking country based on the included display text. The IP cameras accessed are likely random and not related.</p></td>\n</tr>\n<tr><td><p>6/24/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised an Allen Bradley 1763-L16DWD MicroLogix 1100 programmable logic controller (PLC) in an unknown location. The actor's Telegram post included multiple screenshots of configuration details for the device and suggests that the actor likely changed the device's password.</p></td>\n</tr>\n<tr><td><p>6/20/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised a Schneider Electric Smart Home Light Switch/Socket in Germany. The actor's Telegram post included multiple screenshots of configuration details for a Schneider Electric Merten System M.</p></td>\n</tr>\n<tr><td><p>6/19/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised a Schneider Electric ethernet gateway located in the U.S. The actor's Telegram post included multiple screenshots of configuration details for a Schneider Electric PowerLogic EGX100 ethernet gateway. The actor also defaced the gateway by changing several configuration text fields to and creating new users named \"Hunt3rKill3rs.\"</p></td>\n</tr>\n<tr><td><p>6/16/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised a Schneider Electric power meter in Germany. The actor's Telegram post included multiple screenshots of configuration details for a Schneider Electric PowerLogic ION7650. The actor also defaced the meter by changing several configuration text fields to \"Hunt3rKill3rs.\"</p></td>\n</tr>\n<tr><td><p>6/10/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have access and compromised an Elnet energy meter. The Telegram post includes multiple screenshots of an Elnet MC1 multi-channel power and energy meter LCD display and a defaced image/meter statement containing the text \"Hacked by Hunt3rKill3rs.\"</p></td>\n</tr>\n<tr><td><p>6/10/2024</p></td>\n<td><p>Hunt3rKill3rs created multiple Telegram posts claiming to have compromised multiple Moxa devices. The actor shared a number of screenshots displaying Moxa EtherDevice Switch series EDS-518E and system configuration details. The actor is likely creating an EtherDevice switch under the name of Hunt3rKill3rs in the system and also shared additional screenshots of operation modes and network settings. The actor included a list of devices accessed along with credentials created on the system. All three devices included in the post geolocate to the United States.</p></td>\n</tr>\n<tr><td><p>6/9/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have compromised a Unitronics HMI within the country of Israel. The actor shared multiple screenshots of an HMI display containing Hebrew language along with the name Reservoir Givat Oz (translated). The images detail associated pumps, malfunction overloads, engine overheating, low pressure, and a regulator in ready mode. The actor included two IP addresses that both geolocate to Israel, claiming to be related to their message.</p></td>\n</tr>\n<tr><td><p>6/7/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have targeted multiple devices belonging to countries that support NATO and Israel. The Telegram post includes several screenshots of varying device types and vendors including but not limited to: a Beralam b700, a SpiderControl SCADA web licensing server, a Strip Panels emissions and energy systems display\u2014possibly located in the City of Beverly Hills in the U.S.\u2014and several unidentifiable devices.</p></td>\n</tr>\n<tr><td><p>6/6/2024</p></td>\n<td><p>Hunt3rKill3rs shared multiple screenshots of Unitronics and Siemens PLC and HMI systems belonging to unknown targets in Sweden. The images shown include boiler, radiator, and alarm system HMI displays and a Siemens SIMATIC 1200 PLC web display. The actor also claims to have targeted a large number of Mobotix cameras installed across Sweden.</p></td>\n</tr>\n<tr><td><p>6/1/2024</p></td>\n<td><p>Hunt3rKill3rs claimed to have targeted multiple water supply systems using Unitronics products/equipment and other devices. The actor shared multiple screenshots from the victims' devices. Visible names include Anderson StormWater Treatment, Municipality of Saint-Fabien-De-Panet, Lake Down Sub-Basin, and Apex Energies. Devices include an Unitronics V570 HMI, likely a smart meter, a Turck Cloud Portal display, and various unidentifiable devices. The actor also included images detailing configuration changes and defacements in text fields.</p></td>\n</tr>\n<tr><td><p>5/23/2024</p></td>\n<td><p>Hunt3rKill3rs claim to have accessed and manipulated a Siemens PLC product, SIMATIC S7 CP. Additionally, the actors posted screenshots of devices accessed, including but not limited to: Siemens SIMATIC S7 CP, Cisco SPA504G, and 750-880 WAGO PLC. In a separate post the group claims access to Unitronics PLCs and shares a number of screenshots showing PLC data and images containing French language. One of the images again shows \"lavagepro.com,\" which was previously referenced within another claim in May 15, 2024, by the group. We suspect the actor is scanning for internet-accessible OT with remote services enabled.</p></td>\n</tr>\n<tr><td><p>5/15/2024</p></td>\n<td><p>Hunt3rKill3rs claims to have accessed and manipulated multiple internet-accessible OT devices in Europe and Israel. The actor posted screenshots of additional devices accessed, including but not limited to: Unitronics PLC, Siemens S7-1500/1200, Mobotix cameras, and Schneider Electric PowerLogic ION7650. In many of the screenshots, the actor shows the changes made to the device and in some images, suspected manipulation of the HMI controls.\u00a0</p></td>\n</tr>\n</tbody>\n</table>\n<p style=\"text-align: center;\">Table 1: Hunt3rKill3rs activity against OT</p><p></p><p><strong>Critical Infrastructure Industry Targeting</strong></p><p></p><p>We track threat activity against industrial and critical infrastructure industries as a warning indicator to identify threat actors who may show a potential interest in targeting OT environments. We have observed Hunt3rKill3rs claim to affect OT assets in a few of these industries.</p><p></p><ul><li><p>Energy &amp; Utilities</p></li><li><p>Water and Wastewater Treatment</p></li><li><p>Building Automation</p></li><li><p>Internet of Things (IoT)</p></li></ul><p></p><p><strong>Malware and Tools</strong></p><p></p><p>We track malware and tool capabilities that pose a heightened risk to OT environments, such as OT-oriented capabilities, disruptive and destructive functionality, worm-like features, and supply chain trojans. We have not seen evidence of Hunt3rKill3rs using any malware or toolsets.</p><p></p><p><strong>Appendix: MITRE ATT&amp;CK for ICS Mapping</strong></p><p></p><p><em>Initial Access</em></p><p></p><p>Initial access consists of techniques that adversaries may use as entry vectors to gain an initial foothold within an ICS environment.\u00a0</p><p></p><ul><li><p><strong>T0883</strong>: Internet Accessible Device</p></li><li><p><strong>T0822</strong>: External Remote Services</p></li></ul><p></p><p><em>Execution</em></p><p></p><p>Execution consists of techniques that result in adversary-controlled code running on a local or remote system, device, or other asset.\u00a0</p><p></p><ul><li><p><strong>T0823</strong>: Graphical User Interface</p></li></ul><p></p><p><em>Persistence</em></p><p></p><p>Persistence consists of techniques that adversaries use to maintain access to ICS systems and devices across restarts, changed credentials, and other interruptions that could cut off their access. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Privilege Escalation</em></p><p></p><p>Privilege Escalation consists of techniques that adversaries use to gain higher-level permissions on a system or network. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Evasion</em></p><p></p><p>Evasion consists of techniques that adversaries use to avoid detection by both human operators and technical defenses throughout their compromise. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Discovery</em></p><p></p><p>Discovery consists of techniques that adversaries use to survey your ICS environment and gain knowledge about the internal network, control system devices, and how their processes interact. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Lateral Movement</em></p><p></p><p>Lateral movement consists of techniques that adversaries use to enter and control remote systems on a network. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Collection\u00a0</em></p><p></p><p>Collection consists of techniques adversaries use to gather domain knowledge and obtain contextual feedback in an ICS environment.</p><p></p><ul><li><p><strong>T0852</strong>: Screen Capture</p></li></ul><p></p><p><em>Command and Control</em></p><p></p><p>Command and control consists of techniques that adversaries use to communicate with and send commands to compromised systems, devices, controllers, and platforms with specialized applications used in ICS environments. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Inhibit Response Function</em></p><p></p><p>Inhibit Response Function consists of techniques that adversaries use to hinder the safeguards put in place for processes and products. We have not observed Hunt3rKill3rs employ techniques defined in this tactic.</p><p></p><p><em>Impair Process Control</em></p><p></p><p>Impair Process Control consists of techniques that adversaries use to disrupt control logic and cause detrimental effects to processes being controlled in the target environment.\u00a0</p><p></p><ul><li><p><strong>T0836</strong>: Modify Parameter</p></li></ul><p></p><p><em>Impact</em></p><p></p><p>Impact consists of techniques that adversaries use to disrupt, compromise, destroy, and manipulate the integrity and availability of control system operations, processes, devices, and data.\u00a0</p><p></p><ul><li><p><strong>T0831</strong>: Manipulation of Control</p></li></ul>",
+          "executive_summary": "<p></p><ul><li><p>This report is part of the Cyber Physical Threat Actor Spotlight series, which provides targeted overviews of actors that Mandiant believes pose heightened risk to operational technology (OT) environments.</p></li><li><p>Hunt3rKill3rs is a hacktivist threat actor that Mandiant has tracked since mid-2024. The group poses a moderate risk to OT environments due to their explicit targeting of and ability to access and manipulate internet-accessible OT assets.</p></li></ul>",
+          "autogenerated_summary": "The campaign targeted internet-accessible operational technology (OT) devices across various industries and countries.  Attackers gained unauthorized access via HTTP and remote services, altering device configurations, creating new users, and defacing devices with political messaging.  Compromised devices included HMIs, PLCs, IP cameras, and other ICS/OT devices.  The attackers modified device parameters and manipulated HMI controls. No malware was used.\n",
+          "analyst_comment": "",
+          "report_type": "Actor Profile",
+          "report_confidence": "",
+          "status": "COMPUTED",
+          "link": null,
+          "version": 1,
+          "private": true,
+          "origin": "Google Threat Intelligence",
+          "affected_systems": [
+            "Users/Application and Software",
+            "Enterprise/Application Layer",
+            "Control Systems and Applications",
+            "Equipment Under Control"
+          ],
+          "intended_effects": ["Disruption", "Interference with ICS"],
+          "targeted_informations": ["Credentials", "IT Information"],
+          "threat_categories": null,
+          "threat_scape": ["Cyber Physical"],
+          "top_icon_md5": [],
+          "recent_activity_relative_change": null,
+          "recent_activity_summary": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "counters": {
+            "domains": 0,
+            "files": 0,
+            "iocs": 0,
+            "ip_addresses": 0,
+            "subscribers": 0,
+            "urls": 0
+          },
+          "aggregations": {
+            "domains": null,
+            "files": null,
+            "ip_addresses": null,
+            "urls": null
+          },
+          "motivations": [
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "value": "Opportunistic"
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "value": "Hacktivism"
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "value": "Notoriety"
+            }
+          ],
+          "source_regions_hierarchy": [
+            {
+              "confidence": "possible",
+              "country": "Russian Federation",
+              "country_iso2": "RU",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "region": "Europe",
+              "source": null,
+              "sub_region": "Eastern Europe"
+            }
+          ],
+          "tags_details": [],
+          "targeted_industries_tree": [
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Oil & Gas",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Aerospace & Defense",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Technology",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Energy & Utilities",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Construction & Engineering",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Telecommunications",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Automotive",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Agriculture",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Manufacturing",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Pharmaceuticals",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Chemicals & Materials",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Transportation",
+              "source": null
+            },
+            {
+              "confidence": "possible",
+              "description": null,
+              "first_seen": null,
+              "last_seen": null,
+              "industry": null,
+              "industry_group": "Government",
+              "source": null
+            }
+          ],
+          "targeted_regions_hierarchy": [],
+          "technologies": []
+        },
+        "context_attributes": {
+          "shared_with_me": false,
+          "role": "viewer"
+        }
+      }
+    ],
+    "meta": {
+      "count": 1,
+      "cursor": null
+    },
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections?filter=collection_type:report+last_modification_date:2024-06-03T09:30:31%2B+report_type:\"Actor+Profile\"&limit=40&order=last_modification_date%2B",
+      "next": null
+    }
+  }
+}
