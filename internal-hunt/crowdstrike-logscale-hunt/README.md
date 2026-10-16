@@ -41,7 +41,7 @@ CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_SECRET=ChangeMe
 CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY=search-all
 ```
 
-Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one query job on the repository. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+A hunt run refused by the platform names the missing permission in plain words, with what to grant.
 
 Table of Contents
 

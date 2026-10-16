@@ -23,10 +23,7 @@ TODO:
     - [ ] Declare the permissions the account needs on your platform in
         `REQUIRED_PERMISSIONS`, its setup documentation in `DOCUMENTATION_URL`
         and, in `ACCESS_DENIED_HINTS`, what a refused account lacks: OpenCTI
-        shows them on the page of the connector and on an "Access denied" run.
-    - [ ] Return the cheapest search of your platform in `connection_test_query()`
-        (or check each permission in `connection_checks()`): it backs
-        "Test connection" in OpenCTI.
+        shows them in the setup of hunts and on an "Access denied" run.
 """
 
 from connector.settings import ConnectorSettings
@@ -61,7 +58,7 @@ REQUIRED_PERMISSIONS = (
         "Run the searches of the hunts on the indices of TEMPLATE_INDICES and read their results.",
     ),
 )
-"""Permissions of the API key, shown on the page of the connector in OpenCTI."""
+"""Permissions of the API key, shown in the setup of hunts in OpenCTI."""
 
 ACCESS_DENIED_HINTS = {
     401: "the platform refused the API key: check TEMPLATE_API_KEY, valid and not expired",
@@ -96,10 +93,6 @@ class TemplateConnector(InternalHuntConnector):
             verify_ssl=self.template_config.verify_ssl,
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
-
-    def connection_test_query(self) -> NativeQuery:
-        """Return the test search of "Test connection": any event of the indices."""
-        return NativeQuery(language="opensearch-lucene", query="*")
 
     def sigma_backend(self, pipeline: str | None) -> TextQueryTestBackend:
         """Create the pySigma backend of the platform.

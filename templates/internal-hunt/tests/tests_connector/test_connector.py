@@ -194,28 +194,16 @@ def test_connector_declares_its_permissions_and_setup_documentation(connector):
     assert connector.documentation_url.startswith("https://docs.opencti.io/")
 
 
-def test_connection_checks_pass_with_a_searchable_account(connector, requests_mock):
-    # Given a platform answering the test search
-    requests_mock.post(
-        "https://siem.example.com/api/search", json={"total": 0, "events": []}
-    )
-
-    # When the connection is tested
-    checks = connector.connection_checks(RunDeadline(30))
-
-    # Then every check passes
-    assert checks
-    assert all(check.ok for check in checks)
-
-
-def test_connection_checks_name_the_missing_permission(connector, requests_mock):
+def test_a_refused_search_names_the_missing_permission(connector, requests_mock):
     # Given an API key lacking the search permission
     requests_mock.post("https://siem.example.com/api/search", status_code=403)
+    window = HuntTimeWindow(start="2026-10-03T00:00:00Z", end="2026-10-04T00:00:00Z")
 
-    # When the connection is tested
-    checks = connector.connection_checks(RunDeadline(30))
-
-    # Then the failed check names the permission to grant
-    failed = [check for check in checks if not check.ok]
-    assert failed
-    assert "search:read" in failed[0].message
+    # When/Then the refused search names the permission to grant
+    with pytest.raises(HuntExecutionError, match="search:read"):
+        connector.execute(
+            NativeQuery(language="x", query="q"),
+            window,
+            HuntLimits(),
+            RunDeadline(30),
+        )
