@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Infrastructure Tracker' # optional (default: 'Infrastructure Tracker')
+  # scope: 'internet' # optional, hunt platform slug (default: 'internet')
+  # log_level: 'error' # optional (default: 'error')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,Domain-Name' # optional, IPv4-Addr and Domain-Name are the types created (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+infrastructure_tracker:
+  # Configure at least one search source; leave a key empty to disable its source.
+  censys_token: 'ChangeMe' # Censys Platform personal access token
+  # censys_organisation_id: '' # optional, Censys organization ID (paid accounts)
+  # censys_api_url: 'https://api.platform.censys.io' # optional
+  # silentpush_api_key: '' # optional, Silent Push API key
+  # silentpush_api_url: 'https://api.silentpush.com' # optional
+  # urlscan_api_key: '' # optional, urlscan.io API key
+  # urlscan_api_url: 'https://urlscan.io' # optional
+  # cymru_scout_api_key: '' # optional, Team Cymru Scout API key
+  # cymru_scout_api_url: 'https://scout.cymru.com/api/scout' # optional
+  # internetdb_enabled: true # optional, enrich the IP addresses found with Shodan InternetDB (default: true)
+  # internetdb_url: 'https://internetdb.shodan.io' # optional
+  # internetdb_max_lookups: 25 # optional, IP addresses enriched per hunt run (default: 25)
+  # create_certificates: true # optional, create the X.509 certificates found (default: true)

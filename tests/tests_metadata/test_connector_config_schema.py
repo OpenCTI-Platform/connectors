@@ -39,6 +39,7 @@ HUNT_PLATFORMS = {
     "opensearch",
     "clickhouse",
     "s3-ocsf",
+    "internet",
 }
 
 VALID_LOG_LEVELS = {

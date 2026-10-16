@@ -78,7 +78,7 @@ This documentation covers four primary connector types:
 | **External Import**     | Fetch data from external sources and import into OpenCTI | Threat feeds, OSINT sources, vendor APIs                        |
 | **Internal Enrichment** | Enrich entities within OpenCTI with additional data      | IP/domain reputation, vulnerability enrichment, entity analysis |
 | **Stream**              | Listen to OpenCTI events and sync to external platforms  | SIEM integration, ticketing systems, real-time synchronization  |
-| **Internal Hunt**       | Execute OpenCTI hunts on security telemetry              | Sigma and indicator hunts on SIEM/EDR/XDR and data lakes        |
+| **Internal Hunt**       | Execute OpenCTI hunts on telemetry or internet scan data | Sigma hunts on SIEM/EDR/data lakes, adversary infrastructure tracking |
 
 ### What is a verified connector?
 
@@ -381,6 +381,7 @@ This guide is organized into multiple documents:
 - Run limits (timeout, max results) and benign suppression
 - Sightings and observed-data mapping
 - Evidence redaction and privacy guarantees
+- Outside-in (internet) hunt connectors
 
 **[Code Quality & Standards](./docs/05-code-quality-standards.md)**
 - Code style requirements
