@@ -1,19 +1,38 @@
 #!/usr/bin/env python3
 """
-Generate the GitHub Actions matrix for config-schema generation
-(build-manifest.yml).
+Generate the GitHub Actions matrix for config-schema generation.
 
-Unlike the linter/test matrices, this one is NOT filtered by git changes:
+By default (build-manifest.yml) the matrix is NOT filtered by git changes:
 every manager-supported connector's config schema is regenerated on every
 run, since the schema feeds the global manifest which must stay complete
 and correct even for connectors that weren't touched in the latest push.
+
+With CHANGED_ONLY=true (ci-config-schema.yml, on pull requests) it keeps
+only the connectors changed since the merge base, so a connector whose
+schema cannot be generated is caught before it reaches master. A change to
+the schema generation tooling, or to the connectors-sdk the generator imports,
+selects every connector.
 
 Shared git/manifest/output/batching helpers live in _matrix_common.py.
 """
 
 import json
+import os
 
 import _matrix_common as common
+
+# Changing any of these can break schema generation for every connector. The
+# generator imports connectors_sdk.settings.json_schema_generator and the task
+# installs the SDK into every connector's venv.
+SCHEMA_TOOLING_PATHS = (
+    "connectors-sdk",
+    ".mise/tasks/generate_config_schema.sh",
+    ".mise/tasks/_helpers.sh",
+    "shared/tools/composer/generate_connectors_config_schemas",
+    ".github/scripts/build_manifest_matrix.py",
+    ".github/scripts/_matrix_common.py",
+    ".github/workflows/ci-config-schema.yml",
+)
 
 # ---------------------------------------------------------------------------
 # Connector discovery
@@ -60,6 +79,17 @@ def warn_on_unmaintainable_schemas(skipped: list) -> None:
             print(f"Skipping {root}: no config-schema dependency declared")
 
 
+def select_changed(roots: list, base_commit: str | None) -> list:
+    """Keep the connector roots changed since *base_commit*.
+
+    Every root is kept when there is no merge base or when the schema
+    generation tooling itself changed.
+    """
+    if base_commit is None or common.has_changes(base_commit, *SCHEMA_TOOLING_PATHS):
+        return roots
+    return [root for root in roots if common.has_changes(base_commit, str(root))]
+
+
 # ---------------------------------------------------------------------------
 # Matrix building
 # ---------------------------------------------------------------------------
@@ -80,8 +110,15 @@ def make_entry(connector_roots: list) -> dict:
 
 def main() -> None:
     connectors, skipped = discover_manager_supported_connectors()
-    warn_on_unmaintainable_schemas(skipped)
     print(f"Manager-supported connectors: {len(connectors)} ({len(skipped)} skipped)")
+
+    if os.environ.get("CHANGED_ONLY") == "true":
+        base_commit = common.get_base_commit()
+        connectors = select_changed(connectors, base_commit)
+        skipped = select_changed(skipped, base_commit)
+        print(f"Connectors selected for this run: {len(connectors)}")
+
+    warn_on_unmaintainable_schemas(skipped)
 
     if not connectors:
         print("No manager-supported connectors, skipping.")

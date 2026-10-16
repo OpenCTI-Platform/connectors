@@ -6,6 +6,11 @@ comment:
 ignore:
   # Ignore any folder whose name starts with "test" anywhere in the tree
   - "**/test*/**"
+  # CI and tooling scripts are not covered by tests. Without this, a PR that
+  # only touches them makes `codecov empty-upload` fail with "Testable files
+  # changed" and blocks the required codecov/patch check.
+  - ".github/**"
+  - ".mise/**"
 coverage:
   status:
     project:

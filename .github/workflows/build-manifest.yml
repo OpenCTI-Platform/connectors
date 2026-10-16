@@ -14,11 +14,10 @@ name: Build Manifest
 # Nothing is committed when the caller ref is a tag: there is no branch to push
 # to in that case, the manifest is already built on the branch the tag came from.
 #
-# Schema generation is parallelized: one matrix job per manager-supported
-# connector, all of them regenerated unconditionally (not just the ones that
-# changed) since the global manifest must stay complete even for untouched
-# connectors. A single sequential job used to loop over every connector,
-# which is what made this workflow slow.
+# Schema generation is delegated to ci-config-schema.yml, the same workflow
+# that checks pull requests: one matrix job per manager-supported connector,
+# all of them regenerated unconditionally (not just the ones that changed)
+# since the global manifest must stay complete even for untouched connectors.
 
 on:
   workflow_call:
@@ -33,88 +32,26 @@ permissions:
   contents: read
 
 jobs:
-  detect_connectors:
-    name: Detect manager-supported connectors
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - id: set-matrix
-        name: Build manifest matrix from connector manifests
-        run: python .github/scripts/build_manifest_matrix.py
-
   generate_config_schema:
-    name: Generate schema ${{ matrix.name }}
-    needs: detect_connectors
-    if: needs.detect_connectors.outputs.has_connectors == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.detect_connectors.outputs.matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
-
-      - name: Remove existing generated schema/doc files
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f */*/__metadata__/connector_config_schema.json */*/__metadata__/CONNECTOR_CONFIG_DOC.md
-
-      - name: Generate config schema
-        shell: bash
-        env:
-          # Release/LTS branches generate their schemas against their own
-          # connectors-sdk rather than master's. Tags have no branch to track,
-          # so the task falls back to master.
-          RELEASE_REF: ${{ github.ref_type == 'branch' && github.ref_name || '' }}
-        run: |
-          set -euo pipefail
-          while IFS= read -r connector_path; do
-            [ -z "$connector_path" ] && continue
-            echo "::group::Generating schema for ${connector_path}"
-            mise run generate_config_schema "$connector_path"
-            echo "::endgroup::"
-          done <<< "${{ matrix.connector_paths }}"
-
-      # Uploaded to be collected by the build_manifest job below: each matrix
-      # job only checks out/regenerates its own connector(s), so the schemas
-      # need to be handed off rather than committed from here directly.
-      - name: Upload generated schema
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: manifest-schema-${{ strategy.job-index }}
-          path: |
-            */*/__metadata__/connector_config_schema.json
-            */*/__metadata__/CONNECTOR_CONFIG_DOC.md
-          if-no-files-found: ignore
-          retention-days: 1
+    name: Generate config schemas
+    uses: ./.github/workflows/ci-config-schema.yml
+    permissions:
+      contents: read
+    with:
+      all_connectors: true
+      upload_schemas: true
+      # Release/LTS branches generate their schemas against their own
+      # connectors-sdk rather than master's. Tags have no branch to track,
+      # so the task falls back to master.
+      release_ref: ${{ github.ref_type == 'branch' && github.ref_name || '' }}
 
   build_manifest:
     name: Build and Commit Manifest
-    needs:
-      - detect_connectors
-      - generate_config_schema
-    # Runs when there were no manager-supported connectors (generate_config_schema
-    # skipped), but not when any schema job failed: a failed job uploads no
-    # schema, so the manifest would silently ship that connector's stale
-    # committed schema instead of its current settings.
-    if: |
-      always() &&
-      needs.detect_connectors.result == 'success' &&
-      (needs.generate_config_schema.result == 'success' ||
-        needs.generate_config_schema.result == 'skipped')
+    # Skipped when any schema job failed: a failed job uploads no schema, so
+    # the manifest would silently ship that connector's stale committed schema
+    # instead of its current settings. The called workflow still succeeds when
+    # there is no manager-supported connector to generate.
+    needs: generate_config_schema
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -232,4 +169,5 @@ jobs:
       - name: Warn if manifest commit failed
         if: steps.target.outputs.branch != '' && steps.freshness.outputs.still_head == 'true' && steps.commit.outcome == 'failure'
         run: |
-          echo "::warning::Failed to commit the updated manifest/schemas back to '${{ steps.target.outputs.branch }}' (likely blocked by branch protection rules). This does not fail the build — investigate/commit manually if needed."
+          echo "::error::Failed to commit the updated manifest/schemas back to '${{ steps.target.outputs.branch }}' (likely blocked by branch protection rules). This does not fail the build — investigate/commit manually if needed."
+          exit 1
