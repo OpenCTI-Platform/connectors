@@ -25,6 +25,7 @@ class ZscalerConnector:
         zscaler_username,
         zscaler_password,
         zscaler_api_key,
+        zscaler_api_base_url,
         zscaler_blacklist_name,
     ):
         self.helper = helper
@@ -38,7 +39,7 @@ class ZscalerConnector:
             zscaler_blacklist_name  # Parameter for the blacklist
         )
 
-        self.zscaler_base_url = "https://zsapi.zscalertwo.net/api/v1"
+        self.zscaler_base_url = f"{str(zscaler_api_base_url).rstrip('/')}/api/v1"
         self.session = requests.Session()
 
         self.rate_limit = 400  # Limit to 400 requests per hour
