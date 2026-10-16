@@ -100,6 +100,7 @@ from connectors_sdk.connectors.internal_hunt.translation import (
     parse_sigma_rule,
 )
 from connectors_sdk.settings.base_settings import (
+    HUNT_INFRASTRUCTURE_PLATFORMS,
     BaseConnectorSettings,
     BaseInternalHuntConnectorConfig,
 )
@@ -409,6 +410,7 @@ class InternalHuntConnector(ABC):
         Returns:
             The hunt connector registration returned by OpenCTI.
         """
+        is_infrastructure = self.platform in HUNT_INFRASTRUCTURE_PLATFORMS
         capabilities: dict[str, Any] = {}
         # A pycti without indicator hunts registers the connector without them
         if _accepts_keyword(self.helper.register_hunt_platform, "supports_indicators"):
@@ -427,7 +429,9 @@ class InternalHuntConnector(ABC):
         registration = self.helper.register_hunt_platform(
             platform=self.platform,
             languages=list(self.languages),
-            security_platform_name=self.config.security_platform_name,
+            security_platform_name=(
+                None if is_infrastructure else self.config.security_platform_name
+            ),
             security_platform_type=self.config.security_platform_type,
             supports_preview=True,
             max_concurrent_runs=self.config.max_concurrent_runs,
@@ -1369,8 +1373,8 @@ class InternalHuntConnector(ABC):
             return
         bundle = self.helper.stix2_create_bundle(list(objects.values()))
         # The bundle references entities that already exist in OpenCTI (markings,
-        # author): cleaning up "inconsistent" references would strip them from the
-        # objects sent.
+        # author, the threats an infrastructure hunt relates its infrastructure to):
+        # cleaning up "inconsistent" references would strip them from the objects sent.
         self.helper.send_stix2_bundle(
             bundle,
             work_id=self.helper.work_id,

@@ -9,6 +9,7 @@
 - [Implementing a hunt connector](#implementing-a-hunt-connector)
 - [Knowledge produced](#knowledge-produced)
 - [Evidence and privacy](#evidence-and-privacy)
+- [Outside-in hunt connectors](#outside-in-hunt-connectors)
 - [Testing](#testing)
 - [Compatibility](#compatibility)
 
@@ -33,8 +34,14 @@ Each connector instance executes against exactly one platform, identified by a s
 | `sentinelone` | SentinelOne Singularity (Singularity Data Lake PowerQuery) |
 | `clickhouse` | ClickHouse |
 | `s3-ocsf` | OCSF data lake on S3 |
+| `censys` | Censys Platform (outside-in hunts, no Security Platform) |
+| `silentpush` | Silent Push (outside-in hunts, no Security Platform) |
+| `urlscan` | urlscan.io (outside-in hunts, no Security Platform) |
+| `cymru-scout` | Team Cymru Scout (outside-in hunts, no Security Platform) |
+| `shodan` | Shodan (outside-in hunts, no Security Platform) |
 
-Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`, `powerquery`, `sql`.
+Query languages: `spl`, `kql`, `esql`, `lucene`, `eql`, `logscale`, `yara-l`, `udm`, `ppl`, `opensearch-lucene`,
+`powerquery`, `sql`, `fingerprint`.
 
 ## Architecture
 
@@ -65,7 +72,7 @@ Settings inherit `BaseInternalHuntConnectorConfig` (connector namespace, `CONNEC
 | Variable | Description |
 |---|---|
 | `CONNECTOR_SCOPE` | Exactly one platform slug. |
-| `CONNECTOR_SECURITY_PLATFORM_NAME` | Security Platform identity the hunts run against (created by OpenCTI when missing). Required. |
+| `CONNECTOR_SECURITY_PLATFORM_NAME` | Security Platform identity the hunts run against (created by OpenCTI when missing). Required, except for the internet scanning platforms (`censys`, `silentpush`, `urlscan`, `cymru-scout`, `shodan`), where it must stay empty. |
 | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM` (default `SIEM`). |
 | `CONNECTOR_MAX_CONCURRENT_RUNS` | Connector-side concurrency limit, sent at registration. A run holds one platform query at a time, so each connector defaults it from the concurrency quota its vendor documents (see the "Quotas and limits" section of its README). |
 | `CONNECTOR_OBSERVABLE_TYPES` | Observable types the connector may create (IOC types by default: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`; can be widened with `Hostname`, `User-Account`, `Mac-Addr`). |
@@ -228,6 +235,30 @@ escalation threshold of the new hits of the hunt.
   widens the observable types.
 - Private, loopback and reserved IP addresses, and internal domain suffixes (`.local`, `.corp`, `.internal`...), are
   never turned into observables.
+
+## Outside-in hunt connectors
+
+One connector per internet scanning service (`censys-hunt`, `silentpush-hunt`, `urlscan-hunt`, `cymru-scout-hunt`,
+`shodan-hunt`) hunts adversary infrastructure from fingerprint rules stored as hunt native queries (`platform:
+<service slug>`, `language: fingerprint`). Each has its own credential, quotas and concurrency default, and no Security
+Platform. They are built on `InfrastructureHuntConnector`, which owns what they share:
+
+- the fingerprint rule format and its parser (`parse_fingerprint_rule`): fingerprints of the kinds listed in
+  `FingerprintKind` and optional raw queries by platform slug;
+- the query plan: the fingerprints the service indexes (its `fingerprint_matches`), joined into one query
+  (`fingerprint_join`) or one query per fingerprint (`fingerprint_join = None`), plus the raw query of the service;
+- the execution: the queries share the run `max_results`, a failing query is skipped unless every query fails, a
+  timeout fails the run, and the hosts found are merged (`Host`, `HostSearchResult`, `within_window` to keep the hosts
+  a service last scanned within the run window);
+- the STIX mapping: `infrastructure`, observables (`ipv4-addr`, `domain-name`, `x509-certificate`) and detection
+  indicators, linked with `consists-of`, `based-on`, `related-to` and `indicates` relationships, plus the run-scoped
+  observed-data of the observables found (`build_observed_data`, one per observable, `number_observed` being the number
+  of hosts holding it) as the link to the run. The observables, indicators and relationships keep their standard ids
+  and the infrastructure takes an id seeded from the hunt id alone, so every run of a hunt, renamed or not, grows the
+  same infrastructure.
+
+A service connector only implements `search()` (one query, its client, its pagination) and maps the answers to
+`Host` records. The run report counts the requests sent (`queries_count`), pages included, as the quota consumed.
 
 ## Testing
 

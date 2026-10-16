@@ -1,0 +1,29 @@
+{
+  "title": "Team Cymru Scout Hunt",
+  "slug": "cymru-scout-hunt",
+  "description": "Executes OpenCTI infrastructure hunts on Team Cymru Scout. An infrastructure hunt lists the fingerprints of adversary infrastructure as a fingerprint rule for the cymru-scout hunt platform. For every hunt run, the connector searches the IP addresses Scout observed on the days of the run window (Scout search, 90 days of history, 30 days at a time) on the JARM, JA4X, certificate SHA-256, subject and issuer fingerprints of the rule, one search per fingerprint, within the run timeout and result limit, and creates in OpenCTI an infrastructure consisting of the public IPv4 addresses and the domain names (passive DNS) found, each with a detection indicator, related to the threats the hunt targets, plus one observed-data per observable stamped with the hunt run. OpenCTI receives the hit count, the queries run and a hashed, truncated evidence sample. Quotas: every search uses one query of the monthly balance of the account, and Scout answers HTTP 429 beyond 1 request per second, beyond its concurrent request limit or once the balance is spent; the connector paces its requests to 1 per second, reads at most 5,000 IP addresses per search and holds 1 run at a time by default (CONNECTOR_MAX_CONCURRENT_RUNS). Before you start: a Team Cymru Scout API key with search queries left in its balance. The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#team-cymru-scout.",
+  "short_description": "Tracks adversary infrastructure fingerprints (JARM, JA4X, certificates) in the Team Cymru Scout observations of the last 90 days for OpenCTI infrastructure hunts and creates the infrastructure found.",
+  "logo": "internal-hunt/cymru-scout-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.team-cymru.com/pure-signal-scout",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/cymru-scout-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cymru-scout-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

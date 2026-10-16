@@ -1,0 +1,29 @@
+{
+  "title": "Censys Platform Hunt",
+  "slug": "censys-hunt",
+  "description": "Executes OpenCTI infrastructure hunts on Censys Platform. An infrastructure hunt lists the fingerprints of adversary infrastructure (JARM, JA4X, JA4S, certificate fingerprint, subject or issuer, HTTP title, body hash or Server header, banner hash, ASN) as a fingerprint rule for the censys hunt platform. For every hunt run, the connector searches them with the Censys Platform Global Search (CenQL) within the run timeout and result limit, keeps the hosts Censys last scanned within the run window, and creates in OpenCTI an infrastructure consisting of the public IPv4 addresses, domain names and X.509 certificates found, each with a detection indicator, related to the threats the hunt targets, plus one observed-data per observable stamped with the hunt run. OpenCTI receives the hit count, the queries run and a hashed, truncated evidence sample. Quotas: every search uses 1 credit, plus 1 per extra page of 100 hits; an organization runs 1 concurrent request on the Free and Starter plans and 25 on the Search and Core plans (HTTP 429 beyond), within 25 requests per second per IP address; the connector sends one request at a time and holds 1 run at a time by default (CONNECTOR_MAX_CONCURRENT_RUNS). Before you start: a Censys Platform personal access token of a user with the API Access role, and the organization ID of a paid organization (free accounts cannot search through the API). The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#censys.",
+  "short_description": "Tracks adversary infrastructure fingerprints (JARM, JA4X, certificates, HTTP banners, ASN) on Censys Platform for OpenCTI infrastructure hunts and creates the infrastructure found.",
+  "logo": "internal-hunt/censys-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://censys.com/pricing/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/censys-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-censys-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

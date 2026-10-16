@@ -550,6 +550,15 @@ class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
     )
 
 
+HUNT_INFRASTRUCTURE_PLATFORMS: tuple[str, ...] = (
+    "censys",
+    "silentpush",
+    "urlscan",
+    "cymru-scout",
+    "shodan",
+)
+"""Platform slugs of the infrastructure hunt connectors: internet scanning services, no Security Platform identity."""
+
 HUNT_PLATFORMS: tuple[str, ...] = (
     "splunk",
     "microsoft-sentinel",
@@ -561,6 +570,7 @@ HUNT_PLATFORMS: tuple[str, ...] = (
     "sentinelone",
     "clickhouse",
     "s3-ocsf",
+    *HUNT_INFRASTRUCTURE_PLATFORMS,
 )
 """Hunt platform slugs accepted as `CONNECTOR_SCOPE` by internal hunt connectors."""
 
@@ -587,13 +597,14 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
     """Settings class for internal hunt connectors.
 
     An internal hunt connector executes the hunts dispatched by OpenCTI against exactly one
-    telemetry platform (a SIEM, an EDR, a data lake).
+    telemetry platform (a SIEM, an EDR, a data lake) or against internet scanning APIs.
 
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_HUNT" for internal hunt connectors.
         scope (ListFromString): Exactly one hunt platform slug (see `HUNT_PLATFORMS`).
         security_platform_name (str | None): Name of the OpenCTI Security Platform identity the connector
-            executes against (required). Created by OpenCTI when missing.
+            executes against. Created by OpenCTI when missing. Must be empty for the infrastructure platforms
+            (see `HUNT_INFRASTRUCTURE_PLATFORMS`), and only for them.
         security_platform_type (str): Type of the Security Platform identity.
         max_concurrent_runs (int | None): Connector-side limit of concurrent hunt runs.
         observable_types (ListFromString): Observable types the connector may create from hunt results.
@@ -611,7 +622,8 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
         default=None,
         description=(
             "Name of the OpenCTI Security Platform the hunts are executed against "
-            "(created when missing)."
+            "(created when missing). Leave empty only for the internet scanning platforms: "
+            f"{', '.join(HUNT_INFRASTRUCTURE_PLATFORMS)}."
         ),
     )
     security_platform_type: Literal["SIEM", "EDR", "XDR", "SOAR", "NDR", "ISPM"] = (
@@ -667,10 +679,19 @@ class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
 
     @model_validator(mode="after")
     def _validate_security_platform(self) -> Self:
-        """Require the name of the Security Platform the hunts run against."""
-        if not (self.security_platform_name and self.security_platform_name.strip()):
+        """Require a Security Platform name for every platform except the internet scanning ones."""
+        is_infrastructure = self.scope[0] in HUNT_INFRASTRUCTURE_PLATFORMS
+        has_name = bool(
+            self.security_platform_name and self.security_platform_name.strip()
+        )
+        if not is_infrastructure and not has_name:
             raise ValueError(
                 f"security_platform_name is required for the '{self.scope[0]}' hunt platform."
+            )
+        if is_infrastructure and has_name:
+            raise ValueError(
+                f"security_platform_name must be empty for the '{self.scope[0]}' hunt platform "
+                "(an internet scanning service, not a Security Platform)."
             )
         return self
 

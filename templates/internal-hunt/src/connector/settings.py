@@ -38,7 +38,8 @@ class InternalHuntConnectorConfig(BaseInternalHuntConnectorConfig):
         - [ ] Set `scope` to the hunt platform slug of your platform
             (`splunk`, `microsoft-sentinel`, `microsoft-defender`, `elastic-security`,
             `crowdstrike-logscale`, `google-secops`, `opensearch`, `sentinelone`,
-            `clickhouse` or `s3-ocsf`).
+            `clickhouse` or `s3-ocsf`; an internet scanning service builds on
+            `InfrastructureHuntConnector` instead, see `internal-hunt/censys-hunt`).
         - [ ] Replace `security_platform_name` default with the name of the
             Security Platform identity the hunts run against.
         - [ ] Set the `max_concurrent_runs` default from the concurrency quota

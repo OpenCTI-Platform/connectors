@@ -24,6 +24,7 @@ def test_root_public_api_is_valid():
         "Deprecate",
         "DeprecatedField",
         "ExternalImportConnector",
+        "InfrastructureHuntConnector",
         "InternalHuntConnector",
         "ConnectorLogger",
         "BaseDataProcessor",

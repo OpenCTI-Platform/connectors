@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-silentpush-hunt:
+    image: opencti/connector-silentpush-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Silent Push Hunt # optional (default: 'Silent Push Hunt')
+      # - CONNECTOR_SCOPE=silentpush # optional, hunt platform slug (default: 'silentpush')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: 2)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional, IPv4-Addr and Domain-Name are created when listed (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Silent Push
+      - SILENTPUSH_HUNT_API_KEY=ChangeMe # API key of a subscription that includes the web scan data API
+      # - SILENTPUSH_HUNT_API_URL=https://api.silentpush.com # optional
+      # - SILENTPUSH_HUNT_CREATE_CERTIFICATES=true # optional, create the X.509 certificates found (default: true)
+    restart: always

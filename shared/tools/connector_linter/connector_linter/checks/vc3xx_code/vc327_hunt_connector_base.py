@@ -3,8 +3,9 @@
 An ``INTERNAL_HUNT`` connector receives one message per hunt run. It must be
 built on the connectors-sdk ``InternalHuntConnector`` base class (which
 registers the hunt platform, listens to hunt runs, enforces the run limits,
-redacts the evidence and reports every run), or call
-``self.helper.listen_hunt()`` itself.
+redacts the evidence and reports every run) or on its
+``InfrastructureHuntConnector`` subclass for internet scanning services, or
+call ``self.helper.listen_hunt()`` itself.
 
 Scope: INTERNAL_HUNT only.
 """
@@ -21,7 +22,7 @@ from connector_linter.models import (
 )
 from connector_linter.registry import CheckRegistry
 
-_HUNT_BASE_CLASS = "InternalHuntConnector"
+_HUNT_BASE_CLASSES = frozenset({"InternalHuntConnector", "InfrastructureHuntConnector"})
 _SDK_PACKAGE = "connectors_sdk"
 
 
@@ -31,9 +32,9 @@ def _is_sdk_module(name: str) -> bool:
 
 
 def _sdk_bindings(tree: ast.Module) -> tuple[set[str], set[str]]:
-    """Return the names a module binds to the SDK hunt base class and to SDK modules.
+    """Return the names a module binds to the SDK hunt base classes and to SDK modules.
 
-    A class of the module named like the base class shadows it, so it binds nothing.
+    A class of the module named like a base class shadows it, so it binds nothing.
     """
     base_names: set[str] = set()
     module_names: set[str] = set()
@@ -46,7 +47,7 @@ def _sdk_bindings(tree: ast.Module) -> tuple[set[str], set[str]]:
             base_names.update(
                 alias.asname or alias.name
                 for alias in node.names
-                if alias.name == _HUNT_BASE_CLASS
+                if alias.name in _HUNT_BASE_CLASSES
             )
         elif isinstance(node, ast.Import):
             module_names.update(
@@ -54,21 +55,19 @@ def _sdk_bindings(tree: ast.Module) -> tuple[set[str], set[str]]:
                 for alias in node.names
                 if _is_sdk_module(alias.name)
             )
-    if any(
-        isinstance(node, ast.ClassDef) and node.name == _HUNT_BASE_CLASS
-        for node in ast.walk(tree)
-    ):
-        base_names.discard(_HUNT_BASE_CLASS)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name in _HUNT_BASE_CLASSES:
+            base_names.discard(node.name)
     return base_names, module_names
 
 
 def _is_sdk_hunt_base(
     base: ast.expr, base_names: set[str], module_names: set[str]
 ) -> bool:
-    """Return whether a base class expression is the SDK ``InternalHuntConnector``."""
+    """Return whether a base class expression is an SDK hunt connector base class."""
     if isinstance(base, ast.Name):
         return base.id in base_names
-    if isinstance(base, ast.Attribute) and base.attr == _HUNT_BASE_CLASS:
+    if isinstance(base, ast.Attribute) and base.attr in _HUNT_BASE_CLASSES:
         root = base.value
         while isinstance(root, ast.Attribute):
             root = root.value
@@ -90,7 +89,7 @@ def _is_helper_listen_hunt(node: ast.Call) -> bool:
 def _find_hunt_entrypoints(
     trees: dict[Path, ast.Module],
 ) -> list[tuple[Path, int, str]]:
-    """Find subclasses of the SDK hunt base class and ``helper.listen_hunt()`` calls."""
+    """Find subclasses of the SDK hunt base classes and ``helper.listen_hunt()`` calls."""
     hits: list[tuple[Path, int, str]] = []
     for file_path, tree in trees.items():
         base_names, module_names = _sdk_bindings(tree)
@@ -124,7 +123,8 @@ def check_hunt_connector_base(ctx: ConnectorContext) -> list[CheckFinding]:
                 message="No InternalHuntConnector subclass nor helper.listen_hunt() call found",
                 severity=Severity.ERROR,
                 suggestion=(
-                    "Subclass connectors_sdk InternalHuntConnector (preferred) or call "
+                    "Subclass connectors_sdk InternalHuntConnector (preferred; "
+                    "InfrastructureHuntConnector for an internet scanning service) or call "
                     "self.helper.listen_hunt(message_callback=self.process_message)."
                 ),
             ),

@@ -40,6 +40,11 @@ HUNT_PLATFORMS = {
     "sentinelone",
     "clickhouse",
     "s3-ocsf",
+    "censys",
+    "silentpush",
+    "urlscan",
+    "cymru-scout",
+    "shodan",
 }
 
 VALID_LOG_LEVELS = {

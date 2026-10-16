@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Shodan Hunt' # optional (default: 'Shodan Hunt')
+  # scope: 'shodan' # optional, hunt platform slug (default: 'shodan')
+  # log_level: 'error' # optional (default: 'error')
+  # max_concurrent_runs: 1 # optional (default: 1)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+shodan_hunt:
+  api_key: 'ChangeMe' # API key of a plan with query credits
+  # api_url: 'https://api.shodan.io' # optional
+  # create_certificates: true # optional (default: true)

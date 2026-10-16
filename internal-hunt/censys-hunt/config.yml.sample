@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Censys Platform Hunt' # optional (default: 'Censys Platform Hunt')
+  # scope: 'censys' # optional, hunt platform slug (default: 'censys')
+  # log_level: 'error' # optional (default: 'error')
+  # max_concurrent_runs: 1 # optional (default: 1)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+censys_hunt:
+  token: 'ChangeMe' # personal access token of a user with the API Access role
+  # organization_id: '' # organization whose credits the searches use (required by the paid plans)
+  # api_url: 'https://api.platform.censys.io' # optional
+  # create_certificates: true # optional (default: true)

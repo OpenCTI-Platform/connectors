@@ -1,0 +1,29 @@
+{
+  "title": "Shodan Hunt",
+  "slug": "shodan-hunt",
+  "description": "Executes OpenCTI infrastructure hunts on Shodan. An infrastructure hunt lists the fingerprints of adversary infrastructure as a fingerprint rule for the shodan hunt platform. For every hunt run, the connector searches the Shodan banners (host search) on the JARM, certificate fingerprint, certificate subject and issuer common names, HTTP title and ASN fingerprints of the rule, one search per fingerprint, within the run timeout and result limit, keeps the hosts Shodan last scanned within the run window, and creates in OpenCTI an infrastructure consisting of the public IPv4 addresses, domain names and X.509 certificates found, each with a detection indicator, related to the threats the hunt targets, plus one observed-data per observable stamped with the hunt run. OpenCTI receives the hit count, the queries run and a hashed, truncated evidence sample. Quotas: every filtered search uses 1 query credit, plus 1 per page of 100 banners past the first; the monthly query credits depend on the plan (100 for Membership, 10,000 for Freelancer, 200,000 for Small Business, unlimited for Corporate), and the API answers 1 request per second on every plan; the connector paces its requests to 1 per second and holds 1 run at a time by default (CONNECTOR_MAX_CONCURRENT_RUNS). Before you start: a Shodan API key of a plan with query credits. The least-privilege permissions, the console steps and a copy-ready configuration are at https://docs.opencti.io/latest/usage/hunt-connectors/#shodan.",
+  "short_description": "Tracks adversary infrastructure fingerprints (JARM, certificates, HTTP title, ASN) in Shodan banners for OpenCTI infrastructure hunts and creates the infrastructure found.",
+  "logo": "internal-hunt/shodan-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://account.shodan.io/billing",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/shodan-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-shodan-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

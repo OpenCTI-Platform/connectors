@@ -170,13 +170,10 @@ def test_start_registers_the_platform_and_listens(hunt_settings):
     assert helper.callback == connector.process_message
 
 
-def test_register_platform_sends_the_concurrency_limit(hunt_settings, hunt_helper):
-    # Given a hunt connector limited to two concurrent runs
+def test_register_platform_for_internet_scanning_services(hunt_settings, hunt_helper):
+    # Given a hunt connector of an internet scanning service
     hunt_settings.connector = make_hunt_config(
-        scope=["microsoft-defender"],
-        security_platform_name="Defender",
-        security_platform_type="XDR",
-        max_concurrent_runs=2,
+        scope=["censys"], security_platform_name=None, max_concurrent_runs=2
     )
     connector = DummyHuntConnector(hunt_settings)
     connector._helper = hunt_helper
@@ -186,11 +183,10 @@ def test_register_platform_sends_the_concurrency_limit(hunt_settings, hunt_helpe
     # When the platform is registered
     registration = connector.register_platform()
 
-    # Then the Security Platform and the limit are sent
+    # Then no Security Platform is requested
     kwargs = hunt_helper.register_hunt_platform.call_args.kwargs
-    assert kwargs["platform"] == "microsoft-defender"
-    assert kwargs["security_platform_name"] == "Defender"
-    assert kwargs["security_platform_type"] == "XDR"
+    assert kwargs["platform"] == "censys"
+    assert kwargs["security_platform_name"] is None
     assert kwargs["max_concurrent_runs"] == 2
     assert registration == {}
 

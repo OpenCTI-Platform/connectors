@@ -19,6 +19,9 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
     ExternalImportConnector,
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.connectors.internal_hunt.infrastructure_connector import (
+    InfrastructureHuntConnector,
+)
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
     InternalHuntConnector,
 )
@@ -79,6 +82,7 @@ __all__ = [
     "ExternalImportConnectorState",
     # Connector base classes
     "ExternalImportConnector",
+    "InfrastructureHuntConnector",
     "InternalHuntConnector",
     "ConnectorLogger",
     "BaseDataProcessor",

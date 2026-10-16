@@ -7,6 +7,7 @@ import pytest
 from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
+    HUNT_INFRASTRUCTURE_PLATFORMS,
     HUNT_IOC_OBSERVABLE_TYPES,
     BaseConfigModel,
     BaseConnectorSettings,
@@ -578,6 +579,22 @@ def test_base_internal_hunt_connector_config_defaults():
     assert config.max_observables == 100
 
 
+@pytest.mark.parametrize("platform", HUNT_INFRASTRUCTURE_PLATFORMS)
+def test_base_internal_hunt_connector_config_accepts_scanning_services_without_platform_name(
+    platform,
+):
+    """Test that the internet scanning platforms need no Security Platform name."""
+
+    # Given/When: An infrastructure hunt connector config without Security Platform name
+    config = BaseInternalHuntConnectorConfig(
+        id="connector--uid", name="Test", scope=platform
+    )
+
+    # Then: The config is valid
+    assert config.platform == platform
+    assert config.security_platform_name is None
+
+
 @pytest.mark.parametrize(
     "overrides",
     [
@@ -585,7 +602,8 @@ def test_base_internal_hunt_connector_config_defaults():
         pytest.param({"scope": ["splunk", "opensearch"]}, id="several_platforms"),
         pytest.param({"security_platform_name": None}, id="missing_platform_name"),
         pytest.param({"security_platform_name": "  "}, id="blank_platform_name"),
-        pytest.param({"scope": ["internet"]}, id="internet_platform"),
+        pytest.param({"scope": ["shodan"]}, id="platform_name_for_scanning_service"),
+        pytest.param({"scope": ["internet"]}, id="retired_internet_platform"),
         pytest.param({"observable_types": ["Process"]}, id="unsupported_observable"),
         pytest.param({"max_concurrent_runs": 0}, id="null_concurrency"),
         pytest.param({"max_observables": -1}, id="negative_observables"),

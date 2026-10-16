@@ -13,6 +13,7 @@ dependencies = [
     "pycti==7.261014.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
+    "PyYAML>=6.0,<7", # Fingerprint documents of the infrastructure hunts; already required by pycti
     "regex>=2023.12.25", # Time-bounded matching (timeout) of the hunt benign patterns; already required by pycti (datefinder); floor = the version stix-shifter 8.0.2 pins (stream/splunk) so every SDK consumer resolves
     "requests>=2.31.0,<3",
 ]
@@ -146,8 +147,8 @@ exclude = [
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
-module = ["pycti.*", "stix2.*", "requests.*", "limits.*", "regex.*"]
-ignore_missing_imports = true  # pycti, stix2, requests, limits and regex do not provide stubs
+module = ["pycti.*", "stix2.*", "requests.*", "limits.*", "regex.*", "yaml.*"]
+ignore_missing_imports = true  # pycti, stix2, requests, limits, regex and PyYAML do not provide stubs
 
 [tool.sphinx]
 project = "Connectors SDK"

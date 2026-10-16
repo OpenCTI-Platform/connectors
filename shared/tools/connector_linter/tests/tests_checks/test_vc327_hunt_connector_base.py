@@ -19,6 +19,31 @@ class SplunkHuntConnector(connectors_sdk.InternalHuntConnector):
     pass
 """
 
+_INFRASTRUCTURE_BASE = """\
+import connectors_sdk
+from connectors_sdk import InfrastructureHuntConnector
+
+
+class CensysHuntConnector(InfrastructureHuntConnector):
+    service_name = "Censys Platform"
+
+
+class ShodanHuntConnector(connectors_sdk.InfrastructureHuntConnector):
+    service_name = "Shodan"
+"""
+
+_SHADOWED_INFRASTRUCTURE_BASE = """\
+from connectors_sdk import InfrastructureHuntConnector
+
+
+class InfrastructureHuntConnector:
+    pass
+
+
+class Connector(InfrastructureHuntConnector):
+    pass
+"""
+
 _HELPER_LISTEN_HUNT = """\
 class Connector:
     def run(self):
@@ -101,6 +126,21 @@ class TestVC327HuntConnectorBase:
         )
         results = run_checks(path, select=["VC327"])
         assert [r.severity for r in results] == [Severity.INFO]
+
+    def test_passes_with_the_sdk_infrastructure_base_class(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _INFRASTRUCTURE_BASE), connector_type="INTERNAL_HUNT"
+        )
+        results = run_checks(path, select=["VC327"])
+        assert [r.severity for r in results] == [Severity.INFO]
+
+    def test_flags_a_local_class_shadowing_the_infrastructure_base(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _SHADOWED_INFRASTRUCTURE_BASE),
+            connector_type="INTERNAL_HUNT",
+        )
+        results = run_checks(path, select=["VC327"])
+        assert [r.severity for r in results] == [Severity.ERROR]
 
     def test_flags_a_local_class_shadowing_the_sdk_base(self, connector_src):
         path = connector_src(

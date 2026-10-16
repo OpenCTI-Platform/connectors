@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Team Cymru Scout Hunt' # optional (default: 'Team Cymru Scout Hunt')
+  # scope: 'cymru-scout' # optional, hunt platform slug (default: 'cymru-scout')
+  # log_level: 'error' # optional (default: 'error')
+  # max_concurrent_runs: 1 # optional (default: 1)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+cymru_scout_hunt:
+  api_key: 'ChangeMe' # API key of an account with search queries
+  # api_url: 'https://scout.cymru.com/api/scout' # optional
