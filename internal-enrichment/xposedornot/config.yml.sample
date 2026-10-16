@@ -16,4 +16,4 @@ xposedornot:
   max_tlp: 'TLP:AMBER'                # optional, max TLP of observables the connector may enrich (default: 'TLP:AMBER')
   tlp_level: 'amber'                  # optional, TLP applied to the summary note: clear, white, green, amber, amber+strict, red (default: 'amber')
   max_note_breaches: 50               # optional, breaches tabulated in the summary note, newest first; 0 renders every breach (default: 50)
-  update_score: true
+  update_score: false

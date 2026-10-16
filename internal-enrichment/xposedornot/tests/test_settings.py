@@ -37,7 +37,7 @@ def test_defaults_are_the_documented_ones(monkeypatch):
     assert settings.xposedornot.max_tlp == "TLP:AMBER"
     assert settings.xposedornot.tlp_level == "amber"
     assert settings.xposedornot.max_note_breaches == 50
-    assert settings.xposedornot.update_score is True
+    assert settings.xposedornot.update_score is False
     assert settings.to_helper_config()["connector"]["type"] == "INTERNAL_ENRICHMENT"
 
 
@@ -45,12 +45,12 @@ def test_environment_overrides_are_read(monkeypatch):
     settings = settings_from_env(
         monkeypatch,
         XPOSEDORNOT_API_KEY="k",
-        XPOSEDORNOT_UPDATE_SCORE="false",
+        XPOSEDORNOT_UPDATE_SCORE="true",
         XPOSEDORNOT_MAX_NOTE_BREACHES="0",
         XPOSEDORNOT_TLP_LEVEL="red",
     )
     assert settings.xposedornot.api_key.get_secret_value() == "k"
-    assert settings.xposedornot.update_score is False
+    assert settings.xposedornot.update_score is True
     assert settings.xposedornot.max_note_breaches == 0
     assert settings.xposedornot.tlp_level == "red"
 

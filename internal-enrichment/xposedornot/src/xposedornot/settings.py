@@ -106,9 +106,9 @@ class XposedOrNotConfig(BaseConfigModel):
             "Write the XposedOrNot risk score (community API only) to the"
             " observable's score. The score measures how exposed the address"
             " is, not how malicious it is, and overwrites the existing score."
-            " Disable to keep only the note and the labels."
+            " Off by default; enable to write it."
         ),
-        default=True,
+        default=False,
     )
 
     @field_validator("api_base_url", mode="after")

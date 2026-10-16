@@ -102,8 +102,8 @@
       "type": "string"
     },
     "XPOSEDORNOT_UPDATE_SCORE": {
-      "default": true,
-      "description": "Write the XposedOrNot risk score (community API only) to the observable's score. The score measures how exposed the address is, not how malicious it is, and overwrites the existing score. Disable to keep only the note and the labels.",
+      "default": false,
+      "description": "Write the XposedOrNot risk score (community API only) to the observable's score. The score measures how exposed the address is, not how malicious it is, and overwrites the existing score. Off by default; enable to write it.",
       "type": "boolean"
     }
   },

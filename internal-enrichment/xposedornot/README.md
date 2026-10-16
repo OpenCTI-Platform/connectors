@@ -37,7 +37,7 @@ This internal-enrichment connector enriches `Email-Addr` observables with that e
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261008.0
+- OpenCTI Platform >= 7.261014.0
 - No XposedOrNot account or API key needed (optional key for higher volume)
 
 ## Configuration variables
@@ -70,7 +70,7 @@ Configuration is set either in `docker-compose.yml` (for Docker), a `.env` file,
 | Base URL          | xposedornot.api_base_url      | `XPOSEDORNOT_API_BASE_URL`      | `https://api.xposedornot.com` | No        | Base URL of the free community API. Must be `https://`; plain `http://` is rejected at startup because the email address travels to this endpoint. No effect when an API key is set. |
 | Max TLP           | xposedornot.max_tlp           | `XPOSEDORNOT_MAX_TLP`           | `TLP:AMBER`                   | No        | Maximum TLP of an observable the connector may enrich. The email address is sent to the XposedOrNot API, so this gates what may leave the platform.               |
 | TLP level         | xposedornot.tlp_level         | `XPOSEDORNOT_TLP_LEVEL`         | `amber`                       | No        | TLP marking applied to the summary note: `clear`, `white`, `green`, `amber`, `amber+strict` or `red`. `white` is the deprecated alias of `clear`.               |
-| Update score      | xposedornot.update_score      | `XPOSEDORNOT_UPDATE_SCORE`      | `true`                        | No        | Write the XposedOrNot risk score to the observable's score. See [Score semantics](#score-semantics). Set to `false` to keep only the note and the labels.         |
+| Update score      | xposedornot.update_score      | `XPOSEDORNOT_UPDATE_SCORE`      | `false`                       | No        | Write the XposedOrNot risk score to the observable's score. See [Score semantics](#score-semantics). Off by default; set to `true` to write it.                  |
 | Max note breaches | xposedornot.max_note_breaches | `XPOSEDORNOT_MAX_NOTE_BREACHES` | `50`                          | No        | How many breaches the summary note tabulates, newest first; a line names how many more were found. `0` renders every breach.                                     |
 
 ## Deployment
@@ -135,7 +135,7 @@ graph LR
 
 ### Score semantics
 
-OpenCTI usually reads an observable's score as a level of threat. The XposedOrNot risk score measures something else: how exposed a **victim** address is across known breaches. A heavily breached address such as `test@example.com` scores 100 without being malicious in any way. Keep this in mind before routing scored Email-Addr observables into detection-oriented workflows or feeds. The score overwrites the observable's existing score. Teams that use the score for detection should set `XPOSEDORNOT_UPDATE_SCORE=false` and rely on the labels and the Note instead.
+OpenCTI usually reads an observable's score as a level of threat. The XposedOrNot risk score measures something else: how exposed a **victim** address is across known breaches. A heavily breached address such as `test@example.com` scores 100 without being malicious in any way. Keep this in mind before routing scored Email-Addr observables into detection-oriented workflows or feeds. The score overwrites the observable's existing score. For that reason the score is off by default: the connector writes only the labels and the Note unless `XPOSEDORNOT_UPDATE_SCORE=true`.
 
 ### Markings
 
