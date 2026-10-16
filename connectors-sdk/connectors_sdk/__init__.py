@@ -19,6 +19,9 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
     ExternalImportConnector,
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
+    InternalHuntConnector,
+)
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -29,6 +32,7 @@ from connectors_sdk.settings.base_settings import (
     BaseExternalImportConnectorConfig,
     BaseInternalEnrichmentConnectorConfig,
     BaseInternalExportFileConnectorConfig,
+    BaseInternalHuntConnectorConfig,
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
 )
@@ -59,6 +63,7 @@ __all__ = [
     "BaseExternalImportConnectorConfig",
     "BaseInternalEnrichmentConnectorConfig",
     "BaseInternalExportFileConnectorConfig",
+    "BaseInternalHuntConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
     "BaseStreamConnectorConfig",
     # Exceptions
@@ -74,6 +79,7 @@ __all__ = [
     "ExternalImportConnectorState",
     # Connector base classes
     "ExternalImportConnector",
+    "InternalHuntConnector",
     "ConnectorLogger",
     "BaseDataProcessor",
 ]

@@ -1,5 +1,6 @@
 """ObservedData."""
 
+from connectors_sdk.models._hunt_run import scope_to_hunt_run
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from pycti import ObservedData as PyctiObservedData
@@ -28,12 +29,21 @@ class ObservedData(BaseIdentifiedEntity):
         default=None,
         description="Files to upload with the observed data, e.g. observed data as a PDF.",
     )
+    hunt_run_id: str | None = Field(
+        default=None,
+        description=(
+            "OpenCTI id of the hunt run that observed the data. "
+            "The identifier of the observed data is then scoped to the run."
+        ),
+    )
 
     def to_stix2_object(self) -> Stix2ObservedData:
         """Make stix object."""
         object_refs = [obj.id for obj in self.entities]
         return Stix2ObservedData(
-            id=PyctiObservedData.generate_id(object_refs),
+            id=scope_to_hunt_run(
+                PyctiObservedData.generate_id(object_refs), self.hunt_run_id
+            ),
             first_observed=self.first_observed,
             last_observed=self.last_observed,
             number_observed=self.number_observed,
@@ -41,6 +51,7 @@ class ObservedData(BaseIdentifiedEntity):
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
+            x_opencti_hunt_run_id=self.hunt_run_id,
             allow_custom=True,
             **self._common_stix2_properties()
         )

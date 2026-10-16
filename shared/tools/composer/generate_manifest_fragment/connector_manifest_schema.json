@@ -186,6 +186,7 @@
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",
+        "INTERNAL_HUNT",
         "INTERNAL_IMPORT_FILE",
         "STREAM"
       ]

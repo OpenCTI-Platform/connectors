@@ -86,7 +86,7 @@ def check_log_level_default(ctx: ConnectorContext) -> list[CheckFinding]:
     sdk_imports = find_imports(
         trees,
         module_pattern=r"^connectors_sdk",
-        name_pattern=r"^Base(ExternalImport|InternalEnrichment|Stream|InternalExportFile|InternalImportFile)ConnectorConfig$",
+        name_pattern=r"^Base(ExternalImport|InternalEnrichment|Stream|InternalExportFile|InternalImportFile|InternalHunt)ConnectorConfig$",
     )
     if sdk_imports:
         imp = sdk_imports[0]

@@ -30,6 +30,7 @@ CONNECTOR_TYPE_DIRS = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
@@ -204,7 +205,14 @@ def build_batched_matrix(
     for item in items:
         groups.setdefault(type_of(item), []).append(item)
 
+    # Each group is rounded up on its own: grow the batches until the groups fit
+    largest = max(len(group_items) for group_items in groups.values())
     batch_size = math.ceil(len(items) / limit)
+    while batch_size < largest and (
+        sum(math.ceil(len(group_items) / batch_size) for group_items in groups.values())
+        > limit
+    ):
+        batch_size += 1
     entries = []
     for _, group_items in sorted(groups.items()):
         for i in range(0, len(group_items), batch_size):
