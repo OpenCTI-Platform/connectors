@@ -37,6 +37,7 @@ HUNT_PLATFORMS = {
     "crowdstrike-logscale",
     "google-secops",
     "opensearch",
+    "sentinelone",
     "clickhouse",
     "s3-ocsf",
     "internet",

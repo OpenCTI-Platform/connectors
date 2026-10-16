@@ -58,6 +58,7 @@ pysigma-backend-elasticsearch=sigma
 pysigma-backend-kusto=sigma
 pysigma-backend-opensearch=sigma
 pysigma-backend-secops=sigma
+pysigma-backend-sentinelone-pq=sigma
 pysigma-backend-splunk=sigma
 pysigma-pipeline-ocsf=sigma
 pysigma-pipeline-windows=sigma
