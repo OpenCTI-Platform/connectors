@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/enisa-euvd_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "ENISA EUVD",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "vulnerability"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT2H` for two hours).",
+      "format": "duration",
+      "type": "string"
+    },
+    "ENISA_EUVD_API_BASE_URL": {
+      "default": "https://euvdservices.enisa.europa.eu/api",
+      "description": "The base URL of the ENISA EUVD API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ENISA_EUVD_IMPORT_START_DATE": {
+      "default": "P30D",
+      "description": "First run only: how far back (last-update) to pull, as an ISO 8601 duration (e.g. 'P30D' for 30 days). Subsequent runs resume from the connector's persisted state.",
+      "format": "duration",
+      "type": "string"
+    },
+    "ENISA_EUVD_TLP_LEVEL": {
+      "description": "Default TLP (Traffic Light Protocol) marking applied to every object this connector creates in OpenCTI.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "ENISA_EUVD_INGEST_SOFTWARE": {
+      "default": false,
+      "description": "Enable/disable the import of Software observables and their 'has' relationship to each vulnerability. Off by default: a single vulnerability can reference many affected products, which increases the volume of objects created per run.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
