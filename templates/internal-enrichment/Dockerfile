@@ -13,7 +13,9 @@ ENV PYTHONUNBUFFERED=1
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Copy the connector
+# Copy the connector. The image build writes the identity stamp (.connector_version.json:
+# version and catalog slug) into src/; it must stay next to the entry point, where
+# pycti reads it to report the connector's catalog entry to the platform.
 COPY src /opt/opencti-connector-template
 WORKDIR /opt/opencti-connector-template
 
