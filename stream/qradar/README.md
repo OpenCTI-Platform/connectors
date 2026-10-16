@@ -72,13 +72,14 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter            | config.yml             | Docker environment variable | Default                            | Mandatory | Description                                                |
-|----------------------|------------------------|-----------------------------|------------------------------------|-----------|-----------------------------------------------------------|
-| QRadar URL           | qradar.url             | `QRADAR_URL`                |                                    | Yes       | QRadar REST API URL.                                       |
-| QRadar SSL Verify    | qradar.ssl_verify      | `QRADAR_SSL_VERIFY`         | true                               | No        | Verify SSL certificates.                                   |
-| QRadar Token         | qradar.token           | `QRADAR_TOKEN`              |                                    | Yes       | QRadar API token.                                          |
-| QRadar Reference Name| qradar.reference_name  | `QRADAR_REFERENCE_NAME`     |                                    | Yes       | Base name for reference sets (e.g., `OpenCTI`).            |
-| QRadar Ignore Types  | qradar.ignore_types    | `QRADAR_IGNORE_TYPES`       | label,marking-definition,identity  | No        | Comma-separated list of entity types to ignore.            |
+| Parameter             | config.yml             | Docker environment variable | Default                            | Mandatory | Description                                                        |
+|-----------------------|------------------------|-----------------------------|------------------------------------|-----------|--------------------------------------------------------------------|
+| QRadar URL            | qradar.url             | `QRADAR_URL`                |                                    | Yes       | QRadar REST API URL.                                               |
+| QRadar SSL Verify     | qradar.ssl_verify      | `QRADAR_SSL_VERIFY`         | true                               | No        | Verify SSL certificates.                                           |
+| QRadar Token          | qradar.token           | `QRADAR_TOKEN`              |                                    | Yes       | QRadar API token.                                                  |
+| QRadar Reference Name | qradar.reference_name  | `QRADAR_REFERENCE_NAME`     |                                    | Yes       | Base name for reference sets (e.g., `OpenCTI`).                    |
+| QRadar Ignore Types   | qradar.ignore_types    | `QRADAR_IGNORE_TYPES`       | label,marking-definition,identity  | No        | Comma-separated list of entity types to ignore.                    |
+| QRadar Trim URL scheme| qradar.trim_url_scheme | `QRADAR_TRIM_URL_SCHEME`    | false                              | No        | Whether to remove the scheme (protocol) from URLs pushed to QRadar.|
 
 ## Deployment
 
