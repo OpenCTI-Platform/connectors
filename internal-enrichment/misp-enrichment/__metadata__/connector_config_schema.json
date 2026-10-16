@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/misp-enrichment_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "MISP Enrichment",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "Url",
+        "StixFile",
+        "Email-Addr",
+        "Indicator"
+      ],
+      "description": "The OpenCTI entity types the connector enriches.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict"
+    },
+    "MISP_URL": {
+      "description": "Base URL of the MISP instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "MISP_API_KEY": {
+      "description": "MISP automation API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MISP_SSL_VERIFY": {
+      "default": true,
+      "description": "Verify the SSL certificate of the MISP instance.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_ATTRIBUTE_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "Apply the tags of the matched MISP attributes as labels on the enriched entity.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_ASSOCIATED_EVENTS_TAGS_AS_LABELS": {
+      "default": false,
+      "description": "Apply the tags of the matched MISP events as labels on the enriched entity.",
+      "type": "boolean"
+    },
+    "MISP_EVENT_FILTER_CREATOR_ORGS": {
+      "default": [],
+      "description": "Creator organisations (Event.Orgc, name or UUID) to include. If set, only events created by one of these organisations are considered.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_EVENT_FILTER_CREATOR_ORGS_NOT": {
+      "default": [],
+      "description": "Creator organisations (Event.Orgc, name or UUID) to exclude.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_EVENT_FILTER_OWNER_ORGS": {
+      "default": [],
+      "description": "Owner organisations (Event.Org, name or UUID) to include. If set, only events owned by one of these organisations are considered.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_EVENT_FILTER_OWNER_ORGS_NOT": {
+      "default": [],
+      "description": "Owner organisations (Event.Org, name or UUID) to exclude.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MISP_EVENT_FILTER_NAME_REGEX": {
+      "default": null,
+      "description": "Regex searched in the event name (Event.info). Only events whose name matches are considered.",
+      "type": "string"
+    },
+    "MISP_ATTRIBUTE_COMMENT_FILTER_REGEX": {
+      "default": null,
+      "description": "Regex searched in the attribute comment. The comment of a matched attribute is written in the Note only if it matches.",
+      "type": "string"
+    },
+    "MISP_IMPORT_EVENTS": {
+      "default": false,
+      "description": "Create one OpenCTI Report per matched MISP event, containing the enriched entity.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MISP_URL",
+    "MISP_API_KEY"
+  ],
+  "additionalProperties": true
+}
