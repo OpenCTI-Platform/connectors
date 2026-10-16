@@ -6,7 +6,7 @@ for this connector), and the ones specific to HoneyLabs (`HoneyLabsConfig`).
 Values come from environment variables (`HONEYLABS_*`) or `config.yml`.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import (
@@ -76,7 +76,7 @@ class HoneyLabsConfig(BaseConfigModel):
         description="Start date for the first import (ISO 8601, absolute like "
         "'2026-01-01T00:00:00Z' or relative like 'P7D'). Later runs resume from the "
         "connector state. The free plan serves 7 days of history, paid plans 30.",
-        default_factory=lambda: (datetime.now(timezone.utc) - timedelta(days=7)),
+        default="P7D",
     )
     page_size: int = Field(
         description="Objects requested per TAXII page.",

@@ -77,9 +77,9 @@
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE": {
-      "default": "2020-01-01T00:00:00Z",
-      "description": "Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
-      "format": "date-time",
+      "default": "P30D",
+      "description": "Import starting date, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago) - used only if connector's state is not set.",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS": {

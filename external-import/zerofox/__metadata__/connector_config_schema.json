@@ -84,7 +84,7 @@
     "ZEROFOX_FIRST_RUN": {
       "default": "P1D",
       "description": "Start date to look back on the connector's very first run (ISO 8601 format, absolute date or duration, e.g. '2023-10-01' or 'P1D').",
-      "format": "date-time",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "ZEROFOX_COLLECTORS": {

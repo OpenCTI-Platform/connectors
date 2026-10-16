@@ -65,8 +65,9 @@
       "writeOnly": true
     },
     "COFENSE_THREATHQ_IMPORT_START_DATE": {
+      "default": "P30D",
       "description": "Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
-      "format": "date-time",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "COFENSE_THREATHQ_API_BASE_URL": {

@@ -1,14 +1,16 @@
+import re
 from datetime import datetime, timedelta, timezone
 
 import freezegun
 import pytest
 from connectors_sdk.settings.annotated_types import (
+    ISO_DATETIME_OR_DURATION_PATTERN,
     DatetimeFromIsoString,
     ListFromString,
     parse_comma_separated_list,
     parse_iso_string,
 )
-from pydantic import TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 # ListFromString
 
@@ -168,3 +170,49 @@ def test_datetime_from_iso_string_dumps_valid_json_in_pycti_mode(
         input, mode="json", context={"mode": "pycti"}
     )
     assert value == expected
+
+
+def test_datetime_from_iso_string_json_schema_has_iso_pattern_without_format() -> None:
+    schema = TypeAdapter(DatetimeFromIsoString).json_schema()
+
+    assert schema == {"type": "string", "pattern": ISO_DATETIME_OR_DURATION_PATTERN}
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "2023-10-01",
+        "2023-10-01T12:30",
+        "2023-10-01T12:30:00.123456",
+        "2023-10-01T12:30:00Z",
+        "2023-10-01T12:30:00+02:00",
+        "2023-10-01 12:30:00",
+        "P30D",
+        "P1Y",
+        "P4W",
+        "P1Y2M3DT4H5M6S",
+        "PT1.5S",
+    ],
+)
+def test_iso_pattern_matches_values_accepted_at_runtime(value: str) -> None:
+    assert re.match(ISO_DATETIME_OR_DURATION_PATTERN, value)
+    assert isinstance(parse_iso_string(value), datetime)
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "P", "PT", "P1DT", "P1H", "30D", "2023-10", "2023/10/01", "yesterday"],
+)
+def test_iso_pattern_rejects_non_iso_values(value: str) -> None:
+    assert re.match(ISO_DATETIME_OR_DURATION_PATTERN, value) is None
+
+
+@freezegun.freeze_time("2023-10-01T12:30:00Z")
+def test_datetime_from_iso_string_duration_default_is_kept_in_json_schema() -> None:
+    class Model(BaseModel):
+        start_date: DatetimeFromIsoString = Field(default="P30D", validate_default=True)
+
+    schema = Model.model_json_schema()["properties"]["start_date"]
+
+    assert schema["default"] == "P30D"
+    assert Model().start_date == datetime(2023, 9, 1, 12, 30, tzinfo=timezone.utc)

@@ -90,8 +90,8 @@
       "type": "integer"
     },
     "TSC_EXPORT_SINCE": {
-      "description": "Datetime (ISO-8601) used as the starting point of the very first data retrieval. It is overwritten by the connector state after the first successful run.",
-      "format": "date-time",
+      "description": "Starting point of the very first data retrieval, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). It is overwritten by the connector state after the first successful run.",
+      "pattern": "^(?:\\d{4}-\\d{2}-\\d{2}(?:[T ]\\d{2}:\\d{2}(?::\\d{2}(?:\\.\\d+)?)?(?:Z|[+-]\\d{2}(?::?\\d{2})?)?)?|P(?!$)(?:\\d+Y)?(?:\\d+M)?(?:\\d+W)?(?:\\d+D)?(?:T(?=\\d)(?:\\d+H)?(?:\\d+M)?(?:\\d+(?:\\.\\d+)?S)?)?)$",
       "type": "string"
     },
     "TSC_SEVERITY_MIN_LEVEL": {

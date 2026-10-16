@@ -7,6 +7,7 @@ from pydantic import (
     BeforeValidator,
     PlainSerializer,
     TypeAdapter,
+    WithJsonSchema,
 )
 
 
@@ -61,6 +62,20 @@ Examples
 ]
 
 
+# ISO-8601 datetime (e.g. "2023-10-01", "2023-10-01T12:30:00Z") or ISO-8601 duration
+# (e.g. "P30D", "PT1H"). Kept compatible with ECMAScript regexes (`u` flag), as it is
+# evaluated by OpenCTI (AJV) when validating managed connectors config.
+ISO_DATETIME_OR_DURATION_PATTERN = (
+    r"^(?:"
+    r"\d{4}-\d{2}-\d{2}"
+    r"(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?)?"
+    r"|"
+    r"P(?!$)(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?"
+    r"(?:T(?=\d)(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?"
+    r")$"
+)
+
+
 def parse_iso_string(value: str | datetime) -> datetime:
     """Convert ISO string into a datetime object.
 
@@ -94,6 +109,9 @@ DatetimeFromIsoString = Annotated[
     BeforeValidator(parse_iso_string),
     # Replace the default JSON serializer, in order to use +00:00 offset instead of Z prefix
     PlainSerializer(datetime.isoformat, when_used="json"),
+    # Advertise both ISO-8601 datetimes and durations in the JSON schema, as OpenCTI
+    # validates managed connectors config against it (a `format` accepts only one)
+    WithJsonSchema({"type": "string", "pattern": ISO_DATETIME_OR_DURATION_PATTERN}),
     """Annotated datetime that:
 - Validates: Accepts an ISO-8601 string (datetime or duration).
   If a datetime ISO-8601 string is provided, and no timezone is present, the string
@@ -101,12 +119,17 @@ DatetimeFromIsoString = Annotated[
   If a duration ISO-8601 string is provided, the returned datetime will be relative
   to `datetime.now(timezone.utc)` at runtime.
 - Serializes (JSON): Serializes a datetime object to an datetime ISO-8601 string.
+- JSON schema: Advertises a string matching either an ISO-8601 datetime or an
+  ISO-8601 duration (`ISO_DATETIME_OR_DURATION_PATTERN`). Prefer a duration string
+  as field default (e.g. `default="P30D"`) so that it is kept in the schema.
 
 Components
 - BeforeValidator(parse_iso_string): Converts input strings to datetime
   early in validation.
 - PlainSerializer(datetime.isoformat, when_used="json"): Produces the datetime ISO-8601 string
   for JSON serialization.
+- WithJsonSchema({"type": "string", "pattern": ISO_DATETIME_OR_DURATION_PATTERN}):
+  Produces the JSON schema accepting both ISO-8601 datetimes and durations.
 
 Examples
 - Validation:
