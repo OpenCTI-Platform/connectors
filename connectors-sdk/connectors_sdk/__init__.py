@@ -19,6 +19,15 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
     ExternalImportConnector,
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
+    BaseEnrichmentProcessor,
+)
+from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
+    EnrichmentMessage,
+)
+from connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector import (
+    InternalEnrichmentConnector,
+)
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -76,4 +85,7 @@ __all__ = [
     "ExternalImportConnector",
     "ConnectorLogger",
     "BaseDataProcessor",
+    "InternalEnrichmentConnector",
+    "BaseEnrichmentProcessor",
+    "EnrichmentMessage",
 ]
