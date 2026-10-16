@@ -118,7 +118,7 @@ def test_ppl_restricts_caps_and_counts(requests_mock):
         f"{base} | stats count() as opencti_hit_count",
     ]
     assert result.rows == [{"time": START_MS, "device.hostname": "ws1"}]
-    assert (result.total, result.partial) == (42, False)
+    assert (result.total, result.partial, result.queries) == (42, False, 2)
 
 
 def test_ppl_does_not_count_a_page_below_the_cap(requests_mock):
@@ -130,7 +130,7 @@ def test_ppl_does_not_count_a_page_below_the_cap(requests_mock):
 
     # Then no count query is sent and the total is the number of rows
     assert requests_mock.call_count == 1
-    assert result.total == 2
+    assert (result.total, result.queries) == (2, 1)
 
 
 def test_ppl_date_window_and_platform_cap(requests_mock):

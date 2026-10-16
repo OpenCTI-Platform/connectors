@@ -342,7 +342,9 @@ class MicrosoftDefenderHuntConnector(InternalHuntConnector):
         rows = client.run_query(f"{query}\n| take {cap}", span, deadline).rows
         total = len(rows)
         truncated = False
+        queries = 1
         if total >= cap:
+            queries = 2
             counted_total = _count(
                 client.run_query(f"{query}\n| count", span, deadline).rows
             )
@@ -360,7 +362,12 @@ class MicrosoftDefenderHuntConnector(InternalHuntConnector):
             HuntEvent(timestamp=_event_time(row), fields=_event_fields(row))
             for row in rows
         ]
-        return HuntResult(events=events, total_hits=total, truncated=truncated)
+        return HuntResult(
+            events=events,
+            total_hits=total,
+            truncated=truncated,
+            queries_count=queries,
+        )
 
 
 def _with_fields(query: NativeQuery) -> NativeQuery:

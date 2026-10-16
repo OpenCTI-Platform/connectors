@@ -183,6 +183,7 @@ def test_execute_runs_native_queries_verbatim(connector_factory, requests_mock):
         "DeviceInfo | summarize count()\n| take 1000"
     ]
     assert result.events[0].timestamp is None
+    assert result.queries_count == 1
 
 
 def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock):
@@ -208,6 +209,7 @@ def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock
         "DeviceEvents\n| count",
     ]
     assert (result.hits_count, result.truncated) == (42, True)
+    assert result.queries_count == 2
 
 
 def test_execute_caps_at_10000_rows(connector_factory, requests_mock):
@@ -520,7 +522,7 @@ def test_start_registers_the_defender_platform_and_listens():
         security_platform_name="Microsoft Defender XDR",
         security_platform_type="XDR",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=2,
         supports_indicators=True,
         required_permissions=[
             {"name": "ThreatHunting.Read.All", "purpose": purpose}

@@ -103,7 +103,7 @@ def test_execute_caps_and_maps_rows(connector_factory, requests_mock):
 
     # Then it is capped with take, and the total is the returned rows
     assert _queries(requests_mock) == ["SecurityEvent\n| take 1000"]
-    assert result.hits_count == 1
+    assert (result.hits_count, result.queries_count) == (1, 1)
     assert result.truncated is False
     assert result.events[0].timestamp == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
     assert result.events[0].fields["Computer"] == "ws1"
@@ -131,7 +131,7 @@ def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock
         "DeviceEvents\n| take 1",
         "DeviceEvents\n| count",
     ]
-    assert result.hits_count == 42
+    assert (result.hits_count, result.queries_count) == (42, 2)
     assert result.truncated is True
     assert result.events[0].timestamp == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
 
@@ -443,7 +443,7 @@ def test_start_registers_the_sentinel_platform_and_listens(credential):
         security_platform_name="Microsoft Sentinel",
         security_platform_type="SIEM",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=5,
         supports_indicators=False,
         required_permissions=[
             {"name": name, "purpose": purpose}

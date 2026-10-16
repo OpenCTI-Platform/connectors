@@ -9,7 +9,7 @@ connector:
   # log_level: 'error' # optional (default: 'error')
   # security_platform_name: 'Microsoft Defender XDR' # optional (default: 'Microsoft Defender XDR')
   # security_platform_type: 'XDR' # optional (default: 'XDR')
-  # max_concurrent_runs: 2 # optional (default: none)
+  # max_concurrent_runs: 2 # optional (default: 2)
   # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
   # max_observables: 100 # optional (default: 100)
 

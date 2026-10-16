@@ -433,7 +433,7 @@ def test_start_registers_the_elastic_platform_and_listens():
         security_platform_name="Elastic Security",
         security_platform_type="SIEM",
         supports_preview=True,
-        max_concurrent_runs=None,
+        max_concurrent_runs=3,
         supports_indicators=False,
         required_permissions=[
             {"name": name, "purpose": purpose}

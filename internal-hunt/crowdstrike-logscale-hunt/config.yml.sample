@@ -9,7 +9,7 @@ connector:
   # log_level: 'error' # optional (default: 'error')
   # security_platform_name: 'CrowdStrike Falcon' # optional (default: 'CrowdStrike Falcon')
   # security_platform_type: 'SIEM' # optional (default: 'SIEM')
-  # max_concurrent_runs: 2 # optional (default: none)
+  # max_concurrent_runs: 3 # optional (default: 3)
   # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
   # max_observables: 100 # optional (default: 100)
 

@@ -30,6 +30,13 @@ class ElasticSecurityHuntConnectorConfig(BaseInternalHuntConnectorConfig):
         description="Name of the OpenCTI Security Platform the hunts are executed against.",
         default="Elastic Security",
     )
+    max_concurrent_runs: int | None = Field(
+        description="Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time "
+        "(a run holds one query on the platform at a time). The platform budget is the minimum of its own "
+        "setting and this value. Defaults to 3.",
+        default=3,
+        ge=1,
+    )
 
 
 class ElasticSecurityHuntConfig(BaseConfigModel):

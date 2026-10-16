@@ -234,6 +234,7 @@ def test_rules_share_the_maximum_number_of_results(
     # Then the second rule does not run and the run says its results are partial
     _, kwargs = report_kwargs(hunt_helper)
     assert len(connector.executed) == 1
+    assert kwargs["queries_count"] == 1
     assert kwargs["truncated"] is True
     second = kwargs["rule_results"][1]
     assert (second["status"], second["truncated"]) == ("completed", True)

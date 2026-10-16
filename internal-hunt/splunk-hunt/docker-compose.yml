@@ -13,7 +13,7 @@ services:
       # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       # - CONNECTOR_SECURITY_PLATFORM_NAME=Splunk # optional, Security Platform the hunts run against (default: 'Splunk')
       # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
-      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=3 # optional, connector-side limit of concurrent hunt runs (default: 3)
       # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
       # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
       # Splunk REST API

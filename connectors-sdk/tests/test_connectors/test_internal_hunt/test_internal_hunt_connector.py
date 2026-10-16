@@ -19,6 +19,8 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntQueryRejectedError,
     HuntRequestError,
     HuntResult,
+    HuntRunReport,
+    HuntRunStatus,
     HuntTimeoutError,
     HuntTranslationError,
     HuntUnsupportedPyctiError,
@@ -780,6 +782,100 @@ def test_pycti_without_terminal_failures_gets_the_error_only(
     assert connector.helper.reports == [
         ("run-1", "failed", "HuntQueryRejectedError: Invalid UDM field")
     ]
+
+
+@pytest.mark.parametrize(
+    "result, mode, queries",
+    [
+        pytest.param(HuntResult(), "execute", 1, id="one_query"),
+        pytest.param(HuntResult(queries_count=2), "execute", 2, id="query_and_count"),
+        pytest.param(HuntResult(), "preview", 0, id="preview"),
+    ],
+)
+def test_run_reports_the_queries_sent_to_the_platform(
+    connector_factory, hunt_event, hunt_helper, result, mode, queries
+):
+    # Given a run sending one query, a query and its count, or nothing for a preview
+    connector = connector_factory(result)
+
+    # When it is processed
+    connector.process_message(hunt_event(mode=mode))
+
+    # Then the run reports the queries it sent, and the connector forgets them
+    assert _report_kwargs(hunt_helper)[1]["queries_count"] == queries
+    assert connector._queries_sent == {}
+
+
+def test_a_failed_or_timed_out_query_still_counts(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a query the platform fails
+    failing = connector_factory(HuntExecutionError("platform down"))
+
+    # When/Then the failed run reports the query it sent
+    with pytest.raises(HuntExecutionError):
+        failing.process_message(hunt_event())
+    assert _report_kwargs(hunt_helper)[1]["queries_count"] == 1
+
+    # Given a query running longer than the run timeout
+    slow = connector_factory(HuntResult())
+    slow.block = True
+
+    # When/Then the timed out run reports it too
+    with pytest.raises(HuntTimeoutError):
+        slow.process_message(hunt_event(limits={"timeout_seconds": 1}))
+    assert slow.release.wait(5)
+    assert _report_kwargs(hunt_helper)[1]["queries_count"] == 1
+    assert slow._queries_sent == {}
+
+
+def test_a_report_keeps_the_query_count_it_states(connector_factory, hunt_helper):
+    # Given a report stating the queries of its run
+    connector = connector_factory()
+
+    # When it is reported
+    connector.report(
+        "run-1", HuntRunReport(status=HuntRunStatus.COMPLETED, queries_count=4)
+    )
+
+    # Then the stated count is reported
+    assert _report_kwargs(hunt_helper)[1]["queries_count"] == 4
+
+
+def test_older_pycti_gets_no_query_count(connector_factory, hunt_event):
+    # Given a pycti whose report does not take the queries of a run
+    class _NoQueriesHelper:
+        work_id = "work-1"
+
+        def __init__(self):
+            self.reports = []
+
+        def report_hunt_run(
+            self,
+            run_id,
+            status,
+            hits_count=None,
+            distinct_entities=None,
+            evidence_sample=None,
+            translated_query=None,
+            query_language=None,
+            cost_ms=None,
+            result_ids=None,
+            error=None,
+            truncated=None,
+            retryable=None,
+        ):
+            self.reports.append((run_id, status, hits_count))
+
+    connector = connector_factory(HuntResult())
+    connector._helper = _NoQueriesHelper()
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the run is reported without the count
+    assert connector.helper.reports == [("run-1", "completed", 0)]
+    assert connector._queries_sent == {}
 
 
 def test_invalid_execute_result_fails_the_run(connector_factory, hunt_event):

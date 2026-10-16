@@ -58,7 +58,7 @@ Table of Contents
   - [Usage](#usage)
   - [Query languages](#query-languages)
   - [Behavior](#behavior)
-  - [Limits](#limits)
+  - [Quotas and limits](#quotas-and-limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -125,7 +125,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn` or `error`. |
 | Security Platform name | `connector.security_platform_name` | `CONNECTOR_SECURITY_PLATFORM_NAME` | `CrowdStrike Falcon` | No | OpenCTI Security Platform the hunts run against (created when missing). Use one name per Falcon tenant or LogScale cluster. |
 | Security Platform type | `connector.security_platform_type` | `CONNECTOR_SECURITY_PLATFORM_TYPE` | `SIEM` | No | `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
-| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | | No | Connector-side limit of concurrent hunt runs (the platform budget is the minimum of both). |
+| Concurrent runs | `connector.max_concurrent_runs` | `CONNECTOR_MAX_CONCURRENT_RUNS` | `3` | No | Connector-side limit of concurrent hunt runs, each holding one query on the platform at a time (the platform budget is the minimum of both). |
 | Observable types | `connector.observable_types` | `CONNECTOR_OBSERVABLE_TYPES` | IOC types | No | Observable types the connector may create: `IPv4-Addr`, `IPv6-Addr`, `Domain-Name`, `Url`, `StixFile`, `Email-Addr`, widened with `Hostname`, `User-Account`, `Mac-Addr`. |
 | Observables per run | `connector.max_observables` | `CONNECTOR_MAX_OBSERVABLES` | `100` | No | Maximum number of observables created per run (the most frequent first). |
 | Deployment | `crowdstrike_logscale_hunt.deployment` | `CROWDSTRIKE_LOGSCALE_HUNT_DEPLOYMENT` | `falcon` | No | `falcon` (Falcon Next-Gen SIEM) or `logscale` (LogScale cluster). |
@@ -213,7 +213,18 @@ Investigate).
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
 
-## Limits
+## Quotas and limits
+
+Quotas of the platform, from its vendor documentation:
+
+| Quota | Value | Source |
+|---|---|---|
+| Events per query job | 200 events by default for a query without aggregation, 1,500 rows with one; the connector sets the count with `tail`. | [Running Query Jobs](https://library.humio.com/logscale-api/api-search-query.html) |
+| Query job lifetime | A job not polled for 90 seconds stops and deletes itself. | [Polling a Query Job](https://library.humio.com/logscale-api/api-search-query-poll.html) |
+| Query start rate (self-hosted) | Number of cores / 2 new queries per second by default (`QUERY_COORDINATOR_START_RATE_LIMIT`); queries beyond are delayed. | [QUERY_COORDINATOR_START_RATE_LIMIT](https://library.humio.com/falcon-logscale-self-hosted/envar-query_coordinator_start_rate_limit.html) |
+| Falcon API request rate | Not documented publicly by the vendor (the API documentation requires a Falcon login). | - |
+
+Limits of the connector:
 
 | Limit | Value |
 |---|---|
