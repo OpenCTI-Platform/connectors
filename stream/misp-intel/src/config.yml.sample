@@ -33,6 +33,9 @@ misp:
   # Tagging configuration
   tag_opencti: true  # Add OpenCTI-specific tags to MISP events
   tag_prefix: 'opencti:'  # Prefix for OpenCTI tags
+  # Marking definition types whose container markings are converted to MISP event tags
+  # (only controls tag conversion, does not filter exported objects)
+  marking_types_to_convert: 'TLP,PAP'
 
   # Round-trip configuration
   detect_round_trip: false  # Enable round-trip detection (update existing MISP events instead of creating duplicates)

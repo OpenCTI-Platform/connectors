@@ -383,11 +383,11 @@ class Connector:
             "TLP:CLEAR",
         )
         if not self.helper.check_max_tlp(
-            tlp=tlp, max_tlp=self.config.zetalytics.max_tlp
+            tlp=tlp, max_tlp=f"TLP:{self.config.connector.max_tlp.upper()}"
         ):
             raise TlpError(
                 f"Observable TLP ({tlp}) exceeds configured maximum "
-                f"({self.config.zetalytics.max_tlp}); skipping enrichment."
+                f"(TLP:{self.config.connector.max_tlp.upper()}); skipping enrichment."
             )
         return tlp
 

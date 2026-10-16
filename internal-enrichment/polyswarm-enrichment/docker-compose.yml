@@ -13,11 +13,11 @@ services:
       # - CONNECTOR_SCOPE=StixFile,Artifact
       # - CONNECTOR_AUTO=true
       # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_MAX_TLP=TLP:RED
 
       # ========== PolySwarm Configuration ==========
       - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
       # - POLYSWARM_ENRICHMENT_COMMUNITY=default
       # - POLYSWARM_ENRICHMENT_MAX_POLLING_TIME=120
-      # - POLYSWARM_ENRICHMENT_MAX_TLP=TLP:AMBER
       # - POLYSWARM_ENRICHMENT_POLYKG_API_URL=
     restart: always

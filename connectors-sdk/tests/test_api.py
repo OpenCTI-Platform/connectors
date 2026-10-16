@@ -27,7 +27,6 @@ def test_root_public_api_is_valid():
         "InternalHuntConnector",
         "ConnectorLogger",
         "BaseDataProcessor",
-        "WorkManager",
         "ListFromString",
         "BaseClientApi",
         "RateLimit",

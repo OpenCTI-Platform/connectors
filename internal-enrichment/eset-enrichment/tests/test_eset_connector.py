@@ -268,3 +268,53 @@ class TestEsetConnector(object):
             )
             is not None
         )
+
+    @pytest.mark.parametrize(
+        "skip_entity",
+        [
+            pytest.param(
+                lambda data: data.update(
+                    entity_id="identity--8133d9f2-79ad-52bf-9541-cde65d175ce0",
+                    entity_type="Identity",
+                ),
+                id="out_of_scope",
+            ),
+            pytest.param(
+                lambda data: data["enrichment_entity"]["createdBy"].update(name="TEST"),
+                id="not_created_by_eset",
+            ),
+            pytest.param(
+                lambda data: data["enrichment_entity"].update(
+                    objects=[], objectsIds=[]
+                ),
+                id="no_portal_link",
+            ),
+            pytest.param(
+                lambda data: data["enrichment_entity"]["importFiles"].append(
+                    {"name": "AS-2024-0005 Report.pdf"}
+                ),
+                id="report_already_attached",
+            ),
+        ],
+    )
+    @pytest.mark.usefixtures("enrichment_data")
+    def test_skipped_entity_from_playbook_sends_original_bundle(
+        self, enrichment_data, skip_entity
+    ):
+        """A playbook MUST get the original bundle back, otherwise it stalls."""
+        self.connector.helper.send_stix2_bundle.reset_mock()
+        del enrichment_data["event_type"]
+        skip_entity(enrichment_data)
+
+        with patch_download(b"") as mock_get:
+            self.connector.process_message(enrichment_data)
+
+        mock_get.assert_not_called()
+        self.connector.helper.send_stix2_bundle.assert_called_once()
+        sent_bundle = json.loads(
+            self.connector.helper.send_stix2_bundle.call_args.args[0]
+        )
+        assert [o["id"] for o in sent_bundle["objects"]] == [
+            o["id"] for o in enrichment_data["stix_objects"]
+        ]
+        assert all("x_opencti_files" not in o for o in sent_bundle["objects"])
