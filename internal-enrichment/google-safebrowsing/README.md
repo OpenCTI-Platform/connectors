@@ -64,6 +64,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Scope  | scope      | `CONNECTOR_SCOPE`           | Url,Domain-Name,Hostname   | No        | The scope of observables the connector will enrich.                         |
 | Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | error                      | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
 | Auto Mode        | auto       | `CONNECTOR_AUTO`            | false                      | No        | Enables or disables automatic enrichment of observables.                    |
+| Max TLP          | max_tlp    | `CONNECTOR_MAX_TLP`         | amber                      | No        | Observables with a higher TLP are not sent to the Safe Browsing API: `clear`, `white`, `green`, `amber`, `amber+strict` or `red`. |
 
 ### Connector extra parameters environment variables
 
@@ -71,7 +72,6 @@ There are a number of configuration options, which are set either in `docker-com
 |-----------|------------------------------|--------------------------------|---------------------------------------|-----------|------------------------------------------------------------------------------------------------------|
 | API Key   | api_key                      | `SAFE_BROWSING_API_KEY`        |                                       | Yes*      | Safe Browsing API key (Google or Yandex). *Unless the deprecated `GOOGLE_SAFE_BROWSING_API_KEY` is set. |
 | API URL   | api_url                      | `SAFE_BROWSING_API_URL`        | `https://safebrowsing.googleapis.com` | No        | Safe Browsing API base URL. Use `https://sba.yandex.net` for Yandex.                                 |
-| Max TLP   | max_tlp                      | `SAFE_BROWSING_MAX_TLP`        | `TLP:AMBER`                           | No        | Observables with a higher TLP are not sent to the Safe Browsing API.                                 |
 | API Key   |                              | `GOOGLE_SAFE_BROWSING_API_KEY` |                                       | No        | **Deprecated**, use `SAFE_BROWSING_API_KEY`. Used only if `SAFE_BROWSING_API_KEY` is unset.          |
 
 ## Deployment
@@ -97,9 +97,9 @@ Configure the connector in `docker-compose.yml`:
       # - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
       # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=amber
       - SAFE_BROWSING_API_KEY=ChangeMe
       # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Use https://sba.yandex.net for Yandex
-      # - SAFE_BROWSING_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -200,7 +200,7 @@ graph LR
 ### Processing Details
 
 1. **Observable Type Check**: Verifies entity is Domain-Name, URL, or Hostname and is in the connector scope
-2. **TLP Check**: Skips observables whose TLP is higher than `SAFE_BROWSING_MAX_TLP`
+2. **TLP Check**: Skips observables whose TLP is higher than `CONNECTOR_MAX_TLP`
 3. **API Query**: Sends threat match request to Safe Browsing API
 4. **Result Processing**: If match found:
    - Sets observable score to 100 (malicious)

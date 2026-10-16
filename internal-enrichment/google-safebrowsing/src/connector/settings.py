@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Any
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -47,17 +47,6 @@ class SafeBrowsingConfig(BaseConfigModel):
             "Use `https://sba.yandex.net` for Yandex Safe Browsing."
         ),
         default=HttpUrl(DEFAULT_API_URL),
-    )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
-        description="Maximum TLP of the observables to send to the Safe Browsing API.",
-        default="TLP:AMBER",
     )
 
     @field_validator("api_url", mode="before")

@@ -35,11 +35,11 @@ def _fake_settings(settings_dict: dict[str, Any]) -> type[ConnectorSettings]:
                     "scope": "Url,Domain-Name,Hostname",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "red",
                 },
                 "safe_browsing": {
                     "api_key": "test-api-key",
                     "api_url": "https://sba.yandex.net",
-                    "max_tlp": "TLP:RED",
                 },
             },
             id="full_valid_settings_dict",
@@ -87,7 +87,7 @@ def test_settings_defaults():
     assert settings.connector.scope == ["Url", "Domain-Name", "Hostname"]
     assert settings.connector.type == "INTERNAL_ENRICHMENT"
     assert str(settings.safe_browsing.api_url) == "https://safebrowsing.googleapis.com/"
-    assert settings.safe_browsing.max_tlp == "TLP:AMBER"
+    assert settings.connector.max_tlp == "amber"
 
 
 def test_settings_empty_api_url_falls_back_to_default():
@@ -141,8 +141,8 @@ def test_settings_empty_api_url_falls_back_to_default():
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {},
-                "safe_browsing": {"api_key": "test-api-key", "max_tlp": "amber"},
+                "connector": {"max_tlp": "invalid"},
+                "safe_browsing": {"api_key": "test-api-key"},
             },
             id="invalid_max_tlp",
         ),

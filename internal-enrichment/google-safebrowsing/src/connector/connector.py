@@ -157,7 +157,9 @@ class SafeBrowsingConnector:
         for marking_definition in opencti_entity.get("objectMarking") or []:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
-        return self.helper.check_max_tlp(tlp, self.config.safe_browsing.max_tlp)
+        return self.helper.check_max_tlp(
+            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        )
 
     def _send_bundle(self, stix_objects: list) -> list:
         """Create a STIX bundle from the given objects and send it to OpenCTI."""
@@ -196,7 +198,7 @@ class SafeBrowsingConnector:
                 "Entity TLP is greater than the connector max TLP, skipping",
                 {
                     "entity_id": data["entity_id"],
-                    "max_tlp": self.config.safe_browsing.max_tlp,
+                    "max_tlp": self.config.connector.max_tlp,
                 },
             )
             return None

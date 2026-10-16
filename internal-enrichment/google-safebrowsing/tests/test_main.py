@@ -40,11 +40,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "Url,Domain-Name,Hostname",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "amber",
                 },
                 "safe_browsing": {
                     "api_key": "test-api-key",
                     "api_url": "https://safebrowsing.googleapis.com",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )
