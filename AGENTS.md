@@ -286,6 +286,11 @@ exact pycti version. If the connector's `requirements.txt` pins an older
 pycti, dependency resolution fails and generation stops. Rebase on the latest
 `master` before regenerating.
 
+When the change also touches `connectors-sdk/` (for example the JSON schema of a
+settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
+SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
+`SDK_SOURCE=local mise run gs external-import/myconnector`.
+
 ## CI overview
 
 Workflows live in `.github/workflows/`. On a pull request, only changed
