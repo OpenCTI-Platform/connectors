@@ -1,0 +1,21 @@
+{
+  "title": "Abuse.ch False Positive List",
+  "slug": "abusech-fplist",
+  "description": "abuse.ch operates community-driven threat intelligence platforms such as MalwareBazaar, ThreatFox and URLhaus. False positives happen, especially on community-driven platforms: abuse.ch is transparent about them and publishes a False Positive List of entries recently removed from its platforms because of false positive reports, available in an automated way through the Hunting API.\nThis connector fetches the abuse.ch False Positive List and deletes the matching Indicators from OpenCTI, preventing false alerts in downstream SIEM/EDR integrations. Observables are left untouched.",
+  "short_description": "Deletes Indicators from OpenCTI that abuse.ch has removed from its platforms (MalwareBazaar, ThreatFox, URLhaus, ...) as false positives.",
+  "logo": "external-import/abusech-fplist/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://hunting.abuse.ch/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/abusech-fplist",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-abusech-fplist",
+  "container_type": "EXTERNAL_IMPORT"
+}
