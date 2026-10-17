@@ -1,6 +1,7 @@
 import time
 from typing import TYPE_CHECKING, Any, List, Optional
 
+import google.auth
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests import Response
@@ -40,7 +41,9 @@ class SecOpsEntitiesClient:
 
     def init_session(self) -> ChronicleRequests.AuthorizedSession:
         """
-        Initializes an authorized session for interacting with the Chronicle API using a service account.
+        Initializes an authorized session for interacting with the Chronicle API using either a
+        service account key (auth_method='service_account') or Application Default Credentials /
+        Workload Identity (auth_method='adc').
 
         This method leverages the Google Python library to handle authentication and token management,
         including retry strategies for specific status codes. It ensures that credentials are refreshed
@@ -59,23 +62,28 @@ class SecOpsEntitiesClient:
         Error logging:
             All errors are logged with `self.helper.connector_logger.error` to ensure traceability.
         """
-        service_account_info = {
-            "type": "service_account",
-            "project_id": self.config.project_id,
-            "private_key": self.config.private_key.get_secret_value(),
-            "private_key_id": self.config.private_key_id,
-            "client_email": self.config.client_email,
-            "client_id": self.config.client_id,
-            "auth_uri": self.config.auth_uri,
-            "token_uri": self.config.token_uri,
-            "auth_provider_x509_cert_url": self.config.auth_provider_cert,
-            "client_x509_cert_url": self.config.client_cert_url,
-        }
-
         try:
-            credentials = service_account.Credentials.from_service_account_info(
-                info=service_account_info, scopes=SCOPES
-            )
+            if self.config.auth_method == "adc":
+                # Application Default Credentials: GKE Workload Identity (metadata
+                # server) or Workload Identity Federation (external_account via
+                # GOOGLE_APPLICATION_CREDENTIALS). No exported key involved.
+                credentials, _ = google.auth.default(scopes=SCOPES)
+            else:
+                service_account_info = {
+                    "type": "service_account",
+                    "project_id": self.config.project_id,
+                    "private_key": self.config.private_key.get_secret_value(),
+                    "private_key_id": self.config.private_key_id,
+                    "client_email": self.config.client_email,
+                    "client_id": self.config.client_id,
+                    "auth_uri": self.config.auth_uri,
+                    "token_uri": self.config.token_uri,
+                    "auth_provider_x509_cert_url": self.config.auth_provider_cert,
+                    "client_x509_cert_url": self.config.client_cert_url,
+                }
+                credentials = service_account.Credentials.from_service_account_info(
+                    info=service_account_info, scopes=SCOPES
+                )
             # Create a Chronicle session with retries when token expired
             return ChronicleRequests.AuthorizedSession(
                 credentials=credentials,
