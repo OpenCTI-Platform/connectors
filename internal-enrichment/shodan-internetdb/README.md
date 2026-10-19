@@ -67,12 +67,12 @@ This connector enriches IPv4 observables with:
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `IPv4-Addr` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:WHITE`). Replaces the deprecated `SHODAN_MAX_TLP` |
 
 ### Shodan InternetDB Configuration
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
-| `shodan_max_tlp` | `SHODAN_MAX_TLP` | No | Maximum TLP for processing (default: TLP:CLEAR) |
 | `shodan_ssl_verify` | `SHODAN_SSL_VERIFY` | No | Verify SSL connections (default: true) |
 
 ---
@@ -98,7 +98,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
-      - SHODAN_MAX_TLP=TLP:CLEAR
+      - CONNECTOR_MAX_TLP=TLP:CLEAR
       - SHODAN_SSL_VERIFY=true
     restart: always
 ```

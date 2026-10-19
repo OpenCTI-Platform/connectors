@@ -160,9 +160,9 @@
             "type": "string"
           },
           "MICROSOFT_SENTINEL_INCIDENTS_IMPORT_START_DATE": {
-            "default": "2020-01-01T00:00:00Z",
-            "description": "Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
-            "format": "date-time",
+            "default": "P30D",
+            "description": "Import starting date, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago) - used only if connector's state is not set.",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "MICROSOFT_SENTINEL_INCIDENTS_FILTER_LABELS": {
@@ -209,10 +209,1519 @@
       "support_version": ">=7.260811.0",
       "subscription_link": "https://www.group-ib.com",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/group-ib-ti",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-group-ib-ti",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/group-ib-ti_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Group-IB Connector",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "stix2",
+              "report",
+              "threat-actor",
+              "intrusion-set",
+              "malware",
+              "attack-pattern",
+              "vulnerability",
+              "indicator",
+              "location",
+              "identity",
+              "incident",
+              "note",
+              "relationship",
+              "ipv4-addr",
+              "ipv6-addr",
+              "domain",
+              "url",
+              "StixFile",
+              "email-addr",
+              "user-account",
+              "payment-card",
+              "bank-account"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT4H",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "TI_API_URL": {
+            "default": "https://tap.group-ib.com/api/v2/",
+            "description": "Group-IB Threat Intelligence API URL.",
+            "type": "string"
+          },
+          "TI_API_USERNAME": {
+            "description": "Group-IB TI portal profile email.",
+            "type": "string"
+          },
+          "TI_API_TOKEN": {
+            "description": "Group-IB TI API token.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "TI_API_PROXY_IP": {
+            "default": null,
+            "description": "Proxy host or IP.",
+            "type": "string"
+          },
+          "TI_API_PROXY_PORT": {
+            "default": null,
+            "description": "Proxy port.",
+            "type": "integer"
+          },
+          "TI_API_PROXY_PROTOCOL": {
+            "default": null,
+            "description": "Proxy protocol (http/https).",
+            "type": "string"
+          },
+          "TI_API_PROXY_USERNAME": {
+            "default": null,
+            "description": "Proxy username.",
+            "type": "string"
+          },
+          "TI_API_PROXY_PASSWORD": {
+            "default": null,
+            "description": "Proxy password.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "TI_API_EXTRA_SETTINGS_INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR": {
+            "default": false,
+            "description": "Emit Intrusion-Set SDOs instead of Threat-Actor.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_IGNORE_NON_MALWARE_DDOS": {
+            "default": false,
+            "description": "Drop DDoS events without a malware payload.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREATS": {
+            "default": false,
+            "description": "Drop threat events carrying no indicators.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREAT_REPORTS": {
+            "default": false,
+            "description": "Drop threat reports carrying no indicators.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_ENABLE_STATEMENT_MARKING": {
+            "default": false,
+            "description": "Attach a Group-IB statement marking to bundles.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_PRESERVE_MANUAL_LABELS": {
+            "default": false,
+            "description": "Omit x_opencti_labels so analyst-added labels survive updates.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_TIME_OUTPUT_FORMAT": {
+            "default": null,
+            "description": "strftime format for human-readable timestamps in logs.",
+            "examples": [
+              "%Y-%m-%d %H:%M:%S"
+            ],
+            "type": "string"
+          },
+          "TI_API_EXTRA_SETTINGS_ENABLE_FILE_LOGGING": {
+            "default": false,
+            "description": "Write rotating file logs in addition to stdout.",
+            "type": "boolean"
+          },
+          "TI_API_EXTRA_SETTINGS_LOG_FILE_DIR": {
+            "default": null,
+            "description": "Directory for rotating file logs.",
+            "type": "string"
+          },
+          "TI_API_EXTRA_SETTINGS_LOG_FILE_MAX_BYTES": {
+            "default": null,
+            "description": "Max size (bytes) per log file before rotation.",
+            "type": "integer"
+          },
+          "TI_API_EXTRA_SETTINGS_LOG_FILE_BACKUP_COUNT": {
+            "default": null,
+            "description": "Number of rotated log files to keep.",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: apt/threat]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: apt/threat]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: apt/threat]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_STORE_REPORT_LABELS_IN_NOTE": {
+            "default": null,
+            "description": "Write report labels to a Note instead of the SDO. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES": {
+            "default": null,
+            "description": "Attach the actor name as a label on observables. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_INCLUDE_THREAT_ACTOR_LABELS": {
+            "default": null,
+            "description": "Add labels naming the linked threat actors. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_INCLUDE_NATION_STATE_LABEL": {
+            "default": null,
+            "description": "Add the global `nation_state` label. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_INCLUDE_CONTEXT_LABEL": {
+            "default": null,
+            "description": "Add labels derived from the payload (tailored, autogen, raw labels). [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_TARGETED_ENTITIES_AS_SDO": {
+            "default": null,
+            "description": "Promote victimology (sectors/regions/companies) into SDOs. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_INCLUDE_EXPERTISE_LABELS": {
+            "default": null,
+            "description": "Add bare expertise labels from the report `expertise` field. [collection: apt/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: apt/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: apt/threat_actor]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: apt/threat_actor]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: apt/threat_actor]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: apt/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_INCLUDE_NATION_STATE_LABEL": {
+            "default": null,
+            "description": "Add the global `nation_state` label. [collection: apt/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_APT_THREAT_ACTOR_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: apt/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: attacks/ddos]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: attacks/ddos]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: attacks/ddos]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: attacks/ddos]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: attacks/ddos]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_CNC_AS_INDICATOR": {
+            "default": null,
+            "description": "Emit CnC observables as Indicators. [collection: attacks/ddos]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DDOS_CREATE_INCIDENT": {
+            "default": null,
+            "description": "Create an Incident SDO per event. [collection: attacks/ddos]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DEFACE_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: attacks/deface]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DEFACE_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: attacks/deface]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DEFACE_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: attacks/deface]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DEFACE_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: attacks/deface]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_DEFACE_CREATE_INCIDENT": {
+            "default": null,
+            "description": "Create an Incident SDO per event. [collection: attacks/deface]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: attacks/phishing_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: attacks/phishing_group]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: attacks/phishing_group]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: attacks/phishing_group]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: attacks/phishing_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_BRAND_AS_IDENTITY": {
+            "default": null,
+            "description": "Emit the impersonated brand as an Identity. [collection: attacks/phishing_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_INCLUDE_BRAND_LABELS": {
+            "default": null,
+            "description": "Add bare labels naming the impersonated brands. [collection: attacks/phishing_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: attacks/phishing_kit]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: attacks/phishing_kit]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: attacks/phishing_kit]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: attacks/phishing_kit]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: attacks/phishing_kit]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_BRAND_AS_IDENTITY": {
+            "default": null,
+            "description": "Emit the impersonated brand as an Identity. [collection: attacks/phishing_kit]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_INCLUDE_BRAND_LABELS": {
+            "default": null,
+            "description": "Add bare labels naming the impersonated brands. [collection: attacks/phishing_kit]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/access]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/access]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/access]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/access]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_DATA_PREVIEW_MAX_LEN": {
+            "default": null,
+            "description": "Max characters of preview text in Notes when full_data is off. [collection: compromised/access]",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_FULL_DATA": {
+            "default": null,
+            "description": "Emit full text instead of a truncated preview in Notes. [collection: compromised/access]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: compromised/access]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_CNC_AS_INDICATOR": {
+            "default": null,
+            "description": "Emit CnC observables as Indicators. [collection: compromised/access]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCESS_TARGET_OBSERVABLES": {
+            "default": null,
+            "description": "Emit non-IOC target/victim observables. [collection: compromised/access]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/account_group]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/account_group]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/account_group]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_INCLUDE_PASSWORDS": {
+            "default": null,
+            "description": "Include cleartext passwords in the account-group Note (off by default for GDPR / compliance reasons). [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_INCLUDE_MALWARE_LABELS": {
+            "default": null,
+            "description": "Tag entities with the originating malware family name. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_INCLUDE_MALWARE_THREAT_ACTOR_LABELS": {
+            "default": null,
+            "description": "Add labels naming the threat actors linked to the malware. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_INCLUDE_SOURCE_TYPE_LABELS": {
+            "default": null,
+            "description": "Add bare labels from the API `source_type` field. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_UNIQUE": {
+            "default": null,
+            "description": "Upstream API parameter: deduplicate by credential pair. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_COMBOLIST": {
+            "default": null,
+            "description": "Upstream API parameter: include records sourced from combolists (vs. only stealer logs). [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_PROBABLE_CORPORATE_ACCESS": {
+            "default": null,
+            "description": "Upstream API parameter: prioritise records that look like corporate access. [collection: compromised/account_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/bank_card_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/bank_card_group]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/bank_card_group]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/bank_card_group]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: compromised/bank_card_group]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/discord]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/discord]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/discord]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/discord]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: compromised/discord]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_REDACT_MESSAGE_TEXT": {
+            "default": null,
+            "description": "Omit the raw chat message body from the Note (keep metadata). [collection: compromised/discord]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_INCLUDE_TRANSLATION_IN_NOTE": {
+            "default": null,
+            "description": "Append the message translation (when present) to the Note. [collection: compromised/discord]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_FULL_DATA": {
+            "default": null,
+            "description": "Emit full text instead of a truncated preview in Notes. [collection: compromised/discord]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_DISCORD_DATA_PREVIEW_MAX_LEN": {
+            "default": null,
+            "description": "Max characters of preview text in Notes when full_data is off. [collection: compromised/discord]",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/masked_card]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/masked_card]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/masked_card]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/masked_card]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: compromised/masked_card]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_INCLUDE_MALWARE_LABELS": {
+            "default": null,
+            "description": "Tag entities with the originating malware family name. [collection: compromised/masked_card]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_INCLUDE_THREAT_ACTOR_LABELS": {
+            "default": null,
+            "description": "Add labels naming the linked threat actors. [collection: compromised/masked_card]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_INCLUDE_SOURCE_TYPE_LABELS": {
+            "default": null,
+            "description": "Add bare labels from the API `source_type` field. [collection: compromised/masked_card]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/messenger]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/messenger]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/messenger]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/messenger]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: compromised/messenger]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_REDACT_MESSAGE_TEXT": {
+            "default": null,
+            "description": "Omit the raw chat message body from the Note (keep metadata). [collection: compromised/messenger]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_INCLUDE_TRANSLATION_IN_NOTE": {
+            "default": null,
+            "description": "Append the message translation (when present) to the Note. [collection: compromised/messenger]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_FULL_DATA": {
+            "default": null,
+            "description": "Emit full text instead of a truncated preview in Notes. [collection: compromised/messenger]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_DATA_PREVIEW_MAX_LEN": {
+            "default": null,
+            "description": "Max characters of preview text in Notes when full_data is off. [collection: compromised/messenger]",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_SPD_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: compromised/spd]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_SPD_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: compromised/spd]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_SPD_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: compromised/spd]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_SPD_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: compromised/spd]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_COMPROMISED_SPD_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: compromised/spd]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_DARKWEB_FORUMS_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: darkweb/forums]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_DARKWEB_FORUMS_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: darkweb/forums]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_DARKWEB_FORUMS_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: darkweb/forums]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_DARKWEB_FORUMS_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: darkweb/forums]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_DARKWEB_FORUMS_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: darkweb/forums]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: hi/open_threats]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: hi/open_threats]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: hi/open_threats]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_DATA_PREVIEW_MAX_LEN": {
+            "default": null,
+            "description": "Max characters of preview text in Notes when full_data is off. [collection: hi/open_threats]",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_FULL_DATA": {
+            "default": null,
+            "description": "Emit full text instead of a truncated preview in Notes. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_INCLUDE_TEXT_IN_NOTE": {
+            "default": null,
+            "description": "Include the parsed text body in the Note. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_INCLUDE_ORIGINAL_IN_NOTE": {
+            "default": null,
+            "description": "Include the raw original payload in the Note. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_OPEN_THREATS_OBSERVABLES_AS_INDICATORS": {
+            "default": null,
+            "description": "Emit report IOC observables as Indicators. [collection: hi/open_threats]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: hi/threat]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: hi/threat]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: hi/threat]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_STORE_REPORT_LABELS_IN_NOTE": {
+            "default": null,
+            "description": "Write report labels to a Note instead of the SDO. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES": {
+            "default": null,
+            "description": "Attach the actor name as a label on observables. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_INCLUDE_THREAT_ACTOR_LABELS": {
+            "default": null,
+            "description": "Add labels naming the linked threat actors. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_INCLUDE_CYBERCRIMINAL_LABEL": {
+            "default": null,
+            "description": "Add the global `cybercriminal` label. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_INCLUDE_CONTEXT_LABEL": {
+            "default": null,
+            "description": "Add labels derived from the payload (tailored, autogen, raw labels). [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_TARGETED_ENTITIES_AS_SDO": {
+            "default": null,
+            "description": "Promote victimology (sectors/regions/companies) into SDOs. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_INCLUDE_EXPERTISE_LABELS": {
+            "default": null,
+            "description": "Add bare expertise labels from the report `expertise` field. [collection: hi/threat]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: hi/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: hi/threat_actor]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: hi/threat_actor]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: hi/threat_actor]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: hi/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_INCLUDE_CYBERCRIMINAL_LABEL": {
+            "default": null,
+            "description": "Add the global `cybercriminal` label. [collection: hi/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_HI_THREAT_ACTOR_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: hi/threat_actor]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_IOC_PRIMARY_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: ioc/primary]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_IOC_PRIMARY_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: ioc/primary]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_IOC_PRIMARY_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: ioc/primary]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_IOC_PRIMARY_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: ioc/primary]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: malware/cnc]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: malware/cnc]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: malware/cnc]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: malware/cnc]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_INCLUDE_MALWARE_LABELS": {
+            "default": null,
+            "description": "Tag entities with the originating malware family name. [collection: malware/cnc]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_INCLUDE_THREAT_ACTOR_LABELS": {
+            "default": null,
+            "description": "Add labels naming the linked threat actors. [collection: malware/cnc]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CNC_ALL_OBSERVABLES_AS_INDICATORS": {
+            "default": null,
+            "description": "Emit every observable of the event as an Indicator. [collection: malware/cnc]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: malware/config]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: malware/config]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: malware/config]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: malware/config]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: malware/config]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: malware/config]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_CONFIG_INCLUDE_MALWARE_LABELS": {
+            "default": null,
+            "description": "Tag entities with the originating malware family name. [collection: malware/config]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_MALWARE_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: malware/malware]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_MALWARE_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: malware/malware]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_MALWARE_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: malware/malware]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_MALWARE_MALWARE_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: malware/malware]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_MALWARE_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: malware/malware]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_SIGNATURE_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: malware/signature]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_SIGNATURE_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: malware/signature]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_SIGNATURE_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: malware/signature]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_MALWARE_SIGNATURE_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: malware/signature]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_YARA_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: malware/yara]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_MALWARE_YARA_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: malware/yara]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_MALWARE_YARA_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: malware/yara]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_MALWARE_YARA_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: malware/yara]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: osi/git_repository]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: osi/git_repository]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: osi/git_repository]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: osi/git_repository]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: osi/git_repository]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: osi/git_repository]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_AUTHOR_EMAIL_OBSERVABLES": {
+            "default": null,
+            "description": "Emit commit-author emails as observables. [collection: osi/git_repository]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: osi/public_leak]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: osi/public_leak]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: osi/public_leak]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: osi/public_leak]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: osi/public_leak]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_DATA_PREVIEW_MAX_LEN": {
+            "default": null,
+            "description": "Max characters of preview text in Notes when full_data is off. [collection: osi/public_leak]",
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_FULL_DATA": {
+            "default": null,
+            "description": "Emit full text instead of a truncated preview in Notes. [collection: osi/public_leak]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_DESCRIPTION_IN_EXTERNAL_REFERENCES": {
+            "default": null,
+            "description": "Move the entity description into an external reference instead of the SDO description field. [collection: osi/public_leak]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_VULNERABILITY_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: osi/vulnerability]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_OSI_VULNERABILITY_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: osi/vulnerability]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_VULNERABILITY_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: osi/vulnerability]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_OSI_VULNERABILITY_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: osi/vulnerability]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_OSI_VULNERABILITY_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: osi/vulnerability]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: suspicious_ip/open_proxy]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: suspicious_ip/open_proxy]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: suspicious_ip/open_proxy]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: suspicious_ip/open_proxy]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: suspicious_ip/open_proxy]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: suspicious_ip/scanner]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: suspicious_ip/scanner]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: suspicious_ip/scanner]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: suspicious_ip/scanner]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: suspicious_ip/scanner]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: suspicious_ip/socks_proxy]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: suspicious_ip/socks_proxy]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: suspicious_ip/socks_proxy]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: suspicious_ip/socks_proxy]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: suspicious_ip/socks_proxy]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: suspicious_ip/tor_node]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: suspicious_ip/tor_node]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: suspicious_ip/tor_node]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: suspicious_ip/tor_node]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: suspicious_ip/tor_node]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_ENABLE": {
+            "default": false,
+            "description": "Ingest this collection. Must be true to run. [collection: suspicious_ip/vpn]",
+            "type": "boolean"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_DEFAULT_DATE": {
+            "default": null,
+            "description": "First-run lookback anchor (YYYY-MM-DD). Ignored after the stored sequpdate cursor takes over. [collection: suspicious_ip/vpn]",
+            "examples": [
+              "2024-01-01"
+            ],
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_TTL": {
+            "default": null,
+            "description": "Validity period (days) for emitted Indicator SDOs. [collection: suspicious_ip/vpn]",
+            "examples": [
+              30,
+              90,
+              1460
+            ],
+            "type": "integer"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_LOCAL_CUSTOM_TAG": {
+            "default": null,
+            "description": "Extra bare label appended to every entity from this collection. [collection: suspicious_ip/vpn]",
+            "type": "string"
+          },
+          "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_USE_HUNTING_RULES": {
+            "default": null,
+            "description": "Ask the Group-IB API to apply portal hunting rules server-side (only honored by collections that support it). [collection: suspicious_ip/vpn]",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "TI_API_USERNAME",
+          "TI_API_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Catalyst",
@@ -462,8 +1971,8 @@
             "type": "integer"
           },
           "TSC_EXPORT_SINCE": {
-            "description": "Datetime (ISO-8601) used as the starting point of the very first data retrieval. It is overwritten by the connector state after the first successful run.",
-            "format": "date-time",
+            "description": "Starting point of the very first data retrieval, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). It is overwritten by the connector state after the first successful run.",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "TSC_SEVERITY_MIN_LEVEL": {
@@ -629,9 +2138,9 @@
             "type": "array"
           },
           "SILOBREAKER_IMPORT_START_DATE": {
-            "default": "2025-12-01T00:00:00Z",
-            "description": "The start date for importing Silobreaker data. (Default: 01/12/2025).",
-            "format": "date-time",
+            "default": "P30D",
+            "description": "The start date for importing Silobreaker data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           }
         },
@@ -1672,8 +3181,9 @@
             "type": "string"
           },
           "THREATMATCH_IMPORT_FROM_DATE": {
+            "default": "P30D",
             "description": "Relative ISO-8601 duration (e.g., 'P30D') used to set the first import window. Applied on the first run only. Defaults to 30 days ago from the current date. ",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "THREATMATCH_IMPORT_PROFILES": {
@@ -4785,8 +6295,8 @@
           },
           "MISP_FEED_IMPORT_FROM_DATE": {
             "default": null,
-            "description": "Start date for importing data from the MISP feed.",
-            "format": "date-time",
+            "description": "Start date for importing data from the MISP feed, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "MISP_FEED_CREATE_REPORTS": {
@@ -7046,8 +8556,8 @@
           },
           "MISP_IMPORT_FROM_DATE": {
             "default": null,
-            "description": "A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
-            "format": "date-time",
+            "description": "The date from which to start importing MISP events (based on events creation date), as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "MISP_IMPORT_TAGS": {
@@ -7596,7 +9106,7 @@
           "CHECKFIRST_SINCE": {
             "default": "P1Y",
             "description": "Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) or durations relative to now (e.g., P365D, P1Y, P6M, P4W). Defaults to 1 year ago.",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "CHECKFIRST_FORCE_REPROCESS": {
@@ -9130,8 +10640,8 @@
           },
           "FLASHPOINT_IMPORT_START_DATE": {
             "default": "P30D",
-            "description": "The date from which to start importing data.",
-            "format": "date-time",
+            "description": "The date from which to start importing data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "FLASHPOINT_IMPORT_REPORTS": {
@@ -9207,7 +10717,7 @@
       }
     },
     {
-      "title": "Wiz Cloud Threat Landscape",
+      "title": "Wiz Public Threat Landscape",
       "slug": "wiz",
       "description": "This connector imports data made publicly available by Wiz exposed at https://threats.wiz.io/. The list of imported entities (with their relationships) :\n\nIncidents : A historical collection of past cloud security incidents and campaigns, offering insights into targeting patterns, initial access methods, and effective impact.\n\nActors : Profiles of threat actors involved in cloud security incidents, shedding light on their potential motivations and victimology, to aid in risk assessment and threat modeling. NB: These can be modeled as either Threat Actor or Intrusion Set objects, depending on the configuration variable. See threat_actor_as_intrusion_set in Configuration variables.\n\nTechniques : An overview of attack techniques used by threat actors in cloud security incidents, aligned with the MITRE ATT&CK matrix framework for additional context.\n\nTools : Details on software utilized by threat actors in their activities targeting cloud environments, ranging from penetration testing utilities to bespoke malware.\n\nTargeted Technologies : Analysis of frequently targeted software found in cloud environments, noting their prevalence and any related incidents and techniques.\n\nDefenses : A corpus of cloud security measures that can serve to mitigate risks and prevent or detect attack techniques. Each mechanism is mapped to the MITRE D3FEND matrix.",
       "short_description": "Imports cloud security threat intelligence from Wiz (threats.wiz.io) into OpenCTI, including cloud incidents, threat actor profiles, attack techniques, tools, targeted technologies, and defensive measures.",
@@ -9252,7 +10762,7 @@
             "writeOnly": true
           },
           "CONNECTOR_NAME": {
-            "default": "Wiz Cloud Threat Landscape",
+            "default": "Wiz Public Threat Landscape",
             "description": "The name of the connector.",
             "type": "string"
           },
@@ -10518,8 +12028,9 @@
             "type": "array"
           },
           "HONEYLABS_IMPORT_SINCE": {
+            "default": "P7D",
             "description": "Start date for the first import (ISO 8601, absolute like '2026-01-01T00:00:00Z' or relative like 'P7D'). Later runs resume from the connector state. The free plan serves 7 days of history, paid plans 30.",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "HONEYLABS_PAGE_SIZE": {
@@ -11426,10 +12937,134 @@
       "support_version": ">= 6.5.1",
       "subscription_link": "https://spycloud.com/",
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/spycloud",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-spycloud",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/spycloud_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "SpyCloud",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "spycloud"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "info",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT1H",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "SPYCLOUD_API_BASE_URL": {
+            "description": "SpyCloud API base URL (a trailing slash is added if missing).",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "SPYCLOUD_API_KEY": {
+            "description": "SpyCloud API key.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "SPYCLOUD_SEVERITY_LEVELS": {
+            "default": [],
+            "description": "Comma-separated list of severities to filter breach records (allowed values are 2, 5, 20, 25). Leave empty to import all severities.",
+            "items": {
+              "enum": [
+                2,
+                5,
+                20,
+                25
+              ],
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "SPYCLOUD_WATCHLIST_TYPES": {
+            "default": [],
+            "description": "Comma-separated list of watchlist types to filter breach records (allowed values are 'email', 'domain', 'subdomain', 'ip'). Leave empty to import all watchlist types.",
+            "items": {
+              "enum": [
+                "email",
+                "domain",
+                "subdomain",
+                "ip"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "SPYCLOUD_TLP_LEVEL": {
+            "default": "amber+strict",
+            "description": "TLP level to set on imported entities.",
+            "enum": [
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string"
+          },
+          "SPYCLOUD_IMPORT_START_DATE": {
+            "default": "P30D",
+            "description": "The date to start importing breach records from, used only if the connector's state is not set. Can be either absolute (ISO 8601 date, e.g. '2024-01-01T00:00:00Z') or relative (ISO 8601 duration, e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "SPYCLOUD_API_BASE_URL",
+          "SPYCLOUD_API_KEY"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Maltiverse",
@@ -12044,7 +13679,7 @@
           "ZEROFOX_FIRST_RUN": {
             "default": "P1D",
             "description": "Start date to look back on the connector's very first run (ISO 8601 format, absolute date or duration, e.g. '2023-10-01' or 'P1D').",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "ZEROFOX_COLLECTORS": {
@@ -12608,6 +14243,202 @@
         "required": [
           "OPENCTI_URL",
           "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
+      "title": "Wiz Cloud Security",
+      "slug": "wiz-cloud",
+      "short_description": "Import Wiz Threat Detection Issues as OpenCTI Incidents with their affected cloud assets.",
+      "description": "The Wiz Cloud Security connector polls the Wiz tenant GraphQL API (issuesV2) and ingests Threat Detection Issues as Incidents, describing the affected cloud resource in the incident and creating it as a System, User Account, Software or Credential linked to the incident. Not to be confused with the wiz connector, which imports the public Wiz Research feed from threats.wiz.io.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Adversary & Campaign Insights",
+        "Cloud, SaaS & Platform Security"
+      ],
+      "solution_categories": [
+        "Threat Intelligence Feed",
+        "Cloud Security"
+      ],
+      "license_type": "Commercial",
+      "contact": null,
+      "verified": true,
+      "last_verified_date": "2026-08-28",
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">=6.6.2",
+      "subscription_link": null,
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/wiz-cloud",
+      "manager_supported": true,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-wiz-cloud",
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/wiz-cloud_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Wiz Cloud",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "wiz-cloud"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT6H",
+            "format": "duration",
+            "type": "string"
+          },
+          "WIZ_CLOUD_API_URL": {
+            "description": "Tenant GraphQL endpoint, e.g. https://api.us17.app.wiz.io/graphql",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "WIZ_CLOUD_AUTH_URL": {
+            "default": "https://auth.app.wiz.io/oauth/token",
+            "description": "OAuth2 token endpoint (different host than api_url)",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "WIZ_CLOUD_CLIENT_ID": {
+            "description": "Wiz service account client id",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "WIZ_CLOUD_CLIENT_SECRET": {
+            "description": "Wiz service account client secret",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "WIZ_CLOUD_ISSUE_SEVERITY": {
+            "default": [
+              "CRITICAL",
+              "HIGH"
+            ],
+            "description": "Issue severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "WIZ_CLOUD_ISSUE_STATUS": {
+            "default": [
+              "OPEN",
+              "IN_PROGRESS"
+            ],
+            "description": "Issue statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "WIZ_CLOUD_IMPORT_VULNERABILITIES": {
+            "default": false,
+            "description": "Whether to import vulnerability findings for the cloud assets referenced by the imported issues.",
+            "type": "boolean"
+          },
+          "WIZ_CLOUD_VULNERABILITY_SEVERITY": {
+            "default": [
+              "CRITICAL",
+              "HIGH"
+            ],
+            "description": "Vulnerability severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "WIZ_CLOUD_VULNERABILITY_STATUS": {
+            "default": [
+              "OPEN",
+              "IN_PROGRESS"
+            ],
+            "description": "Vulnerability statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT": {
+            "default": false,
+            "description": "Import only vulnerabilities with a known exploit. Severity alone barely reduces the volume, so this is the effective filter when an asset carries hundreds of findings.",
+            "type": "boolean"
+          },
+          "WIZ_CLOUD_SINCE": {
+            "description": "Relative import start on first run (ISO 8601 duration)",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
+            "type": "string"
+          },
+          "WIZ_CLOUD_PAGE_SIZE": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "WIZ_CLOUD_MARKING": {
+            "description": "TLP Level Enum.\n\nSee https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "WIZ_CLOUD_API_URL",
+          "WIZ_CLOUD_CLIENT_ID",
+          "WIZ_CLOUD_CLIENT_SECRET"
         ],
         "additionalProperties": true
       }
@@ -13652,8 +15483,8 @@
           },
           "THEHIVE_IMPORT_FROM_DATE": {
             "default": null,
-            "description": "The date from which to start importing data (ISO format, e.g. 2021-01-01T00:00:00). Defaults to current time.",
-            "format": "date-time",
+            "description": "The date from which to start importing data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). Defaults to current time.",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "THEHIVE_IMPORT_ONLY_TLP": {
@@ -15655,6 +17486,11 @@
             "description": "Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
             "type": "boolean"
           },
+          "RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES": {
+            "default": false,
+            "description": "Whether to also import the context entities of analyst notes, i.e. entities referenced in the note's context but not tagged as primary. Disabled by default as they can add a lot of noise and false positives.",
+            "type": "boolean"
+          },
           "RECORDED_FUTURE_PULL_RISK_LIST": {
             "default": false,
             "description": "Whether to import Recorded Future risk lists.",
@@ -16139,10 +17975,112 @@
       "support_version": ">=5.5.4",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cybersixgill",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-cybersixgill",
-      "container_type": "EXTERNAL_IMPORT"
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/cybersixgill_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Cybersixgill Darkfeed",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "cybersixgill"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT5M",
+            "description": "The period of time to await between two runs of the connector.",
+            "format": "duration",
+            "type": "string"
+          },
+          "CYBERSIXGILL_CLIENT_ID": {
+            "description": "Cybersixgill API Client ID.",
+            "type": "string"
+          },
+          "CYBERSIXGILL_CLIENT_SECRET": {
+            "description": "Cybersixgill API Client Secret.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CYBERSIXGILL_CREATE_OBSERVABLES": {
+            "default": true,
+            "description": "Create observables from indicators.",
+            "type": "boolean"
+          },
+          "CYBERSIXGILL_CREATE_INDICATORS": {
+            "default": true,
+            "description": "Create STIX indicators.",
+            "type": "boolean"
+          },
+          "CYBERSIXGILL_ENABLE_RELATIONSHIPS": {
+            "default": true,
+            "description": "Create relationships between SDOs.",
+            "type": "boolean"
+          },
+          "CYBERSIXGILL_FETCH_SIZE": {
+            "default": 2000,
+            "description": "Number of indicators to fetch per run.",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "CYBERSIXGILL_INTERVAL_SEC": {
+            "default": null,
+            "deprecated": true,
+            "type": "integer",
+            "description": "Use CONNECTOR_DURATION_PERIOD instead."
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "CYBERSIXGILL_CLIENT_ID",
+          "CYBERSIXGILL_CLIENT_SECRET"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "ThreatFox",
@@ -17862,8 +19800,9 @@
             "writeOnly": true
           },
           "COFENSE_THREATHQ_IMPORT_START_DATE": {
+            "default": "P30D",
             "description": "Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "COFENSE_THREATHQ_API_BASE_URL": {
@@ -18058,9 +19997,9 @@
             "writeOnly": true
           },
           "MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE": {
-            "default": "2025-01-01T00:00:00Z",
-            "description": "Start date for importing incidents in ISO 8601 format (e.g. '2025-01-01T00:00:00Z'). Used only on the first run; subsequent runs use the stored state.",
-            "format": "date-time",
+            "default": "P30D",
+            "description": "Start date for importing incidents, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). Used only on the first run; subsequent runs use the stored state.",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL": {
@@ -18569,7 +20508,7 @@
           "DRAGOS_IMPORT_START_DATE": {
             "default": "P30D",
             "description": "Start date of first import (ISO format). Can be a relative or an absolute date.",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "DRAGOS_TLP_LEVEL": {
@@ -19963,13 +21902,13 @@
           "VULNCHECK_NVD2_LAST_MOD_START_DATE": {
             "default": null,
             "description": "Optional ISO-8601 date override for a manual NVD2 backfill (start).",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "VULNCHECK_NVD2_LAST_MOD_END_DATE": {
             "default": null,
             "description": "Optional ISO-8601 date override for a manual NVD2 backfill (end).",
-            "format": "date-time",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           }
         },
@@ -20363,8 +22302,9 @@
             "type": "string"
           },
           "SERVICENOW_IMPORT_START_DATE": {
-            "description": "Start date of first import (ISO date format) - Default to 30 days ago.",
-            "format": "date-time",
+            "default": "P30D",
+            "description": "Start date of first import, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+            "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
             "type": "string"
           },
           "SERVICENOW_STATE_TO_EXCLUDE": {
@@ -20551,6 +22491,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          },
           "WHISPER_API_URL": {
             "description": "Base URL of the Whisper graph API, e.g. 'https://graph.whisper.security'. The connector POSTs Cypher to '<api_url>/api/query'.",
             "examples": [
@@ -20568,12 +22521,9 @@
             "writeOnly": true
           },
           "WHISPER_MAX_TLP": {
-            "default": "TLP:AMBER+STRICT",
-            "description": "Maximum TLP marking the connector will enrich. Observables marked above this level are skipped. Set 'TLP:RED' to disable the gate.",
-            "examples": [
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -20666,6 +22616,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "PURE_SIGNAL_SCOUT_API_URL": {
             "default": "https://taxii.cymru.com/api/scout",
             "description": "Base URL of the Scout API",
@@ -20678,8 +22641,9 @@
             "writeOnly": true
           },
           "PURE_SIGNAL_SCOUT_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level for enrichment (default: TLP:AMBER)",
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "PURE_SIGNAL_SCOUT_SEARCH_INTERVAL": {
@@ -20754,10 +22718,113 @@
       "support_version": ">=5.6.1",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/eset-enrichment",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-eset-enrichment",
-      "container_type": "INTERNAL_ENRICHMENT"
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/eset-enrichment_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "ESET ETI Report Enrichment Connector",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "report"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "red"
+          },
+          "ESET_API_KEY": {
+            "description": "ESET Threat Intelligence API key.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "ESET_API_SECRET": {
+            "description": "ESET Threat Intelligence API secret.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "ESET_API_HOST": {
+            "default": "https://eti.eset.com/",
+            "description": "ESET Threat Intelligence API base URL.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CONNECTOR_TEMPLATE_MAX_TLP": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "ESET_API_KEY",
+          "ESET_API_SECRET"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Palo Alto Networks WildFire",
@@ -20840,6 +22907,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "PALOALTO_WILDFIRE_API_KEY": {
             "description": "Palo Alto Networks WildFire API key.",
             "format": "password",
@@ -20870,16 +22950,9 @@
             "type": "integer"
           },
           "PALOALTO_WILDFIRE_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP of the observable the connector is allowed to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -21153,17 +23226,23 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
-          "SHODAN_MAX_TLP": {
-            "default": "TLP:WHITE",
-            "description": "The maximum TLP marking of observables the connector is allowed to process.",
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
             "enum": [
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:RED",
-              "TLP:CLEAR",
-              "TLP:AMBER+STRICT"
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
             ],
+            "type": "string",
+            "default": "white"
+          },
+          "SHODAN_MAX_TLP": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "SHODAN_SSL_VERIFY": {
@@ -21286,6 +23365,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          },
           "VISIONHEIGHT_API_BASE_URL": {
             "default": "https://api.visionheight.com",
             "description": "VisionHeight API base URL. Override for white-label or staging endpoints.",
@@ -21301,15 +23393,9 @@
             "writeOnly": true
           },
           "VISIONHEIGHT_MAX_TLP_LEVEL": {
-            "default": "amber+strict",
-            "description": "Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged.",
-            "enum": [
-              "clear",
-              "green",
-              "amber",
-              "amber+strict",
-              "red"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -21432,6 +23518,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "HYBRID_ANALYSIS_SANDBOX_TOKEN": {
             "description": "Hybrid Analysis API token.",
             "format": "password",
@@ -21454,15 +23553,9 @@
             "type": "string"
           },
           "HYBRID_ANALYSIS_SANDBOX_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP for submission.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "HYBRID_ANALYSIS_SANDBOX_API_KEY": {
@@ -21497,17 +23590,10 @@
             "deprecated": true
           },
           "HYBRID_ANALYSIS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Use HYBRID_ANALYSIS_SANDBOX_MAX_TLP instead. (removal scheduled for 2026-12-31)",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
-            "type": "string",
-            "deprecated": true
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead. (removal scheduled for 2026-12-31)",
+            "type": "string"
           },
           "HYBRID_ANALYSIS_API_KEY": {
             "default": null,
@@ -21793,6 +23879,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "REVERSINGLABS_SPECTRA_ANALYZE_URL": {
             "description": "API base URL",
             "type": "string"
@@ -21802,16 +23901,9 @@
             "type": "string"
           },
           "REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP for entity that connector can enrich",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS": {
@@ -21842,18 +23934,10 @@
             "deprecated": true
           },
           "REVERSINGLABS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP instead.",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
-            "type": "string",
-            "deprecated": true
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
+            "type": "string"
           },
           "REVERSINGLABS_SANDBOX_OS": {
             "default": "windows10",
@@ -21968,6 +24052,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_URL": {
             "default": "data.reversinglabs.com",
             "description": "ReversingLabs Spectra Intelligence API base URL.",
@@ -21984,16 +24081,9 @@
             "writeOnly": true
           },
           "REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP level for entities that the connector can enrich.",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_SANDBOX_OS": {
@@ -22142,6 +24232,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "PURE_SIGNAL_SCOUT_API_URL": {
             "default": "https://taxii.cymru.com/api/scout",
             "description": "Base URL of the Scout API",
@@ -22154,16 +24257,9 @@
             "writeOnly": true
           },
           "PURE_SIGNAL_SCOUT_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level for enrichment (default: TLP:AMBER)",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -22270,6 +24366,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "HUNTER_API_BASE_URL": {
             "default": "https://api.hunter.cyborgsecurity.io/",
             "description": "Base URL of the Intel 471 Hunter API.",
@@ -22321,16 +24430,9 @@
             "type": "integer"
           },
           "HUNTER_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the entity being enriched.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -22620,6 +24722,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          },
           "QUALYS_CVE_ENRICHMENT_BASE_URL": {
             "default": "https://qualysapi.qualys.com/",
             "description": "Qualys API base URL.",
@@ -22653,16 +24768,9 @@
             "type": "string"
           },
           "QUALYS_CVE_ENRICHMENT_MAX_TLP": {
-            "default": "amber+strict",
-            "description": "Maximum TLP level for enrichment (clear, white, green, amber, amber+strict, red).",
-            "enum": [
-              "clear",
-              "white",
-              "green",
-              "amber",
-              "amber+strict",
-              "red"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -22781,6 +24889,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "FIRST_EPSS_API_BASE_URL": {
             "default": "https://api.first.org/data/v1/epss",
             "description": "The base URL of the FIRST EPSS API.",
@@ -22790,16 +24911,9 @@
             "type": "string"
           },
           "FIRST_EPSS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximum TLP level for the connector.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -22923,6 +25037,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "green"
+          },
           "DNSLYTICS_API_KEY": {
             "description": "DNSlytics API key (premium credits). Sent as the `apikey` query parameter, never logged.",
             "examples": [
@@ -22954,20 +25081,9 @@
             "type": "boolean"
           },
           "DNSLYTICS_MAX_TLP_LEVEL": {
-            "default": "green",
-            "description": "Do not enrich Indicators marked above this TLP level.",
-            "enum": [
-              "clear",
-              "white",
-              "green",
-              "amber",
-              "amber+strict",
-              "red"
-            ],
-            "examples": [
-              "green",
-              "amber"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "DNSLYTICS_OUTPUT_TLP_LEVEL": {
@@ -23201,6 +25317,19 @@
             "default": false,
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
+          },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "red"
           },
           "JOE_SANDBOX_REPORT_TYPES": {
             "default": "executive,html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,pdfexecutive,misp,pcap,maec,memdumps,json,lightjsonfixed,xml,lightxml,pcapunified,pcapsslinspection",
@@ -23530,6 +25659,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "ISMALICIOUS_API_URL": {
             "default": "https://api.ismalicious.com",
             "description": "The base URL of the isMalicious API.",
@@ -23542,16 +25684,9 @@
             "writeOnly": true
           },
           "ISMALICIOUS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP level of the observables to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "ISMALICIOUS_ENRICH_IPV4": {
@@ -23666,6 +25801,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "DOMAINTOOLS_API_USERNAME": {
             "description": "The username required for the authentication on DomainTools API.",
             "type": "string"
@@ -23677,8 +25825,9 @@
             "writeOnly": true
           },
           "DOMAINTOOLS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the observable being enriched.",
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -23772,6 +25921,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "FORTISANDBOX_API_BASE_URL": {
             "description": "FortiSandbox base URL (appliance, VM or cloud), without the /jsonrpc suffix.",
             "format": "uri",
@@ -23815,16 +25977,9 @@
             "type": "integer"
           },
           "FORTISANDBOX_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP of the observable the connector is allowed to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -23919,6 +26074,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated. Must be false when CONNECTOR_SCOPE includes Incident.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "red"
+          },
           "CONNECTOR_AUTO_UPDATE": {
             "default": false,
             "description": "Whether the connector should run automatically when an entity is updated. Must be false when CONNECTOR_SCOPE includes Incident.",
@@ -24000,16 +26168,9 @@
             "type": "string"
           },
           "DOPPEL_ALERT_TAKEDOWN_MAX_TLP": {
-            "default": "TLP:RED",
-            "description": "Max TLP level of entities to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -24128,6 +26289,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "GREYNOISE_VULN_KEY": {
             "description": "The GreyNoise API key.",
             "format": "password",
@@ -24135,16 +26309,9 @@
             "writeOnly": true
           },
           "GREYNOISE_VULN_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the vulnerability being enriched.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "GREYNOISE_VULN_NAME": {
@@ -24250,17 +26417,23 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
-          "CENSYS_ENRICHMENT_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximum TLP level allowed for enrichment.",
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
             "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
             ],
+            "type": "string",
+            "default": "amber"
+          },
+          "CENSYS_ENRICHMENT_MAX_TLP": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "CENSYS_ENRICHMENT_ORGANISATION_ID": {
@@ -24661,6 +26834,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "SHADOWTRACKR_BASE_URL": {
             "default": "https://shadowtrackr.com/api/v3",
             "description": "Base URL of the ShadowTrackr API.",
@@ -24676,16 +26862,9 @@
             "writeOnly": true
           },
           "SHADOWTRACKR_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level of the entities to enrich.",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE": {
@@ -24815,6 +26994,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "SHODAN_TOKEN": {
             "description": "Shodan API Key",
             "format": "password",
@@ -24822,16 +27014,9 @@
             "writeOnly": true
           },
           "SHODAN_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the observable being enriched.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "SHODAN_DEFAULT_SCORE": {
@@ -25087,6 +27272,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "HATCHING_TRIAGE_SANDBOX_TOKEN": {
             "description": "Hatching Triage API token. See https://tria.ge/account",
             "format": "password",
@@ -25124,15 +27322,9 @@
             "type": "string"
           },
           "HATCHING_TRIAGE_SANDBOX_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP marking for observable submission.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -25226,6 +27418,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "URLSCAN_ENRICHMENT_API_KEY": {
             "description": "URLScan API Key",
             "format": "password",
@@ -25253,16 +27458,9 @@
             "type": "string"
           },
           "URLSCAN_ENRICHMENT_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "URLSCAN_ENRICHMENT_CREATE_INDICATOR": {
@@ -25439,6 +27637,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "red"
+          },
           "POLYSWARM_API_KEY": {
             "description": "PolySwarm API key for authentication.",
             "format": "password",
@@ -25451,17 +27662,9 @@
             "type": "string"
           },
           "POLYSWARM_MAX_TLP": {
-            "default": "",
-            "description": "Max TLP level of entities to enrich (empty = no limit).",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED",
-              ""
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "POLYSWARM_REPLACE_WITH_LOWER_SCORE": {
@@ -25901,6 +28104,19 @@
             "description": "If True, the connector will automatically import data from the API.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "KASPERSKY_API_BASE_URL": {
             "default": "https://tip.kaspersky.com/",
             "description": "Kaspersky API base URL.",
@@ -25916,16 +28132,9 @@
             "writeOnly": true
           },
           "KASPERSKY_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP marking of the entity to enrich (inclusive).",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "KASPERSKY_ZONE_OCTI_SCORE_MAPPING": {
@@ -26070,6 +28279,19 @@
             "description": "Enable/disable auto-enrichment of observables.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          },
           "PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL": {
             "default": "https://api.emergingthreats.net/v1/",
             "description": "The base URL of the ProofPoint ET Intelligence API.",
@@ -26085,16 +28307,9 @@
             "writeOnly": true
           },
           "PROOFPOINT_ET_INTELLIGENCE_MAX_TLP": {
-            "default": "TLP:AMBER+STRICT",
-            "description": "Maximum TLP level the connector is authorized to enrich. Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "PROOFPOINT_ET_INTELLIGENCE_IMPORT_LAST_SEEN_TIME_WINDOW": {
@@ -26303,6 +28518,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "IOC_EXTRACTOR_EXTRACT_HASHES": {
             "default": true,
             "description": "Extract file hashes (MD5, SHA-1, SHA-256).",
@@ -26334,16 +28562,9 @@
             "type": "boolean"
           },
           "IOC_EXTRACTOR_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the observable being enriched.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -26439,6 +28660,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "ZETALYTICS_TOKEN": {
             "description": "Zetalytics API token.",
             "format": "password",
@@ -26463,16 +28697,9 @@
             "type": "string"
           },
           "ZETALYTICS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP level of observables this connector will enrich.",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "ZETALYTICS_MAX_RESULTS": {
@@ -26697,6 +28924,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "SILENTPUSH_API_BASE_URL": {
             "default": "https://app.silentpush.com/api/v2/",
             "description": "External API base URL.",
@@ -26712,16 +28952,9 @@
             "writeOnly": true
           },
           "SILENTPUSH_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level of the entities to enrich.",
-            "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "SILENTPUSH_VERIFY_CERT": {
@@ -26959,6 +29192,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "OSINT_INDUSTRIES_API_KEY": {
             "description": "The API key used to authenticate against the OSINT Industries API.",
             "format": "password",
@@ -26987,16 +29233,9 @@
             "type": "string"
           },
           "OSINT_INDUSTRIES_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximum TLP level of an observable the connector is allowed to enrich. Observables marked above this level are skipped and their value is never sent to the OSINT Industries API.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "OSINT_INDUSTRIES_PREMIUM": {
@@ -27335,6 +29574,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "REVERSINGLABS_TITANIUMCLOUD_URL": {
             "default": "data.reversinglabs.com",
             "description": "The hostname of the ReversingLabs TitaniumCloud API.",
@@ -27351,16 +29603,9 @@
             "writeOnly": true
           },
           "REVERSINGLABS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximal TLP of the observable being enriched.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "REVERSINGLABS_CREATE_INDICATORS": {
@@ -27402,6 +29647,33 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-rst-whois-api",
+      "container_type": "INTERNAL_ENRICHMENT"
+    },
+    {
+      "title": "IPGeolocation.io",
+      "slug": "ipgeolocation",
+      "description": "IPGeolocation.io enriches IPv4 and IPv6 observables with IP intelligence from one API request: geolocation, autonomous system, company, threat intelligence and abuse contact.\n\nKey features:\n\n- Threat score and VPN, proxy, residential proxy, Tor, relay, bot, spam and known attacker signals, turned into an OpenCTI score and labels\n- Country and city with located-at relationships, autonomous system with belongs-to, operating organization and cloud provider\n- Hostname with a resolves-to relationship\n- Optional indicator for addresses whose risk score reaches a threshold\n- A note with the full enrichment report, including the abuse contact\n- TLP checked before any data leaves OpenCTI; works on free plans (location and ASN) and paid plans",
+      "short_description": "Enriches IPv4 and IPv6 observables with geolocation, ASN, company, threat score, VPN, proxy and Tor signals, and abuse contacts from IPGeolocation.io.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Infrastructure & Attack Surface Visibility",
+        "Detection & Response Enablement"
+      ],
+      "solution_categories": [
+        "Enrichment & Reputation"
+      ],
+      "license_type": "Commercial",
+      "contact": "support@ipgeolocation.io",
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": true,
+      "max_confidence_level": 50,
+      "support_version": ">=7.261016.0",
+      "subscription_link": "https://ipgeolocation.io/pricing.html",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipgeolocation",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-ipgeolocation",
       "container_type": "INTERNAL_ENRICHMENT"
     },
     {
@@ -27484,6 +29756,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "POLYSWARM_API_KEY": {
             "description": "PolySwarm API key for authentication.",
             "format": "password",
@@ -27506,16 +29791,9 @@
             "type": "integer"
           },
           "POLYSWARM_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level of entities to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "POLYSWARM_REPLACE_WITH_LOWER_SCORE": {
@@ -27734,6 +30012,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "GREYNOISE_KEY": {
             "description": "The GreyNoise API key.",
             "format": "password",
@@ -27741,16 +30032,9 @@
             "writeOnly": true
           },
           "GREYNOISE_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Maximum TLP level for data to be sent to GreyNoise.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "GREYNOISE_SIGHTING_NOT_SEEN": {
@@ -28128,6 +30412,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "CRIMINAL_IP_TOKEN": {
             "description": "Criminal IP API key.",
             "format": "password",
@@ -28135,16 +30432,9 @@
             "writeOnly": true
           },
           "CRIMINAL_IP_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP level of entities to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -28290,6 +30580,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "MALBEACON_API_KEY": {
             "description": "The API key used to authenticate against the Malbeacon API.",
             "format": "password",
@@ -28310,16 +30613,9 @@
             "type": "integer"
           },
           "MALBEACON_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximum TLP marking the connector is allowed to enrich.",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           }
         },
@@ -28418,6 +30714,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
           "RECORDED_FUTURE_TOKEN": {
             "description": "API Token for Recorded Future.",
             "format": "password",
@@ -28432,16 +30741,9 @@
             "type": "integer"
           },
           "RECORDED_FUTURE_INFO_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "Max TLP marking of the entity to enrich (inclusive).",
-            "enum": [
-              "TLP:CLEAR",
-              "TLP:WHITE",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
-            ],
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "RECORDED_FUTURE_THREAT_ACTOR_TO_INTRUSION_SET": {
@@ -28690,6 +30992,19 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "red"
+          },
           "DNS_TWIST_FETCH_REGISTERED": {
             "default": true,
             "description": "Only return domains that are actually registered.",
@@ -28792,17 +31107,23 @@
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
           },
-          "CENSYS_ENRICHMENTAPIS_MAX_TLP": {
-            "default": "TLP:AMBER",
-            "description": "The maximum TLP level allowed for enrichment.",
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
             "enum": [
-              "TLP:WHITE",
-              "TLP:CLEAR",
-              "TLP:GREEN",
-              "TLP:AMBER",
-              "TLP:AMBER+STRICT",
-              "TLP:RED"
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
             ],
+            "type": "string",
+            "default": "amber"
+          },
+          "CENSYS_ENRICHMENTAPIS_MAX_TLP": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
             "type": "string"
           },
           "CENSYS_ENRICHMENTAPIS_ORGANISATION_ID": {
@@ -31368,6 +33689,12 @@
             "minLength": 1,
             "type": "string"
           },
+          "MISP_MARKING_TYPES_TO_CONVERT": {
+            "default": "TLP,PAP",
+            "description": "Comma-separated list of marking definition types (case-insensitive, e.g. TLP, PAP) whose container markings are converted to MISP event tags. This only controls tag conversion, it does not filter which containers or objects are exported.",
+            "minLength": 1,
+            "type": "string"
+          },
           "MISP_HARD_DELETE": {
             "default": true,
             "description": "Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later.",
@@ -32112,6 +34439,14 @@
             "format": "password",
             "type": "string",
             "writeOnly": true
+          },
+          "ZSCALER_API_BASE_URL": {
+            "default": "https://zsapi.zscalertwo.net/",
+            "description": "Base URL of the Zscaler ZIA API for your Zscaler cloud, without the `/api/v1` path (e.g. `https://zsapi.zscalerone.net`).",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
           },
           "ZSCALER_BLACKLIST_NAME": {
             "default": "BLACK_LIST_DYNDNS",

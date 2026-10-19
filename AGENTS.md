@@ -141,6 +141,11 @@ Details: `docs/02-external-import-specifications.md`.
 - Check the TLP with `helper.check_max_tlp(entity_tlp, max_tlp)` before any
   external API call. Both values must be in `TLP:XXX` form: pycti raises
   `KeyError` on `"amber+strict"`.
+- The max TLP is `settings.connector.max_tlp` (`CONNECTOR_MAX_TLP`), a
+  `TLPLevel` from `BaseInternalEnrichmentConnectorConfig`. Pass it to
+  `check_max_tlp` as `f"TLP:{settings.connector.max_tlp.upper()}"`. Never
+  add a max TLP setting to the connector's own section. To change its
+  default, override it as `max_tlp: TLPLevel = Field(default=TLPLevel.AMBER_STRICT)`.
 - When the message comes from a playbook (`data.get("event_type")` is falsy)
   and the entity is out of scope, send `data["stix_objects"]` back unchanged.
   Otherwise the playbook stalls.
@@ -280,6 +285,11 @@ The generator installs `connectors-sdk` from GitHub `master`, which pins an
 exact pycti version. If the connector's `requirements.txt` pins an older
 pycti, dependency resolution fails and generation stops. Rebase on the latest
 `master` before regenerating.
+
+When the change also touches `connectors-sdk/` (for example the JSON schema of a
+settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
+SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
+`SDK_SOURCE=local mise run gs external-import/myconnector`.
 
 ## CI overview
 

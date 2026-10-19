@@ -9,12 +9,12 @@ connector:
   # log_level: "info"
   # Set to true to automatically enrich all observables
   # auto: false
+  # Maximum TLP level to process (TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED)
+  # max_tlp: "TLP:AMBER"
 
 ismalicious:
   # api_url: "https://api.ismalicious.com"
   api_key: "ChangeMe"
-  # Maximum TLP level to process (TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED)
-  # max_tlp: "TLP:AMBER"
   # Observable types to enrich
   # enrich_ipv4: true
   # enrich_ipv6: true
