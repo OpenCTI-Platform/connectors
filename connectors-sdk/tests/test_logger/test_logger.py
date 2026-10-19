@@ -18,6 +18,7 @@ def test_public_api():
     """Test that the module exposes the expected public API."""
     assert set(connectors_sdk.logger.__all__) == {
         "ConnectorLoggerAdapter",
+        "configure_logging",
         "get_logger",
     }
 

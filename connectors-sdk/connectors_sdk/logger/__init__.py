@@ -21,12 +21,32 @@ same name:
 - `isinstance(logger, logging.Logger)` is `False`. Type hints should use
   `ConnectorLoggerAdapter`.
 
-No `OpenCTIConnectorHelper` is needed.
+No `OpenCTIConnectorHelper` is needed. `OPENCTI_JSON_LOGGING` decides who owns the
+logging setup, as for pycti:
+
+- Enabled (default): the SDK, so no setup is needed. Records are written to stderr as
+  JSON, with pycti's formatter, and every other root handler is removed. Until the
+  settings are parsed, the level comes from `CONNECTOR_LOG_LEVEL` (`error` when it is
+  not set or invalid, with a warning record saying so).
+- Disabled: the developer, who configures logging (e.g. with `logging.basicConfig()`).
+  Once the settings are parsed, the SDK only calls `logging.basicConfig(level=...)`,
+  like pycti: if nothing is configured, it adds Python's default handler (plain text).
+
+Once the connector's settings are parsed, call `configure_logging()` with their log
+level and format.
+
+In tests, set `OPENCTI_JSON_LOGGING` to `false` (e.g. in `conftest.py`), so that pytest
+keeps capturing the records.
 """
 
-from connectors_sdk.logger._logger import ConnectorLoggerAdapter, get_logger
+from connectors_sdk.logger._logger import (
+    ConnectorLoggerAdapter,
+    configure_logging,
+    get_logger,
+)
 
 __all__ = [
     "ConnectorLoggerAdapter",
+    "configure_logging",
     "get_logger",
 ]

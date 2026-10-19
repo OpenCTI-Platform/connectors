@@ -404,13 +404,17 @@ def test_base_connector_settings_should_raise_when_missing_mandatory_env_vars():
         BaseConnectorSettings()
 
 
-def test_base_connector_settings_should_provide_helper_config(mock_environment):
+def test_base_connector_settings_should_provide_helper_config(
+    mock_environment, monkeypatch
+):
     """
     Test that `BaseConnectorSettings().to_helper_config` returns a valid `config` dict for `pycti.OpenCTIConnectorHelper`.
     For testing purpose, `os.environ` is patched.
     """
 
     # Given: A valid BaseConnectorSettings instance built from patched environment
+    # (without `OPENCTI_JSON_LOGGING`, set for every test in `conftest.py`)
+    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
     # When: OpenCTIConnectorHelper config dict is generated
     settings = BaseConnectorSettings()
     json_dump = settings.model_dump(mode="json")
