@@ -4,9 +4,7 @@ ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
 COPY src /opt/opencti-connector-export-report-pdf
 WORKDIR /opt/opencti-connector-export-report-pdf
 
-RUN apk --no-cache add git zlib-dev tiff-dev jpeg-dev openjpeg-dev \
-    freetype-dev lcms2-dev libwebp-dev tcl-dev tk-dev harfbuzz-dev fribidi-dev libimagequant-dev \
-    libxcb-dev libpng-dev pango harfbuzz-subset && \
+RUN apk --no-cache add git pango harfbuzz-subset && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git
 
