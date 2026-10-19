@@ -33,7 +33,7 @@ logging setup, as for pycti:
   like pycti: if nothing is configured, it adds Python's default handler (plain text).
 
 Once the connector's settings are parsed, call `configure_logging()` with their log
-level and format.
+level and format. `BaseConnectorSettings` does it for you.
 
 In tests, set `OPENCTI_JSON_LOGGING` to `false` (e.g. in `conftest.py`), so that pytest
 keeps capturing the records.

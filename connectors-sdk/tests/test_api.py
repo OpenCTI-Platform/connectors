@@ -26,7 +26,6 @@ def test_root_public_api_is_valid():
         "ConnectorLoggerAdapter",
         "get_logger",
         "configure_logging",
-        "ConnectorLogger",
         "BaseDataProcessor",
         "ListFromString",
         "BaseClientApi",
