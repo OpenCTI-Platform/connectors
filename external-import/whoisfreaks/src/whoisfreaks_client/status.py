@@ -81,6 +81,7 @@ class WhoisFreaksStatusClient:
             {
                 "X-API-KEY": api_key,
                 "Accept": "application/json",
+                "Accept-Encoding": "identity",
             }
         )
         self._base_url = str(base_url).rstrip("/")

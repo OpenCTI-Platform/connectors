@@ -1,11 +1,9 @@
-import gzip
 from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
 
 import pytest
 import requests
-import urllib3
 from whoisfreaks_client.api_client import (
     ThreatFeedPage,
     WhoisFreaksClient,
@@ -180,30 +178,7 @@ def test_iter_continues_after_malformed_only_page():
     ]
 
 
-def _gzip_response(payload: str) -> MagicMock:
-    """A streamed response whose raw body is gzip-encoded, as requests leaves it."""
-    response = MagicMock()
-    response.encoding = "utf-8"
-    response.raw = urllib3.HTTPResponse(
-        body=BytesIO(gzip.compress(payload.encode("utf-8"))),
-        headers={"Content-Encoding": "gzip"},
-        preload_content=False,
-        decode_content=False,
-    )
-    response.close.return_value = None
-    return response
-
-
-def test_parse_csv_stream_decodes_gzip_body():
-    payload = (
-        "domain,threat_type,confidence,first_seen,last_seen,"
-        "No_of_threat_matched_pivots\n"
-        "example.com,malware,1,2026-09-01 10:00:00+00,"
-        "2026-09-02 10:00:00+00,3\n"
-    )
-    response = _gzip_response(payload)
-
-    records = WhoisFreaksClient("test-api-key")._parse_csv_stream(response)
-
-    assert [r.domain for r in records] == ["example.com"]
-    assert records.source_record_count == 1
+def test_client_does_not_advertise_compression():
+    """Feeds are plain-text CSV read from undecoded response.raw."""
+    client = WhoisFreaksClient("test-api-key")
+    assert client._session.headers["Accept-Encoding"] == "identity"

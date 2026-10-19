@@ -1,11 +1,9 @@
-import gzip
 from datetime import date
 from io import BytesIO
 from unittest.mock import MagicMock
 
 import pytest
 import requests
-import urllib3
 from whoisfreaks_client.nrd_client import (
     NRDPage,
     WhoisFreaksNRDClient,
@@ -261,32 +259,7 @@ def test_iter_continues_after_malformed_only_page():
     assert [page.source_record_count for page in pages] == [2, 1]
 
 
-def _gzip_response(payload: str) -> MagicMock:
-    """A streamed response whose raw body is gzip-encoded, as requests leaves it."""
-    response = MagicMock()
-    response.encoding = "utf-8"
-    response.raw = urllib3.HTTPResponse(
-        body=BytesIO(gzip.compress(payload.encode("utf-8"))),
-        headers={"Content-Encoding": "gzip"},
-        preload_content=False,
-        decode_content=False,
-    )
-    response.close.return_value = None
-    return response
-
-
-def test_parse_whois_stream_decodes_gzip_body():
-    response = _gzip_response("domain_name,create_date\nexample.com,2026-09-01\n")
-
-    records = WhoisFreaksNRDClient("test-api-key")._parse_whois_stream(response)
-
-    assert [r.domain_name for r in records] == ["example.com"]
-    assert records[0].fields["create_date"] == "2026-09-01"
-
-
-def test_parse_domains_stream_decodes_gzip_body():
-    response = _gzip_response("example.com\nexample.org\n")
-
-    records = WhoisFreaksNRDClient("test-api-key")._parse_domains_stream(response)
-
-    assert [r.domain_name for r in records] == ["example.com", "example.org"]
+def test_client_does_not_advertise_compression():
+    """Feeds are plain-text CSV read from undecoded response.raw."""
+    client = WhoisFreaksNRDClient("test-api-key")
+    assert client._session.headers["Accept-Encoding"] == "identity"
