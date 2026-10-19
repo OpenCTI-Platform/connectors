@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from connectors_sdk import ConnectorLogger
+from connectors_sdk import get_logger
 from shadowserver.api import ShadowserverAPI
 from shadowserver.constants import TLP_MAP
 from shadowserver.stix_transform import ShadowserverStixTransformation
@@ -175,7 +175,7 @@ class TestShadowserverAPI:
                 marking_refs=TLP_MAP["TLP:WHITE"],
                 report_list=report_rows,
                 report=report,
-                logger=ConnectorLogger(MagicMock()),
+                logger=get_logger(__name__),
             ).get_stix_objects()
 
             assert len(stix_reports) > 0
