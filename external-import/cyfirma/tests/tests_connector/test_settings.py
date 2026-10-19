@@ -3,6 +3,13 @@ from typing import Any
 import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from pydantic import SecretStr
+
+VALID_SETTINGS_DICT = {
+    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+    "connector": {"id": "connector-id", "scope": "test, connector"},
+    "cyfirma": {"api_base_url": "http://test.com", "api_key": "test-api-key"},
+}
 
 
 @pytest.mark.parametrize(
@@ -131,3 +138,17 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err.value)
+
+
+def test_api_key_is_secret():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(VALID_SETTINGS_DICT)  # reuse your valid dict
+
+    settings = FakeConnectorSettings()
+
+    assert isinstance(settings.cyfirma.api_key, SecretStr)
+    assert settings.cyfirma.api_key.get_secret_value() == "test-api-key"
+    assert "test-api-key" not in repr(settings.cyfirma)
+    assert "test-api-key" not in settings.cyfirma.model_dump_json()

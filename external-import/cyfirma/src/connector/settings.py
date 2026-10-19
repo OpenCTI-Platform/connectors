@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -31,7 +31,7 @@ class CyfirmaConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
     tailored_iocs: bool = Field(
         description="Whether to fetch tailored IOCs.",
         default=True,

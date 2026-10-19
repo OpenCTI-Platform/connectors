@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from connector.connector import CyfirmaConnector
+from pydantic import SecretStr
 
 TLP_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 
@@ -13,7 +14,7 @@ TLP_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 def config():
     cfg = MagicMock()
     cfg.cyfirma.api_base_url = "https://api.cyfirma.test"
-    cfg.cyfirma.api_key = "secret"
+    cfg.cyfirma.api_key = SecretStr("secret")
     cfg.cyfirma.tailored_iocs = True
     cfg.cyfirma.tailored_vulnerabilities = False
     cfg.cyfirma.look_back_days = 5
@@ -224,3 +225,21 @@ def test_run_schedules_process(connector, helper):
         message_callback=connector.process_message,
         duration_period=3600.0,
     )
+
+
+def test_collect_intelligence_skips_marking_definitions(connector):
+    feed_tlp = {"type": "marking-definition", "id": TLP_ID}
+    other_marking = {"type": "marking-definition", "id": "marking-definition--other"}
+    connector.client.get_entities.return_value = [
+        {"type": "indicator", "id": "indicator--1"},
+        feed_tlp,
+        other_marking,
+    ]
+
+    result = connector._collect_intelligence()
+
+    assert result[0]["object_marking_refs"] == [TLP_ID]
+    # marking definitions are kept as-is, without markings or self-reference
+    assert result[1] == {"type": "marking-definition", "id": TLP_ID}
+    assert "object_marking_refs" not in result[1]
+    assert "object_marking_refs" not in result[2]

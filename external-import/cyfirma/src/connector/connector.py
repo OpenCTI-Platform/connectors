@@ -31,7 +31,7 @@ class CyfirmaConnector:
         self.client = CyfirmaClient(
             helper=self.helper,
             base_url=self.config.cyfirma.api_base_url,
-            api_key=self.config.cyfirma.api_key,
+            api_key=self.config.cyfirma.api_key.get_secret_value(),
             tailored_iocs=self.config.cyfirma.tailored_iocs,
             tailored_vulnerabilities=self.config.cyfirma.tailored_vulnerabilities,
             look_back_days=self.config.cyfirma.look_back_days,
@@ -60,6 +60,8 @@ class CyfirmaConnector:
         if len(stix_objects):
             # stix_objects.append(self.converter_to_stix.author)
             for obj in stix_objects:
+                if obj.get("type") == "marking-definition":
+                    continue
                 refs = obj.setdefault("object_marking_refs", [])
                 if self.converter_to_stix.tlp_marking.id not in refs:
                     refs.append(self.converter_to_stix.tlp_marking.id)
@@ -91,6 +93,7 @@ class CyfirmaConnector:
                     {"last_run_datetime": last_run},
                 )
             else:
+                self.client.last_run = ""
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector has never run..."
                 )

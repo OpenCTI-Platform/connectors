@@ -194,11 +194,7 @@ class CyfirmaClient:
                         params={"values": list(ta_names)},
                         headers=self.headers,
                     )
-                    return_data.extend(
-                        obj
-                        for obj in (ta_res_data or {}).get("objects", [])
-                        if obj.get("type") != "threat-actor"
-                    )
+                    return_data.extend((ta_res_data or {}).get("objects", []))
                 except requests.RequestException as err:
                     self.helper.connector_logger.error(
                         f"CYFIRMA -- TA enrichment failed, continuing with indicators only: {str(err)}"
@@ -263,67 +259,45 @@ class CyfirmaClient:
                     new_extension_props["cvss_base_score"] = float(
                         ext_props.get("cvss_base_score")
                     )
-                new_extension_props["cvss_base_severity"] = ext_props.get(
-                    "severity", ""
-                )
+                new_extension_props["cvss_base_severity"] = ext_props.get("severity")
                 new_extension_props["cvss_attack_vector"] = ext_props.get(
-                    "attack_vector", ""
+                    "attack_vector"
                 )
                 new_extension_props["cvss_integrity_impact"] = ext_props.get(
-                    "integrity_impact", ""
+                    "integrity_impact"
                 )
                 new_extension_props["cvss_vector_string"] = str(
-                    ext_props.get("cvss_vector", "")
+                    ext_props.get("cvss_vector")
                 )
                 new_extension_props["cvss_attack_complexity"] = ext_props.get(
-                    "attack_complexity", ""
+                    "attack_complexity"
                 )
                 new_extension_props["cvss_privileges_required"] = ext_props.get(
-                    "privileges_required", ""
+                    "privileges_required"
                 )
                 new_extension_props["cvss_user_interaction"] = ext_props.get(
-                    "user_interaction", ""
+                    "user_interaction"
                 )
                 new_extension_props["cvss_scope"] = ext_props.get("scope", "")
                 new_extension_props["cvss_confidentiality_impact"] = ext_props.get(
-                    "confidentiality_impact", ""
+                    "confidentiality_impact"
                 )
                 new_extension_props["cvss_availability_impact"] = ext_props.get(
-                    "availability_impact", ""
+                    "availability_impact"
                 )
 
             elif "2" in cvss_version:
-                if "cvss_base_score" in ext_props:
-                    new_extension_props["cvss_v2_base_score"] = float(
-                        ext_props.get("cvss_base_score")
-                    )
-                new_extension_props["cvss_v2_base_severity"] = ext_props.get(
-                    "severity", ""
-                )
-                new_extension_props["cvss_v2_attack_vector"] = ext_props.get(
-                    "attack_vector", ""
+                new_extension_props["cvss_v2_vector_string"] = ext_props.get(
+                    "cvss_vector"
                 )
                 new_extension_props["cvss_v2_integrity_impact"] = ext_props.get(
-                    "integrity_impact", ""
-                )
-                new_extension_props["cvss_v2_vector_string"] = ext_props.get(
-                    "cvss_vector", ""
-                )
-                new_extension_props["cvss_v2_attack_complexity"] = ext_props.get(
-                    "attack_complexity", ""
-                )
-                new_extension_props["cvss_v2_privileges_required"] = ext_props.get(
-                    "privileges_required", ""
-                )
-                new_extension_props["cvss_v2_user_interaction"] = ext_props.get(
-                    "user_interaction", ""
-                )
-                new_extension_props["cvss_v2_scope"] = ext_props.get("scope", "")
-                new_extension_props["cvss_v2_confidentiality_impact"] = ext_props.get(
-                    "confidentiality_impact", ""
+                    "integrity_impact"
                 )
                 new_extension_props["cvss_v2_availability_impact"] = ext_props.get(
-                    "availability_impact", ""
+                    "availability_impact"
+                )
+                new_extension_props["cvss_v2_confidentiality_impact"] = ext_props.get(
+                    "confidentiality_impact"
                 )
 
             extensions = vuln.setdefault("extensions", {})

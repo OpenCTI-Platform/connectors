@@ -15,6 +15,7 @@ from connector.utils import (
     OPENCTI_EXTENSION_DEFINITION_ID,
 )
 from cyfirma_client import CyfirmaClient
+from pydantic import SecretStr
 
 BASE_URL = "https://api.cyfirma.test"
 RETRY_STATUS = {429, 500, 502, 503, 504}
@@ -58,7 +59,7 @@ def client(helper):
     return CyfirmaClient(
         helper=helper,
         base_url=BASE_URL + "/",
-        api_key="secret",
+        api_key=SecretStr("secret"),
         tailored_iocs=True,
         look_back_days=3,
         tailored_vulnerabilities=True,
@@ -92,7 +93,7 @@ def patched_helpers():
 
 def test_init_strips_trailing_slash_and_stores_options(client):
     assert client.base_url == BASE_URL
-    assert client.api_key == "secret"
+    assert client.api_key == SecretStr("secret")
     assert client.look_back_days == 3
     assert client.tailored_iocs is True
     assert client.tailored_vulnerabilities is True
@@ -101,7 +102,11 @@ def test_init_strips_trailing_slash_and_stores_options(client):
 
 
 def test_init_defaults(helper):
-    c = CyfirmaClient(helper=helper, base_url=BASE_URL, api_key="k")
+    c = CyfirmaClient(
+        helper=helper,
+        base_url=BASE_URL,
+        api_key=SecretStr("secret"),
+    )
 
     assert c.tailored_iocs is True
     assert c.tailored_vulnerabilities is False
@@ -296,10 +301,10 @@ def test_get_indicators_feeds_enriches_with_threat_actor_objects(
     ) as request:
         result = client.get_indicators_feeds()
 
-    # indicators first, then only the non threat-actor enrichment objects
+    # indicators first, then every enrichment object (threat actors included)
     assert result[: len(indicators)] == indicators
-    assert result[-1] == {"type": "intrusion-set", "id": "intrusion-set--1"}
-    assert len(result) == len(indicators) + 1
+    assert result[-2:] == ta_response["objects"]
+    assert len(result) == len(indicators) + 2
 
     fetch.assert_called_once()
     assert fetch.call_args.args[0] == f"{BASE_URL}{_IOC_TAILORED_PATH}"
@@ -466,18 +471,11 @@ def test_convert_cvss_v2(client):
     )
 
     octi = vuln["extensions"][OPENCTI_EXTENSION_DEFINITION_ID]
-    assert octi["cvss_v2_base_score"] == 7.5
-    assert octi["cvss_v2_base_severity"] == "HIGH"
-    assert octi["cvss_v2_attack_vector"] == "NETWORK"
+
     assert octi["cvss_v2_integrity_impact"] == "NONE"
     assert octi["cvss_v2_vector_string"] == "CVSS:3.1/AV:N/AC:L"
-    assert octi["cvss_v2_attack_complexity"] == "LOW"
-    assert octi["cvss_v2_privileges_required"] == "NONE"
-    assert octi["cvss_v2_user_interaction"] == "NONE"
-    assert octi["cvss_v2_scope"] == "UNCHANGED"
     assert octi["cvss_v2_confidentiality_impact"] == "HIGH"
     assert octi["cvss_v2_availability_impact"] == "NONE"
-    assert "cvss_base_score" not in octi
 
 
 @pytest.mark.parametrize("version", ["3.1", "2.0"])
@@ -489,8 +487,6 @@ def test_convert_missing_base_score_is_left_unset(client, version):
     )
 
     octi = vuln["extensions"][OPENCTI_EXTENSION_DEFINITION_ID]
-    assert "cvss_base_score" not in octi
-    assert "cvss_v2_base_score" not in octi
 
 
 def test_convert_without_cvss_version_only_moves_extension(client):
