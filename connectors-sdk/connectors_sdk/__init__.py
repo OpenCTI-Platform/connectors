@@ -18,7 +18,6 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from connectors_sdk.logger import (
     ConnectorLoggerAdapter,
     configure_logging,
@@ -83,6 +82,5 @@ __all__ = [
     "ExternalImportConnectorState",
     # Connector base classes
     "ExternalImportConnector",
-    "ConnectorLogger",
     "BaseDataProcessor",
 ]

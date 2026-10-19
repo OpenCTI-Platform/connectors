@@ -67,10 +67,21 @@ The SDK sets up logging at two moments, with the rules above:
 
    With JSON logging disabled, the developer owns the logging setup, so nothing happens at this moment.
 2. **When the settings are parsed.** A settings parser calls `configure_logging(log_level, json_logging)` as soon as it knows the configuration (environment variables, `config.yml` or `.env`). pycti does the same: it sets up logging when it reads the configuration.
+   `BaseConnectorSettings` calls it after validation, with `connector.log_level` and `opencti.json_logging`.
+   `opencti.json_logging` is hidden from the connector's config schema (`SkipJsonSchema`), so that XTM Composer does not offer it when it deploys a connector. It can still be set with `OPENCTI_JSON_LOGGING`, `config.yml` or `.env`.
 
 If the settings disable JSON logging while the environment variables did not (e.g. in `config.yml`), the SDK first removes the JSON handler it added at step 1.
 
 If the settings were parsed before the first record, step 2 already happened, and the first record changes nothing.
+
+### Class loggers
+
+The SDK classes that log (connector, data processor, work manager, settings, states, API client) get a `logger` class attribute from `_ClassLoggerMixin`.
+This logger is named after the module that defines the class.
+So a connector's subclass logs under the connector's module name, and the SDK class logs under the SDK's module name.
+
+A class must not define `logger` in its body: this raises a `TypeError`. This way, every class logs the same way.
+Most tests check logs with `caplog` and do not need this. For testing purposes only, a test can replace the logger after the class is defined: `MyProcessor.logger = fake_logger`.
 
 ### How a connector keeps control
 
