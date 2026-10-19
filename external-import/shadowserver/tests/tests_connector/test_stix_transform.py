@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 from connectors_sdk import get_logger
+from freezegun import freeze_time
 from pycti import CustomObjectCaseIncident
 from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import datetime_to_string
@@ -90,6 +91,18 @@ class TestShadowserverStixTransformation(unittest.TestCase):
         self.assertEqual(
             self.transformation.get_published_date(self.report_list), expected_date
         )
+
+    @freeze_time("2026-01-02 03:04:05")
+    def test_get_published_date_falls_back_to_now_when_the_timestamp_is_invalid(self):
+        with self.assertLogs(__name__, level="ERROR") as logs:
+            published_date = self.transformation.get_published_date(
+                [{"timestamp": 12345}]
+            )
+
+        self.assertEqual(published_date, "2026-01-02T03:04:05.000Z")
+        [record] = logs.records
+        self.assertIn("Error parsing published date", record.getMessage())
+        self.assertIsNotNone(record.exc_info)  # Logged with its traceback
 
     def test_upload_stix2_artifact(self):
         with patch(

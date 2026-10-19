@@ -243,7 +243,7 @@ class WizVulnerabilitiesProcessor:
                     objects.extend(finding_objects)
         except (WizGraphQLError, RequestException) as err:
             self.failures += 1
-            self._logger.error(
+            self._logger.exception(
                 "[WIZ-CLOUD] Failed to collect vulnerabilities for an asset",
                 meta={"asset_id": asset_id, "error": str(err)},
             )
