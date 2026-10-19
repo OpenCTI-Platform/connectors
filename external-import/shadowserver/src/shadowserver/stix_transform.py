@@ -175,7 +175,7 @@ class ShadowserverStixTransformation:
                     string_to_datetime(report_list[0].get("timestamp"))
                 )
         except Exception as e:
-            self._logger.error(f"Error parsing published date: {e}")
+            self._logger.exception(f"Error parsing published date: {e}")
         return datetime_to_string(datetime.now())
 
     def get_stix_objects(self):
@@ -674,7 +674,7 @@ class ShadowserverStixTransformation:
                 )
                 self.stix_objects.append(stix_object)
         except Exception as e:
-            self._logger.error(f"Error creating observed data: {e}")
+            self._logger.exception(f"Error creating observed data: {e}")
 
     def create_stix_note_from_data(self, labels: list = []):
         """

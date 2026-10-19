@@ -110,7 +110,7 @@ def test_counts_a_failure_instead_of_raising(vulnerabilities_processor, system):
 
     assert objects == []
     assert vulnerabilities_processor.failures == 1
-    assert vulnerabilities_processor._logger.error.called
+    assert vulnerabilities_processor._logger.exception.called
 
 
 def test_drops_partial_results_when_a_later_page_fails(
