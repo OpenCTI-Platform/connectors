@@ -477,3 +477,80 @@ def test_failed_run_on_legacy_state_keeps_the_legacy_cursor(env):
     retry = _processor(_one_page(), state)
     retry.collect()
     assert retry.client.list_objects_metadata.call_args.kwargs["page_token"] == "p7"
+
+
+def _clocked(processor, *times):
+    """Make processor._now() return each of `times` in turn (one per run)."""
+    processor._now = MagicMock(side_effect=list(times))
+    return processor
+
+
+def _cel(processor, call=-1):
+    return processor.client.list_objects_metadata.call_args_list[call].kwargs[
+        "cel_filter"
+    ]
+
+
+def test_failed_first_run_retry_keeps_the_first_window(env):
+    """A first run that fails must not let a later retry skip its backfill."""
+    may6 = datetime(2026, 5, 6, tzinfo=timezone.utc)
+    may7 = datetime(2026, 5, 7, tzinfo=timezone.utc)
+    may8 = datetime(2026, 5, 8, tzinfo=timezone.utc)
+    state = ConnectorState()
+    # One processor instance across runs, as the SDK keeps it.
+    processor = _processor(_one_page(_file_obj("a" * 64)) * 3, state)
+    _clocked(processor, may6, may7, may8)
+    processor.work_manager = MagicMock()
+    processor.work_manager.__enter__ = MagicMock(return_value=processor.work_manager)
+    processor.work_manager.__exit__ = MagicMock(return_value=False)
+
+    processor.work_manager.send.side_effect = RuntimeError("queue down")
+    with pytest.raises(RuntimeError):
+        processor.process()
+    processor.work_manager.send.side_effect = None
+    processor.process()  # the retry, a day later
+    retry = _cel(processor)
+    assert '>= "2026-05-05T00:00:00.000Z"' in retry
+    assert '< "2026-05-06T00:00:00.000Z"' in retry
+    assert state.watermark == may6
+
+    processor.process()  # the next scheduled run
+    nxt = _cel(processor)
+    assert '>= "2026-05-06T00:00:00.000Z"' in nxt
+    assert '< "2026-05-08T00:00:00.000Z"' in nxt
+
+
+def test_every_page_of_a_resumed_window_keeps_its_upper_bound(env):
+    env.setenv("STAIRWELL_IMPORT_MAX_INDICATORS", "1")
+    state = ConnectorState()
+    pages = [_page("a", 1, "p2"), _page("b", 1, "")]
+    first = _clocked(
+        _processor(pages[:1], state), datetime(2026, 5, 6, tzinfo=timezone.utc)
+    )
+    _run(first)
+    end = '< "2026-05-06T00:00:00.000Z"'
+    assert end in _cel(first)
+    second = _clocked(
+        _processor(pages[1:], state), datetime(2026, 5, 9, tzinfo=timezone.utc)
+    )
+    _run(second)
+    assert end in _cel(second)
+    assert state.watermark == datetime(2026, 5, 6, tzinfo=timezone.utc)
+
+
+def test_legacy_cursor_without_window_end_resumes_up_to_now(env):
+    """Old-format state may lack `window_end`; the window then runs to now."""
+    state = _loaded(
+        {
+            "last_run": "2026-04-01T00:00:00.000Z",
+            "pending": {"cutoff": "2026-03-01T00:00:00.000Z", "page_token": "p7"},
+        }
+    )
+    processor = _clocked(
+        _processor(_one_page(), state), datetime(2026, 5, 9, 12, tzinfo=timezone.utc)
+    )
+    processor.collect()
+    call = processor.client.list_objects_metadata.call_args.kwargs
+    assert call["page_token"] == "p7"
+    assert '>= "2026-03-01T00:00:00.000Z"' in call["cel_filter"]
+    assert '< "2026-05-09T12:00:00.000Z"' in call["cel_filter"]

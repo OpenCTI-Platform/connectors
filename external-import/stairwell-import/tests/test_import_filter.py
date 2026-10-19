@@ -91,3 +91,17 @@ def test_window_start_treats_a_naive_watermark_as_utc():
 def test_window_start_falls_back_to_now_minus_window():
     now = datetime(2026, 5, 6, tzinfo=timezone.utc)
     assert window_start(None, timedelta(days=2), now) == now - timedelta(days=2)
+
+
+def test_build_cel_filter_bounds_the_window_and_normalises_to_utc():
+    cutoff = datetime(2026, 5, 4, 1, 0, tzinfo=timezone(timedelta(hours=1)))
+    end = datetime(2026, 5, 5, tzinfo=timezone.utc)
+    assert build_cel_filter(cutoff=cutoff, window_end=end) == (
+        "mal_eval.malicious==true"
+        ' && object.global_first_seen_time >= "2026-05-04T00:00:00.000Z"'
+        ' && object.global_first_seen_time < "2026-05-05T00:00:00.000Z"'
+    )
+    # Naive datetimes are UTC.
+    assert '>= "2026-05-04T00:00:00.000Z"' in build_cel_filter(
+        cutoff=datetime(2026, 5, 4), window_end=None
+    )

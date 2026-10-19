@@ -75,6 +75,12 @@ Environment variables override the file.
   observables), so the same entity from another connector merges with ours.
   Each bundle carries the Stairwell author identity and the TLP marking
   definition it references.
+  Each window is bounded on both ends (`cutoff <= first seen < window end`,
+  both truncated to whole seconds, so adjacent windows still meet exactly),
+  so a cursor resumed on a later day fetches the same objects, and newer files
+  wait for the next window. If the very first run fails, retries reuse its
+  window, so its backfill is not skipped (this is held in memory: a restart
+  before the retry recomputes it).
   State saved by versions of this connector that predate the SDK (`last_run`
   plus a nested `pending` cursor) is adopted on the first run, so an
   in-progress backlog resumes instead of restarting.

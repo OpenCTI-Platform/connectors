@@ -92,6 +92,11 @@ class MalEvalFilesProcessor(BaseDataProcessor):
 
     def post_init(self) -> None:
         s = self.settings.stairwell
+        # The first window (no watermark yet), fixed at the first attempt so a
+        # retry after a failed first run imports the same backfill. A failed
+        # run saves no state, so this lives in memory: a restart between the
+        # failed attempt and the retry recomputes it.
+        self._first_window: tuple[datetime, datetime] | None = None
         self.client = StairwellClient(
             api_token=s.api_token.get_secret_value(),
             base_url=str(s.api_base_url),
@@ -138,20 +143,32 @@ class MalEvalFilesProcessor(BaseDataProcessor):
     # ------------------------------------------------------------------
     # collect: fetch raw pages, no STIX
     # ------------------------------------------------------------------
+    @staticmethod
+    def _now() -> datetime:
+        return datetime.now(tz=timezone.utc)
+
     def collect(self) -> Batch:
-        run_started = datetime.now(tz=timezone.utc)
+        run_started = self._now()
         state = self.state
         state.migrate_legacy()
         if state.pending_cutoff is not None:
             cutoff = state.pending_cutoff
             window_end = state.pending_window_end or run_started
             page_token = state.pending_page_token
-        else:
+        elif state.watermark is not None:
             cutoff = window_start(state.watermark, self.first_run_window, run_started)
             window_end = run_started
             page_token = None
+        else:
+            if self._first_window is None:
+                self._first_window = (
+                    window_start(None, self.first_run_window, run_started),
+                    run_started,
+                )
+            cutoff, window_end = self._first_window
+            page_token = None
 
-        cel = build_cel_filter(cutoff=cutoff)
+        cel = build_cel_filter(cutoff=cutoff, window_end=window_end)
         self.logger.info(
             "Stairwell import window", {"cutoff": _iso(cutoff), "filter": cel}
         )
