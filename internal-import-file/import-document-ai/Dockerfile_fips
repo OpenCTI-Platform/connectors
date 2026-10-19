@@ -4,9 +4,9 @@ ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 COPY src /opt/opencti-connector-import-document-ai
 WORKDIR /opt/opencti-connector-import-document-ai
 
-RUN apk --no-cache add git build-base openssl-dev rust cargo && \
+RUN apk --no-cache add git build-base && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base rust cargo openssl-dev
+    apk del git build-base
 
 RUN chmod -R 0777 /opt/opencti-connector-import-document-ai
 ENV HOME=/opt/opencti-connector-import-document-ai
