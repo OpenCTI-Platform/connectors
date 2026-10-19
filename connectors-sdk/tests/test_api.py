@@ -25,6 +25,7 @@ def test_root_public_api_is_valid():
         "ExternalImportConnector",
         "ConnectorLoggerAdapter",
         "get_logger",
+        "configure_logging",
         "ConnectorLogger",
         "BaseDataProcessor",
         "ListFromString",

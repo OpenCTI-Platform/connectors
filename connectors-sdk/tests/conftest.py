@@ -10,6 +10,11 @@ from pathlib import Path
 
 import pytest
 
+# pytest captures the records with its own handlers on the root logger. With JSON
+# logging, the SDK would replace them (see `connectors_sdk.logger`): disable it, so
+# that pytest owns the logging setup in the tests.
+os.environ["OPENCTI_JSON_LOGGING"] = "false"
+
 from connectors_sdk.models import (
     AssociatedFile,
     ExternalReference,
