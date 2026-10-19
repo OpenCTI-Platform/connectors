@@ -6,6 +6,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
+# pytest captures the records with its own handlers on the root logger. With JSON
+# logging, the SDK would replace them (see `connectors_sdk.logger`): disable it, so
+# that pytest owns the logging setup in the tests.
+os.environ["OPENCTI_JSON_LOGGING"] = "false"
+
 # Inject both src/ and tests/ so google_secops and test_helpers are importable.
 _tests_dir = os.path.dirname(__file__)
 sys.path.insert(0, _tests_dir)

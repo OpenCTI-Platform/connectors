@@ -19,6 +19,9 @@ minimal_config_dict = {
     "opencti": {
         "url": "http://localhost:8080",
         "token": "test-token",
+        # pytest captures the records with its own handlers on the root logger. With
+        # JSON logging, the SDK would replace them (see `connectors_sdk.logger`)
+        "json_logging": False,
     },
     "connector": {},
     "misp": {
