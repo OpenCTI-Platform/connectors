@@ -19,6 +19,7 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
     ExternalImportConnector,
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logger import ConnectorLoggerAdapter, get_logger
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -43,6 +44,9 @@ from connectors_sdk.settings.exceptions import (
 from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
+    # Logger
+    "ConnectorLoggerAdapter",
+    "get_logger",
     # HTTP Client
     "BaseClientApi",
     "RateLimit",
