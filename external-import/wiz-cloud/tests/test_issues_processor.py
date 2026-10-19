@@ -501,7 +501,7 @@ class TestInterleavedVulnerabilities:
         )
 
         counts = {
-            call.args[1]["asset"]: call.args[1]["vulnerabilities"]
+            call.kwargs["meta"]["asset"]: call.kwargs["meta"]["vulnerabilities"]
             for call in processor.logger.info.call_args_list
             if "Sending an incident" in call.args[0]
         }
@@ -522,7 +522,7 @@ class TestInterleavedVulnerabilities:
         )
 
         summary = next(
-            call.args[1]
+            call.kwargs["meta"]
             for call in processor.logger.info.call_args_list
             if "Import finished" in call.args[0]
         )

@@ -121,7 +121,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         self.work_name = f"Wiz Cloud issues import since {since:%Y-%m-%d %H:%M}"
         self.logger.info(
             "[WIZ-CLOUD] Collecting issues",
-            {
+            meta={
                 "since": since.isoformat(),
                 "severity": self._config.issue_severity,
                 "status": self._config.issue_status,
@@ -183,7 +183,7 @@ class WizIssuesProcessor(BaseDataProcessor):
                 except ValidationError as err:
                     self.logger.warning(
                         "[WIZ-CLOUD] Skipping unparseable issue",
-                        {"id": raw.get("id"), "error": str(err)},
+                        meta={"id": raw.get("id"), "error": str(err)},
                     )
                     continue
 
@@ -216,7 +216,7 @@ class WizIssuesProcessor(BaseDataProcessor):
 
                 self.logger.info(
                     "[WIZ-CLOUD] Sending an incident with its vulnerabilities",
-                    {
+                    meta={
                         "issue_id": issue.id,
                         "asset": (
                             issue.entity_snapshot.name
@@ -240,7 +240,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         if issues_converted == 0:
             self.logger.info(
                 "[WIZ-CLOUD] Nothing to ingest, no new issue since the last run",
-                (
+                meta=(
                     {"since": _utc(self.state.issues_last_created_at)}
                     if self.state.issues_last_created_at
                     else {}
@@ -249,7 +249,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         else:
             self.logger.info(
                 "[WIZ-CLOUD] Import finished",
-                {
+                meta={
                     "incidents": issues_converted,
                     "vulnerabilities": vulnerabilities_sent,
                     "bundles": bundles_sent,
@@ -295,7 +295,7 @@ class WizIssuesProcessor(BaseDataProcessor):
             self.logger.warning(
                 "[WIZ-CLOUD] Holding the issues cursor back after vulnerability "
                 "failures, the window will be imported again on the next run",
-                {"failed_assets": failures},
+                meta={"failed_assets": failures},
             )
             return
 

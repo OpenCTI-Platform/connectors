@@ -90,7 +90,7 @@ def test_logs_the_counts_for_the_asset(
     vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     details = next(
-        call.args[1]
+        call.kwargs["meta"]
         for call in vulnerabilities_processor._logger.info.call_args_list
         if "Collected vulnerabilities" in call.args[0]
     )

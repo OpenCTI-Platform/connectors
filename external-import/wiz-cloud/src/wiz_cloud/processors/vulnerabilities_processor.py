@@ -204,7 +204,7 @@ class WizVulnerabilitiesProcessor:
         if asset_id in self._seen_assets:
             self._logger.debug(
                 "[WIZ-CLOUD] Asset already scanned this run, skipping",
-                {"asset_id": asset_id},
+                meta={"asset_id": asset_id},
             )
             return []
         self._seen_assets.add(asset_id)
@@ -225,7 +225,7 @@ class WizVulnerabilitiesProcessor:
                     except ValidationError as err:
                         self._logger.warning(
                             "[WIZ-CLOUD] Skipping unparseable vulnerability finding",
-                            {"id": raw.get("id"), "error": str(err)},
+                            meta={"id": raw.get("id"), "error": str(err)},
                         )
                         continue
                     try:
@@ -235,7 +235,7 @@ class WizVulnerabilitiesProcessor:
                         # incident travelling in the same bundle.
                         self._logger.warning(
                             "[WIZ-CLOUD] Skipping vulnerability finding rejected by the model",
-                            {"id": raw.get("id"), "error": str(err)},
+                            meta={"id": raw.get("id"), "error": str(err)},
                         )
                         continue
                     if finding_objects:
@@ -245,7 +245,7 @@ class WizVulnerabilitiesProcessor:
             self.failures += 1
             self._logger.error(
                 "[WIZ-CLOUD] Failed to collect vulnerabilities for an asset",
-                {"asset_id": asset_id, "error": str(err)},
+                meta={"asset_id": asset_id, "error": str(err)},
             )
             # Partial objects are dropped: half an asset is worse than none,
             # and the run will be replayed anyway.
@@ -253,7 +253,7 @@ class WizVulnerabilitiesProcessor:
 
         self._logger.info(
             "[WIZ-CLOUD] Collected vulnerabilities for an asset",
-            {
+            meta={
                 "asset_id": asset_id,
                 "asset": asset.name,
                 "findings_returned": findings,
@@ -296,7 +296,7 @@ class WizVulnerabilitiesProcessor:
         if not finding.name:
             self._logger.warning(
                 "[WIZ-CLOUD] Skipping finding without a CVE id",
-                {"id": finding.id},
+                meta={"id": finding.id},
             )
             return []
 
