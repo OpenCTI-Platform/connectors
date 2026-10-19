@@ -4,8 +4,8 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 COPY src /opt/opencti-connector-hygiene/src
 WORKDIR /opt/opencti-connector-hygiene
 
-RUN apk --no-cache add git build-base && \
+RUN apk --no-cache add git && \
     pip3 install --no-cache-dir -r src/requirements.txt && \
-    apk del git build-base
+    apk del git
 
 CMD ["python", "-m", "src"]
