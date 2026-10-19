@@ -54,6 +54,8 @@ def test_yaml_config(
         yaml_dict["threatmatch"].pop("import_from_date") == "2025-01-01T00:00:00+00:00"
     )
     config_dict["threatmatch"].pop("import_from_date")
+    # Default added by the SDK, read by pycti too
+    assert yaml_dict["opencti"].pop("json_logging") is True
     assert yaml_dict == config_dict
 
 
@@ -65,6 +67,8 @@ def test_env_config(config_dict: dict[str, dict[str, Any]]) -> None:
         env_dict["threatmatch"].pop("import_from_date") == "2025-01-01T00:00:00+00:00"
     )
     config_dict["threatmatch"].pop("import_from_date")
+    # Default added by the SDK, read by pycti too
+    assert env_dict["opencti"].pop("json_logging") is True
     assert env_dict == config_dict
 
 
