@@ -199,7 +199,7 @@ graph LR
 | OTX Pulse Data         | OpenCTI Entity      | Description                                      |
 |------------------------|---------------------|--------------------------------------------------|
 | Pulse                  | Report              | Contains all related entities as object_refs     |
-| Adversary              | Intrusion Set       | Threat actor group                               |
+| Adversary              | Intrusion Set       | One Intrusion Set per comma-separated name       |
 | Malware Families       | Malware             | Malware families mentioned in Pulse              |
 | Attack IDs             | Attack Pattern      | MITRE ATT&CK techniques                          |
 | CVE Indicators         | Vulnerability       | CVE vulnerabilities                              |
