@@ -55,7 +55,7 @@ OpenCTI connector practice:
 
 - Python >= 3.11
 - OpenCTI Platform >= 7.261002.0
-- `pycti==7.261008.0` (or matching your OpenCTI version)
+- `pycti==7.261016.0` (or matching your OpenCTI version)
 - `connectors-sdk` matching your OpenCTI version
 - WhoisFreaks API key with access to the feeds you enable
 

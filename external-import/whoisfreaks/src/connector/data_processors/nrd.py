@@ -156,6 +156,9 @@ class NRDProcessor(BaseDataProcessor):
         self.whois = _NRD_FEEDS[feed_name]["whois"]
         self.work_name = f"WhoisFreaks {feed_name}"
         self.status: WhoisFreaksStatus | None = None
+        # Set by transform() when a record of the current page fails
+        # conversion; read by the collector before advancing checkpoints.
+        self._page_conversion_failed = False
 
     def set_status(self, status: WhoisFreaksStatus) -> None:
         """Set the shared WhoisFreaks status snapshot."""
@@ -263,10 +266,18 @@ class NRDProcessor(BaseDataProcessor):
         page_limit: int,
         checkpoint_every: int,
     ) -> Iterable[list[NRDRecord]]:
-        """Yield pages and update the in-memory offset at checkpoint intervals."""
+        """Yield pages and update the in-memory offset at checkpoint intervals.
+
+        transform() consumes each page before this generator resumes, so a
+        conversion failure in a page is known here. From the first failed page
+        on, the offset checkpoint is frozen (it stays at or before that page)
+        and the day is not marked complete, so the next run retries it.
+        Valid records of later pages are still yielded and imported.
+        """
 
         offset = start_offset
         pages_since_checkpoint = 0
+        conversion_failed = False
         try:
             for page in self.client.iter_feed(
                 feed_type=self.feed_type,
@@ -275,12 +286,24 @@ class NRDProcessor(BaseDataProcessor):
                 limit=page_limit,
                 start_offset=start_offset,
             ):
+                self._page_conversion_failed = False
                 yield page
 
                 offset += getattr(page, "source_record_count", len(page))
                 pages_since_checkpoint += 1
 
-                if pages_since_checkpoint >= checkpoint_every:
+                if self._page_conversion_failed and not conversion_failed:
+                    conversion_failed = True
+                    self.logger.warning(
+                        "[NRD] Conversion failures; checkpoint frozen",
+                        {
+                            "feed_name": self.feed_name,
+                            "date": feed_date.isoformat(),
+                            "page_end_offset": offset,
+                        },
+                    )
+
+                if not conversion_failed and pages_since_checkpoint >= checkpoint_every:
                     self.state.set_nrd_offset(
                         self.feed_name,
                         offset,
@@ -299,6 +322,13 @@ class NRDProcessor(BaseDataProcessor):
             self.logger.warning(
                 "[NRD] Subscription error; feed skipped",
                 {"feed_name": self.feed_name, "error": str(exc)},
+            )
+            return
+
+        if conversion_failed:
+            self.logger.warning(
+                "[NRD] Feed day not marked complete; will retry next run",
+                {"feed_name": self.feed_name, "date": feed_date.isoformat()},
             )
             return
 
@@ -335,6 +365,7 @@ class NRDProcessor(BaseDataProcessor):
                 except Exception as err:
                     # Skip a single bad record; do not fail the whole page
                     # Conversion failures are handled per item, not per page.
+                    self._page_conversion_failed = True
                     self.logger.warning(
                         "[NRD] Skipping record that failed conversion",
                         {

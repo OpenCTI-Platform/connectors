@@ -333,3 +333,118 @@ class TestSubscriptionErrors:
         assert (
             "Subscription error" in warning_msg or "subscription" in warning_msg.lower()
         )
+
+
+# ---------------------------------------------------------------------------
+# Conversion failures must not advance checkpoints
+# ---------------------------------------------------------------------------
+
+
+def _fail_on(domains: set[str], original):
+    def _to_stix(record, tlp, **kwargs):
+        name = getattr(record, "domain", None) or record.domain_name
+        if name in domains:
+            raise ValueError("boom")
+        return original(record, tlp, **kwargs)
+
+    return _to_stix
+
+
+def _domain_values(bundles) -> set[str]:
+    return {
+        obj["value"]
+        for objects in bundles
+        for obj in objects
+        if getattr(obj, "type", None) == "domain-name"
+    }
+
+
+class TestConversionFailureCheckpoint:
+    def _threat_processor(self, pages) -> ThreatFeedProcessor:
+        processor = TestThreatFeedCheckpoint()._prepare(checkpoint_every=1)
+        processor.settings.whoisfreaks.tlp_level = "amber"
+        processor._author = MagicMock()
+        processor.client.iter_threat_feed.return_value = iter(pages)
+        return processor
+
+    def _nrd_processor(self, pages) -> NRDProcessor:
+        processor = TestNRDCheckpoint()._prepare(next_date="", checkpoint_every=1)
+        processor.settings.whoisfreaks.tlp_level = "amber"
+        processor.settings.whoisfreaks.create_indicators_for_nrd = False
+        processor._author = MagicMock()
+        processor.client.iter_feed.return_value = iter(pages)
+        return processor
+
+    def test_threat_mixed_success_freezes_checkpoint_before_failed_page(self):
+        pages = [
+            [_make_threat_record("ok1.com")],
+            [_make_threat_record("bad.com"), _make_threat_record("ok2.com")],
+            [_make_threat_record("ok3.com")],
+        ]
+        processor = self._threat_processor(pages)
+        processor._to_stix = _fail_on({"bad.com"}, processor._to_stix)
+
+        bundles = list(processor.transform(processor.collect()))
+
+        # Valid records, including those after the failed page, are emitted.
+        assert _domain_values(bundles) == {"ok1.com", "ok2.com", "ok3.com"}
+        # Only the page before the failure is checkpointed.
+        processor.state.set_threat_offset.assert_called_once_with(
+            "malware", 1, snapshot_date=AVAILABLE_DATE
+        )
+        processor.state.set_next_date.assert_not_called()
+
+    def test_threat_all_failed_page_does_not_complete_snapshot(self):
+        pages = [[_make_threat_record("bad1.com"), _make_threat_record("bad2.com")]]
+        processor = self._threat_processor(pages)
+        processor._to_stix = _fail_on({"bad1.com", "bad2.com"}, processor._to_stix)
+
+        bundles = list(processor.transform(processor.collect()))
+
+        assert bundles == []
+        processor.state.set_threat_offset.assert_not_called()
+        processor.state.set_next_date.assert_not_called()
+
+    def test_threat_successful_run_completes_snapshot(self):
+        processor = self._threat_processor([[_make_threat_record("ok.com")]])
+
+        list(processor.transform(processor.collect()))
+
+        processor.state.set_next_date.assert_called_once_with("malware", AVAILABLE_DATE)
+
+    def test_nrd_mixed_success_freezes_checkpoint_before_failed_page(self):
+        pages = [
+            [_make_nrd_record("ok1.com")],
+            [_make_nrd_record("bad.com"), _make_nrd_record("ok2.com")],
+            [_make_nrd_record("ok3.com")],
+        ]
+        processor = self._nrd_processor(pages)
+        processor._to_stix = _fail_on({"bad.com"}, processor._to_stix)
+
+        bundles = list(processor.transform(processor.collect()))
+
+        assert _domain_values(bundles) == {"ok1.com", "ok2.com", "ok3.com"}
+        processor.state.set_nrd_offset.assert_called_once_with(
+            "nrd_gtld_without_whois", 1, snapshot_date=AVAILABLE_DATE
+        )
+        processor.state.set_next_nrd_date.assert_not_called()
+
+    def test_nrd_all_failed_page_does_not_complete_day(self):
+        pages = [[_make_nrd_record("bad1.com"), _make_nrd_record("bad2.com")]]
+        processor = self._nrd_processor(pages)
+        processor._to_stix = _fail_on({"bad1.com", "bad2.com"}, processor._to_stix)
+
+        bundles = list(processor.transform(processor.collect()))
+
+        assert bundles == []
+        processor.state.set_nrd_offset.assert_not_called()
+        processor.state.set_next_nrd_date.assert_not_called()
+
+    def test_nrd_successful_run_completes_day(self):
+        processor = self._nrd_processor([[_make_nrd_record("ok.com")]])
+
+        list(processor.transform(processor.collect()))
+
+        processor.state.set_next_nrd_date.assert_called_once_with(
+            "nrd_gtld_without_whois", "2026-09-28"
+        )

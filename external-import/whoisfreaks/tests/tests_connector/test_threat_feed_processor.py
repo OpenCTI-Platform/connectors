@@ -79,6 +79,30 @@ def test_threat_feed_processor_creates_indicator_observable_and_relationship():
         assert obj.object_marking_refs == [stix2.TLP_WHITE.id]
 
 
+def test_single_observation_indicator_omits_valid_until():
+    """first_seen == last_seen has no interval: keep the record, drop valid_until."""
+    processor = ThreatFeedProcessor("malware")
+    record = make_record("single.example")
+    record.last_seen = record.first_seen
+
+    objects = processor._to_stix(record, stix2.TLP_WHITE)
+
+    assert len(objects) == 4
+    indicator = next(obj for obj in objects if obj.type == "indicator")
+    assert indicator.valid_from == record.first_seen
+    assert "valid_until" not in indicator
+
+
+def test_indicator_keeps_valid_until_for_positive_interval():
+    processor = ThreatFeedProcessor("malware")
+    record = make_record("interval.example")
+
+    objects = processor._to_stix(record, stix2.TLP_WHITE)
+
+    indicator = next(obj for obj in objects if obj.type == "indicator")
+    assert indicator.valid_until == record.last_seen
+
+
 def test_threat_feed_note_includes_every_source_column():
     processor = ThreatFeedProcessor("malware")
     record = make_record("example.com")

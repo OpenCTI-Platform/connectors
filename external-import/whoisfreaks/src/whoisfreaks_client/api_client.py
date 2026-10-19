@@ -278,6 +278,9 @@ class WhoisFreaksClient:
         """Parse one CSV page from a streamed HTTP response body."""
 
         # Decode incrementally; page size is bounded by limit so memory is OK.
+        # requests leaves response.raw undecoded when streaming; let urllib3
+        # undo any Content-Encoding (gzip/deflate) so the CSV is readable.
+        response.raw.decode_content = True
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",

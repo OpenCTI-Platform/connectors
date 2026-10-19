@@ -39,6 +39,9 @@ class ThreatFeedProcessor(BaseDataProcessor):
         self.feed_type = feed_type
         self.work_name = f"WhoisFreaks {feed_type} threat feed"
         self.status: WhoisFreaksStatus | None = None
+        # Set by transform() when a record of the current page fails
+        # conversion; read by the collector before advancing checkpoints.
+        self._page_conversion_failed = False
 
     def set_status(self, status: WhoisFreaksStatus) -> None:
         """Set the shared WhoisFreaks status snapshot."""
@@ -144,10 +147,18 @@ class ThreatFeedProcessor(BaseDataProcessor):
         page_limit: int,
         checkpoint_every: int,
     ) -> Iterable[list[ThreatFeedRecord]]:
-        """Yield pages and update the in-memory offset at checkpoint intervals."""
+        """Yield pages and update the in-memory offset at checkpoint intervals.
+
+        transform() consumes each page before this generator resumes, so a
+        conversion failure in a page is known here. From the first failed page
+        on, the offset checkpoint is frozen (it stays at or before that page)
+        and the snapshot is not marked complete, so the next run retries it.
+        Valid records of later pages are still yielded and imported.
+        """
 
         offset = start_offset
         pages_since_checkpoint = 0
+        conversion_failed = False
         try:
             for page in self.client.iter_threat_feed(
                 feed_type=self.feed_type,
@@ -155,12 +166,24 @@ class ThreatFeedProcessor(BaseDataProcessor):
                 limit=page_limit,
                 start_offset=start_offset,
             ):
+                self._page_conversion_failed = False
                 yield page
 
                 offset += getattr(page, "source_record_count", len(page))
                 pages_since_checkpoint += 1
 
-                if pages_since_checkpoint >= checkpoint_every:
+                if self._page_conversion_failed and not conversion_failed:
+                    conversion_failed = True
+                    self.logger.warning(
+                        "[THREAT_FEED] Conversion failures; checkpoint frozen",
+                        {
+                            "feed_type": self.feed_type,
+                            "date": feed_date.isoformat(),
+                            "page_end_offset": offset,
+                        },
+                    )
+
+                if not conversion_failed and pages_since_checkpoint >= checkpoint_every:
                     self.state.set_threat_offset(
                         self.feed_type,
                         offset,
@@ -179,6 +202,13 @@ class ThreatFeedProcessor(BaseDataProcessor):
             self.logger.warning(
                 "[THREAT_FEED] Subscription error; feed skipped",
                 {"feed_type": self.feed_type, "error": str(exc)},
+            )
+            return
+
+        if conversion_failed:
+            self.logger.warning(
+                "[THREAT_FEED] Snapshot not marked complete; will retry next run",
+                {"feed_type": self.feed_type, "date": feed_date.isoformat()},
             )
             return
 
@@ -210,6 +240,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
                 except Exception as err:
                     # Skip a single bad record; do not fail the whole page
                     # Conversion failures are handled per item, not per page.
+                    self._page_conversion_failed = True
                     self.logger.warning(
                         "[THREAT_FEED] Skipping record that failed conversion",
                         {
@@ -310,7 +341,11 @@ class ThreatFeedProcessor(BaseDataProcessor):
             pattern_type="stix",
             pattern=pattern,
             valid_from=record.first_seen,
-            valid_until=record.last_seen,
+            # STIX requires valid_until > valid_from; a single observation
+            # (first_seen == last_seen) has no interval, so omit it.
+            valid_until=(
+                record.last_seen if record.last_seen > record.first_seen else None
+            ),
             labels=labels,
             object_marking_refs=[tlp],
             created_by_ref=_AUTHOR_ID,

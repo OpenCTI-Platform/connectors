@@ -296,6 +296,9 @@ class WhoisFreaksNRDClient:
     ) -> NRDPage:
         """Parse a WHOIS-enriched NRD CSV page from a stream."""
 
+        # requests leaves response.raw undecoded when streaming; let urllib3
+        # undo any Content-Encoding (gzip/deflate) so the CSV is readable.
+        response.raw.decode_content = True
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",
@@ -322,6 +325,9 @@ class WhoisFreaksNRDClient:
     ) -> NRDPage:
         """Parse a domains-only NRD page (no CSV header)."""
 
+        # requests leaves response.raw undecoded when streaming; let urllib3
+        # undo any Content-Encoding (gzip/deflate) so the CSV is readable.
+        response.raw.decode_content = True
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",

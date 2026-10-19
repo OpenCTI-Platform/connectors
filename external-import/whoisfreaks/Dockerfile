@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev ca-certificates
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev ca-certificates
 
 # Install the connector as a proper package (src/ layout: connector/,
 # whoisfreaks_client/). Then drop build inputs so the source tree does not
