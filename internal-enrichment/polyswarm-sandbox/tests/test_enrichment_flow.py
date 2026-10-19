@@ -8,7 +8,6 @@ verifies the full pipeline end-to-end with mocked dependencies.
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from tests.test_connector import make_connector
 
 ENTITY_ID = "artifact--00000000-0000-0000-0000-000000000001"
@@ -36,6 +35,58 @@ def _opencti_entity():
             }
         ],
     }
+
+
+# ── TLP check ───────────────────────────────────────────────────────────────
+
+_TLP_ORDER = ["TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"]
+
+
+def _check_max_tlp(tlp, max_tlp):
+    """Same contract as ``OpenCTIConnectorHelper.check_max_tlp``: one TLP name."""
+    return _TLP_ORDER.index(tlp.upper()) <= _TLP_ORDER.index(max_tlp.upper())
+
+
+def _marked(definition):
+    entity = _opencti_entity()
+    entity["objectMarking"] = [
+        {
+            "standard_id": "marking-definition--1",
+            "definition_type": "TLP",
+            "definition": definition,
+        },
+        {
+            "standard_id": "marking-definition--2",
+            "definition_type": "PAP",
+            "definition": "PAP:GREEN",
+        },
+    ]
+    return entity
+
+
+class TestTlpCheck:
+    """check_max_tlp must receive a TLP name, not the list of marking ids."""
+
+    def test_marked_artifact_within_max_tlp_is_enriched(self):
+        c = make_connector()
+        c.helper.check_max_tlp = _check_max_tlp
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(None, "Download disabled")
+        )
+        result = c._enrich_file(
+            ENTITY_ID, _entity(), _marked("TLP:GREEN"), [{"type": "identity"}]
+        )
+        # Reached the download phase instead of failing in the TLP check.
+        assert "disabled" in result["error"].lower()
+
+    def test_marked_artifact_above_max_tlp_is_skipped(self):
+        c = make_connector()
+        c.helper.check_max_tlp = _check_max_tlp
+        result = c._enrich_file(
+            ENTITY_ID, _entity(), _marked("TLP:RED"), [{"type": "identity"}]
+        )
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
 
 
 # ── _phase_download ─────────────────────────────────────────────────────────
