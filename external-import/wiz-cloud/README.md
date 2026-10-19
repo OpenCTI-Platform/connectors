@@ -65,6 +65,9 @@ graph LR
 | Incident `first_seen` / `last_seen` | `firstEventAt` / `lastEventAt` (fallback `createdAt` / `updatedAt`) |
 | Incident `severity` | `severity` |
 | Incident external reference | `url` (Wiz portal deep link) + issue `id` |
+| AttackPattern `name` / `mitre_id` | `sourceRules[].securitySubCategories[].title` / the technique part of `externalId` |
+| AttackPattern `kill_chain_phases` | `securitySubCategories[].category.name`, as `mitre-attack` phases |
+| Relationship | Incident `uses` AttackPattern |
 
 The affected resource (`entitySnapshot`) is always summarized in the incident description (name, type, cloud platform, region, provider ID, external ID). It is also created as an entity for the following resource types only:
 
@@ -79,6 +82,8 @@ The affected resource (`entitySnapshot`) is always summarized in the incident de
 Each created entity carries `entitySnapshot.externalId` (and `cloudProviderURL` when present) as an external reference. Resource tags are not imported.
 
 Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT ASC`, so incidents reach the platform in the order they happened). Entity IDs are deterministic, so re-runs never duplicate.
+
+When `WIZ_CLOUD_IMPORT_TTPS` is enabled (the default), the MITRE ATT&CK techniques mapped to the issue's source rules become `AttackPattern` entities linked to the Incident with a `uses` relationship. They are returned by the issues query itself, so importing them costs no extra API call. Only the `MITRE ATT&CK Matrix` and `MITRE ATT&CK Cloud Matrix` frameworks are converted: the Wiz proprietary taxonomies number their entries themselves, so importing them would put non-MITRE identifiers into the ATT&CK namespace.
 
 ### Vulnerabilities
 
@@ -119,4 +124,5 @@ If a vulnerability fetch fails, the issue is still imported but the incremental 
 
 - **Updates to already-imported issues are not re-imported.** The Wiz API does not allow filtering or ordering by `updatedAt`, so a status or severity change on an old issue is not detected. A periodic full re-import (planned) will close this gap.
 - Only `THREAT_DETECTION` issues are imported. Posture findings (toxic combinations, cloud configuration) are out of scope.
-- Threat actors and MITRE ATT&CK techniques from `threatDetectionDetails` are parsed but not yet converted (planned for the next milestone).
+- Threat actors from `threatDetectionDetails` are parsed but not yet converted (planned for the next milestone).
+- Technique mappings from the Wiz proprietary frameworks (`Wiz for Threat Detection`, `Wiz for Risk Assessment`, `Wiz for Code & Supply Chain Security`) are not imported as `AttackPattern` entities; only `MITRE ATT&CK Matrix` and `MITRE ATT&CK Cloud Matrix` are.
