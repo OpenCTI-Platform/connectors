@@ -14,9 +14,6 @@ The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filte
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -47,37 +44,10 @@ Key features:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml   | Docker environment variable | Mandatory | Description                                          |
-|---------------|--------------|------------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url          | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token        | `OPENCTI_TOKEN`              | Yes       | The default admin token set in the OpenCTI platform. |
-| SSL Verify    | ssl_verify   | `OPENCTI_SSL_VERIFY`         | No        | Verify SSL certificates (default: false).            |
-
-### Base connector environment variables
-
-| Parameter                      | config.yml                 | Docker environment variable              | Default          | Mandatory | Description                                                                    |
-|--------------------------------|----------------------------|------------------------------------------|------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                         | `CONNECTOR_ID`                           |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Type                 | type                       | `CONNECTOR_TYPE`                         | STREAM           | Yes       | Should always be set to `STREAM` for this connector.                           |
-| Connector Name                 | name                       | `CONNECTOR_NAME`                         | ZscalerConnector | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                      | `CONNECTOR_SCOPE`                        | Zscaler          | Yes       | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id             | `CONNECTOR_LIVE_STREAM_ID`               |                  | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete  | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`    | true             | Yes       | Listen to delete events.                                                       |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`  | true             | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                  | `CONNECTOR_LOG_LEVEL`                    | info             | No        | Determines the verbosity of the logs.                                          |
-
-### Connector extra parameters environment variables
-
-| Parameter        | config.yml            | Docker environment variable | Default           | Mandatory | Description                                         |
-|------------------|----------------------|------------------------------|-------------------|-----------|-----------------------------------------------------|
-| Username         | zscaler.username     | `ZSCALER_USERNAME`           |                   | Yes       | Zscaler username for API authentication.            |
-| Password         | zscaler.password     | `ZSCALER_PASSWORD`           |                   | Yes       | Zscaler password for API authentication.            |
-| API Key          | zscaler.api_key      | `ZSCALER_API_KEY`            |                   | Yes       | Zscaler API key.                                    |
-| Blacklist Name   | zscaler.blacklist_name | `ZSCALER_BLACKLIST_NAME`   | BLACK_LIST_DYNDNS | Yes       | Name of the Zscaler URL category to manage.         |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -264,6 +234,6 @@ CONNECTOR_LOG_LEVEL=debug
 
 - **Supported Indicators**: Only `domain-name` type indicators
 - **Pattern Format**: Must use STIX pattern `[domain-name:value = 'example.com']`
-- **API Endpoint**: Uses `zsapi.zscalertwo.net` - adjust if using different Zscaler cloud
+- **API Endpoint**: Defaults to `https://zsapi.zscalertwo.net/`. If your organization is on another Zscaler cloud, set `ZSCALER_API_BASE_URL` (e.g. `https://zsapi.zscalerone.net`). See [Getting Started | Zscaler](https://help.zscaler.com/zia/getting-started-zia-api) to find your cloud name
 - **Session Management**: Automatic re-authentication when session expires
 - **Activation**: Changes are automatically activated after each operation

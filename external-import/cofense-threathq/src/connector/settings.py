@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -47,8 +47,7 @@ class CofenseThreathqConfig(BaseConfigModel):
         description="Token password for Cofense ThreatHQ API authentication.",
     )
     import_start_date: DatetimeFromIsoString = Field(
-        # `default_factory` is used to set a dynamic default value (datetime) at runtime
-        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=30),
+        default="P30D",
         description="Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
     )
     api_base_url: HttpUrl = Field(

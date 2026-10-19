@@ -11,9 +11,9 @@ services:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - MODAT_API_BASE_URL=https://api.magnify.modat.io
       - MODAT_API_KEY=ChangeMe
-      - MODAT_MAX_TLP=TLP:AMBER
       - MODAT_DEFAULT_SCORE=50
       - MODAT_CREATE_NOTE=true
       - MODAT_INCLUDE_CVES=false

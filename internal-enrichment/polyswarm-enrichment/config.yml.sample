@@ -10,12 +10,12 @@ connector:
   auto: true
   confidence_level: 80
   log_level: 'info'
+  # max_tlp: 'TLP:RED'  # Refuse enrichment above this TLP (default: 'TLP:RED', no limit)
 
 polyswarm:
   api_key: 'ChangeMe'
   community: 'default'        # 'default' or 'private' (enables dual-community)
   max_polling_time: 120
-  # max_tlp: 'TLP:AMBER'     # Refuse enrichment above this TLP (default: no limit)
   # replace_with_lower_score: true  # Set false to keep higher existing scores
 
 # Optional: polykg knowledge graph for advanced profile enrichment

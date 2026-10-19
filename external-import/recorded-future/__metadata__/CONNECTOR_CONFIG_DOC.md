@@ -27,6 +27,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_RISK_AS_SCORE | `boolean` |  | boolean | `true` | Whether to import risk scores as confidence scores in OpenCTI. |
 | RECORDED_FUTURE_RISK_THRESHOLD | `integer` |  | `0 < x ` | `60` | Minimum risk score threshold (0-100) for importing entities. |
 | RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS | `boolean` |  | boolean | `false` | Enable or disable the automatic guessing of relationships between entities when processing analyst notes. |
+| RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES | `boolean` |  | boolean | `false` | Whether to also import the context entities of analyst notes, i.e. entities referenced in the note's context but not tagged as primary. Disabled by default as they can add a lot of noise and false positives. |
 | RECORDED_FUTURE_PULL_RISK_LIST | `boolean` |  | boolean | `false` | Whether to import Recorded Future risk lists. |
 | RECORDED_FUTURE_RISKRULES_AS_LABEL | `boolean` |  | boolean | `false` | Whether to import risk rules as labels in OpenCTI. |
 | RECORDED_FUTURE_RISK_LIST_THRESHOLD | `integer` |  | `0 < x ` | `70` | Minimum risk score threshold (0-100) for importing risk list entities. |

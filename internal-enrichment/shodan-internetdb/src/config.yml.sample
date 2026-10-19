@@ -8,7 +8,7 @@ connector:
   # scope: 'IPv4-Addr' # Optional (default: 'IPv4-Addr')
   # auto: false # Optional (default: false)
   # log_level: 'error' # Optional (default: 'error')
+  # max_tlp: 'TLP:WHITE' # Optional (default: 'TLP:WHITE')
 
 shodan:
-  # max_tlp: 'TLP:WHITE' # Optional (default: 'TLP:WHITE')
   # ssl_verify: true # Optional (default: true)
