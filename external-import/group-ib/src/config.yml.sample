@@ -1,3 +1,6 @@
+# DEPRECATED: this connector is deprecated and will be removed in a future release.
+# Migrate to group-ib-ti. See DEPRECATION.md.
+
 opencti:
   # http://opencti:8080 - for docker deployment, http://localhost:8080 - for manual deployment
   url: 'http://localhost:8080'
