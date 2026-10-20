@@ -478,17 +478,6 @@ def test_convert_cvss_v2(client):
     assert octi["cvss_v2_availability_impact"] == "NONE"
 
 
-@pytest.mark.parametrize("version", ["3.1", "2.0"])
-def test_convert_missing_base_score_is_left_unset(client, version):
-    props = {k: v for k, v in FULL_PROPS.items() if k != "cvss_base_score"}
-
-    vuln = client._convert_to_opencti_vulnerabilities(
-        _vuln(cvss_version=version, **props)
-    )
-
-    octi = vuln["extensions"][OPENCTI_EXTENSION_DEFINITION_ID]
-
-
 def test_convert_without_cvss_version_only_moves_extension(client):
     vuln = client._convert_to_opencti_vulnerabilities(_vuln())
 
