@@ -97,18 +97,6 @@ def test_invalid_domain_should_not_call_zscaler(connector):
     connector.client.request.assert_not_called()
 
 
-def test_activation_should_retry_on_503(connector, monkeypatch):
-    monkeypatch.setattr("stream_connector.connector.time.sleep", Mock())
-    connector.client.request.side_effect = [
-        make_response(200, {"status": "UNKNOWN"}),
-        make_response(503, {"message": "busy"}),
-        make_response(200, {"status": "UNKNOWN"}),
-        make_response(200),
-    ]
-
-    assert connector.activate_zscaler_changes() is True
-
-
 def test_activation_should_fail_on_unexpected_error(connector):
     connector.client.request.side_effect = [
         make_response(200, {"status": "UNKNOWN"}),
@@ -116,3 +104,28 @@ def test_activation_should_fail_on_unexpected_error(connector):
     ]
 
     assert connector.activate_zscaler_changes() is False
+
+
+def test_failed_activation_should_be_retried_on_next_event(connector):
+    # The update succeeds but its activation fails
+    connector.client.request.side_effect = [
+        make_response(200),  # PUT /urlCategories
+        make_response(200, {"status": "UNKNOWN"}),  # GET /status
+        make_response(500),  # POST /status/activate, after the client retries
+    ]
+    connector.send_to_zscaler("malicious.example.com", "create", "x")
+    assert connector.activation_pending is True
+
+    # The next event changes nothing in Zscaler but retries the activation
+    connector.client.request.reset_mock()
+    connector.client.request.side_effect = [
+        make_response(200, {"status": "UNKNOWN"}),
+        make_response(200),
+    ]
+    connector._process_message(
+        _stream_message("create", {"type": "indicator", "pattern_type": "yara"})
+    )
+
+    methods = [c.args[:2] for c in connector.client.request.call_args_list]
+    assert methods == [("GET", "/status"), ("POST", "/status/activate")]
+    assert connector.activation_pending is False
