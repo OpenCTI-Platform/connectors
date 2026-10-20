@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -7,12 +7,15 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 LEGACY_AUTH_DEPRECATION = (
-    "The legacy Zscaler API authentication is no longer supported. "
-    "Use 'client_id', 'client_secret' and 'vanity_domain' (Zscaler OneAPI) instead."
+    "The legacy Zscaler API authentication is deprecated and stops working when "
+    "Zscaler removes it. Use 'client_id', 'client_secret' and 'vanity_domain' "
+    "(Zscaler OneAPI) instead."
 )
+LEGACY_CREDENTIAL_FIELDS = ("username", "password", "api_key")
+ONEAPI_CREDENTIAL_FIELDS = ("client_id", "client_secret", "vanity_domain")
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -40,33 +43,40 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
 
 
 class ZscalerConfig(BaseConfigModel):
-    """Zscaler-specific configuration (Zscaler OneAPI, authenticated through ZIdentity)."""
+    """Zscaler-specific configuration.
 
-    client_id: str = Field(
-        description="Client ID of the ZIdentity API client used to authenticate to Zscaler OneAPI.",
-    )
-    client_secret: SecretStr = Field(
-        description="Client secret of the ZIdentity API client.",
-    )
-    vanity_domain: str = Field(
+    The connector uses Zscaler OneAPI (authenticated through ZIdentity). The legacy
+    API credentials still work while Zscaler supports them, but are deprecated.
+    """
+
+    client_id: str | None = Field(
         description=(
-            "ZIdentity vanity domain of the organization, i.e. the `<vanity_domain>` "
-            "part of `https://<vanity_domain>.zslogin.net`."
-        ),
-    )
-    cloud: str | None = Field(
-        description=(
-            "Zscaler cloud to target (for example `beta`). "
-            "Leave empty to use the production cloud (`api.zsapi.net`)."
+            "Client ID of the ZIdentity API client used to authenticate to Zscaler "
+            "OneAPI. Required unless the deprecated legacy credentials are used."
         ),
         default=None,
     )
-    api_base_url: HttpUrl = Field(
+    client_secret: SecretStr | None = Field(
         description=(
-            "Base URL of the Zscaler ZIA API for your Zscaler cloud, without the "
-            "`/api/v1` path (e.g. `https://zsapi.zscalerone.net`)."
+            "Client secret of the ZIdentity API client. "
+            "Required unless the deprecated legacy credentials are used."
         ),
-        default=HttpUrl("https://zsapi.zscalertwo.net/"),
+        default=None,
+    )
+    vanity_domain: str | None = Field(
+        description=(
+            "ZIdentity vanity domain of the organization, i.e. the `<vanity_domain>` "
+            "part of `https://<vanity_domain>.zslogin.net`. "
+            "Required unless the deprecated legacy credentials are used."
+        ),
+        default=None,
+    )
+    cloud: str | None = Field(
+        description=(
+            "Zscaler cloud to target with OneAPI (for example `beta`). "
+            "Leave empty to use the production cloud (`api.zsapi.net`)."
+        ),
+        default=None,
     )
     blacklist_name: str = Field(
         description=(
@@ -81,16 +91,59 @@ class ZscalerConfig(BaseConfigModel):
     )
     username: str | None = DeprecatedField(
         deprecated=LEGACY_AUTH_DEPRECATION,
-        description="Zscaler account username (legacy API, no longer used).",
+        description="Zscaler account username (deprecated legacy API authentication).",
     )
     password: SecretStr | None = DeprecatedField(
         deprecated=LEGACY_AUTH_DEPRECATION,
-        description="Zscaler account password (legacy API, no longer used).",
+        description="Zscaler account password (deprecated legacy API authentication).",
     )
     api_key: SecretStr | None = DeprecatedField(
         deprecated=LEGACY_AUTH_DEPRECATION,
-        description="Zscaler API key (legacy API, no longer used).",
+        description="Zscaler API key (deprecated legacy API authentication).",
     )
+    api_base_url: HttpUrl | None = DeprecatedField(
+        deprecated=LEGACY_AUTH_DEPRECATION,
+        description=(
+            "Base URL of the legacy Zscaler ZIA API, without the `/api/v1` path "
+            "(default: `https://zsapi.zscalertwo.net`). Only used with the "
+            "deprecated legacy credentials; use 'cloud' with OneAPI."
+        ),
+    )
+
+    @property
+    def use_legacy_api(self) -> bool:
+        """Whether the deprecated legacy API credentials are used instead of OneAPI."""
+        return not any(self._raw(field) for field in ONEAPI_CREDENTIAL_FIELDS)
+
+    def _raw(self, field: str) -> object:
+        # Read deprecated fields without triggering pydantic's deprecation warning
+        return self.__dict__.get(field)
+
+    @model_validator(mode="after")
+    def _check_credentials(self) -> Self:
+        """Require complete OneAPI credentials, or complete legacy ones."""
+        if self.use_legacy_api:
+            missing = [f for f in LEGACY_CREDENTIAL_FIELDS if not self._raw(f)]
+            if not missing:
+                return self
+            if len(missing) == len(LEGACY_CREDENTIAL_FIELDS):
+                raise ValueError(
+                    "Zscaler credentials are missing: set 'client_id', "
+                    "'client_secret' and 'vanity_domain' (Zscaler OneAPI)."
+                )
+            raise ValueError(
+                "Incomplete deprecated legacy Zscaler credentials "
+                f"(missing: {', '.join(missing)}). Prefer the Zscaler OneAPI "
+                "credentials 'client_id', 'client_secret' and 'vanity_domain'."
+            )
+
+        missing = [f for f in ONEAPI_CREDENTIAL_FIELDS if not self._raw(f)]
+        if missing:
+            raise ValueError(
+                "Incomplete Zscaler OneAPI credentials "
+                f"(missing: {', '.join(missing)})."
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):
