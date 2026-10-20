@@ -44,8 +44,8 @@ Key features:
 - A ZIdentity API client (client ID and client secret) with a ZIA API role allowed to manage URL categories and activate changes
 
 The connector uses [Zscaler OneAPI](https://automate.zscaler.com/docs/api-reference-and-guides/guides/UnderstandingOneAPI)
-(OAuth 2.0 client credentials). The legacy ZIA API authentication (username, password and API key) is no longer supported,
-see [Migrating from the legacy API](#migrating-from-the-legacy-api).
+(OAuth 2.0 client credentials). The legacy ZIA API authentication (username, password and API key) still works but is
+deprecated, see [Migrating from the legacy API](#migrating-from-the-legacy-api).
 
 ## Configuration variables
 
@@ -247,8 +247,16 @@ CONNECTOR_LOG_LEVEL=debug
 
 Earlier versions of this connector authenticated against the legacy ZIA API
 (`zsapi.zscalertwo.net`) with a username, a password and an API key. Zscaler is
-deprecating this authentication method, and the connector now only supports
-Zscaler OneAPI.
+removing this authentication method, so the connector now uses Zscaler OneAPI.
+
+The legacy settings are deprecated but still work. When `ZSCALER_CLIENT_ID`,
+`ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN` are not set, the connector
+falls back to `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY`
+against `ZSCALER_API_BASE_URL` (default `https://zsapi.zscalertwo.net`), and logs
+a deprecation warning at startup. This fallback stops working when Zscaler
+removes the legacy authentication.
+
+To migrate:
 
 1. Make sure your tenant is migrated to ZIdentity.
 2. In ZIdentity, create an API client and assign it a ZIA API role allowed to
@@ -256,4 +264,5 @@ Zscaler OneAPI.
 3. Replace `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY` with
    `ZSCALER_CLIENT_ID`, `ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN`.
 
-The legacy variables are ignored: the connector logs a warning if they are still set.
+4. Remove the legacy variables, including `ZSCALER_API_BASE_URL`. If they are
+   still set next to the OneAPI ones, the connector ignores them and logs a warning.

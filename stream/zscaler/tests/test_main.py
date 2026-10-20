@@ -2,11 +2,10 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from main import build_auth
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
-from requests.cookies import RequestsCookieJar
 from stream_connector import ZscalerConnector
-from stream_connector.client import ZscalerClient
+from stream_connector.client import LegacyAuth, ZscalerClient
 from stream_connector.settings import ConnectorSettings
 
 
@@ -77,10 +76,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     client = ZscalerClient(
         logger=helper.connector_logger,
-        client_id=settings.zscaler.client_id,
-        client_secret=settings.zscaler.client_secret.get_secret_value(),
-        vanity_domain=settings.zscaler.vanity_domain,
-        cloud=settings.zscaler.cloud,
+        auth=build_auth(settings, helper),
         ssl_verify=settings.zscaler.ssl_verify,
     )
     connector = ZscalerConnector(
@@ -93,5 +89,37 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector.client is client
     assert connector.zscaler_blacklist_name == "BLACK_LIST_DYNDNS"
     assert client.base_url == "https://api.zsapi.net/zia/api/v1"
-    assert client.token_url == "https://acme.zslogin.net/oauth2/v1/token"
+    assert client.auth.token_url == "https://acme.zslogin.net/oauth2/v1/token"
     assert client.ssl_verify is False
+
+
+def test_build_auth_should_use_deprecated_legacy_credentials(
+    mock_opencti_connector_helper,
+):
+    class LegacyConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id", "live_stream_id": "stream"},
+                    "zscaler": {
+                        "username": "zscaler-user",
+                        "password": "zscaler-password",
+                        "api_key": "zscaler-api-key",
+                        "api_base_url": "https://zsapi.zscalerone.net",
+                    },
+                }
+            )
+
+    settings = LegacyConnectorSettings()
+    helper = MagicMock()
+
+    auth = build_auth(settings, helper)
+
+    assert isinstance(auth, LegacyAuth)
+    assert auth.base_url == "https://zsapi.zscalerone.net/api/v1"
+    assert auth.username == "zscaler-user"
+    assert auth.password == "zscaler-password"
+    assert auth.api_key == "zscaler-api-key"
+    helper.connector_logger.warning.assert_called_once()

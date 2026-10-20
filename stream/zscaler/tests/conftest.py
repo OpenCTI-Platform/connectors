@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from pycti import OpenCTIConnectorHelper
-from stream_connector.client import ZscalerClient
+from stream_connector.client import OneApiAuth, ZscalerClient
 from stream_connector.connector import ZscalerConnector
 
 
@@ -21,9 +21,9 @@ def client(logger):
     """A ZscalerClient whose HTTP session is mocked."""
     zscaler_client = ZscalerClient(
         logger=logger,
-        client_id="client-id",
-        client_secret="client-secret",
-        vanity_domain="acme",
+        auth=OneApiAuth(
+            client_id="client-id", client_secret="client-secret", vanity_domain="acme"
+        ),
     )
     zscaler_client.session = Mock()
     return zscaler_client

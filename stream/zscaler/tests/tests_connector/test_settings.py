@@ -130,21 +130,6 @@ def test_settings_should_apply_defaults():
             },
             id="invalid_connector_id",
         ),
-        pytest.param(
-            {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": "connector-id",
-                    "live_stream_id": "live-stream-id",
-                },
-                "zscaler": {
-                    "username": "zscaler-user",
-                    "password": "zscaler-password",
-                    "api_key": "zscaler-api-key",
-                },
-            },
-            id="legacy_credentials_only",
-        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict):
@@ -171,3 +156,77 @@ def test_settings_should_accept_deprecated_legacy_credentials():
 
     assert "username" in settings.zscaler.model_fields_set
     assert settings.zscaler.client_id == "zscaler-client-id"
+
+
+def _settings_with_zscaler(zscaler: dict[str, Any]) -> type[ConnectorSettings]:
+    settings_dict = _minimal_valid_settings()
+    settings_dict["zscaler"] = zscaler
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    return FakeConnectorSettings
+
+
+def test_settings_should_accept_deprecated_legacy_credentials_only():
+    settings = _settings_with_zscaler(
+        {
+            "username": "zscaler-user",
+            "password": "zscaler-password",
+            "api_key": "zscaler-api-key",
+        }
+    )()
+
+    assert settings.zscaler.use_legacy_api is True
+
+
+def test_settings_should_prefer_oneapi_when_both_are_set():
+    settings = _settings_with_zscaler(
+        {
+            "client_id": "zscaler-client-id",
+            "client_secret": "zscaler-client-secret",
+            "vanity_domain": "acme",
+            "username": "zscaler-user",
+        }
+    )()
+
+    assert settings.zscaler.use_legacy_api is False
+
+
+@pytest.mark.parametrize(
+    "zscaler, expected_message",
+    [
+        pytest.param({}, "Zscaler credentials are missing", id="no_credentials"),
+        pytest.param(
+            {"client_id": "zscaler-client-id"},
+            "missing: client_secret, vanity_domain",
+            id="incomplete_oneapi",
+        ),
+        pytest.param(
+            {"username": "zscaler-user", "password": "zscaler-password"},
+            "missing: api_key",
+            id="incomplete_legacy",
+        ),
+    ],
+)
+def test_settings_should_reject_incomplete_credentials(zscaler, expected_message):
+    with pytest.raises(ConfigValidationError) as exc_info:
+        _settings_with_zscaler(zscaler)()
+
+    assert expected_message in str(exc_info.value.__cause__)
+
+
+def test_settings_should_accept_deprecated_api_base_url():
+    settings_dict = _minimal_valid_settings()
+    settings_dict["zscaler"]["api_base_url"] = "https://zsapi.zscalerone.net"
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+
+    assert "api_base_url" in settings.zscaler.model_fields_set
