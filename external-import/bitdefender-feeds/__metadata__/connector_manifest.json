@@ -13,5 +13,8 @@
     "Network Security"
   ],
   "support_version": ">= 6.7.0",
-  "subscription_link": "https://www.bitdefender.com/en-us/oem/contact/threat-intelligence-solutions-contact?icid=ref%7Cb%7Copencti%7Coem-trial&campaign=2026_Aug_WW_B2B2B_FCM_Partner_Generated_Cybersecurity_at_Scale_OpenCTI"
+  "subscription_link": "https://www.bitdefender.com/en-us/oem/contact/threat-intelligence-solutions-contact?icid=ref%7Cb%7Copencti%7Coem-trial&campaign=2026_Aug_WW_B2B2B_FCM_Partner_Generated_Cybersecurity_at_Scale_OpenCTI",
+  "container_version": "rolling",
+  "container_image": "opencti/bitdefender-feeds",
+  "container_type": "EXTERNAL_IMPORT"
 }
