@@ -22,7 +22,10 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'indicator, vulnerability'.",
+      "default": [
+        "stairwell"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -131,7 +134,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "STAIRWELL_API_TOKEN"
   ],
   "additionalProperties": true

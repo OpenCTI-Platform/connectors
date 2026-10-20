@@ -30,7 +30,7 @@ Environment variables override the file.
 | Connector ID | `connector.id` | `CONNECTOR_ID` | yes | — | UUIDv4 unique to this instance |
 | Connector type | `connector.type` | `CONNECTOR_TYPE` | yes | `EXTERNAL_IMPORT` | Must be `EXTERNAL_IMPORT` |
 | Connector name | `connector.name` | `CONNECTOR_NAME` | yes | `Stairwell Import` | Display name in OpenCTI |
-| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | yes | `stairwell` | Free-form import scope tag |
+| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | no | `stairwell` | Comma-separated scope tags |
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | no | `error` | `debug`, `info`, `warn`, `error` |
 | Duration period | `connector.duration_period` | `CONNECTOR_DURATION_PERIOD` | no | `P1D` | ISO 8601 interval between runs (scheduling) |
 

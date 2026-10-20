@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Stairwell Import' # optional (default: 'Stairwell Import')
-  scope: 'stairwell'
+  scope: 'stairwell' # optional (default: 'stairwell')
   log_level: 'error' # optional (default: 'error')
   duration_period: 'P1D' # optional, ISO-8601 interval between two runs (default: 'P1D')
 

@@ -19,3 +19,14 @@ def test_committed_config_schema_matches_settings():
         (CONNECTOR_DIR / "__metadata__" / "connector_config_schema.json").read_text()
     )
     assert generated == committed
+
+
+def test_scope_has_a_list_default():
+    """The OpenCTI UI and upstream's metadata tests need a default for array settings."""
+    committed = json.loads(
+        (CONNECTOR_DIR / "__metadata__" / "connector_config_schema.json").read_text()
+    )
+    scope = committed["properties"]["CONNECTOR_SCOPE"]
+    assert scope["type"] == "array"
+    assert scope["default"] == ["stairwell"]
+    assert "CONNECTOR_SCOPE" not in committed.get("required", [])

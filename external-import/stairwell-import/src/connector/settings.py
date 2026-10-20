@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -21,6 +22,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="Stairwell Import",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["stairwell"],
     )
     duration_period: timedelta = Field(
         description="Interval between two runs of the connector (ISO-8601).",
