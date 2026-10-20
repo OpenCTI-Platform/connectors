@@ -27,6 +27,8 @@ def test_vulnerability_parses_a_full_item(single_vulnerability):
     assert vuln.products[0].product.name == "Example Admin Panel"
     assert vuln.products[0].product.vendor.name == "Example Vendor"
     assert vuln.products[0].product_version == "1.2.3"
+    assert vuln.assigner == "Example-CERT"
+    assert [ref.vendor.name for ref in vuln.vendors] == ["Example Vendor"]
 
 
 def test_vulnerability_handles_missing_products_and_null_lists(search_page):
@@ -45,12 +47,16 @@ def test_vulnerability_coalesces_null_references_and_aliases_to_empty_lists():
         "dateUpdated": "Jan 1, 2024, 12:00:00 AM",
         "references": None,
         "aliases": None,
+        "enisaIdProduct": None,
+        "enisaIdVendor": None,
     }
     vuln = EUVDVulnerability.model_validate(raw)
 
     assert vuln.references == []
     assert vuln.aliases == []
     assert vuln.products == []
+    assert vuln.vendors == []
+    assert vuln.assigner is None
     assert vuln.base_score is None
     assert vuln.epss is None
 
@@ -74,3 +80,18 @@ def test_vulnerability_parses_every_cvss_version(
 ):
     vuln = EUVDVulnerability.model_validate(search_page["items"][search_index])
     assert vuln.base_score_version == expected_version
+
+
+def test_vulnerability_accepts_a_product_without_vendor():
+    raw = {
+        "id": "EUVD-2024-99998",
+        "description": "Product without vendor, seen on the live API.",
+        "datePublished": "Jan 1, 2024, 12:00:00 AM",
+        "dateUpdated": "Jan 1, 2024, 12:00:00 AM",
+        "enisaIdProduct": [{"product": {"name": "Example Product"}}],
+    }
+
+    vuln = EUVDVulnerability.model_validate(raw)
+
+    assert vuln.products[0].product.name == "Example Product"
+    assert vuln.products[0].product.vendor is None

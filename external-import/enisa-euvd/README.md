@@ -6,9 +6,6 @@ Table of Contents
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration variables](#configuration-variables)
-  - [OpenCTI environment variables](#opencti-environment-variables)
-  - [Base connector environment variables](#base-connector-environment-variables)
-  - [ENISA EUVD connector environment variables](#enisa-euvd-connector-environment-variables)
   - [In-code constants](#in-code-constants)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
@@ -31,9 +28,11 @@ published by ENISA (European Union Agency for Cybersecurity). See the
 [API documentation](https://euvd.enisa.europa.eu/apidoc).
 
 Each vulnerability is ingested as a STIX `Vulnerability` with its CVSS scores
-(v2/v3/v4, whichever the source reports), EPSS score, and aliases (CVE,
-GHSA...). Affected products can optionally be ingested as `Software`
-observables linked to the vulnerability with a `has` relationship.
+(v2/v3/v4, whichever the source reports), EPSS score, aliases (CVE, GHSA...)
+and labels for its assigner and affected vendors and products. The import can
+be restricted to a minimum score, to exploited vulnerabilities or to critical
+ones. Affected products can optionally be ingested as `Software` observables
+linked to the vulnerability with a `has` relationship.
 
 ## Installation
 
@@ -44,34 +43,13 @@ observables linked to the vulnerability with a `has` relationship.
 
 ## Configuration variables
 
-The exhaustive, generated list of every parameter is available in
-[Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                       |
-| ------------- | ---------- | ---------------------------- | --------- | ---------------------------------- |
-| OpenCTI URL   | `url`      | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.   |
-| OpenCTI Token | `token`    | `OPENCTI_TOKEN`               | Yes       | The API token for OpenCTI.         |
-
-### Base connector environment variables
-
-| Parameter        | config.yml         | Docker environment variable    | Default   | Mandatory | Description                                          |
-| ---------------- | ------------------- | ------------------------------- | --------- | --------- | ----------------------------------------------------- |
-| Connector ID      | `id`                | `CONNECTOR_ID`                  | `cd55d2d1-cdd9-4880-9e76-afa1f4c1d0cb` (placeholder) | No | A unique `UUIDv4` identifying this connector instance. **Replace the default with your own generated UUIDv4 before deploying more than one instance.** |
-| Connector Name    | `name`              | `CONNECTOR_NAME`                | ENISA EUVD | No       | Display name of the connector.                        |
-| Connector Scope   | `scope`             | `CONNECTOR_SCOPE`               | `vulnerability` | No | Entity types imported.                                 |
-| Log Level         | `log_level`         | `CONNECTOR_LOG_LEVEL`           | `error`   | No        | One of `debug`, `info`, `warn`, `warning`, `error`.    |
-| Duration Period   | `duration_period`   | `CONNECTOR_DURATION_PERIOD`     | `PT2H`    | No        | ISO 8601 duration between two runs.                    |
-
-### ENISA EUVD connector environment variables
-
-| Parameter          | config.yml            | Docker environment variable   | Default                                          | Mandatory | Description                                                                                          |
-| ------------------- | ---------------------- | -------------------------------| ------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| API base URL        | `api_base_url`         | `ENISA_EUVD_API_BASE_URL`           | `https://euvdservices.enisa.europa.eu/api`         | No        | Base URL of the ENISA EUVD API.                                                                        |
-| Import start date   | `import_start_date`    | `ENISA_EUVD_IMPORT_START_DATE`      | `P30D`                                             | No        | First run only: how far back (by `dateUpdated`) to pull. Subsequent runs resume from persisted state.  |
-| TLP level           | `tlp_level`            | `ENISA_EUVD_TLP_LEVEL`              | `clear`                                            | No        | One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                                       |
-| Ingest software     | `ingest_software`      | `ENISA_EUVD_INGEST_SOFTWARE`        | `false`                                            | No        | Import affected products as `Software` observables + `has` relationships. Off by default (volume).    |
+Set your own `CONNECTOR_ID` (a UUIDv4) before deploying more than one
+instance: the default value is shared by every deployment.
 
 ### In-code constants
 
@@ -118,10 +96,10 @@ automatically according to `duration_period`.
 ```mermaid
 flowchart LR
     A["ENISA EUVD API<br/>GET /search"] --> B[EnisaEuvdClient]
-    B -->|"paginate page=0..N<br/>size=100, stop at cutoff"| C[VulnerabilityProcessor.collect]
+    B -->|"fromUpdatedDate + filters<br/>page=0..N, size=100<br/>stop at watermark"| C[VulnerabilityProcessor.collect]
     C --> D[VulnerabilityProcessor.transform]
     D -->|"Vulnerability<br/>+ optional Software / has"| E[(OpenCTI)]
-    D -->|"advance watermark<br/>(newest-first, freezes on error)"| F[(Connector state<br/>last_euvd_updated)]
+    D -->|"advance watermark<br/>(stays below failed items)"| F[(Connector state<br/>last_euvd_updated)]
 ```
 
 ### STIX 2.1 mapping
@@ -132,10 +110,12 @@ flowchart LR
 | --- | --- | --- |
 | `id` (`EUVD-xxxx`) | `name` | never empty |
 | `description` | `description` | full |
+| `datePublished` | `created` | |
 | `aliases` (CVE, GHSA...) | `aliases` | split by line, deduplicated |
 | `baseScore` + `baseScoreVersion` | `cvss_v{2,3,4}_base_score` | routed by version (`2.0`→v2, `3.0`/`3.1`→v3, `4.0`→v4); unrecognized versions are logged and dropped |
 | `baseScoreVector` | `cvss_v{2,3,4}_vector_string` | same routing |
-| `epss` | `epss_score` | |
+| `epss` | `epss_score` | EUVD gives a percentage (`18.38`), divided by 100 (`0.1838`) |
+| `assigner`, `enisaIdVendor[].vendor.name`, `enisaIdProduct[].product.name` | `labels` | in that order, deduplicated case-insensitively |
 | `id` | `external_references[]` | `source_name="ENISA EUVD"`, `external_id`, `url=https://euvd.enisa.europa.eu/vulnerability/{id}` |
 | `references` (URL lines) | `external_references[]` | one per URL; `source_name` inferred from the domain (NVD, GitHub Advisory...), else `"ENISA EUVD reference"` |
 
@@ -163,42 +143,47 @@ flowchart LR
 | Source field | Reason |
 | --- | --- |
 | `enisaUuid` | Internal technical id, no OpenCTI use. |
-| `assigner` | No dedicated SDK property; not structuring enough for a label. |
-| `enisaIdVendor` | Redundant with `enisaIdProduct[].product.vendor`. |
+| `dateUpdated` | The connectors-sdk `Vulnerability` model has no `modified` property; the date is only used as the collection watermark. |
+| `exploitedSince` | No dedicated SDK property; use `exploited_only` to restrict the import to exploited vulnerabilities. |
 | Detailed CVSS sub-metrics (AV/AC/PR...) | EUVD only exposes the raw vector string, not individual sub-metric fields. |
 | CWE | Absent from the EUVD `/search` payload (verified live). |
 | EPSS percentile | Absent from the EUVD payload (only a raw `epss` score is provided). |
 
 ### Collection strategy and checkpointing
 
-`GET /search` supports only `page`/`size` pagination (max `size=100`), sorted
-**descending by `dateUpdated`** (verified against the live API) — there is no
-independent "updated since" filter.
+`GET /search` is sorted **descending by `dateUpdated`** and paginated with
+`page`/`size` (max `size=100`). Its `fromUpdatedDate` filter only has day
+granularity.
 
 - The connector keeps a single watermark, `last_euvd_updated`, in its
-  persisted state.
-- On each run, it walks `page=0, 1, 2...` and stops as soon as it sees an item
-  older than the watermark (or `now - import_start_date` on the first run) —
-  everything after that point is guaranteed older, since results are sorted
-  descending.
-- The watermark only advances through the newest-first, *contiguous prefix of
-  successfully converted items*: if any item fails to convert, the watermark
-  freezes at the last successfully converted item **before** the failure, so
-  the failed item (and everything from that point on) is retried on the next
-  run instead of being silently skipped forever.
-- The comparison is inclusive (`>=`), so the item at the watermark itself is
-  re-fetched and re-sent on the next run. This is a harmless duplicate:
-  OpenCTI deduplicates by the deterministic STIX id (`Vulnerability.generate_id(name=<EUVD-id>)`).
+  persisted state: the `dateUpdated` of the newest vulnerability imported.
+- On each run, it requests `fromUpdatedDate=<day of the watermark>` (or of
+  `import_start_date` on the first run) with the configured `fromScore` and
+  `exploited` filters, walks `page=0, 1, 2...`, and stops at the first item
+  updated at or before the watermark: everything after it is older.
+- The comparison is strict (`>`): the newest item of a run, whose
+  `dateUpdated` became the watermark, is not sent again on the next run.
+- If an item fails validation or conversion, the watermark stays below it: it
+  moves to the newest converted item older than every failed item (or does
+  not move), so the failed item is fetched again on the next run. An item
+  whose `dateUpdated` itself cannot be read cannot be placed: it is logged and
+  skipped.
 
 ## Known caveats
 
-- **No true incremental cursor**: because pagination is by position only
-  (no independent date filter), a crash mid-run does not resume from a
-  partial page — the next run restarts the walk from `page=0` with the same
-  watermark as the last fully-successful run. This is safe (thanks to
-  deterministic STIX ids) but means a crash near the end of a large first-run
-  catch-up (e.g. a 30-day backfill) re-fetches and re-sends everything from
-  that run, rather than only the remainder.
+- **No resume within a run**: pagination is by position, and new items shift
+  every page, so a failed run is not resumed from a partial page. The state
+  is only saved after a fully successful run, so the next run walks again
+  from `page=0` with the previous watermark. This is safe (deterministic STIX
+  ids) but a failure near the end of a large first import (90 days by
+  default) sends that whole window again.
+- **Item that keeps failing validation or conversion**: the watermark stays below it, so
+  every following run sends it and every newer item again until it converts.
+  Each failure is logged as a warning with its EUVD id.
+- **Changing the filters**: the watermark is not reset when `min_score`,
+  `exploited_only` or `critical_only` change. Vulnerabilities newly matching
+  a looser filter but updated before the watermark are not imported until
+  they are updated again; reset the connector state to import them.
 - **CVSS v2 items have no `base_severity`**: EUVD does not provide a severity
   label (only a numeric score), so `cvss_v{2,3,4}_base_severity` is never set.
 - **`Software` volume**: a single vulnerability can list many affected

@@ -53,7 +53,16 @@ class EUVDProduct(BaseModel):
     """A product, as nested under a product reference."""
 
     name: str = Field(description="Name of the product.")
-    vendor: EUVDVendor = Field(description="Vendor of the product.")
+    vendor: EUVDVendor | None = Field(
+        default=None,
+        description="Vendor of the product, absent on some items.",
+    )
+
+
+class EUVDVendorRef(BaseModel):
+    """One entry of `enisaIdVendor`: a vendor affected by the vulnerability."""
+
+    vendor: EUVDVendor
 
 
 class EUVDProductRef(BaseModel):
@@ -78,7 +87,14 @@ class EUVDVulnerability(BaseModel):
     base_score: float | None = Field(default=None, alias="baseScore")
     base_score_version: str | None = Field(default=None, alias="baseScoreVersion")
     base_score_vector: str | None = Field(default=None, alias="baseScoreVector")
-    epss: float | None = Field(default=None, description="EPSS score (0-1).")
+    epss: float | None = Field(
+        default=None,
+        description="EPSS score, as a percentage (0-100), e.g. 18.38 for 0.1838.",
+    )
+    assigner: str | None = Field(
+        default=None,
+        description="Organization that assigned the identifier, e.g. 'mitre'.",
+    )
     references: list[str] = Field(
         default_factory=list,
         description="Related URLs (advisories, NVD/CVE detail pages...).",
@@ -92,6 +108,11 @@ class EUVDVulnerability(BaseModel):
         alias="enisaIdProduct",
         description="Affected products, each with its vendor and version range.",
     )
+    vendors: list[EUVDVendorRef] = Field(
+        default_factory=list,
+        alias="enisaIdVendor",
+        description="Affected vendors.",
+    )
 
     @field_validator("date_published", "date_updated", mode="before")
     @classmethod
@@ -102,3 +123,27 @@ class EUVDVulnerability(BaseModel):
     @classmethod
     def _validate_lines(cls, value: object) -> list[str]:
         return _split_lines(value)
+
+    @field_validator("products", "vendors", mode="before")
+    @classmethod
+    def _validate_nullable_lists(cls, value: object) -> object:
+        return [] if value is None else value
+
+
+class EUVDInvalidItem(BaseModel):
+    """An item of `GET /search` that failed `EUVDVulnerability` validation.
+
+    Only its id and `dateUpdated` are kept, so the processor can log it and
+    keep the watermark below it until it can be imported.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = Field(default="unknown", description="The EUVD identifier, if any.")
+    date_updated: datetime = Field(alias="dateUpdated")
+    error: str = Field(description="Why the item failed validation.")
+
+    @field_validator("date_updated", mode="before")
+    @classmethod
+    def _validate_date(cls, value: object) -> object:
+        return _parse_euvd_datetime(value)

@@ -5,12 +5,16 @@ Reference: https://euvd.enisa.europa.eu/apidoc
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import Any
 
-from connectors_sdk import BaseClientApi, RateLimit
-from enisa_euvd.models import EUVDVulnerability
+import requests
+from connectors_sdk import ApiClientError, BaseClientApi, RateLimit
+from connectors_sdk.exceptions.error import DataRetrievalError
+from enisa_euvd.models import EUVDInvalidItem, EUVDVulnerability
+from pydantic import ValidationError
 
 PAGE_SIZE = 100
 # EUVD publishes no documented rate limit; stay defensive and proactively
@@ -41,65 +45,110 @@ class EnisaEuvdClient(BaseClientApi):
         return {"User-Agent": USER_AGENT}
 
     def iter_vulnerabilities(
-        self, cutoff: datetime | None = None
-    ) -> Generator[list[EUVDVulnerability], None, None]:
+        self,
+        updated_after: datetime | None = None,
+        min_score: float | None = None,
+        exploited_only: bool = False,
+    ) -> Generator[list[EUVDVulnerability | EUVDInvalidItem], None, None]:
         """Paginate `GET /search`, page by page, newest `dateUpdated` first.
 
         Args:
-            cutoff: When set, only vulnerabilities with `date_updated >= cutoff`
-                are yielded. Since `/search`'s default order is descending on
-                `dateUpdated` (verified against the live API), the first item
-                older than `cutoff` means every following item -- on this page
-                and on any subsequent page -- is older too, so pagination stops
-                immediately instead of fetching pages that would be entirely
-                discarded. A naive (timezone-unaware) `cutoff` is treated as
-                UTC, matching the API's own (always UTC) timestamps.
+            updated_after: When set, only vulnerabilities with
+                `date_updated > updated_after` (strictly) are yielded. The
+                API's `fromUpdatedDate` filter only has day granularity, so it
+                is sent to skip older days server-side, and the exact
+                comparison is done here. The comparison is strict so the
+                newest item of the previous run, whose `dateUpdated` became
+                the watermark, is not sent again on every run. Since
+                `/search` is sorted descending on `dateUpdated`, the first
+                item at or before `updated_after` ends the pagination. A naive
+                (timezone-unaware) value is treated as UTC, like the API's own
+                timestamps.
+            min_score: When set, sent as `fromScore`: only vulnerabilities
+                with a base score greater than or equal to it are returned.
+            exploited_only: When true, sent as `exploited=true`: only
+                vulnerabilities with a known exploitation are returned.
 
         Yields:
-            One page (list) of validated `EUVDVulnerability` at a time. Items
-            that fail validation are logged and skipped, never raised.
-        """
-        if cutoff is not None and cutoff.tzinfo is None:
-            cutoff = cutoff.replace(tzinfo=timezone.utc)
+            One page (list) of items at a time: an `EUVDVulnerability` per
+            valid item, an `EUVDInvalidItem` per item that failed validation
+            (see `_parse_items`).
 
-        page = 0
-        while True:
-            response = self._get("/search", params={"page": page, "size": PAGE_SIZE})
+        Raises:
+            DataRetrievalError: If the API is unreachable or keeps returning
+                an error once retries are exhausted.
+        """
+        params: dict[str, Any] = {"size": PAGE_SIZE}
+        if updated_after is not None:
+            if updated_after.tzinfo is None:
+                updated_after = updated_after.replace(tzinfo=timezone.utc)
+            params["fromUpdatedDate"] = (
+                updated_after.astimezone(timezone.utc).date().isoformat()
+            )
+        if min_score is not None:
+            params["fromScore"] = min_score
+        if exploited_only:
+            params["exploited"] = "true"
+
+        for page in itertools.count():
+            try:
+                response = self._get("/search", params={**params, "page": page})
+            except (ApiClientError, requests.RequestException) as err:
+                raise DataRetrievalError(
+                    f"Failed to fetch EUVD vulnerabilities (page {page}): {err}"
+                ) from err
             raw_items = (response or {}).get("items") or []
             if not raw_items:
                 break
 
-            vulnerabilities = self._parse_items(raw_items)
+            items = self._parse_items(raw_items)
 
-            if cutoff is not None:
-                in_range = [v for v in vulnerabilities if v.date_updated >= cutoff]
+            if updated_after is not None:
+                in_range = [i for i in items if i.date_updated > updated_after]
                 if in_range:
                     yield in_range
-                if len(in_range) < len(vulnerabilities):
-                    # Reached an item older than the cutoff: every subsequent
-                    # item (this page and following ones) is older still.
+                if len(in_range) < len(items):
+                    # Reached an item at or before the watermark: every
+                    # subsequent item (this page and following ones) is older.
                     break
-            elif vulnerabilities:
-                yield vulnerabilities
+            elif items:
+                yield items
 
             if len(raw_items) < PAGE_SIZE:
                 break
-            page += 1
 
-    def _parse_items(self, raw_items: list[dict[str, Any]]) -> list[EUVDVulnerability]:
-        """Validate each raw item, logging and skipping malformed ones."""
-        vulnerabilities = []
+    def _parse_items(
+        self, raw_items: list[dict[str, Any]]
+    ) -> list[EUVDVulnerability | EUVDInvalidItem]:
+        """Validate each raw item.
+
+        An item that fails validation is returned as an `EUVDInvalidItem` when
+        its `dateUpdated` can still be read, so the processor keeps the
+        watermark below it. Otherwise it cannot be placed, and is logged and
+        skipped.
+        """
+        items: list[EUVDVulnerability | EUVDInvalidItem] = []
         for raw_item in raw_items:
-            raw_id = (
-                raw_item.get("id", "unknown")
-                if isinstance(raw_item, dict)
-                else "unknown"
-            )
             try:
-                vulnerabilities.append(EUVDVulnerability.model_validate(raw_item))
-            except Exception as e:
-                self._logger.warning(
-                    "Failed to parse EUVD vulnerability, skipping it",
-                    {"raw_id": raw_id, "error": str(e)},
+                items.append(EUVDVulnerability.model_validate(raw_item))
+                continue
+            except ValidationError as err:
+                error = str(err)
+            raw = raw_item if isinstance(raw_item, dict) else {}
+            try:
+                items.append(
+                    EUVDInvalidItem.model_validate(
+                        {
+                            "id": raw.get("id") or "unknown",
+                            "dateUpdated": raw.get("dateUpdated"),
+                            "error": error,
+                        }
+                    )
                 )
-        return vulnerabilities
+            except ValidationError:
+                self._logger.warning(
+                    "Failed to parse EUVD vulnerability without a valid "
+                    "dateUpdated, skipping it",
+                    {"raw_id": raw.get("id", "unknown"), "error": error},
+                )
+        return items

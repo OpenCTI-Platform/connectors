@@ -4,16 +4,20 @@ Configuration values are read from environment variables or `config.yml`
 (see `config.yml.sample` and the README's "Configuration variables" section).
 """
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl
+
+# Lower bound of the CVSS "Critical" severity rating (v3.x and v4.0).
+CRITICAL_SCORE = 9.0
 
 
 class ConnectorConfig(BaseExternalImportConnectorConfig):
@@ -33,8 +37,8 @@ class ConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="Time to wait between two runs of the connector, "
-        "as an ISO 8601 duration (e.g. `PT2H` for two hours).",
-        default=timedelta(hours=2),
+        "as an ISO 8601 duration (e.g. `P1D` for one day).",
+        default=timedelta(days=1),
     )
 
 
@@ -45,16 +49,34 @@ class EnisaEuvdConfig(BaseConfigModel):
         default=HttpUrl("https://euvdservices.enisa.europa.eu/api"),
         description="The base URL of the ENISA EUVD API.",
     )
-    import_start_date: timedelta = Field(
-        default=timedelta(days=30),
-        description="First run only: how far back (last-update) to pull, as an "
-        "ISO 8601 duration (e.g. 'P30D' for 30 days). Subsequent runs resume from "
-        "the connector's persisted state.",
+    import_start_date: DatetimeFromIsoString = Field(
+        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=90),
+        description="First run only: oldest last-update date to import. Can be "
+        "absolute (e.g. '2026-01-01T00:00:00Z') or relative (e.g. 'P90D' for "
+        "90 days ago). Subsequent runs resume from the connector's persisted state.",
     )
     tlp_level: TLPLevel = Field(
         default=TLPLevel.CLEAR,
         description="Default TLP (Traffic Light Protocol) marking applied to "
         "every object this connector creates in OpenCTI.",
+    )
+    min_score: float | None = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Only import vulnerabilities with a base score greater than "
+        "or equal to this value (0 to 10). Vulnerabilities without a score are "
+        "then excluded. Leave empty to import every vulnerability.",
+    )
+    exploited_only: bool = Field(
+        default=False,
+        description="Only import vulnerabilities with a known exploitation.",
+    )
+    critical_only: bool = Field(
+        default=False,
+        description="Only import vulnerabilities of critical severity "
+        f"(base score of {CRITICAL_SCORE} or more). Combined with `min_score`, "
+        "the higher of the two thresholds applies.",
     )
     ingest_software: bool = Field(
         default=False,
@@ -63,6 +85,13 @@ class EnisaEuvdConfig(BaseConfigModel):
         "vulnerability can reference many affected products, which increases "
         "the volume of objects created per run.",
     )
+
+    @property
+    def effective_min_score(self) -> float | None:
+        """The score threshold to apply, combining `min_score` and `critical_only`."""
+        if self.critical_only:
+            return max(self.min_score or 0.0, CRITICAL_SCORE)
+        return self.min_score
 
 
 class ConnectorSettings(BaseConnectorSettings):
