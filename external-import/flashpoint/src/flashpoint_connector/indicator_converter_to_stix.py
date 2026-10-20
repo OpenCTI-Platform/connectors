@@ -31,15 +31,14 @@ from connectors_sdk.models.enums import (
     RelationshipType,
     TLPLevel,
 )
-from pycti import OpenCTIConnectorHelper
-
-from .extracted_config import (
+from flashpoint_connector.extracted_config import (
     NetworkKind,
     extract_network_indicators,
     extract_parameters,
     parse_extracted_config,
 )
-from .utils import is_domain
+from flashpoint_connector.utils import is_domain
+from pycti import OpenCTIConnectorHelper
 
 
 class IndicatorConverterToStix:
@@ -53,14 +52,19 @@ class IndicatorConverterToStix:
         self,
         helper: OpenCTIConnectorHelper,
         tlp_definition: str = "TLP:GREEN",
+        import_extracted_config_domains_urls: bool = False,
     ):
         """Initialize converter dependencies and default marking.
 
         Args:
             helper: OpenCTI connector helper used for logging and object context.
             tlp_definition: TLP definition for generated indicator-related objects.
+            import_extracted_config_domains_urls: Whether domains and URLs found in
+                extracted malware configs become observables. Disabled by default
+                because those lists can mix real C2s with legitimate domains.
         """
         self.helper = helper
+        self.import_extracted_config_domains_urls = import_extracted_config_domains_urls
         self.author = self._create_author()
         tlp_level_mapping = {
             "TLP:CLEAR": TLPLevel.CLEAR,
@@ -890,9 +894,18 @@ class IndicatorConverterToStix:
         return DomainName(value=value, **common_properties)
 
     @staticmethod
-    def _build_config_note_content(parameters: dict[str, str]) -> str:
-        """Render config parameters as a markdown list."""
-        return "\n".join(f"- **{key}**: `{value}`" for key, value in parameters.items())
+    def _build_config_note_content(indicator_id: str | None, parameters: dict) -> str:
+        """Render config parameters as a markdown list.
+
+        The Flashpoint indicator id leads the content so two distinct configs
+        sharing the same parameters do not collapse into a single note. Only
+        stable values go in the content: it feeds the note id.
+        """
+        lines = (
+            [f"- **Flashpoint indicator**: `{indicator_id}`"] if indicator_id else []
+        )
+        lines.extend(f"- **{key}**: `{value}`" for key, value in parameters.items())
+        return "\n".join(lines)
 
     def _convert_extracted_config(self, indicator: dict) -> list:
         """Convert an `extracted_config` indicator into malware, observables and a note.
@@ -929,16 +942,20 @@ class IndicatorConverterToStix:
             for name in sorted(malware_names)
         ]
 
-        labels = sorted(
-            {
-                tag
-                for tag in self._collect_sighting_tags(indicator)
-                if tag.startswith(("malware:", "type:"))
-            }
-        )
+        base_labels = {
+            tag
+            for tag in self._collect_sighting_tags(indicator)
+            if tag.startswith(("malware:", "type:"))
+        }
         observables = [
-            self._create_network_observable(kind, value, labels)
-            for kind, value in extract_network_indicators(config)
+            self._create_network_observable(
+                endpoint.kind,
+                endpoint.value,
+                sorted(base_labels | ({"dga"} if endpoint.is_dga else set())),
+            )
+            for endpoint in extract_network_indicators(config)
+            if self.import_extracted_config_domains_urls
+            or endpoint.kind not in ("domain", "url")
         ]
 
         attached_objects = [*malwares, *observables]
@@ -961,11 +978,10 @@ class IndicatorConverterToStix:
         title = ", ".join(sorted(malware_names)) or "unknown malware"
         note = Note(
             abstract=f"Extracted configuration ({title})",
-            content=self._build_config_note_content(parameters)
+            content=self._build_config_note_content(indicator.get("id"), parameters)
             or "No additional parameters.",
             note_types=[NoteType.EXTERNAL],
             objects=attached_objects,
-            created=self._parse_datetime(indicator.get("created_at")),
             external_references=self._build_external_references(indicator),
             author=self.author,
             markings=[self.marking],

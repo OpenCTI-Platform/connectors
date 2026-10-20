@@ -1,7 +1,8 @@
 import json
-from typing import Literal
+from typing import Literal, NamedTuple
+from urllib.parse import urlparse
 
-from .utils import is_domain, is_ipv4, is_ipv6
+from flashpoint_connector.utils import is_domain, is_ipv4, is_ipv6
 
 NetworkKind = Literal["domain", "ipv4", "ipv6", "url"]
 
@@ -19,12 +20,25 @@ NETWORK_KEYS = frozenset(
         "ips",
         "gateway",
         "c2",
+        "c2s",
+        "dga_c2s",
         "url",
         "urls",
     }
 )
 
+# Config keys listing algorithmically generated (short-lived) endpoints.
+DGA_KEYS = frozenset({"dga_c2s"})
+
 URL_SCHEMES = ("http://", "https://", "ftp://")
+
+
+class NetworkIndicator(NamedTuple):
+    """A network endpoint found in an extracted config."""
+
+    kind: NetworkKind
+    value: str
+    is_dga: bool = False
 
 
 def parse_extracted_config(raw_value: str | None) -> dict | None:
@@ -57,10 +71,8 @@ def _flatten_values(raw: object) -> list[str]:
     return [part.strip() for part in str(raw).split(",") if part.strip()]
 
 
-def _classify(value: str) -> tuple[NetworkKind, str] | None:
-    """Return the observable kind and normalized value, or `None` if unusable."""
-    if value.lower().startswith(URL_SCHEMES):
-        return "url", value
+def _classify_host(value: str) -> tuple[NetworkKind, str] | None:
+    """Classify a bare host as IPv4, IPv6 or domain."""
     if is_ipv4(value):
         return "ipv4", value
     if is_ipv6(value):
@@ -70,33 +82,61 @@ def _classify(value: str) -> tuple[NetworkKind, str] | None:
     return None
 
 
-def extract_network_indicators(config: dict) -> list[tuple[NetworkKind, str]]:
+def _classify(value: str) -> tuple[NetworkKind, str] | None:
+    """Return the observable kind and normalized value, or `None` if unusable.
+
+    A URL made only of a scheme and a host (no path, query or fragment) carries
+    no more information than its host, so it is returned as a domain or an IP.
+    """
+    if value.lower().startswith(URL_SCHEMES):
+        parsed = urlparse(value)
+        has_only_host = (
+            parsed.path in ("", "/")
+            and not parsed.params
+            and not parsed.query
+            and not parsed.fragment
+        )
+        if has_only_host:
+            return _classify_host(parsed.hostname) if parsed.hostname else None
+        return "url", value
+    return _classify_host(value)
+
+
+def extract_network_indicators(config: dict) -> list[NetworkIndicator]:
     """Extract deduplicated network endpoints from a parsed config.
 
     Args:
         config: Parsed `extracted_config` payload.
 
     Returns:
-        list[tuple[NetworkKind, str]]: `(kind, value)` pairs in config order.
+        list[NetworkIndicator]: Endpoints in config order. An endpoint listed
+        under a DGA key is flagged even when it also appears under another key.
     """
-    endpoints: list[tuple[NetworkKind, str]] = []
-    seen: set[tuple[str, str]] = set()
+    endpoints: dict[tuple[NetworkKind, str], bool] = {}
 
     for key, raw in config.items():
-        if key.lower() not in NETWORK_KEYS:
+        lowered_key = key.lower()
+        if lowered_key not in NETWORK_KEYS:
             continue
+        is_dga = lowered_key in DGA_KEYS
         for value in _flatten_values(raw):
             classified = _classify(value)
-            if classified is None or classified in seen:
+            if classified is None:
                 continue
-            seen.add(classified)
-            endpoints.append(classified)
+            endpoints[classified] = endpoints.get(classified, False) or is_dga
 
-    return endpoints
+    return [
+        NetworkIndicator(kind, value, is_dga)
+        for (kind, value), is_dga in endpoints.items()
+    ]
 
 
 def extract_parameters(config: dict) -> dict[str, str]:
     """Extract non-network parameters (ports, mutex, keys, ...) as strings.
+
+    The result is deterministic for a given config: keys are sorted and list
+    values are sorted, so the output does not depend on the order in which the
+    API returns them.
 
     Args:
         config: Parsed `extracted_config` payload.
@@ -105,10 +145,14 @@ def extract_parameters(config: dict) -> dict[str, str]:
         dict[str, str]: Parameters with empty values dropped, lists joined by `, `.
     """
     parameters: dict[str, str] = {}
-    for key, raw in config.items():
+    for key in sorted(config, key=str.lower):
         if key.lower() in NETWORK_KEYS:
             continue
-        values = _flatten_values(raw) if isinstance(raw, (list, tuple)) else [raw]
+        raw = config[key]
+        if isinstance(raw, (list, tuple)):
+            values = sorted(_flatten_values(raw))
+        else:
+            values = [raw]
         text = ", ".join(str(value) for value in values if value not in (None, ""))
         if text.strip():
             parameters[key] = text.strip()

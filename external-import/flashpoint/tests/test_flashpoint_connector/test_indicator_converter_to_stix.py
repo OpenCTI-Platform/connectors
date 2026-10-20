@@ -22,10 +22,15 @@ from connectors_sdk.models.enums import RelationshipType
 from flashpoint_connector.indicator_converter_to_stix import IndicatorConverterToStix
 
 
-def _build_converter() -> IndicatorConverterToStix:
+def _build_converter(
+    import_extracted_config_domains_urls: bool = False,
+) -> IndicatorConverterToStix:
     helper = Mock()
     helper.connector_logger = Mock()
-    return IndicatorConverterToStix(helper=helper)
+    return IndicatorConverterToStix(
+        helper=helper,
+        import_extracted_config_domains_urls=import_extracted_config_domains_urls,
+    )
 
 
 def _build_extracted_config(value: str, tags: list[str] | None = None) -> dict:
@@ -57,7 +62,7 @@ def test_convert_extracted_config_should_not_create_indicator_or_text():
 
 
 def test_convert_extracted_config_should_create_malware_observables_and_relationships():
-    converter = _build_converter()
+    converter = _build_converter(import_extracted_config_domains_urls=True)
     indicator = _build_extracted_config(
         '{"type": "botnet", "Domains": "mir.anonplus.org,rep.anonplus.org"}'
     )
@@ -81,7 +86,7 @@ def test_convert_extracted_config_should_create_malware_observables_and_relation
 
 
 def test_convert_extracted_config_should_handle_host_key_variants_and_lists():
-    converter = _build_converter()
+    converter = _build_converter(import_extracted_config_domains_urls=True)
     indicator = _build_extracted_config(
         '{"HOSTS": "Example.COM,,example.com", "ip": ["162.216.243.56"], '
         '"gateway": ["172.86.117.36"], "urls": ["http://example.net/c"], '
@@ -100,7 +105,7 @@ def test_convert_extracted_config_should_handle_host_key_variants_and_lists():
 
 
 def test_convert_extracted_config_should_keep_parameters_in_note():
-    converter = _build_converter()
+    converter = _build_converter(import_extracted_config_domains_urls=True)
     indicator = _build_extracted_config(
         '{"Ports": "443,80", "Mutex": "DcRatMutex_x", "Empty": "", '
         '"Hosts": ["example.com"], "type": "trojan"}',
@@ -118,6 +123,60 @@ def test_convert_extracted_config_should_keep_parameters_in_note():
     assert {obj.id for obj in note.objects} == {
         obj.id for obj in octi_objects if isinstance(obj, (Malware, DomainName))
     }
+
+
+def test_convert_extracted_config_should_skip_domains_and_urls_by_default():
+    converter = _build_converter()
+    indicator = _build_extracted_config(
+        '{"Hosts": ["example.com", "203.0.113.10"], "urls": ["http://example.net/c"]}',
+        tags=["malware:strrat", "type:trojan"],
+    )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    assert not any(isinstance(obj, (DomainName, URL)) for obj in octi_objects)
+    ips = [obj.value for obj in octi_objects if isinstance(obj, IPV4Address)]
+    assert ips == ["203.0.113.10"]
+
+
+def test_convert_extracted_config_should_read_c2s_keys_and_flag_dga_domains():
+    converter = _build_converter(import_extracted_config_domains_urls=True)
+    indicator = _build_extracted_config(
+        '{"C2s": ["http://203.0.113.5/gate.php"], '
+        '"dga_c2s": ["https://dga.example.org", "https://203.0.113.9/"]}',
+        tags=["malware:prometai", "type:trojan"],
+    )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    urls = [obj.value for obj in octi_objects if isinstance(obj, URL)]
+    domains = [obj for obj in octi_objects if isinstance(obj, DomainName)]
+    ips = [obj for obj in octi_objects if isinstance(obj, IPV4Address)]
+    assert urls == ["http://203.0.113.5/gate.php"]
+    assert [domain.value for domain in domains] == ["dga.example.org"]
+    assert "dga" in domains[0].labels
+    assert [ip.value for ip in ips] == ["203.0.113.9"]
+    assert "dga" in ips[0].labels
+    assert "dga" not in next(obj for obj in octi_objects if isinstance(obj, URL)).labels
+
+
+def test_convert_extracted_config_note_id_should_be_deterministic():
+    converter = _build_converter(import_extracted_config_domains_urls=True)
+    first = _build_extracted_config(
+        '{"Ports": "443", "lst": ["b", "a"], "Hosts": ["example.com"]}',
+        tags=["malware:dcrat"],
+    )
+    second = _build_extracted_config(
+        '{"lst": ["a", "b"], "Hosts": ["example.com"], "Ports": "443"}',
+        tags=["malware:dcrat"],
+    )
+
+    first_note = converter.convert_indicator_to_stix(first)[0]
+    second_note = converter.convert_indicator_to_stix(second)[0]
+
+    assert first_note.created is None
+    assert first_note.content == second_note.content
+    assert first_note.to_stix2_object().id == second_note.to_stix2_object().id
 
 
 def test_convert_extracted_config_should_skip_invalid_json():
