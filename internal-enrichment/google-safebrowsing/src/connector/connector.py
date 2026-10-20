@@ -135,7 +135,7 @@ class SafeBrowsingConnector:
                 self.helper.connector_logger.info(
                     "Bundles sent to OpenCTI", {"bundles_sent": len(bundles_sent)}
                 )
-                return f"Sent {bundles_sent} bundles to OpenCTI"
+                return f"Sent {len(bundles_sent)} bundles to OpenCTI"
 
         else:
             self.helper.connector_logger.error(
