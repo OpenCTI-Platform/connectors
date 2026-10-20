@@ -35,8 +35,9 @@ logging setup, as for pycti:
 Once the connector's settings are parsed, call `configure_logging()` with their log
 level and format. `BaseConnectorSettings` does it for you.
 
-In tests, set `OPENCTI_JSON_LOGGING` to `false` (e.g. in `conftest.py`), so that pytest
-keeps capturing the records.
+In tests, the SDK's pytest plugin (`connectors_sdk_pytest_plugin`) disables JSON
+logging, so that pytest keeps capturing the records. Mark a test with
+`@pytest.mark.sdk_json_logging` to run it with the logging setup of production.
 """
 
 from connectors_sdk.logger._logger import (

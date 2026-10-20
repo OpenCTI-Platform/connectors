@@ -94,10 +94,13 @@ But `OpenCTIConnectorHelper` removes them when it is created, like any other roo
 ### Tests
 
 pytest captures the records with its own handlers on the root logger. With JSON logging enabled, the SDK would replace them, and `caplog` would stop capturing records.
-So tests disable JSON logging, for example in `conftest.py`:
+So the SDK ships a pytest plugin (`connectors_sdk_pytest_plugin`, registered through the `pytest11` entry point), with an autouse fixture that disables JSON logging in every test.
+It covers the setup made by the first record and the one made by the settings, even when a test builds them from a stub that ignores the environment. It does not change the environment, so the settings read the same values as without it.
+Connectors need no code for it. A test that checks the logging setup of production opts out with a marker:
 
 ```python
-os.environ["OPENCTI_JSON_LOGGING"] = "false"
+@pytest.mark.sdk_json_logging
+def test_records_are_written_as_json(capsys): ...
 ```
 
 <br>
@@ -116,7 +119,7 @@ os.environ["OPENCTI_JSON_LOGGING"] = "false"
 ## Disadvantages
 
 - **The SDK changes the global logging configuration.** With JSON logging enabled (the default), it replaces every root handler. Python's guidelines recommend that libraries do not configure logging. The SDK does it anyway, like pycti, so that a connector works without any setup.
-- **Tests must disable JSON logging.** Otherwise, `caplog` stops capturing records.
+- **Tests depend on a pytest plugin.** Without it, `caplog` would stop capturing records. The plugin is implicit: it applies to every test suite where the SDK is installed.
 - **Some pycti values are copied.** The record format is not exposed by pycti. If pycti changes it, the SDK must follow.
 - **`ConnectorLoggerAdapter` is not a `logging.Logger`.** Type hints must use `ConnectorLoggerAdapter`.
 

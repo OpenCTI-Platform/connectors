@@ -16,6 +16,10 @@ dependencies = [
     "requests>=2.31.0,<3",
 ]
 
+# Fixtures for the connectors' tests (see `connectors_sdk_pytest_plugin.py`)
+[project.entry-points.pytest11]
+connectors_sdk = "connectors_sdk_pytest_plugin"
+
 [project.optional-dependencies]
 dev = [
     "black==26.5.1",  # Aligned with ci-requirements
@@ -38,7 +42,7 @@ doc = [
 
 [tool.poetry]
 version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
-packages = [{include = "connectors_sdk"}]
+packages = [{include = "connectors_sdk"}, {include = "connectors_sdk_pytest_plugin.py"}]
 
 [tool.pytest.ini_options]
 testpaths = [

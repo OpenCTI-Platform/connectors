@@ -14,12 +14,16 @@ from connectors_sdk.logger import configure_logging, get_logger
 from pycti.utils.opencti_logger import CustomJsonFormatter
 from pycti.utils.opencti_logger import logger as pycti_logger
 
+# These tests check the logging setup of production: the SDK's pytest plugin must not
+# leave it to pytest
+pytestmark = pytest.mark.sdk_json_logging
+
 
 @pytest.fixture(autouse=True)
 def logging_not_configured(monkeypatch):
     """Run each test as in a process where the SDK has not configured logging yet."""
     monkeypatch.setattr(logger_module, "_logging_configured", False)
-    # JSON logging by default, whatever `conftest.py` sets for the other tests
+    # JSON logging by default, whatever the environment running the tests says
     monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "info")
     root_logger = logging.getLogger()
