@@ -190,7 +190,7 @@ class ConnectorClient:
         last_activity_before: str,
         page: int = 0,
         page_size: int = 100,
-    ) -> tuple[list, int]:
+    ) -> tuple[list, int, int]:
         """
         Retrieve one page of alerts.
 
@@ -199,7 +199,8 @@ class ConnectorClient:
         ascending so the connector can checkpoint the newest activity time on
         the page without skipping older alerts.
 
-        :return: alerts and ``total_pages`` from that single response
+        :return: alerts, ``total_pages``, and the window's total ``count`` from
+            that single response
         """
         alerts_endpoint = self.config.doppel.alerts_endpoint.lstrip("/")
         for prefix in ("v1/", "v2/"):
@@ -233,6 +234,7 @@ class ConnectorClient:
         metadata = data.get("metadata", {})
         alerts = data.get("alerts") or []
         total_pages = metadata.get("total_pages", 0)
+        total_count = metadata.get("count", 0)
 
         self.helper.connector_logger.info(
             "[DoppelConnector] Fetched alerts page",
@@ -243,4 +245,4 @@ class ConnectorClient:
                 "alert_count": len(alerts),
             },
         )
-        return alerts, total_pages
+        return alerts, total_pages, total_count

@@ -7,6 +7,11 @@ from doppel.settings import ConnectorSettings
 from doppel.utils import parse_iso_datetime
 from pycti import OpenCTIConnectorHelper
 
+LAST_RUN_FORMAT = "%Y-%m-%d %H:%M:%S"
+# Attempts to page through one activity second before failing the run. Each
+# retry only happens when the window's alert count changed mid-walk.
+MAX_ACTIVITY_SECOND_ATTEMPTS = 3
+
 
 class DoppelConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -42,7 +47,7 @@ class DoppelConnector:
             default_start = start_datetime - timedelta(
                 days=self.config.doppel.historical_polling_days
             )
-            previous_run = default_start.strftime("%Y-%m-%d %H:%M:%S")
+            previous_run = default_start.strftime(LAST_RUN_FORMAT)
             self.helper.connector_logger.info(
                 "No previous state found. Using historical polling window",
                 {"start_date": previous_run},
@@ -68,7 +73,24 @@ class DoppelConnector:
             raise ValueError(
                 "Doppel alert result window exceeds the limit within one second"
             )
-        return midpoint.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        return midpoint.astimezone(timezone.utc).strftime(LAST_RUN_FORMAT)
+
+    @staticmethod
+    def _next_second(timestamp: str) -> str:
+        """Return the activity second after ``timestamp`` in the last_run format."""
+        parsed = parse_iso_datetime(timestamp)
+        if parsed is None:
+            raise ValueError("Invalid Doppel alert activity timestamp")
+        following = parsed.astimezone(timezone.utc) + timedelta(seconds=1)
+        return following.strftime(LAST_RUN_FORMAT)
+
+    @staticmethod
+    def _is_after(timestamp: str, other: str) -> bool:
+        first = parse_iso_datetime(timestamp)
+        second = parse_iso_datetime(other)
+        if first is None or second is None:
+            raise ValueError("Invalid Doppel alert activity timestamp")
+        return first > second
 
     @staticmethod
     def _activity_checkpoint(timestamp: object) -> str | None:
@@ -77,7 +99,7 @@ class DoppelConnector:
         if parsed is None:
             return None
         truncated = parsed.astimezone(timezone.utc).replace(microsecond=0)
-        return truncated.strftime("%Y-%m-%d %H:%M:%S")
+        return truncated.strftime(LAST_RUN_FORMAT)
 
     def _newest_activity_checkpoint(self, alerts: list) -> str:
         checkpoints = [
@@ -120,6 +142,82 @@ class DoppelConnector:
             "STIX bundle sent", {"len_bundle_sent": len(bundle_sent)}
         )
 
+    def _ensure_work(self, work_id: str | None, window_end: str) -> str:
+        if work_id is not None:
+            return work_id
+        friendly_name = f"Doppel run @ {window_end}"
+        return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+
+    def _drain_activity_second(
+        self, second: str, window_end: str, work_id: str, current_state
+    ):
+        """
+        Send every alert whose activity falls in one second using offset pages.
+
+        Offset pages are only safe while the result set is stable. Alerts that
+        receive new activity move past the window, which would shift an unseen
+        alert into a page that was already fetched. Bounding the request to the
+        single second keeps that set small, and any change to the window's
+        total count restarts the walk from page 0 so no alert can be skipped.
+        ``last_run`` stays at ``second`` until the caller moves on, so a
+        failure replays this second rather than losing it.
+
+        :return: the connector state after the last stored checkpoint
+        """
+        page_size = self.config.doppel.page_size
+        narrow_end = self._next_second(second)
+        if self._is_after(narrow_end, window_end):
+            narrow_end = window_end
+
+        for _attempt in range(MAX_ACTIVITY_SECOND_ATTEMPTS):
+            baseline_count = None
+            page = 0
+            while True:
+                try:
+                    alerts, total_pages, total_count = self.client.get_alerts(
+                        last_activity_timestamp=self._format_api_timestamp(second),
+                        last_activity_before=self._format_api_timestamp(narrow_end),
+                        page=page,
+                        page_size=page_size,
+                    )
+                except ResultWindowExceededError as err:
+                    raise RuntimeError(
+                        "Doppel alert result window exceeded within a single "
+                        "activity second"
+                    ) from err
+
+                if baseline_count is None:
+                    baseline_count = total_count
+                elif total_count != baseline_count:
+                    self.helper.connector_logger.warning(
+                        "[DoppelConnector] Alert activity second changed while "
+                        "paging; restarting from the first page",
+                        {
+                            "last_activity_timestamp": second,
+                            "last_activity_before": narrow_end,
+                            "page": page,
+                            "previous_count": baseline_count,
+                            "count": total_count,
+                        },
+                    )
+                    break
+
+                if not alerts:
+                    return current_state
+
+                # Validate before any OpenCTI side effect.
+                self._newest_activity_checkpoint(alerts)
+                self._send_alert_page(alerts, work_id)
+                current_state = self._store_last_run(current_state, second)
+
+                if len(alerts) < page_size or page + 1 >= total_pages:
+                    return current_state
+                page += 1
+
+        raise RuntimeError(
+            "Doppel alerts kept changing while paging a single activity second"
+        )
+
     def process_message(self) -> None:
         """
         Connector main process to collect alerts.
@@ -127,11 +225,13 @@ class DoppelConnector:
         Each page is converted and sent before the next page is requested.
         ``last_run`` advances after every successful send to that page's
         newest activity time so a later failure resumes from the last page
-        that was stored. The lower bound is inclusive, so a full page whose
-        alerts all share that timestamp keeps the in-memory cursor and
-        requests the next page instead of repeating the same page forever. If
-        Doppel rejects a result window above its limit, the connector bisects
-        the window until the oldest bounded range can be processed safely.
+        that was stored. Every page is requested as page 0 from the inclusive
+        lower bound, so alerts that gain activity mid-run cannot shift unseen
+        alerts into an already fetched page. When a full page shares one
+        activity second, that second is drained separately with a bounded
+        window and count verification. If Doppel rejects a result window above
+        its limit, the connector bisects the window until the oldest bounded
+        range can be processed safely.
         :return: None
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
@@ -141,24 +241,18 @@ class DoppelConnector:
 
         try:
             cursor = self._get_last_run(current_state, start_datetime)
-            window_end = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
-            page = 0
+            window_end = start_datetime.strftime(LAST_RUN_FORMAT)
             page_size = self.config.doppel.page_size
 
-            while True:
+            while not self._is_after(cursor, window_end):
                 try:
-                    alerts, total_pages = self.client.get_alerts(
+                    alerts, _total_pages, _total_count = self.client.get_alerts(
                         last_activity_timestamp=self._format_api_timestamp(cursor),
                         last_activity_before=self._format_api_timestamp(window_end),
-                        page=page,
+                        page=0,
                         page_size=page_size,
                     )
-                except ResultWindowExceededError as err:
-                    if page != 0:
-                        raise RuntimeError(
-                            "Doppel alert result window exceeded while paging a "
-                            "single activity timestamp"
-                        ) from err
+                except ResultWindowExceededError:
                     previous_window_end = window_end
                     window_end = self._bisect_window(cursor, window_end)
                     self.helper.connector_logger.warning(
@@ -178,34 +272,36 @@ class DoppelConnector:
                 # sending data. Otherwise an invalid page could be delivered
                 # without advancing state and replay forever on later runs.
                 checkpoint = self._newest_activity_checkpoint(alerts)
-
-                if work_id is None:
-                    friendly_name = f"Doppel run @ {window_end}"
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
+                if self._is_after(cursor, checkpoint):
+                    raise ValueError(
+                        "Doppel returned alerts older than the requested activity "
+                        "window"
                     )
+                page_is_full = len(alerts) >= page_size
 
+                if page_is_full and self._alerts_share_checkpoint(alerts, checkpoint):
+                    # More alerts than one page share this second. Re-read the
+                    # second through a bounded, count-verified walk instead of
+                    # trusting offset pages over a mutable ordering.
+                    self.helper.connector_logger.info(
+                        "[DoppelConnector] Full page shares one activity second; "
+                        "draining that second separately",
+                        {"last_activity_timestamp": checkpoint},
+                    )
+                    work_id = self._ensure_work(work_id, window_end)
+                    current_state = self._drain_activity_second(
+                        checkpoint, window_end, work_id, current_state
+                    )
+                    cursor = self._next_second(checkpoint)
+                    continue
+
+                work_id = self._ensure_work(work_id, window_end)
                 self._send_alert_page(alerts, work_id)
 
                 # Persist after every successful send so a later page failure
                 # does not replay pages already delivered.
                 current_state = self._store_last_run(current_state, checkpoint)
-                page_is_full = len(alerts) >= page_size
-                if page_is_full and self._alerts_share_checkpoint(alerts, checkpoint):
-                    if page + 1 >= total_pages:
-                        break
-                    self.helper.connector_logger.info(
-                        "[DoppelConnector] Full page shares one activity timestamp; "
-                        "fetching the next page",
-                        {"page": page, "last_activity_timestamp": checkpoint},
-                    )
-                    # Keep the in-memory cursor unchanged so the inclusive lower
-                    # bound still pages through alerts that share this timestamp.
-                    page += 1
-                    continue
-
                 cursor = checkpoint
-                page = 0
                 if not page_is_full:
                     break
 

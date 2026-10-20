@@ -198,7 +198,14 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 - Converts and sends each page to OpenCTI before requesting the next page.
   `last_run` advances after every successful send to that page's newest
   activity time, so a later page failure resumes from the last page that was
-  sent.
+  sent. Every page is requested as page 0 from that inclusive lower bound
+  rather than by offset, so alerts that gain activity during a run cannot
+  shift unseen alerts into a page that was already fetched.
+- When more than one page of alerts share the same activity second, that
+  second is read separately through a one-second window. Doppel's `count`
+  for the window is checked on every page; if it changes mid-walk the second
+  is re-read from its first page (up to three attempts) so no alert is
+  skipped. `last_run` stays on that second until it is fully sent.
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
   Indicators (description, score, external reference) and RFT cases

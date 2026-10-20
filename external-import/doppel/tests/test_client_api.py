@@ -41,14 +41,17 @@ def test_get_alerts_requests_one_page(client, total_pages):
         return _response(
             {
                 "alerts": [{"id": "alert-0"}] if total_pages else [],
-                "metadata": {"total_pages": total_pages},
+                "metadata": {
+                    "total_pages": total_pages,
+                    "count": total_pages * 100,
+                },
             }
         )
 
     client._request_data = MagicMock(side_effect=request_data)
     client._request_data.retry = MagicMock()
 
-    alerts, returned_pages = client.get_alerts(
+    alerts, returned_pages, returned_count = client.get_alerts(
         "2026-08-03T00:00:00Z",
         "2026-08-03T02:00:00Z",
     )
@@ -56,7 +59,19 @@ def test_get_alerts_requests_one_page(client, total_pages):
     assert client._request_data.call_count == 1
     assert client._request_data.call_args.args[0] == "https://api.doppel.test/v1/alerts"
     assert returned_pages == total_pages
+    assert returned_count == total_pages * 100
     assert alerts == ([{"id": "alert-0"}] if total_pages else [])
+
+
+def test_get_alerts_defaults_missing_metadata_to_zero(client):
+    client._request_data = MagicMock(return_value=_response({"alerts": []}))
+    client._request_data.retry = MagicMock()
+
+    assert client.get_alerts("2026-08-03T00:00:00Z", "2026-08-03T02:00:00Z") == (
+        [],
+        0,
+        0,
+    )
 
 
 def test_get_alerts_v1_sends_bounded_ascending_params_to_prevent_backlog_skips(
@@ -88,13 +103,13 @@ def test_get_alerts_v2_sends_window_and_sort_params():
         return_value=_response(
             {
                 "alerts": [{"id": "alert-2"}],
-                "metadata": {"total_pages": 4},
+                "metadata": {"total_pages": 4, "count": 151},
             }
         )
     )
     client._request_data.retry = MagicMock()
 
-    alerts, total_pages = client.get_alerts(
+    alerts, total_pages, total_count = client.get_alerts(
         "2026-08-03T00:00:00Z",
         "2026-08-03T02:00:00Z",
         page=2,
@@ -104,6 +119,7 @@ def test_get_alerts_v2_sends_window_and_sort_params():
     assert client._request_data.call_count == 1
     assert alerts == [{"id": "alert-2"}]
     assert total_pages == 4
+    assert total_count == 151
     assert client._request_data.call_args.kwargs["params"] == {
         "last_activity_timestamp": "2026-08-03T00:00:00Z",
         "last_activity_before": "2026-08-03T02:00:00Z",
