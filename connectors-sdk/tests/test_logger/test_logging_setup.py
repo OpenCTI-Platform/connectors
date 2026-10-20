@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 import connectors_sdk.logger._logger as logger_module
 import pytest
+from _connectors_sdk_plugins import pytest_plugin
 from connectors_sdk.logger import configure_logging, get_logger
 from pycti.utils.opencti_logger import CustomJsonFormatter
 from pycti.utils.opencti_logger import logger as pycti_logger
@@ -17,24 +18,24 @@ from pycti.utils.opencti_logger import logger as pycti_logger
 
 @pytest.fixture(autouse=True)
 def logging_not_configured(monkeypatch):
-    """Run each test as in a process where the SDK has not configured logging yet."""
+    """Run each test as in a new process, where the SDK has not set up logging yet.
+
+    In tests, the SDK's pytest plugin stops the SDK from changing the root logger.
+    These tests check how the SDK changes it, so the plugin is off during each test.
+    """
+    pytest_plugin.pytest_unconfigure()  # Plugin off
     monkeypatch.setattr(logger_module, "_logging_configured", False)
-    # JSON logging by default, whatever `conftest.py` sets for the other tests
-    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
+    monkeypatch.setattr(logger_module, "_sdk_json_handler", None)
+    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)  # JSON logging (default)
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "info")
     root_logger = logging.getLogger()
     saved_level = root_logger.level
     root_logger.setLevel(logging.WARNING)  # Python's default
-    # pycti's `logger()` also sets the level of these third-party loggers
-    third_party_levels = {
-        name: logging.getLogger(name).level for name in ("urllib3", "pika")
-    }
 
     yield
 
     root_logger.setLevel(saved_level)
-    for name, level in third_party_levels.items():
-        logging.getLogger(name).setLevel(level)
+    pytest_plugin.pytest_load_initial_conftests()  # Plugin back on
 
 
 @contextmanager
@@ -166,7 +167,7 @@ def test_setup_should_read_json_logging_like_the_settings(
     monkeypatch, env_value, json_logging
 ):
     """Test that `OPENCTI_JSON_LOGGING` is disabled by the values pydantic reads as
-    `False`, like the settings do. Disabled, the first record sets nothing up."""
+    `False`, like the settings do. Disabled, the first record adds no handler."""
     if env_value is not None:
         monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
 
@@ -174,6 +175,8 @@ def test_setup_should_read_json_logging_like_the_settings(
         get_logger("tests.demo").info("Hello")
 
         handlers = list(root_logger.handlers)
+        # The level applies either way
+        assert root_logger.level == logging.INFO
 
     if json_logging:
         [handler] = handlers
@@ -182,22 +185,26 @@ def test_setup_should_read_json_logging_like_the_settings(
         assert handlers == []
 
 
-def test_disabled_json_logging_should_leave_an_existing_configuration_alone(
+def test_disabled_json_logging_should_keep_the_handlers_and_apply_the_level(
     monkeypatch, capsys
 ):
-    """Test that a connector's own `basicConfig()`, called first, is kept as is."""
+    """Test that a connector's own handlers, set up first, are kept, while the level
+    comes from `CONNECTOR_LOG_LEVEL`."""
     monkeypatch.setenv("OPENCTI_JSON_LOGGING", "false")
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "warning")
 
     with no_root_handler() as root_logger:
         logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(message)s")
         [connector_handler] = root_logger.handlers
 
-        get_logger("tests.demo").debug("Hello")
+        logger = get_logger("tests.demo")
+        logger.info("Below the level")
+        logger.warning("Hello")
 
         assert root_logger.handlers == [connector_handler]
-        assert root_logger.level == logging.DEBUG
+        assert root_logger.level == logging.WARNING
 
-    assert capsys.readouterr().err == "DEBUG Hello\n"
+    assert capsys.readouterr().err == "WARNING Hello\n"
 
 
 # --- First record, level ---
@@ -230,7 +237,7 @@ def test_setup_should_warn_when_the_level_is_missing_or_invalid(
 ):
     """Test that a missing or unknown level is reported, then the default one applies.
 
-    The warning is written although WARNING is below the default level.
+    The warning is written although the root level was above WARNING.
     """
     if env_value is None:
         monkeypatch.delenv("CONNECTOR_LOG_LEVEL")
@@ -238,6 +245,7 @@ def test_setup_should_warn_when_the_level_is_missing_or_invalid(
         monkeypatch.setenv("CONNECTOR_LOG_LEVEL", env_value)
 
     with no_root_handler() as root_logger:
+        root_logger.setLevel(logging.CRITICAL)  # e.g. set by the connector
         get_logger("tests.demo").info("Below the default level")
 
         assert root_logger.level == logging.ERROR
@@ -332,8 +340,9 @@ def test_configure_logging_without_json_should_add_python_default_handler():
         assert root_logger.level == logging.INFO
 
 
-def test_configure_logging_without_json_should_leave_a_developer_setup_alone():
-    """Test that nothing changes when the developer configured logging."""
+def test_configure_logging_without_json_should_keep_the_handlers_and_apply_the_level():
+    """Test that the developer's handlers are kept, while the settings' level applies,
+    unlike pycti."""
     with no_root_handler() as root_logger:
         logging.basicConfig(level=logging.ERROR, format="%(message)s")
         [connector_handler] = root_logger.handlers
@@ -341,7 +350,19 @@ def test_configure_logging_without_json_should_leave_a_developer_setup_alone():
         configure_logging(log_level="debug", json_logging=False)
 
         assert root_logger.handlers == [connector_handler]
-        assert root_logger.level == logging.ERROR
+        assert root_logger.level == logging.DEBUG
+
+
+def test_configure_logging_without_json_should_keep_a_developer_json_handler():
+    """Test that only the SDK's own JSON handler is removed when JSON is disabled."""
+    with no_root_handler() as root_logger:
+        developer_handler = logging.StreamHandler()
+        developer_handler.setFormatter(CustomJsonFormatter("%(message)s"))
+        root_logger.addHandler(developer_handler)
+
+        configure_logging(log_level="info", json_logging=False)
+
+        assert root_logger.handlers == [developer_handler]
 
 
 def test_configure_logging_should_disable_the_first_record_setup():

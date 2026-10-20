@@ -373,9 +373,8 @@ def test_base_connector_settings_should_read_json_logging(
     else:
         monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
 
-    # When: Settings are instantiated (JSON logging would replace pytest's handlers)
-    with patch("connectors_sdk.settings.base_settings.configure_logging"):
-        settings = BaseConnectorSettings()
+    # When: Settings are instantiated
+    settings = BaseConnectorSettings()
 
     # Then: The value is a boolean
     assert settings.opencti.json_logging is expected
@@ -497,12 +496,10 @@ def test_base_connector_settings_should_provide_helper_config(
     """
 
     # Given: A valid BaseConnectorSettings instance built from patched environment
-    # (without `OPENCTI_JSON_LOGGING`, set for every test in `conftest.py`)
+    # (without `OPENCTI_JSON_LOGGING`, whatever the shell running the tests sets)
     monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
     # When: OpenCTIConnectorHelper config dict is generated
-    # (JSON logging would replace pytest's handlers)
-    with patch("connectors_sdk.settings.base_settings.configure_logging"):
-        settings = BaseConnectorSettings()
+    settings = BaseConnectorSettings()
     json_dump = settings.model_dump(mode="json")
     opencti_dict = settings.to_helper_config()
 

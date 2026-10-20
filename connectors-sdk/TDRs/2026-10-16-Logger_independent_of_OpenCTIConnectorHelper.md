@@ -52,7 +52,10 @@ It is a standard `logging.LoggerAdapter` around `logging.getLogger(name)`, with 
 | `OPENCTI_JSON_LOGGING` | Who owns the logging setup | What the SDK does |
 |---|---|---|
 | Enabled (default) | The SDK | It replaces every root handler with its own: records are written to stderr as JSON, with pycti's formatter. It sets the level. |
-| Disabled | The developer | Once the settings are parsed, it calls `logging.basicConfig(level=...)`, like pycti: if nothing configured logging, it adds Python's default handler (plain text on stderr) and sets the level. Otherwise, it changes nothing: neither the handlers nor the level. |
+| Disabled | The developer | Once the settings are parsed, it adds Python's default handler (plain text on stderr) if nothing configured logging. Otherwise, it keeps the developer's handlers. It sets the level. |
+
+Either way, the SDK sets the root logger's level. A developer who owns the handlers still sees the records of the `CONNECTOR_LOG_LEVEL` they set.
+pycti differs here: with JSON logging disabled, it only calls `logging.basicConfig(level=...)`, which changes nothing, the level included, once handlers exist.
 
 `OPENCTI_JSON_LOGGING` accepts the same values as a pydantic `bool`. For example, `false`, `no`, `off` and `0` disable JSON, in any case.
 
@@ -61,11 +64,11 @@ It is a standard `logging.LoggerAdapter` around `logging.getLogger(name)`, with 
 Importing the SDK does not change the logging setup.
 The SDK sets up logging at two moments, with the rules above:
 
-1. **When the first record is logged, if JSON logging is enabled.** The SDK only reads the environment variables:
+1. **When the first record is logged.** The SDK only reads the environment variables:
    - `OPENCTI_JSON_LOGGING`, to know whether JSON logging is enabled;
    - `CONNECTOR_LOG_LEVEL` for the level. When it is missing or invalid, the level is `error` until the settings are parsed, and a warning record says so.
 
-   With JSON logging disabled, the developer owns the logging setup, so nothing happens at this moment.
+   With JSON logging disabled, the developer owns the handlers, so only the level is set at this moment.
 2. **When the settings are parsed.** A settings parser calls `configure_logging(log_level, json_logging)` as soon as it knows the configuration (environment variables, `config.yml` or `.env`). pycti does the same: it sets up logging when it reads the configuration.
    `BaseConnectorSettings` calls it after validation, with `connector.log_level` and `opencti.json_logging`.
    `opencti.json_logging` is hidden from the connector's config schema (`SkipJsonSchema`), so that XTM Composer does not offer it when it deploys a connector. It can still be set with `OPENCTI_JSON_LOGGING`, `config.yml` or `.env`.
@@ -93,12 +96,12 @@ But `OpenCTIConnectorHelper` removes them when it is created, like any other roo
 
 ### Tests
 
-pytest captures the records with its own handlers on the root logger. With JSON logging enabled, the SDK would replace them, and `caplog` would stop capturing records.
-So tests disable JSON logging, for example in `conftest.py`:
+pytest captures the records with its own handlers on the root logger. The SDK would replace them (`caplog` would capture nothing) and set the root level.
 
-```python
-os.environ["OPENCTI_JSON_LOGGING"] = "false"
-```
+So the SDK ships a pytest plugin, loaded automatically when the SDK is installed. During tests, it turns `_set_sdk_json_handler()` and `_set_root_level()` into no-ops: connectors' tests need no logging setup.
+pycti's own setup, when a test creates a real `OpenCTIConnectorHelper`, is not covered.
+
+The plugin is in `_connectors_sdk_plugins`, next to `connectors_sdk`: pytest loads plugins before pytest-cov starts, and a plugin inside `connectors_sdk` would load the whole SDK too early.
 
 <br>
 
@@ -106,7 +109,7 @@ os.environ["OPENCTI_JSON_LOGGING"] = "false"
 
 - **Log anywhere, at any time.** No helper is needed, even before it exists.
 - **The configured level and format apply as soon as they are known.** This includes `config.yml` and `.env`, in production too.
-- **Simple to test.** Records are standard `logging` records, so `caplog` works.
+- **Simple to test.** Records are standard `logging` records, so `caplog` works, with no setup.
 - **Same output as pycti.** Same JSON format, same `attributes` field.
 - **Works alone.** It needs no other SDK module.
 - **One clear switch.** `OPENCTI_JSON_LOGGING` decides who owns the logging setup, with the same meaning as for pycti.
@@ -116,7 +119,7 @@ os.environ["OPENCTI_JSON_LOGGING"] = "false"
 ## Disadvantages
 
 - **The SDK changes the global logging configuration.** With JSON logging enabled (the default), it replaces every root handler. Python's guidelines recommend that libraries do not configure logging. The SDK does it anyway, like pycti, so that a connector works without any setup.
-- **Tests must disable JSON logging.** Otherwise, `caplog` stops capturing records.
+- **Unlike pycti, the level applies when the developer owns the handlers.** A connector that relied on pycti ignoring it must set the level it wants in `CONNECTOR_LOG_LEVEL`.
 - **Some pycti values are copied.** The record format is not exposed by pycti. If pycti changes it, the SDK must follow.
 - **`ConnectorLoggerAdapter` is not a `logging.Logger`.** Type hints must use `ConnectorLoggerAdapter`.
 
@@ -156,13 +159,30 @@ Rejected:
 Rejected: the meaning of `OPENCTI_JSON_LOGGING` would be ambiguous.
 Something else (a library, a test tool) could silently disable the JSON output, and it would differ from pycti's meaning.
 
+### In tests, disable JSON logging
+
+For example, the pytest plugin sets `OPENCTI_JSON_LOGGING=false`, or each connector does it in `conftest.py`.
+
+Rejected:
+
+- Settings built from a dict in tests, instead of the environment, would keep JSON logging enabled.
+- `to_helper_config()` would return other values in tests than in production.
+- In a `conftest.py`, every connector would have to do it, and could forget it.
+
+### In tests, ignore the forced `logging.basicConfig()` calls
+
+Rejected:
+
+- It patches the standard library for every test.
+- It covers pycti's setup too, which is not a problem the SDK solves.
+- On its own, it misses the level, which the SDK sets with `setLevel()`.
+
 ### Always add the JSON handler, next to the other handlers
 
 Rejected:
 
 - The meaning of `OPENCTI_JSON_LOGGING` would be ambiguous too.
 - A connector with its own handler on stderr would write every record twice, in two formats.
-- The SDK would set the level of a setup it does not own.
 
 <br>
 

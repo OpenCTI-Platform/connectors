@@ -15,11 +15,16 @@ is needed:
   logger works out of the box: if the settings are not parsed yet, the first record
   configures logging from the environment variables (see
   `_configure_logging_from_env()`).
-- Disabled: the developer. Like pycti, the SDK only calls `logging.basicConfig()`, once
-  the settings are parsed: it adds Python's default handler if nothing is configured.
+- Disabled: the developer. Once the settings are parsed, the SDK only adds Python's
+  default handler if nothing is configured.
 
-Once the connector's settings are parsed, `configure_logging()` applies their log level
-and format. Importing the module does not change the logging setup.
+Whoever owns the handlers, the SDK sets the root logger's level: first from
+`CONNECTOR_LOG_LEVEL`, then from the settings. Once the connector's settings are parsed,
+`configure_logging()` applies their log level and format. Importing the module does not
+change the logging setup.
+
+In tests, the SDK's pytest plugin (`_connectors_sdk_plugins.pytest_plugin`) replaces
+`_set_sdk_json_handler()` and `_set_root_level()`, so that pytest keeps the root logger.
 """
 
 from __future__ import annotations
@@ -49,6 +54,8 @@ _setup_logger = logging.getLogger(__name__)
 # Whether the SDK already configured logging, from the environment variables or from
 # the settings. If so, the first record has nothing to do.
 _logging_configured = False
+# The JSON handler the SDK added to the root logger, if any
+_sdk_json_handler: logging.Handler | None = None
 
 
 class ConnectorLoggerAdapter(logging.LoggerAdapter[logging.Logger]):
@@ -121,11 +128,14 @@ def configure_logging(log_level: str, json_logging: bool = True) -> None:
     record no longer configures logging from the environment variables.
 
     - `json_logging=True`: the SDK owns the logging setup. Every root handler is
-      replaced with a JSON handler, and the level applies.
+      replaced with a JSON handler.
     - `json_logging=False`: the developer owns the logging setup. The SDK removes the
       JSON handler that the first record may have added (from the environment
-      variables). Then, like pycti, it only calls `logging.basicConfig(level=...)`,
-      which does nothing if logging is already configured.
+      variables). Then it calls `logging.basicConfig()`, which adds Python's default
+      handler only if logging is not configured yet.
+
+    In both cases, the level applies to the root logger. Unlike pycti, it also applies
+    when the developer configured the handlers.
 
     Args:
         log_level (str): A level name, in any case (e.g. `"info"`).
@@ -140,12 +150,14 @@ def configure_logging(log_level: str, json_logging: bool = True) -> None:
         raise ValueError(f"Unknown log level: {log_level}")
 
     if json_logging:
-        logging.basicConfig(handlers=[_json_handler()], level=level, force=True)
+        _set_sdk_json_handler()
     else:
         # Undo the JSON setup made by the first record, if any (e.g. JSON logging is
         # only disabled in `config.yml`)
-        _remove_json_handlers()
-        logging.basicConfig(level=level)
+        _remove_sdk_json_handler()
+        logging.basicConfig()
+    # Whoever owns the handlers, the connector's log level applies
+    _set_root_level(level)
 
     global _logging_configured
     # The settings win over the environment variables: the first record must not
@@ -157,24 +169,21 @@ def _configure_logging_from_env() -> None:
     """Configure logging from the environment variables, before the settings are parsed.
 
     The first record calls it, unless `configure_logging()` was called before. With JSON
-    logging disabled, the developer owns the logging setup, so nothing changes. With
-    JSON logging enabled, the SDK owns it: every root handler is replaced with a JSON
-    handler, at the `CONNECTOR_LOG_LEVEL` level.
+    logging enabled, the SDK owns the logging setup: every root handler is replaced with
+    a JSON handler. With JSON logging disabled, the developer owns the handlers, so they
+    don't change. In both cases, the root logger's level comes from
+    `CONNECTOR_LOG_LEVEL`.
     """
-    global _logging_configured
-    # Set before the early return below: the environment is read only once, by the
-    # first record, even when JSON logging is disabled and nothing is configured
-    _logging_configured = True
-
-    if os.environ.get(_JSON_LOGGING_ENV_VAR, "").strip().lower() in _FALSE_VALUES:
-        return
-
-    logging.basicConfig(handlers=[_json_handler()], force=True)
+    env_json_logging = os.environ.get(_JSON_LOGGING_ENV_VAR, "")
+    json_logging = env_json_logging.strip().lower()
+    if json_logging not in _FALSE_VALUES:
+        _set_sdk_json_handler()
 
     env_level = os.environ.get(_LOG_LEVEL_ENV_VAR)
     level = (env_level or "").strip().upper()
     if level not in logging.getLevelNamesMapping():
-        # Logged before the level is set, so that the default level does not hide it
+        # The current root level (e.g. ERROR) must not hide this warning
+        _set_root_level("WARNING")
         _setup_logger.warning(
             f"Missing or invalid {_LOG_LEVEL_ENV_VAR}: the default log level applies "
             "until the settings are parsed",
@@ -186,19 +195,35 @@ def _configure_logging_from_env() -> None:
             },
         )
         level = _DEFAULT_LOG_LEVEL
+    _set_root_level(level)
+
+    global _logging_configured
+    # The environment is read only once, by the first record
+    _logging_configured = True
+
+
+def _set_sdk_json_handler() -> None:
+    """Replace every root handler with a JSON handler."""
+    global _sdk_json_handler
+    _sdk_json_handler = logging.StreamHandler()
+    _sdk_json_handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
+
+    logging.basicConfig(handlers=[_sdk_json_handler], force=True)
+
+
+def _set_root_level(level: str) -> None:
+    """Set the root logger's level.
+
+    Args:
+        level (str): A level name, in upper case (e.g. `"INFO"`).
+    """
     logging.getLogger().setLevel(level)
 
 
-def _json_handler() -> logging.Handler:
-    """Create the handler pycti uses: JSON records, written to stderr."""
-    handler = logging.StreamHandler()
-    handler.setFormatter(CustomJsonFormatter(_PYCTI_LOG_RECORD_FORMAT))
-    return handler
+def _remove_sdk_json_handler() -> None:
+    """Remove the JSON handler the SDK added to the root logger, if any.
 
-
-def _remove_json_handlers() -> None:
-    """Remove the handlers writing JSON records from the root logger."""
-    root_logger = logging.getLogger()
-    for handler in list(root_logger.handlers):
-        if isinstance(handler.formatter, CustomJsonFormatter):
-            root_logger.removeHandler(handler)
+    The developer's own handlers stay, even when they write JSON records.
+    """
+    if _sdk_json_handler is not None:
+        logging.getLogger().removeHandler(_sdk_json_handler)

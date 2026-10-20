@@ -28,15 +28,20 @@ logging setup, as for pycti:
   JSON, with pycti's formatter, and every other root handler is removed. Until the
   settings are parsed, the level comes from `CONNECTOR_LOG_LEVEL` (`error` when it is
   not set or invalid, with a warning record saying so).
-- Disabled: the developer, who configures logging (e.g. with `logging.basicConfig()`).
-  Once the settings are parsed, the SDK only calls `logging.basicConfig(level=...)`,
-  like pycti: if nothing is configured, it adds Python's default handler (plain text).
+- Disabled: the developer, who configures the handlers (e.g. with
+  `logging.basicConfig()`). Once the settings are parsed, the SDK only adds Python's
+  default handler (plain text) if nothing is configured.
+
+Either way, the SDK sets the root logger's level: from `CONNECTOR_LOG_LEVEL` until the
+settings are parsed, then from the settings. Unlike pycti, the level also applies when
+the developer configured the handlers.
 
 Once the connector's settings are parsed, call `configure_logging()` with their log
 level and format. `BaseConnectorSettings` does it for you.
 
-In tests, set `OPENCTI_JSON_LOGGING` to `false` (e.g. in `conftest.py`), so that pytest
-keeps capturing the records.
+In tests, nothing is needed: the SDK's pytest plugin, loaded automatically, stops the
+SDK from changing the root logger, so pytest keeps capturing the records (`caplog`).
+pycti's own setup, when a test creates a real `OpenCTIConnectorHelper`, is not covered.
 """
 
 from connectors_sdk.logger._logger import (
