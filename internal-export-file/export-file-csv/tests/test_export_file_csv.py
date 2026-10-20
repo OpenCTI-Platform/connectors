@@ -94,6 +94,42 @@ class TestSelectExportColumns:
 
 
 class TestExportDictListToCsv:
+    def test_custom_field_values_in_their_own_columns(self):
+        connector = _make_connector()
+        data = [
+            {
+                "name": "A",
+                "customFieldValues": [
+                    {"field_name": "x_opencti_cf_score", "int_value": 0},
+                    {"field_name": "x_opencti_cf_tags", "select_values": ["a", "b"]},
+                ],
+            },
+            {"name": "B", "customFieldValues": []},
+        ]
+        rows = list(
+            csv.reader(
+                io.StringIO(connector.export_dict_list_to_csv(data)), delimiter=";"
+            )
+        )
+        assert rows[0] == ["name", "x_opencti_cf_score", "x_opencti_cf_tags"]
+        assert rows[1][:2] == ["A", "0"]
+        assert "a" in rows[1][2] and "b" in rows[1][2]
+        assert rows[2] == ["B", "", ""]
+
+    def test_custom_field_values_filtered_as_visible_columns(self):
+        connector = _make_connector()
+        data = [
+            {
+                "name": "A",
+                "customFieldValues": [
+                    {"field_name": "x_opencti_cf_note", "string_value": "n"}
+                ],
+            }
+        ]
+        out = connector.export_dict_list_to_csv(data, ["x_opencti_cf_note", "name"])
+        rows = list(csv.reader(io.StringIO(out), delimiter=";"))
+        assert rows == [["x_opencti_cf_note", "name"], ["n", "A"]]
+
     def test_all_columns_when_no_filter(self):
         connector = _make_connector()
         data = [{"name": "A", "entity_type": "Malware"}]
