@@ -1,6 +1,5 @@
 import json
 import re
-import time
 
 import validators
 from pycti import OpenCTIConnectorHelper
@@ -21,6 +20,9 @@ class ZscalerConnector:
         self.zscaler_blacklist_name = (
             zscaler_blacklist_name  # Parameter for the blacklist
         )
+        # Set when a successful update could not be activated yet, so that the
+        # activation is retried on the next event even if it changes nothing
+        self.activation_pending = False
 
     def extract_domain(self, pattern):
         """Extract domain from the STIX pattern if it follows the format [domain-name:value = 'example.com']"""
@@ -126,6 +128,7 @@ class ZscalerConnector:
                 "Successfully sent event to Zscaler",
                 {"domain": domain, "event_type": event_type},
             )
+            self.activation_pending = True
             self.activate_zscaler_changes()
         else:
             self.helper.connector_logger.error(
@@ -140,55 +143,46 @@ class ZscalerConnector:
                 },
             )
 
-    def activate_zscaler_changes(self, max_retries=5, delay=30):
-        """Activate configuration changes in Zscaler, retrying while another activation is in progress."""
-        for attempt in range(1, max_retries + 1):
-            # Check if already ACTIVE/PENDING/INPROGRESS
-            status_resp = self.client.request("GET", "/status")
-            if status_resp is not None and status_resp.ok:
-                status = status_resp.json().get("status")
-                if status in ("ACTIVE", "PENDING", "INPROGRESS"):
-                    self.helper.connector_logger.info(
-                        "No Zscaler activation needed", {"status": status}
-                    )
-                    return True
+    def activate_zscaler_changes(self):
+        """Activate configuration changes in Zscaler.
 
-            # Try activation
-            resp = self.client.request("POST", "/status/activate")
-            if resp is not None and resp.ok:
-                self.helper.connector_logger.info("Zscaler configuration activated.")
-                return True
-            if resp is not None and resp.status_code == 503:
-                self.helper.connector_logger.warning(
-                    "Zscaler activation unavailable, retrying",
-                    {
-                        "attempt": attempt,
-                        "max_retries": max_retries,
-                        "delay": delay,
-                        "response": resp.text,
-                    },
+        Transient failures (HTTP 5xx, including 503 while another activation is in
+        progress, and network errors) are retried by the client. If activation
+        still fails, ``activation_pending`` stays set and the activation is retried
+        on the next stream event.
+        """
+        # Check if already ACTIVE/PENDING/INPROGRESS
+        status_resp = self.client.request("GET", "/status")
+        if status_resp is not None and status_resp.ok:
+            status = status_resp.json().get("status")
+            if status in ("ACTIVE", "PENDING", "INPROGRESS"):
+                self.helper.connector_logger.info(
+                    "No Zscaler activation needed", {"status": status}
                 )
-                time.sleep(delay)
-                delay *= 2
-                continue
+                self.activation_pending = False
+                return True
 
-            self.helper.connector_logger.error(
-                "Zscaler activation failed",
-                {
-                    "status_code": resp.status_code if resp is not None else None,
-                    "response": resp.text if resp is not None else None,
-                },
-            )
-            return False
+        resp = self.client.request("POST", "/status/activate")
+        if resp is not None and resp.ok:
+            self.helper.connector_logger.info("Zscaler configuration activated.")
+            self.activation_pending = False
+            return True
 
-        self.helper.connector_logger.error(
-            "Zscaler activation failed after all retries",
-            {"max_retries": max_retries},
+        self.helper.connector_logger.warning(
+            "Zscaler activation failed, it will be retried on the next event",
+            {
+                "status_code": resp.status_code if resp is not None else None,
+                "response": resp.text if resp is not None else None,
+            },
         )
         return False
 
     def _process_message(self, msg):
         """Process messages from the OpenCTI stream."""
+        # Retry an activation that failed on a previous event
+        if self.activation_pending:
+            self.activate_zscaler_changes()
+
         data = json.loads(msg.data)["data"]
 
         # Only process indicators with pattern_type 'stix'
