@@ -122,8 +122,8 @@ class Intel471_V2Config(BaseConfigModel):
         default=False,
     )
     affiliation_group: ListFromString = Field(
-        description="Optional comma-separated list of affiliation groups to restrict the "
-        "leaked-credentials stream to (Verity471 only). Allowed values: `my_employees`, "
+        description="Optional comma-separated list of affiliation groups used to narrow "
+        "the leaked-credentials stream (Verity471 only). Allowed values: `my_employees`, "
         "`my_customers`, `third_parties`, `vip_emails`. If not set, credentials from all "
         "affiliation groups are fetched. A Verity471 cursor is only valid for the filter "
         "set it was issued against, so changing this makes the connector discard the "

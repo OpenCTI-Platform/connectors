@@ -61,7 +61,7 @@ class FilterAwareVerity471Stream(Verity471Stream):
 
     # Name of the attribute on each API item holding its event timestamp. It may be a
     # `datetime`, epoch milliseconds, or a string (epoch-ms or ISO-8601); `_to_ms`
-    # normalises all three. Used to re-anchor the from-date on a filter change.
+    # normalizes all three. Used to re-anchor the from-date on a filter change.
     _timestamp_field: ClassVar[str]
     # Milliseconds the from-date is moved back by when re-anchoring after a filter
     # change. See `FILTER_MIGRATION_MARGIN_MS`.
@@ -95,11 +95,11 @@ class FilterAwareVerity471Stream(Verity471Stream):
     @staticmethod
     def _to_ms(value: Any) -> Union[int, None]:
         """
-        Normalise an event timestamp to epoch milliseconds.
+        Normalize an event timestamp to epoch milliseconds.
 
         Accepts a `datetime`, already-epoch milliseconds, or a string holding either
         epoch milliseconds or an ISO-8601 timestamp. Anything else (including an
-        unparseable string) returns `None`.
+        unparsable string) returns `None`.
         """
         if isinstance(value, datetime.datetime):
             aware = value if value.tzinfo else value.replace(tzinfo=datetime.UTC)

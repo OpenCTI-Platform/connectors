@@ -270,7 +270,7 @@ def test_settings_should_parse_alerts_filters():
     """
     The alerts stream's filter settings parse from comma-separated strings into lists
     (`watcher_group_ids`, `watcher_ids`, `statuses`) and a bool (`is_trashed_included`),
-    and `initial_history_alerts` is normalised like the other initial-history fields.
+    and `initial_history_alerts` is normalized like the other initial-history fields.
     """
 
     class FakeConnectorSettings(ConnectorSettings):
@@ -371,7 +371,7 @@ def test_settings_credentials_defaults_are_disabled_and_plaintext_off():
 def test_settings_should_parse_credentials_settings():
     """
     The credentials stream's settings parse as expected: a non-zero interval enables
-    it, `initial_history_credentials` is normalised from epoch seconds like the other
+    it, `initial_history_credentials` is normalized from epoch seconds like the other
     initial-history fields, the plaintext-password opt-in is read as a bool, and
     `affiliation_group` parses from a comma-separated string into a list.
     """

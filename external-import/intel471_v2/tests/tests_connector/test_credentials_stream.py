@@ -175,7 +175,7 @@ def test_unchanged_affiliation_group_keeps_cursor():
 def test_lastseen_tracks_last_updated_ts_string_and_persists():
     """
     The high-water mark is read from each credential's `last_updated_ts`, which the API
-    returns as a string (epoch milliseconds or ISO-8601); both are normalised to ms.
+    returns as a string (epoch milliseconds or ISO-8601); both are normalized to ms.
     """
     state = {}
     stream, _, _ = _build_credentials_stream("verity471", False, state=state)
