@@ -1,8 +1,10 @@
 import os
 import time
 import traceback
+
 import requests
 from src.bitdefender_import_feed.stixmaker import StixMaker
+
 
 class BitdefenderFeedConnector:
     def __init__(self, config, helper) -> None:

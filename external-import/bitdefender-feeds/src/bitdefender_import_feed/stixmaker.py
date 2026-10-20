@@ -1,5 +1,6 @@
 import json
 import time
+
 import iso3166
 import stix2
 
