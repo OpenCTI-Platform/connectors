@@ -203,8 +203,10 @@ class PolySwarmConnector:
 
         try:
             result = self._enrich_file(entity_id, entity, opencti_entity, stix_objects)
-            if result and result.get("status") == "error":
-                error_msg = result.get("error", "Unknown error")
+            if result and result.get("status") in ("error", "skipped"):
+                error_msg = result.get("error") or result.get(
+                    "message", "Unknown error"
+                )
                 self.helper.connector_logger.warning(f"[CONNECTOR] {error_msg}")
                 self._send_original_bundle(stix_objects)
                 return json.dumps(result)

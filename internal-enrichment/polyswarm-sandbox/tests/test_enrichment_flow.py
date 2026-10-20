@@ -88,6 +88,25 @@ class TestTlpCheck:
         assert result["status"] == "skipped"
         c.artifact_handler.download_artifact.assert_not_called()
 
+    def test_skipped_artifact_forwards_original_bundle(self):
+        """A TLP skip must still forward the bundle so playbooks do not stall."""
+        c = make_connector()
+        c.helper.check_max_tlp = _check_max_tlp
+        c._entity_in_scope = MagicMock(return_value=True)
+        c._send_original_bundle = MagicMock()
+        stix_objects = [{"type": "identity"}]
+        c.artifact_handler.download_artifact = MagicMock()
+        c._process_message(
+            {
+                "enrichment_entity": _marked("TLP:RED"),
+                "stix_entity": _entity(),
+                "stix_objects": stix_objects,
+                "entity_id": ENTITY_ID,
+            }
+        )
+        c._send_original_bundle.assert_called_once_with(stix_objects)
+        c.artifact_handler.download_artifact.assert_not_called()
+
 
 # ── _phase_download ─────────────────────────────────────────────────────────
 
