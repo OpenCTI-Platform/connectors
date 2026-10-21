@@ -216,6 +216,8 @@ graph LR
 | BitcoinAddress         | Cryptocurrency-Wallet | Bitcoin wallet observables                     |
 | YARA                   | Indicator (YARA)    | YARA rule indicators                             |
 
+The Adversary value is split on every comma, so free text such as "Unknown, possibly Chinese" produces two Intrusion Sets, and aliases of one group listed in the same value (for example "APT28, Sofacy") produce one Intrusion Set each.
+
 ### Relationships Created
 
 - Intrusion Set → `uses` → Malware

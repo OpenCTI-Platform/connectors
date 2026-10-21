@@ -101,15 +101,22 @@ def assert_references_resolve(objects: List[Any]) -> None:
 def test_comma_separated_adversary_creates_one_intrusion_set_per_name(
     make_pulse: Callable[..., Pulse],
 ):
-    """#5005: 'APT28, Sofacy' gives two intrusion sets, not one combined set."""
-    objects = build_objects(make_pulse(adversary="APT28, Sofacy"))
+    """#5005: three comma-separated groups give three intrusion sets, not one."""
+    objects = build_objects(
+        make_pulse(adversary="Linen Typhoon, Storm-2603, Violet Typhoon")
+    )
 
     intrusion_sets = objects_of_type(objects, "intrusion-set")
 
-    assert [i["name"] for i in intrusion_sets] == ["APT28", "Sofacy"]
+    assert [i["name"] for i in intrusion_sets] == [
+        "Linen Typhoon",
+        "Storm-2603",
+        "Violet Typhoon",
+    ]
     assert [i["id"] for i in intrusion_sets] == [
-        IntrusionSet.generate_id("APT28"),
-        IntrusionSet.generate_id("Sofacy"),
+        IntrusionSet.generate_id("Linen Typhoon"),
+        IntrusionSet.generate_id("Storm-2603"),
+        IntrusionSet.generate_id("Violet Typhoon"),
     ]
 
 
@@ -118,7 +125,7 @@ def test_each_intrusion_set_is_linked_like_a_single_adversary(
 ):
     """#5005: every split intrusion set gets uses, targets and indicates links."""
     pulse = make_pulse(
-        adversary="APT28, Sofacy",
+        adversary="Linen Typhoon, Storm-2603",
         malware_families=["X-Agent"],
         attack_ids=["T1566"],
         industries=["Government"],
@@ -143,7 +150,7 @@ def test_each_intrusion_set_is_linked_like_a_single_adversary(
     country_id = objects_of_type(objects, "location")[0]["id"]
     vulnerability_id = objects_of_type(objects, "vulnerability")[0]["id"]
 
-    for name in ("APT28", "Sofacy"):
+    for name in ("Linen Typhoon", "Storm-2603"):
         intrusion_set_id = IntrusionSet.generate_id(name)
         assert ("uses", intrusion_set_id, malware_id) in triples
         assert ("uses", intrusion_set_id, attack_pattern_id) in triples
@@ -201,7 +208,7 @@ def test_building_the_same_pulse_twice_gives_identical_ids(
 ):
     """#5005: intrusion set and relationship ids are stable across builds."""
     pulse = make_pulse(
-        adversary="APT28, Sofacy",
+        adversary="Linen Typhoon, Storm-2603",
         malware_families=["X-Agent"],
         attack_ids=["T1566"],
     )

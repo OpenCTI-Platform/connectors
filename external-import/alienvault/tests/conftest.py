@@ -7,6 +7,8 @@ import pytest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from alienvault.models import Pulse
+
 
 @pytest.fixture
 def pulse_data() -> Dict[str, Any]:
@@ -32,9 +34,8 @@ def pulse_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def make_pulse(pulse_data: Dict[str, Any]) -> Callable[..., Any]:
+def make_pulse(pulse_data: Dict[str, Any]) -> Callable[..., Pulse]:
     """Build a Pulse from the shared payload, with per-test overrides."""
-    from alienvault.models import Pulse
 
     def _make_pulse(**overrides: Any) -> Pulse:
         return Pulse(**{**pulse_data, **overrides})
