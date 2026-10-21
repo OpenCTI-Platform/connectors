@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from pycti import Identity as PyctiIdentity
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
 from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
@@ -553,6 +554,75 @@ def test_analyst_note_deduplicates_entities_shared_between_both_arrays():
     assert len(report.object_refs) == 1
 
 
+# Scenario: An entity unknown to the risk API is skipped, not the whole note (issue #7344)
+def test_analyst_note_skips_entity_without_risk_score_when_threshold_is_set():
+    # Given a risk threshold, and a risk API that does not know one of the two
+    # domains of the note
+    note = _given_stix_note(risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then the note is still built, with the known domain and the malware,
+    # but without the unknown domain
+    _then_single_report(stix_objects)
+    assert _indicator_names(stix_objects) == ["known.example.com"]
+    assert any(obj["type"] == "malware" for obj in stix_objects)
+
+
+# Scenario: An entity unknown to the risk API is kept without score when no threshold is set (issue #7344)
+def test_analyst_note_keeps_entity_without_risk_score_when_no_threshold():
+    # Given risk scores are imported without threshold, and a risk API that does
+    # not know one of the two domains of the note
+    note = _given_stix_note(risk_as_score=True, risk_threshold=None)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then both domains are present, only the known one carries a score
+    scores = {
+        obj["name"]: obj.get("x_opencti_score")
+        for obj in stix_objects
+        if obj["type"] == "indicator"
+    }
+    assert scores == {"known.example.com": 80, "unknown.example.com": None}
+
+
+# Scenario: The risk score is fetched once per entity when threshold and score are both enabled
+def test_analyst_note_fetches_risk_score_once_per_entity():
+    # Given a risk threshold and risk scores imported as score
+    note = _given_stix_note(risk_as_score=True, risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80, "unknown.example.com": 90}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+
+    # Then the risk API is called once per domain
+    assert note.rfapi.get_risk_score.call_count == 2
+
+
+# Scenario: A risk API failure other than 404 is not hidden
+def test_analyst_note_raises_on_risk_api_error_other_than_not_found():
+    # Given a risk API that fails with a server error
+    note = _given_stix_note(risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_http_error(500)
+
+    # When the note is converted to STIX objects
+    # Then the error is raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -580,13 +650,44 @@ def _given_ip_indicator(ip, author, tlp):
     return RFIPAddress(ip, "IpAddress", author, tlp)
 
 
-def _given_stix_note(include_context_entities=False):
+def _given_stix_note(
+    include_context_entities=False, risk_as_score=False, risk_threshold=None
+):
     return StixNote(
         opencti_helper=MagicMock(),
         tas=[],
         rfapi=MagicMock(),
+        risk_as_score=risk_as_score,
+        risk_threshold=risk_threshold,
         analyst_notes_include_context_entities=include_context_entities,
     )
+
+
+def _given_http_error(status_code):
+    response = MagicMock()
+    response.status_code = status_code
+    return requests.exceptions.HTTPError(f"{status_code} Error", response=response)
+
+
+def _given_risk_scores(scores_by_value):
+    """Risk API returning the given scores, and a 404 for any other value"""
+
+    def get_risk_score(_type, value):
+        if value not in scores_by_value:
+            raise _given_http_error(404)
+        return scores_by_value[value]
+
+    return get_risk_score
+
+
+def _given_analyst_note_json_with_domains():
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+        {"id": "entity-2", "type": "InternetDomainName", "name": "unknown.example.com"},
+        {"id": "entity-3", "type": "InternetDomainName", "name": "known.example.com"},
+    ]
+    return note_json
 
 
 def _given_analyst_note_json():
@@ -751,6 +852,10 @@ def _then_stix_types_match(stix_objects, expected_types):
 def _then_objects_exclude(stix_objects, excluded_object):
     found = [obj for obj in stix_objects if obj.id == excluded_object.id]
     assert len(found) == 0, f"Expected {excluded_object.id} to be absent, got {found}"
+
+
+def _indicator_names(stix_objects):
+    return [obj["name"] for obj in stix_objects if obj["type"] == "indicator"]
 
 
 def _then_single_report(stix_objects):
