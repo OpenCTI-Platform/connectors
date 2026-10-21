@@ -19,8 +19,9 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, tlp):
+    def __init__(self, helper, tlp, import_passwords: bool = True):
         self.helper = helper
+        self.import_passwords = import_passwords
         self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp.lower())
 
@@ -181,6 +182,14 @@ class ConverterToStix:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
         dtm_alert_doc = dtm_alert.get("doc", {})
+        if self.import_passwords:
+            password = (
+                dtm_alert_doc.get("service_account", {})
+                .get("password", {})
+                .get("plain_text", "")
+            )
+        else:
+            password = "[redacted]"
         markdown_content = f"""
 {metadata_part}
 ### Source Information
@@ -196,7 +205,7 @@ class ConverterToStix:
 - **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
 - **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain", "")}
 - **Login**: {dtm_alert_doc.get("service_account", {}).get("login", "")}
-- **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text", "")}
+- **Password**: {password}
 """
         return markdown_content
 
@@ -465,7 +474,8 @@ class ConverterToStix:
         if "login" in dtm_alert.get("doc", {}).get("service_account", {}):
             password = None
             if (
-                "plain_text"
+                self.import_passwords
+                and "plain_text"
                 in dtm_alert.get("doc").get("service_account", {}).get("password", {})
                 and dtm_alert.get("doc")
                 .get("service_account", {})
