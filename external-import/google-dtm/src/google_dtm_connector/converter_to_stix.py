@@ -193,7 +193,7 @@ class ConverterToStix:
 ### Content
 - **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
 - **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
-- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain", "")}
+- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("profile", {}).get("contact", {}).get("email_domain", "")}
 - **Login**: {dtm_alert_doc.get("service_account", {}).get("login", "")}
 - **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text", "")}
 """
@@ -543,7 +543,7 @@ class ConverterToStix:
             if hashes.get("md5"):
                 stix_hashes["MD5"] = hashes["md5"]
             stix_file = stix2.File(
-                hashes=stix_hashes,
+                hashes=stix_hashes or None,
                 name=source_file.get("filename"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={

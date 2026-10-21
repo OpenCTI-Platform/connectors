@@ -6,6 +6,7 @@ that an incomplete document still produces its `alert.md` attachment and, for
 """
 
 import base64
+import copy
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,7 +28,7 @@ _ACCOUNT_DISCOVERY_ALERT = {
         },
         "service_account": {
             "login": "jdoe@acme.com",
-            "email_domain": "acme.com",
+            "profile": {"contact": {"email_domain": "acme.com"}},
             "service": {"inet_location": {"domain": "acme.com"}},
         },
     },
@@ -118,6 +119,25 @@ def test_source_file_observable_carries_the_filename(converter):
     stix_file = next(obj for obj in stix_objects if obj["type"] == "file")
     assert stix_file["name"] == "combo.txt"
     assert stix_file["hashes"]["MD5"] == "d41d8cd98f00b204e9800998ecf8427e"
+
+
+def test_source_file_without_hashes_does_not_raise(converter):
+    """An empty hashes dict made stix2 raise and aborted the whole run."""
+    alert = copy.deepcopy(_ACCOUNT_DISCOVERY_ALERT)
+    del alert["doc"]["source_file"]["hashes"]
+
+    stix_objects = converter.create_incident(alert)
+
+    stix_file = next(obj for obj in stix_objects if obj["type"] == "file")
+    assert stix_file["name"] == "combo.txt"
+    assert "hashes" not in stix_file
+
+
+def test_email_domain_is_read_from_the_profile_contact(converter):
+    """DTM nests email_domain under profile.contact; the line was always empty."""
+    markdown = _alert_markdown(converter.create_incident(_ACCOUNT_DISCOVERY_ALERT))
+
+    assert "- **Email Domain**: acme.com\n" in markdown
 
 
 def test_document_alert_does_not_label_the_source_url_as_author(converter):
