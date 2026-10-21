@@ -15,7 +15,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install dependencies
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
   apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 # Leverage a bind mount to requirements.txt to avoid having to copy them into

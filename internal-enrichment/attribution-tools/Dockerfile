@@ -5,7 +5,7 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 COPY src /opt/opencti-connector-attribution-tools
 
 # Install dependencies
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add gcc git build-base libmagic libffi-dev \
     gfortran openblas openblas-dev xsimd xsimd-dev
 
