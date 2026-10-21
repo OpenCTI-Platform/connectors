@@ -304,7 +304,7 @@ class MispConfig(BaseConfigModel):
         default="misp-event",
     )
     import_from_date: DatetimeFromIsoString | None = Field(
-        description="A date (ISO-8601) from which to start importing MISP events (based on events creation date).",
+        description="The date from which to start importing MISP events (based on events creation date), as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
         default=None,
     )
     import_tags: ListFromString = Field(

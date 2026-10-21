@@ -1,116 +1,85 @@
 import os
-from pathlib import Path
-from typing import Any
+from typing import ClassVar
 
+import isodate
 import pycti
-import yaml
 from cyberintegrations.utils import FileHandler
-from dotenv import load_dotenv
-from pycti import get_config_variable
+from settings import ConnectorSettings
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
 
 class ConfigConnector:
-
     def __init__(self):
         """
-        Initialize the connector with necessary configurations
+        Initialize the connector with necessary configurations.
+
+        Configuration is loaded and validated through the Pydantic
+        ``ConnectorSettings`` model. Values consumed by the rest of the connector
+        are exposed under their historical names via the properties and helpers
+        below, so no downstream code needs to change.
         """
-        self.load = self._load_config()
-        self.env_keys = self._load_env_keys()
-        self._initialize_configurations()
+        self.settings = ConnectorSettings()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
 
-    def _load_config(self) -> dict:
-        """
-        Loads the configuration from `config.yml`. If `config.yml` does not exist, returns an empty dictionary.
-        """
-        config_dir = Path(__file__).parents[1].joinpath("src")
-        config_file_path = config_dir.joinpath("config.yml")
+    def to_helper_config(self) -> dict:
+        """Return a config dict suitable for ``pycti.OpenCTIConnectorHelper``."""
+        return self.settings.to_helper_config()
 
-        if config_file_path.is_file():
-            with open(config_file_path, "r", encoding="utf-8") as file:
-                return yaml.load(file, Loader=yaml.FullLoader)
+    # --- Connector settings consumed by the scheduler / helpers ---
+    @property
+    def connector_duration_period(self) -> str:
+        # Historical ISO-8601 string form used by the interval validation helper.
+        return isodate.duration_isoformat(self.settings.connector.duration_period)
 
-        return {}
+    @property
+    def connector_update_existing_data(self) -> bool:
+        return self.settings.connector.update_existing_data
 
-    def _load_env_keys(self) -> list[str]:
-        load_dotenv()
-        return os.environ.keys()
+    # --- Group-IB TI API credentials & proxy consumed by the TI adapter ---
+    @property
+    def ti_api_url(self) -> str:
+        return self.settings.ti_api.url
 
-    def _extract_config_keys(self, data, parent_keys=None):
-        if parent_keys is None:
-            parent_keys = []
+    @property
+    def ti_api_username(self) -> str:
+        return self.settings.ti_api.username
 
-        keys_list = []
-        if isinstance(data, dict):
-            for key, value in data.items():
-                new_keys = parent_keys + [key]
-                if isinstance(value, dict):
-                    keys_list.extend(self._extract_config_keys(value, new_keys))
-                else:
-                    keys_list.append(new_keys)
-        return keys_list
+    @property
+    def ti_api_token(self) -> str:
+        return self.settings.ti_api.token.get_secret_value()
 
-    def _converting_keys_to_environment_keys(self, key):
-        if not key or not isinstance(key, list):
-            return None
+    @property
+    def ti_api_proxy_ip(self):
+        return self.settings.ti_api.proxy_ip
 
-        key = [str(k).upper().replace("-", "_") for k in key]
+    @property
+    def ti_api_proxy_port(self):
+        return self.settings.ti_api.proxy_port
 
-        if key[0] in ["OPENCTI", "CONNECTOR"]:
-            return "_".join(key)
+    @property
+    def ti_api_proxy_protocol(self):
+        return self.settings.ti_api.proxy_protocol
 
-        if key[0] == "TI_API":
-            if len(key) > 1 and key[1] == "COLLECTIONS":
-                modified_key = key[2:]
-                modified_key = [part.replace("/", "_") for part in modified_key]
-                return (
-                    f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
-                    if modified_key
-                    else f"{key[0]}__{key[1]}"
-                )
-            return "__".join(key)
+    @property
+    def ti_api_proxy_username(self):
+        return self.settings.ti_api.proxy_username
 
-        return "_".join(key)
+    @property
+    def ti_api_proxy_password(self):
+        password = self.settings.ti_api.proxy_password
+        return password.get_secret_value() if password is not None else None
 
-    def _initialize_configurations(self) -> None:
-        """
-        Connector configuration variables
-        :return: None
-        """
-        if self.load:
-            for key in self._extract_config_keys(self.load):
-                if len(key) > 2 and key[1] == "collections":
-                    key[2] = key[2].replace("/", "_")
-                env_var = self._converting_keys_to_environment_keys(key)
-                attr_name = "__".join(key).lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_var,
-                    yaml_path=key,
-                    config=self.load,
-                )
-                setattr(self, attr_name, attr_value)
-        else:
-            for env_key in self.env_keys:
-                attr_name = env_key.lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_key,
-                    yaml_path=None,
-                    config=None,
-                )
-                setattr(self, attr_name, attr_value)
-
-    def get_collection_settings(self, collection, setting_name) -> Any:
-        collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
-        return getattr(self, collection_attr_name, None)
+    # --- Dynamic collection / extra settings (unknown names resolve to None) ---
+    def get_collection_settings(self, collection, setting_name):
+        return getattr(
+            self.settings.ti_api, f"collections_{collection}_{setting_name}", None
+        )
 
     def get_extra_settings_by_name(self, setting_name):
-        extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
-        return getattr(self, extra_setting_attr_name, None)
+        return getattr(self.settings.ti_api, f"extra_settings_{setting_name}", None)
 
     # Set up product metadata
     PRODUCT_TYPE = "SCRIPT"
@@ -161,7 +130,7 @@ class ConfigConnector:
         # fallback if custom TLP cannot be created by stix2 in this runtime
         TLP_AMBER_STRICT = TLP_AMBER
 
-    STIX_TLP_MAP = {
+    STIX_TLP_MAP: ClassVar[dict] = {
         "white": TLP_WHITE,
         "green": TLP_GREEN,
         "amber": TLP_AMBER,
@@ -170,12 +139,12 @@ class ConfigConnector:
     }
 
     # Default TLPs by SDO type when upstream API did not provide a valid TLP
-    DEFAULT_TLP_BY_SDO = {
+    DEFAULT_TLP_BY_SDO: ClassVar[dict] = {
         "malware": "amber+strict",
         "threat-actor": "amber+strict",
         "intrusion-set": "amber+strict",
     }
-    STIX_MAIN_OBSERVABLE_TYPE_MAP = {
+    STIX_MAIN_OBSERVABLE_TYPE_MAP: ClassVar[dict] = {
         "domain": "Domain-Name",
         "domain-name": "Domain-Name",
         "file": "StixFile",
@@ -187,9 +156,9 @@ class ConfigConnector:
         "yara": "StixFile",
         "suricata": "Network-Traffic",
     }
-    STIX_MALWARE_TYPE_MAP = {*MALWARE_TYPE}
+    STIX_MALWARE_TYPE_MAP: ClassVar[set] = {*MALWARE_TYPE}
     # ISO3166-1 https://www.iso.org/standard/72482.html
-    COUNTRIES = {
+    COUNTRIES: ClassVar[dict] = {
         "AF": "Afghanistan",
         "AX": "Åland Islands",
         "AL": "Albania",
@@ -440,19 +409,19 @@ class ConfigConnector:
         "ZM": "Zambia",
         "ZW": "Zimbabwe",
     }
-    STIX_COUNTRY_TYPE_MAP = {
+    STIX_COUNTRY_TYPE_MAP: ClassVar[dict] = {
         "country": "Country",
         "city": "City",
         "state": "Administrative-Area",
     }
-    STIX_REPORT_TYPE_MAP = {"threat_report": "Threat-Report"}
-    STIX_RELATION_TYPE_MAP = {
+    STIX_REPORT_TYPE_MAP: ClassVar[dict] = {"threat_report": "Threat-Report"}
+    STIX_RELATION_TYPE_MAP: ClassVar[dict] = {
         "indicator": "based-on",
         "attack_pattern": "indicates",
         "malware": "indicates",
         "threat_actor": "indicates",
     }
-    COLLECTION_MAP = {
+    COLLECTION_MAP: ClassVar[dict] = {
         "apt_threat": "apt/threat",
         "apt_threat_actor": "apt/threat_actor",
         "attacks_ddos": "attacks/ddos",

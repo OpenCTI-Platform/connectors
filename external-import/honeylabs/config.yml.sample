@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'HoneyLabs'
+  scope: 'Indicator,IPv4-Addr,Url'
+  log_level: 'info'
+  duration_period: 'PT1H'
+
+honeylabs:
+  api_key: 'ChangeMe'
+  # api_root: 'https://honeylabs.net/taxii2/api/'
+  # collections: 'attackers,malware-infrastructure'
+  # import_since: 'P7D'
+  # page_size: 500
+  # create_observables: true
+  # tlp_level: 'clear'

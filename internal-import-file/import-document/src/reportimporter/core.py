@@ -526,6 +526,12 @@ class ReportImporter:
                     object_marking_refs=object_markings,
                     custom_properties=custom_properties,
                 )
+            elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-512":
+                observable = stix2.File(
+                    hashes={"SHA-512": match[RESULT_FORMAT_MATCH]},
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
             elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
                 observable = stix2.WindowsRegistryKey(
                     key=match[RESULT_FORMAT_MATCH],
@@ -765,6 +771,11 @@ class ReportImporter:
             ids = []
             final_objects = []
             for object in observables:
+                if (
+                    "created_by_ref" in object
+                    and object["created_by_ref"] == "Restricted"
+                ):
+                    object["created_by_ref"] = None
                 if object["id"] not in ids:
                     ids.append(object["id"])
                     final_objects.append(object)

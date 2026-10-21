@@ -21,15 +21,20 @@ The SDK provides predefined models to represent data structures commonly used in
 You can use the models in your connector code as follows:
 
 ```python
-from connectors_sdk.models.octi import related_to
-from connectors_sdk.models import IPV4Address, Organization, OrganizationAuthor, TLPMarking
+from connectors_sdk.models import (
+    IPV4Address,
+    Organization,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
+)
 
 # Create an IOC provider (Author)
 author = OrganizationAuthor(name="Example Author")
 # Create knowledge and activity objects and link them together
 ip = IPV4Address(value="127.0.0.1", author=author, markings=[TLPMarking(level="amber+strict")])
 org = Organization(name="Example Corp", author=author)
-rel = ip | related_to | org
+rel = Relationship(type="related-to", source=ip, target=org)
 # Convert to OCTI extended STIX2 objects
 for obj in [author, ip, org, rel]:
     stix_object = obj.to_stix2_object()

@@ -36,6 +36,7 @@ def fixture_full_settings_dict() -> dict[str, dict[str, Any]]:
             "risk_as_score": False,
             "risk_threshold": 60,
             "analyst_notes_guess_relationships": False,
+            "analyst_notes_include_context_entities": False,
             "pull_risk_list": False,
             "riskrules_as_label": False,
             "risk_list_threshold": 70,

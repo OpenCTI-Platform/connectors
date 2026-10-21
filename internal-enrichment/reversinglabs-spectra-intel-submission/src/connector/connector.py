@@ -44,7 +44,9 @@ class ReversingLabsSpectraIntelConnector:
         self.reversinglabs_spectra_intelligence_password = (
             cfg.password.get_secret_value()
         )
-        self.reversinglabs_spectra_intelligence_max_tlp = cfg.max_tlp
+        self.reversinglabs_spectra_intelligence_max_tlp = (
+            f"TLP:{self.config.connector.max_tlp.upper()}"
+        )
         self.reversinglabs_sandbox_platform = cfg.sandbox_os
         self.reversinglabs_sandbox_internet_sim = cfg.sandbox_internet_sim
         self.reversinglabs_create_indicators = cfg.create_indicators

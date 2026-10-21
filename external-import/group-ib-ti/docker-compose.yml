@@ -1,0 +1,8 @@
+services:
+  connector-group-ib-ti:
+    image: opencti/connector-group-ib-ti:latest
+    env_file:
+      - .env
+    volumes:
+      - ./logs/:/opt/connector/logs/
+    restart: always

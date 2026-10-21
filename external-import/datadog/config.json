@@ -30,16 +30,16 @@
       "value": "info"
     },
     {
+      "name": "CONNECTOR_DURATION_PERIOD",
+      "value": "PT1H"
+    },
+    {
       "name": "DATADOG_API_BASE_URL",
       "value": "https://api.datadoghq.com"
     },
     {
       "name": "DATADOG_APP_BASE_URL",
       "value": "https://app.datadoghq.com"
-    },
-    {
-      "name": "DATADOG_IMPORT_INTERVAL",
-      "value": "60"
     },
     {
       "name": "DATADOG_MAX_TLP",

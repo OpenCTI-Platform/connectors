@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+from connectors_sdk import ConfigValidationError
 from pytest_mock.plugin import MockerFixture
 from tweetfeed import TweetFeed
 
@@ -134,3 +135,84 @@ class TestTweetFeedIntervalBehavior:
         assert (
             connector.is_scheduled(last_run=0, current_time=one_day_in_seconds) is True
         )
+
+
+class TestTweetFeedTLPMarking:
+    """`TWEETFEED_TLP_LEVEL` drives the marking attached to every created
+    observable and indicator."""
+
+    # Static marking-definition ids used by the OpenCTI platform.
+    MARKING_IDS = {
+        "clear": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
+        "white": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
+        "green": "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da",
+        "amber": "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82",
+        "amber+strict": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+        "red": "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed",
+    }
+
+    def test_defaults_to_tlp_green(self, required_env, mocked_helper_class):
+        """TLP:GREEN was the hardcoded marking before this setting existed, so it
+        stays the default to keep existing deployments unchanged."""
+        connector = TweetFeed()
+
+        assert connector.config.tweetfeed.tlp_level == "green"
+        assert connector.tlp_marking_id == self.MARKING_IDS["green"]
+
+    @pytest.mark.parametrize("tlp_level", list(MARKING_IDS))
+    def test_configured_level_is_mapped_to_its_marking_id(
+        self, required_env, monkeypatch, mocked_helper_class, tlp_level
+    ):
+        monkeypatch.setenv("TWEETFEED_TLP_LEVEL", tlp_level)
+
+        connector = TweetFeed()
+
+        assert connector.tlp_marking_id == self.MARKING_IDS[tlp_level]
+
+    def test_configured_level_is_case_insensitive(
+        self, required_env, monkeypatch, mocked_helper_class
+    ):
+        monkeypatch.setenv("TWEETFEED_TLP_LEVEL", "AMBER+STRICT")
+
+        connector = TweetFeed()
+
+        assert connector.tlp_marking_id == self.MARKING_IDS["amber+strict"]
+
+    def test_unknown_level_is_rejected(
+        self, required_env, monkeypatch, mocked_helper_class
+    ):
+        monkeypatch.setenv("TWEETFEED_TLP_LEVEL", "purple")
+
+        with pytest.raises(ConfigValidationError):
+            TweetFeed()
+
+    def test_observables_are_created_with_the_configured_marking(
+        self, required_env, monkeypatch, mocked_helper_class
+    ):
+        monkeypatch.setenv("TWEETFEED_TLP_LEVEL", "red")
+        connector = TweetFeed()
+
+        connector.create_observables_i(
+            {"type": "ip", "value": "1.2.3.4"},
+            {"id": "external-reference--id"},
+        )
+
+        _, kwargs = connector.helper.api.stix_cyber_observable.create.call_args
+        assert kwargs["objectMarking"] == [self.MARKING_IDS["red"]]
+
+    @pytest.mark.parametrize("tags", [[""], ["phishing"]])
+    def test_indicators_are_created_with_the_configured_marking(
+        self, required_env, monkeypatch, mocked_helper_class, tags
+    ):
+        monkeypatch.setenv("TWEETFEED_TLP_LEVEL", "amber")
+        connector = TweetFeed()
+        connector.data = {"Date": "2026-01-01T00:00:00.000Z"}
+
+        connector.create_indicators_i(
+            {"type": "ip", "value": "1.2.3.4", "tags": tags},
+            {"id": "external-reference--id"},
+            tags,
+        )
+
+        _, kwargs = connector.helper.api.indicator.create.call_args
+        assert kwargs["objectMarking"] == [self.MARKING_IDS["amber"]]

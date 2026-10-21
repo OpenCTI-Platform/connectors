@@ -24,6 +24,7 @@ class ConnectorConverter(BaseConverter):
         author_name: str,
         author_description: str,
         tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        report_type: str = REPORT_TYPE_THREAT_REPORT,
     ) -> None:
         super().__init__(
             helper=helper,
@@ -31,6 +32,7 @@ class ConnectorConverter(BaseConverter):
             author_description=author_description,
             tlp_level=tlp_level,
         )
+        self.report_type = report_type
 
     def to_stix_objects(self, entity: Message) -> Generator[stix2.Report, None, None]:
         """
@@ -48,7 +50,7 @@ class ConnectorConverter(BaseConverter):
             yield self._create_report(
                 name=name,
                 published=entity.received_date_time,
-                report_types=[REPORT_TYPE_THREAT_REPORT],
+                report_types=[self.report_type],
                 x_opencti_content=entity.body.content,
                 x_opencti_files=[
                     OpenCTIFile(

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -17,6 +19,13 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="ImportDocument",
+    )
+    type: Literal["INTERNAL_IMPORT_FILE", "INTERNAL_ANALYSIS"] = Field(
+        description=(
+            "The type of the connector. Use `INTERNAL_ANALYSIS` to run the connector "
+            "in content mapping mode, along with `only_contextual` set to `true`."
+        ),
+        default="INTERNAL_IMPORT_FILE",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",

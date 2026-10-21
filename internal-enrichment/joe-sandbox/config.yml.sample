@@ -10,6 +10,7 @@ connector:
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 50 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+  # max_tlp: 'TLP:RED' # Max TLP of the observables submitted to Joe Sandbox (default: 'TLP:RED', no limit)
 
 joe_sandbox:
   report_types: 'executive,html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,pdfexecutive,misp,pcap,maec,memdumps,json,lightjsonfixed,xml,lightxml,pcapunified,pcapsslinspection'

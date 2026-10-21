@@ -132,13 +132,12 @@ find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \
     -e "s/TemplateClient/${PYTHON_NAME}Client/g" \
     -e "s/TEMPLATE/${CAPITALIZED_NAME}/g" {} +
 
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/config.yml.sample"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/__init__.py"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/connector.py"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/connector/settings.py"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/src/template_client/__init__.py"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/tests/tests_connector/test_settings.py"
-sed -i -e "s/$NAME/${NAME//-/_}/g" "$NEW_CONNECTOR_DIR/tests/test_main.py"
+# Convert the hyphenated connector name to its underscore form wherever it is used
+# as a Python identifier (package/module names, config field names...). This covers
+# every Python source and the sample config, so it keeps working when the template
+# file layout changes.
+find "$NEW_CONNECTOR_DIR" -type f \( -name '*.py' -o -name 'config.yml.sample' \) -exec \
+    sed -i -e "s/$NAME/${NAME//-/_}/g" {} +
 
 if [ -d "$NEW_CONNECTOR_DIR/src/template_client" ]; then
     mv "$NEW_CONNECTOR_DIR/src/template_client" "$NEW_CONNECTOR_DIR/src/${NAME//-/_}_client"

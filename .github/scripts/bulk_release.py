@@ -122,9 +122,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
     """Discover every buildable connector across all type directories.
 
     A directory is a connector when it lives directly under a type directory,
-    does not start with '.' or '_', and contains a ``Dockerfile``. This mirrors
-    the CI build matrix (.github/scripts/build_alpine_matrix.py) so that every
-    connector the pipeline can build is releasable in bulk.
+    does not start with '.' or '_', and contains both a ``Dockerfile`` and a
+    ``__metadata__/connector_manifest.json``. This mirrors the CI build matrix
+    (.github/scripts/build_alpine_matrix.py) so that every connector the
+    pipeline can build is releasable in bulk.
     """
     connectors: list[Connector] = []
     for type_dir in common.CONNECTOR_TYPE_DIRS:
@@ -137,6 +138,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
             if connector_path.name.startswith((".", "_")):
                 continue
             if not (connector_path / "Dockerfile").exists():
+                continue
+            if not (
+                connector_path / "__metadata__" / "connector_manifest.json"
+            ).exists():
                 continue
             connectors.append(
                 Connector(

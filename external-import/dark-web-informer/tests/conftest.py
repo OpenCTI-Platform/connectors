@@ -29,4 +29,5 @@ def helper():
     mock = MagicMock()
     mock.connect_id = "d1c5e2a7-0b3f-4e8a-9c6d-7f2b1a4e9c30"
     mock.api.work.initiate_work.return_value = "work-id"
+    mock.get_state.return_value = None
     return mock

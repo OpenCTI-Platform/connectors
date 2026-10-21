@@ -1,6 +1,7 @@
 """Kaspersky publication importer module."""
 
 from datetime import datetime
+from enum import Enum
 from typing import Any, List, Mapping, Optional, Set
 
 from kaspersky.client import KasperskyClient
@@ -11,6 +12,14 @@ from kaspersky.utils import datetime_to_timestamp, timestamp_to_datetime
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.exceptions import STIXError
+
+
+class PublicationResult(Enum):
+    """Kaspersky publication processing result."""
+
+    SUCCESS = "success"
+    SKIPPED = "skipped"
+    FAILED = "failed"
 
 
 class PublicationImporter(BaseImporter):
@@ -85,21 +94,25 @@ class PublicationImporter(BaseImporter):
         )
 
         failed_count = 0
+        skipped_count = 0
 
         for publication in publications:
             result = self._process_publication(publication)
-            if not result:
+            if result is PublicationResult.FAILED:
                 failed_count += 1
+            elif result is PublicationResult.SKIPPED:
+                skipped_count += 1
 
             publication_updated = publication.updated
             if publication_updated > latest_publication_datetime:
                 latest_publication_datetime = publication_updated
 
-        success_count = publication_count - failed_count
+        success_count = publication_count - failed_count - skipped_count
 
         self._info(
-            "Kaspersky publication importer completed (imported: {0}, failed: {1}, total: {2})",  # noqa: E501
+            "Kaspersky publication importer completed (imported: {0}, skipped: {1}, failed: {2}, total: {3})",  # noqa: E501
             success_count,
+            skipped_count,
             failed_count,
             publication_count,
         )
@@ -166,23 +179,39 @@ class PublicationImporter(BaseImporter):
 
         return list(filter(_ignored_prefix_filter, publications))
 
-    def _process_publication(self, publication: Publication) -> bool:
+    def _process_publication(self, publication: Publication) -> PublicationResult:
         self._info(
             "Processing publication {0} ({1})...", publication.name, publication.id
         )
 
         publication_details = self._fetch_publication_details(publication.id)
 
-        publication_bundle = self._create_publication_bundle(publication_details)
+        try:
+            publication_bundle = self._create_publication_bundle(publication_details)
+        except STIXError as e:
+            self.helper.metric.inc("error_count")
+            self._error(
+                "Failed to build publication bundle for '{0}' ({1}): {2}",
+                publication.name,
+                publication.id,
+                e,
+            )
+            return PublicationResult.FAILED
+
         if publication_bundle is None:
-            return False
+            self._info(
+                "Discarding publication without any intelligence '{0}' ({1}).",
+                publication.name,
+                publication.id,
+            )
+            return PublicationResult.SKIPPED
 
         # with open(f"publication_bundle_{publication_details.id}.json", "w") as f:
         #     f.write(publication_bundle.serialize(pretty=True))
 
         self._send_bundle(publication_bundle)
 
-        return True
+        return PublicationResult.SUCCESS
 
     def _create_publication_bundle(self, publication: Publication) -> Optional[Bundle]:
         author = self.author
@@ -210,17 +239,7 @@ class PublicationImporter(BaseImporter):
             opencti_regions,
         )
 
-        try:
-            return bundle_builder.build()
-        except STIXError as e:
-            self.helper.metric.inc("error_count")
-            self._error(
-                "Failed to build publication bundle for '{0}' ({1}): {2}",
-                publication.name,
-                publication.id,
-                e,
-            )
-            return None
+        return bundle_builder.build()
 
     def _load_opencti_regions(self) -> None:
         self.opencti_regions.clear()

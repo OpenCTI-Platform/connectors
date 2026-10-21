@@ -31,10 +31,18 @@ class HTTPSessionManager:
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
 
-    def create_session(self, api_key: str) -> requests.Session:
-        """Create a new HTTP session with resilience features."""
+    def create_session(self, api_key: str, api_version: str) -> requests.Session:
+        """Create a new HTTP session with resilience features.
+
+        The two Hunt.io APIs use mutually exclusive auth schemes: V2 expects a `token`
+        header and rejects bearer auth, V3 expects `Authorization: Bearer` and rejects
+        the `token` header. Both return HTTP 401 on a mismatch.
+        """
         session = requests.Session()
-        session.headers.update({"token": api_key})
+        if api_version == "v3":
+            session.headers.update({"Authorization": f"Bearer {api_key}"})
+        else:
+            session.headers.update({"token": api_key})
 
         # Configure retry strategy
         retry_strategy = Retry(
@@ -195,7 +203,8 @@ class ConnectorClient:
 
         # Create HTTP session with resilience features
         self.session = self.session_manager.create_session(
-            self.config.hunt_io.api_key.get_secret_value()
+            self.config.hunt_io.api_key.get_secret_value(),
+            self.config.hunt_io.api_version,
         )
 
     @property
@@ -322,7 +331,8 @@ class ConnectorClient:
 
             # Create new session with same configuration
             self.session = self.session_manager.create_session(
-                self.config.hunt_io.api_key.get_secret_value()
+                self.config.hunt_io.api_key.get_secret_value(),
+                self.config.hunt_io.api_version,
             )
 
             self.helper.connector_logger.info(
