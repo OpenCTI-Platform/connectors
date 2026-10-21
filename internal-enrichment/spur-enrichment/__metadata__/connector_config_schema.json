@@ -100,6 +100,11 @@
       "maximum": 100,
       "minimum": 0,
       "type": "integer"
+    },
+    "SPUR_FETCH_TAG_METADATA": {
+      "default": false,
+      "description": "Fetch the Spur metadata of the services seen on the IP (tunnel operators, client proxies, AI operators) to describe their infrastructures: categories, protocols, no-log policy, metrics... Each distinct service costs one more query of the Context API quota, cached for 24 hours.",
+      "type": "boolean"
     }
   },
   "required": [

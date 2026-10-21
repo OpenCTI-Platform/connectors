@@ -36,7 +36,11 @@ def test_connector_should_send_the_enriched_ip_in_the_original_bundle(settings):
         "event_type": "INTERNAL_ENRICHMENT",
         "entity_id": ip_id,
         "entity_type": "IPv4-Addr",
-        "enrichment_entity": {"entity_type": "IPv4-Addr", "objectMarking": []},
+        "enrichment_entity": {
+            "id": "opencti-id",
+            "entity_type": "IPv4-Addr",
+            "objectMarking": [],
+        },
         "stix_entity": entity,
         "stix_objects": [dict(entity)],
     }

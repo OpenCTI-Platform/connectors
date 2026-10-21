@@ -2,7 +2,7 @@ from ipaddress import IPv4Address, IPv6Address
 
 import pytest
 from pydantic import ValidationError
-from spur_client import IPContext
+from spur_client import IPContext, TagMetadata
 
 
 def test_ip_context_should_accept_a_full_response():
@@ -122,3 +122,65 @@ def test_ip_context_should_accept_unknown_values_and_fields():
 def test_ip_context_should_reject_an_invalid_response(response):
     with pytest.raises(ValidationError):
         IPContext.model_validate(response)
+
+
+def test_tag_metadata_should_accept_a_full_response():
+    # Given a tag metadata response with camelCase fields (trimmed real response)
+    response = {
+        "tag": "OXYLABS_PROXY",
+        "name": "Oxylabs",
+        "description": "Oxylabs is the second largest proxy provider tracked.",
+        "allTags": ["OXYLABS_PROXY"],
+        "categories": ["RESIDENTIAL_PROXY", "ISP_PROXY"],
+        "isAnonymous": True,
+        "isCallbackProxy": True,
+        "isNoLog": True,
+        "isTracked": True,
+        "allowsWhiteLabel": True,
+        "maxAgeDays": 3,
+        "metrics": {"distinctIPs": 11230722, "churnRate": 0.0856},
+        "platforms": ["ROUTER"],
+        "protocols": ["HTTP", "SOCKS"],
+        "resoldBy": ["SMARTPROXY_PROXY"],
+        "resells": [{"tag": "OTHER_PROXY", "products": ["RESIDENTIAL"]}],
+        "targetingTypes": ["CITY", "ASN"],
+    }
+
+    # When validating it
+    metadata = TagMetadata.model_validate(response)
+
+    # Then every field is typed, with snake_case names
+    assert metadata.tag == "OXYLABS_PROXY"
+    assert metadata.categories == ["RESIDENTIAL_PROXY", "ISP_PROXY"]
+    assert metadata.is_callback_proxy is True
+    assert metadata.allows_white_label is True
+    assert metadata.max_age_days == 3
+    assert metadata.metrics == {"distinctIPs": 11230722, "churnRate": 0.0856}
+    assert metadata.resold_by == ["SMARTPROXY_PROXY"]
+    assert metadata.resells[0].products == ["RESIDENTIAL"]
+    assert metadata.targeting_types == ["CITY", "ASN"]
+
+
+def test_tag_metadata_should_accept_a_response_without_optional_fields():
+    # Given a response with only the tag (Spur omits fields its doc marks as required)
+    metadata = TagMetadata.model_validate({"tag": "PROTON_VPN"})
+
+    # Then the missing fields are empty
+    assert metadata.description is None
+    assert metadata.website is None
+    assert metadata.categories == []
+    assert metadata.metrics == {}
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        pytest.param({"name": "Proton VPN"}, id="missing_tag"),
+        pytest.param({"tag": "X", "categories": "VPN"}, id="categories_not_a_list"),
+        pytest.param({"tag": "X", "isNoLog": "maybe"}, id="invalid_boolean"),
+        pytest.param({"tag": "X", "metrics": {"distinctIPs": "many"}}, id="bad_metric"),
+    ],
+)
+def test_tag_metadata_should_reject_an_invalid_response(response):
+    with pytest.raises(ValidationError):
+        TagMetadata.model_validate(response)

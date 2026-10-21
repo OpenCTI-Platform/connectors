@@ -2,8 +2,8 @@ from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -56,11 +56,20 @@ class SpurConfig(BaseConfigModel):
         ge=0,
         le=100,
     )
+    fetch_tag_metadata: bool = Field(
+        description=(
+            "Fetch the Spur metadata of the services seen on the IP (tunnel operators, "
+            "client proxies, AI operators) to describe their infrastructures: categories, "
+            "protocols, no-log policy, metrics... Each distinct service costs one more "
+            "query of the Context API quota, cached for 24 hours."
+        ),
+        default=False,
+    )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalEnrichmentConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `SpurConfig`.
+    Override `BaseInternalEnrichmentConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `SpurConfig`.
     """
 
     connector: InternalEnrichmentConnectorConfig = Field(

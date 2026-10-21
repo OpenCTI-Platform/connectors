@@ -3,11 +3,12 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 from connector import SpurIPProcessor
+from connector.processor import SpurData
 from connectors_sdk import ApiUnauthorizedError, EnrichmentMessage
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import IPV4Address, IPV6Address
 from pydantic import ValidationError
-from spur_client import IPContext, SpurClient
+from spur_client import IPContext, SpurClient, TagMetadata
 
 IP_CONTEXT = {
     "ip": "89.39.106.191",
@@ -49,7 +50,7 @@ IP_CONTEXT = {
 @pytest.fixture
 def processor(settings) -> SpurIPProcessor:
     processor = SpurIPProcessor()
-    processor.inject_dependencies(settings=settings, helper=MagicMock())
+    processor.inject_dependencies(settings=settings)
     processor.post_init()
     processor.client = MagicMock(spec=SpurClient)
     return processor
@@ -68,18 +69,27 @@ def _make_message(
         "value": value,
         **extra,
     }
-    return EnrichmentMessage(
-        entity_id=stix_entity["id"],
-        enrichment_entity={"entity_type": entity_type, "objectMarking": []},
-        stix_entity=stix_entity,
-        stix_objects=[stix_entity],
-        is_playbook=False,
+    return EnrichmentMessage.model_validate(
+        {
+            "enrichment_entity": {
+                "id": "opencti-id",
+                "entity_type": entity_type,
+                "objectMarking": [],
+            },
+            "stix_entity": stix_entity,
+            "stix_objects": [stix_entity],
+            "from_playbook": False,
+        }
     )
 
 
-def _context(data: dict) -> IPContext:
-    """Validate a Spur response, the IP being optional in tests."""
-    return IPContext.model_validate({"ip": "89.39.106.191", **data})
+def _context(data: dict, tag_metadata: list[dict] | None = None) -> SpurData:
+    """Build collected Spur data from raw responses, the IP being optional in tests."""
+    metadata = [TagMetadata.model_validate(item) for item in tag_metadata or []]
+    return SpurData(
+        ip_context=IPContext.model_validate({"ip": "89.39.106.191", **data}),
+        tag_metadata={item.tag: item for item in metadata},
+    )
 
 
 def _by_type(objects: list) -> dict[str, list[dict]]:
@@ -121,7 +131,7 @@ def test_collect_should_query_a_single_ip(processor, value, queried_ip):
 
     # Then Spur is queried with the bare IP
     processor.client.get_ip_context.assert_called_once_with(queried_ip)
-    assert data == ip_context
+    assert data == SpurData(ip_context=ip_context)
 
 
 @pytest.mark.parametrize("value", ["1.2.3.0/24", "not-an-ip"])
@@ -189,7 +199,7 @@ def test_transform_should_enrich_the_ip_with_labels_and_score(processor):
 
     # Then the enriched IP keeps its id, with the Spur labels and score
     ip = _by_type(objects)["ipv4-addr"][0]
-    assert ip["id"] == message.entity_id
+    assert ip["id"] == message.stix_entity.id
     assert ip["x_opencti_score"] == 75
     assert ip["x_opencti_labels"] == [
         "spur-tunnel-type:vpn",
@@ -223,13 +233,13 @@ def test_transform_should_link_the_ip_to_its_spur_page(processor):
     ]
 
 
-def test_transform_should_keep_the_existing_labels(processor):
-    message = _make_message(x_opencti_labels=["existing", "spur-risk:tunnel"])
+def test_transform_should_return_the_ip_with_the_id_of_the_ip_received(processor):
+    message = _make_message()
 
     objects = processor.transform(_context({"risks": ["TUNNEL"]}), message)
 
-    ip = _by_type(objects)["ipv4-addr"][0]
-    assert ip["x_opencti_labels"] == ["existing", "spur-risk:tunnel"]
+    [ip] = [obj for obj in objects if isinstance(obj, IPV4Address)]
+    assert ip.id == message.stix_entity.id
 
 
 def test_transform_should_handle_ipv6(processor):
@@ -237,7 +247,7 @@ def test_transform_should_handle_ipv6(processor):
 
     objects = processor.transform(_context({"ip": "2001:db8::1"}), message)
 
-    assert _by_type(objects)["ipv6-addr"][0]["id"] == message.entity_id
+    assert _by_type(objects)["ipv6-addr"][0]["id"] == message.stix_entity.id
 
 
 @pytest.mark.parametrize(
@@ -290,7 +300,7 @@ def test_transform_should_link_the_autonomous_system(processor):
     assert autonomous_system["number"] == 49981
     assert autonomous_system["name"] == "WorldStream B.V."
     assert _links(stix_objects, "belongs-to") == [
-        (message.entity_id, autonomous_system["id"])
+        (message.stix_entity.id, autonomous_system["id"])
     ]
 
 
@@ -307,7 +317,7 @@ def test_transform_should_chain_the_locations(processor):
     assert locations["Administrative-Area"]["name"] == "North Holland"
     assert locations["Country"]["name"] == "Netherlands"
     assert _links(stix_objects, "located-at") == [
-        (message.entity_id, locations["City"]["id"]),
+        (message.stix_entity.id, locations["City"]["id"]),
         (locations["City"]["id"], locations["Administrative-Area"]["id"]),
         (locations["Administrative-Area"]["id"], locations["Country"]["id"]),
     ]
@@ -322,7 +332,9 @@ def test_transform_should_link_the_ip_to_the_country_only(processor):
 
     country = stix_objects["location"][0]
     assert country["name"] == "Germany"
-    assert _links(stix_objects, "located-at") == [(message.entity_id, country["id"])]
+    assert _links(stix_objects, "located-at") == [
+        (message.stix_entity.id, country["id"])
+    ]
 
 
 @pytest.mark.parametrize(
@@ -357,7 +369,7 @@ def test_transform_should_link_the_tunnel_operator_to_the_ip(processor):
     assert infrastructure["description"] == (
         "Services seen by Spur on 89.39.106.191: OPENVPN, IPSEC"
     )
-    assert (infrastructure["id"], message.entity_id) in _links(
+    assert (infrastructure["id"], message.stix_entity.id) in _links(
         stix_objects, "consists-of"
     )
 
@@ -380,7 +392,7 @@ def test_transform_should_relate_the_client_proxies_to_the_ip(processor):
     infrastructure = _infrastructure(stix_objects, "NETNUT_PROXY")
     assert infrastructure["infrastructure_types"] == ["anonymization"]
     assert _links(stix_objects, "related-to") == [
-        (infrastructure["id"], message.entity_id)
+        (infrastructure["id"], message.stix_entity.id)
     ]
 
 
@@ -391,7 +403,7 @@ def test_transform_should_link_the_ai_operator_to_the_ip(processor):
 
     infrastructure = _infrastructure(stix_objects, "OPENAI")
     assert "infrastructure_types" not in infrastructure
-    assert (infrastructure["id"], message.entity_id) in _links(
+    assert (infrastructure["id"], message.stix_entity.id) in _links(
         stix_objects, "consists-of"
     )
 
@@ -521,12 +533,250 @@ def test_transform_should_build_a_deterministic_note(processor):
     assert len(first) == 1
     note = first[0]
     assert note["id"] == second[0]["id"]
-    assert note["object_refs"] == [message.entity_id]
+    assert note["object_refs"] == [message.stix_entity.id]
     assert note["abstract"] == "Spur IP context for 89.39.106.191"
     assert "- **Organization**: Proton AG" in note["content"]
     assert "- **Client count**: 12" in note["content"]
     assert "- **Client concentration**: Paris, Ile-de-France, FR" in note["content"]
     assert "- **Concentration density**: 0.42" in note["content"]
+
+
+# ----------------------------------------------------------------------
+# collect() and transform(): service tag metadata
+# ----------------------------------------------------------------------
+
+PROTON_VPN_METADATA = {
+    "tag": "PROTON_VPN",
+    "name": "Proton VPN",
+    "description": "Proton VPN is a commercial VPN.",
+    "website": "https://protonvpn.com",
+    "allTags": ["PROTON_VPN"],
+    "categories": ["COMMERCIAL_VPN"],
+    "isAnonymous": True,
+    "isNoLog": True,
+    "maxAgeDays": 7,
+    "protocols": ["OPENVPN", "WIREGUARD"],
+    "metrics": {"churnRate": 0.003416871, "distinctIPs": 56433},
+}
+
+
+def _tag_metadata_lookup(*metadata: dict):
+    known = {item["tag"]: TagMetadata.model_validate(item) for item in metadata}
+    return lambda tag: known.get(tag)
+
+
+def test_collect_should_not_fetch_tag_metadata_by_default(processor):
+    # Given an IP with a tunnel operator, and tag metadata disabled (default)
+    processor.client.get_ip_context.return_value = IPContext.model_validate(
+        {"ip": "1.2.3.4", "tunnels": [{"operator": "PROTON_VPN"}]}
+    )
+
+    # When collecting
+    data = processor.collect(_make_message("1.2.3.4"))
+
+    # Then only the IP context is fetched
+    processor.client.get_tag_metadata.assert_not_called()
+    assert data.tag_metadata == {}
+
+
+def test_collect_should_fetch_the_metadata_of_each_service_tag(processor):
+    # Given tag metadata enabled and an IP seen with three services
+    processor.fetch_tag_metadata = True
+    processor.client.get_ip_context.return_value = IPContext.model_validate(
+        {
+            "ip": "1.2.3.4",
+            "tunnels": [{"operator": "PROTON_VPN"}],
+            "client": {"proxies": ["OXYLABS_PROXY", "PROTON_VPN"]},
+            "ai": {"operator": "OPENAI"},
+        }
+    )
+    processor.client.get_tag_metadata.side_effect = _tag_metadata_lookup(
+        PROTON_VPN_METADATA, {"tag": "OXYLABS_PROXY"}
+    )
+
+    # When collecting
+    data = processor.collect(_make_message("1.2.3.4"))
+
+    # Then each distinct tag is fetched once, unknown tags are left out
+    assert [
+        call.args[0] for call in processor.client.get_tag_metadata.call_args_list
+    ] == [
+        "PROTON_VPN",
+        "OXYLABS_PROXY",
+        "OPENAI",
+    ]
+    assert list(data.tag_metadata) == ["PROTON_VPN", "OXYLABS_PROXY"]
+
+
+def test_collect_should_fetch_the_canonical_tag_of_an_alias(processor):
+    # Given a tag that is an alias of another one
+    processor.fetch_tag_metadata = True
+    processor.client.get_ip_context.return_value = IPContext.model_validate(
+        {"ip": "1.2.3.4", "tunnels": [{"operator": "PROTONVPN"}]}
+    )
+    processor.client.get_tag_metadata.side_effect = _tag_metadata_lookup(
+        {"tag": "PROTONVPN", "aliasOf": "PROTON_VPN"}, PROTON_VPN_METADATA
+    )
+
+    # When collecting
+    data = processor.collect(_make_message("1.2.3.4"))
+
+    # Then the canonical tag metadata is fetched too
+    assert list(data.tag_metadata) == ["PROTONVPN", "PROTON_VPN"]
+
+
+def test_collect_should_skip_a_tag_whose_metadata_fails(processor):
+    # Given the metadata of one tag fails
+    processor.fetch_tag_metadata = True
+    processor.logger = MagicMock()
+    processor.client.get_ip_context.return_value = IPContext.model_validate(
+        {"ip": "1.2.3.4", "client": {"proxies": ["BROKEN_PROXY", "OXYLABS_PROXY"]}}
+    )
+    known = _tag_metadata_lookup({"tag": "OXYLABS_PROXY"})
+
+    def get_tag_metadata(tag: str):
+        if tag == "BROKEN_PROXY":
+            raise ApiUnauthorizedError("Unauthorized")
+        return known(tag)
+
+    processor.client.get_tag_metadata.side_effect = get_tag_metadata
+
+    # When collecting
+    data = processor.collect(_make_message("1.2.3.4"))
+
+    # Then the enrichment goes on without this tag, and the failure is logged
+    assert list(data.tag_metadata) == ["OXYLABS_PROXY"]
+    processor.logger.warning.assert_called_once()
+
+
+def test_transform_should_describe_the_infrastructure_with_its_metadata(processor):
+    # Given a tunnel operator with its metadata
+    data = _context(
+        {"tunnels": [{"operator": "PROTON_VPN", "anonymous": False}]},
+        [PROTON_VPN_METADATA],
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    # Then the infrastructure carries the metadata
+    infrastructure = _infrastructure(stix_objects, "PROTON_VPN")
+    assert infrastructure["aliases"] == ["Proton VPN"]
+    assert infrastructure["labels"] == [
+        "spur-category:commercial_vpn",
+        "spur-infra:anonymous",
+        "spur-infra:no-log",
+    ]
+    assert infrastructure["description"].startswith("Proton VPN is a commercial VPN.")
+    assert "- **Protocols**: OPENVPN, WIREGUARD" in infrastructure["description"]
+    assert "- **No-log policy**: yes" in infrastructure["description"]
+    assert "- **Observation max age (days)**: 7" in infrastructure["description"]
+    assert infrastructure["external_references"] == [
+        {
+            "source_name": "Proton VPN",
+            "description": "Service website",
+            "url": "https://protonvpn.com",
+        }
+    ]
+
+
+def test_transform_should_attach_the_service_metrics_to_the_infrastructure(processor):
+    data = _context({"tunnels": [{"operator": "PROTON_VPN"}]}, [PROTON_VPN_METADATA])
+
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    infrastructure = _infrastructure(stix_objects, "PROTON_VPN")
+    note = next(
+        note
+        for note in stix_objects["note"]
+        if note["object_refs"] == [infrastructure["id"]]
+    )
+    assert note["abstract"] == "Spur metrics for PROTON_VPN"
+    assert note["content"] == "- **Distinct IPs**: 56433\n- **Churn rate**: 0.0034"
+
+
+def test_transform_should_name_an_alias_after_its_canonical_tag(processor):
+    # Given an alias tag and its canonical tag
+    data = _context(
+        {"tunnels": [{"operator": "PROTONVPN"}]},
+        [{"tag": "PROTONVPN", "aliasOf": "PROTON_VPN"}, PROTON_VPN_METADATA],
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    # Then the infrastructure uses the canonical tag, the alias is kept as alias
+    infrastructure = stix_objects["infrastructure"][0]
+    assert infrastructure["name"] == "PROTON_VPN"
+    assert infrastructure["aliases"] == ["PROTONVPN", "Proton VPN"]
+
+
+def test_transform_should_merge_two_tags_of_the_same_service(processor):
+    # Given a tunnel operator and a client proxy that are the same service
+    data = _context(
+        {
+            "tunnels": [{"operator": "PROTON_VPN"}],
+            "client": {"proxies": ["PROTONVPN"]},
+        },
+        [{"tag": "PROTONVPN", "aliasOf": "PROTON_VPN"}, PROTON_VPN_METADATA],
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    # Then a single infrastructure is linked, as tunnel operator
+    assert [infra["name"] for infra in stix_objects["infrastructure"]] == ["PROTON_VPN"]
+    assert _links(stix_objects, "related-to") == []
+
+
+def test_transform_should_merge_the_tunnels_of_two_tags_of_the_same_service(
+    processor,
+):
+    # Given two tunnels whose operators are an alias and its canonical tag
+    data = _context(
+        {
+            "tunnels": [
+                {"operator": "PROTON_VPN", "entries": ["2.2.2.2"]},
+                {"operator": "PROTONVPN", "exits": ["3.3.3.3"]},
+            ]
+        },
+        [{"tag": "PROTONVPN", "aliasOf": "PROTON_VPN"}, PROTON_VPN_METADATA],
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    # Then one infrastructure holds the nodes of both tunnels
+    infrastructure = _infrastructure(stix_objects, "PROTON_VPN")
+    assert len(stix_objects["infrastructure"]) == 1
+    assert [target for source, target in _links(stix_objects, "consists-of")] == [
+        _make_message().stix_entity.id,
+        _node(stix_objects, "2.2.2.2")["id"],
+        _node(stix_objects, "3.3.3.3")["id"],
+    ]
+    assert {source for source, _ in _links(stix_objects, "consists-of")} == {
+        infrastructure["id"]
+    }
+
+
+def test_transform_should_not_build_a_metrics_note_without_metrics(processor):
+    data = _context({"tunnels": [{"operator": "PROTON_VPN"}]}, [{"tag": "PROTON_VPN"}])
+
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    assert "note" not in stix_objects
+
+
+def test_transform_should_keep_the_ip_services_without_metadata(processor):
+    data = _context({"tunnels": [{"operator": "CORP_VPN"}], "services": ["IPSEC"]})
+
+    stix_objects = _by_type(processor.transform(data, _make_message()))
+
+    infrastructure = _infrastructure(stix_objects, "CORP_VPN")
+    assert infrastructure["description"] == (
+        "Services seen by Spur on 89.39.106.191: IPSEC"
+    )
+    assert "aliases" not in infrastructure
 
 
 def _infrastructure(stix_objects: dict[str, list[dict]], name: str) -> dict:

@@ -15,3 +15,4 @@ spur:
   # api_base_url: 'https://api.spur.us'
   # tlp_level: 'amber' # Available values: clear, white, green, amber, amber+strict, red
   # default_score: 70
+  # fetch_tag_metadata: false # Describe the services seen on the IP; each distinct service costs one more query (cached 24 hours)

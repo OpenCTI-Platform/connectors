@@ -2,7 +2,11 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseInternalEnrichmentConnectorSettings,
+    ConfigValidationError,
+)
 from connectors_sdk.models.enums import TLPLevel
 
 
@@ -13,6 +17,11 @@ def _settings_class(settings_dict: dict[str, Any]) -> type[ConnectorSettings]:
             return handler(settings_dict)
 
     return FakeConnectorSettings
+
+
+def test_settings_should_be_internal_enrichment_connector_settings():
+    """`ConnectorSettings` is built on the SDK settings base of enrichment connectors."""
+    assert issubclass(ConnectorSettings, BaseInternalEnrichmentConnectorSettings)
 
 
 def test_settings_should_accept_minimal_input():
@@ -37,6 +46,7 @@ def test_settings_should_accept_minimal_input():
     assert settings.spur.api_key.get_secret_value() == "test-api-key"
     assert settings.spur.tlp_level == "amber"
     assert settings.spur.default_score == 70
+    assert settings.spur.fetch_tag_metadata is False
 
 
 def test_settings_should_accept_full_input():
@@ -50,6 +60,7 @@ def test_settings_should_accept_full_input():
                 "api_key": "test-api-key",
                 "tlp_level": "green",
                 "default_score": 50,
+                "fetch_tag_metadata": True,
             },
         }
     )
@@ -61,6 +72,7 @@ def test_settings_should_accept_full_input():
     assert settings.connector.max_tlp == TLPLevel.AMBER_STRICT
     assert settings.spur.tlp_level == "green"
     assert settings.spur.default_score == 50
+    assert settings.spur.fetch_tag_metadata is True
 
 
 @pytest.mark.parametrize(

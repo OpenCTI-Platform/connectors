@@ -1,4 +1,7 @@
-"""Typed model of the Spur IP Context object (`GET /v2/context/{ip}`).
+"""Typed models of the Spur Context API responses.
+
+- `IPContext`: the IP Context object (`GET /v2/context/{ip}`).
+- `TagMetadata`: the Tag Metadata object (`GET /v2/metadata/tags/{tag}`).
 
 See https://docs.spur.us/context-api/endpoints for the reference.
 
@@ -6,7 +9,7 @@ See https://docs.spur.us/context-api/endpoints for the reference.
   raises a `ValidationError` instead of producing wrong objects.
 - Presence is not: Spur omits empty fields, including some that its JSON schema
   marks as required (a tunnel without `entries`, an IP without `client`...).
-  Every field except `ip` is optional, lists default to empty.
+  Every field except `ip` and `tag` is optional, lists default to empty.
 - Values with a documented list (`risks`, `services`, `infrastructure`...) are
   plain strings: Spur adds values over time, and a new one must not break the
   enrichment.
@@ -14,6 +17,7 @@ See https://docs.spur.us/context-api/endpoints for the reference.
 """
 
 from pydantic import BaseModel, ConfigDict, Field, IPvAnyAddress
+from pydantic.alias_generators import to_camel
 
 
 class _SpurModel(BaseModel):
@@ -130,3 +134,56 @@ class IPContext(_SpurModel):
         description="Protocols in use (`OPENVPN`, `WIREGUARD`...).",
     )
     tunnels: list[Tunnel] = Field(default_factory=list)
+
+
+class Resell(_SpurModel):
+    """A service that a tagged service resells or routes through."""
+
+    tag: str | None = None
+    products: list[str] = Field(default_factory=list)
+
+
+class TagMetadata(_SpurModel):
+    """The Spur Tag Metadata object: what Spur knows about a service tag.
+
+    Field names are the snake_case version of the camelCase API fields
+    (`isNoLog` becomes `is_no_log`). The documentation marks some fields as
+    required (`description`, `website`...) that real responses omit.
+    """
+
+    model_config = ConfigDict(alias_generator=to_camel)
+
+    tag: str = Field(description="Service tag (e.g. `PROTON_VPN`).")
+    name: str | None = Field(default=None, description="Human-readable name.")
+    description: str | None = None
+    website: str | None = None
+    alias_of: str | None = Field(
+        default=None, description="Canonical tag that this tag aliases."
+    )
+    aliases: list[str] = Field(default_factory=list)
+    all_tags: list[str] = Field(default_factory=list)
+    categories: list[str] = Field(
+        default_factory=list,
+        description="Service categories (`COMMERCIAL_VPN`, `RESIDENTIAL_PROXY`...).",
+    )
+    is_anonymous: bool | None = None
+    is_callback_proxy: bool | None = None
+    is_no_log: bool | None = None
+    is_enterprise: bool | None = None
+    is_inactive: bool | None = None
+    is_tracked: bool | None = None
+    allows_white_label: bool | None = None
+    allows_local_network_access: bool | None = None
+    allows_crypto: bool | None = None
+    allows_free_access: bool | None = None
+    allows_torrents: bool | None = None
+    max_age_days: int | float | None = None
+    platforms: list[str] = Field(default_factory=list)
+    protocols: list[str] = Field(default_factory=list)
+    targeting_types: list[str] = Field(default_factory=list)
+    resold_by: list[str] = Field(default_factory=list)
+    resells: list[Resell] = Field(default_factory=list)
+    metrics: dict[str, int | float | None] = Field(
+        default_factory=dict,
+        description="Service metrics (`distinctIPs`, `churnRate`...).",
+    )
