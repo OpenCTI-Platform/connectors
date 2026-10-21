@@ -39,7 +39,7 @@ class Pulse(BaseModel):
     author_name: str
     public: bool
     revision: int
-    adversary: List[str] = []
+    adversary: List[str] = Field(default_factory=list)
     malware_families: List[str]
     industries: List[str]
     attack_ids: List[str]
