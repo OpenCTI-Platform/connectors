@@ -60,6 +60,7 @@ class ConverterToStix:
             x_opencti_aliases=None,
             x_opencti_reliability=None,
         )
+        self._tlp_marking = tlp_marking
         self._object_marking_refs: list[str] = [tlp_marking["id"]]
 
     def _system_from_asset(
@@ -184,7 +185,10 @@ class ConverterToStix:
         )
 
     def _vulnerabilities_from_cve(
-        self, cve: "CVEPort", severity_fallback: Optional[str] = None
+        self,
+        cve: "CVEPort",
+        cpe_uris: Optional[Iterable[str]],
+        severity_fallback: Optional[str] = None,
     ) -> tuple[Vulnerability, list[Software]]:
 
         vulnerability = self._make_vulnerability(
@@ -197,9 +201,17 @@ class ConverterToStix:
             severity_fallback=severity_fallback,
         )
 
-        software_s = self._make_targeted_softwares(
-            cpe_uris=cve.cpes if cve.cpes else []
-        )
+        # Softwares are built from the CPEs of the Tenable plugin that triggered the
+        # finding, as on the finding-only path (and as in the Tenable Vulnerability
+        # Management connector). The CVE's own CPE list (cve.cpes) is the generic NVD
+        # applicability list: it is not tied to the scanned asset, can be very large and
+        # is out of this connector's scope (the CVE connector `import_software` option
+        # covers this use case).
+        # Previous behavior, kept commented for an easy rollback if needed:
+        # software_s = self._make_targeted_softwares(
+        #     cpe_uris=cve.cpes if cve.cpes else []
+        # )
+        software_s = self._make_targeted_softwares(cpe_uris=cpe_uris)
         return (vulnerability, software_s)
 
     def _vulnerability_from_finding(
@@ -284,7 +296,9 @@ class ConverterToStix:
                 if finding.cves:
                     vulnerabilities = [
                         self._vulnerabilities_from_cve(
-                            cve, severity_fallback=finding.tenable_severity
+                            cve,
+                            cpe_uris=finding.cpes,
+                            severity_fallback=finding.tenable_severity,
                         )
                         for cve in finding.cves
                     ]
@@ -338,4 +352,8 @@ class ConverterToStix:
             return {}
 
         bundle.append(self._author)
-        return {obj.id: obj.to_stix2_object() for obj in bundle}
+        stix_objects = {obj.id: obj.to_stix2_object() for obj in bundle}
+        # Every object references the TLP marking: its definition must be in the bundle,
+        # otherwise `cleanup_inconsistent_bundle` strips the marking refs on send.
+        stix_objects[self._tlp_marking["id"]] = self._tlp_marking
+        return stix_objects

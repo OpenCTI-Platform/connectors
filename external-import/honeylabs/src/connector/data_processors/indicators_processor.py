@@ -82,7 +82,7 @@ class IndicatorsProcessor(BaseDataProcessor):
         since = self._checkpoint() or self.settings.honeylabs.import_since
         self.logger.info(
             "Fetching HoneyLabs collection",
-            {"collection": self.collection, "added_after": since.isoformat()},
+            meta={"collection": self.collection, "added_after": since.isoformat()},
         )
         yield from self.client.iter_objects(
             self.collection, since, self.settings.honeylabs.page_size
@@ -101,7 +101,7 @@ class IndicatorsProcessor(BaseDataProcessor):
                     objects.append(self._convert(raw))
                 except IndicatorConversionError as exc:
                     self.logger.warning(
-                        "Skipping indicator", {"id": raw.id, "error": str(exc)}
+                        "Skipping indicator", meta={"id": raw.id, "error": str(exc)}
                     )
                     skipped += 1
                     continue
@@ -123,7 +123,11 @@ class IndicatorsProcessor(BaseDataProcessor):
             yield objects
         self.logger.info(
             "HoneyLabs collection imported",
-            {"collection": self.collection, "indicators": total, "skipped": skipped},
+            meta={
+                "collection": self.collection,
+                "indicators": total,
+                "skipped": skipped,
+            },
         )
 
     # -- conversion -------------------------------------------------------

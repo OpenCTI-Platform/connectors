@@ -82,8 +82,8 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - GREYNOISE_KEY=ChangeMe
-      - GREYNOISE_MAX_TLP=TLP:AMBER
       - GREYNOISE_SIGHTING_NOT_SEEN=false
       - GREYNOISE_NO_SIGHTINGS=false
     restart: always
@@ -189,7 +189,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed conn
 Common issues:
 - **Invalid API Key**: Ensure you have an valid API key
 - **Rate Limit Error**: Ensure the connector is set to manual enrichment and only enrich within the weekly limits allowed for Free Tier users
-- **TLP Restrictions**: Check that observable TLP does not exceed `GREYNOISE_MAX_TLP`
+- **TLP Restrictions**: Check that observable TLP does not exceed `CONNECTOR_MAX_TLP` (replaces the deprecated `GREYNOISE_MAX_TLP`)
 
 ---
 

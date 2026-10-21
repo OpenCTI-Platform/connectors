@@ -1,6 +1,8 @@
 # isort:skip_file
 # pragma: no cover
 from tenable_security_center.adapters.tsc_api.v5_13_from_asset import (
+    _CVEAPI,
+    _CVEsAPI,
     _FindingAPI,
     _ScanResultsAPI,
 )
@@ -99,3 +101,90 @@ def test_parse_response_with_zero_asset_exposure_score():
 
     # Then asset_exposure_score should be 0.0
     assert result["asset_exposure_score"] == 0.0  # noqa: S101
+
+
+def test_cve_api_from_id_only_should_build_a_degraded_cve():
+    """from_id_only should build a CVE with only its id set, everything else None.
+
+    Used when Tenable Security Center has no details for a CVE id (e.g. an
+    empty response from the CVE endpoint) so the relationship to the
+    system/software can still be created.
+    """
+    # Given a CVE id with no available details
+    cve_id = "CVE-2021-9999"
+
+    # When building a degraded CVE from it
+    cve = _CVEAPI.from_id_only(cve_id)
+
+    # Then only the name is set, everything else is None
+    assert cve.name == cve_id  # noqa: S101
+    assert cve.description is None  # noqa: S101
+    assert cve.publication_datetime is None  # noqa: S101
+    assert cve.last_modified_datetime is None  # noqa: S101
+    assert cve.cpes is None  # noqa: S101
+    assert cve.cvss_v3_score is None  # noqa: S101
+    assert cve.cvss_v3_vector is None  # noqa: S101
+    assert cve.epss_score is None  # noqa: S101
+    assert cve.epss_percentile is None  # noqa: S101
+
+
+def test_cves_api_fetch_cves_should_yield_id_only_cve_on_empty_response():
+    """Regression test: Tenable Security Center returning an empty body for a
+    CVE id (HTTP 200, no content) must not be skipped nor crash the run; the
+    relationship to the CVE should still be created using its id only.
+    """
+    # Given a mocked Tenable Security Center client whose CVE endpoint
+    # returns an empty body (no error raised, just an empty response)
+    tsc_client = Mock()
+    tsc_client._url = "https://sc.example.com"
+    empty_response = Mock()
+    empty_response.content = b""
+    empty_response.raise_for_status = Mock()
+    tsc_client._session.get.return_value = empty_response
+
+    api = _CVEsAPI(tsc_client=tsc_client, logger=Mock(), num_threads=1)
+
+    # When fetching a CVE whose details are unavailable
+    cves = list(api.fetch_cves(["CVE-2021-9999"]))
+
+    # Then a degraded CVE (id only) is returned, not skipped
+    assert len(cves) == 1  # noqa: S101
+    assert cves[0].name == "CVE-2021-9999"  # noqa: S101
+    assert cves[0].description is None  # noqa: S101
+
+
+def test_cves_api_fetch_cves_should_return_full_cve_on_valid_response():
+    """A normal, non-empty response should still be parsed into a full CVE."""
+    # Given a mocked Tenable Security Center client returning a valid CVE payload
+    tsc_client = Mock()
+    tsc_client._url = "https://sc.example.com"
+    valid_response = Mock()
+    valid_response.content = b'{"primary_vuln_id": "CVE-2021-1234"}'
+    valid_response.raise_for_status = Mock()
+    valid_response.json.return_value = {
+        "primary_vuln_id": "CVE-2021-1234",
+        "descriptions": [
+            {
+                "description_text": "A test vulnerability.",
+                "publication_date": "2021-01-01T00:00:00Z",
+            },
+            {
+                "description_text": "A test vulnerability.",
+                "publication_date": "2021-01-02T00:00:00Z",
+            },
+        ],
+        "cpe_metrics": [],
+        "cvss_metrics": [{}],
+        "epss_metrics": [{}],
+    }
+    tsc_client._session.get.return_value = valid_response
+
+    api = _CVEsAPI(tsc_client=tsc_client, logger=Mock(), num_threads=1)
+
+    # When fetching that CVE
+    cves = list(api.fetch_cves(["CVE-2021-1234"]))
+
+    # Then the full CVE details are returned
+    assert len(cves) == 1  # noqa: S101
+    assert cves[0].name == "CVE-2021-1234"  # noqa: S101
+    assert cves[0].description == "A test vulnerability."  # noqa: S101

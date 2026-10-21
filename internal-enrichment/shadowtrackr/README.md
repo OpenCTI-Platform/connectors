@@ -67,13 +67,13 @@ Key features:
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must include `IPv4-Addr`, `IPv6-Addr`, `Indicator` |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: true) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP for sending to ShadowTrackr (default: `TLP:AMBER`). Replaces the deprecated `SHADOWTRACKR_MAX_TLP` |
 
 ### ShadowTrackr Configuration
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `shadowtrackr_api_key` | `SHADOWTRACKR_API_KEY` | Yes | ShadowTrackr API key |
-| `shadowtrackr_max_tlp` | `SHADOWTRACKR_MAX_TLP` | No | Maximum TLP for sending to ShadowTrackr (default: TLP:AMBER) |
 | `shadowtrackr_replace_with_lower_score` | `SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE` | No | Lower score based on false positive estimate |
 | `shadowtrackr_replace_valid_to_date` | `SHADOWTRACKR_REPLACE_VALID_TO_DATE` | No | Set valid_until to tomorrow for CDNs/Clouds/VPNs |
 
@@ -97,8 +97,8 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Indicator
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - SHADOWTRACKR_API_KEY=ChangeMe
-      - SHADOWTRACKR_MAX_TLP=TLP:AMBER
       - SHADOWTRACKR_REPLACE_WITH_LOWER_SCORE=true
       - SHADOWTRACKR_REPLACE_VALID_TO_DATE=true
     restart: always

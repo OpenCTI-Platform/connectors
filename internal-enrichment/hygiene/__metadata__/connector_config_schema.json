@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Hygiene",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -30,6 +32,7 @@
       ],
       "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -65,21 +68,25 @@
     "HYGIENE_LABEL_NAME": {
       "default": "hygiene",
       "description": "Set the label name.",
+      "minLength": 1,
       "type": "string"
     },
     "HYGIENE_LABEL_COLOR": {
       "default": "#fc0341",
       "description": "Color to use for the label.",
+      "minLength": 1,
       "type": "string"
     },
     "HYGIENE_LABEL_PARENT_NAME": {
       "default": "hygiene_parent",
       "description": "Label name to be used when enriching sub-domains.",
+      "minLength": 1,
       "type": "string"
     },
     "HYGIENE_LABEL_PARENT_COLOR": {
       "default": "#fc0341",
       "description": "Color to use for the label when enriching subdomains.",
+      "minLength": 1,
       "type": "string"
     },
     "HYGIENE_ENRICH_SUBDOMAINS": {
