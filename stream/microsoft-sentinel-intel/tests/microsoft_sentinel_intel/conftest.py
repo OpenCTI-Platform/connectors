@@ -233,3 +233,13 @@ def fixture_mock_microsoft_sentinel_intel_batch_create_only_config(
     microsoft_sentinel_intel_batch_create_only_config_dict: dict[str, dict[str, Any]],
 ) -> None:
     _mock_config_environ(mocker, microsoft_sentinel_intel_batch_create_only_config_dict)
+
+
+@pytest.fixture(name="mock_microsoft_sentinel_intel_keep_extensions_config")
+def fixture_mock_microsoft_sentinel_intel_keep_extensions_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
+) -> None:
+    config = deepcopy(microsoft_sentinel_intel_config_dict)
+    config["microsoft_sentinel_intel"]["delete_extensions"] = False
+    _mock_config_environ(mocker, config)

@@ -28,6 +28,11 @@ class Connector:
 
     def _prepare_stix_object(self, stix_object: dict) -> dict:
         stix_object = dict(stix_object)
+        # Sentinel has no score field and does not index STIX extensions,
+        # so the OpenCTI score is sent as confidence to keep it filterable
+        score = self.helper.get_attribute_in_extension("score", stix_object)
+        if score is not None:
+            stix_object["confidence"] = score
         if self.config.microsoft_sentinel_intel.delete_extensions:
             stix_object.pop("extensions", None)
         if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:

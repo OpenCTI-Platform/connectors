@@ -9,6 +9,7 @@ from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
+OPENCTI_EXTENSION_ID = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 BASE_API_URL = "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main"
 
 
@@ -32,13 +33,28 @@ def fixture_batch_connector(
     return Connector(helper=helper, config=config, client=client)
 
 
+@pytest.fixture(name="keep_extensions_connector")
+def fixture_keep_extensions_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_keep_extensions_config
+) -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
+
+
 @pytest.fixture(name="event_data_indicator")
 def fixture_event_data_indicator() -> dict:
     return {
         "id": "indicator--uuid",
         "spec_version": "2.1",
         "type": "indicator",
-        "extensions": {},
+        "extensions": {
+            OPENCTI_EXTENSION_ID: {
+                "extension_type": "property-extension",
+                "score": 80,
+            }
+        },
         "created": "2025-06-06T09:37:59.399Z",
         "modified": "2025-06-06T09:37:59.399Z",
         "revoked": False,
@@ -72,6 +88,7 @@ def test_handle_event_create(
     )
 
     event_data_indicator.pop("extensions")  # as delete_extensions is True
+    event_data_indicator["confidence"] = 80  # OpenCTI score sent as confidence
     event_data_indicator["labels"] = ["label"]  # labels in config
 
     request = mocked_send_request.call_args.kwargs["request"]
@@ -86,6 +103,48 @@ def test_handle_event_create(
         "sourcesystem": "Opencti Stream Connector",
         "stixobjects": [event_data_indicator],
     }
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_handle_event_create_should_keep_confidence_when_no_score(
+    mocker: MockerFixture, connector: Connector, event_data_indicator: dict
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    event_data_indicator["extensions"][OPENCTI_EXTENSION_ID].pop("score")
+    event_data_indicator["confidence"] = 42
+
+    connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    uploaded = json.loads(request.body)["stixobjects"][0]
+    assert uploaded["confidence"] == 42
+    assert "extensions" not in uploaded
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_keep_extensions_config")
+def test_handle_event_create_should_send_score_as_confidence_when_extensions_kept(
+    mocker: MockerFixture,
+    keep_extensions_connector: Connector,
+    event_data_indicator: dict,
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    keep_extensions_connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    uploaded = json.loads(request.body)["stixobjects"][0]
+    assert uploaded["confidence"] == 80
+    assert uploaded["extensions"] == event_data_indicator["extensions"]
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -287,7 +346,12 @@ def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
         "id": indicator_id,
         "spec_version": "2.1",
         "type": "indicator",
-        "extensions": {},
+        "extensions": {
+            OPENCTI_EXTENSION_ID: {
+                "extension_type": "property-extension",
+                "score": 80,
+            }
+        },
         "created": "2025-06-06T09:37:59.399Z",
         "modified": "2025-06-06T09:37:59.399Z",
         "revoked": False,
@@ -446,6 +510,7 @@ def test_process_batch_prepare_applied(
     body = json.loads(request.body)
     for obj in body["stixobjects"]:
         assert "extensions" not in obj  # delete_extensions is True
+        assert obj["confidence"] == 80  # OpenCTI score sent as confidence
         assert "label" in obj["labels"]  # extra_labels applied
 
 

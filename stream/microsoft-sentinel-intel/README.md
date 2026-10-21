@@ -229,3 +229,4 @@ CONNECTOR_LOG_LEVEL=debug
 - **STIX Bundles**: Indicators are sent as STIX bundles to preserve threat intelligence context
 - **Extra Labels**: Add comma-separated labels to all indicators sent to Sentinel
 - **Delete Extensions**: Set to `true` to remove OpenCTI-specific extensions from bundles
+- **Score**: Microsoft Sentinel has no score field and does not index STIX extensions, so the OpenCTI score is sent in the STIX `confidence` property (0-100), which overrides the OpenCTI confidence. Objects without a score keep their original confidence
