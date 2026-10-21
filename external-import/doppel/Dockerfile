@@ -6,7 +6,7 @@ WORKDIR /opt/doppel
 COPY src /opt/doppel
 
 # Install required OS packages and Python dependencies
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN pip install --upgrade pip && \

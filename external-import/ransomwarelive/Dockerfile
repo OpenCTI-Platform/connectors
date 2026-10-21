@@ -6,7 +6,8 @@ COPY src /opt/connector
 WORKDIR /opt/connector
 
 # Install Python modules
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 

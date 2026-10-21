@@ -6,7 +6,7 @@ COPY src /opt/opencti-yara
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add gcc git build-base libmagic libffi-dev yara
 
 RUN pip3 install --no-cache-dir -r /opt/opencti-yara/requirements.txt && \
