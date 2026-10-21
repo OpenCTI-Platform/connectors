@@ -1,4 +1,4 @@
-pycti==7.261014.0
+pycti==7.261021.1
 pycountry==24.6.1
 pydantic~=2.13.5
 requests~=2.33.0

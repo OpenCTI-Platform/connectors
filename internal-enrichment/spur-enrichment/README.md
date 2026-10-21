@@ -78,6 +78,8 @@ Open an IPv4 or IPv6 observable in OpenCTI and click on the enrichment button, t
 The connector can also be used in playbooks.
 
 Each enrichment consumes one query of the Spur Context API quota, so `CONNECTOR_AUTO` defaults to `false`.
+With `SPUR_FETCH_TAG_METADATA=true`, each distinct service seen on the IP costs one more query, cached for 24 hours
+(see [Service metadata](#service-metadata)).
 
 ## Behavior
 
@@ -105,6 +107,24 @@ The connector makes a single call to `GET /v2/context/{ip}` per enrichment and c
 Infrastructures are named after the Spur service tag (e.g. `PROTON_VPN`), so the same service always gives the same
 infrastructure. Service tags are not labels: they are an open catalog of thousands of values.
 
+### Service metadata
+
+With `SPUR_FETCH_TAG_METADATA=true`, the connector also calls `GET /v2/metadata/tags/{tag}` for each service seen on
+the IP (tunnel operators, client proxies, AI operator) and describes their infrastructures with it:
+
+| Tag metadata field | OpenCTI |
+| ------------------ | ------- |
+| `aliasOf` | The infrastructure is named after the canonical tag, the tag seen on the IP becomes an alias |
+| `name`, `aliases`, `allTags` | `Infrastructure` aliases (e.g. `Proton VPN`) |
+| `categories` | Labels on the infrastructure: `spur-category:commercial_vpn`... |
+| `isAnonymous`, `isNoLog` | Labels on the infrastructure: `spur-infra:anonymous`, `spur-infra:no-log` |
+| `description` and the other properties (`protocols`, `platforms`, `targetingTypes`, `isCallbackProxy`, `isEnterprise`, `isInactive`, `maxAgeDays`, `resoldBy`, `resells`...) | `Infrastructure` description |
+| `website` | External reference on the infrastructure |
+| `metrics` | `Note` attached to the infrastructure (distinct IPs, ASNs, countries, churn rate...) |
+
+Responses are cached for 24 hours, including unknown tags (HTTP 404, which still costs a query). A service whose
+metadata cannot be fetched keeps the infrastructure built from the IP context only, and the enrichment goes on.
+
 The new objects are created by the `Spur` organization and marked with `SPUR_TLP_LEVEL`. The author and the markings
 of the enriched IP are left unchanged.
 
@@ -122,7 +142,8 @@ The connector can be debugged by setting the appropriate log level (`CONNECTOR_L
 ## Additional information
 
 - The Spur labels and the score can also be set by the Spur external-import connector, which uses unprefixed labels.
-- The infrastructure description lists the services of the last enriched IP of this service: it is replaced at each
-  enrichment.
+- Without service metadata, the infrastructure description lists the services of the last enriched IP of this
+  service: it is replaced at each enrichment.
 - Labels are only added, never removed: an IP keeps its Spur labels after Spur stops reporting them.
-- The Spur service tag metadata (`/v2/metadata/tags/{tag}`) is not used yet.
+- The service metrics change often: each new set of metrics gives a new note on the infrastructure, and the older ones
+  remain.

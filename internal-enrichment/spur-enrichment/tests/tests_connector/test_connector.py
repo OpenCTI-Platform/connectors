@@ -31,7 +31,12 @@ def test_connector_should_send_the_enriched_ip_in_the_original_bundle(settings):
         }
     )
     ip_id = IPV4Address(value="1.2.3.4").id
-    entity = {"type": "ipv4-addr", "id": ip_id, "value": "1.2.3.4"}
+    entity = {
+        "type": "ipv4-addr",
+        "id": ip_id,
+        "value": "1.2.3.4",
+        "x_opencti_labels": ["existing"],
+    }
     data = {
         "event_type": "INTERNAL_ENRICHMENT",
         "entity_id": ip_id,
@@ -44,12 +49,13 @@ def test_connector_should_send_the_enriched_ip_in_the_original_bundle(settings):
     # When an IPv4 enrichment message is received
     connector.callback(data)
 
-    # Then one bundle is sent with the original IP replaced by the enriched one
+    # Then one bundle is sent with the Spur data merged into the original IP
     helper.send_stix2_bundle.assert_called_once()
     objects = json.loads(helper.send_stix2_bundle.call_args.args[0])["objects"]
     ips = [obj for obj in objects if obj["id"] == ip_id]
     assert len(ips) == 1
     assert ips[0]["x_opencti_score"] == 75
+    assert ips[0]["x_opencti_labels"][0] == "existing"
     assert "spur-tunnel-type:vpn" in ips[0]["x_opencti_labels"]
     assert {obj["type"] for obj in objects} == {
         "identity",

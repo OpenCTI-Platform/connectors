@@ -37,6 +37,7 @@ def test_settings_should_accept_minimal_input():
     assert settings.spur.api_key.get_secret_value() == "test-api-key"
     assert settings.spur.tlp_level == "amber"
     assert settings.spur.default_score == 70
+    assert settings.spur.fetch_tag_metadata is False
 
 
 def test_settings_should_accept_full_input():
@@ -50,6 +51,7 @@ def test_settings_should_accept_full_input():
                 "api_key": "test-api-key",
                 "tlp_level": "green",
                 "default_score": 50,
+                "fetch_tag_metadata": True,
             },
         }
     )
@@ -61,6 +63,7 @@ def test_settings_should_accept_full_input():
     assert settings.connector.max_tlp == TLPLevel.AMBER_STRICT
     assert settings.spur.tlp_level == "green"
     assert settings.spur.default_score == 50
+    assert settings.spur.fetch_tag_metadata is True
 
 
 @pytest.mark.parametrize(

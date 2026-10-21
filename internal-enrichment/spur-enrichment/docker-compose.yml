@@ -18,4 +18,5 @@ services:
       # - SPUR_API_BASE_URL=https://api.spur.us
       # - SPUR_TLP_LEVEL=amber # Available values: clear, white, green, amber, amber+strict, red
       # - SPUR_DEFAULT_SCORE=70
+      # - SPUR_FETCH_TAG_METADATA=false # Describe the services seen on the IP; each distinct service costs one more query (cached 24 hours)
     restart: always
