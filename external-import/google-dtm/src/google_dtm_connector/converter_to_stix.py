@@ -132,7 +132,6 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Author**: {dtm_alert_doc.get("source_url", "")}
 - **Collected**: {dtm_alert_doc.get("ingested", "")}
 - **Published**: {dtm_alert_doc.get("timestamp", "")}
 - **Source File**: {dtm_alert_doc.get("filename", "")}
@@ -192,8 +191,8 @@ class ConverterToStix:
 - **SHA1**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha1", "")}
 - **SHA256**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha256", "")}
 ### Content
-- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
-- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
+- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
+- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
 - **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain", "")}
 - **Login**: {dtm_alert_doc.get("service_account", {}).get("login", "")}
 - **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text", "")}
@@ -545,7 +544,7 @@ class ConverterToStix:
                 stix_hashes["MD5"] = hashes["md5"]
             stix_file = stix2.File(
                 hashes=stix_hashes,
-                name=source_file.get("name"),
+                name=source_file.get("filename"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
