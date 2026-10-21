@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-RUN apk add --no-cache git build-base libffi-dev openssl-dev libmagic
+RUN apk --no-cache upgrade && \
+    apk add --no-cache git build-base libffi-dev openssl-dev libmagic
 
 COPY src /opt/opencti-connector-usta
 

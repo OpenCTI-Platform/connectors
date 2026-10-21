@@ -8,7 +8,7 @@ COPY requirements.txt /opt/opencti-connector-dogesec-cyberthreatexchange/require
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-dogesec-cyberthreatexchange && \
