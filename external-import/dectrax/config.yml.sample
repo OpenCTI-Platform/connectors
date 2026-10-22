@@ -16,7 +16,6 @@ dectrax:
   edl_endpoint: '/api/v1/edl/firewall.txt'
   telemetry_endpoint: '/api/v1/telemetry/threats'
   tlp_level: 'clear' # 'clear', 'white', 'green', 'amber', 'amber+strict', 'red'
-  confidence_level: 90
   create_indicators: true
   create_observables: true
   sync_modbus: true

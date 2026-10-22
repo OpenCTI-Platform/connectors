@@ -3,25 +3,25 @@ services:
   connector-dectrax:
     image: opencti/connector-dectrax:latest
     environment:
-      # OpenCTI settings
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGEME
-      # Connector settings
-      - CONNECTOR_ID=4dfb62c9-6cb8-48b5-90df-520e2ef5b901
-      - CONNECTOR_NAME=DECTRAX Autonomous Deception
-      - CONNECTOR_SCOPE=dectrax,ipv4-addr,indicator
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT1H
-      # DECTRAX settings
-      - DECTRAX_API_URL=http://dectrax:8000
-      - DECTRAX_API_KEY=CHANGEME
-      - DECTRAX_EDL_ENDPOINT=/api/v1/edl/firewall.txt
-      - DECTRAX_TELEMETRY_ENDPOINT=/api/v1/telemetry/threats
-      - DECTRAX_TLP_LEVEL=clear
-      - DECTRAX_CONFIDENCE_LEVEL=90
-      - DECTRAX_CREATE_INDICATORS=true
-      - DECTRAX_CREATE_OBSERVABLES=true
-      - DECTRAX_SYNC_MODBUS=true
-      - DECTRAX_SYNC_LDAP=true
-      - DECTRAX_SYNC_RDP=true
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=DECTRAX Autonomous Deception # OPTIONAL
+      # - CONNECTOR_SCOPE=dectrax,ipv4-addr,indicator # OPTIONAL
+      # - CONNECTOR_LOG_LEVEL=error # OPTIONAL
+      # - CONNECTOR_DURATION_PERIOD=PT1H # OPTIONAL default PT1H (ISO 8601 format)
+
+      # Connector's custom execution parameters
+      # - DECTRAX_API_URL=http://localhost:8000 # OPTIONAL default http://localhost:8000
+      - DECTRAX_API_KEY=ChangeMe # REQUIRED
+      # - DECTRAX_EDL_ENDPOINT=/api/v1/edl/firewall.txt # OPTIONAL
+      # - DECTRAX_TELEMETRY_ENDPOINT=/api/v1/telemetry/threats # OPTIONAL
+      # - DECTRAX_TLP_LEVEL=clear # OPTIONAL
+      # - DECTRAX_CREATE_INDICATORS=true # OPTIONAL
+      # - DECTRAX_CREATE_OBSERVABLES=true # OPTIONAL
+      # - DECTRAX_SYNC_MODBUS=true # OPTIONAL
+      # - DECTRAX_SYNC_LDAP=true # OPTIONAL
+      # - DECTRAX_SYNC_RDP=true # OPTIONAL
     restart: always

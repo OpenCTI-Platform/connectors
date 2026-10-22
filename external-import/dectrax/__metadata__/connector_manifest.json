@@ -5,9 +5,9 @@
   "short_description": "Ingests high-fidelity deception indicators and attacker telemetry from DECTRAX sensors into OpenCTI.",
   "logo": "external-import/dectrax/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence Feed",
+    "Detection & Response Enablement",
     "Infrastructure & Attack Surface Visibility",
-    "Deception & Honeypot Telemetry"
+    "Adversary & Campaign Insights"
   ],
   "solution_categories": [
     "Threat Intelligence Feed"
@@ -21,7 +21,7 @@
   "support_version": ">=6.0.0",
   "subscription_link": "https://dectrax.io",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dectrax",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-dectrax",
   "container_type": "EXTERNAL_IMPORT"

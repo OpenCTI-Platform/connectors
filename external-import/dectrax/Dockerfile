@@ -1,4 +1,5 @@
 FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
 COPY src /opt/opencti-connector-dectrax
@@ -12,7 +13,5 @@ RUN apk --no-cache upgrade && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["sh", "/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-dectrax
+ENTRYPOINT ["python3", "main.py"]
