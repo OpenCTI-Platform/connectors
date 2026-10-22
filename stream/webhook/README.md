@@ -64,7 +64,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector ID                  | id                         | `CONNECTOR_ID`                          |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                     |
 | Connector Name                | name                       | `CONNECTOR_NAME`                        |         | Yes       | Name of the webhook instance, to identify multiple webhook connectors.        |
 | Connector Scope               | scope                      | `CONNECTOR_SCOPE`                       | webhook | Yes       | Must be `webhook`, not used in this connector.                                |
-| Confidence Level              | confidence_level           | `CONNECTOR_CONFIDENCE_LEVEL`            |         | Yes       | The default confidence level for created sightings (1-100).                   |
 | Log Level                     | log_level                  | `CONNECTOR_LOG_LEVEL`                   | info    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.    |
 | Consumer Count                | consumer_count             | `CONNECTOR_CONSUMER_COUNT`              | 10      | No        | Number of consumer/worker threads that will push data to webhook.             |
 | Live Stream Start Timestamp   | live_stream_start_timestamp | `CONNECTOR_LIVE_STREAM_START_TIMESTAMP` |         | No        | Start timestamp used on connector first start.                                |
@@ -103,7 +102,6 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Webhook
       - CONNECTOR_SCOPE=webhook
-      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_CONSUMER_COUNT=10
       - WEBHOOK_TYPE=URL

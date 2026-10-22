@@ -412,7 +412,7 @@ class TestTransform:
 
         results = list(proc.transform(gen()))
         assert len(results) == 1
-        proc.logger.error.assert_called()
+        proc.logger.exception.assert_called()
 
     def test_transform_empty_page_yields_nothing(self):
         proc = _make_processor()
@@ -437,7 +437,7 @@ class TestTransform:
 
             results = list(proc.transform(gen()))
             assert len(results) == 0
-            proc.logger.error.assert_called()
+            proc.logger.exception.assert_called()
 
 
 class TestPostInit:
