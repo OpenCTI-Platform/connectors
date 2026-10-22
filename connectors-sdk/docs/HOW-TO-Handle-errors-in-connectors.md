@@ -196,7 +196,7 @@ class ClientAPI:
             sys.exit(0)
         except Exception as err: 
             # Log error in Error Handler
-            self.logger.error("Unexpected error.", {"error": str(err)})
+            self.logger.error("Unexpected error.", meta={"error": str(err)})
             # display error message in the OpenCTI UI            
             self.helper.api.work.report_expectation(
                 work_id=self.work_id, error={"error": error_message, "source": "CONNECTOR"}
