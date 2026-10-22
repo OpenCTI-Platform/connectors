@@ -141,10 +141,13 @@ class FilterAwareVerity471Stream(Verity471Stream):
             f"cursor and re-anchoring the from-date. Expect a small overlapping "
             f"re-ingest. A change that widens the filters backfills only the margin."
         )
-        anchor_ms = self._lastseen_ms or int(
-            datetime.datetime.now(datetime.UTC).timestamp() * 1000
-        )
         current_initdate = self._get_state(self._initdate_key) or self.initial_history
+        # Without a cursor nothing was ever ingested (e.g. the first request failed),
+        # so keep the original from-date. With a cursor but no last-seen timestamp we
+        # cannot tell how far we got, so fall back to now.
+        anchor_ms = self._lastseen_ms or current_initdate
+        if not self._lastseen_ms and cursor:
+            anchor_ms = int(datetime.datetime.now(datetime.UTC).timestamp() * 1000)
         self._set_state(
             self._initdate_key,
             max(current_initdate, anchor_ms - self.migration_margin_ms),

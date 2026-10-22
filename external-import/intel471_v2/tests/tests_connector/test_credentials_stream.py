@@ -160,6 +160,26 @@ def test_changed_affiliation_group_discards_cursor_and_reanchors():
     stream.helper.log_warning.assert_called_once()
 
 
+def test_changed_affiliation_group_after_failed_first_request_keeps_initdate():
+    """
+    If the first request failed (e.g. no Credentials API access yet), a fingerprint and
+    from-date are stored but no cursor or last-seen timestamp. Changing
+    `affiliation_group` before retrying must keep the original from-date.
+    """
+    old_initdate = 1_690_000_000_000
+    state = {
+        "credentials_filters_v471": "stale-fingerprint",
+        "credentials_initdate_v471": old_initdate,
+    }
+    stream, _, _ = _build_credentials_stream(
+        "verity471", False, state=state, affiliation_group=["my_employees"]
+    )
+
+    assert stream._get_cursor() is None
+    assert state["credentials_initdate_v471"] == old_initdate
+    assert state["credentials_filters_v471"] == stream._filters_fingerprint()
+
+
 def test_unchanged_affiliation_group_keeps_cursor():
     """An unchanged filter set leaves the stored cursor in place."""
     state = {"credentials_cursor_v471": "cur1"}
