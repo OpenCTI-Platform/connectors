@@ -8,6 +8,7 @@ verifies the full pipeline end-to-end with mocked dependencies.
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from tests.test_connector import make_connector
 
 ENTITY_ID = "artifact--00000000-0000-0000-0000-000000000001"
