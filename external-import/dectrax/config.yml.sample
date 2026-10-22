@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'dectrax-external-import-connector'
+  name: 'DECTRAX Autonomous Deception'
+  scope: 'dectrax,ipv4-addr,indicator'
+  log_level: 'info'
+  duration_period: 'PT1H'
+
+dectrax:
+  api_url: 'http://localhost:8000'
+  api_key: 'ChangeMe'
+  edl_endpoint: '/api/v1/edl/firewall.txt'
+  telemetry_endpoint: '/api/v1/telemetry/threats'
+  tlp_level: 'clear' # 'clear', 'white', 'green', 'amber', 'amber+strict', 'red'
+  confidence_level: 90
+  create_indicators: true
+  create_observables: true
+  sync_modbus: true
+  sync_ldap: true
+  sync_rdp: true

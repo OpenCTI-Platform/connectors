@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-dectrax:
+    image: opencti/connector-dectrax:latest
+    environment:
+      # OpenCTI settings
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector settings
+      - CONNECTOR_ID=4dfb62c9-6cb8-48b5-90df-520e2ef5b901
+      - CONNECTOR_NAME=DECTRAX Autonomous Deception
+      - CONNECTOR_SCOPE=dectrax,ipv4-addr,indicator
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      # DECTRAX settings
+      - DECTRAX_API_URL=http://dectrax:8000
+      - DECTRAX_API_KEY=CHANGEME
+      - DECTRAX_EDL_ENDPOINT=/api/v1/edl/firewall.txt
+      - DECTRAX_TELEMETRY_ENDPOINT=/api/v1/telemetry/threats
+      - DECTRAX_TLP_LEVEL=clear
+      - DECTRAX_CONFIDENCE_LEVEL=90
+      - DECTRAX_CREATE_INDICATORS=true
+      - DECTRAX_CREATE_OBSERVABLES=true
+      - DECTRAX_SYNC_MODBUS=true
+      - DECTRAX_SYNC_LDAP=true
+      - DECTRAX_SYNC_RDP=true
+    restart: always
