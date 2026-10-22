@@ -20,7 +20,8 @@ WORKDIR /app
 # ``pip install`` — keeping the runtime layer free of the git binary
 # (smaller image, smaller attack surface, no accidental network shell
 # from inside the container).
-RUN apk add --no-cache libmagic
+RUN apk --no-cache upgrade && \
+    apk add --no-cache libmagic
 
 # Copy ONLY ``requirements.txt`` first so the ``pip install`` layer is
 # cached across rebuilds whenever the connector source changes but the

@@ -61,7 +61,9 @@ class GoogleDTMConnector:
             api_key=self.config.google_dtm.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(
-            self.helper, tlp=self.config.google_dtm.tlp
+            self.helper,
+            tlp=self.config.google_dtm.tlp,
+            import_passwords=self.config.google_dtm.import_passwords,
         )
 
     def _collect_intelligence(self, since_date) -> tuple[list[Any], Any | None]:

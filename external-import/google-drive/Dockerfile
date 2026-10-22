@@ -6,7 +6,8 @@ COPY src /opt/opencti-connector-google-drive
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-google-drive && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base

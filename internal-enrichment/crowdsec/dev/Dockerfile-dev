@@ -3,7 +3,8 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
 
 # Expose and entrypoint
 COPY entrypoint-dev.sh /
