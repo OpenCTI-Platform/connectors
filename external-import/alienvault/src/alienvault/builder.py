@@ -208,9 +208,8 @@ class PulseBundleBuilder:
 
     def _create_intrusion_sets(self) -> List[stix2.IntrusionSet]:
         intrusion_sets = []
-        adversary = self.pulse.adversary
-        if adversary is not None and adversary:
-            intrusion_set = self._create_intrusion_set(adversary)
+        for adversary_name in self.pulse.adversary:
+            intrusion_set = self._create_intrusion_set(adversary_name)
             intrusion_sets.append(intrusion_set)
         return intrusion_sets
 

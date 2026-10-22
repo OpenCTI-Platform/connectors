@@ -270,7 +270,7 @@ class IsMaliciousConnector:
                 tlp = marking.get("definition", tlp)
 
         if not OpenCTIConnectorHelper.check_max_tlp(
-            tlp, self.config.ismalicious.max_tlp
+            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
         ):
             return self._skip(data, "TLP too high, skipping enrichment")
 

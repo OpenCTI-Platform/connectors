@@ -18,12 +18,10 @@ from connector import ConnectorSettings  # noqa: E402
 
 
 class FakeLogger:
-    """Minimal stand-in for `ConnectorLogger`, used throughout this test suite.
+    """Minimal stand-in for the SDK logger, used throughout this test suite.
 
-    It implements the same four logging methods (`info`/`debug`/
-    `warning`/`error`) but does nothing with them -- just enough for the
-    code under test to log without needing a real, pycti-backed
-    `OpenCTIConnectorHelper`.
+    It implements the logging methods the code under test uses (`info`/`debug`/
+    `warning`/`error`/`exception`) but does nothing with them.
     """
 
     def info(self, *args: Any, **kwargs: Any) -> None:
@@ -36,6 +34,9 @@ class FakeLogger:
         pass
 
     def error(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def exception(self, *args: Any, **kwargs: Any) -> None:
         pass
 
 

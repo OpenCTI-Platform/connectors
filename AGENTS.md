@@ -88,10 +88,12 @@ Older connectors still use `get_config_variable`, a monolithic single file or
   unused and missing dependencies per changed connector.
 - Never commit secrets. Samples (`config.yml.sample`, `docker-compose.yml`)
   hold placeholders only.
-- **Logging:** static message plus a context dict, never an f-string:
-  `self.logger.info("Reports fetched", {"count": len(reports)})` (use
+- **Logging:** static message plus a `meta=` context dict, never an f-string:
+  `self.logger.info("Reports fetched", meta={"count": len(reports)})` (use
   `helper.connector_logger` in legacy connectors). Log a handled or skipped
-  error at WARNING, keep ERROR for unexpected failures at the top level.
+  error at WARNING, keep ERROR for unexpected failures at the top level. In an
+  `except` block, use `self.logger.exception(...)`, which also logs the
+  traceback.
 - **Errors:** use the SDK exceptions (`ConfigValidationError` at startup,
   `DataRetrievalError` for source failures, `UseCaseError` for conversion
   failures) and always `raise ... from err`. See
@@ -141,6 +143,11 @@ Details: `docs/02-external-import-specifications.md`.
 - Check the TLP with `helper.check_max_tlp(entity_tlp, max_tlp)` before any
   external API call. Both values must be in `TLP:XXX` form: pycti raises
   `KeyError` on `"amber+strict"`.
+- The max TLP is `settings.connector.max_tlp` (`CONNECTOR_MAX_TLP`), a
+  `TLPLevel` from `BaseInternalEnrichmentConnectorConfig`. Pass it to
+  `check_max_tlp` as `f"TLP:{settings.connector.max_tlp.upper()}"`. Never
+  add a max TLP setting to the connector's own section. To change its
+  default, override it as `max_tlp: TLPLevel = Field(default=TLPLevel.AMBER_STRICT)`.
 - When the message comes from a playbook (`data.get("event_type")` is falsy)
   and the entity is out of scope, send `data["stix_objects"]` back unchanged.
   Otherwise the playbook stalls.
@@ -206,7 +213,20 @@ Manifest rules (`__metadata__/connector_manifest.json`):
 - `short_description`: 250 characters or fewer.
 - Logo: square PNG or JPEG, at least 96x96.
 - Never change `verified`, `last_verified_date` or `manager_supported`:
-  maintainers own them.
+  maintainers own them. The one exception is the manager-supported migration
+  below, which sets `manager_supported` to `true`.
+
+## Migrating a connector to manager-supported mode
+
+Legacy connectors (`get_config_variable`, `config.yml` loading) are migrated
+in place by the procedure in
+`.claude/skills/connector-manager-supported-migration/references/procedure.md`:
+Pydantic settings wired into the existing code, manifest flag, generated
+schema and tests, one commit per step, no restructuring. Tools that load
+skills and agents from `.claude/` (Claude Code, GitHub Copilot) pick up the
+`connector-manager-supported-migration` skill and the
+`connector-manager-supported-migrator` agent. With other tools, follow the
+procedure file directly.
 
 ## Validation commands
 
@@ -280,6 +300,11 @@ The generator installs `connectors-sdk` from GitHub `master`, which pins an
 exact pycti version. If the connector's `requirements.txt` pins an older
 pycti, dependency resolution fails and generation stops. Rebase on the latest
 `master` before regenerating.
+
+When the change also touches `connectors-sdk/` (for example the JSON schema of a
+settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
+SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
+`SDK_SOURCE=local mise run gs external-import/myconnector`.
 
 ## CI overview
 

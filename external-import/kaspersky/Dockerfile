@@ -32,7 +32,7 @@ COPY src /opt/opencti-connector-kaspersky
 WORKDIR /opt/opencti-connector-kaspersky
 
 # Install OS dependencies.
-RUN apk update && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add libmagic libxml2 libxslt && \
     rm -rf /var/cache/apk/*
 

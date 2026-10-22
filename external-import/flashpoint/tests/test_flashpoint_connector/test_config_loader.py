@@ -9,7 +9,6 @@ from flashpoint_connector.config_loader import (
     ConfigLoader,
     ConfigRetrievalError,
     comma_separated_list_validator,
-    iso_string_validator,
     pycti_list_serializer,
 )
 from pydantic_settings import SettingsConfigDict
@@ -128,20 +127,6 @@ def test_config_loader_with_invalid_environment_variables():
 def test_comma_separated_list_validator_with_list_input():
     result = comma_separated_list_validator(["a", "b", "c"])
     assert result == ["a", "b", "c"]
-
-
-def test_iso_string_validator_with_duration():
-    result = iso_string_validator("P30D")
-    assert isinstance(result, datetime)
-    expected_approx = datetime.now(timezone.utc) - timedelta(days=30)
-    assert abs((result - expected_approx).total_seconds()) < 5
-
-
-def test_iso_string_validator_with_non_string():
-    """Cover line 91: input already a datetime, returned as-is."""
-    dt = datetime(2026, 1, 1, tzinfo=timezone.utc)
-    result = iso_string_validator(dt)
-    assert result is dt
 
 
 def test_pycti_list_serializer_pycti_mode():

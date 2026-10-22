@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel
+from connectors_sdk.models.enums import TLPLevel
 from zetalytics_dns.settings import ConfigLoader
 
 
@@ -302,3 +303,17 @@ def test_connector_name_suffix_not_duplicated_on_repeated_validation():
         }
     )
     assert config.connector.name.count("(1 year)") == 1
+
+
+def test_config_loader_migrates_deprecated_zetalytics_max_tlp_to_connector_max_tlp():
+    """The deprecated zetalytics.max_tlp (ZETALYTICS_MAX_TLP) moves to connector.max_tlp (CONNECTOR_MAX_TLP)."""
+    with pytest.warns(UserWarning, match="zetalytics.max_tlp"):
+        config = _make_loader(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "tok"},
+                "connector": {"id": "abc", "scope": "Domain-Name"},
+                "zetalytics": {"token": "zt", "max_tlp": "TLP:RED"},
+            }
+        )
+
+    assert config.connector.max_tlp == TLPLevel.RED

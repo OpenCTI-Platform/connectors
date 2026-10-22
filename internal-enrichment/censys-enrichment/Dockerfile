@@ -1,7 +1,7 @@
 FROM python:3.12-alpine AS base
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk add --no-cache  \
       build-base  \
       git  \

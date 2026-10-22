@@ -14,7 +14,7 @@ from stream_connector import connector as zscaler
 def mock_obfuscate(monkeypatch):
     """Mock obfuscate_api_key to return a dummy string."""
     monkeypatch.setattr(
-        "stream_connector.utils.obfuscate_api_key",
+        "stream_connector.connector.obfuscate_api_key",
         lambda api_key, timestamp: "dummy-obfuscated",
     )
 
@@ -29,6 +29,7 @@ def connector(helper_mock, mock_config, mock_session):
         zscaler_username=mock_config.zscaler.username,
         zscaler_password=mock_config.zscaler.password,
         zscaler_api_key=mock_config.zscaler.api_key,
+        zscaler_api_base_url=mock_config.zscaler.api_base_url,
         zscaler_blacklist_name=mock_config.zscaler.blacklist_name,
     )
     zscaler_connector.session = mock_session
@@ -45,6 +46,7 @@ def mock_config():
     mock.zscaler.username = "user"
     mock.zscaler.password = "pass"
     mock.zscaler.api_key = "api-key"
+    mock.zscaler.api_base_url = "https://zsapi.example.com/"
     mock.zscaler.blacklist_name = "blacklist"
     return mock
 

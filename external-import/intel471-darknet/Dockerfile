@@ -13,7 +13,8 @@ COPY src /opt/opencti-connector-intel471-darknet
 # layer. Runtime-only libraries (``libmagic``) are installed
 # unconditionally and stay in the published image.
 # hadolint ignore=DL3018,DL3003
-RUN apk --no-cache add libmagic && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add libmagic && \
     apk add --no-cache --virtual .build-deps \
         build-base \
         git \

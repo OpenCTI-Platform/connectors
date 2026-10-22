@@ -9,9 +9,9 @@ services:
       # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
       # - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=TLP:AMBER
       # - ISMALICIOUS_API_URL=https://api.ismalicious.com
       - ISMALICIOUS_API_KEY=ChangeMe
-      # - ISMALICIOUS_MAX_TLP=TLP:AMBER
       # - ISMALICIOUS_ENRICH_IPV4=true
       # - ISMALICIOUS_ENRICH_IPV6=true
       # - ISMALICIOUS_ENRICH_DOMAIN=true

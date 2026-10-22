@@ -100,10 +100,11 @@ class EmailCasesConfig(BaseConfigModel):
     start_date: DatetimeFromIsoString | None = Field(
         default=None,
         description=(
-            "Optional ISO 8601 starting date used ONLY on the first fetch cycle "
-            "(when no prior state exists). Later cycles resume from the last run "
-            "timestamp stored in state. Formats accepted: 'YYYY-MM-DD' or "
-            "'YYYY-MM-DDTHH:MM:SSZ'. Example: '2026-04-01'. Leave empty to let "
+            "Optional starting date used ONLY on the first fetch cycle "
+            "(when no prior state exists), as an ISO-8601 date (e.g. '2026-04-01') "
+            "or duration relative to now (e.g. 'P30D' for 30 days ago). Later "
+            "cycles resume from the last "
+            "run timestamp stored in state. Leave empty to let "
             "the email server return the most recent N emails on first run."
         ),
     )
