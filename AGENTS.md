@@ -88,10 +88,12 @@ Older connectors still use `get_config_variable`, a monolithic single file or
   unused and missing dependencies per changed connector.
 - Never commit secrets. Samples (`config.yml.sample`, `docker-compose.yml`)
   hold placeholders only.
-- **Logging:** static message plus a context dict, never an f-string:
-  `self.logger.info("Reports fetched", {"count": len(reports)})` (use
+- **Logging:** static message plus a `meta=` context dict, never an f-string:
+  `self.logger.info("Reports fetched", meta={"count": len(reports)})` (use
   `helper.connector_logger` in legacy connectors). Log a handled or skipped
-  error at WARNING, keep ERROR for unexpected failures at the top level.
+  error at WARNING, keep ERROR for unexpected failures at the top level. In an
+  `except` block, use `self.logger.exception(...)`, which also logs the
+  traceback.
 - **Errors:** use the SDK exceptions (`ConfigValidationError` at startup,
   `DataRetrievalError` for source failures, `UseCaseError` for conversion
   failures) and always `raise ... from err`. See
