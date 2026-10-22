@@ -78,7 +78,8 @@ COPY --from=builder /usr/local/lib/libolm* /usr/local/lib/
 # Runtime native dependencies. ``libstdc++`` is required by libolm and
 # ``libmagic`` is required by the OpenCTI helper.
 # hadolint ignore=DL3018
-RUN apk add --no-cache \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
         libmagic \
         libstdc++
 

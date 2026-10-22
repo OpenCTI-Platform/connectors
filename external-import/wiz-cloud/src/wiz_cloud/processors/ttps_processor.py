@@ -90,7 +90,7 @@ class WizTtpsProcessor:
                 if match is None:
                     self._logger.debug(
                         "[WIZ-CLOUD] Skipping a MITRE entry without a technique id",
-                        {
+                        meta={
                             "issue_id": issue.id,
                             "external_id": sub_category.external_id,
                         },

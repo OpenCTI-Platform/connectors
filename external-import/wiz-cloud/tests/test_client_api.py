@@ -216,7 +216,7 @@ def test_paginate_reports_a_missing_cursor_as_such():
 
     list(client.paginate("query", {"after": None}, connection_key="things"))
 
-    meta = client._logger.warning.call_args[0][1]
+    meta = client._logger.warning.call_args.kwargs["meta"]
     assert meta["reason"] == "missing"
     assert meta["connection"] == "things"
 
@@ -232,7 +232,7 @@ def test_paginate_stops_when_the_cursor_does_not_advance():
 
     assert pages == [[{"id": "1"}], [{"id": "2"}]]
     assert client.execute.call_count == 2
-    assert client._logger.warning.call_args[0][1]["reason"] == "repeated"
+    assert client._logger.warning.call_args.kwargs["meta"]["reason"] == "repeated"
 
 
 def test_paginate_stays_quiet_on_a_normal_end_of_pagination():

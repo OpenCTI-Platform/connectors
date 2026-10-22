@@ -90,7 +90,7 @@ def test_logs_the_counts_for_the_asset(
     vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     details = next(
-        call.args[1]
+        call.kwargs["meta"]
         for call in vulnerabilities_processor._logger.info.call_args_list
         if "Collected vulnerabilities" in call.args[0]
     )
@@ -110,7 +110,7 @@ def test_counts_a_failure_instead_of_raising(vulnerabilities_processor, system):
 
     assert objects == []
     assert vulnerabilities_processor.failures == 1
-    assert vulnerabilities_processor._logger.error.called
+    assert vulnerabilities_processor._logger.exception.called
 
 
 def test_drops_partial_results_when_a_later_page_fails(
