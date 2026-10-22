@@ -33,6 +33,9 @@ How `OpenCTIConnectorHelper` (pycti 7.260930.0) and the platform handle an enric
 - `cleanup_inconsistent_bundle=True` removes references to ids missing from the bundle, so the enriched entity must stay in the bundle.
 - The playbook executor deep-merges the returned bundle with the previous step's bundle (same id: merged; missing objects: added back).
 - The worker upsert ignores fields absent from the bundle and only adds multiple references (markings, labels, external references).
+- The enriched entity does not have the same shape in every mode. In manual or automatic mode, pycti exports OpenCTI attributes at the top level (`x_opencti_score`, `x_opencti_labels`, `x_opencti_external_references`). In a playbook, the platform puts them in the OpenCTI extension of the object (`score`, `labels`, `external_references`...).
+- At ingestion, pycti reads each attribute from the first location that holds it: labels from top-level `labels`, then the extension, then `x_opencti_labels`; external references from top-level `external_references`, then the extension, then `x_opencti_external_references`; an observable's score and description from `x_opencti_*`, then the extension; markings only from top-level `object_marking_refs`. connectors-sdk observable models write `x_opencti_labels` and `x_opencti_external_references`: next to a playbook entity's extension, they are ignored.
+- The id of an object is computed from some of its properties. A file known by its SHA-256 only and rebuilt with an MD5 gets another id, since the MD5 comes first; so does an IP whose value is normalized (e.g. `/32` removed).
 
 ---
 
@@ -42,14 +45,15 @@ How `OpenCTIConnectorHelper` (pycti 7.260930.0) and the platform handle an enric
 
 ```plaintext
 connectors_sdk/connectors/
-├── _stix_conversion.py              to_stix2_objects(), shared with WorkManager
+├── _stix_conversion.py              to_stix2_objects() (shared with WorkManager), to_stix_dict()
 └── internal_enrichment/
     ├── enrichment_message.py        EnrichmentMessage
+    ├── enriched_entity.py             EnrichedEntity, merge_enriched_entity(), replace_refs()
     ├── base_enrichment_processor.py BaseEnrichmentProcessor
     └── internal_enrichment_connector.py InternalEnrichmentConnector
 ```
 
-- `EnrichmentMessage`: a frozen dataclass built for each message. It exposes only fields that are reliable in every mode: `entity_id`, `entity_type` (from `enrichment_entity`, set in playbooks too and matching OpenCTI type names), `enrichment_entity`, `stix_entity`, `stix_objects`, `tlp_levels` (every TLP marking), `is_playbook`, and `entity_copy()` (a deep copy of `stix_entity`, safe to modify). A dataclass and not a Pydantic model: the data comes from pycti, is not user input, and must not be copied on validation.
+- `EnrichmentMessage`: a frozen dataclass built for each message. It exposes only fields that are reliable in every mode: `entity_id`, `entity_type` (from `enrichment_entity`, set in playbooks too and matching OpenCTI type names), `enrichment_entity`, `stix_entity`, `stix_objects`, `tlp_levels` (every TLP marking), `is_playbook`, `entity_copy()` (a deep copy of `stix_entity`) and `enriched_entity(obj)` (declares the enriched version of the entity, see below). A dataclass and not a Pydantic model: the data comes from pycti, is not user input, and must not be copied on validation.
 - `BaseEnrichmentProcessor`: same lifecycle as `BaseDataProcessor` (`inject_dependencies()`, `post_init()`). It declares `entity_types`, may override `supports(message)` to filter within a type (e.g. an indicator's `pattern_type`), and implements `collect(message)` (network, no STIX) and `transform(data, message)` (STIX, no network). It never sends bundles and holds no per-message state.
 - `InternalEnrichmentConnector(settings, enrichment_processors)`: creates the helper with `playbook_compatible=True` in `start()`, injects the processors' dependencies, then listens. Its callback handles each message.
 
@@ -61,11 +65,23 @@ no processor supports the entity?                    → skip (WARNING)
 an entity TLP above connector.max_tlp?               → skip (WARNING), before any call to the source
 objects = processor.transform(processor.collect(message))
 no objects?                                          → skip (INFO)
-otherwise → send stix_objects + objects, an object sharing an id with an original object replacing it
+otherwise → send stix_objects + objects, the enriched entity merged into the entity received
 
 skip:  playbook → send the original bundle back; manual/auto → send nothing, the work completes with the reason
 error: log the exception text at ERROR; playbook → send the original bundle back; re-raise (manual/auto: work in error)
 ```
+
+### Enriching the entity itself
+
+A processor gives the new version of the entity it enriches by returning `message.enriched_entity(obj)`, where `obj` is a connectors-sdk model, a stix2 object or a STIX dict. `EnrichedEntity` only marks `obj` in the list returned by `transform()`: the connector cannot recognize it otherwise when its id differs from the entity's. An object returned with the id of the entity is treated the same way. The connector merges the enriched entity into the entity received (`merge_enriched_entity()`), instead of adding it to the bundle:
+
+- labels, external references and markings are added to the entity's ones, without duplicates; missing file hashes are added;
+- score and description replace the entity's ones, when the enriched entity provides them;
+- any other property is added when the entity does not have it, and never overwritten (a model rebuilt from the entity carries defaults, such as a new `valid_from` for an indicator);
+- the id, the type, the author and the timestamps of the entity are kept;
+- each value is written where pycti reads it: where the entity already holds the attribute (top level, extension, or both), otherwise in its OpenCTI extension if it has one, otherwise at the top level under the key the enriched entity uses.
+
+When the enriched entity has another id than the entity received (e.g. a file rebuilt with an MD5), the references to that id in the other objects of the bundle (e.g. a relationship built from the same model) are replaced with the id of the entity (`replace_refs()`). A `Reference` to the entity can also be used as the source or target of a relationship; a `Reference` returned in the list is ignored, as it only points to an object already in OpenCTI.
 
 Bundles are sent with `cleanup_inconsistent_bundle=True`. The bundle is serialized before anything is sent, so an object that cannot be serialized goes through the error path. A bundle is never sent twice for a message: a failure while sending is logged and re-raised, not retried. A failure while sending the original bundle back after an error is logged, and the original error is re-raised.
 
@@ -80,7 +96,7 @@ Bundles are sent with `cleanup_inconsistent_bundle=True`. The bundle is serializ
 | Skips in manual/auto mode | The work completes with the reason; it is not an error | Out of scope, unsupported or above max TLP are policy outcomes, not failures. |
 | `max_tlp` | `connector.max_tlp` (`CONNECTOR_MAX_TLP`), a `TLPLevel` added by #7926 (default `amber`, `TLP:XXX` accepted in any case); the base converts it to `TLP:XXX` before calling `check_max_tlp` | A generic policy like `scope` and `auto`, with one environment variable for every connector. The conversion lives in the base so that connectors never pass a lowercase level to `check_max_tlp`, which raises `KeyError` on it. |
 | Playbook detection | `helper.playbook is not None` | The exact signal `send_stix2_bundle` uses to route the bundle; equivalent to a missing `event_type`. |
-| Enriched entity | Replaced by id in the bundle, no merge | The playbook executor merges with the previous step's bundle, and the worker upsert never removes data absent from the bundle. |
+| Enriched entity | Explicitly marked (`message.enriched_entity(obj)`) and merged into the entity received, keeping its id | Replacing the entity by the processor's object loses nothing in OpenCTI (additive upsert, playbook merge), but writes the new values where pycti does not read it in playbooks (top-level `x_opencti_labels` next to the extension), and creates a second entity when the processor's object has another id (file hashes, normalized value). |
 | Generators in `collect()`/`transform()` | Not supported | One message gives one bundle. |
 | Source "not found" | The processor returns no data, the base skips | The base stays independent of the HTTP client. |
 
@@ -101,9 +117,8 @@ class IPv4Processor(BaseEnrichmentProcessor):
     def transform(self, data: dict | None, message: EnrichmentMessage) -> list:
         if not data:
             return []
-        entity = message.entity_copy()
-        entity["x_opencti_score"] = data["score"]
-        return [self.author, self.tlp_marking, entity]
+        ip = IPV4Address(value=message.stix_entity["value"], score=data["score"])
+        return [self.author, self.tlp_marking, message.enriched_entity(ip)]
 
 
 InternalEnrichmentConnector(
@@ -143,7 +158,9 @@ Existing connectors keep working: the new classes are opt-in. Their own TLP sett
 - **Running every processor that supports the entity**: rejected, since it breaks the one-bundle-per-message guarantee. A processor can call several endpoints in `collect()` instead.
 - **Keeping `max_tlp` in each connector's section, read through a hook**: rejected, since it keeps three forms and four names for the same setting.
 - **Raising on skips in manual/auto mode** (the current majority behaviour): rejected, since a skip is a configured policy, not a failure, and it is invisible in playbooks anyway.
-- **Merging the enriched entity with the original instead of replacing it**: rejected as unnecessary, given the playbook executor merge and the additive worker upsert.
+- **Replacing the enriched entity by the processor's object with the same id** (first version of this design): rejected, since values written at the top level are ignored in playbooks, and an object with another id becomes a second entity.
+- **Merging every object that has the id of the entity, without marking the enriched entity**: kept as a fallback, but not enough on its own, since it cannot recognize an enriched entity built with another id.
+- **`transform()` returning a `(enriched_entity, other_objects)` pair, or a separate processor method for the entity**: rejected, since it makes the simple case heavier and breaks the symmetry with external import processors.
 
 ---
 
@@ -154,5 +171,6 @@ Existing connectors keep working: the new classes are opt-in. Their own TLP sett
 - Related TDR: [Typing and validation of connector's state with Pydantic](2026-04-14-Typing_and_validation_of_connector_state_with_pydantic.md)
 - pycti `OpenCTIConnectorHelper` (7.260930.0): `ListenQueue._data_handler`, `send_stix2_bundle`, `check_max_tlp` (consulted on 2026-10-05)
 - OpenCTI platform: `domain/enrichment.js`, `domain/stixCoreObject.js`, `modules/playbook/playbook-components.ts`, `utils/upsert-utils.js` (consulted on 2026-10-05)
+- pycti `OpenCTIStix2.extract_embedded_relationships` and `OpenCTIStix2.put_attribute_in_extension`, `OpenCTIApiClient.get_attribute_in_extension` (consulted on 2026-10-22)
 
 ---

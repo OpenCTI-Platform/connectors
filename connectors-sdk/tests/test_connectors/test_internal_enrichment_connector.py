@@ -10,6 +10,9 @@ import pytest
 from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
     BaseEnrichmentProcessor,
 )
+from connectors_sdk.connectors.internal_enrichment.enriched_entity import (
+    OPENCTI_SCO_EXTENSION_ID,
+)
 from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
 )
@@ -19,12 +22,14 @@ from connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import (
     AutonomousSystem,
+    File,
     IPV4Address,
     OrganizationAuthor,
+    Reference,
     Relationship,
     TLPMarking,
 )
-from connectors_sdk.models.enums import TLPLevel
+from connectors_sdk.models.enums import HashAlgorithm, TLPLevel
 from connectors_sdk.settings.base_settings import BaseInternalEnrichmentConnectorConfig
 from pycti import OpenCTIConnectorHelper
 
@@ -128,6 +133,57 @@ class UnserializableProcessor(BaseEnrichmentProcessor):
     def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         # A plain dict holding a datetime cannot be serialized to JSON
         return [{"type": "note", "id": "note--3", "created": data}]
+
+
+class FileHashesProcessor(BaseEnrichmentProcessor):
+    """Example processor rebuilding a file with an MD5, so with another id.
+
+    The id of a file is computed from its MD5 first: a file known by its SHA-256 only
+    and rebuilt with an MD5 gets another id.
+    """
+
+    entity_types = frozenset({"StixFile"})
+
+    def collect(self, message: EnrichmentMessage) -> dict[str, str]:
+        return {"md5": "b" * 32}
+
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
+        hashes = {
+            HashAlgorithm.MD5: data["md5"],
+            HashAlgorithm.SHA256: message.stix_entity["hashes"]["SHA-256"],
+        }
+        file = File(hashes=hashes, score=90)
+        asn = AutonomousSystem(number=64500)
+        relationship = Relationship(type="related-to", source=file, target=asn)
+        return [message.enriched_entity(file), asn, relationship]
+
+
+class LabelProcessor(BaseEnrichmentProcessor):
+    """Example processor adding a label to the enriched IP with an SDK model."""
+
+    entity_types = frozenset({"IPv4-Addr"})
+
+    def collect(self, message: EnrichmentMessage) -> list[str]:
+        return ["vpn"]
+
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
+        ip = IPV4Address(value=message.stix_entity["value"], labels=data)
+        return [message.enriched_entity(ip)]
+
+
+class ReferenceProcessor(BaseEnrichmentProcessor):
+    """Example processor linking new objects to the entity through a Reference."""
+
+    entity_types = frozenset({"IPv4-Addr"})
+
+    def collect(self, message: EnrichmentMessage) -> int:
+        return 64500
+
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
+        entity = Reference(id=message.entity_id)
+        asn = AutonomousSystem(number=data)
+        relationship = Relationship(type="belongs-to", source=entity, target=asn)
+        return [entity, asn, relationship]
 
 
 class EmptyTypesProcessor(BaseEnrichmentProcessor):
@@ -384,7 +440,7 @@ class TestCallbackEnrichment:
             "relationship",
         }
 
-    def test_replaces_the_enriched_entity_by_id(self):
+    def test_merges_an_object_with_the_entity_id_into_the_entity(self):
         helper = _make_helper()
         connector = _make_connector(
             helper, [IPv4Processor(client=_ip_client({"score": 80, "asn": 13335}))]
@@ -396,8 +452,79 @@ class TestCallbackEnrichment:
         entities = [obj for obj in sent if obj["id"] == IP_ID]
         assert len(entities) == 1
         assert entities[0]["x_opencti_score"] == 80
+        # The original marking is kept, the source's one is added
+        assert entities[0]["object_marking_refs"][0] == "marking-definition--original"
+        assert len(entities[0]["object_marking_refs"]) == 2
+        # The source does not become the author of the enriched entity
+        assert "x_opencti_created_by_ref" not in entities[0]
         # The original entity keeps its position at the start of the bundle
         assert sent[0]["id"] == IP_ID
+
+    def test_merges_an_enriched_entity_with_another_id_and_moves_its_references(self):
+        helper = _make_helper()
+        connector = _make_connector(
+            helper,
+            [FileHashesProcessor()],
+            settings=_make_settings(scope=["StixFile"]),
+        )
+        sha256 = "a" * 64
+        file_id = File(hashes={HashAlgorithm.SHA256: sha256}).id
+        entity = {"type": "file", "id": file_id, "hashes": {"SHA-256": sha256}}
+
+        connector.callback(_make_data(entity_type="StixFile", stix_entity=entity))
+
+        sent = _sent_objects(helper)
+        files = [obj for obj in sent if obj["type"] == "file"]
+        assert len(files) == 1
+        assert files[0]["id"] == file_id
+        assert files[0]["hashes"] == {"SHA-256": sha256, "MD5": "b" * 32}
+        assert files[0]["x_opencti_score"] == 90
+        [relationship] = [obj for obj in sent if obj["type"] == "relationship"]
+        assert relationship["source_ref"] == file_id
+
+    def test_writes_the_enriched_entity_into_the_extension_of_a_playbook_entity(self):
+        helper = _make_helper(playbook=True)
+        connector = _make_connector(helper, [LabelProcessor()])
+        entity = {
+            "type": "ipv4-addr",
+            "id": IP_ID,
+            "value": "1.2.3.4",
+            "extensions": {OPENCTI_SCO_EXTENSION_ID: {"labels": ["existing"]}},
+        }
+
+        connector.callback(_make_data(stix_entity=entity, playbook=True))
+
+        sent = _sent_by_id(helper)[IP_ID]
+        assert sent["extensions"][OPENCTI_SCO_EXTENSION_ID]["labels"] == [
+            "existing",
+            "vpn",
+        ]
+        assert "x_opencti_labels" not in sent
+
+    def test_ignores_references_and_links_objects_to_the_entity_through_them(self):
+        helper = _make_helper()
+        connector = _make_connector(helper, [ReferenceProcessor()])
+
+        result = connector.callback(_make_data())
+
+        assert result == "Entity enriched with 3 objects"
+        sent = _sent_objects(helper)
+        assert [obj["id"] for obj in sent].count(IP_ID) == 1
+        [relationship] = [obj for obj in sent if obj["type"] == "relationship"]
+        assert relationship["source_ref"] == IP_ID
+
+    def test_adds_the_merged_entity_when_it_is_not_in_the_original_objects(self):
+        helper = _make_helper()
+        connector = _make_connector(helper, [LabelProcessor()])
+        data = _make_data()
+        data["stix_objects"] = [
+            obj for obj in data["stix_objects"] if obj["id"] != IP_ID
+        ]
+
+        connector.callback(data)
+
+        sent = _sent_by_id(helper)[IP_ID]
+        assert sent["x_opencti_labels"] == ["vpn"]
 
     def test_entity_copy_modifications_reach_the_bundle(self):
         helper = _make_helper()

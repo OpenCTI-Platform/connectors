@@ -72,9 +72,8 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
         ...     def transform(self, data, message):
         ...         if not data:
         ...             return []
-        ...         entity = message.entity_copy()
-        ...         entity["x_opencti_score"] = data["score"]
-        ...         return [self.author, self.tlp_marking, entity]
+        ...         ip = IPV4Address(value=message.stix_entity["value"], score=data["score"])
+        ...         return [self.author, self.tlp_marking, message.enriched_entity(ip)]
     """
 
     entity_types: ClassVar[frozenset[str]]
@@ -149,10 +148,12 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
         No network call should happen here.
 
         Return the author and the marking objects with the new objects, otherwise
-        references to them break. To update the enriched entity itself, return a
-        modified ``message.entity_copy()`` (or any object with the same id): it replaces
-        the original entity in the bundle. Do not return ``message.stix_objects``:
-        the connector adds them.
+        references to them break. To enrich the entity itself (score, labels,
+        external references...), return ``message.enriched_entity(obj)``: the connector
+        merges ``obj`` into the entity received and keeps its id. A ``Reference`` to the
+        entity can be used as the source or target of a relationship; a ``Reference``
+        returned in the list is ignored. Do not return ``message.stix_objects``: the
+        connector adds them.
 
         Skip and log (WARNING) a single item that fails to convert instead of raising.
         Raise ``UseCaseError`` (``raise ... from err``) only when nothing can be converted.

@@ -19,7 +19,7 @@ Message handling::
     TLP above max_tlp?            → skip
     objects = transform(collect())
     no objects?                   → skip
-    otherwise                     → send stix_objects + objects (enriched entity replaced by id)
+    otherwise                     → send stix_objects + objects (enriched entity merged into the entity)
 
     skip: playbook → send the original bundle back; manual/auto → nothing sent, work completed
     error: playbook → send the original bundle back; then re-raise (manual/auto: work in error)
@@ -30,16 +30,23 @@ sending two runs the next step twice.
 
 from __future__ import annotations
 
+import copy
 from typing import Any
 
-from connectors_sdk.connectors._stix_conversion import to_stix2_objects
+from connectors_sdk.connectors._stix_conversion import to_stix_dict
 from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
     BaseEnrichmentProcessor,
+)
+from connectors_sdk.connectors.internal_enrichment.enriched_entity import (
+    EnrichedEntity,
+    merge_enriched_entity,
+    replace_refs,
 )
 from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
 )
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
+from connectors_sdk.models.reference import Reference
 from connectors_sdk.settings.base_settings import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
@@ -55,8 +62,8 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
     - Scope check against ``connector.scope``, on the OpenCTI type of the entity
     - Processor selection: the first processor whose ``supports()`` returns ``True``
     - TLP check against ``connector.max_tlp``, before any call to the external source
-    - Bundle assembly: original ``stix_objects`` plus the processor's objects,
-      the enriched entity being replaced when the processor returns an object with its id
+    - Bundle assembly: original ``stix_objects`` plus the processor's objects, the
+      enriched entity being merged into the entity received (which keeps its id)
     - Playbook compatibility: exactly one bundle sent per playbook message, whatever happens
     - Error handling and logging
 
@@ -326,21 +333,105 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
         """Skip the message: send the original bundle back in a playbook, nothing otherwise."""
         return (message.stix_objects if message.is_playbook else None), reason
 
-    @staticmethod
     def _build_bundle_objects(
-        message: EnrichmentMessage, new_objects: list[Any]
-    ) -> list[Any]:
+        self, message: EnrichmentMessage, new_objects: list[Any]
+    ) -> list[dict[str, Any]]:
         """Merge the processor's objects into the original bundle objects.
 
-        An object sharing its id with an original object (typically the modified
-        enriched entity) replaces it; the other objects are appended.
+        - A ``Reference`` is ignored: it only points to an object already in OpenCTI.
+        - An ``EnrichedEntity``, or any object with the id of the entity received, is
+          merged into the entity received, which keeps its id (see
+          ``merge_enriched_entity``). When it has another id, the objects referencing
+          it are made to reference the entity received.
+        - Any other object sharing its id with an original object replaces it; the
+          other objects are appended.
+
+        Args:
+            message: The enrichment message.
+            new_objects: The objects returned by the processor's ``transform()``.
+
+        Returns:
+            The objects to send, as STIX dicts.
         """
-        new_objects_by_id = {obj["id"]: obj for obj in to_stix2_objects(new_objects)}
-        bundle_objects = [
-            new_objects_by_id.pop(obj["id"], obj) for obj in message.stix_objects
-        ]
-        bundle_objects.extend(new_objects_by_id.values())
-        return bundle_objects
+        enriched_entities, other_objects = self._sort_new_objects(message, new_objects)
+
+        # Keyed by id: assigning an id already present replaces the object in place,
+        # a new id is added at the end.
+        bundle_objects = {obj["id"]: obj for obj in message.stix_objects}
+        if enriched_entities:
+            bundle_objects[message.entity_id] = self._merged_entity(
+                message, enriched_entities, other_objects
+            )
+        for stix_object in other_objects:
+            bundle_objects[stix_object["id"]] = stix_object
+        return list(bundle_objects.values())
+
+    @staticmethod
+    def _sort_new_objects(
+        message: EnrichmentMessage, new_objects: list[Any]
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Split the processor's objects into enriched entities and other objects.
+
+        Args:
+            message: The enrichment message.
+            new_objects: The objects returned by the processor's ``transform()``.
+
+        Returns:
+            The enriched entities and the other objects, as STIX dicts.
+        """
+        enriched_entities = []
+        other_objects = []
+        for obj in new_objects:
+            if isinstance(obj, Reference):
+                # Only points to an object already in OpenCTI: nothing to send
+                continue
+            if isinstance(obj, EnrichedEntity):
+                enriched_entities.append(to_stix_dict(obj.entity))
+                continue
+            stix_object = to_stix_dict(obj)
+            if stix_object["id"] == message.entity_id:
+                enriched_entities.append(stix_object)
+            else:
+                other_objects.append(stix_object)
+        return enriched_entities, other_objects
+
+    def _merged_entity(
+        self,
+        message: EnrichmentMessage,
+        enriched_entities: list[dict[str, Any]],
+        other_objects: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """Return a copy of the entity received with the enriched entities merged into it.
+
+        When an enriched entity has another id than the entity received, the other
+        objects referencing that id are made to reference the entity received.
+
+        Args:
+            message: The enrichment message.
+            enriched_entities: The enriched entities, as STIX dicts.
+            other_objects: The other new objects, as STIX dicts, modified in place.
+
+        Returns:
+            The merged entity, as a STIX dict.
+        """
+        original = next(
+            (obj for obj in message.stix_objects if obj["id"] == message.entity_id),
+            message.stix_entity,
+        )
+        entity = copy.deepcopy(original)
+        for enriched in enriched_entities:
+            merge_enriched_entity(entity, enriched)
+            if enriched["id"] != message.entity_id:
+                self.logger.debug(
+                    "Enriched entity has another id, references moved to the entity",
+                    meta={
+                        "enriched_entity_id": enriched["id"],
+                        "entity_id": message.entity_id,
+                    },
+                )
+                for stix_object in other_objects:
+                    replace_refs(stix_object, enriched["id"], message.entity_id)
+        return entity
 
     def _send_original_bundle(self, data: dict[str, Any]) -> None:
         """Send the original bundle back to the playbook after an error.

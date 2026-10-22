@@ -15,7 +15,7 @@ The message has the same shape in every mode, but some fields are only reliable 
   object inside it.
 
 Never modify ``stix_entity`` in place: depending on the mode, the change may or may not
-reach the bundle. Modify ``entity_copy()`` and return it from ``transform()`` instead.
+reach the bundle. Return ``enriched_entity(obj)`` from ``transform()`` instead.
 
 ``EnrichmentMessage`` only exposes fields that are reliable in both modes
 (e.g. ``entity_type`` comes from ``enrichment_entity``).
@@ -26,6 +26,8 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from typing import Any
+
+from connectors_sdk.connectors.internal_enrichment.enriched_entity import EnrichedEntity
 
 
 @dataclass(frozen=True)
@@ -93,13 +95,41 @@ class EnrichmentMessage:
         ]
 
     def entity_copy(self) -> dict[str, Any]:
-        """Return a deep copy of ``stix_entity``, safe to modify.
+        """Return a deep copy of ``stix_entity``, safe to read or modify.
 
-        To update the enriched entity (score, labels, external references...),
-        modify this copy and return it from ``transform()``: the connector replaces
-        the original entity in the bundle with it, as both share the same id.
+        To return a new version of the entity, use ``enriched_entity()``.
 
         Returns:
             A deep copy of ``stix_entity``.
         """
         return copy.deepcopy(self.stix_entity)
+
+    def enriched_entity(self, entity: Any) -> EnrichedEntity:
+        """Declare the enriched version of the entity, to return from ``transform()``.
+
+        The connector merges ``entity`` into the entity received, in the shape the
+        platform sent it, instead of adding it to the bundle as a separate object:
+
+        - labels, external references, markings and hashes are added to the existing ones;
+        - score and description replace the existing ones, when ``entity`` provides them;
+        - other properties are only added when the entity does not have them;
+        - the id and the author of the entity are kept, even if ``entity`` has another id
+          (e.g. a model rebuilt with more file hashes); the objects referencing
+          ``entity`` (e.g. relationships built from it) are made to reference the entity.
+
+        Example:
+            >>> ip = IPV4Address(value=message.stix_entity["value"], score=80, labels=["vpn"])
+            >>> asn = AutonomousSystem(number=64500)
+            >>> return [
+            ...     message.enriched_entity(ip),
+            ...     asn,
+            ...     Relationship(type="belongs-to", source=ip, target=asn),
+            ... ]
+
+        Args:
+            entity: The enriched entity, as a connectors-sdk model, a stix2 object or a STIX dict.
+
+        Returns:
+            The ``EnrichedEntity`` to put in the list returned by ``transform()``.
+        """
+        return EnrichedEntity(entity)

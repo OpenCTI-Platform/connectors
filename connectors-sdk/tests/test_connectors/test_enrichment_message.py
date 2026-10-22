@@ -1,6 +1,7 @@
 # pragma: no cover
 # type: ignore
 import pytest
+from connectors_sdk.connectors.internal_enrichment.enriched_entity import EnrichedEntity
 from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
 )
@@ -94,3 +95,11 @@ class TestEnrichmentMessage:
         }
         assert data["stix_entity"]["labels"] == ["original"]
         assert "x_opencti_score" not in data["stix_entity"]
+
+    def test_enriched_entity_wraps_the_object(self):
+        message = EnrichmentMessage.from_data(_make_data(), is_playbook=False)
+        enriched = {"id": ENTITY_ID, "x_opencti_score": 80}
+
+        result = message.enriched_entity(enriched)
+
+        assert result == EnrichedEntity(enriched)
