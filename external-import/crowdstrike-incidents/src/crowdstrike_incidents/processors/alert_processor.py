@@ -29,6 +29,7 @@ from connectors_sdk.models import (
     Incident,
     IPV4Address,
     IPV6Address,
+    Note,
     OrganizationAuthor,
     Relationship,
     TLPMarking,
@@ -38,6 +39,7 @@ from connectors_sdk.models.enums import (
     HashAlgorithm,
     IncidentSeverity,
     IncidentType,
+    NoteType,
     RelationshipType,
 )
 from crowdstrike_incidents.client_api import (
@@ -65,6 +67,9 @@ SEVERITY_MAP: dict[Severity, IncidentSeverity] = {
     Severity.HIGH: IncidentSeverity.HIGH,
     Severity.CRITICAL: IncidentSeverity.CRITICAL,
 }
+
+# Length of the alert ID suffix that makes Incident names unique.
+SHORT_ID_LENGTH = 8
 
 # Source events can predate their alert by the rule lookback; the search window
 # starts from the oldest detection window of the page, minus this margin.
@@ -173,7 +178,7 @@ class AlertProcessor(BaseDataProcessor):
         self.work_name = f"CrowdStrike Incidents import (since {since})"
         self.logger.info(
             "Collecting CrowdStrike alerts",
-            {"since": since, "products": ",".join(self._config.products)},
+            meta={"since": since, "products": ",".join(self._config.products)},
         )
         total = 0
         for page in self._client.iter_alert_pages(
@@ -183,6 +188,11 @@ class AlertProcessor(BaseDataProcessor):
             skip_ids=self.state.last_boundary_ids,
         ):
             total += len(page.alerts)
+            if page.skipped_ids:
+                self.logger.warning(
+                    "Alerts without composite_id or updated_timestamp skipped",
+                    meta={"composite_ids": list(page.skipped_ids)},
+                )
             self.logger.info(f"Fetched {len(page.alerts)} alerts (total: {total})")
             yield page
         self.logger.info(f"Collection complete: {total} alerts fetched.")
@@ -205,7 +215,7 @@ class AlertProcessor(BaseDataProcessor):
                 except ValidationError as err:
                     self.logger.error(
                         "Failed to parse alert",
-                        {
+                        meta={
                             "composite_id": raw_alert.get("composite_id"),
                             "error": str(err),
                         },
@@ -223,7 +233,7 @@ class AlertProcessor(BaseDataProcessor):
                 except Exception as err:  # noqa: BLE001
                     self.logger.error(
                         "Failed to convert alert",
-                        {"composite_id": alert.composite_id, "error": str(err)},
+                        meta={"composite_id": alert.composite_id, "error": str(err)},
                     )
             yield self._dedup(objects), page
 
@@ -262,7 +272,7 @@ class AlertProcessor(BaseDataProcessor):
             self.logger.warning(
                 "Source events search failed, Incidents are created without "
                 "their threat observables",
-                {"alerts": len(alerts), "error": str(err)},
+                meta={"alerts": len(alerts), "error": str(err)},
             )
             return {}
 
@@ -271,12 +281,14 @@ class AlertProcessor(BaseDataProcessor):
             try:
                 event = SourceEvent.model_validate(raw_event)
             except ValidationError as err:
-                self.logger.warning("Failed to parse source event", {"error": str(err)})
+                self.logger.warning(
+                    "Failed to parse source event", meta={"error": str(err)}
+                )
                 continue
             events.setdefault(event.indicator_id, event)
         self.logger.info(
             f"Found the source event of {len(events)} of {len(alerts)} alerts.",
-            {"search_window_start": since.isoformat()},
+            meta={"search_window_start": since.isoformat()},
         )
         return events
 
@@ -285,7 +297,7 @@ class AlertProcessor(BaseDataProcessor):
     ) -> list[Any]:
         """Convert an alert, and its source event if any, into the Incident and
         its related objects."""
-        incident = self._build_incident(alert, event)
+        incident = self._build_incident(alert)
         related: list[Any] = []
         relationships: list[Relationship] = []
 
@@ -302,18 +314,60 @@ class AlertProcessor(BaseDataProcessor):
             relationships.append(
                 self._relationship(RelationshipType.USES, incident, attack_pattern)
             )
+        note = self._build_execution_note(alert, event, incident)
+        if note:
+            related.append(note)
 
         return [AUTHOR, self._marking, incident, *related, *relationships]
 
-    def _build_incident(
-        self, alert: CrowdstrikeAlert, event: SourceEvent | None = None
-    ) -> Incident:
+    def _build_execution_note(
+        self,
+        alert: CrowdstrikeAlert,
+        event: SourceEvent | None,
+        incident: Incident,
+    ) -> Note | None:
+        """Build a Note with the execution context of the source event.
+
+        The context is kept out of the Incident description: an update of the
+        alert imported while the enrichment is unavailable would otherwise erase
+        it. The Note is only sent when the source event is found, and its ID
+        derives from its content and the alert creation date, so it is stable.
+        Temporary: the command line and process chain are to be moved to a
+        Process observable once the connectors-sdk provides one
+        (OpenCTI-Platform/connectors#7968).
+        """
+        if event is None:
+            return None
+        chain = [event.grandparent_name, event.parent_name, event.file_name]
+        rows = [
+            ("Command line", event.command_line),
+            ("Executable", event.executable),
+            ("Process chain", " → ".join(name for name in chain if name)),
+        ]
+        table = "\n".join(
+            f"| {label} | {_escape_cell(value)} |"
+            for label, value in rows
+            if value not in (None, "")
+        )
+        if not table:
+            return None
+        return Note(
+            abstract="Execution context (CrowdStrike Next-Gen SIEM source event)",
+            content=f"| Attribute | Value |\n| --- | --- |\n{table}",
+            created=alert.created_timestamp,
+            note_types=[NoteType.EXTERNAL],
+            objects=[incident],
+            author=AUTHOR,
+            markings=[self._marking],
+        )
+
+    def _build_incident(self, alert: CrowdstrikeAlert) -> Incident:
         source = SOURCE_NAMES.get(alert.product or "", "CrowdStrike Falcon")
         severity = _parse_severity(alert.severity_name)
         tactics = list(dict.fromkeys(t.tactic for t in alert.mitre_attack if t.tactic))
         return Incident(
             name=self._incident_name(alert),
-            description=self._incident_description(alert, event),
+            description=self._incident_description(alert),
             created=alert.created_timestamp,
             first_seen=alert.start_time,
             last_seen=alert.end_time,
@@ -334,17 +388,17 @@ class AlertProcessor(BaseDataProcessor):
 
     @staticmethod
     def _incident_name(alert: CrowdstrikeAlert) -> str:
-        """Build '<rule> on <host>'.
+        """Build '<rule> (<alert short ID>)'.
 
-        The user is deliberately left out (it is in the description): users can
-        be added to an alert later, and the Incident ID derives from its name.
+        OpenCTI identifies an Incident by its name and creation date, so the name
+        must be stable across alert updates and unique per alert: hosts and
+        users, which can change, are in the description, and the short alert ID
+        makes the name unique.
         """
         rule = alert.display_name or alert.name
         if not rule:
             return alert.composite_id
-        if alert.host_names:
-            return f"{rule} on {alert.host_names[0]}"
-        return rule
+        return f"{rule} ({_indicator_id(alert)[:SHORT_ID_LENGTH]})"
 
     @staticmethod
     def _user_names(alert: CrowdstrikeAlert) -> list[str]:
@@ -352,10 +406,9 @@ class AlertProcessor(BaseDataProcessor):
         return list(dict.fromkeys(names))
 
     @classmethod
-    def _incident_description(
-        cls, alert: CrowdstrikeAlert, event: SourceEvent | None = None
-    ) -> str:
+    def _incident_description(cls, alert: CrowdstrikeAlert) -> str:
         rows: list[tuple[str, Any]] = [
+            ("Hosts", ", ".join(dict.fromkeys(alert.host_names))),
             ("Users", ", ".join(cls._user_names(alert))),
             ("Product", alert.product),
             ("Type", alert.type),
@@ -365,15 +418,6 @@ class AlertProcessor(BaseDataProcessor):
             ("Detection ID", alert.detection_id),
             ("Event IDs", ", ".join(alert.event_ids)),
         ]
-        if event:
-            # Temporary: to be replaced by a Process observable once the
-            # connectors-sdk provides one (OpenCTI-Platform/connectors#7968).
-            chain = [event.grandparent_name, event.parent_name, event.file_name]
-            rows += [
-                ("Command line", event.command_line),
-                ("Executable", event.executable),
-                ("Process chain", " → ".join(name for name in chain if name)),
-            ]
         table = "\n".join(
             f"| {label} | {_escape_cell(value)} |"
             for label, value in rows
@@ -402,16 +446,23 @@ class AlertProcessor(BaseDataProcessor):
             except ValueError:
                 self.logger.warning(
                     "Invalid IP address skipped",
-                    {"composite_id": alert.composite_id, "value": value},
+                    meta={"composite_id": alert.composite_id, "value": value},
                 )
                 continue
             ip_class = IPV4Address if ip.version == 4 else IPV6Address
             observables.append(ip_class(value=value, **common))
 
-        accounts = {u.user_name: u.sid for u in alert.users if u.user_name} or (
-            dict.fromkeys(alert.user_names)
+        # Keyed on (login, SID): the same login can be different accounts (e.g.
+        # local Administrator on several hosts). A login without SID is only
+        # added when no account with a SID has this login, to keep a stable ID.
+        accounts = dict.fromkeys(
+            (user.user_name, user.sid) for user in alert.users if user.user_name
         )
-        for login, sid in accounts.items():
+        logins_with_sid = {login for login, _ in accounts}
+        for login in alert.user_names:
+            if login not in logins_with_sid:
+                accounts.setdefault((login, None))
+        for login, sid in accounts:
             observables.append(
                 UserAccount(account_login=login, user_id=sid or None, **common)
             )
@@ -441,7 +492,10 @@ class AlertProcessor(BaseDataProcessor):
             if not _is_valid_hash(algorithm, value):
                 self.logger.warning(
                     "Malformed hash skipped",
-                    {"indicator_id": event.indicator_id, "algorithm": algorithm.value},
+                    meta={
+                        "indicator_id": event.indicator_id,
+                        "algorithm": algorithm.value,
+                    },
                 )
                 continue
             hashes[algorithm] = value
@@ -459,7 +513,7 @@ class AlertProcessor(BaseDataProcessor):
         except Exception as err:  # noqa: BLE001
             self.logger.warning(
                 "Failed to build the File of the source event",
-                {"indicator_id": event.indicator_id, "error": str(err)},
+                meta={"indicator_id": event.indicator_id, "error": str(err)},
             )
             return []
 

@@ -5,7 +5,11 @@ from datetime import timedelta
 import pytest
 from connectors_sdk import ConfigValidationError
 from connectors_sdk.models.enums import TLPLevel
-from crowdstrike_incidents.settings import ConnectorSettings, Severity
+from crowdstrike_incidents.settings import (
+    ConnectorSettings,
+    CrowdstrikeIncidentsConfig,
+    Severity,
+)
 
 
 def test_defaults(mock_env):
@@ -67,20 +71,23 @@ def test_products_are_normalised(mock_env, monkeypatch):
     assert ConnectorSettings().crowdstrike_incidents.products == ["ngsiem"]
 
 
-def test_unsupported_products_are_ignored_with_a_warning(mock_env, monkeypatch):
-    monkeypatch.setenv("CROWDSTRIKE_INCIDENTS_PRODUCTS", "ngsiem,epp,idp")
+@pytest.mark.parametrize("products", ["epp", "ngsiem,epp", "", " , "])
+def test_unsupported_products_are_rejected(mock_env, monkeypatch, products):
+    """Regression (review): an unsupported value must be refused by the schema
+    (and the XTM Composer form), not accepted then fail at startup."""
+    monkeypatch.setenv("CROWDSTRIKE_INCIDENTS_PRODUCTS", products)
 
-    with pytest.warns(UserWarning, match="epp, idp"):
-        settings = ConnectorSettings()
-
-    assert settings.crowdstrike_incidents.products == ["ngsiem"]
-
-
-def test_no_supported_product_is_rejected(mock_env, monkeypatch):
-    monkeypatch.setenv("CROWDSTRIKE_INCIDENTS_PRODUCTS", "epp")
-
-    with pytest.warns(UserWarning), pytest.raises(ConfigValidationError):
+    with pytest.raises(ConfigValidationError):
         ConnectorSettings()
+
+
+def test_products_schema_only_offers_supported_values():
+    schema = CrowdstrikeIncidentsConfig.model_json_schema()
+    items = schema["properties"]["products"]["items"]
+    if "$ref" in items:
+        items = schema["$defs"][items["$ref"].rsplit("/", 1)[-1]]
+
+    assert items["enum"] == ["ngsiem"]
 
 
 def test_invalid_severity_is_rejected(mock_env, monkeypatch):

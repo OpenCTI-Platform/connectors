@@ -9,10 +9,14 @@ complete alerts in a single call per page.
 
 Pagination: the endpoint paginates "on live data", and records may appear on
 several pages or on none when sorting on a field that changes over time, such
-as ``updated_timestamp``. Pages are therefore chained by keyset rather than by
-``after`` token: each page restarts from the last ``updated_timestamp`` seen,
-which can never skip an alert. The ``after`` token is only used to page through
-alerts sharing that exact timestamp.
+as ``updated_timestamp``. The ``after`` token is therefore not used. Each page
+is a fresh query from the last ``updated_timestamp`` seen (the cursor) that
+excludes the alerts already processed *at the cursor timestamp only*:
+
+    (updated_timestamp:>'<cursor>', (updated_timestamp:'<cursor>' + composite_id:![...]))
+
+An alert updated while the run is going moves past the cursor and is fetched
+again; alerts sharing the cursor timestamp are drained without skipping any.
 """
 
 import ast
@@ -29,6 +33,9 @@ USER_AGENT = "OpenCTI-CrowdStrike-Incidents-Connector"
 SORT = "updated_timestamp|asc"
 # Maximum page size of POST /alerts/combined/alerts/v1.
 MAX_PAGE_SIZE = 1000
+# Maximum number of alerts sharing the exact cursor timestamp that can be
+# excluded from a query (keeps the FQL filter of a reasonable size).
+MAX_EXCLUDED_IDS = 5000
 
 # LogScale search (POST /humio/api/v1/repositories/{repository}/queryjobs).
 # Searching the repositories directly is forbidden; the search-all view is not.
@@ -62,12 +69,15 @@ class AlertPage:
         alerts: Raw alert dicts, sorted by ``updated_timestamp`` ascending.
         cursor: ``updated_timestamp`` to resume from once the page is processed.
         boundary_ids: Composite IDs already yielded whose timestamp equals the
-            cursor; the inclusive filter returns them again and they are skipped.
+            cursor; they are excluded from the next query at that timestamp only.
+        skipped_ids: Composite IDs (or ``"<unknown>"``) of the alerts dropped
+            because their ``composite_id`` or ``updated_timestamp`` is missing.
     """
 
     alerts: list[dict[str, Any]]
     cursor: str
     boundary_ids: frozenset[str] = field(default_factory=frozenset)
+    skipped_ids: tuple[str, ...] = ()
 
 
 class CrowdstrikeApiError(Exception):
@@ -121,55 +131,83 @@ class CrowdstrikeAlertsClient:
         product_filter = ",".join(f"'{product}'" for product in products)
         hidden_filter = "" if include_hidden else "+show_in_ui:true"
         cursor = since
-        after: str | None = None
         boundary_ids: set[str] = set(skip_ids)
         has_more = True
 
         while has_more:
-            alerts, next_after = self._get_page(
+            if len(boundary_ids) > MAX_EXCLUDED_IDS:
+                raise CrowdstrikeApiError(
+                    None,
+                    f"More than {MAX_EXCLUDED_IDS} alerts share the same "
+                    f"updated_timestamp ({cursor}); cannot paginate further.",
+                )
+            raw_alerts, has_next = self._get_page(
                 fql=(
                     f"product:[{product_filter}]"
-                    f"+updated_timestamp:>='{cursor}'{hidden_filter}"
-                ),
-                after=after,
+                    f"+{self._time_filter(cursor, boundary_ids)}{hidden_filter}"
+                )
             )
+            alerts: list[dict[str, Any]] = []
+            skipped: list[str] = []
+            for alert in raw_alerts:
+                if alert.get("composite_id") and alert.get("updated_timestamp"):
+                    alerts.append(alert)
+                else:
+                    skipped.append(alert.get("composite_id") or "<unknown>")
             alerts.sort(
                 key=lambda alert: timestamp_sort_key(alert["updated_timestamp"])
             )
-            new_alerts = [a for a in alerts if a["composite_id"] not in boundary_ids]
+            cursor_key = timestamp_sort_key(cursor)
+            # Defensive: the filter already excludes them
+            new_alerts = [
+                alert
+                for alert in alerts
+                if timestamp_sort_key(alert["updated_timestamp"]) > cursor_key
+                or (
+                    timestamp_sort_key(alert["updated_timestamp"]) == cursor_key
+                    and alert["composite_id"] not in boundary_ids
+                )
+            ]
 
-            last_timestamp = alerts[-1]["updated_timestamp"] if alerts else cursor
-            if timestamp_sort_key(last_timestamp) <= timestamp_sort_key(cursor):
-                # The whole page shares the cursor timestamp (or is not newer):
-                # keyset cannot move forward, page through it with the after
-                # token. The cursor never moves backwards.
-                after = next_after
-            else:
-                cursor = last_timestamp
-                after = None
+            if new_alerts and (
+                timestamp_sort_key(new_alerts[-1]["updated_timestamp"]) > cursor_key
+            ):
+                cursor = new_alerts[-1]["updated_timestamp"]
                 boundary_ids = set()
             boundary_ids.update(
                 alert["composite_id"]
-                for alert in alerts
+                for alert in new_alerts
                 if timestamp_sort_key(alert["updated_timestamp"])
                 == timestamp_sort_key(cursor)
             )
 
-            if new_alerts:
-                yield AlertPage(new_alerts, cursor, frozenset(boundary_ids))
-            # The API returns an after token only when more results are available
-            has_more = next_after is not None and bool(alerts)
+            if new_alerts or skipped:
+                yield AlertPage(
+                    new_alerts, cursor, frozenset(boundary_ids), tuple(skipped)
+                )
+            # Stop on the last page, or when a page brings nothing new
+            has_more = has_next and bool(new_alerts)
 
-    def _get_page(
-        self, fql: str, after: str | None
-    ) -> tuple[list[dict[str, Any]], str | None]:
+    @staticmethod
+    def _time_filter(cursor: str, processed_ids: set[str]) -> str:
+        """FQL filter on alerts newer than the cursor, or at the cursor timestamp
+        but not processed yet."""
+        if not processed_ids:
+            return f"updated_timestamp:>='{cursor}'"
+        excluded = ",".join(f"'{i}'" for i in sorted(processed_ids))
+        return (
+            f"(updated_timestamp:>'{cursor}',"
+            f"(updated_timestamp:'{cursor}'+composite_id:![{excluded}]))"
+        )
+
+    def _get_page(self, fql: str) -> tuple[list[dict[str, Any]], bool]:
+        """Return a page of alerts and whether more results are available."""
         body: dict[str, Any] = {"filter": fql, "sort": SORT, "limit": self._page_size}
-        if after:
-            body["after"] = after
         response = self._alerts.get_alerts_combined(body=body)
         resources = self._resources(response)
         pagination = (response.get("body") or {}).get("meta", {}).get("pagination", {})
-        return resources, pagination.get("after") or None
+        # The API returns an after token only when more results are available
+        return resources, bool(pagination.get("after"))
 
     @staticmethod
     def _resources(response: dict[str, Any]) -> list[Any]:

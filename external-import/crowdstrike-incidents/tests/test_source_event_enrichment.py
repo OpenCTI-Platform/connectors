@@ -169,20 +169,44 @@ def test_agent_public_ip_already_in_the_alert_is_not_duplicated(
     assert [ip.value for ip in _of_type(objects, "ipv4-addr")] == ["192.0.2.10"]
 
 
-def test_execution_context_is_added_to_the_description(
+def test_execution_context_is_in_a_note_on_the_incident(
     ngsiem_alert_data, source_event_data
 ):
     event = SourceEvent.model_validate(source_event_data)
+    objects = _convert_with_event(ngsiem_alert_data, source_event_data)
+    incident = _incident(objects)
 
-    description = _incident(
-        _convert_with_event(ngsiem_alert_data, source_event_data)
-    ).description
-
-    assert f"| Command line | {event.command_line} |" in description
-    assert f"| Executable | {event.executable} |" in description
+    (note,) = _of_type(objects, "note")
+    assert [obj.id for obj in note.objects] == [incident.id]
+    assert note.author == AUTHOR
+    assert f"| Command line | {event.command_line} |" in note.content
+    assert f"| Executable | {event.executable} |" in note.content
     assert (
         "| Process chain | cmd.exe → powershell.exe → synthetic-implant.exe |"
-        in description
+        in note.content
+    )
+    assert "Command line" not in incident.description
+
+
+def test_execution_note_is_stable(ngsiem_alert_data, source_event_data):
+    first = _of_type(_convert_with_event(ngsiem_alert_data, source_event_data), "note")
+    second = _of_type(_convert_with_event(ngsiem_alert_data, source_event_data), "note")
+
+    assert first[0].id == second[0].id
+
+
+def test_update_without_enrichment_keeps_the_execution_context(
+    ngsiem_alert_data, source_event_data
+):
+    """Regression (review): an update imported while the enrichment is
+    unavailable must not erase the execution context. It lives in a Note that
+    is only sent with the source event, and the description never holds it."""
+    enriched = _convert_with_event(ngsiem_alert_data, source_event_data)
+    updated = _convert({**ngsiem_alert_data, "status": "in_progress"})
+
+    assert _of_type(updated, "note") == []
+    assert _incident(updated).description == _incident(enriched).description.replace(
+        "| Status | new |", "| Status | in_progress |"
     )
 
 

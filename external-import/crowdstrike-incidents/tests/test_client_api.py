@@ -1,5 +1,6 @@
 """Tests for the CrowdStrike Alerts API client."""
 
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -23,8 +24,11 @@ def _alert(index: int, updated: str, show_in_ui: bool = True) -> dict:
 class FakeAlerts:
     """In-memory stand-in for falconpy.Alerts.get_alerts_combined.
 
-    Sorts by updated_timestamp and pages with an opaque ``after`` token, like
-    POST /alerts/combined/alerts/v1.
+    Understands the two time filters sent by the client:
+    ``updated_timestamp:>='C'`` and
+    ``(updated_timestamp:>'C',(updated_timestamp:'C'+composite_id:![...]))``.
+    Returns at most ``limit`` alerts sorted by updated_timestamp, with an
+    ``after`` token when more results are available.
     """
 
     def __init__(self, alerts: list[dict]) -> None:
@@ -33,34 +37,38 @@ class FakeAlerts:
         self.on_call = None
         self.get_alerts_combined = MagicMock(side_effect=self._combined)
 
+    def _matches(self, fql: str, alert: dict) -> bool:
+        if "show_in_ui:true" in fql and not alert.get("show_in_ui", True):
+            return False
+        key = timestamp_sort_key(alert["updated_timestamp"])
+        inclusive = re.search(r"updated_timestamp:>='([^']+)'", fql)
+        if inclusive:
+            return key >= timestamp_sort_key(inclusive.group(1))
+        cursor = re.search(r"updated_timestamp:>'([^']+)'", fql).group(1)
+        excluded = re.findall(r"'([^']+)'", fql.split("composite_id:![")[1])
+        cursor_key = timestamp_sort_key(cursor)
+        return key > cursor_key or (
+            key == cursor_key and alert["composite_id"] not in excluded
+        )
+
     def _combined(self, body):
         self.bodies.append(dict(body))
         if self.on_call:
             self.on_call(self)
-        fql = body["filter"]
-        since = fql.split("updated_timestamp:>='")[1].split("'")[0]
         matching = sorted(
-            (
-                a
-                for a in self.alerts
-                if timestamp_sort_key(a["updated_timestamp"])
-                >= timestamp_sort_key(since)
-                and ("show_in_ui:true" not in fql or a["show_in_ui"])
-            ),
+            (a for a in self.alerts if self._matches(body["filter"], a)),
             key=lambda a: timestamp_sort_key(a["updated_timestamp"]),
         )
-        offset = int(body.get("after") or 0)
         limit = body["limit"]
-        page = matching[offset : offset + limit]
         pagination = {"total": len(matching), "limit": limit}
-        if offset + limit < len(matching):
-            pagination["after"] = str(offset + limit)
+        if len(matching) > limit:
+            pagination["after"] = "opaque-token"
         # The API does not guarantee the order inside the response
         return {
             "status_code": 200,
             "body": {
                 "meta": {"pagination": pagination},
-                "resources": list(reversed(page)),
+                "resources": list(reversed(matching[:limit])),
                 "errors": [],
             },
         }
@@ -139,7 +147,7 @@ def test_hidden_alerts_are_included_on_demand(make_client):
     assert "show_in_ui" not in fake.bodies[0]["filter"]
 
 
-def test_pages_are_chained_by_keyset_not_after_token(make_client):
+def test_pages_are_fresh_queries_excluding_processed_alerts(make_client):
     client, fake, _ = make_client(
         [_alert(i, f"2025-01-01T00:00:0{i}Z") for i in range(1, 6)]
     )
@@ -148,9 +156,14 @@ def test_pages_are_chained_by_keyset_not_after_token(make_client):
 
     # Every alert is yielded exactly once, oldest first
     assert _ids(pages) == [f"alert-{i}" for i in range(1, 6)]
-    # Each page restarts from the last timestamp, without after token
+    # No after token: each page restarts from the cursor and excludes the
+    # alerts already processed at the cursor timestamp only
     assert all("after" not in body for body in fake.bodies)
-    assert "'2025-01-01T00:00:02Z'" in fake.bodies[1]["filter"]
+    assert (
+        "(updated_timestamp:>'2025-01-01T00:00:02Z',"
+        "(updated_timestamp:'2025-01-01T00:00:02Z'+composite_id:!['alert-2']))"
+        in fake.bodies[1]["filter"]
+    )
 
 
 def test_pages_carry_the_cursor_and_boundary_ids(make_client):
@@ -195,7 +208,42 @@ def test_skip_ids_are_not_yielded_again(make_client):
     assert _ids(pages) == ["alert-2"]
 
 
-def test_full_page_with_identical_timestamps_uses_the_after_token(make_client):
+def test_boundary_alert_updated_between_runs_is_imported_again(make_client):
+    """Regression (review): boundary IDs only apply at the cursor timestamp, so
+    the newer version of an updated boundary alert is not dropped."""
+    client, _, _ = make_client(
+        [_alert(1, "2025-01-01T00:00:05Z"), _alert(2, "2025-01-01T00:00:03Z")]
+    )
+
+    # alert-1 was processed at 00:00:01 in a previous run, then updated
+    pages = _pages(client, since="2025-01-01T00:00:01Z", skip_ids=["alert-1"])
+
+    assert _ids(pages) == ["alert-2", "alert-1"]
+    assert pages[-1].cursor == "2025-01-01T00:00:05Z"
+
+
+def test_boundary_alert_updated_during_pagination_is_imported_again(make_client):
+    client, fake, _ = make_client(
+        [_alert(i, f"2025-01-01T00:00:0{i}Z") for i in range(1, 6)]
+    )
+
+    def update_alert_2_after_first_page(fake_alerts):
+        if len(fake_alerts.bodies) == 2:
+            alert_2 = next(
+                a for a in fake_alerts.alerts if a["composite_id"] == "alert-2"
+            )
+            alert_2["updated_timestamp"] = "2025-01-01T00:00:09Z"
+
+    fake.on_call = update_alert_2_after_first_page
+
+    ids = _ids(_pages(client))
+
+    # alert-2 is yielded twice: its first version, then its update
+    assert ids.count("alert-2") == 2
+    assert set(ids) == {f"alert-{i}" for i in range(1, 6)}
+
+
+def test_identical_timestamps_are_drained_by_exclusion(make_client):
     same = "2025-01-01T00:00:01Z"
     client, fake, _ = make_client(
         [_alert(i, same) for i in range(1, 6)] + [_alert(6, "2025-01-01T00:00:02Z")]
@@ -205,12 +253,32 @@ def test_full_page_with_identical_timestamps_uses_the_after_token(make_client):
 
     assert sorted(ids) == [f"alert-{i}" for i in range(1, 7)]
     assert len(ids) == len(set(ids))
-    assert any("after" in body for body in fake.bodies)
+    assert all("after" not in body for body in fake.bodies)
+
+
+def test_tie_draining_survives_an_update(make_client):
+    """Regression (review): an alert of a timestamp tie updated while the tie is
+    drained must not shift the pagination and skip another alert."""
+    tie = "2025-01-01T00:00:01Z"
+    client, fake, _ = make_client(
+        [_alert(i, tie) for i in range(1, 6)] + [_alert(6, "2025-01-01T00:00:02Z")]
+    )
+
+    def update_alert_1_after_first_page(fake_alerts):
+        if len(fake_alerts.bodies) == 2:
+            alert_1 = next(
+                a for a in fake_alerts.alerts if a["composite_id"] == "alert-1"
+            )
+            alert_1["updated_timestamp"] = "2025-01-01T00:00:03Z"
+
+    fake.on_call = update_alert_1_after_first_page
+
+    ids = _ids(_pages(client, since=tie))
+
+    assert set(ids) == {f"alert-{i}" for i in range(1, 7)}
 
 
 def test_alert_updated_between_pages_is_not_lost(make_client):
-    """An alert updated during the run moves to a later position: it must be
-    yielded again later, and no other alert may be skipped."""
     client, fake, _ = make_client(
         [_alert(i, f"2025-01-01T00:00:0{i}Z") for i in range(10)], page_size=3
     )
@@ -227,6 +295,41 @@ def test_alert_updated_between_pages_is_not_lost(make_client):
     ids = _ids(_pages(client))
 
     assert set(ids) == {f"alert-{i}" for i in range(10)}
+
+
+@pytest.mark.parametrize("missing", ["updated_timestamp", "composite_id"])
+def test_alerts_missing_a_key_are_skipped_and_reported(make_client, missing):
+    """Regression (review): one invalid alert must not block the connector."""
+    invalid = _alert(1, "2025-01-01T00:00:01Z")
+    invalid.pop(missing)
+    client, fake, _ = make_client([_alert(2, "2025-01-01T00:00:02Z")], page_size=5)
+    fake.alerts.append(invalid)
+    # The fake filters on updated_timestamp: inject the invalid alert directly
+    original = fake._combined
+
+    def with_invalid(body):
+        response = original(body)
+        response["body"]["resources"].append(invalid)
+        return response
+
+    fake.get_alerts_combined.side_effect = with_invalid
+    fake.alerts = [a for a in fake.alerts if a is not invalid]
+
+    pages = _pages(client)
+
+    assert _ids(pages) == ["alert-2"]
+    assert pages[0].skipped_ids == (
+        ("alert-1",) if missing == "updated_timestamp" else ("<unknown>",)
+    )
+
+
+def test_too_many_identical_timestamps_raise(make_client, mocker):
+    mocker.patch("crowdstrike_incidents.client_api.MAX_EXCLUDED_IDS", 3)
+    same = "2025-01-01T00:00:01Z"
+    client, _, _ = make_client([_alert(i, same) for i in range(1, 10)])
+
+    with pytest.raises(CrowdstrikeApiError, match="same updated_timestamp"):
+        _pages(client, since=same)
 
 
 def test_empty_result(make_client):

@@ -96,41 +96,57 @@ def test_incident_core_fields(ngsiem_alert_data):
     assert incident.markings == [TLPMarking(level="amber+strict")]
 
 
-def test_incident_name_identifies_rule_and_host(ngsiem_alert_data):
+def test_incident_name_is_the_rule_and_a_short_alert_id(ngsiem_alert_data):
     incident = _incident(_convert(ngsiem_alert_data))
 
-    assert incident.name == "Synthetic Rule A on host-a.example.org"
+    assert incident.name == "Synthetic Rule A (44444444)"
 
 
-def test_incident_name_does_not_depend_on_users(ngsiem_alert_data):
-    """Users can be added to an alert later: they must not change the Incident ID."""
+@pytest.mark.parametrize(
+    "update",
+    [
+        {"host_names": ["host-b.example.org"]},
+        {"host_names": []},
+        {"users": [], "user_names": ["late-user"]},
+        {"status": "in_progress", "updated_timestamp": "2025-01-16T00:00:00Z"},
+    ],
+)
+def test_incident_identity_is_stable_across_alert_updates(ngsiem_alert_data, update):
+    """Regression (review): hosts and users can change when an alert is
+    updated; the Incident must keep the same name and STIX ID."""
     first = _incident(_convert(ngsiem_alert_data))
-    ngsiem_alert_data["users"].append({"user_name": "late-user"})
-    ngsiem_alert_data["user_names"].append("late-user")
-    second = _incident(_convert(ngsiem_alert_data))
+    second = _incident(_convert({**ngsiem_alert_data, **update}))
 
     assert first.name == second.name
     assert first.id == second.id
 
 
+def test_distinct_alerts_with_same_rule_host_and_date_stay_distinct(
+    ngsiem_alert_data,
+):
+    """Regression (review): OpenCTI identifies Incidents by name and creation
+    date, so two alerts sharing them must get different names."""
+    other = {
+        **ngsiem_alert_data,
+        "composite_id": "33333333333333333333333333333333:ngsiem:"
+        "33333333333333333333333333333333:55555555555555555555555555555555",
+    }
+    proc = _make_processor()
+
+    ((objects, _),) = list(proc.transform(iter([_page([ngsiem_alert_data, other])])))
+
+    incidents = _of_type(objects, "incident")
+    assert len(incidents) == 2
+    assert len({incident.name for incident in incidents}) == 2
+
+
 @pytest.mark.parametrize(
     "overrides, expected",
     [
-        ({"host_names": []}, "Synthetic Rule A"),
+        ({"display_name": None}, "Synthetic Rule A (44444444)"),
+        ({"display_name": "   "}, "Synthetic Rule A (44444444)"),
         (
-            {"host_names": ["  ", "host-b.example.org"]},
-            "Synthetic Rule A on host-b.example.org",
-        ),
-        ({"display_name": None}, "Synthetic Rule A on host-a.example.org"),
-        ({"display_name": "   "}, "Synthetic Rule A on host-a.example.org"),
-        (
-            {
-                "display_name": None,
-                "name": None,
-                "host_names": [],
-                "user_names": [],
-                "users": [],
-            },
+            {"display_name": None, "name": None},
             "33333333333333333333333333333333:ngsiem:33333333333333333333333333333333:44444444444444444444444444444444",
         ),
     ],
@@ -139,6 +155,14 @@ def test_incident_name_fallbacks(ngsiem_alert_data, overrides, expected):
     ngsiem_alert_data.update(overrides)
 
     assert _incident(_convert(ngsiem_alert_data)).name == expected
+
+
+def test_hosts_are_listed_in_the_description(ngsiem_alert_data):
+    ngsiem_alert_data["host_names"] = ["host-a.example.org", "host-b.example.org"]
+
+    description = _incident(_convert(ngsiem_alert_data)).description
+
+    assert "| Hosts | host-a.example.org, host-b.example.org |" in description
 
 
 def test_users_are_listed_in_the_description(ngsiem_alert_data):
@@ -623,3 +647,49 @@ def test_state_load_applies_the_stored_values():
 
     assert state.last_updated_timestamp == "2025-01-15T11:00:02Z"
     assert state.last_boundary_ids == ["alert-1"]
+
+
+# ---------------------------------------------------------------------------
+# User accounts (review)
+# ---------------------------------------------------------------------------
+
+
+def _accounts(objects: list) -> set[tuple]:
+    return {(a.account_login, a.user_id) for a in _of_type(objects, "user-account")}
+
+
+def test_same_login_with_different_sids_gives_distinct_accounts(ngsiem_alert_data):
+    ngsiem_alert_data["users"] = [
+        {"user_name": "Administrator", "sid": "S-1-5-21-1-500"},
+        {"user_name": "Administrator", "sid": "S-1-5-21-2-500"},
+    ]
+    ngsiem_alert_data["user_names"] = ["Administrator"]
+
+    assert _accounts(_convert(ngsiem_alert_data)) == {
+        ("Administrator", "S-1-5-21-1-500"),
+        ("Administrator", "S-1-5-21-2-500"),
+    }
+
+
+def test_login_without_sid_is_not_duplicated(ngsiem_alert_data):
+    ngsiem_alert_data["users"] = [{"user_name": "jdoe", "sid": "S-1-5-21-1-1001"}]
+    ngsiem_alert_data["user_names"] = ["jdoe", "other"]
+
+    assert _accounts(_convert(ngsiem_alert_data)) == {
+        ("jdoe", "S-1-5-21-1-1001"),
+        ("other", None),
+    }
+
+
+def test_skipped_alerts_are_logged():
+    proc = _make_processor()
+    proc._client.iter_alert_pages.return_value = iter(
+        [AlertPage([], "cursor", frozenset(), ("<unknown>",))]
+    )
+
+    list(proc.collect())
+
+    proc.logger.warning.assert_called_once()
+    assert proc.logger.warning.call_args.kwargs["meta"] == {
+        "composite_ids": ["<unknown>"]
+    }

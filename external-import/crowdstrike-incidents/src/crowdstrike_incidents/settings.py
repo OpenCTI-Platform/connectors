@@ -1,8 +1,8 @@
 """Configuration settings for the CrowdStrike Incidents connector."""
 
-import warnings
 from datetime import timedelta
 from enum import StrEnum
+from typing import Annotated, Any
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -11,11 +11,33 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, HttpUrl, SecretStr, field_validator
+from pydantic import BeforeValidator, Field, HttpUrl, SecretStr
+
 
 # Alert products the connector knows how to map. Other Alerts API products
 # (epp, idp, xdr...) carry a different payload and are not supported yet.
-SUPPORTED_PRODUCTS = ["ngsiem"]
+# Typed as an enum so that the generated schema (and the XTM Composer form)
+# only offers the supported values.
+class Product(StrEnum):
+    """CrowdStrike alert products supported by the connector."""
+
+    NGSIEM = "ngsiem"
+
+
+def _parse_products(value: Any) -> Any:
+    """Accept a comma-separated string; normalise case, spaces and duplicates."""
+    if isinstance(value, str):
+        value = value.split(",")
+    if isinstance(value, list):
+        return list(
+            dict.fromkeys(
+                str(item).strip().lower() for item in value if str(item).strip()
+            )
+        )
+    return value
+
+
+SupportedProducts = Annotated[list[Product], BeforeValidator(_parse_products)]
 
 
 class Severity(StrEnum):
@@ -79,12 +101,13 @@ class CrowdstrikeIncidentsConfig(BaseConfigModel):
         description="How far back to look on the first import (e.g. 'P7D' for 7 days, 'P30D' for 30 days).",
         default=timedelta(days=7),
     )
-    products: ListFromString = Field(
+    products: SupportedProducts = Field(
         description=(
             "Comma-separated list of CrowdStrike alert products to import. "
-            "Only 'ngsiem' (Next-Gen SIEM) is supported for now; other values are ignored."
+            "Only 'ngsiem' (Next-Gen SIEM) is supported for now."
         ),
         default=["ngsiem"],
+        min_length=1,
     )
     severity_min: Severity | None = Field(
         description=(
@@ -109,28 +132,6 @@ class CrowdstrikeIncidentsConfig(BaseConfigModel):
         description="TLP marking level applied to every created STIX object.",
         default=TLPLevel.AMBER_STRICT,
     )
-
-    @field_validator("products", mode="after")
-    @classmethod
-    def _keep_supported_products(cls, products: list[str]) -> list[str]:
-        """Normalise the products and drop the ones the connector cannot map."""
-        normalised = list(
-            dict.fromkeys(p.strip().lower() for p in products if p.strip())
-        )
-        unsupported = [p for p in normalised if p not in SUPPORTED_PRODUCTS]
-        if unsupported:
-            warnings.warn(
-                f"Unsupported CrowdStrike products ignored: {', '.join(unsupported)}. "
-                f"Supported products: {', '.join(SUPPORTED_PRODUCTS)}.",
-                UserWarning,
-                stacklevel=2,
-            )
-        supported = [p for p in normalised if p in SUPPORTED_PRODUCTS]
-        if not supported:
-            raise ValueError(
-                f"No supported product configured. Supported products: {', '.join(SUPPORTED_PRODUCTS)}."
-            )
-        return supported
 
 
 class ConnectorSettings(BaseConnectorSettings):
