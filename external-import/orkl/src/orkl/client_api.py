@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Any
 
-from connectors_sdk import ApiClientError, BaseClientApi, ConnectorLogger
+from connectors_sdk import ApiClientError, BaseClientApi
 
 # ORKL (https://orkl.eu) publishes no documented request quota, so this
 # client relies on a two-layer defensive strategy:
@@ -49,21 +49,16 @@ class OrklClient(BaseClientApi):
         https://orkl.eu/api/v1
     """
 
-    def __init__(
-        self, base_url: str, *, logger: ConnectorLogger | None = None, **kwargs: Any
-    ) -> None:
+    def __init__(self, base_url: str, **kwargs: Any) -> None:
         """Initialize the client, applying ORKL-specific defaults.
 
         The module-level constants are applied via ``setdefault`` so callers
-        (and tests) can still override them explicitly.
+        (and tests) can still override them explicitly. Pagination warnings go
+        through ``self.logger``, provided by ``BaseClientApi``.
 
         Args:
             base_url: ORKL API base URL.
-            logger: Optional ``ConnectorLogger`` used for pagination warnings.
-                When omitted the client stays silent. ``BaseClientApi`` accepts
-                no ``logger`` kwarg, so it is consumed here and not forwarded.
         """
-        self._logger = logger
         kwargs.setdefault("rate_limit", RATE_LIMIT)
         kwargs.setdefault("max_retries", MAX_RETRIES)
         kwargs.setdefault("backoff_factor", BACKOFF_FACTOR)
@@ -81,11 +76,6 @@ class OrklClient(BaseClientApi):
     def session_headers(self) -> dict[str, str]:
         """Return the descriptive User-Agent header. No auth is required."""
         return {"User-Agent": USER_AGENT}
-
-    def _warn(self, message: str, meta: dict[str, Any]) -> None:
-        """Emit a warning only when a logger was supplied; stay silent otherwise."""
-        if self._logger is not None:
-            self._logger.warning(message, meta)
 
     def _parse_response(self, response: Any) -> Any:
         """Unwrap the ORKL ``{"data", "message", "status"}`` envelope.
@@ -152,11 +142,11 @@ class OrklClient(BaseClientApi):
 
             current_ids = [entry.get("id") for entry in entries]
             if current_ids == previous_ids:
-                self._warn(
+                self.logger.warning(
                     "ORKL library entries stalled: server is not honouring "
                     "`offset` (same ids as previous page); stopping pagination "
                     "to avoid an unbounded request loop",
-                    {"offset": offset, "pages_yielded": page_number - 1},
+                    meta={"offset": offset, "pages_yielded": page_number - 1},
                 )
                 break
             previous_ids = current_ids
@@ -168,12 +158,12 @@ class OrklClient(BaseClientApi):
 
             offset += len(entries)
         else:
-            self._warn(
+            self.logger.warning(
                 "ORKL library entries pagination hit the MAX_PAGES cap without "
                 "a short final page; stopping to avoid an unbounded request "
                 "loop (server may be misbehaving or the corpus may have grown "
                 "beyond this connector's expectations)",
-                {"max_pages": MAX_PAGES},
+                meta={"max_pages": MAX_PAGES},
             )
 
     def get_library_entry(self, entry_id: str) -> dict[str, Any] | None:

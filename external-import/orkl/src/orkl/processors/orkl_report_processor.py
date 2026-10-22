@@ -154,7 +154,7 @@ class OrklReportProcessor(BaseDataProcessor):
         """Build the client and read conversion config once dependencies exist."""
         self._config = self.settings.orkl  # type: ignore[attr-defined]
         self._api_base_url = str(self._config.api_base_url).rstrip("/")
-        self._client = OrklClient(base_url=self._api_base_url, logger=self.logger)
+        self._client = OrklClient(base_url=self._api_base_url)
         self._marking = TLPMarking(level=self._config.tlp_level.value)
         self._threat_actor_as_intrusion_set = self._config.threat_actor_as_intrusion_set
         self._ingest_tools = self._config.ingest_tools
@@ -177,7 +177,7 @@ class OrklReportProcessor(BaseDataProcessor):
         cutoff = self._resolve_cutoff()
         self.work_name = f"ORKL reports since {cutoff.isoformat()}"
         self.logger.info(
-            "Collecting ORKL reports", {"updated_after": cutoff.isoformat()}
+            "Collecting ORKL reports", meta={"updated_after": cutoff.isoformat()}
         )
 
         pages_fetched = 0
@@ -207,7 +207,7 @@ class OrklReportProcessor(BaseDataProcessor):
                     self.logger.warning(
                         "ORKL entry has an unparseable updated_at; keeping it "
                         "and continuing rather than stopping the run",
-                        {
+                        meta={
                             "entry_id": raw.get("id"),
                             "updated_at": raw.get("updated_at"),
                         },
@@ -224,7 +224,7 @@ class OrklReportProcessor(BaseDataProcessor):
             if surviving:
                 self.logger.info(
                     "Collected ORKL entries page",
-                    {"page": pages_fetched, "entries": len(surviving)},
+                    meta={"page": pages_fetched, "entries": len(surviving)},
                 )
                 yield surviving
 
@@ -233,7 +233,7 @@ class OrklReportProcessor(BaseDataProcessor):
 
         self.logger.info(
             "ORKL collection complete",
-            {
+            meta={
                 "pages_fetched": pages_fetched,
                 "entries_seen": entries_seen,
                 "skipped_deleted": skipped_deleted,
@@ -265,7 +265,7 @@ class OrklReportProcessor(BaseDataProcessor):
                 except ValidationError as err:
                     self.logger.error(
                         "Skipping ORKL entry: failed to parse",
-                        {"entry_id": raw.get("id"), "error": str(err)},
+                        meta={"entry_id": raw.get("id"), "error": str(err)},
                     )
                     continue
 
@@ -274,7 +274,7 @@ class OrklReportProcessor(BaseDataProcessor):
                 except Exception as err:  # noqa: BLE001
                     self.logger.error(
                         "Skipping ORKL entry: failed to convert to STIX",
-                        {"entry_id": entry.id, "error": str(err)},
+                        meta={"entry_id": entry.id, "error": str(err)},
                     )
                     continue
 
@@ -291,12 +291,12 @@ class OrklReportProcessor(BaseDataProcessor):
                 reports_produced += page_reports
                 self.logger.info(
                     "Sending STIX objects for page",
-                    {"objects": len(unique), "reports": page_reports},
+                    meta={"objects": len(unique), "reports": page_reports},
                 )
                 yield unique
 
         self.logger.info(
-            "ORKL transform complete", {"reports_produced": reports_produced}
+            "ORKL transform complete", meta={"reports_produced": reports_produced}
         )
 
     # ------------------------------------------------------------------

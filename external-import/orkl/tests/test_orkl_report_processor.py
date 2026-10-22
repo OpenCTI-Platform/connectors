@@ -343,9 +343,7 @@ class TestPostInit:
         with patch("orkl.processors.orkl_report_processor.OrklClient") as mock_client:
             proc.post_init()
 
-        mock_client.assert_called_once_with(
-            base_url="https://orkl.eu/api/v1", logger=proc.logger
-        )
+        mock_client.assert_called_once_with(base_url="https://orkl.eu/api/v1")
         assert proc._api_base_url == "https://orkl.eu/api/v1"
         assert proc._marking.level == "green"
         assert proc._threat_actor_as_intrusion_set is False
