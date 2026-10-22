@@ -197,8 +197,9 @@ class CyfirmaClient:
                     return_data.extend((ta_res_data or {}).get("objects", []))
                 except requests.RequestException as err:
                     self.helper.connector_logger.error(
-                        f"CYFIRMA -- TA enrichment failed, continuing with indicators only: {str(err)}"
+                        "CYFIRMA -- TA enrichment failed", {"error": str(err)}
                     )
+                    raise
 
             return return_data
 
@@ -287,6 +288,10 @@ class CyfirmaClient:
                 )
 
             elif "2" in cvss_version:
+                if "cvss_base_score" in ext_props:
+                    new_extension_props["cvss_v2_base_score"] = float(
+                        ext_props["cvss_base_score"]
+                    )
                 new_extension_props["cvss_v2_vector_string"] = ext_props.get(
                     "cvss_vector"
                 )
