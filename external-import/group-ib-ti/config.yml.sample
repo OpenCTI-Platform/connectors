@@ -2,12 +2,12 @@ opencti:
   # http://opencti:8080 - for docker deployment, http://localhost:8080 - for manual deployment
   url: "http://opencti:8080"
   # Use one as provided by the OpenCTI platform
-  token: ""
+  token: "ChangeMe"
 
 connector:
   # Generate one with uuidgen (https://www.uuidgenerator.net/version4)
-  id: ""
-  type: "EXTERNAL_IMPORT"
+  # A default UUID is built in; set your own when running several instances.
+  id: "ChangeMe"
   name: "Group-IB Connector"
   scope: "stix2,report,threat-actor,intrusion-set,malware,attack-pattern,vulnerability,indicator,location,identity,incident,note,relationship,ipv4-addr,ipv6-addr,domain,url,StixFile,email-addr,user-account,payment-card,bank-account"
   docker_container_name: "gib_connector"
@@ -36,8 +36,8 @@ connector:
 # TI URL and credentials are required. Proxy fields may be left empty.
 ti_api:
     url: "https://tap.group-ib.com/api/v2/"
-    username: ""
-    token: ""
+    username: "ChangeMe"
+    token: "ChangeMe"
     # === Threat Intelligence API Proxy ===
     # Proxy specific parameters. You can leave them blank.
     proxy:

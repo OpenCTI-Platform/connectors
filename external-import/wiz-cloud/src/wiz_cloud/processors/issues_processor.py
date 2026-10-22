@@ -1,0 +1,557 @@
+"""Processor turning Wiz Threat Detection issues into OpenCTI Incidents.
+
+Each issue becomes an Incident. The cloud resource it was raised on is always
+described in the incident description, and becomes an entity linked to the
+incident only for the resource types mapped in _entity_for. When vulnerability
+import is enabled, the findings of that resource are fetched while the issue
+is converted and travel in the same bundle, so an issue and its
+vulnerabilities are never committed apart.
+"""
+
+from collections.abc import Iterator
+from datetime import datetime, timezone
+from importlib import resources
+
+from connectors_sdk import BaseDataProcessor
+from connectors_sdk.models import (
+    AttackPattern,
+    BaseIdentifiedEntity,
+    ExternalReference,
+    Incident,
+    OrganizationAuthor,
+    Relationship,
+    Software,
+    System,
+    TLPMarking,
+    UserAccount,
+    Vulnerability,
+)
+from connectors_sdk.models.enums import IncidentSeverity, IncidentType, RelationshipType
+from pydantic import ValidationError
+from wiz_cloud.client_api import WizApiClient
+from wiz_cloud.models import WizEntitySnapshot, WizIssue
+from wiz_cloud.observables import Credential
+from wiz_cloud.processors.ttps_processor import WizTtpsProcessor
+from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
+
+ISSUES_QUERY = (
+    resources.files("wiz_cloud.queries").joinpath("issues.graphql").read_text("utf-8")
+)
+
+# Wiz Severity enum to SDK IncidentSeverity. INFORMATIONAL has no OpenCTI
+# equivalent and maps to LOW.
+_SEVERITY = {
+    "CRITICAL": IncidentSeverity.CRITICAL,
+    "HIGH": IncidentSeverity.HIGH,
+    "MEDIUM": IncidentSeverity.MEDIUM,
+    "LOW": IncidentSeverity.LOW,
+    "INFORMATIONAL": IncidentSeverity.LOW,
+}
+
+
+def _utc(dt: datetime) -> str:
+    # Full precision matters: Wiz createdAt carries microseconds and the
+    # filter is exclusive, so truncating to the second would re-select the
+    # issue the cursor points at on every run.
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class WizIssuesProcessor(BaseDataProcessor):
+    # Set in post_init() when vulnerability import is enabled. Declared here
+    # so conversion works on a processor whose post_init() was skipped.
+    _vulnerabilities: WizVulnerabilitiesProcessor | None = None
+    # Same for TTPs, which need no client and no state.
+    _ttps: WizTtpsProcessor | None = None
+
+    def process(self) -> None:
+        """Run the full processing pipeline: collect → transform → send.
+
+        Opens a work via the ``WorkManager`` context manager, then
+        composes ``send(transform(collect()))``.
+
+        The work is automatically closed on exit (success, fail, or delete).
+        """
+        super().process()
+
+        if self._vulnerabilities is not None:
+            self._vulnerabilities._seen_assets = set()
+            self._vulnerabilities.failures = 0
+
+    # -- lifecycle -----------------------------------------------------------
+
+    def post_init(self) -> None:
+        """Build the Wiz client and the objects shared by every bundle.
+
+        Called by the SDK once dependencies are injected, so settings are
+        available here but not in __init__.
+        """
+        self._config = self.settings.wiz_cloud
+        self._client = WizApiClient(
+            base_url=str(self._config.api_url),
+            auth_url=str(self._config.auth_url),
+            client_id=self._config.client_id.get_secret_value(),
+            client_secret=self._config.client_secret.get_secret_value(),
+            logger=self.logger,
+            timeout=60,
+            max_retries=3,
+            backoff_factor=2.0,
+        )
+        self._author = OrganizationAuthor(name="Wiz")
+        self._marking = TLPMarking(level=self._config.marking)
+        # Built here rather than in __init__ because it needs the settings and
+        # shares the client, so both queries ride on a single access token.
+        self._vulnerabilities: WizVulnerabilitiesProcessor | None = None
+        if self._config.import_vulnerabilities:
+            self._vulnerabilities = WizVulnerabilitiesProcessor(
+                client=self._client,
+                config=self._config,
+                logger=self.logger,
+                author=self._author,
+                marking=self._marking,
+            )
+
+        self._ttps: WizTtpsProcessor | None = None
+        if self._config.import_ttps:
+            self._ttps = WizTtpsProcessor(
+                logger=self.logger,
+                author=self._author,
+                marking=self._marking,
+            )
+
+    # -- collect -------------------------------------------------------------
+
+    def collect(self) -> Iterator[list[dict]]:
+        """Fetch Threat Detection issues created since the last run.
+
+        The lower bound is the stored cursor, or now minus the configured
+        since window on a first run.
+
+        Yields:
+            Lists of raw issue dicts, one per API page.
+        """
+        since = self.state.issues_last_created_at or self._config.since
+        self.work_name = f"Wiz Cloud issues import since {since:%Y-%m-%d %H:%M}"
+        self.logger.info(
+            "[WIZ-CLOUD] Collecting issues",
+            meta={
+                "since": since.isoformat(),
+                "severity": self._config.issue_severity,
+                "status": self._config.issue_status,
+            },
+        )
+
+        variables = {
+            "first": self._config.page_size,
+            "after": None,
+            # Oldest first: incidents then reach the platform in the order
+            # they happened, and a run that dies halfway leaves a contiguous
+            # window behind. See state.py for why the cursor stays safe.
+            "orderBy": {"field": "CREATED_AT", "direction": "ASC"},
+            "filterBy": {
+                "type": ["THREAT_DETECTION"],
+                "severity": list(self._config.issue_severity),
+                "status": list(self._config.issue_status),
+                "createdAt": {"after": _utc(since)},
+            },
+        }
+        yield from self._client.paginate(
+            ISSUES_QUERY, variables, connection_key="issues"
+        )
+
+    # -- transform -----------------------------------------------------------
+
+    def transform(self, data: Iterator[list[dict]]) -> Iterator[list]:
+        """Convert raw issue pages into bundle objects.
+
+        Unparseable issues are logged and skipped rather than failing the run.
+
+        When vulnerability import is enabled, each issue is emitted as its own
+        bundle carrying the vulnerabilities of its resource, so the two are
+        committed together. Otherwise one bundle per page is emitted, as
+        before.
+
+        Args:
+            data: Pages of raw issue dicts yielded by collect().
+
+        Yields:
+            Lists of SDK objects: one bundle per issue when vulnerabilities
+            are imported, one bundle per non-empty page otherwise.
+        """
+        # Run-scoped caches: the same entitySnapshot backs many issues, and
+        # author/marking must be sent once, not once per page.
+        entities_cache: dict[str, BaseIdentifiedEntity] = {}
+        shared_sent = False
+        max_created = self.state.issues_last_created_at
+        issues_converted = 0
+        bundles_sent = 0
+        vulnerabilities_sent = 0
+        ttps_sent = 0
+
+        for page in data:
+            page_objects: list = []
+
+            for raw in page:
+                try:
+                    issue = WizIssue.model_validate(raw)
+                except ValidationError as err:
+                    self.logger.warning(
+                        "[WIZ-CLOUD] Skipping unparseable issue",
+                        meta={"id": raw.get("id"), "error": str(err)},
+                    )
+                    continue
+
+                objects = self._convert(issue, entities_cache)
+                issues_converted += 1
+                ttps = sum(1 for obj in objects if isinstance(obj, AttackPattern))
+                ttps_sent += ttps
+                if max_created is None or issue.created_at > max_created:
+                    max_created = issue.created_at
+
+                if self._vulnerabilities is None:
+                    page_objects.extend(objects)
+                    continue
+
+                vulnerabilities = 0
+                asset = (
+                    entities_cache.get(issue.entity_snapshot.id)
+                    if issue.entity_snapshot is not None
+                    else None
+                )
+                # OpenCTI only lets a System or a Software have a
+                # vulnerability; service accounts and access keys carry none.
+                if isinstance(asset, (System, Software)):
+                    found = self._vulnerabilities.objects_for_asset(
+                        issue.entity_snapshot.id, asset
+                    )
+                    vulnerabilities = sum(
+                        1 for obj in found if isinstance(obj, Vulnerability)
+                    )
+                    objects.extend(found)
+                vulnerabilities_sent += vulnerabilities
+
+                self.logger.info(
+                    "[WIZ-CLOUD] Sending an incident with its vulnerabilities",
+                    meta={
+                        "issue_id": issue.id,
+                        "asset": (
+                            issue.entity_snapshot.name
+                            if issue.entity_snapshot
+                            else None
+                        ),
+                        # Zero when the asset was already scanned this run:
+                        # its vulnerabilities went out with an earlier issue.
+                        "vulnerabilities": vulnerabilities,
+                        "ttps": ttps,
+                    },
+                )
+                yield self._with_shared(objects, shared_sent)
+                shared_sent = True
+                bundles_sent += 1
+
+            if page_objects:
+                yield self._with_shared(page_objects, shared_sent)
+                shared_sent = True
+                bundles_sent += 1
+
+        if issues_converted == 0:
+            self.logger.info(
+                "[WIZ-CLOUD] Nothing to ingest, no new issue since the last run",
+                meta=(
+                    {"since": _utc(self.state.issues_last_created_at)}
+                    if self.state.issues_last_created_at
+                    else {}
+                ),
+            )
+        else:
+            self.logger.info(
+                "[WIZ-CLOUD] Import finished",
+                meta={
+                    "incidents": issues_converted,
+                    "vulnerabilities": vulnerabilities_sent,
+                    "ttps": ttps_sent,
+                    "bundles": bundles_sent,
+                },
+            )
+
+        self._advance_cursor(max_created)
+
+    def _with_shared(self, objects: list, already_sent: bool) -> list:
+        """Finalise a bundle: drop its repeats, then prepend the shared objects.
+
+        Args:
+            objects: The bundle objects.
+            already_sent: Whether a previous bundle carried them.
+
+        Returns:
+            The bundle, without the repeats it does not need, and with author
+            and marking in front when they are still owed. They never travel
+            in a bundle of their own.
+        """
+        objects = self._deduplicated(objects)
+        if already_sent:
+            return objects
+        return [self._author, self._marking, *objects]
+
+    @staticmethod
+    def _deduplicated(objects: list) -> list:
+        """Drop the objects a bundle already carries, keeping the first copy.
+
+        Systems and attack patterns are appended for every issue that
+        references them, so that each bundle resolves on its own whatever
+        order the workers consume them in. Inside one bundle the first copy
+        already grants that, and ids are deterministic, so the later copies
+        are byte-identical noise.
+
+        Args:
+            objects: The bundle objects, in emission order.
+
+        Returns:
+            The same objects, in the same order, without repeated ids.
+        """
+        seen: set[str] = set()
+        unique: list = []
+        for obj in objects:
+            if obj.id in seen:
+                continue
+            seen.add(obj.id)
+            unique.append(obj)
+        return unique
+
+    def _advance_cursor(self, max_created: datetime | None) -> None:
+        """Store the newest issue createdAt, unless vulnerabilities failed.
+
+        A failed fetch is not fatal, but the issues it belongs to must not be
+        marked as done: leaving the cursor where it is replays the whole
+        window on the next run. Replaying is harmless because every object
+        carries a deterministic id, whereas advancing would drop those
+        vulnerabilities for good.
+
+        The connector persists the state only after all processors succeed.
+
+        Args:
+            max_created: The newest createdAt converted this run, if any.
+        """
+        if max_created is None:
+            return
+
+        failures = self._vulnerabilities.failures if self._vulnerabilities else 0
+        if failures:
+            self.logger.warning(
+                "[WIZ-CLOUD] Holding the issues cursor back after vulnerability "
+                "failures, the window will be imported again on the next run",
+                meta={"failed_assets": failures},
+            )
+            return
+
+        self.state.issues_last_created_at = max_created
+
+    # -- conversion ----------------------------------------------------------
+
+    def _convert(
+        self, issue: WizIssue, entities_cache: dict[str, BaseIdentifiedEntity]
+    ) -> list:
+        """Convert one Wiz issue into its bundle objects.
+
+        Args:
+            issue: Parsed Wiz issue.
+            entities_cache: Entities already built during this run, keyed by
+                entitySnapshot id, so a resource shared by several issues
+                reuses the same object instead of being rebuilt for each one.
+
+        Returns:
+            A list holding the Incident, the AttackPatterns and their uses
+            Relationships for the issue's MITRE techniques when TTP import is
+            enabled, plus the resource entity and the Relationship linking
+            them when the issue carries an entity snapshot of a mapped type.
+            A list is returned so further entities can be appended without
+            changing the signature.
+        """
+        objects: list = []
+
+        incident = Incident(
+            name=self._incident_name(issue),
+            description=self._incident_description(issue),
+            incident_type=IncidentType.ALERT,
+            severity=_SEVERITY.get(issue.severity, IncidentSeverity.LOW),
+            source="Wiz",
+            # Event timestamps are the real activity window; createdAt is
+            # only when Wiz noticed.
+            first_seen=issue.first_event_at or issue.created_at,
+            last_seen=issue.last_event_at or issue.updated_at,
+            labels=self._labels(issue),
+            external_references=self._issue_references(issue),
+            author=self._author,
+            markings=[self._marking],
+        )
+        objects.append(incident)
+
+        if self._ttps is not None:
+            objects.extend(self._ttps.objects_for_issue(issue, incident))
+
+        if issue.entity_snapshot is None:
+            return objects
+
+        # Appended to every bundle that references it, not just the first:
+        # bundles are split across workers and ingested in any order, so a
+        # relationship pointing at an entity from an earlier bundle can
+        # fail to resolve. The id is deterministic, so the repeat upserts.
+        entity = self._entity_for(issue.entity_snapshot, entities_cache)
+        if entity is None:
+            return objects
+        objects.append(entity)
+        objects.append(
+            Relationship(
+                # OpenCTI only allows related-to between an Incident and an
+                # observable; targets is kept for the System.
+                type=(
+                    RelationshipType.TARGETS
+                    if isinstance(entity, System)
+                    else RelationshipType.RELATED_TO
+                ),
+                source=incident,
+                target=entity,
+                author=self._author,
+                markings=[self._marking],
+            )
+        )
+
+        return objects
+
+    def _incident_name(self, issue: WizIssue) -> str:
+        # sourceRule.name + the Wiz issue id. Rule name alone repeats across
+        # hundreds of issues and description is rule-generic prose, so the id
+        # is what keeps each incident name unambiguous.
+        name = issue.rule_name or ""
+        return f"{name} - Wiz issue {issue.id}" if name else f"Wiz issue {issue.id}"
+
+    def _incident_description(self, issue: WizIssue) -> str | None:
+        # The affected resource is written out whatever its type, so the
+        # incident stays self-explanatory for types that get no entity.
+        parts = [
+            issue.description,  # "" observed in payloads
+            self._resource_summary(issue.entity_snapshot),
+        ]
+        return "\n\n".join(part for part in parts if part) or None
+
+    @staticmethod
+    def _resource_summary(snapshot: WizEntitySnapshot | None) -> str | None:
+        if snapshot is None:
+            return None
+        fields = (
+            ("Name", snapshot.name),
+            ("Type", snapshot.type),
+            ("Cloud platform", snapshot.cloud_platform),
+            ("Region", snapshot.region),
+            ("Provider ID", snapshot.provider_id),
+            ("External ID", snapshot.external_id),
+            ("Cloud provider URL", snapshot.cloud_provider_url),
+        )
+        # region, providerId and cloudProviderURL are often "" in payloads.
+        lines = [f"- {label}: {value}" for label, value in fields if value]
+        return "\n".join(["**Affected resource**", "", *lines])
+
+    def _labels(self, issue: WizIssue) -> list[str]:
+        # No "wiz" label: the incident is already created-by the Wiz author
+        # and carries a Wiz external reference, so it would only add a label
+        # every analyst has to filter out.
+        labels = [issue.type.lower().replace("_", "-"), issue.status.lower()]
+        if issue.rule_name:
+            labels.append(issue.rule_name)
+        return labels
+
+    def _issue_references(self, issue: WizIssue) -> list[ExternalReference]:
+        references = []
+        if issue.url:
+            references.append(
+                ExternalReference(
+                    source_name="Wiz",
+                    url=issue.url,  # taken from the API, never rebuilt
+                    external_id=issue.id,
+                    description="Wiz issue",
+                )
+            )
+        return references
+
+    def _entity_for(
+        self, snapshot: WizEntitySnapshot, cache: dict[str, BaseIdentifiedEntity]
+    ) -> BaseIdentifiedEntity | None:
+        """Return the entity for a snapshot, building it on first sight.
+
+        Args:
+            snapshot: The resource the issue was raised on.
+            cache: Entities already built during this run, keyed by
+                entitySnapshot id.
+
+        Returns:
+            The entity, or None when the snapshot type is not mapped.
+        """
+        if snapshot.id in cache:
+            return cache[snapshot.id]
+        if not snapshot.name:
+            # Every mapped model requires a non-empty name or value.
+            return None
+
+        common = {
+            "description": self._snapshot_context(snapshot),
+            "external_references": self._snapshot_references(snapshot),
+            "author": self._author,
+            "markings": [self._marking],
+        }
+        # Do not add labels to the entities as tags are too numerous and
+        # create noise.
+        entity: BaseIdentifiedEntity
+        match snapshot.type:
+            case "VIRTUAL_MACHINE":
+                entity = System(name=snapshot.name, **common)
+            case "SERVICE_ACCOUNT":
+                entity = UserAccount(
+                    # OpenCTI displays account_login first, so the readable
+                    # name goes there and the Wiz identifier in user_id.
+                    account_login=snapshot.name,
+                    user_id=snapshot.external_id or None,
+                    display_name=snapshot.name,
+                    is_service_account=True,
+                    **common,
+                )
+            case "CONTAINER_IMAGE":
+                entity = Software(name=snapshot.name, **common)
+            case "ACCESS_KEY":
+                # The access key id. Wiz never returns the secret.
+                entity = Credential(value=snapshot.name, **common)
+            case _:
+                # Mapping every Wiz resource type costs a lot for little
+                # benefit: any other type (SUBSCRIPTION included) only appears
+                # in the incident description.
+                return None
+
+        cache[snapshot.id] = entity
+        return entity
+
+    @staticmethod
+    def _snapshot_context(snapshot: WizEntitySnapshot) -> str | None:
+        parts = [
+            part
+            for part in (
+                snapshot.type,
+                snapshot.cloud_platform,
+                snapshot.region or None,  # "" observed in payloads
+                snapshot.provider_id or None,
+            )
+            if part
+        ]
+        return " | ".join(parts) or None
+
+    @staticmethod
+    def _snapshot_references(snapshot: WizEntitySnapshot) -> list[ExternalReference]:
+        if not snapshot.external_id:
+            return []
+        return [
+            ExternalReference(
+                source_name="Wiz",
+                external_id=snapshot.external_id,
+                description="Cloud provider resource identifier",
+                # cloudProviderURL is usually "" in practice; guard on
+                # falsiness, not None.
+                url=snapshot.cloud_provider_url or None,
+            )
+        ]

@@ -155,14 +155,14 @@ class ZerofoxAlertsProcessor(BaseDataProcessor):
                 try:
                     alert = ZerofoxAlert.model_validate(raw_alert)
                 except ValidationError as e:
-                    self.logger.error(f"Failed to parse alert: {e}")
+                    self.logger.exception(f"Failed to parse alert: {e}")
                     continue
 
                 try:
                     objects = self._convert_alert(alert)
                     stix_objects.extend(objects)
                 except Exception as e:
-                    self.logger.error(
+                    self.logger.exception(
                         f"Failed to convert alert #{alert.id} to STIX: {e}"
                     )
                     continue

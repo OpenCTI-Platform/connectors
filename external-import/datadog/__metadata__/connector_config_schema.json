@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/datadog_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "DataDog",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "stix2"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "DATADOG_TOKEN": {
+      "description": "The DataDog API key used to authenticate against the DataDog API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DATADOG_APP_KEY": {
+      "description": "The DataDog Application key. Required by the Security Monitoring v2 API, which rejects calls missing it with a 403.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DATADOG_API_BASE_URL": {
+      "default": "https://api.datadoghq.com",
+      "description": "The base URL of the DataDog API (site-dependent).",
+      "type": "string"
+    },
+    "DATADOG_APP_BASE_URL": {
+      "default": "https://app.datadoghq.com",
+      "description": "The base URL of the DataDog web application, used to build the external references pointing back to each signal.",
+      "type": "string"
+    },
+    "DATADOG_IMPORT_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    },
+    "DATADOG_IMPORT_START_DATE": {
+      "default": null,
+      "description": "The ISO 8601 date to start importing signals from on the very first run (e.g. '2024-01-01T00:00:00Z'). Defaults to 24 hours ago.",
+      "type": "string"
+    },
+    "DATADOG_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The TLP marking applied to every emitted STIX object. Available values are: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED.",
+      "type": "string"
+    },
+    "DATADOG_BATCH_SIZE": {
+      "default": 100,
+      "description": "The page size used when paginating the DataDog Security Monitoring API (DataDog caps this at 1000).",
+      "type": "integer"
+    },
+    "DATADOG_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Whether to import DataDog security signals (alerts).",
+      "type": "boolean"
+    },
+    "DATADOG_CREATE_INCIDENT_RESPONSE_CASES": {
+      "default": false,
+      "description": "Whether to create a Case-Incident response object for each imported security signal.",
+      "type": "boolean"
+    },
+    "DATADOG_ALERT_PRIORITIES": {
+      "default": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "description": "Comma-separated list of signal priorities to import (e.g. 'P1,P2'). Defaults to every priority.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DATADOG_ALERT_TAGS_FILTER": {
+      "default": [],
+      "description": "Comma-separated list of DataDog tags used to filter the imported signals (e.g. 'env:prod,team:secops'). Empty means no filtering.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DATADOG_EXTRACT_OBSERVABLES_FROM_ALERTS": {
+      "default": true,
+      "description": "Whether to extract the observables (IP addresses, domains, URLs, user-agents, email addresses) embedded in the signal payload.",
+      "type": "boolean"
+    },
+    "DATADOG_INCLUDE_ALERT_CONTEXT": {
+      "default": true,
+      "description": "Whether to emit an explanatory Note carrying the DataDog tags, monitor query and assignee context of each signal.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "DATADOG_TOKEN",
+    "DATADOG_APP_KEY"
+  ],
+  "additionalProperties": true
+}

@@ -19,3 +19,4 @@ email_intel_microsoft:
   email: 'ChangeMe'
 #  mailbox: 'INBOX'
 #  attachments_mime_types: 'application/pdf,text/csv,text/plain'
+#  report_type: 'threat-report'

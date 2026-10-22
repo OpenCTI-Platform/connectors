@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib import parse
 
 from .constants import THREAT_MAP_TYPE_MAPPER
+from .rf_to_stix2 import IntrusionSet
 
 
 class ThreatMap(threading.Thread):
@@ -77,8 +78,17 @@ class ThreatMap(threading.Thread):
                                 _type = entity_with_links["entity"]["type"].replace(
                                     "type:", ""
                                 )
+                                entity_kwargs = {"tlp": self.tlp}
+                                if threat_map_type["class"] is IntrusionSet:
+                                    # Map Recorded Future "AKA" alias data so OpenCTI
+                                    # can deduplicate Intrusion Sets across feeds
+                                    entity_kwargs["aliases"] = (
+                                        self.rfapi.get_entity_aliases(
+                                            entity_with_links["entity"]["id"]
+                                        )
+                                    )
                                 entity_to_stix2 = threat_map_type["class"](
-                                    _name, _type, tlp=self.tlp
+                                    _name, _type, **entity_kwargs
                                 )
 
                                 # Map data with related entities

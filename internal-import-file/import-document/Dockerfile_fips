@@ -1,16 +1,13 @@
 FROM filigran/alpine-python-fips:python3.12
 ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 
-# Copy the connector
 COPY src /opt/opencti-connector-import-document
+WORKDIR /opt/opencti-connector-import-document
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev libffi-dev openssl-dev rust cargo && \
-    cd /opt/opencti-connector-import-document && \
+RUN apk --no-cache add git && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git
 
 RUN chmod -R 0777 /opt/opencti-connector-import-document
-WORKDIR /opt/opencti-connector-import-document
+
 CMD ["python3", "main.py"]

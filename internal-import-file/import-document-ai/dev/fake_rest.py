@@ -7,14 +7,20 @@ import logging
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
-from fastapi import FastAPI, Request, Response, UploadFile
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+# Development server only: these packages are declared in
+# dev/dev-requirements.txt, while deptry checks the whole connector against the
+# runtime src/requirements.txt, which must not carry them.
+from cryptography import x509  # deptry: ignore[DEP003]
+from cryptography.hazmat.backends import default_backend  # deptry: ignore[DEP003]
+from cryptography.hazmat.primitives import (  # deptry: ignore[DEP003]
+    hashes,
+    serialization,
+)
+from cryptography.hazmat.primitives.asymmetric import rsa  # deptry: ignore[DEP003]
+from cryptography.x509.oid import NameOID  # deptry: ignore[DEP003]
+from fastapi import FastAPI, Request, Response, UploadFile  # deptry: ignore[DEP003]
+from fastapi.responses import JSONResponse  # deptry: ignore[DEP003]
+from starlette.middleware.base import BaseHTTPMiddleware  # deptry: ignore[DEP003]
 
 logger = logging.getLogger(__name__)
 

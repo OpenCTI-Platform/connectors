@@ -10,7 +10,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=OpenCTI Splunk Connector"
       - CONNECTOR_SCOPE=splunk
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)

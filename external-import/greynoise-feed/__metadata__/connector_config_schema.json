@@ -12,6 +12,7 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_TYPE": {
@@ -22,6 +23,7 @@
     "CONNECTOR_NAME": {
       "default": "GreyNoise Feed",
       "description": "The name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -30,6 +32,7 @@
       ],
       "description": "The scope of the connector, e.g. 'greynoise'.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -55,6 +58,7 @@
     "GREYNOISE_FEED_API_KEY": {
       "description": "The API key to connect to Greynoise.",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },

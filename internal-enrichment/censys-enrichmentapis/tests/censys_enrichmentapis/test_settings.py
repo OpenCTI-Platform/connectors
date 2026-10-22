@@ -1,6 +1,7 @@
 import pytest
 from censys_enrichmentapis.settings import ConfigLoader
 from connectors_sdk import ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import HttpUrl
 
 
@@ -34,7 +35,17 @@ def test_config() -> None:
     assert config.connector.log_level == "error"
     assert config.connector.auto is False
 
-    assert config.censys_enrichmentapis.max_tlp == "TLP:AMBER"
+    assert config.connector.max_tlp == TLPLevel.AMBER
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_deprecated_max_tlp_is_migrated_to_connector_max_tlp(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CENSYS_ENRICHMENTAPIS_MAX_TLP", "TLP:RED")
+    with pytest.warns(UserWarning, match="censys_enrichmentapis.max_tlp"):
+        config = ConfigLoader()
+    assert config.connector.max_tlp == TLPLevel.RED
 
 
 @pytest.mark.usefixtures("mock_config")

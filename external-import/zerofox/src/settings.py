@@ -70,10 +70,7 @@ class ZeroFoxConfig(BaseConfigModel):
             "Start date to look back on the connector's very first run (ISO 8601 "
             "format, absolute date or duration, e.g. '2023-10-01' or 'P1D')."
         ),
-        # `default_factory` is used to set a dynamic default value (datetime) at runtime
-        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=1),
-        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
-        json_schema_extra={"default": "P1D"},
+        default="P1D",
     )
     collectors: ListFromString = Field(
         description=(

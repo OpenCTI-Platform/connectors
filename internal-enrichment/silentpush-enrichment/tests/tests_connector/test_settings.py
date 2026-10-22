@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 
 
 @pytest.mark.parametrize(
@@ -20,11 +21,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "silentpush": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             id="full_valid_settings_dict",
@@ -79,11 +80,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "silentpush": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "opencti.url",
@@ -100,10 +101,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "silentpush": {
                     "api_base_url": "http://test.com",
-                    "max_tlp_level": "clear",
                 },
             },
             "silentpush.api_key",
@@ -123,3 +124,22 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_silentpush_max_tlp_to_connector_max_tlp():
+    # Given: A config dict that still sets max_tlp in the silentpush section
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "silentpush": {"api_key": "test-api-key", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    # When: The settings are loaded
+    # Then: A deprecation warning is emitted, and the value is used as connector.max_tlp
+    with pytest.warns(UserWarning, match="silentpush.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == TLPLevel.RED

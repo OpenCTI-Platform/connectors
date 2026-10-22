@@ -10,7 +10,6 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=MISP Intel
       - CONNECTOR_SCOPE=misp
-      - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
@@ -28,5 +27,6 @@ services:
       - MISP_PUBLISH_ALERT=false
       - MISP_TAG_OPENCTI=true
       - MISP_TAG_PREFIX=opencti:
+      - MISP_MARKING_TYPES_TO_CONVERT=TLP,PAP
       - MISP_DETECT_ROUND_TRIP=false
     restart: always

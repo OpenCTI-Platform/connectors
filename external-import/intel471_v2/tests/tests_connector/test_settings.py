@@ -266,6 +266,145 @@ def test_settings_should_convert_initial_history_given_in_seconds():
     assert settings.intel471.initial_history_reports == 0
 
 
+def test_settings_should_parse_alerts_filters():
+    """
+    The alerts stream's filter settings parse from comma-separated strings into lists
+    (`watcher_group_ids`, `watcher_ids`, `statuses`) and a bool (`is_trashed_included`),
+    and `initial_history_alerts` is normalized like the other initial-history fields.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "interval_alerts": 30,
+                        "initial_history_alerts": INITIAL_HISTORY_TIMESTAMP // 1000,
+                        "watcher_group_ids": "1,2,3",
+                        "watcher_ids": "10,20",
+                        "statuses": "generated,completed",
+                        "is_trashed_included": True,
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 30
+    assert settings.intel471.initial_history_alerts == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.watcher_group_ids == ["1", "2", "3"]
+    assert settings.intel471.watcher_ids == ["10", "20"]
+    assert settings.intel471.statuses == ["generated", "completed"]
+    assert settings.intel471.is_trashed_included is True
+
+
+def test_settings_alerts_defaults_are_disabled_and_empty():
+    """
+    With no alerts settings given, the stream is disabled (`interval_alerts == 0`), the
+    filters are empty lists, and trashed alerts are excluded.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 0
+    assert settings.intel471.initial_history_alerts == 0
+    assert settings.intel471.watcher_group_ids == []
+    assert settings.intel471.watcher_ids == []
+    assert settings.intel471.statuses == []
+    assert settings.intel471.is_trashed_included is False
+
+
+def test_settings_credentials_defaults_are_disabled_and_plaintext_off():
+    """
+    With no credentials settings given, the stream is disabled
+    (`interval_credentials == 0`), there is no initial history, and the cleartext
+    password is withheld (`enable_credentials_plain_password is False`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_credentials == 0
+    assert settings.intel471.initial_history_credentials == 0
+    assert settings.intel471.enable_credentials_plain_password is False
+    assert settings.intel471.affiliation_group == []
+
+
+def test_settings_should_parse_credentials_settings():
+    """
+    The credentials stream's settings parse as expected: a non-zero interval enables
+    it, `initial_history_credentials` is normalized from epoch seconds like the other
+    initial-history fields, the plaintext-password opt-in is read as a bool, and
+    `affiliation_group` parses from a comma-separated string into a list.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "interval_credentials": 60,
+                        "initial_history_credentials": INITIAL_HISTORY_TIMESTAMP
+                        // 1000,
+                        "enable_credentials_plain_password": True,
+                        "affiliation_group": "my_employees,my_customers",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_credentials == 60
+    assert settings.intel471.initial_history_credentials == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.enable_credentials_plain_password is True
+    assert settings.intel471.affiliation_group == ["my_employees", "my_customers"]
+
+
 def test_settings_should_raise_when_initial_history_is_not_an_epoch():
     """
     Test that an `initial_history_*` value that is plausible neither as epoch

@@ -23,6 +23,6 @@ microsoft_defender_incidents:
   tenant_id: 'ChangeMe'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  import_start_date: '2025-01-01T00:00:00Z'
+  import_start_date: 'P30D'
   #api_base_url: 'https://graph.microsoft.com/v1.0'
   #incident_path: '/security/incidents'
