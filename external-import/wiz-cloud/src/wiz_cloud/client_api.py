@@ -23,8 +23,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import requests
-from connectors_sdk import ApiClientError, BaseClientApi
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk import ApiClientError, BaseClientApi, ConnectorLoggerAdapter
 
 
 class WizGraphQLError(ApiClientError):
@@ -49,7 +48,7 @@ class WizApiClient(BaseClientApi):
         auth_url: str,
         client_id: str,
         client_secret: str,
-        logger: ConnectorLogger,
+        logger: ConnectorLoggerAdapter,
         **kwargs: Any,
     ) -> None:
         super().__init__(base_url=base_url, **kwargs)
@@ -151,7 +150,7 @@ class WizApiClient(BaseClientApi):
                 self._logger.warning(
                     "[WIZ-CLOUD] Stopping pagination early on an unusable cursor, "
                     "results may be incomplete",
-                    {
+                    meta={
                         "connection": connection_key,
                         "cursor": cursor,
                         "reason": "missing" if not cursor else "repeated",

@@ -136,7 +136,10 @@ def test_skips_an_external_id_without_a_technique(
     objects = ttps_processor.objects_for_issue(issue, incident)
 
     assert objects == []
-    assert ttps_processor._logger.debug.called
+    ttps_processor._logger.debug.assert_called_once_with(
+        "[WIZ-CLOUD] Skipping a MITRE entry without a technique id",
+        meta={"issue_id": issue.id, "external_id": "TA0042"},
+    )
 
 
 def test_falls_back_to_the_technique_id_when_the_title_is_blank(

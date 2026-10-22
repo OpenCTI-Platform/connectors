@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-hygiene/src
 WORKDIR /opt/opencti-connector-hygiene
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev rust cargo openssl-dev
 
 RUN cd /opt/opencti-connector-hygiene/src && \
