@@ -34,6 +34,19 @@ _ACCOUNT_DISCOVERY_ALERT = {
     },
 }
 
+_PLAINTEXT_PASSWORD = "hunter2"
+
+_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD = {
+    **_ACCOUNT_DISCOVERY_ALERT,
+    "doc": {
+        **_ACCOUNT_DISCOVERY_ALERT["doc"],
+        "service_account": {
+            **_ACCOUNT_DISCOVERY_ALERT["doc"]["service_account"],
+            "password": {"plain_text": _PLAINTEXT_PASSWORD},
+        },
+    },
+}
+
 _ACCOUNT_DISCOVERY_ALERT_WITH_SERVICE_URL = {
     **_ACCOUNT_DISCOVERY_ALERT,
     "doc": {
@@ -95,6 +108,71 @@ def _alert_markdown(stix_objects):
     (attachment,) = _attachments(stix_objects)
     assert attachment["name"] == "alert.md"
     return base64.b64decode(attachment["data"]).decode("utf-8")
+
+
+def _user_account(stix_objects):
+    return next(obj for obj in stix_objects if obj["type"] == "user-account")
+
+
+# --------------------------------------------------------------------------
+# import_passwords: plaintext passwords are opt-out
+# --------------------------------------------------------------------------
+
+
+def test_passwords_are_imported_by_default(converter):
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD)
+
+    assert _user_account(stix_objects)["credential"] == _PLAINTEXT_PASSWORD
+    assert f"- **Password**: {_PLAINTEXT_PASSWORD}\n" in _alert_markdown(stix_objects)
+
+
+def test_passwords_are_dropped_when_import_is_disabled():
+    converter = ConverterToStix(MagicMock(), tlp="clear", import_passwords=False)
+
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD)
+
+    # stix2 drops a None property instead of storing it.
+    user_account = _user_account(stix_objects)
+    assert "credential" not in user_account
+    assert user_account["account_login"] == "jdoe@acme.com"
+
+    markdown = _alert_markdown(stix_objects)
+    assert "- **Password**: [redacted]\n" in markdown
+    assert _PLAINTEXT_PASSWORD not in markdown
+    # The rest of the credential exposure context is kept.
+    assert "- **Login**: jdoe@acme.com\n" in markdown
+    observable_types = {obj["type"] for obj in stix_objects}
+    assert {"user-account", "domain-name", "file"} <= observable_types
+    converter.helper.connector_logger.error.assert_not_called()
+
+
+def test_password_is_redacted_even_when_the_source_has_none():
+    """The redaction is unconditional so analysts can't infer absence."""
+    converter = ConverterToStix(MagicMock(), tlp="clear", import_passwords=False)
+
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT)
+
+    assert "- **Password**: [redacted]\n" in _alert_markdown(stix_objects)
+    assert "credential" not in _user_account(stix_objects)
+
+
+@pytest.mark.parametrize("import_passwords", [True, False])
+def test_a_masked_password_is_never_stored_as_a_credential(import_passwords):
+    converter = ConverterToStix(
+        MagicMock(), tlp="clear", import_passwords=import_passwords
+    )
+    alert = {
+        **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD,
+        "doc": {
+            **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD["doc"],
+            "service_account": {
+                **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD["doc"]["service_account"],
+                "password": {"plain_text": "********"},
+            },
+        },
+    }
+
+    assert "credential" not in _user_account(converter.create_incident(alert))
 
 
 # --------------------------------------------------------------------------
