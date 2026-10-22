@@ -389,7 +389,9 @@ class DectraxConnector:
 
                 self.run_process()
 
-                self.helper.set_state({"last_run": timestamp})
+                self.helper.set_state(
+                    {**(self.helper.get_state() or {}), "last_run": timestamp}
+                )
                 time.sleep(self.duration_period)
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stopped by user")
