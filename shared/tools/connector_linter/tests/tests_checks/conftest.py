@@ -19,6 +19,7 @@ import pytest
 _TYPE_DIRS: dict[str, str] = {
     "EXTERNAL_IMPORT": "external-import",
     "INTERNAL_ENRICHMENT": "internal-enrichment",
+    "INTERNAL_HUNT": "internal-hunt",
     "STREAM": "stream",
 }
 

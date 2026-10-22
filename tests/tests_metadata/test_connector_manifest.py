@@ -21,6 +21,7 @@ CONNECTOR_TYPES_DIRECTORIES = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
@@ -32,6 +33,8 @@ def get_manifests_paths() -> list[str]:
     manifests_paths = []
     for connector_type_directory in CONNECTOR_TYPES_DIRECTORIES:
         directory_path = Path(".") / connector_type_directory
+        if not directory_path.is_dir():
+            continue
         for entry in directory_path.iterdir():
             if entry.is_dir() and not entry.name.startswith("."):
                 manifest_path = entry / "__metadata__" / "connector_manifest.json"

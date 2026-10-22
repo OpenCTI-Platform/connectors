@@ -15,6 +15,7 @@ class ConnectorType(StrEnum):
     EXTERNAL_IMPORT = "EXTERNAL_IMPORT"
     INTERNAL_ENRICHMENT = "INTERNAL_ENRICHMENT"
     INTERNAL_EXPORT_FILE = "INTERNAL_EXPORT_FILE"
+    INTERNAL_HUNT = "INTERNAL_HUNT"
     INTERNAL_IMPORT_FILE = "INTERNAL_IMPORT_FILE"
     STREAM = "STREAM"
 
@@ -98,6 +99,7 @@ _DIR_TO_CONNECTOR_TYPE: dict[str, ConnectorType] = {
     "external-import": ConnectorType.EXTERNAL_IMPORT,
     "internal-enrichment": ConnectorType.INTERNAL_ENRICHMENT,
     "internal-export-file": ConnectorType.INTERNAL_EXPORT_FILE,
+    "internal-hunt": ConnectorType.INTERNAL_HUNT,
     "internal-import-file": ConnectorType.INTERNAL_IMPORT_FILE,
     "stream": ConnectorType.STREAM,
 }
@@ -183,7 +185,8 @@ class ConnectorContext:
                 "Unable to determine connector type for "
                 f"'{ctx.path}'. Expected a connector directory nested under one "
                 "of: external-import, internal-enrichment, internal-export-file, "
-                "internal-import-file, stream, or templates/<connector-kind>; "
+                "internal-hunt, internal-import-file, stream, or "
+                "templates/<connector-kind>; "
                 "or provide '__metadata__/connector_manifest.json' with "
                 "'container_type'."
             )
