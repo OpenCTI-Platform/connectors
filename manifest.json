@@ -11627,6 +11627,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "GOOGLE_DTM_IMPORT_PASSWORDS": {
+            "default": true,
+            "description": "Whether to import plaintext passwords from Compromised Credentials alerts. When false, UserAccount observables are created without a credential and the password is redacted in the alert content.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -33695,13 +33700,6 @@
             ],
             "type": "string"
           },
-          "CONNECTOR_CONFIDENCE_LEVEL": {
-            "default": 80,
-            "description": "The default confidence level for created entities (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
-          },
           "CONNECTOR_LIVE_STREAM_ID": {
             "description": "The ID of the live stream to listen to.",
             "minLength": 1,
@@ -36262,13 +36260,6 @@
               "error"
             ],
             "type": "string"
-          },
-          "CONNECTOR_CONFIDENCE_LEVEL": {
-            "default": 100,
-            "description": "The default confidence level for created entities (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
           },
           "CONNECTOR_LIVE_STREAM_ID": {
             "default": "ChangeMe",
