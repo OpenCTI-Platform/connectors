@@ -40,6 +40,7 @@ COPY src/requirements.txt /opt/opencti-connector-export-file-ods/requirements.tx
 # not bloated.
 # hadolint ignore=DL3008
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         default-jre-headless \

@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev
 
 COPY src/zetalytics_dns /opt/opencti-connector-zetalytics-dns/src/zetalytics_dns
