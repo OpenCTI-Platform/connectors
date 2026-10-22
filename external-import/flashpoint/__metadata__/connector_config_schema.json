@@ -79,6 +79,11 @@
       "description": "Whether to import indicators of compromise (IoCs) or not.",
       "type": "boolean"
     },
+    "FLASHPOINT_IMPORT_EXTRACTED_CONFIG_DOMAINS_URLS": {
+      "default": false,
+      "description": "Whether to create Domain-Name and URL observables from the network endpoints of extracted malware configurations. Disabled by default: these lists can mix real C2 servers with legitimate domains (false positives).",
+      "type": "boolean"
+    },
     "FLASHPOINT_IMPORT_ALERTS": {
       "default": true,
       "description": "Whether to import alert data from Flashpoint or not.",
