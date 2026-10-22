@@ -32,11 +32,12 @@ and imports each of them into OpenCTI as an **Incident**, with:
   in Next-Gen SIEM: the executed file and its hashes, and its execution context.
 
 ```
-Incident « <rule> on <host> »
+Incident « <rule> (<alert short ID>) »
 ├── Victim      : Hostname · IPv4/IPv6 (internal and public) · User-Account
 ├── Threat      : File (name, SHA-256, MD5, SHA-1)            ← enrich_from_events
 ├── TTP         : Attack-Pattern (MITRE ATT&CK), if declared by the rule
-└── Description : alert context + command line and process chain  ← enrich_from_events
+├── Description : alert context (hosts, users, status, priority, detection IDs)
+└── Note        : execution context (command line, process chain)  ← enrich_from_events
 ```
 
 > Next-Gen SIEM alerts only exist when a correlation rule fires. The alert payload only describes
@@ -70,7 +71,7 @@ Main parameters (environment variable prefix `CROWDSTRIKE_INCIDENTS_`):
 | `client_id`          | (required)                    | CrowdStrike API client ID.                                                                       |
 | `client_secret`      | (required)                    | CrowdStrike API client secret.                                                                   |
 | `import_start_date`  | `P7D`                         | How far back to look on the first run (ISO 8601 duration). Ignored once a cursor is stored.      |
-| `products`           | `ngsiem`                      | Alert products to import. **Only `ngsiem` is supported**; other values are ignored with a warning, and the connector does not start if no supported value remains. |
+| `products`           | `ngsiem`                      | Alert products to import. **Only `ngsiem` is supported**: the configuration schema only allows this value, and any other value is rejected. |
 | `severity_min`       | (none)                        | Minimum severity to import: `informational`, `low`, `medium`, `high` or `critical`.              |
 | `include_hidden`     | `false`                       | Also import the alerts hidden in the Falcon console.                                             |
 | `enrich_from_events` | `false`                       | Enrich each Incident with the threat observables of the alert's source event. Requires the **NGSIEM: Write** scope (see Requirements). |
@@ -158,8 +159,8 @@ Each alert produces one **Incident** and its related objects. Every object is cr
 
 | CrowdStrike field                             | OpenCTI Incident        | Notes                                                                                                     |
 |-----------------------------------------------|-------------------------|-----------------------------------------------------------------------------------------------------------|
-| `display_name`, `host_names[0]`               | `name`                  | `<rule> on <host>`. Falls back to `name` for the rule, to `<rule>` without host, then to `composite_id`. |
-| `description`                                 | `description`           | Followed by a table: users, product, type, status, priority, priority explanation, detection ID, event IDs. |
+| `display_name`, `composite_id`                | `name`                  | `<rule> (<first 8 characters of the alert ID>)`, e.g. `Obas implants (99284cc7)`. Falls back to `name` for the rule, then to `composite_id`. See below. |
+| `description`                                 | `description`           | Followed by a table: hosts, users, product, type, status, priority, priority explanation, detection ID, event IDs. |
 | `severity_name`                               | `severity`              | `Informational` and `Low` → `low`, `Medium` → `medium`, `High` → `high`, `Critical` → `critical`.         |
 | —                                             | `incident_type`         | Always `alert`.                                                                                           |
 | `product`                                     | `source`                | `CrowdStrike Falcon Next-Gen SIEM`.                                                                       |
@@ -168,11 +169,16 @@ Each alert produces one **Incident** and its related objects. Every object is cr
 | `mitre_attack[].tactic`                       | `labels`                | e.g. `Execution`, `Persistence`.                                                                          |
 | `falcon_host_link`, `composite_id`            | External reference      | `source_name` `CrowdStrike Falcon Next-Gen SIEM`, `url` = console link, `external_id` = `composite_id`.   |
 
-The Incident STIX ID is generated from its `name` and `created` date, which do not change when the
-alert is updated in CrowdStrike: an updated alert updates the existing Incident instead of creating
-a new one. The user is deliberately **not** part of the name (it is listed in the description):
-users can be added to an alert after its creation, and a name change would create a duplicate
-Incident.
+**Why this name**: OpenCTI identifies an Incident by its **name and creation date** (its standard
+ID is computed from these two fields, whatever STIX ID the connector sends). The name must therefore
+be:
+
+- **stable** across alert updates: hosts and users can be added or changed on an existing alert, so
+  they are in the description, not in the name. Otherwise an update would create a second Incident;
+- **unique** per alert: two alerts of the same rule can share a creation date (to the millisecond).
+  The short alert ID keeps them as two Incidents instead of merging them.
+
+An updated alert therefore updates its existing Incident.
 
 #### Related objects
 
@@ -180,7 +186,7 @@ Incident.
 |-----------------------------------|-----------------------------------------|----------------------------------|
 | `host_names[]`                    | `Hostname` observable                   | `related-to`                     |
 | `source_ips[]`                    | `IPv4-Addr` / `IPv6-Addr` observable    | `related-to`                     |
-| `users[].user_name`, `users[].sid` (or `user_names[]`) | `User-Account` (`account_login`, `user_id`) | `related-to`  |
+| `users[].user_name`, `users[].sid` (or `user_names[]`) | `User-Account` (`account_login`, `user_id`) | `related-to`. One account per (login, SID) pair: the same login with different SIDs (e.g. local `Administrator` on several hosts) gives distinct accounts. A login from `user_names[]` is only added when no account with a SID has this login. |
 | `mitre_attack[].technique_id`, `technique` | `Attack-Pattern`               | `uses`                           |
 
 Attack Patterns are only created for MITRE ATT&CK IDs (`T1234` or `T1234.567`). Their STIX ID only
@@ -209,12 +215,17 @@ a source event can predate its alert by days (correlation rule lookback).
 | `Vendor.FileName` | `File` name | Incident `related-to` File (threat) |
 | `process.hash.sha256`, `process.hash.md5`, `process.hash.sha1` | `File` hashes | Hashes made only of zeros, and malformed hashes (not hexadecimal or wrong length), are dropped (see Known caveats) |
 | `Vendor.aip` | `IPv4-Addr` / `IPv6-Addr` | Incident `related-to` IP: public IP of the affected host (victim) |
-| `process.command_line` | Incident description, "Command line" row | Temporary, see Known caveats |
-| `process.executable` | Incident description, "Executable" row | |
-| `Vendor.GrandParentBaseFileName`, `process.parent.name`, `Vendor.FileName` | Incident description, "Process chain" row | e.g. `cmd.exe → powershell.exe → implant.exe` |
+| `process.command_line` | `Note` on the Incident, "Command line" row | Temporary, see Known caveats |
+| `process.executable` | `Note` on the Incident, "Executable" row | |
+| `Vendor.GrandParentBaseFileName`, `process.parent.name`, `Vendor.FileName` | `Note` on the Incident, "Process chain" row | e.g. `cmd.exe → powershell.exe → implant.exe` |
 | `threat.tactic.name`, `threat.technique.name` | — | Not mapped: names without MITRE ID; the alert provides the IDs when the rule declares them |
 
 No Indicator is created from the file hashes.
+
+The execution context is in a **Note** attached to the Incident, not in the Incident description.
+The Note is only sent when the source event is found, and its ID is derived from its content and the
+alert creation date. So when an alert is updated while the enrichment is unavailable (failed search,
+event out of the LogScale retention), the update does not erase the execution context.
 
 #### Not mapped
 
@@ -230,14 +241,24 @@ No Indicator is created from the file hashes.
   change, etc.) are fetched again and update the existing Incident.
 - **One call per page**: `POST /alerts/combined/alerts/v1` returns complete alerts, so each page is
   a consistent snapshot (no gap between listing IDs and reading details).
-- **Pagination by keyset**: CrowdStrike documents that this endpoint paginates "on live data" and
-  that records may appear on several pages, or on none, when sorting on a field that changes over
-  time such as `updated_timestamp`. Pages are therefore chained by keyset instead of by `after`
-  token: each page restarts from the last `updated_timestamp` seen, so an alert updated during the
-  run moves forward and is imported again, but no alert is skipped. The `after` token is only used
-  to page through alerts sharing that exact timestamp.
-- **Boundary alerts**: the IDs of the alerts already sent at the cursor timestamp are stored in the
-  state and skipped on the next query, so they are not re-sent at every run.
+- **Pagination without `after` token**: CrowdStrike documents that this endpoint paginates "on live
+  data" and that records may appear on several pages, or on none, when sorting on a field that
+  changes over time such as `updated_timestamp`. The `after` token is therefore not used. Each page
+  is a fresh query from the last `updated_timestamp` seen (the cursor), which excludes the alerts
+  already processed **at the cursor timestamp only**:
+
+  ```
+  product:['ngsiem'] + (updated_timestamp:>'<cursor>', (updated_timestamp:'<cursor>' + composite_id:![<processed IDs>]))
+  ```
+
+  An alert updated during or between runs moves past the cursor and is imported again (its update
+  is never dropped), and alerts sharing the cursor timestamp are drained without skipping any, even
+  if one of them is updated meanwhile.
+- **Boundary alerts**: the IDs of the alerts already processed at the cursor timestamp are stored in
+  the state and excluded from the next query at that timestamp, so they are not re-sent at every
+  run.
+- **Invalid alerts**: an alert without `composite_id` or `updated_timestamp` is skipped with a
+  warning naming it; the other alerts of the page are imported.
 - **Checkpoint after every bundle**: the cursor is saved after each page is sent to OpenCTI, so a
   crash during a large backlog resumes where it stopped instead of restarting.
 - **Per-alert failures**: an alert that cannot be parsed or converted is logged and skipped; the
@@ -264,10 +285,11 @@ No Indicator is created from the file hashes.
   OAuth2 flow, token refresh and cloud regions.
 - **Observables describe the affected internal assets**, not threat indicators: host names, private
   IP addresses and machine accounts (e.g. `HOST$`) are common.
-- **Incident names are not unique**: two alerts of the same rule on the same host share a name; they
-  stay distinct Incidents because their creation dates differ.
-- **Host changes create a new Incident**: the name includes the first host name, so if CrowdStrike
-  changes it on an existing alert, a new Incident is created.
+- **Renaming a correlation rule creates new Incidents**: the rule name is part of the Incident name,
+  which OpenCTI uses (with the creation date) to identify it. Alerts updated after the rename get a
+  new Incident. A stable identity key in the connectors-sdk models would remove this limit.
+- **More than 5 000 alerts sharing the exact same `updated_timestamp`** cannot be paginated (the
+  exclusion list would be too long): the run fails with an explicit error.
 - **Alerts updated during a run are sent twice** (harmless upsert): once at their old position,
   once at their new `updated_timestamp`.
 - **Hidden alerts filter not verified live**: `include_hidden: false` filters on `show_in_ui:true`
@@ -283,12 +305,12 @@ No Indicator is created from the file hashes.
   compute them (an all-zero SHA-1 is common). OpenCTI matches Files on any of their hashes, so sending
   this shared placeholder merged unrelated binaries into a single File during tests. Only the
   placeholder value is dropped: the File is still created with its real hashes.
-- **Command line and process chain are in the description, not in observables**: the connectors-sdk
-  has no `Process` observable model yet
+- **Command line and process chain are in a Note, not in observables**: the connectors-sdk has no
+  `Process` observable model yet
   ([#7968](https://github.com/OpenCTI-Platform/connectors/issues/7968)). They will move to a `Process`
   observable once the model exists.
 - **Command lines are imported verbatim** and may contain secrets passed as arguments (tokens,
-  passwords), which then appear in the Incident description.
+  passwords), which then appear in the execution context Note.
 - **Source events of other event types**: the threat mapping was validated on process events
   (`ProcessRollup2`); correlation rules on other event types (network, DNS, e-mail) may expose fields
   that are not mapped yet.

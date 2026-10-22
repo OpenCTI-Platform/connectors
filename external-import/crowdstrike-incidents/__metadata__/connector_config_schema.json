@@ -82,10 +82,16 @@
       "default": [
         "ngsiem"
       ],
-      "description": "Comma-separated list of CrowdStrike alert products to import. Only 'ngsiem' (Next-Gen SIEM) is supported for now; other values are ignored.",
+      "description": "Comma-separated list of CrowdStrike alert products to import. Only 'ngsiem' (Next-Gen SIEM) is supported for now.",
       "items": {
+        "description": "CrowdStrike alert products supported by the connector.",
+        "enum": [
+          "ngsiem"
+        ],
+        "title": "Product",
         "type": "string"
       },
+      "minItems": 1,
       "type": "array"
     },
     "CROWDSTRIKE_INCIDENTS_SEVERITY_MIN": {
