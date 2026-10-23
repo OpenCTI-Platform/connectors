@@ -260,3 +260,13 @@ class TestOrklThreatActor:
             {"id": "x", "main_name": "Foo", "unexpected_field": "value"}
         )
         assert actor.main_name == "Foo"
+
+
+class TestExtractionQuality:
+    """Found live: ORKL serves extraction_quality as 1 or as a fraction."""
+
+    @pytest.mark.parametrize("value", [1, 0, 0.9860525384681915, None])
+    def test_integer_fraction_and_null_are_accepted(self, full_entry_data, value):
+        full_entry_data["extraction_quality"] = value
+        entry = OrklLibraryEntry.model_validate(full_entry_data)
+        assert entry.extraction_quality == value

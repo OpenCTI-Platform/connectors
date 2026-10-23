@@ -104,7 +104,8 @@ class OrklLibraryEntry(BaseModel):
     file_modification_date: str | None = None
     file_size: int | None = None
     plain_text: str | None = None
-    extraction_quality: int | None = None
+    # Seen live as both `1` and fractions such as `0.986`: never type it as int.
+    extraction_quality: float | None = None
     language: str | None = None
     sources: list[str] = Field(default_factory=list)
     origins: list[str] = Field(default_factory=list)
