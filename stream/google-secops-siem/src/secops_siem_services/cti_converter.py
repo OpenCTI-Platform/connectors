@@ -56,7 +56,7 @@ class CTIConverter:
         """
         ioc_stix_id = data["id"]
         ioc_start_time = data["valid_from"]
-        ioc_end_time = data["valid_until"]
+        ioc_end_time = data.get("valid_until")
         ioc_confidence_level = data.get("confidence")
         ioc_description = data.get("description")
         ioc_score = int(self.helper.get_attribute_in_extension("score", data))
@@ -69,10 +69,7 @@ class CTIConverter:
             "collected_timestamp": self.current_date(),
             "product_entity_id": ioc_stix_id,
             "description": ioc_description,
-            "interval": {
-                "start_time": ioc_start_time,
-                "end_time": ioc_end_time,
-            },
+            "interval": {"start_time": ioc_start_time},
             "threat": {
                 "confidence_details": (
                     str(ioc_confidence_level) if ioc_confidence_level else None
@@ -83,6 +80,10 @@ class CTIConverter:
                 "url_back_to_product": x_opencti_ioc_url,
             },
         }
+
+        # Indicators without valid_until (e.g. excluded from decay) have no expiration
+        if ioc_end_time is not None:
+            metadata["interval"]["end_time"] = ioc_end_time
 
         return metadata
 

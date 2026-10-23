@@ -8,6 +8,8 @@ from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
 from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
 
+VULNCHECK_KEV_LABEL = "VulnCheck KEV"
+
 
 def _create_vckev_vuln(
     converter_to_stix: ConverterToStix,
@@ -20,6 +22,7 @@ def _create_vckev_vuln(
     )
     return converter_to_stix.create_vulnerability(
         cve=entity.cve[0],
+        labels=[VULNCHECK_KEV_LABEL],
     )
 
 

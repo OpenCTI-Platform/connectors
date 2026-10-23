@@ -78,6 +78,10 @@ class GoogleDTMConfig(BaseConfigModel):
         default=[],
         description="Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities.",
     )
+    import_passwords: bool = Field(
+        default=True,
+        description="Whether to import plaintext passwords from Compromised Credentials alerts. When false, UserAccount observables are created without a credential and the password is redacted in the alert content.",
+    )
 
     @field_validator("alert_type", "alert_severity", mode="before")
     @classmethod

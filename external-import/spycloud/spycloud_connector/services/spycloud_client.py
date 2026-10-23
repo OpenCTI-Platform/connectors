@@ -7,13 +7,13 @@ import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter, Retry
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
-from spycloud_connector.services import ConfigLoader
 
 if TYPE_CHECKING:
     from spycloud_connector.models.spycloud import (
         BreachRecordSeverity,
         BreachRecordWatchlistType,
     )
+    from spycloud_connector.settings import ConnectorSettings
 
 
 class SpycloudClient:
@@ -22,21 +22,27 @@ class SpycloudClient:
     """
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper = None, config: ConfigLoader = None
+        self, helper: OpenCTIConnectorHelper = None, config: "ConnectorSettings" = None
     ):
         """
         Initialize the client with necessary configurations.
         Spycloud API documentation: https://spycloud-external.readme.io/sc-enterprise-api/docs/getting-started
         :param helper: OpenCTIConnectorHelper instance
-        :param config: ConfigLoader instance
+        :param config: ConnectorSettings instance
         """
         self.helper = helper
         self.config = config
 
+        # `HttpUrl` adds a trailing slash only when the URL has no path, so
+        # `https://api.spycloud.io/enterprise-v2` keeps none and `urljoin` would drop
+        # `enterprise-v2`. Stringify and normalize it here, once.
+        base_url = str(self.config.spycloud.api_base_url)
+        self.base_url = base_url if base_url.endswith("/") else f"{base_url}/"
+
         self.session = self._session(
             headers={
                 "Accept": "application/json",
-                "X-API-KEY": self.config.spycloud.api_key,
+                "X-API-KEY": self.config.spycloud.api_key.get_secret_value(),
             }
         )
 
@@ -54,7 +60,7 @@ class SpycloudClient:
             total=3, backoff_factor=2, status_forcelist=[429, 500, 502, 504]
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount(self.config.spycloud.api_base_url, adapter)
+        session.mount(self.base_url, adapter)
 
         return session
 
@@ -96,9 +102,7 @@ class SpycloudClient:
         :param breach_catalog_id: ID of breach catalog to retrieve
         :return: Found breach catalog
         """
-        url = urljoin(
-            self.config.spycloud.api_base_url, f"breach/catalog/{breach_catalog_id}"
-        )
+        url = urljoin(self.base_url, f"breach/catalog/{breach_catalog_id}")
 
         data = self._request(method="GET", url=url)
         if not data:
@@ -125,7 +129,7 @@ class SpycloudClient:
         :param since: Optional query param to filter breach records by publish date
         :return: List of breach records
         """
-        url = urljoin(self.config.spycloud.api_base_url, "breach/data/watchlist")
+        url = urljoin(self.base_url, "breach/data/watchlist")
         params = {
             "watchlist_type": watchlist_type if watchlist_type else None,
             "severity": severity_levels if severity_levels else None,

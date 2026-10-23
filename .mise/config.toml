@@ -5,7 +5,7 @@ ty = "latest"
 ruff = "latest"
 uv = "latest"
 gh = "latest"
-"aqua:github/copilot-cli" = "latest"
+claude-code = "latest"
 git-cliff = "latest"
 
 [tasks.global_manifest]

@@ -25,6 +25,7 @@ def _full_valid_settings() -> dict[str, Any]:
             "username": "zscaler-user",
             "password": "zscaler-password",
             "api_key": "zscaler-api-key",
+            "api_base_url": "https://zsapi.zscalerone.net",
             "blacklist_name": "BLACK_LIST_DYNDNS",
             "ssl_verify": False,
         },
@@ -92,6 +93,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.live_stream_no_dependencies is True
     assert settings.zscaler.blacklist_name == "BLACK_LIST_DYNDNS"
     assert settings.zscaler.ssl_verify is False
+    assert str(settings.zscaler.api_base_url) == "https://zsapi.zscalertwo.net/"
 
 
 @pytest.mark.parametrize(
@@ -127,6 +129,22 @@ def test_settings_should_apply_defaults():
                 },
             },
             id="invalid_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "live_stream_id": "live-stream-id",
+                },
+                "zscaler": {
+                    "username": "zscaler-user",
+                    "password": "zscaler-password",
+                    "api_key": "zscaler-api-key",
+                    "api_base_url": "not-a-url",
+                },
+            },
+            id="invalid_zscaler_api_base_url",
         ),
     ],
 )

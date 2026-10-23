@@ -1,0 +1,128 @@
+# OpenCTI Wiz Cloud Security Connector
+
+Ingests **Wiz Threat Detection Issues** from a Wiz tenant as **OpenCTI Incidents**, together with the affected cloud resource (virtual machine, service account, container image or access key) linked to the incident. Optionally imports the **vulnerability findings** of those assets as `Vulnerability` entities linked by a `has` relationship.
+
+> **Not to be confused with the `wiz` connector**, which imports the public Wiz Research threat landscape feed from threats.wiz.io. This connector imports your own tenant's findings from the authenticated Wiz GraphQL API. The two are complementary.
+
+Table of Contents
+
+- [Introduction](#introduction)
+- [Requirements](#requirements)
+- [Configuration variables](#configuration-variables)
+- [Deployment](#deployment)
+- [Behavior](#behavior)
+- [Known limitations](#known-limitations)
+
+## Introduction
+
+[Wiz](https://www.wiz.io/) is a cloud security platform. Its Threat Detection Rules evaluate cloud events, audit logs and runtime signals, and raise **Issues** of type `THREAT_DETECTION` when suspicious activity is detected.
+
+This connector polls the Wiz GraphQL API (`issuesV2`) and converts each threat detection issue into STIX 2.1 objects pushed to OpenCTI.
+
+## Requirements
+
+- OpenCTI Platform
+- A Wiz **service account** (client credentials) with the `read:issues` scope, plus `read:vulnerabilities` when importing vulnerability findings
+- Your tenant GraphQL endpoint (Wiz portal, Tenant Info), e.g. `https://api.us17.app.wiz.io/graphql`
+
+## Configuration variables
+
+Find all the configuration variables available here: [Connector Configurations](https://github.com/OpenCTI-Platform/connectors/blob/master/external-import/wiz-cloud/__metadata__/CONNECTOR_CONFIG_DOC.md)
+
+The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector. For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/).
+
+## Deployment
+
+### Docker
+
+```shell
+docker compose up -d
+```
+
+### Manual
+
+```shell
+pip install -r requirements.txt
+cp config.yml.sample config.yml   # then edit
+python src/main.py
+```
+
+## Behavior
+
+```mermaid
+graph LR
+    A[Wiz issuesV2<br/>type THREAT_DETECTION] --> B[Incident]
+    A --> C[System / User Account /<br/>Software / Credential<br/>entitySnapshot]
+    B -- targets / related-to --> C
+    W[Wiz] -- created-by --> B
+    W -- created-by --> C
+```
+
+| OpenCTI | Wiz source |
+|---|---|
+| Incident `name` | `sourceRules[].name` + the Wiz issue `id` |
+| Incident `description` | `description` (omitted when empty), followed by an **Affected resource** summary of `entitySnapshot` |
+| Incident `first_seen` / `last_seen` | `firstEventAt` / `lastEventAt` (fallback `createdAt` / `updatedAt`) |
+| Incident `severity` | `severity` |
+| Incident external reference | `url` (Wiz portal deep link) + issue `id` |
+| AttackPattern `name` / `mitre_id` | `sourceRules[].securitySubCategories[].title` / the technique part of `externalId` |
+| AttackPattern `kill_chain_phases` | `securitySubCategories[].category.name`, as `mitre-attack` phases |
+| Relationship | Incident `uses` AttackPattern |
+
+The affected resource (`entitySnapshot`) is always summarized in the incident description (name, type, cloud platform, region, provider ID, external ID). It is also created as an entity for the following resource types only:
+
+| `entitySnapshot.type` | OpenCTI entity | Relationship from the Incident |
+|---|---|---|
+| `VIRTUAL_MACHINE` | System (`name`) | `targets` |
+| `SERVICE_ACCOUNT` | User Account (`account_login` = `name`, `user_id` = `externalId`) | `related-to` |
+| `CONTAINER_IMAGE` | Software (`name`) | `related-to` |
+| `ACCESS_KEY` | Credential (`value` = `name`, the key id, never a secret) | `related-to` |
+| `SUBSCRIPTION` and any other type | none, description only | none |
+
+Each created entity carries `entitySnapshot.externalId` (and `cloudProviderURL` when present) as an external reference. Resource tags are not imported.
+
+Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT ASC`, so incidents reach the platform in the order they happened). Entity IDs are deterministic, so re-runs never duplicate.
+
+When `WIZ_CLOUD_IMPORT_TTPS` is enabled (the default), the MITRE ATT&CK techniques mapped to the issue's source rules become `AttackPattern` entities linked to the Incident with a `uses` relationship. They are returned by the issues query itself, so importing them costs no extra API call. Only the `MITRE ATT&CK Matrix` and `MITRE ATT&CK Cloud Matrix` frameworks are converted: the Wiz proprietary taxonomies number their entries themselves, so importing them would put non-MITRE identifiers into the ATT&CK namespace.
+
+### Vulnerabilities
+
+When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of the cloud asset **while it converts each issue**, and sends them in the same bundle as that issue. Each finding becomes a `Vulnerability` named after its CVE, linked with a `has` relationship to the asset's `System` (virtual machine) or `Software` (container image). OpenCTI lets no other entity type have a vulnerability, so the other resource types (service account, access key, and so on) are not scanned.
+
+```mermaid
+graph LR
+    A[Wiz issuesV2] --> B[Incident]
+    A --> S[System / Software<br/>entitySnapshot]
+    B -- targets / related-to --> S
+    A -. per issue .-> F[Wiz vulnerabilityFindings<br/>assetIdV2 of that issue]
+    F --> V[Vulnerability<br/>CVE]
+    S -- has --> V
+```
+
+| OpenCTI | Wiz source |
+|---|---|
+| Vulnerability `name` | `name` (the CVE id) |
+| Vulnerability `description` | `CVEDescription` (fallback `description`) |
+| Vulnerability CVSS v2 / v3 / v4 | `cvssv2` / `cvssv3` / `cvssv4`, with `score` as the v3 base score |
+| Vulnerability `epss_score` / `epss_percentile` | `epssProbability` / `epssPercentile`, converted from percentages |
+| Vulnerability `is_cisa_kev` | `hasCisaKevExploit` |
+| Vulnerability `ssvc_exploitation` | `active` when `hasCisaKevExploit`, otherwise `proof_of_concept` or `none` from `hasExploit`, unset when unknown |
+| Vulnerability `ssvc_automatable` | `isEffectiveSsvcAutomatable` as `yes` / `no` |
+| Vulnerability `ssvc_technical_impact` | `effectiveSsvcTechnicalImpact`, lower-cased |
+| Vulnerability external reference | `portalUrl` + finding `id` |
+| Relationship | System or Software `has` Vulnerability, `start_time` from `firstDetectedAt` |
+
+The SSVC values come from Wiz's "effective" assessment: CISA-ADP when available, otherwise VulnCheck. They require an OpenCTI version that supports the SSVC attributes on vulnerabilities.
+
+An issue and the vulnerabilities of its resource are therefore committed together, in one bundle, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once even when several issues share it, so a run that imports no issue performs no vulnerability call at all.
+
+If a vulnerability fetch fails, the issue is still imported but the incremental cursor is **not** advanced, so the whole window is imported again on the next run. Replaying is harmless because every entity ID is deterministic, whereas advancing would drop those vulnerabilities for good.
+
+**Volume warning:** a single virtual machine commonly carries several hundred findings, and severity filtering removes very few of them. Enable `WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT` to keep only the vulnerabilities with a known exploit, which is the filter that meaningfully reduces the volume.
+
+## Known limitations
+
+- **Updates to already-imported issues are not re-imported.** The Wiz API does not allow filtering or ordering by `updatedAt`, so a status or severity change on an old issue is not detected. A periodic full re-import (planned) will close this gap.
+- Only `THREAT_DETECTION` issues are imported. Posture findings (toxic combinations, cloud configuration) are out of scope.
+- Threat actors from `threatDetectionDetails` are parsed but not yet converted (planned for the next milestone).
+- Technique mappings from the Wiz proprietary frameworks (`Wiz for Threat Detection`, `Wiz for Risk Assessment`, `Wiz for Code & Supply Chain Security`) are not imported as `AttackPattern` entities; only `MITRE ATT&CK Matrix` and `MITRE ATT&CK Cloud Matrix` are.

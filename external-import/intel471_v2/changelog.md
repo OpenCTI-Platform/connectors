@@ -1,3 +1,11 @@
+# v2.4.0
+
+  + Add a Verity471 leaked **credentials** stream that ingests from `/credentials/stream` and maps each leaked credential to STIX: a `UserAccount` (an email login is also emitted as an `EmailAddress` linked back to it), related to the affected `DomainName`s and the harvesting infostealer `Malware`. Disabled by default; enable it with a non-zero `INTEL471_INTERVAL_CREDENTIALS`. Restrict what is ingested with the optional `INTEL471_AFFILIATION_GROUP` filter (`my_employees`, `my_customers`, `third_parties`, `vip_emails`); as with the alerts stream, changing the filter discards the Verity471 cursor and re-anchors the from-date to the last processed credential minus a small margin (a filter change re-ingests a small overlapping window)
+  + Withhold the cleartext password by default; set `INTEL471_ENABLE_CREDENTIALS_PLAIN_PASSWORD=true` to store it in the `UserAccount` `credential` field. The same setting also governs leaked-credential targets surfaced through the **alerts** stream
+  + Fix the alerts and credentials streams moving the from-date to the current time, and so skipping the initial history, when the filters changed after a first request that failed before anything was ingested (for example, before API access was granted). The original from-date is now kept
+  + Upgrade `verity471[stix]` to version [1.2.2](https://github.com/intel471/verity471-python/releases/tag/v1.2.2) to pick up the credentials STIX mappings and the plaintext-password gate
+  + Upgrade `pycti` to version [7.261019.0](https://pypi.org/project/pycti/7.261019.0/) to match the version pinned by `connectors-sdk`
+
 # v2.3.0
 
   + Add a Verity471 watcher **alerts** stream that ingests alerts from `/watchers/v1/alerts/stream` and maps them to STIX (each alert target wrapped in an `Incident`). Disabled by default; enable it with a non-zero `INTEL471_INTERVAL_ALERTS`. Restrict what is ingested with the optional `INTEL471_WATCHER_GROUP_IDS`, `INTEL471_WATCHER_IDS`, `INTEL471_STATUSES` and `INTEL471_IS_TRASHED_INCLUDED` filters. Because a Verity471 cursor is only valid for the filter set it was issued against, changing any of these filters discards the cursor and re-anchors the from-date to the last processed alert minus a small margin (a filter change re-ingests a small overlapping window; widening a filter backfills only the margin)

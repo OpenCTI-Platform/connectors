@@ -369,6 +369,7 @@ runs:
           io.opencti.connector.path=${{ inputs.connector_path }}
           io.opencti.build.mode=${{ inputs.build_mode }}
           io.opencti.build.variant=fips
+          io.opencti.build.sha=${{ github.sha }}
           io.opencti.build.run_id=${{ github.run_id }}
           io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
@@ -381,10 +382,27 @@ runs:
         DOCKERFILE: ${{ inputs.connector_path }}/Dockerfile_fips
         PLATFORMS: linux/amd64
         PUSH: ${{ inputs.push }}
+        # Pushed by digest only: the merge job tags it ("<tag>-fips") behind its
+        # staleness guard, so an older run can't overwrite a newer one.
+        PUSH_BY_DIGEST: ${{ inputs.push }}
         PULL: "true"
         TAGS: ${{ steps.fips-tags.outputs.tags }}
         LABELS: ${{ steps.fips-oci-labels.outputs.labels }}
         CACHE_FROM: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
         CACHE_TO: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
+        DIGEST_OUT: ${{ runner.temp }}/digest-${{ inputs.connector_name }}-fips
       run: |
         bash "${{ github.action_path }}/../../scripts/buildx_with_retry.sh"
+
+    - name: Export FIPS digest
+      if: inputs.fips == 'true' && inputs.platforms == 'linux/amd64' && inputs.push == 'true'
+      shell: bash
+      run: |
+        mkdir -p "${{ inputs.digests_dir }}"
+        DIGEST="$(cat "${{ runner.temp }}/digest-${{ inputs.connector_name }}-fips")"
+        if [ -z "$DIGEST" ]; then
+          echo "::error::FIPS image was pushed but no digest was recorded"
+          exit 1
+        fi
+        echo "$DIGEST" > "${{ inputs.digests_dir }}/${{ inputs.connector_name }}-fips"
+        echo "📋 FIPS digest: $DIGEST"

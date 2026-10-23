@@ -7,11 +7,11 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Length: `string >= 1` |  | The API token to connect to OpenCTI. |
 | GREYNOISE_FEED_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API key to connect to Greynoise. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
-| CONNECTOR_NAME | `string` |  | string | `"GreyNoise Feed"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["greynoisefeed"]` | The scope of the connector, e.g. 'greynoise'. |
+| CONNECTOR_NAME | `string` |  | Length: `string >= 1` | `"GreyNoise Feed"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["greynoisefeed"]` | The scope of the connector, e.g. 'greynoise'. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT6H"` | The period of time to await between two runs of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | GREYNOISE_FEED_FEED_TYPE | `string` |  | `benign` `malicious` `suspicious` `benign+malicious` `malicious+suspicious` `benign+suspicious+malicious` `all` | `"malicious"` | Type of feed to import. |
