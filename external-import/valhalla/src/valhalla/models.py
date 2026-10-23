@@ -44,6 +44,27 @@ class YaraRule(BaseModel):
             f"Required Yara modules: {', '.join(self.required_modules)}"
         )
 
+    @property
+    def cti_pattern(self) -> str:
+        """
+        YARA rule content preceded by the `import` statements it requires.
+
+        Valhalla serves each rule without its `import` statements and lists the
+        modules in `required_modules` instead (its own client writes them in the
+        ruleset header), but an indicator pattern has to compile on its own.
+
+        Returns:
+            The rule content, unchanged when no import is missing
+        """
+        imports = [
+            f'import "{module}"'
+            for module in dict.fromkeys(self.required_modules)
+            if f'import "{module}"' not in self.content
+        ]
+        if not imports:
+            return self.content
+        return "\n".join(imports) + "\n\n" + self.content
+
 
 class ApiResponse(BaseModel):
     """Valhalla API Respose model"""
