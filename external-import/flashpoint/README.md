@@ -246,6 +246,20 @@ Flashpoint Indicators are ingested into OpenCTI with the following score mapping
 | Suspicious       | `80`          |
 | Malicious        | `100`         |
 
+#### Extracted malware configurations
+
+Indicators of type `extracted_config` carry the configuration extracted from a malware sample (a JSON object whose keys vary from one family to another).
+They are not imported as STIX Indicators, since the raw JSON is not a usable detection pattern. Instead the connector creates:
+
+- the **Malware** families found in the `malware:` tags of the sightings;
+- **observables** for the network endpoints of the config (`Hosts`, `Domains`, `Server`, `host`, `ip`, `gateway`, `c2`, `c2s`, `dga_c2s`, `urls`, ...), linked to the Malware with a `communicates-with` relationship. A URL made only of a scheme and a host (no path or query) is imported as a Domain-Name or an IP address. Endpoints listed under `dga_c2s` are labeled `dga`: such domains are short-lived by nature;
+- a **Note** attached to the Malware and the observables, listing the other parameters of the config (ports, mutex, keys, certificate, ...).
+
+> **Warning — false positives:**  
+> IP addresses are always imported, but Domain-Name and URL observables are only created when `FLASHPOINT_IMPORT_EXTRACTED_CONFIG_DOMAINS_URLS` is set to `true` (default: `false`).
+> The endpoint lists of some families mix real C2 servers with legitimate domains (for example, the C2 list of Berbew contains `kaspersky.ru`).
+> When enabled, review the resulting `communicates-with` relationships before using them for detection or blocking.
+
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get

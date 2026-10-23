@@ -161,7 +161,11 @@ class AnalystNote(threading.Thread):
                 )
             except Exception as exception:
                 self.helper.connector_logger.error(
-                    f"[ANALYST NOTES] Bundle has been skipped due to exception: "
-                    f"{str(exception)}"
+                    "[ANALYST NOTES] Bundle has been skipped due to exception",
+                    {
+                        "note_id": note.get("id"),
+                        "note_title": note.get("attributes", {}).get("title"),
+                        "error": str(exception),
+                    },
                 )
                 continue

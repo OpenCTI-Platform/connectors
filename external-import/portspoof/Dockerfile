@@ -15,7 +15,7 @@ COPY src /opt/opencti-connector-portspoof
 # from source. The build deps are removed in the same layer so the
 # final image stays small.
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-portspoof && \
