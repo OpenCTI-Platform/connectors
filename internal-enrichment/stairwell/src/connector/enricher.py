@@ -34,7 +34,7 @@ def normalize_max_tlp(value: str | None) -> str:
         level = f"TLP:{level}"
     if level not in _TLP_LEVELS:
         raise ValueError(
-            f"STAIRWELL_MAX_TLP_LEVEL must be one of {', '.join(_TLP_LEVELS)}; "
+            f"CONNECTOR_MAX_TLP must be one of {', '.join(_TLP_LEVELS)}; "
             f"got {value!r}"
         )
     return level

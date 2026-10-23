@@ -1,9 +1,11 @@
 import json
+import re
 from unittest.mock import MagicMock
 
 import pytest
 from connector.file_enricher import FileEnricher
 from connector.stairwell import StairwellClient
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 SHA256 = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"  # WannaCry
 
@@ -1001,6 +1003,9 @@ def test_sightings_keep_paging_for_assets_already_kept():
     assert sightings["assets/A"]["count"] == 3
     assert sightings["assets/A"]["last_seen"] == "2026-01-05T00:00:00.000Z"
     assert any(o.get("abstract") == "Stairwell Sightings Truncation" for o in objects)
+    assert not any(
+        o.get("abstract") == "Stairwell Sightings Incomplete" for o in objects
+    )
 
 
 def test_metadata_hash_backfill_skips_malformed_values():
@@ -1023,3 +1028,133 @@ def test_metadata_hash_backfill_skips_malformed_values():
         o for o in objects if o["id"] == _observable_with_sha256()["standard_id"]
     )
     assert sco["hashes"] == {"SHA-256": SHA256, "MD5": "d" * 32}
+
+
+@pytest.mark.parametrize("status", [401, 500, 0])
+def test_failed_metadata_fetch_raises_instead_of_completing(status):
+    client = _client({"get_object_metadata": (status, None)})
+    helper = _helper()
+    with pytest.raises(DataRetrievalError, match=str(status)):
+        FileEnricher(helper, client, default_tlp="amber").enrich(
+            _observable_with_sha256()
+        )
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_flat_yara_matches_become_labels_as_well_as_note_lines():
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "yaraRuleMatches": ["Flat_Rule", "Nested_Rule"],
+        "yara_results": {"matches": [{"rule_name": "Nested_Rule"}]},
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    file_sco = next(o for o in objects if o["type"] == "file")
+    assert "stairwell:yara:Flat_Rule" in file_sco["labels"]
+    assert file_sco["labels"].count("stairwell:yara:Nested_Rule") == 1
+    note = next(
+        o for o in objects if o.get("abstract") == "Stairwell Enrichment Summary"
+    )
+    assert note["content"].count("`Nested_Rule`") == 1
+    assert "`Flat_Rule`" in note["content"]
+
+
+def _sightings_run(pages):
+    client = _client(
+        {
+            "get_object_metadata": (
+                200,
+                {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}},
+            ),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    client.list_object_sightings = MagicMock(side_effect=pages)
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber", sightings_limit=1).enrich(
+        _observable_with_sha256()
+    )
+    return client, json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+
+
+def _page(token):
+    return (
+        200,
+        {
+            "objectSightings": [
+                {
+                    "asset": "assets/A",
+                    "assetName": "A",
+                    "sightingTime": "2026-01-01T00:00:00Z",
+                }
+            ],
+            "nextPageToken": token,
+        },
+    )
+
+
+def test_sightings_note_pagination_stopped_at_the_page_limit():
+    client, objects = _sightings_run([_page("more")] * 60)
+    assert client.list_object_sightings.call_count == 50
+    abstracts = [o.get("abstract") for o in objects]
+    assert "Stairwell Sightings Incomplete" in abstracts
+    # Only one asset exists, so none were dropped.
+    assert "Stairwell Sightings Truncation" not in abstracts
+    sighting = next(o for o in objects if o["type"] == "sighting")
+    assert sighting["count"] == 50
+
+
+def test_sightings_note_a_later_page_failure():
+    _, objects = _sightings_run([_page("p2"), (503, None)])
+    note = next(
+        o for o in objects if o.get("abstract") == "Stairwell Sightings Incomplete"
+    )
+    assert "503" in note["content"]
+    assert any(o["type"] == "sighting" for o in objects)
+
+
+def test_note_lists_exactly_the_network_values_that_became_observables():
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "network_indicators": {
+            "ip_addresses": ["8.8.8.8", "999.1.1.1", "2001:DB8::1"],
+            "hostnames": ["C2.Example.com"],
+            "urls": ["http://c2.example.com/x", "http://user@", "http://h:0/"],
+        },
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    observed = {
+        o["value"]
+        for o in objects
+        if o["type"] in ("ipv4-addr", "ipv6-addr", "domain-name", "url")
+    }
+    assert observed == {
+        "8.8.8.8",
+        "2001:db8::1",
+        "c2.example.com",
+        "http://c2.example.com/x",
+    }
+    note = next(
+        o for o in objects if o.get("abstract") == "Stairwell Enrichment Summary"
+    )
+    section = note["content"].split("## Network indicators")[1].split("##")[0]
+    listed = set(re.findall(r"`([^`]+)`", section))
+    assert listed == observed

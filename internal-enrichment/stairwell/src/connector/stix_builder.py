@@ -303,9 +303,13 @@ def make_url(value: str, tlp: str = "amber") -> dict[str, Any] | None:
         return None
     try:
         parts = urlsplit(value)
+        # `port` raises ValueError on a non-numeric or out-of-range port, and
+        # port 0 is not one a URL can be fetched from.
+        if parts.port == 0:
+            return None
     except ValueError:
         return None
-    if parts.scheme.lower() not in _URL_SCHEMES or not parts.netloc:
+    if parts.scheme.lower() not in _URL_SCHEMES or not parts.hostname:
         return None
     return {
         "type": "url",

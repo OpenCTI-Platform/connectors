@@ -14,8 +14,9 @@ from pydantic import Field, HttpUrl, SecretStr
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """`INTERNAL_ENRICHMENT` connector config with Stairwell defaults.
 
-    `type`, `id`, `scope`, `auto`, and `log_level` are inherited from
-    `BaseInternalEnrichmentConnectorConfig`.
+    `type`, `id`, `scope`, `auto`, `log_level`, and `max_tlp` are inherited
+    from `BaseInternalEnrichmentConnectorConfig`. `max_tlp` (default amber) is
+    the highest TLP an observable may carry and still be sent to Stairwell.
     """
 
     name: str = Field(
@@ -45,15 +46,6 @@ class StairwellConfig(BaseConfigModel):
             description="TLP marking applied to entities created by enrichment.",
             default="amber",
         )
-    )
-    max_tlp_level: Literal[
-        "clear", "white", "green", "amber", "amber+strict", "red"
-    ] = Field(
-        description=(
-            "Highest TLP an observable may carry and still be sent to "
-            "Stairwell; observables marked above it are refused."
-        ),
-        default="amber",
     )
     variant_limit: int = Field(
         description="Max variant SCOs per file enrichment (0 disables).",

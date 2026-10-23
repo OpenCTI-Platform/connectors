@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
+from connectors_sdk.exceptions.error import DataRetrievalError
+
 from .stairwell import StairwellClient
 from .stairwell.score import monotonic_score, score_for_bucket
 from .stix_builder import (
@@ -120,7 +122,7 @@ class FileEnricher:
             self._mark_not_found(observable, primary_hash)
             return f"Stairwell: {primary_hash} not in corpus"
         if metadata is None:
-            return (
+            raise DataRetrievalError(
                 f"Stairwell metadata fetch failed for {primary_hash} (status {status})"
             )
 
@@ -141,8 +143,11 @@ class FileEnricher:
 
         sightings_records: list[dict[str, Any]] = []
         sightings_truncated = False
+        sightings_incomplete: str | None = None
         if self.sightings_limit > 0:
-            sightings_records, sightings_truncated = self._fetch_sightings(primary_hash)
+            sightings_records, sightings_truncated, sightings_incomplete = (
+                self._fetch_sightings(primary_hash)
+            )
 
         return self._build_and_send_bundle(
             observable=observable,
@@ -155,6 +160,7 @@ class FileEnricher:
             variants_payload=variants_payload,
             sightings_records=sightings_records,
             sightings_truncated=sightings_truncated,
+            sightings_incomplete=sightings_incomplete,
         )
 
     # ------------------------------------------------------------------
@@ -212,6 +218,7 @@ class FileEnricher:
         variants_payload: dict[str, Any] | None = None,
         sightings_records: list[dict[str, Any]] | None = None,
         sightings_truncated: bool = False,
+        sightings_incomplete: str | None = None,
     ) -> str:
         objects: list[dict[str, Any]] = [stairwell_identity()]
 
@@ -333,6 +340,7 @@ class FileEnricher:
                 primary_hash=primary_hash,
                 records=sightings_records or [],
                 truncated=sightings_truncated,
+                incomplete=sightings_incomplete,
                 confidence=sighting_score,
             )
         )
@@ -604,18 +612,7 @@ class FileEnricher:
             lines.append("")
             had_content = True
 
-        # YARA matches — current Stairwell response uses `yaraRuleMatches` (a
-        # flat list of strings); legacy/internal builds also expose
-        # `yara_results.matches[].rule_name`. Surface both shapes.
-        yara_names: list[str] = []
-        flat = metadata.get("yaraRuleMatches") or metadata.get("yara_rule_matches")
-        if isinstance(flat, list):
-            for entry in flat:
-                if isinstance(entry, str) and entry:
-                    yara_names.append(entry)
-        for name_ in self._yara_rule_names(metadata):
-            if name_ not in yara_names:
-                yara_names.append(name_)
+        yara_names = self._yara_rule_names(metadata)
         if yara_names:
             lines.append("## YARA matches")
             for rule in yara_names:
@@ -631,10 +628,10 @@ class FileEnricher:
         )
         if isinstance(net, dict):
             ips = self._collect_net_values(
-                net.get("ip_addresses") or net.get("ipAddresses")
+                net.get("ip_addresses") or net.get("ipAddresses"), "ip"
             )
-            hostnames = self._collect_net_values(net.get("hostnames"))
-            urls = self._collect_net_values(net.get("urls"))
+            hostnames = self._collect_net_values(net.get("hostnames"), "hostname")
+            urls = self._collect_net_values(net.get("urls"), "url")
             if ips or hostnames or urls:
                 lines.append("## Network indicators")
                 if ips:
@@ -692,17 +689,22 @@ class FileEnricher:
         )
 
     @staticmethod
-    def _collect_net_values(raw: Any) -> list[str]:
+    def _collect_net_values(raw: Any, kind: str) -> list[str]:
+        """The values that `_network_indicator_objects` turns into observables.
+
+        Each is validated and normalised the same way, so the Note never lists
+        a value with no matching observable in OpenCTI.
+        """
         out: list[str] = []
         if not isinstance(raw, list):
             return out
         for entry in raw:
-            if isinstance(entry, dict):
-                value = entry.get("value")
-            else:
-                value = entry
-            if isinstance(value, str) and value and value not in out:
-                out.append(value)
+            value = entry.get("value") if isinstance(entry, dict) else entry
+            if not isinstance(value, str):
+                continue
+            sco = network_observable_for(value, kind, "clear")
+            if sco is not None and sco["value"] not in out:
+                out.append(sco["value"])
         return out
 
     def _updated_file_sco(
@@ -795,7 +797,16 @@ class FileEnricher:
 
     @staticmethod
     def _yara_rule_names(metadata: dict[str, Any]) -> list[str]:
+        """Matched YARA rule names, deduplicated, in response order.
+
+        The current response has `yaraRuleMatches` (a flat list of names);
+        older builds nest them under `yara_results.matches[].rule_name`.
+        Both shapes are read, so the Note and the labels always agree.
+        """
         rules: list[str] = []
+        flat = metadata.get("yaraRuleMatches") or metadata.get("yara_rule_matches")
+        if isinstance(flat, list):
+            rules.extend(entry for entry in flat if isinstance(entry, str) and entry)
         for path in (
             ("yara_results", "matches"),
             ("yaraResults", "matches"),
@@ -824,29 +835,39 @@ class FileEnricher:
     # ------------------------------------------------------------------
     # Sightings
     # ------------------------------------------------------------------
-    def _fetch_sightings(self, primary_hash: str) -> tuple[list[dict[str, Any]], bool]:
+    def _fetch_sightings(
+        self, primary_hash: str
+    ) -> tuple[list[dict[str, Any]], bool, str | None]:
         """Page through `/v1/objects/{hash}/sightings` to the end (or max_pages).
 
-        Returns (records, truncated). The cap is on UNIQUE assets, not
-        records: once `sightings_limit` distinct assets are kept, events for
-        new assets are dropped (and `truncated` is set), while events for kept
-        assets are still collected from every later page.
+        Returns (records, truncated, incomplete). The cap is on UNIQUE assets,
+        not records: once `sightings_limit` distinct assets are kept, events
+        for new assets are dropped (and `truncated` is set), while events for
+        kept assets are still collected from every later page. `incomplete`
+        says why paging stopped before the last page (the page limit, or a
+        failed page after the first); it is None when every page was read or
+        the first page failed (then there is nothing to report on).
         """
         records: list[dict[str, Any]] = []
         seen_assets: set[str] = set()
         truncated = False
+        incomplete: str | None = None
         page_token: str | None = None
         page_size = min(1000, max(1, self.sightings_limit * 2))
         max_pages = 50  # hard safety stop
 
-        for _ in range(max_pages):
+        for page_number in range(1, max_pages + 1):
             status, body = self.client.list_object_sightings(
                 primary_hash, page_size=page_size, page_token=page_token
             )
-            if status >= 400 or not isinstance(body, dict):
-                break
-            page = body.get("objectSightings") or body.get("object_sightings") or []
-            if not isinstance(page, list):
+            page = (
+                body.get("objectSightings") or body.get("object_sightings") or []
+                if isinstance(body, dict)
+                else None
+            )
+            if status >= 400 or not isinstance(page, list):
+                if page_number > 1:
+                    incomplete = f"page {page_number} failed with status {status}"
                 break
 
             for record in page:
@@ -868,8 +889,10 @@ class FileEnricher:
             page_token = body.get("nextPageToken") or body.get("next_page_token")
             if not page_token:
                 break
+        else:
+            incomplete = f"the {max_pages}-page limit was reached"
 
-        return records, truncated
+        return records, truncated, incomplete
 
     def _sighting_objects(
         self,
@@ -878,6 +901,7 @@ class FileEnricher:
         records: list[dict[str, Any]],
         truncated: bool,
         confidence: int | None,
+        incomplete: str | None = None,
     ) -> list[dict[str, Any]]:
         if not records:
             return []
@@ -979,6 +1003,20 @@ class FileEnricher:
                         f"STAIRWELL_SIGHTINGS_LIMIT={self.sightings_limit} "
                         f"unique assets. Additional assets exist but were "
                         f"dropped from this enrichment run."
+                    ),
+                    object_refs=[entity_id],
+                    tlp=self.tlp,
+                )
+            )
+
+        if incomplete:
+            out.append(
+                make_note(
+                    abstract="Stairwell Sightings Incomplete",
+                    content=(
+                        f"Sighting events of {primary_hash} are partial: "
+                        f"{incomplete} before the last page. Counts and "
+                        f"first/last seen times cover only the events retrieved."
                     ),
                     object_refs=[entity_id],
                     tlp=self.tlp,

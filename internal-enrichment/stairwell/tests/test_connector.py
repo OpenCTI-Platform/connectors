@@ -64,7 +64,8 @@ def test_api_token_is_secret_and_reaches_the_client(env):
 
 def test_defaults_are_amber_max_tlp_and_no_sightings(env):
     settings = ConnectorSettings()
-    assert settings.stairwell.max_tlp_level == "amber"
+    assert settings.connector.max_tlp.value == "amber"
+    assert not hasattr(settings.stairwell, "max_tlp_level")
     assert settings.stairwell.sightings_limit == 0
     connector, _ = _connector()
     assert connector.dispatcher.max_tlp == "TLP:AMBER"
@@ -75,7 +76,7 @@ def test_defaults_are_amber_max_tlp_and_no_sightings(env):
     "configured", ["clear", "white", "green", "amber", "amber+strict", "red"]
 )
 def test_every_configurable_max_tlp_works_with_pycti(env, configured):
-    env.setenv("STAIRWELL_MAX_TLP_LEVEL", configured)
+    env.setenv("CONNECTOR_MAX_TLP", configured)
     connector, helper = _connector()
     data, _ = _message("TLP:CLEAR")
     connector.dispatcher.file.enrich = MagicMock(return_value="enriched")
@@ -102,7 +103,7 @@ def test_observable_above_max_tlp_is_never_sent_to_stairwell(env):
     ],
 )
 def test_configured_max_tlp_reaches_the_gate(env, configured, observable_tlp, allowed):
-    env.setenv("STAIRWELL_MAX_TLP_LEVEL", configured)
+    env.setenv("CONNECTOR_MAX_TLP", configured)
     connector, helper = _connector()
     data, _ = _message(observable_tlp)
     connector.dispatcher.file.enrich = MagicMock(return_value="enriched")
@@ -196,10 +197,55 @@ def test_playbook_result_keeps_the_objects_of_earlier_steps(env):
     helper.send_stix2_bundle.assert_called_once()
     sent = {o["id"]: o for o in _sent_objects(helper)}
     assert set(sent) == {"file--1", "note--2", "report--9"}
-    assert sent["file--1"] == enriched  # the enricher's version wins
+    assert sent["file--1"]["x_opencti_score"] == 75
     assert helper.send_stix2_bundle.call_args.kwargs == {
         "cleanup_inconsistent_bundle": True
     }
+
+
+GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+AMBER = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+
+
+def test_playbook_merge_keeps_what_the_partial_update_leaves_out(env):
+    connector, helper = _connector()
+    data = _playbook_message()
+    data["stix_objects"][0] = {
+        "id": "file--1",
+        "type": "file",
+        "name": "invoice.exe",
+        "hashes": {"SHA-256": "a" * 64},
+        "labels": ["from-earlier-step"],
+        "object_marking_refs": [GREEN],
+        "external_references": [{"source_name": "earlier"}],
+        "x_opencti_score": 40,
+    }
+    enriched = {
+        "id": "file--1",
+        "type": "file",
+        "hashes": {"SHA-256": "a" * 64, "MD5": "b" * 32},
+        "labels": ["stairwell:yara:rule"],
+        "object_marking_refs": [AMBER],
+        "external_references": [{"source_name": "Stairwell"}],
+        "x_opencti_score": 75,
+    }
+
+    def enrich(_):
+        _send_from_enricher(connector, [enriched])
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    assert merged["name"] == "invoice.exe"
+    assert merged["hashes"] == {"SHA-256": "a" * 64, "MD5": "b" * 32}
+    assert merged["labels"] == ["from-earlier-step", "stairwell:yara:rule"]
+    assert merged["object_marking_refs"] == [GREEN, AMBER]
+    assert merged["external_references"] == [
+        {"source_name": "earlier"},
+        {"source_name": "Stairwell"},
+    ]
+    assert merged["x_opencti_score"] == 75  # the enricher's scalar wins
 
 
 @pytest.mark.parametrize(
@@ -273,3 +319,19 @@ def test_failed_enrichment_send_falls_back_to_the_incoming_bundle(env):
     connector.process_message(_playbook_message())
     assert helper.send_stix2_bundle.call_count == 2
     assert _sent_objects(helper) == ORIGINAL
+
+
+def test_playbook_not_found_merges_the_label_into_the_incoming_bundle(env):
+    connector, helper = _connector()
+    connector.client.get_object_metadata = MagicMock(return_value=(404, None))
+    data = _playbook_message()
+    data["stix_objects"][0].update(name="invoice.exe", labels=["from-earlier-step"])
+    message = connector.process_message(data)
+    assert "not in corpus" in message
+    helper.send_stix2_bundle.assert_called_once()
+    sent = {o["id"]: o for o in _sent_objects(helper)}
+    assert set(sent) >= {"file--1", "report--9"}
+    assert sent["file--1"]["name"] == "invoice.exe"
+    assert sent["file--1"]["hashes"] == {"SHA-256": "a" * 64}
+    assert sent["file--1"]["labels"] == ["from-earlier-step", "stairwell:not-found"]
+    assert sent["report--9"] == ORIGINAL[1]

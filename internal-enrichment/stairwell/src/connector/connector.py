@@ -9,13 +9,48 @@ from connector.stairwell import StairwellClient
 from pycti import OpenCTIConnectorHelper
 
 
+def _is_union_list(key: str) -> bool:
+    return key in ("labels", "external_references") or key.endswith("_refs")
+
+
+def _merge_object(incoming: dict[str, Any], ours: dict[str, Any]) -> dict[str, Any]:
+    """`ours` applied on top of `incoming`, keeping what `ours` leaves out.
+
+    Enrichers send partial objects, so a field they omit keeps its incoming
+    value. Dicts present in both (hashes) merge key by key, and labels,
+    external references, and `*_refs` lists (markings) are unioned in order;
+    for any other field the enricher's value wins.
+    """
+    merged = dict(incoming)
+    for key, value in ours.items():
+        previous = merged.get(key)
+        if isinstance(previous, dict) and isinstance(value, dict):
+            merged[key] = {**previous, **value}
+        elif (
+            _is_union_list(key)
+            and isinstance(previous, list)
+            and isinstance(value, list)
+        ):
+            combined = list(previous)
+            seen = {json.dumps(v, sort_keys=True) for v in previous}
+            for item in value:
+                marker = json.dumps(item, sort_keys=True)
+                if marker not in seen:
+                    seen.add(marker)
+                    combined.append(item)
+            merged[key] = combined
+        else:
+            merged[key] = value
+    return merged
+
+
 class _PlaybookBundles:
     """The helper the enrichers send through, with playbook bookkeeping.
 
     A playbook step must hand on the bundle it received plus whatever it adds.
     While a playbook message is processed, every bundle an enricher sends gets
-    the incoming objects merged in (the enricher's version of an object wins),
-    and `sent` records whether anything went out. Every other attribute is the
+    the incoming objects merged in (an object in both is merged with
+    `_merge_object`), and `sent` records whether anything went out. Every other attribute is the
     real helper's.
     """
 
@@ -34,10 +69,13 @@ class _PlaybookBundles:
     def send_stix2_bundle(self, bundle: str, **kwargs: Any) -> Any:
         if self.incoming:
             payload = json.loads(bundle)
-            ids = {o.get("id") for o in payload.get("objects", [])}
-            payload["objects"].extend(
-                o for o in self.incoming if o.get("id") not in ids
-            )
+            ours = {o.get("id"): o for o in payload.get("objects", [])}
+            objects = []
+            for obj in self.incoming:
+                mine = ours.pop(obj.get("id"), None)
+                objects.append(obj if mine is None else _merge_object(obj, mine))
+            objects.extend(ours.values())
+            payload["objects"] = objects
             bundle = json.dumps(payload)
         result = self._helper.send_stix2_bundle(bundle, **kwargs)
         self.sent = True
@@ -83,7 +121,7 @@ class StairwellConnector:
             resolutions_limit=s.resolutions_limit,
             sightings_limit=s.sightings_limit,
             opencti_base_url=str(config.opencti.url).rstrip("/"),
-            max_tlp=s.max_tlp_level,
+            max_tlp=config.connector.max_tlp.value,
         )
 
     def _in_scope(self, observable: dict[str, Any]) -> bool:

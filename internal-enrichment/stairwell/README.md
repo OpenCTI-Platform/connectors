@@ -41,6 +41,7 @@ Environment variables override the file.
 | Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | yes | `StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System` | Observable types this connector handles |
 | Auto enrich | `connector.auto` | `CONNECTOR_AUTO` | no | `false` | Enrich every newly-created in-scope observable |
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | no | `error` | `debug`, `info`, `warn`, `error` |
+| Max TLP | `connector.max_tlp` | `CONNECTOR_MAX_TLP` | no | `amber` | Highest TLP an observable may carry and still be sent to Stairwell: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 
 ### Stairwell
 
@@ -51,7 +52,6 @@ Environment variables override the file.
 | Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
 | Default TLP | `stairwell.default_tlp` | `STAIRWELL_DEFAULT_TLP` | no | `amber` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
-| Max TLP | `stairwell.max_tlp_level` | `STAIRWELL_MAX_TLP_LEVEL` | no | `amber` | Highest TLP an observable may carry and still be sent to Stairwell: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
 | Variant limit | `stairwell.variant_limit` | `STAIRWELL_VARIANT_LIMIT` | no | `25` | Max variant SCOs per file enrichment (`0` disables) |
 | Resolutions limit | `stairwell.resolutions_limit` | `STAIRWELL_RESOLUTIONS_LIMIT` | no | `50` | Max DNS resolution rows per domain (`0` disables resolutions and the DNS history Note) |
 | Sightings limit | `stairwell.sightings_limit` | `STAIRWELL_SIGHTINGS_LIMIT` | no | `0` | Max unique assets per file; `0` (the default) disables sightings. See **Sightings** below before enabling |
@@ -59,7 +59,7 @@ Environment variables override the file.
 ## Behavior
 
 - **Max TLP is enforced before any Stairwell call.** An observable with any
-  TLP marking above `STAIRWELL_MAX_TLP_LEVEL` (or a TLP marking pycti does not
+  TLP marking above `CONNECTOR_MAX_TLP` (or a TLP marking pycti does not
   recognise) is refused and the enrichment fails with an error; its value
   never leaves OpenCTI. An observable with no TLP marking at all is treated
   as unrestricted and is enriched whatever this setting is.
@@ -80,19 +80,25 @@ Environment variables override the file.
   `stairwell:not-found` label and an `external_reference` to the Stairwell
   search UI; no Notes are created.
 - **Errors.** If every Stairwell request for an observable fails (5xx, 401,
-  network failure), the enrichment fails with an error and no STIX is
-  written. A partial failure still enriches with whatever was retrieved.
+  network failure), or a file's metadata lookup fails, the enrichment fails
+  with an error and no STIX is written. Any other partial failure still
+  enriches with whatever was retrieved.
 - **Scope.** Only entity types listed in `CONNECTOR_SCOPE` (and supported by
   the connector) are sent to Stairwell; anything else is refused.
 - **Playbooks.** In a playbook, the bundle sent back always carries the
-  objects the step received, with the enrichment added when there is one. An
-  out-of-scope entity, a refused TLP, no Stairwell data, or an error hands the
-  incoming bundle on unchanged so the playbook continues.
+  objects the step received, with the enrichment added when there is one.
+  The enriched observable is merged into the incoming one: properties the
+  enrichment does not set are kept, hashes are merged, and labels, external
+  references, and markings are combined. An out-of-scope entity, a refused
+  TLP, no Stairwell data, or an error hands the incoming bundle on unchanged
+  so the playbook continues.
 - **Sightings are off by default.** With `STAIRWELL_SIGHTINGS_LIMIT` above
   `0`, file sightings are aggregated per asset: each unique Stairwell-managed
   host that has seen the hash becomes one Sighting SDO (`first_seen` /
   `last_seen` / `count` from the per-asset event window) plus an Identity for
-  the host. Enabling this writes your asset names, Stairwell environment ids,
+  the host. If paging stops early (a failed page, or the 50-page limit), a
+  "Stairwell Sightings Incomplete" Note says the counts are partial.
+  Enabling this writes your asset names, Stairwell environment ids,
   and sample file paths (which often contain usernames) into OpenCTI, at
   `STAIRWELL_DEFAULT_TLP`, visible to everyone who can read the file
   observable.

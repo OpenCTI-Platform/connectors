@@ -9,6 +9,7 @@ connector:
   scope: 'StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System'
   log_level: 'error' # optional (default: 'error')
   auto: false # optional, enable/disable auto-enrichment of in-scope observables (default: false)
+  max_tlp: 'amber' # optional, observables marked above this are never sent to Stairwell (default: 'amber')
 
 stairwell:
   api_token: 'ChangeMe'
@@ -16,7 +17,6 @@ stairwell:
   organization_id: '' # optional, adds a rate-limit header
   user_id: '' # optional, adds a rate-limit header
   default_tlp: 'amber' # optional, one of: clear, white, green, amber, amber+strict, red (default: 'amber')
-  max_tlp_level: 'amber' # optional, observables marked above this are never sent to Stairwell (default: 'amber')
   variant_limit: 25 # optional, max variant SCOs per file (0 disables) (default: 25)
   resolutions_limit: 50 # optional, max DNS resolution rows per domain (0 disables) (default: 50)
   sightings_limit: 0 # optional, max unique assets per file; 0 = off, enabling writes asset names/paths to OpenCTI (default: 0)
