@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_NAME | `string` |  | string | `"ImportDocument"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["application/pdf", "text/plain", "text/csv", "text/html", "text/markdown", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_IMPORT_FILE` | `"INTERNAL_IMPORT_FILE"` |  |
+| CONNECTOR_TYPE | `string` |  | `INTERNAL_IMPORT_FILE` `INTERNAL_ANALYSIS` | `"INTERNAL_IMPORT_FILE"` | The type of the connector. Use `INTERNAL_ANALYSIS` to run the connector in content mapping mode, along with `only_contextual` set to `true`. |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | CONNECTOR_VALIDATE_BEFORE_IMPORT | `boolean` |  | boolean | `true` | Validate any bundle before import. |
 | CONNECTOR_ONLY_CONTEXTUAL | `boolean` |  | boolean | `false` | If `true`, only extract data when an entity context is provided. |

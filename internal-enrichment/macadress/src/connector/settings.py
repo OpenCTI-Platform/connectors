@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -32,16 +31,11 @@ class MacadressConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="macadress.com API key (Bearer token, starts with 'mk_').",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="The maximal TLP of the observable being enriched.",
-        default="TLP:AMBER",
     )
     default_score: int = Field(
         description="Score to apply on the enriched observable.",

@@ -19,8 +19,9 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, tlp):
+    def __init__(self, helper, tlp, import_passwords: bool = True):
         self.helper = helper
+        self.import_passwords = import_passwords
         self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp.lower())
 
@@ -132,7 +133,6 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Author**: {dtm_alert_doc.get("source_url", "")}
 - **Collected**: {dtm_alert_doc.get("ingested", "")}
 - **Published**: {dtm_alert_doc.get("timestamp", "")}
 - **Source File**: {dtm_alert_doc.get("filename", "")}
@@ -181,6 +181,14 @@ class ConverterToStix:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
         dtm_alert_doc = dtm_alert.get("doc", {})
+        if self.import_passwords:
+            password = (
+                dtm_alert_doc.get("service_account", {})
+                .get("password", {})
+                .get("plain_text", "")
+            )
+        else:
+            password = "[redacted]"
         markdown_content = f"""
 {metadata_part}
 ### Source Information
@@ -192,11 +200,11 @@ class ConverterToStix:
 - **SHA1**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha1", "")}
 - **SHA256**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha256", "")}
 ### Content
-- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
-- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
-- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain", "")}
+- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
+- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
+- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("profile", {}).get("contact", {}).get("email_domain", "")}
 - **Login**: {dtm_alert_doc.get("service_account", {}).get("login", "")}
-- **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text", "")}
+- **Password**: {password}
 """
         return markdown_content
 
@@ -465,7 +473,8 @@ class ConverterToStix:
         if "login" in dtm_alert.get("doc", {}).get("service_account", {}):
             password = None
             if (
-                "plain_text"
+                self.import_passwords
+                and "plain_text"
                 in dtm_alert.get("doc").get("service_account", {}).get("password", {})
                 and dtm_alert.get("doc")
                 .get("service_account", {})
@@ -544,8 +553,8 @@ class ConverterToStix:
             if hashes.get("md5"):
                 stix_hashes["MD5"] = hashes["md5"]
             stix_file = stix2.File(
-                hashes=stix_hashes,
-                name=source_file.get("name"),
+                hashes=stix_hashes or None,
+                name=source_file.get("filename"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,

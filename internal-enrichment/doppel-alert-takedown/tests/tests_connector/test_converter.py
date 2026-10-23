@@ -77,7 +77,7 @@ def test_build_note_mentions_alert_and_takedown():
     }
 
     note = converter.build_note(
-        observable_ref="url--4bf6eebd-e328-5b29-bd66-795f6f823f68",
+        object_ref="url--4bf6eebd-e328-5b29-bd66-795f6f823f68",
         alert=alert,
         takedown_requested=True,
         takedown_comment="Confirmed phishing.",

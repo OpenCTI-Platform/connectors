@@ -4,7 +4,9 @@ from types import ModuleType
 from typing import Literal, Union
 
 import titan_client
+import titan_client.exceptions
 import verity471
+import verity471.exceptions
 from titan_client import titan_stix
 from urllib3 import make_headers
 from urllib3.util import parse_url
@@ -34,6 +36,7 @@ class ClientWrapper:
         type[titan_stix.STIXMapperSettings] | type[verity_stix.STIXMapperSettings]
     )
     empty_bundle_exception: type[Exception]
+    auth_exceptions: tuple[type[Exception], ...]
     streams: tuple[type[Intel471Stream], ...]
 
 
@@ -62,6 +65,10 @@ def get_client(
             titan_stix.STIXMapperSettings,
             titan_stix.exceptions.EmptyBundle,
             (
+                titan_client.exceptions.UnauthorizedException,
+                titan_client.exceptions.ForbiddenException,
+            ),
+            (
                 titan_streams.Intel471IndicatorsStream,
                 titan_streams.Intel471YARAStream,
                 titan_streams.Intel471CVEsStream,
@@ -79,14 +86,20 @@ def get_client(
             verity_stix.STIXMapperSettings,
             EmptyBundle,
             (
+                verity471.exceptions.UnauthorizedException,
+                verity471.exceptions.ForbiddenException,
+            ),
+            (
                 verity471_streams.Verity471IndicatorsStream,
                 verity471_streams.Verity471CVEsStream,
+                verity471_streams.Verity471CredentialsStream,
                 verity471_streams.Verity471FintelStream,
                 verity471_streams.Verity471BreachAlertsStream,
                 verity471_streams.Verity471GeopolReportsStream,
                 verity471_streams.Verity471InfoReportsStream,
                 verity471_streams.Verity471MalwareReportsStream,
                 verity471_streams.Verity471SpotReportsStream,
+                verity471_streams.Verity471AlertsStream,
             ),
         )
     raise UnknownBackendError(f"Unknown backend: {backend_name}")

@@ -21,4 +21,5 @@ services:
       # - EMAIL_INTEL_MICROSOFT_RELATIVE_IMPORT_START_DATE=P30D # Optional
       # - EMAIL_INTEL_MICROSOFT_MAILBOX=INBOX # Optional
       # - EMAIL_INTEL_MICROSOFT_ATTACHMENTS_MIME_TYPES=application/pdf,text/csv,text/plain # Optional
+      # - EMAIL_INTEL_MICROSOFT_REPORT_TYPE=threat-report # Optional
     restart: always

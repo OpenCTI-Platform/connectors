@@ -55,7 +55,7 @@ class TheHiveConfig(BaseConfigModel):
         description="The name of the organization in TheHive, used to create the identity in OpenCTI.",
     )
     import_from_date: DatetimeFromIsoString | None = Field(
-        description="The date from which to start importing data (ISO format, e.g. 2021-01-01T00:00:00). Defaults to current time.",
+        description="The date from which to start importing data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). Defaults to current time.",
         default=None,
     )
     import_only_tlp: ListFromString = Field(
@@ -75,7 +75,7 @@ class TheHiveConfig(BaseConfigModel):
         default=["1:01 - low", "2:02 - medium", "3:03 - high", "4:04 - critical"],
     )
     case_status_mapping: ListFromString = Field(
-        description="Comma-separated mapping of TheHive case extended status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
+        description="Comma-separated mapping of TheHive case status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
         default=[],
     )
     case_tag_whitelist: ListFromString = Field(

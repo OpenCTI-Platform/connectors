@@ -99,7 +99,7 @@ fi
 # Find all parents directory of connector with __metadata__ directory
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
-# CircleCI uses a shallow clone by default, so we need to fetch the full history to compare with the base branch
+# CI uses a shallow clone by default, so we need to fetch the full history to compare with the base branch
 git fetch --unshallow || git fetch --depth=100
 git fetch origin "+refs/heads/*:refs/remotes/origin/*"
 

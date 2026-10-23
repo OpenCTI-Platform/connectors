@@ -15,7 +15,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install dependencies
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
   apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 # Install the connector as a proper package. Its packages live under src/
@@ -33,6 +33,10 @@ RUN python -m pip install --no-cache-dir . && \
 # copy it in explicitly; connector/ and vulncheck_client/ resolve from
 # site-packages.
 COPY src/main.py .
+# src/ was removed above, taking its version stamp with it. The `[n]` makes this
+# copy optional: the stamp is written by the CI and is absent from local builds,
+# and a plain COPY would fail there. Do not "fix" it into a literal filename.
+COPY .connector_version.jso[n] ./
 
 # Execute the connector
 CMD [ "python", "main.py" ]

@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 
 from pycti import OpenCTIConnectorHelper
 from spycloud_connector.models.opencti import OCTIBaseModel
-from spycloud_connector.services import ConfigLoader, ConverterToStix, SpycloudClient
+from spycloud_connector.services import ConverterToStix, SpycloudClient
+from spycloud_connector.settings import ConnectorSettings
 from spycloud_connector.utils.helpers import dict_to_serialized_list
 
 if TYPE_CHECKING:
@@ -23,8 +24,8 @@ class SpyCloudConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(self.config.to_dict())
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.client = SpycloudClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 

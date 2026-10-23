@@ -1,8 +1,8 @@
 {
   "title": "Doppel Alert and Takedown",
   "slug": "doppel-alert-takedown",
-  "description": "Enrich URL and Domain-Name observables by creating an alert in Doppel and automatically requesting a takedown. The observable is enriched with an external reference to the Doppel alert and a Note summarizing the alert and takedown request.",
-  "short_description": "Create Doppel alerts and request takedowns from suspicious observables.",
+  "description": "Create Doppel alerts and request takedowns from URL and Domain-Name observables, or explicitly request takedown for an existing Doppel alert from its imported OpenCTI Incident. The connector records the result as a Note without duplicating an Incident-backed alert.",
+  "short_description": "Create Doppel alerts or request takedown from Doppel Incidents.",
   "logo": "internal-enrichment/doppel-alert-takedown/__metadata__/logo.png",
   "use_cases": [
     "Brand, Digital Risk & Underground Exposure"
@@ -13,7 +13,7 @@
   "license_type": "Commercial",
   "contact": null,
   "verified": true,
-  "last_verified_date": "2026-07-21",
+  "last_verified_date": "2026-08-11",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=7.260715.0",

@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
@@ -31,6 +32,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Automatically enrich entities when they are created.",
         examples=[False],
     )
+    max_tlp: TLPLevel = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLPLevel.AMBER_STRICT,
+    )
 
 
 class MetrasConfig(BaseConfigModel):
@@ -48,10 +56,11 @@ class MetrasConfig(BaseConfigModel):
         description="Verify TLS certificates.",
         examples=[True],
     )
-    max_tlp: TLPLevel = Field(
-        default=TLPLevel.AMBER_STRICT,
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level the connector will enrich.",
-        examples=["amber+strict"],
     )
 
 

@@ -23,11 +23,7 @@ IMAGE_TAG="$(docker_image_tag)"
 log_step "Pushing Docker image to local registry"
 log_info "  IMAGE_TAG = $IMAGE_TAG"
 
-if command -v podman >/dev/null 2>&1; then
-    RUNTIME=podman
-else
-    RUNTIME=docker
-fi
+RUNTIME="$(container_runtime)"
 
 $RUNTIME push "$IMAGE_TAG"
 

@@ -1,4 +1,4 @@
-name: Unused Dependencies (warning)
+name: Dependency Check (deptry)
 
 on:
   pull_request:
@@ -8,8 +8,6 @@ on:
       - 'internal-export-file/**'
       - 'internal-import-file/**'
       - 'stream/**'
-      - '.github/deptry-package-map.txt'
-      - '.github/workflows/unused-deps.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,94 +21,135 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deptry:
-    name: Check Unused Dependencies
+  discover:
+    name: Discover changed connectors
     runs-on: ubuntu-latest
+    outputs:
+      connectors: ${{ steps.set.outputs.connectors }}
+      has_changes: ${{ steps.set.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install deptry
-        run: pip install deptry==0.25.1
-
-      - name: Run deptry on changed connectors
-        id: deptry
+      - name: Build the list of changed connectors
+        id: set
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          pr_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
-          warnings=""
-          config=".github/deptry-package-map.txt"
-
-          # Build deptry CLI args from the config file
-          # NOTE: deptry's --package-module-name-map replaces the whole dict on each
-          # invocation (Click MAPPING type), so ALL mappings must be in ONE argument
-          # as comma-separated key=value pairs: --package-module-name-map "k1=v1,k2=v2"
-          MAP_ENTRIES=""
-          IGNORE_PKGS=""
-          while IFS= read -r line || [ -n "$line" ]; do
-            # Strip inline comments and trim whitespace
-            line=$(echo "$line" | sed 's/#.*//' | xargs)
-            [ -z "$line" ] && continue
-            if echo "$line" | grep -q "^ignore="; then
-              pkg="${line#ignore=}"
-              # Accumulate as pipe-separated list under a single DEP002= key
-              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}$pkg"
-            else
-              # Accumulate as comma-separated key=value pairs for a single --package-module-name-map arg
-              MAP_ENTRIES="${MAP_ENTRIES:+$MAP_ENTRIES,}$line"
-            fi
-          done < "$config"
-          MAP_ARGS="${MAP_ENTRIES:+--package-module-name-map $MAP_ENTRIES}"
-
+          pr_files=$(gh pr diff "$PR_NUMBER" --name-only)
+          conns=()
           for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
-            for req in $dir/*/src/requirements.txt; do
-              [ -f "$req" ] || continue
-              connector="$(dirname "$(dirname "$req")")"
-              src="$(dirname "$req")"
-
-              # Only scan connectors with files changed in this PR
-              changed=$(echo "$pr_files" | grep "^${connector}/" || true)
-              [ -z "$changed" ] && continue
-
-              while IFS= read -r line; do
-                # Extract package name from deptry output: DEP002 'pkg-name' defined ...
-                pkg=$(echo "$line" | sed "s/.*DEP002 '\([^']*\)'.*/\1/")
-                # Find the line number of the package in requirements.txt
-                escaped_pkg=$(printf '%s' "$pkg" | sed 's/[.[\'\''/^$*+?(){}|]/\\&/g')
-                lineno=$(grep -n -iE "^${escaped_pkg}(\[[^\]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1 || true)
-                lineno=${lineno:-1}
-                echo "::warning file=$req,line=$lineno,title=Unused dependency::$pkg is listed in $req but not imported in $src"
-                warnings="${warnings}- \`${pkg}\` in \`${req}\`\n"
-              done < <(deptry "$src" --requirements-files "$req" --no-ansi \
-                $MAP_ARGS \
-                ${IGNORE_PKGS:+--per-rule-ignores "DEP002=$IGNORE_PKGS"} \
-                2>&1 | grep "DEP002" || true)
+            for connector in "$dir"/*/; do
+              connector="${connector%/}"
+              # A connector is scannable if it declares dependencies via a
+              # requirements.txt or a pyproject.toml (root or src/).
+              [ -f "$connector/src/requirements.txt" ] \
+                || [ -f "$connector/requirements.txt" ] \
+                || [ -f "$connector/pyproject.toml" ] \
+                || [ -f "$connector/src/pyproject.toml" ] \
+                || continue
+              echo "$pr_files" | grep -q "^${connector}/" && conns+=("$connector")
             done
           done
 
-          if [ -n "$warnings" ]; then
-            echo "::notice title=How to fix unused dependency warnings::For each warning: (1) if the package IS used but under a different import name (e.g. 'PyYAML' -> 'yaml'), add a mapping line to .github/deptry-package-map.txt. (2) if the package is truly unused, remove it from the connector's requirements.txt."
+          if [ "${#conns[@]}" -eq 0 ]; then
+            echo "connectors=[]" >> "$GITHUB_OUTPUT"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            json=$(printf '%s\n' "${conns[@]}" \
+              | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: gsub("/"; "_")})')
+            echo "connectors=$json" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
-          # Pass warnings to next step
+  deptry:
+    name: Scan ${{ matrix.conn.path }}
+    needs: discover
+    if: needs.discover.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        conn: ${{ fromJson(needs.discover.outputs.connectors) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run deptry
+        id: scan
+        env:
+          DEPTRY_RESULTS_DIR: ${{ runner.temp }}/deptry-results
+        run: |
+          set +e
+          python3 .github/scripts/deptry_scan.py "${{ matrix.conn.path }}"
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deptry-${{ matrix.conn.name }}
+          path: ${{ runner.temp }}/deptry-results
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Enforce result
+        if: always()
+        run: exit ${{ steps.scan.outputs.rc }}
+
+  report:
+    name: Report dependency findings
+    needs: [discover, deptry]
+    if: always() && needs.discover.outputs.has_changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download findings
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: deptry-results
+          pattern: deptry-*
+          merge-multiple: true
+
+      - name: Aggregate findings
+        id: agg
+        run: |
+          mkdir -p deptry-results
+          errors=""
+          warnings=""
+          shopt -s nullglob
+          for f in deptry-results/*.err; do errors="${errors}$(cat "$f")"$'\n'; done
+          for f in deptry-results/*.warn; do warnings="${warnings}$(cat "$f")"$'\n'; done
+
           {
-            echo "warnings<<EOF"
-            echo -e "$warnings"
-            echo "EOF"
+            echo "errors<<DEPTRY_EOF"
+            [ -n "$errors" ] && printf '%s' "$errors"
+            echo "DEPTRY_EOF"
+            echo "warnings<<DEPTRY_EOF"
+            [ -n "$warnings" ] && printf '%s' "$warnings"
+            echo "DEPTRY_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Comment on PR
-        if: steps.deptry.outputs.warnings != '' && github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.agg.outputs.warnings != '' || steps.agg.outputs.errors != ''
         uses: actions/github-script@v7
+        env:
+          WARNINGS: ${{ steps.agg.outputs.warnings }}
+          ERRORS: ${{ steps.agg.outputs.errors }}
         with:
           script: |
             const marker = '<!-- unused-deps-bot -->';
-            const body = `${marker}\n⚠️ **Unused dependencies detected**\n\nThe following packages appear to be unused:\n\n${process.env.WARNINGS}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`.`;
+            const errors = process.env.ERRORS.trim();
+            const warnings = process.env.WARNINGS.trim();
+            let body = `${marker}`;
+            if (errors) {
+              body += `\n❌ **Undeclared dependencies detected (blocking)**\n\nThe following packages are imported but not declared (\`DEP001\`):\n\n${errors}\n> **How to fix:** add the missing package to the connector's \`requirements.txt\`. If the import name differs from the PyPI package name, add a mapping line to \`.github/deptry-package-map.txt\`.`;
+            }
+            if (warnings) {
+              body += `\n\n⚠️ **Dependency warnings**\n\nThe following packages are unused (\`DEP002\`) or only available transitively (\`DEP003\`):\n\n${warnings}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`. (3) if transitive, declare it explicitly in \`requirements.txt\`.`;
+            }
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -135,11 +174,9 @@ jobs:
                 body,
               });
             }
-        env:
-          WARNINGS: ${{ steps.deptry.outputs.warnings }}
 
-      - name: Remove comment if no warnings
-        if: steps.deptry.outputs.warnings == '' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Remove comment if no findings
+        if: steps.agg.outputs.warnings == '' && steps.agg.outputs.errors == ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -158,3 +195,4 @@ jobs:
                 comment_id: existing.id,
               });
             }
+

@@ -9,10 +9,10 @@ connector:
   scope: 'IPv4-Addr'
   auto: true # Enable/disable auto-enrichment of observables
   log_level: 'error'
+  max_tlp: 'TLP:AMBER'
 
 greynoise:
   key: 'ChangeMe'
-  max_tlp: 'TLP:AMBER'
   sighting_not_seen: false
   no_sightings: false
   # name: 'GreyNoise Intelligence' # Optional, name of the GreyNoise identity created in OpenCTI

@@ -1,0 +1,18 @@
+**/venv
+**/.venv
+**/__pycache__/
+**/*.egg-info/
+**/logs
+**/*.DS_Store
+**/config.yml
+**/__metadata__
+**/__docs__
+**/.coverage
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Never let real credentials into the build context.
+.env
+docker-instances/env/*.env
+docker-instances/env/groups/*.env

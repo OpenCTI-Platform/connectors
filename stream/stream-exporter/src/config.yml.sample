@@ -10,7 +10,6 @@ connector:
   live_stream_no_dependencies: false
   name: 'StreamExporterConnector'
   scope: 'stream-exporter' # Reserved
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'debug'
 
 minio:

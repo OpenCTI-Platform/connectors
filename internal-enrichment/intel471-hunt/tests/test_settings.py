@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from connectors_sdk import ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from src.settings import ConnectorSettings
 
 REQUIRED_ENV = {
@@ -22,6 +25,7 @@ def env(monkeypatch):
         "CONNECTOR_SCOPE",
         "CONNECTOR_AUTO",
         "CONNECTOR_LOG_LEVEL",
+        "CONNECTOR_MAX_TLP",
         "HUNTER_API_BASE_URL",
         "HUNTER_UI_BASE_URL",
         "HUNTER_INDEXES",
@@ -46,6 +50,21 @@ def test_settings_load_with_required_values(env):
     assert settings.hunter.api_key.get_secret_value() == "secret"
 
 
+def test_settings_should_default_connector_id(env):
+    """The connector id MUST fall back on its unique default UUID v4.
+
+    The SDK declares `id` as required with no default; without the connector's
+    own override, CONNECTOR_ID would stay mandatory and the connector could not
+    be deployed from the catalog without manual input.
+    """
+    env.delenv("CONNECTOR_ID")
+
+    settings = ConnectorSettings()
+
+    assert settings.connector.id == "925c878a-d754-4ecd-b5d4-fcf8b22c767d"
+    assert UUID(settings.connector.id).version == 4
+
+
 def test_settings_defaults(env):
     settings = ConnectorSettings()
 
@@ -55,7 +74,7 @@ def test_settings_defaults(env):
     assert settings.hunter.request_timeout_seconds == 30
     assert settings.hunter.max_results_per_query == 100
     assert settings.hunter.cache_ttl_hours == 24
-    assert settings.hunter.max_tlp == "TLP:AMBER"
+    assert settings.connector.max_tlp == TLPLevel.AMBER
     assert str(settings.hunter.api_base_url).startswith(
         "https://api.hunter.cyborgsecurity.io"
     )
@@ -91,10 +110,19 @@ def test_missing_opencti_token_raises(env):
 
 
 def test_invalid_value_raises(env):
-    env.setenv("HUNTER_MAX_TLP", "TLP:PURPLE")
+    env.setenv("CONNECTOR_MAX_TLP", "TLP:PURPLE")
 
     with pytest.raises(ConfigValidationError):
         ConnectorSettings()
+
+
+def test_deprecated_hunter_max_tlp_is_migrated_to_connector_max_tlp(env):
+    env.setenv("HUNTER_MAX_TLP", "TLP:RED")
+
+    with pytest.warns(UserWarning, match="hunter.max_tlp"):
+        settings = ConnectorSettings()
+
+    assert settings.connector.max_tlp == TLPLevel.RED
 
 
 def test_to_helper_config_is_pycti_shaped(env):

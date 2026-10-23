@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from lib import ConnectorSettings
 
 
@@ -135,3 +136,23 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_default_connector_max_tlp_to_red():
+    """
+    Test that `connector.max_tlp` defaults to `TLP:RED`, so that every entity is still enriched by default.
+    """
+
+    # Given: A config dict without max_tlp
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {"opencti": {"url": "http://localhost:8080", "token": "test-token"}}
+            )
+
+    # When: The settings are loaded
+    settings = FakeConnectorSettings()
+
+    # Then: The max TLP does not filter anything
+    assert settings.connector.max_tlp == TLPLevel.RED

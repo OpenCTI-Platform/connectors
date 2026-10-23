@@ -22,9 +22,12 @@ There are three independent ways a connector declares that command:
 For every connector we resolve each declared command against the layout the
 image actually builds -- reverse-mapping the in-container path back to the repo
 tree using the Dockerfile ``COPY`` instructions -- and verify the target file
-exists. Commands that cannot be resolved statically (e.g. pip
-``console_scripts`` entrypoints, ``.`` copies, custom unmappable workdirs) are
-skipped rather than guessed, to avoid false failures.
+exists. Packaged connectors (Dockerfile ``pip install .`` of the connector's own
+project) are resolved against their package source in the repo instead, since
+``python -m <pkg>`` finds them on ``sys.path`` rather than under WORKDIR.
+Commands that cannot be resolved statically (e.g. pip ``console_scripts``
+entrypoints, ``.`` copies, custom unmappable workdirs) are skipped rather than
+guessed, to avoid false failures.
 """
 
 import re
@@ -61,6 +64,44 @@ _UNRESOLVED = "<unresolved> "
 _ASSIGN_RE = re.compile(
     r'(?P<key>[A-Z_][A-Z0-9_]*)\s*=\s*(?P<value>"[^"]*"|\'[^\']*\'|\S+)'
 )
+
+# A `pip install` invocation and its arguments, up to the next shell separator.
+_PIP_INSTALL_RE = re.compile(r"\bpip[0-9.]*\s+install\b(?P<args>[^\n&|;]*)")
+
+# `pip install` flags whose following token is a value, not an install target.
+_PIP_VALUE_FLAGS = frozenset(
+    {
+        "-r",
+        "--requirement",
+        "-c",
+        "--constraint",
+        "-t",
+        "--target",
+        "-i",
+        "--index-url",
+        "--extra-index-url",
+        "-f",
+        "--find-links",
+        "--prefix",
+        "--root",
+        "--src",
+        "--python-version",
+        "--platform",
+        "--abi",
+        "--implementation",
+    }
+)
+
+# `pip install -e <path>` -- the following token *is* the (local) project.
+_PIP_EDITABLE_FLAGS = frozenset({"-e", "--editable"})
+
+# Roots under a connector where a top-level python package may live, mirroring
+# the `where` values setuptools projects declare.
+_PACKAGE_ROOTS = (Path("."), Path("src"))
+
+# Line-continuation backslash followed by a newline, joined before scanning RUN
+# instructions so a `pip install` split across lines stays a single command.
+_LINE_CONTINUATION_RE = re.compile(r"\\\s*\n\s*")
 
 
 # --------------------------------------------------------------------------- #
@@ -228,7 +269,7 @@ def _copy_layout_is_static(dockerfile: str) -> bool:
 
 
 def _is_unresolvable_command(
-    target: tuple[str, str], workdir: str, dockerfile: str
+    target: tuple[str, str], workdir: str, dockerfile: str, connector_root: Path
 ) -> bool:
     """Decide whether an unmapped command is a genuine startup-crash violation.
 
@@ -246,7 +287,13 @@ def _is_unresolvable_command(
     not merely a layout we could not model; otherwise skip to avoid false
     positives.
     """
-    _kind, value = target
+    kind, value = target
+    if kind == "module" and dockerfile_installs_local_project(
+        dockerfile, connector_root
+    ):
+        # Packaged connector: a module absent from the repo is an installed
+        # dependency reached through sys.path, which no COPY needs to map.
+        return False
     if not value.startswith("/") and "$" in workdir:
         # Relative command with an unexpanded build-arg WORKDIR -- cannot decide.
         return False
@@ -264,6 +311,79 @@ def _resolve_in_container(target: tuple[str, str], workdir: str) -> str | None:
     # module form: package -> <workdir>/<pkg>/__main__.py, module -> <pkg>.py
     rel = value.replace(".", "/")
     return f"{workdir}/{rel}/__main__.py"
+
+
+# --------------------------------------------------------------------------- #
+# Installed-package resolver (pip install of the connector's own project)
+# --------------------------------------------------------------------------- #
+def _pip_install_targets(args: str) -> list[str]:
+    """Return the positional install targets of a ``pip install`` argument list."""
+    try:
+        tokens = shlex.split(args)
+    except ValueError:
+        return []
+    targets: list[str] = []
+    skip_next = False
+    for token in tokens:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in _PIP_EDITABLE_FLAGS:
+            # The next token is the project path -- keep it as a target.
+            continue
+        if token in _PIP_VALUE_FLAGS:
+            skip_next = True
+            continue
+        if token.startswith("-"):
+            continue
+        targets.append(token)
+    return targets
+
+
+def dockerfile_installs_local_project(dockerfile: str, connector_root: Path) -> bool:
+    """Return True when the Dockerfile pip-installs the connector's own project.
+
+    Such connectors ship their package to ``site-packages``, so a ``python -m
+    <pkg>`` command resolves through ``sys.path`` and not through a file copied
+    under WORKDIR (the sources are usually deleted after the install).
+    """
+    if not any(
+        (connector_root / name).is_file() for name in ("pyproject.toml", "setup.py")
+    ):
+        return False
+    joined = _LINE_CONTINUATION_RE.sub(" ", dockerfile)
+    for match in _PIP_INSTALL_RE.finditer(joined):
+        for target in _pip_install_targets(match.group("args")):
+            # A path-like target (".", "./", "/opt", "../pkg") is a local project;
+            # a bare name (e.g. "pycti") comes from an index.
+            if target in (".", "./") or target.startswith(("/", "./", "../")):
+                return True
+    return False
+
+
+def resolve_installed_module(
+    target: tuple[str, str], connector_root: Path, dockerfile: str
+) -> Path | None:
+    """Resolve a ``-m <module>`` command against a pip-installed local project.
+
+    Returns the repo-relative path the module is expected to come from, or None
+    when the connector is not a packaged one or the module is not part of it
+    (e.g. a third-party module, which is not statically resolvable).
+    """
+    kind, value = target
+    if kind != "module":
+        return None
+    if not dockerfile_installs_local_project(dockerfile, connector_root):
+        return None
+    relative = Path(*value.split("."))
+    for root in _PACKAGE_ROOTS:
+        if (connector_root / root / relative).is_dir():
+            # Package: started through its __main__.py, which must exist.
+            return root / relative / "__main__.py"
+        module_file = root / f"{relative}.py"
+        if (connector_root / module_file).is_file():
+            return module_file
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -434,7 +554,8 @@ def resolve_connector_sources(connector: Path) -> list[tuple[str, str, Path]]:
 
     # 2. Standard image -- entrypoint.sh preferred, else Dockerfile CMD.
     dockerfile_path = connector / "Dockerfile"
-    copy_map = parse_copy_map(_read(dockerfile_path), connector)
+    dockerfile = _read(dockerfile_path)
+    copy_map = parse_copy_map(dockerfile, connector)
 
     entrypoint_path = connector / "entrypoint.sh"
     parsed: tuple[list[str], str] | None = None
@@ -444,21 +565,25 @@ def resolve_connector_sources(connector: Path) -> list[tuple[str, str, Path]]:
         label = "entrypoint.sh"
         if parsed is not None and not parsed[1]:
             # entrypoint.sh has no `cd`; inherit the Dockerfile WORKDIR.
-            parsed = (parsed[0], dockerfile_workdir(_read(dockerfile_path)))
+            parsed = (parsed[0], dockerfile_workdir(dockerfile))
     if parsed is None:
-        parsed = parse_dockerfile_command(_read(dockerfile_path))
+        parsed = parse_dockerfile_command(dockerfile)
         label = "Dockerfile"
 
     if parsed is not None:
         tokens, workdir = parsed
         target = command_target(tokens)
         if target is not None:
+            # Packaged connectors resolve through site-packages, not WORKDIR.
+            installed_target = resolve_installed_module(target, connector, dockerfile)
             container_path = _resolve_in_container(target, workdir)
-            if container_path is not None:
+            if installed_target is not None:
+                sources.append((label, " ".join(tokens), installed_target))
+            elif container_path is not None:
                 repo_target = container_to_repo(container_path, copy_map)
                 if repo_target is not None:
                     sources.append((label, " ".join(tokens), repo_target))
-                elif _is_unresolvable_command(target, workdir, _read(dockerfile_path)):
+                elif _is_unresolvable_command(target, workdir, dockerfile, connector):
                     # In-container path is covered by no COPY -- the file will be
                     # absent at runtime (missing/incorrect WORKDIR for a relative
                     # command, or an absolute path no COPY produces). Builds fine

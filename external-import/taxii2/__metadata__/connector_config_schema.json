@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/taxii2_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "TAXII2",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ipv4-addr",
+        "ipv6-addr",
+        "vulnerability",
+        "domain",
+        "url",
+        "file-sha256",
+        "file-md5",
+        "file-sha1"
+      ],
+      "description": "The scope of the connector, i.e. the observable types to import.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TAXII2_DISCOVERY_URL": {
+      "description": "The TAXII 2 server discovery URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "TAXII2_USERNAME": {
+      "default": null,
+      "description": "The username used for basic authentication against the TAXII server.",
+      "type": "string"
+    },
+    "TAXII2_PASSWORD": {
+      "default": null,
+      "description": "The password used for basic authentication against the TAXII server.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII2_USE_TOKEN": {
+      "default": false,
+      "description": "Whether to use bearer token authentication instead of basic authentication.",
+      "type": "boolean"
+    },
+    "TAXII2_TOKEN": {
+      "default": null,
+      "description": "The bearer token used to authenticate against the TAXII server.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII2_USE_APIKEY": {
+      "default": false,
+      "description": "Whether to use API key authentication instead of basic authentication.",
+      "type": "boolean"
+    },
+    "TAXII2_APIKEY_KEY": {
+      "default": null,
+      "description": "The name of the HTTP header holding the API key.",
+      "type": "string"
+    },
+    "TAXII2_APIKEY_VALUE": {
+      "default": null,
+      "description": "The value of the API key sent in the API key HTTP header.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII2_USE_CERT": {
+      "default": false,
+      "description": "Whether to use a client certificate (mTLS) to connect to the TAXII server.",
+      "type": "boolean"
+    },
+    "TAXII2_CERT_PATH": {
+      "default": null,
+      "description": "The path to the client certificate used for mTLS.",
+      "type": "string"
+    },
+    "TAXII2_VERIFY_SSL": {
+      "default": true,
+      "description": "Whether to verify the SSL certificate of the TAXII server.",
+      "type": "boolean"
+    },
+    "TAXII2_V21": {
+      "default": true,
+      "description": "Whether the TAXII server is TAXII 2.1 compliant. Set to `false` for TAXII 2.0.",
+      "type": "boolean"
+    },
+    "TAXII2_COLLECTIONS": {
+      "default": [
+        "*.*"
+      ],
+      "description": "The collections to poll, formatted as `api_root.collection`. Wildcards are supported, e.g. `*.*` to poll every collection of every API root.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_INITIAL_HISTORY": {
+      "default": 24,
+      "description": "The number of hours of history to fetch during the first run.",
+      "type": "integer"
+    },
+    "TAXII2_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    },
+    "TAXII2_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create indicators from the imported observables.",
+      "type": "boolean"
+    },
+    "TAXII2_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables from the imported indicators.",
+      "type": "boolean"
+    },
+    "TAXII2_ADD_CUSTOM_LABEL": {
+      "default": false,
+      "description": "Whether to add a custom label to all the imported objects.",
+      "type": "boolean"
+    },
+    "TAXII2_CUSTOM_LABEL": {
+      "default": null,
+      "description": "The custom label to add to all the imported objects.",
+      "type": "string"
+    },
+    "TAXII2_FORCE_PATTERN_AS_NAME": {
+      "default": false,
+      "description": "Whether to use the indicator pattern as the indicator name.",
+      "type": "boolean"
+    },
+    "TAXII2_FORCE_MULTIPLE_PATTERN_NAME": {
+      "default": null,
+      "description": "The name to give to indicators holding multiple patterns.",
+      "type": "string"
+    },
+    "TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL": {
+      "default": false,
+      "description": "Whether to convert a custom STIX property into an OpenCTI label.",
+      "type": "boolean"
+    },
+    "TAXII2_STIX_CUSTOM_PROPERTY": {
+      "default": null,
+      "description": "The name of the custom STIX property to convert into a label.",
+      "type": "string"
+    },
+    "TAXII2_ENABLE_URL_QUERY_LIMIT": {
+      "default": false,
+      "description": "Whether to add a `limit` query parameter to the TAXII server requests. Only supported by TAXII 2.1 servers.",
+      "type": "boolean"
+    },
+    "TAXII2_URL_QUERY_LIMIT": {
+      "default": 100,
+      "description": "The value of the `limit` query parameter sent to the TAXII server.",
+      "type": "integer"
+    },
+    "TAXII2_DETERMINE_X_OPENCTI_SCORE_BY_LABEL": {
+      "default": false,
+      "description": "Whether to determine the OpenCTI score of an indicator from its labels.",
+      "type": "boolean"
+    },
+    "TAXII2_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 50,
+      "description": "The OpenCTI score to set when no label matches.",
+      "type": "integer"
+    },
+    "TAXII2_INDICATOR_HIGH_SCORE_LABELS": {
+      "default": [],
+      "description": "The labels triggering the high OpenCTI score.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_INDICATOR_HIGH_SCORE": {
+      "default": 80,
+      "description": "The OpenCTI score to set for indicators matching a high score label.",
+      "type": "integer"
+    },
+    "TAXII2_INDICATOR_MEDIUM_SCORE_LABELS": {
+      "default": [],
+      "description": "The labels triggering the medium OpenCTI score.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_INDICATOR_MEDIUM_SCORE": {
+      "default": 60,
+      "description": "The OpenCTI score to set for indicators matching a medium score label.",
+      "type": "integer"
+    },
+    "TAXII2_INDICATOR_LOW_SCORE_LABELS": {
+      "default": [],
+      "description": "The labels triggering the low OpenCTI score.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_INDICATOR_LOW_SCORE": {
+      "default": 40,
+      "description": "The OpenCTI score to set for indicators matching a low score label.",
+      "type": "integer"
+    },
+    "TAXII2_SET_INDICATOR_AS_DETECTION": {
+      "default": false,
+      "description": "Whether to flag the imported indicators as detection.",
+      "type": "boolean"
+    },
+    "TAXII2_CREATE_AUTHOR": {
+      "default": false,
+      "description": "Whether to create an author identity and link it to the imported objects.",
+      "type": "boolean"
+    },
+    "TAXII2_AUTHOR_NAME": {
+      "default": null,
+      "description": "The name of the author identity to create.",
+      "type": "string"
+    },
+    "TAXII2_AUTHOR_DESCRIPTION": {
+      "default": null,
+      "description": "The description of the author identity to create.",
+      "type": "string"
+    },
+    "TAXII2_AUTHOR_RELIABILITY": {
+      "default": null,
+      "description": "The reliability of the author identity to create, e.g. `A - Completely reliable`.",
+      "type": "string"
+    },
+    "TAXII2_EXCLUDE_SPECIFIC_LABELS": {
+      "default": false,
+      "description": "Whether to exclude some labels from the imported objects.",
+      "type": "boolean"
+    },
+    "TAXII2_LABELS_TO_EXCLUDE": {
+      "default": [],
+      "description": "The regular expressions matching the labels to exclude.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_REPLACE_CHARACTERS_IN_LABEL": {
+      "default": false,
+      "description": "Whether to replace characters in the imported labels.",
+      "type": "boolean"
+    },
+    "TAXII2_CHARACTERS_TO_REPLACE_IN_LABEL": {
+      "default": [],
+      "description": "The replacement rules to apply to labels, formatted as a comma-separated list of `find:replace` pairs.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_IGNORE_PATTERN_TYPES": {
+      "default": false,
+      "description": "Whether to ignore indicators based on their pattern type.",
+      "type": "boolean"
+    },
+    "TAXII2_PATTERN_TYPES_TO_IGNORE": {
+      "default": [],
+      "description": "The indicator pattern types to ignore, e.g. `stix, yara`.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_IGNORE_OBJECT_TYPES": {
+      "default": false,
+      "description": "Whether to ignore STIX objects based on their type.",
+      "type": "boolean"
+    },
+    "TAXII2_OBJECT_TYPES_TO_IGNORE": {
+      "default": [],
+      "description": "The STIX object types to ignore, e.g. `report, note`.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_IGNORE_SPECIFIC_PATTERNS": {
+      "default": false,
+      "description": "Whether to ignore indicators based on their pattern content.",
+      "type": "boolean"
+    },
+    "TAXII2_PATTERNS_TO_IGNORE": {
+      "default": [],
+      "description": "The indicator pattern contents to ignore.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_IGNORE_SPECIFIC_NOTES": {
+      "default": false,
+      "description": "Whether to ignore notes based on their content.",
+      "type": "boolean"
+    },
+    "TAXII2_NOTES_TO_IGNORE": {
+      "default": [],
+      "description": "The note contents to ignore.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE": {
+      "default": false,
+      "description": "Whether to save the original indicator ID into an OpenCTI note.",
+      "type": "boolean"
+    },
+    "TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT": {
+      "default": null,
+      "description": "The abstract of the note holding the original indicator ID.",
+      "type": "string"
+    },
+    "TAXII2_CHANGE_REPORT_STATUS": {
+      "default": false,
+      "description": "Whether to override the workflow status of the imported reports.",
+      "type": "boolean"
+    },
+    "TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID": {
+      "default": null,
+      "description": "The OpenCTI workflow status ID to set on the imported reports.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TAXII2_DISCOVERY_URL"
+  ],
+  "additionalProperties": true
+}

@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -44,6 +44,13 @@ class ZscalerConfig(BaseConfigModel):
     )
     api_key: SecretStr = Field(
         description="Zscaler API key used to obfuscate the authenticated session.",
+    )
+    api_base_url: HttpUrl = Field(
+        description=(
+            "Base URL of the Zscaler ZIA API for your Zscaler cloud, without the "
+            "`/api/v1` path (e.g. `https://zsapi.zscalerone.net`)."
+        ),
+        default=HttpUrl("https://zsapi.zscalertwo.net/"),
     )
     blacklist_name: str = Field(
         description="Name of the Zscaler URL category used as blacklist.",

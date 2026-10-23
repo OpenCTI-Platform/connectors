@@ -218,4 +218,4 @@ CONNECTOR_LOG_LEVEL=debug
 - **Public Feed**: No authentication required; data is publicly available
 - **STIX Format**: Wiz provides data in native STIX format
 - **MITRE Mappings**: Techniques map to ATT&CK, defenses map to D3FEND
-- **Reference**: [Wiz Cloud Threat Landscape](https://threats.wiz.io/)
+- **Reference**: [Wiz Public Threat Landscape](https://threats.wiz.io/)

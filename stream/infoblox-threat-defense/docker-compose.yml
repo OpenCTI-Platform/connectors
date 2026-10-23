@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - CONNECTOR_NAME=Infoblox Threat Defense
       - CONNECTOR_SCOPE=Infoblox Threat Defense
-      - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - INFOBLOX_API_KEY=ChangeMe # Infoblox Threat Defense API Key
       - INFOBLOX_VERIFY_SSL=true # Determine if you want to verify the SSL on requests
