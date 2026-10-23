@@ -16,5 +16,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_XTM_ONE_INTENT | `string` |  | string | `"cti.stix_harvester"` | XTM One intent for agent-based extraction. |
 | IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS | `boolean` |  | boolean | `true` | Whether to include relationships extracted from the document. |
 | IMPORT_DOCUMENT_AI_CREATE_INDICATOR | `boolean` |  | boolean | `false` | Whether to flag extracted observables for indicator creation. |
+| IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES | `boolean` |  | boolean | `true` | Whether to bind the entities extracted from the document to the entities that already exist in OpenCTI (curationResolve query) instead of creating duplicates. Skipped on OpenCTI versions without curationResolve. |
 | IMPORT_DOCUMENT_AI_API_BASE_URL | `string` |  | string | `null` | Base URL of the Import Document AI web service (legacy direct mode). |
 | IMPORT_DOCUMENT_AI_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | PEM licence/certificate key used to authenticate against the web service (legacy direct mode). |

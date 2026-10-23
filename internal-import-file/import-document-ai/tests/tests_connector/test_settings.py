@@ -26,6 +26,7 @@ from import_doc_ai.settings import ConnectorSettings
                 "import_document_ai": {
                     "include_relationships": True,
                     "create_indicator": False,
+                    "resolve_existing_entities": False,
                     "api_base_url": "http://ariane.example",
                     "api_key": "-----BEGIN CERTIFICATE-----\nMII...\n-----END CERTIFICATE-----",
                 },
@@ -63,6 +64,38 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.import_document_ai, BaseConfigModel) is True
+
+
+@pytest.mark.parametrize(
+    "environment, expected",
+    [
+        pytest.param({}, True, id="default"),
+        pytest.param(
+            {"IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES": "false"},
+            False,
+            id="disabled",
+        ),
+        pytest.param(
+            {"IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES": "true"},
+            True,
+            id="enabled",
+        ),
+    ],
+)
+def test_settings_resolve_existing_entities_from_the_environment(
+    monkeypatch: pytest.MonkeyPatch, environment: dict[str, str], expected: bool
+):
+    """Binding to existing entities is on by default, and can be turned off."""
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
+    monkeypatch.delenv("IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES", raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+
+    settings = ConnectorSettings()
+
+    assert settings.import_document_ai.resolve_existing_entities is expected
 
 
 @pytest.mark.parametrize(

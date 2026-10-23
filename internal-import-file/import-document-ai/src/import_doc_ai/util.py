@@ -411,7 +411,7 @@ def remove_from_object_refs(
         if "object_refs" in obj:
             # as we cannot reassign stix object properties,
             # we use dict representation not to alter other ones
-            object_dict = json.loads(obj.serialize())
+            object_dict = stix_object_to_dict(obj)
             object_dict["object_refs"] = [
                 ref for ref in obj["object_refs"] if ref not in references
             ]
@@ -562,6 +562,7 @@ def update_custom_properties(
     custom_properties: dict, stix_object: stix2.v21._STIXBase21, extend=True
 ) -> stix2.v21._STIXBase21:
     """Attach custom properties to a STIX object.
+    A given property replaces the value the object already carries.
     Args:
         custom_properties (dict): The custom properties to attach.
         stix_object (stix2.v21._STIXBase21): The STIX object to process.
@@ -574,6 +575,9 @@ def update_custom_properties(
         >>> ip_with_custom = update_custom_properties({"x_opencti_custom": "value"}, ip)
     """
     object_dict = json.loads(stix_object.serialize())
+    # stix2 gives a serialized top-level value precedence over custom_properties
+    for key in custom_properties:
+        object_dict.pop(key, None)
     if extend is False:
         object_dict["custom_properties"] = custom_properties
         return stix2.parse(object_dict, allow_custom=True)
@@ -727,7 +731,7 @@ def extend_bundle(
     )
 
 
-def _as_dict(stix_object: stix2.v21._STIXBase21 | dict) -> dict:
+def stix_object_to_dict(stix_object: stix2.v21._STIXBase21 | dict) -> dict:
     """Return a mutable, JSON-shaped copy of a STIX object."""
     if isinstance(stix_object, stix2.v21._STIXBase21):
         return json.loads(stix_object.serialize())
@@ -801,7 +805,7 @@ def remap_references(
     """
     if not id_mapping or not _references_any(stix_object, id_mapping):
         return stix_object
-    object_dict = _remap_reference_values(_as_dict(stix_object), id_mapping)
+    object_dict = _remap_reference_values(stix_object_to_dict(stix_object), id_mapping)
     return stix2.parse(object_dict, allow_custom=True)
 
 
@@ -837,9 +841,9 @@ def _union_preserving_order(first: list, second: list) -> list:
 def _merge_stix_objects(
     stix_objects: list[stix2.v21._STIXBase21],
 ) -> stix2.v21._STIXBase21:
-    merged = _as_dict(stix_objects[0])
+    merged = stix_object_to_dict(stix_objects[0])
     for duplicate in stix_objects[1:]:
-        for name, value in _as_dict(duplicate).items():
+        for name, value in stix_object_to_dict(duplicate).items():
             if name not in merged:
                 merged[name] = value
             elif isinstance(merged[name], list) and isinstance(value, list):
@@ -880,12 +884,153 @@ def merge_duplicate_objects(bundle: stix2.Bundle) -> stix2.Bundle:
     return stix2.Bundle(type=bundle["type"], objects=merged_objects, allow_custom=True)
 
 
+def with_id(
+    stix_object: stix2.v21._STIXBase21 | dict, object_id: str
+) -> stix2.v21._STIXBase21 | dict:
+    """Return a copy of a STIX object under another id."""
+    object_dict = stix_object_to_dict(stix_object)
+    object_dict["id"] = object_id
+    return stix2.parse(object_dict, allow_custom=True)
+
+
+def merge_rewritten_relationships(
+    bundle: stix2.Bundle, rewritten_ids: set[str]
+) -> stix2.Bundle:
+    """Give the relationships a rewrite touched the id of their new identity.
+
+    OpenCTI identifies a relationship by its type, endpoints and time frame,
+    and so does its deterministic id. A rewritten relationship takes the id
+    generated from its new endpoints: another document naming them directly
+    emits the same id, and the id generated from the former endpoints never
+    designates a relationship it no longer describes. Every relationship
+    sharing that identity with a rewritten one takes the same id, whatever
+    its order in the bundle, and the references to a changed id follow it; a
+    group the rewrite did not touch is left as it is.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        rewritten_ids (set[str]): The ids of the relationships whose
+            endpoints were rewritten.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle where the rewritten relationships
+            carry the id of their identity (``bundle`` itself when no id
+            changes), the duplicates still to be merged by
+            ``merge_duplicate_objects``.
+    """
+    ids_by_key: dict[tuple, list[str]] = {}
+    for obj in bundle.get("objects", []):
+        if obj.get("type") != "relationship":
+            continue
+        key = (
+            obj.get("relationship_type"),
+            obj.get("source_ref"),
+            obj.get("target_ref"),
+            obj.get("start_time"),
+            obj.get("stop_time"),
+        )
+        ids_by_key.setdefault(key, []).append(obj["id"])
+    new_ids: dict[str, str] = {}
+    for key, ids in ids_by_key.items():
+        if not rewritten_ids.intersection(ids):
+            continue
+        identity = StixCoreRelationship.generate_id(*key)
+        new_ids.update({former: identity for former in ids if former != identity})
+    if not new_ids:
+        return bundle
+    objects = [
+        (
+            with_id(obj, new_ids[obj["id"]])
+            if obj.get("type") == "relationship" and obj["id"] in new_ids
+            else obj
+        )
+        for obj in bundle.get("objects", [])
+    ]
+    return remap_references_in_bundle(
+        stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
+        new_ids,
+    )
+
+
+def _remaining_refs(
+    refs: list[str], removed: set[str], replacements: Mapping[str, str]
+) -> list[str]:
+    remaining = []
+    for ref in refs:
+        if ref in removed:
+            ref = replacements.get(ref)
+            if ref is None or ref in removed:
+                continue
+        if ref not in remaining:
+            remaining.append(ref)
+    return remaining
+
+
+def remove_objects_from_bundle(
+    bundle: stix2.Bundle,
+    object_ids: set[str],
+    replacements: Mapping[str, str] | None = None,
+) -> stix2.Bundle:
+    """Remove objects from a STIX bundle, and from every container referencing them.
+
+    A container referencing a removed object references its replacement
+    instead, when ``replacements`` names one. A container left without any
+    reference is removed as well (STIX requires at least one), and so are the
+    references other containers hold to it.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        object_ids (set[str]): The ids of the objects to remove.
+        replacements (Mapping[str, str] | None): For removed objects, the id
+            the containers reference instead.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle without those objects (``bundle``
+            itself when ``object_ids`` is empty).
+    """
+    if not object_ids:
+        return bundle
+    replacements = replacements or {}
+    objects = list(bundle.get("objects", []))
+    container_refs = {
+        obj["id"]: list(obj["object_refs"]) for obj in objects if "object_refs" in obj
+    }
+    removed = set(object_ids)
+    while True:
+        remaining_refs = {
+            container_id: _remaining_refs(refs, removed, replacements)
+            for container_id, refs in container_refs.items()
+            if container_id not in removed
+        }
+        emptied = {
+            container_id for container_id, refs in remaining_refs.items() if not refs
+        }
+        if not emptied:
+            break
+        removed |= emptied
+    updated_objects = []
+    for obj in objects:
+        if obj["id"] in removed:
+            continue
+        refs = remaining_refs.get(obj["id"])
+        if refs is not None and refs != container_refs[obj["id"]]:
+            object_dict = stix_object_to_dict(obj)
+            object_dict["object_refs"] = refs
+            obj = stix2.parse(object_dict, allow_custom=True)
+        updated_objects.append(obj)
+    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
+
+
 def convert_location_to_octi_location(
     stix_location: stix2.v21.Location,
 ) -> stix2.v21.Location:
     """Convert a STIX location object to an OpenCTI-compatible location object.
 
-    This add x_opencti_location_type property if missing.
+    This sets the x_opencti_location_type property: to the location type the
+    object declares (x_opencti_location_type, x_opencti_type or the type of
+    the OpenCTI extension), else to the most specific populated field - a
+    city or an administrative area also names the country (and the region)
+    it belongs to, and a country its region.
     Args:
         stix_location (stix2.v21.Location): The STIX location object to convert.
 
@@ -893,11 +1038,27 @@ def convert_location_to_octi_location(
         (stix2.v21.Location): The converted OpenCTI-compatible location object.
     """
     mapper = {
-        "country": "Country",
-        "region": "Region",
         "city": "City",
         "administrative_area": "Administrative-Area",
+        "country": "Country",
+        "region": "Region",
     }
+    declared_types = (
+        stix_location.get("x_opencti_location_type"),
+        stix_location.get("x_opencti_type"),
+        pycti.OpenCTIConnectorHelper.get_attribute_in_extension("type", stix_location),
+    )
+    declared = next(
+        (value for value in declared_types if value in mapper.values()), None
+    )
+    if declared:
+        if stix_location.get("x_opencti_location_type") == declared:
+            return stix_location
+        return update_custom_properties(
+            custom_properties={"x_opencti_location_type": declared},
+            stix_object=stix_location,
+            extend=True,
+        )
     for stix_property in mapper.keys():
         if stix_location.get(stix_property):
             octi_type = mapper[stix_property]
