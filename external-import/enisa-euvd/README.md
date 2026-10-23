@@ -29,10 +29,10 @@ published by ENISA (European Union Agency for Cybersecurity). See the
 
 Each vulnerability is ingested as a STIX `Vulnerability` with its CVSS scores
 (v2/v3/v4, whichever the source reports), EPSS score, aliases (CVE, GHSA...)
-and labels for its assigner and affected vendors and products. The import can
-be restricted to a minimum score, to exploited vulnerabilities or to critical
-ones. Affected products can optionally be ingested as `Software` observables
-linked to the vulnerability with a `has` relationship.
+and a label for its assigner. The import can be restricted to a minimum score,
+to exploited vulnerabilities or to critical ones. Affected products, with their
+vendor, can optionally be ingested as `Software` observables linked to the
+vulnerability with a `has` relationship (`ingest_software`).
 
 ## Installation
 
@@ -115,7 +115,7 @@ flowchart LR
 | `baseScore` + `baseScoreVersion` | `cvss_v{2,3,4}_base_score` | routed by version (`2.0`→v2, `3.0`/`3.1`→v3, `4.0`→v4); unrecognized versions are logged and dropped |
 | `baseScoreVector` | `cvss_v{2,3,4}_vector_string` | same routing |
 | `epss` | `epss_score` | EUVD gives a percentage (`18.38`), divided by 100 (`0.1838`) |
-| `assigner`, `enisaIdVendor[].vendor.name`, `enisaIdProduct[].product.name` | `labels` | in that order, deduplicated case-insensitively |
+| `assigner` | `labels` | stripped; no label when blank. Vendors and products are not labels: affected products, with their vendor, are available as `Software` through `ingest_software` |
 | `id` | `external_references[]` | `source_name="ENISA EUVD"`, `external_id`, `url=https://euvd.enisa.europa.eu/vulnerability/{id}` |
 | `references` (URL lines) | `external_references[]` | one per URL; `source_name` inferred from the domain (NVD, GitHub Advisory...), else `"ENISA EUVD reference"` |
 
@@ -171,6 +171,9 @@ granularity.
 
 ## Known caveats
 
+- **Vendor-only entries**: a vendor listed in `enisaIdVendor` without a matching
+  product is not imported. Vendors only reach OpenCTI as the vendor of an
+  ingested `Software`.
 - **No resume within a run**: pagination is by position, and new items shift
   every page, so a failed run is not resumed from a partial page. The state
   is only saved after a fully successful run, so the next run walks again
