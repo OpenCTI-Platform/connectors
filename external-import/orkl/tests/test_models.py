@@ -193,11 +193,11 @@ class TestOrklLibraryEntryUpdatedDatetime:
 
 
 class TestOrklLibraryEntryLabels:
-    def test_merges_sources_and_origins_deduplicated(self, full_entry_data):
-        full_entry_data["sources"] = ["MISPGALAXY", "Malpedia", "web"]
+    def test_labels_are_deduplicated_non_empty_sources_only(self, full_entry_data):
+        full_entry_data["sources"] = ["MISPGALAXY", "Malpedia", "MISPGALAXY", ""]
         full_entry_data["origins"] = ["web", "pdf"]
         entry = OrklLibraryEntry.model_validate(full_entry_data)
-        assert entry.labels == ["MISPGALAXY", "Malpedia", "web", "pdf"]
+        assert entry.labels == ["MISPGALAXY", "Malpedia"]
 
 
 class TestOrklLibraryEntryAuthors:

@@ -197,10 +197,14 @@ class OrklLibraryEntry(BaseModel):
 
     @property
     def labels(self) -> list[str]:
-        """Deduplicated union of `sources` and `origins`, order preserved."""
+        """Deduplicated non-empty `sources`, order preserved.
+
+        `origins` (the file kind, e.g. ``pdf`` or ``web``) is deliberately not
+        used: it says nothing about the report's content.
+        """
         seen: set[str] = set()
         result: list[str] = []
-        for value in [*self.sources, *self.origins]:
+        for value in self.sources:
             if not value or value in seen:
                 continue
             seen.add(value)

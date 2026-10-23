@@ -792,9 +792,9 @@ class TestExternalReferences:
 
 
 class TestLabels:
-    def test_labels_merge_sources_and_origins(self, converter, full_entry):
+    def test_labels_are_the_sources_only(self, converter, full_entry):
         report = _report(converter._convert_entry(full_entry))
-        assert set(report.labels) == {"MISPGALAXY", "Malpedia", "web"}
+        assert report.labels == ["MISPGALAXY", "Malpedia"]
 
 
 # ---------------------------------------------------------------------------

@@ -161,7 +161,7 @@ state in OpenCTI also triggers a new full import.
 | `name`                                                            | `Report.name`                                                              |
 | `description`                                                    | `Report.description`                                                       |
 | best available *stable* date among publication/file-creation/file-modification/`ts_*` timestamps (update timestamps are excluded so a re-fetch never changes the id) | `Report.publication_date` (falls back to a fixed 1970-01-01 sentinel to keep the STIX id stable if no usable date exists) |
-| `labels`                                                          | `Report.labels`                                                            |
+| `sources[]` (deduplicated; `origins` such as `pdf`/`web` are not mapped) | `Report.labels`                                                     |
 | entry id                                                          | `Report` external reference (`source_name: "ORKL"`, `external_id`, and a `url` pointing at the ORKL API entry) |
 | `sha1_hash`                                                       | `Report` external reference (SHA-1 of the source file)                    |
 | `references[]` (original publisher links)                        | `Report` external references, one per usable URL                         |
