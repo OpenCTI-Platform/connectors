@@ -336,7 +336,7 @@ def test_get_indicators_feeds_skips_ta_lookup_without_names(client, patched_help
     assert result == [{"type": "indicator", "id": "i"}]
 
 
-def test_get_indicators_feeds_ta_failure_is_tolerated(client, patched_helpers, helper):
+def test_get_indicators_feeds_ta_failure_is_propagated(client, patched_helpers, helper):
     indicators = [_indicator("APT1")]
 
     with patch.object(
@@ -344,10 +344,11 @@ def test_get_indicators_feeds_ta_failure_is_tolerated(client, patched_helpers, h
     ), patch.object(
         client, "_request_data", side_effect=requests.RequestException("boom")
     ):
-        result = client.get_indicators_feeds()
+        with pytest.raises(requests.RequestException, match="boom"):
+            client.get_indicators_feeds()
 
-    assert result == indicators
-    helper.connector_logger.error.assert_called_once()
+    # logged once by the inner TA handler and once by the outer handler
+    assert helper.connector_logger.error.call_count == 2
 
 
 def test_get_indicators_feeds_handles_empty_ta_response(client, patched_helpers):
