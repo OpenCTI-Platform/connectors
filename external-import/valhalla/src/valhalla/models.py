@@ -37,6 +37,21 @@ class YaraRule(BaseModel):
         # return d.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
     @property
+    def rule_level(self) -> str:
+        """Rule level (``x_opencti_rule_level``) derived from the score.
+
+        Ranges of the Nextron YARA style guide: 0-39 very low significance,
+        40-59 noteworthy, 60-79 suspicious, 80-100 high.
+        """
+        if self.score >= 80:
+            return "high"
+        if self.score >= 60:
+            return "medium"
+        if self.score >= 40:
+            return "low"
+        return "informational"
+
+    @property
     def cti_description(self) -> str:
         return (
             f"{self.description}\n\n"
@@ -70,6 +85,7 @@ class ExternalReference(BaseModel):
 class StixObjects(BaseModel):
     type: str
     id: str
+    name: str | None = None
     external_references: List[ExternalReference] | None = None
 
 

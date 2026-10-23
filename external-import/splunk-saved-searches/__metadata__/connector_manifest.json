@@ -1,0 +1,26 @@
+{
+  "title": "Splunk Saved Searches",
+  "slug": "splunk-saved-searches",
+  "description": "Imports the detections deployed in Splunk (Enterprise Security correlation searches, scheduled alerting searches and ATT&CK-annotated searches) into OpenCTI, read-only, through the Splunk REST API. Each saved search becomes an Indicator whose pattern is its SPL query, with its severity and a link to the search in Splunk Web. The search is linked with `indicates` relationships to the MITRE ATT&CK techniques of its correlation search annotations (or written in its name and description), and recorded as deployed on the Splunk platform with its status (active when enabled and scheduled, deployed otherwise, removed when deleted since the previous run).\n\nThese deployments feed the detection layer of the OpenCTI Threat-Informed Defense Matrix: which techniques used by your threats are actually detected, and where. The connector never creates, modifies, enables or schedules a search in Splunk.",
+  "short_description": "Imports the correlation and alerting searches deployed in Splunk as SPL Indicators linked to the ATT&CK techniques they detect and to the Splunk platform they run on.",
+  "logo": "external-import/splunk-saved-searches/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.splunk.com/en_us/products/enterprise-security.html",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/splunk-saved-searches",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-splunk-saved-searches",
+  "container_type": "EXTERNAL_IMPORT"
+}

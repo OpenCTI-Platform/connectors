@@ -1,0 +1,29 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Microsoft Sentinel Analytics Rules'
+  scope: 'Indicator,Attack-Pattern,SecurityPlatform'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+sentinel_analytics_rules:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  subscription_id: 'ChangeMe'
+  resource_group: 'ChangeMe'
+  workspace_name: 'ChangeMe'
+  # management_url: 'https://management.azure.com'
+  # login_url: 'https://login.microsoftonline.com'
+  # api_version: '2025-07-01-preview'
+  # import_disabled_rules: true
+  # request_timeout: 60
+  # max_retries: 5
+  # platform_name: 'Microsoft Sentinel'
+  # platform_id: 'ChangeMe'
+  # platform_type: 'SIEM'
+  # tlp_level: 'amber'
