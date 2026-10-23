@@ -203,3 +203,58 @@ def test_parse_csv_raises_on_missing_domain_header():
     payload = "threat_type,confidence,first_seen,last_seen,No_of_threat_matched_pivots\nmalware,1,2026-09-01 10:00:00+00,2026-09-02 10:00:00+00,1\n"
     with pytest.raises(WhoisFreaksClientError, match="missing required 'domain' header"):
         WhoisFreaksClient._parse_csv(payload)
+
+
+def test_iter_retries_threat_feed_stream_transport_error(monkeypatch):
+    """urllib3 transport errors raised during threat-feed stream reads are retried."""
+    import urllib3.exceptions
+
+    good_payload = (
+        "domain,threat_type,confidence,first_seen,last_seen,No_of_threat_matched_pivots\n"
+        "example.com,malware,1,2026-09-01 10:00:00+00,2026-09-02 10:00:00+00,1\n"
+    )
+
+    class _FailingRaw(BytesIO):
+        auto_close = True
+
+        def read(self, size=-1):
+            raise urllib3.exceptions.ProtocolError("connection broken")
+
+        def read1(self, size=-1):
+            raise urllib3.exceptions.ProtocolError("connection broken")
+
+    call_count = 0
+
+    def fake_get(url, params=None, timeout=None, stream=False):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            response = MagicMock()
+            response.status_code = 200
+            response.encoding = "utf-8"
+            response.raise_for_status.return_value = None
+            response.close.return_value = None
+            response.raw = _FailingRaw(b"domain,threat_type\n")
+            return response
+        resp = MagicMock(status_code=200)
+        resp.encoding = "utf-8"
+        resp.raw = BytesIO(good_payload.encode())
+        resp.raise_for_status.return_value = None
+        resp.close.return_value = None
+        return resp
+
+    client = WhoisFreaksClient("test-api-key", max_retries=1, retry_backoff_seconds=0)
+    monkeypatch.setattr(client._session, "get", fake_get)
+    sleep = MagicMock()
+    monkeypatch.setattr("whoisfreaks_client.api_client.time.sleep", sleep)
+
+    pages = list(
+        client.iter_threat_feed(
+            feed_type="malware",
+            feed_date=date(2026, 9, 1),
+            limit=10,
+        )
+    )
+
+    assert call_count == 2
+    assert [r.domain for r in pages[0]] == ["example.com"]

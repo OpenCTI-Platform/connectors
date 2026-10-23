@@ -11,6 +11,7 @@ from itertools import count
 from typing import Any
 
 import requests
+import urllib3.exceptions as _urllib3_exc
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.logger import get_logger
 from whoisfreaks_client.models import ThreatFeedRecord
@@ -300,6 +301,8 @@ class WhoisFreaksClient:
         try:
             reader = csv.DictReader(text_stream)
             return self._parse_csv_rows(reader)
+        except (_urllib3_exc.HTTPError, _urllib3_exc.IncompleteRead) as exc:
+            raise requests.ConnectionError(f"Threat-feed stream read failed: {exc}") from exc
         finally:
             # urllib3 may auto-close response.raw after EOF, which marks the
             # TextIOWrapper closed and makes detach() raise ValueError — that
