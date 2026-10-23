@@ -25,7 +25,7 @@ from connectors_sdk.models import (
     Tool,
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models.enums import RelationshipType, ReportType
 from orkl.client_api import PAGE_SIZE, OrklClient
 from orkl.models import (
     MIN_VALID_YEAR,
@@ -93,6 +93,17 @@ def _is_usable_url(url: str) -> bool:
     except ValueError:
         return False
     return bool(parsed.scheme and parsed.netloc)
+
+
+def _web_entry_url(api_base_url: str, entry_id: str) -> str:
+    """Return the ORKL web permalink of an entry, on the API's scheme and host.
+
+    The ORKL frontend is a single-page app whose router exposes a
+    ``/libraryEntry/:entryId`` route; the host is taken from ``api_base_url``
+    so a self-hosted ORKL mirror keeps consistent links.
+    """
+    parsed = urlparse(api_base_url)
+    return f"{parsed.scheme}://{parsed.netloc}/libraryEntry/{entry_id}"
 
 
 def _reference_source_name(url: str) -> str:
@@ -423,6 +434,7 @@ class OrklReportProcessor(BaseDataProcessor):
             name=entry.name,
             description=entry.description,
             publication_date=self._resolve_publication_date(entry),
+            report_types=[ReportType.THREAT_REPORT],
             labels=entry.labels or None,
             objects=objects or None,
             external_references=self._build_report_references(entry) or None,
@@ -463,14 +475,13 @@ class OrklReportProcessor(BaseDataProcessor):
     ) -> list[ExternalReference]:
         references: list[ExternalReference] = []
 
-        # 1. The ORKL entry itself. The ORKL single-page app returns HTTP 200
-        # for any path, so no frontend permalink could be verified; the API URL
-        # is used deliberately.
+        # 1. The ORKL entry itself, as the analyst-facing web page (the API
+        # record stays reachable through `external_id`).
         references.append(
             ExternalReference(
                 source_name="ORKL",
                 external_id=entry.id,
-                url=f"{self._api_base_url}/library/entry/{entry.id}",
+                url=_web_entry_url(self._api_base_url, entry.id),
             )
         )
 

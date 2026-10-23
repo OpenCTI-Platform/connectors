@@ -17,7 +17,7 @@ from connectors_sdk.models import (
     TLPMarking,
     Tool,
 )
-from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models.enums import RelationshipType, ReportType
 from orkl.client_api import PAGE_SIZE
 from orkl.models import OrklLibraryEntry
 from orkl.processors.orkl_report_processor import (
@@ -578,6 +578,10 @@ class TestStateOwnership:
 
 
 class TestReportBasics:
+    def test_report_is_typed_as_threat_report(self, converter, full_entry):
+        report = _report(converter._convert_entry(full_entry))
+        assert report.report_types == [ReportType.THREAT_REPORT]
+
     def test_report_present_and_has_non_empty_name(self, converter, full_entry):
         report = _report(converter._convert_entry(full_entry))
         assert isinstance(report, Report)
@@ -717,7 +721,7 @@ class TestExternalReferences:
         entry_ref = refs[0]
         assert entry_ref.source_name == "ORKL"
         assert entry_ref.external_id == entry.id
-        assert entry_ref.url == f"{API_BASE_URL}/library/entry/{entry.id}"
+        assert entry_ref.url == f"https://orkl.eu/libraryEntry/{entry.id}"
 
         sha_refs = [r for r in refs if r.external_id == entry.sha1_hash]
         assert len(sha_refs) == 1

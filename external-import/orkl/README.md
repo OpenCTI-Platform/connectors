@@ -157,12 +157,12 @@ state in OpenCTI also triggers a new full import.
 
 | ORKL field                                                    | STIX object / property                                                     |
 |-----------------------------------------------------------------|--------------------------------------------------------------------------|
-| Library entry                                                    | `Report`                                                                   |
+| Library entry                                                    | `Report` (`report_types: ["threat-report"]`)                               |
 | `name`                                                            | `Report.name`                                                              |
 | `description`                                                    | `Report.description`                                                       |
 | best available *stable* date among publication/file-creation/file-modification/`ts_*` timestamps (update timestamps are excluded so a re-fetch never changes the id) | `Report.publication_date` (falls back to a fixed 1970-01-01 sentinel to keep the STIX id stable if no usable date exists) |
 | `sources[]` (deduplicated; `origins` such as `pdf`/`web` are not mapped) | `Report.labels`                                                     |
-| entry id                                                          | `Report` external reference (`source_name: "ORKL"`, `external_id`, and a `url` pointing at the ORKL API entry) |
+| entry id                                                          | `Report` external reference (`source_name: "ORKL"`, `external_id`, and a `url` pointing at the ORKL web page of the entry) |
 | `sha1_hash`                                                       | `Report` external reference (SHA-1 of the source file)                    |
 | `references[]` (original publisher links)                        | `Report` external references, one per usable URL                         |
 | `files.pdf` / `files.text` / `files.img`                          | `Report` external references (`source_name: "ORKL Archive"`)              |
@@ -246,6 +246,4 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
-- This connector has not been tested against a live OpenCTI platform; it is
-  validated with unit tests only (`external-import/orkl/tests`).
 - **Reference**: [ORKL](https://orkl.eu) / [ORKL API](https://orkl.eu/api/v1)
