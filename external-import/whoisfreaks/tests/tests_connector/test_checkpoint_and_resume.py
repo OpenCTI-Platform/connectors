@@ -309,6 +309,9 @@ class TestSubscriptionErrors:
         assert (
             "Subscription error" in warning_msg or "subscription" in warning_msg.lower()
         )
+        meta = processor.logger.warning.call_args.kwargs["meta"]
+        assert meta["feed_type"] == "phishing"
+        assert "Access denied" in meta["error"]
 
     def test_nrd_subscription_error_is_logged_and_skipped(self):
         """A 401/403 on an NRD feed must log WARNING and return empty, not re-raise."""
@@ -333,6 +336,9 @@ class TestSubscriptionErrors:
         assert (
             "Subscription error" in warning_msg or "subscription" in warning_msg.lower()
         )
+        meta = processor.logger.warning.call_args.kwargs["meta"]
+        assert meta["feed_name"] == "nrd_cctld_with_whois"
+        assert "Access denied" in meta["error"]
 
 
 # ---------------------------------------------------------------------------

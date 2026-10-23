@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import logging
 import time
 from dataclasses import dataclass
 from datetime import date
@@ -13,6 +12,7 @@ from typing import Any, Iterator
 
 import requests
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.logger import get_logger
 
 
 class WhoisFreaksNRDError(DataRetrievalError):
@@ -39,7 +39,7 @@ class NRDPage(list[NRDRecord]):
         self.source_record_count = source_record_count
 
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class WhoisFreaksNRDClient:
@@ -243,7 +243,7 @@ class WhoisFreaksNRDClient:
             if not domain:
                 _LOGGER.warning(
                     "Skipping malformed WhoisFreaks NRD CSV row",
-                    extra={"row_number": row_number},
+                    meta={"row_number": row_number},
                 )
                 continue
 

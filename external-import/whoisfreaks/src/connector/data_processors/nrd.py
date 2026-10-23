@@ -195,7 +195,7 @@ class NRDProcessor(BaseDataProcessor):
         if not feed_status.is_available:
             self.logger.warning(
                 "[NRD] Feed status reports no available data; skipping",
-                {
+                meta={
                     "feed_name": self.feed_name,
                     "last_update": feed_status.last_update,
                 },
@@ -215,7 +215,7 @@ class NRDProcessor(BaseDataProcessor):
         if latest_available_date < import_floor:
             self.logger.info(
                 "[NRD] last_update is older than import_since; skipping",
-                {
+                meta={
                     "feed_name": self.feed_name,
                     "last_update": latest_iso,
                     "import_since": import_floor.isoformat(),
@@ -229,7 +229,7 @@ class NRDProcessor(BaseDataProcessor):
             if next_date > latest_available_date:
                 self.logger.info(
                     "[NRD] Day already ingested; skipping",
-                    {
+                    meta={
                         "feed_name": self.feed_name,
                         "last_update": latest_iso,
                         "next_date": next_date_str,
@@ -242,7 +242,7 @@ class NRDProcessor(BaseDataProcessor):
 
         self.logger.info(
             "[NRD] Fetching WhoisFreaks NRD feed (last_update only)",
-            {
+            meta={
                 "feed_name": self.feed_name,
                 "feed_type": self.feed_type,
                 "whois": self.whois,
@@ -296,7 +296,7 @@ class NRDProcessor(BaseDataProcessor):
                     conversion_failed = True
                     self.logger.warning(
                         "[NRD] Conversion failures; checkpoint frozen",
-                        {
+                        meta={
                             "feed_name": self.feed_name,
                             "date": feed_date.isoformat(),
                             "page_end_offset": offset,
@@ -312,7 +312,7 @@ class NRDProcessor(BaseDataProcessor):
                     pages_since_checkpoint = 0
                     self.logger.debug(
                         "[NRD] Updated offset",
-                        {
+                        meta={
                             "feed_name": self.feed_name,
                             "offset": offset,
                             "date": feed_date.isoformat(),
@@ -321,14 +321,14 @@ class NRDProcessor(BaseDataProcessor):
         except WhoisFreaksNRDSubscriptionError as exc:
             self.logger.warning(
                 "[NRD] Subscription error; feed skipped",
-                {"feed_name": self.feed_name, "error": str(exc)},
+                meta={"feed_name": self.feed_name, "error": str(exc)},
             )
             return
 
         if conversion_failed:
             self.logger.warning(
                 "[NRD] Feed day not marked complete; will retry next run",
-                {"feed_name": self.feed_name, "date": feed_date.isoformat()},
+                meta={"feed_name": self.feed_name, "date": feed_date.isoformat()},
             )
             return
 
@@ -336,7 +336,7 @@ class NRDProcessor(BaseDataProcessor):
         self.state.set_next_nrd_date(self.feed_name, next_date)
         self.logger.info(
             "[NRD] Completed feed day",
-            {
+            meta={
                 "feed_name": self.feed_name,
                 "date": feed_date.isoformat(),
                 "next_date": next_date,
@@ -368,7 +368,7 @@ class NRDProcessor(BaseDataProcessor):
                     self._page_conversion_failed = True
                     self.logger.warning(
                         "[NRD] Skipping record that failed conversion",
-                        {
+                        meta={
                             "feed_name": self.feed_name,
                             "domain": getattr(record, "domain_name", None),
                             "error": str(err),

@@ -47,7 +47,7 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
 
         self.logger.info(
             "[CONNECTOR] Starting connector",
-            {"connector_name": connector_name},
+            meta={"connector_name": connector_name},
         )
 
         try:
@@ -56,14 +56,14 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
             if self.state.last_run:
                 self.logger.info(
                     "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": str(self.state.last_run)},
+                    meta={"last_run_datetime": str(self.state.last_run)},
                 )
             else:
                 self.logger.info("[CONNECTOR] Connector has never run")
 
             self.logger.info(
                 "[CONNECTOR] Enabled feeds",
-                {
+                meta={
                     "threat_feeds": list(self.settings.whoisfreaks.feed_types),
                     "nrd_feeds": list(self.settings.whoisfreaks.nrd_feed_types),
                 },
@@ -78,7 +78,7 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
 
             self.logger.info(
                 "[CONNECTOR] Running processors",
-                {"connector_name": connector_name},
+                meta={"connector_name": connector_name},
             )
 
             for processor in self.data_processors:
@@ -89,7 +89,7 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
 
             self.logger.info(
                 "[CONNECTOR] Run completed",
-                {
+                meta={
                     "connector_name": connector_name,
                     "last_run": str(self.state.last_run),
                 },
@@ -98,14 +98,14 @@ class WhoisFreaksExternalImportConnector(ExternalImportConnector):
         except (KeyboardInterrupt, SystemExit):
             self.logger.info(
                 "[CONNECTOR] Connector stopped",
-                {"connector_name": connector_name},
+                meta={"connector_name": connector_name},
             )
             sys.exit(0)
 
         except Exception as err:
-            self.logger.error(
+            self.logger.exception(
                 "[CONNECTOR] Unexpected error",
-                {"error": str(err)},
+                meta={"error": str(err)},
             )
             raise
 

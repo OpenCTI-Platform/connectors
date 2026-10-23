@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import csv
 import io
-import logging
 import time
 from collections.abc import Iterator
 from datetime import date, datetime
@@ -13,9 +12,10 @@ from typing import Any
 
 import requests
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.logger import get_logger
 from whoisfreaks_client.models import ThreatFeedRecord
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = get_logger(__name__)
 
 
 class ThreatFeedPage(list[ThreatFeedRecord]):
@@ -269,7 +269,7 @@ class WhoisFreaksClient:
             except (KeyError, TypeError, ValueError) as exc:
                 _LOGGER.warning(
                     "Skipping malformed WhoisFreaks threat-feed CSV row",
-                    extra={"row_number": row_number, "error": str(exc)},
+                    meta={"row_number": row_number, "error": str(exc)},
                 )
 
         return ThreatFeedPage(records, source_record_count)

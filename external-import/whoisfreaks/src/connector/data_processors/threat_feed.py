@@ -78,7 +78,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         if not feed_status.is_available:
             self.logger.warning(
                 "[THREAT_FEED] Feed status reports no available data; skipping",
-                {
+                meta={
                     "feed_type": self.feed_type,
                     "last_update": feed_status.last_update,
                 },
@@ -100,7 +100,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         if latest_available_date < import_floor:
             self.logger.info(
                 "[THREAT_FEED] last_update is older than import_since; skipping",
-                {
+                meta={
                     "feed_type": self.feed_type,
                     "last_update": latest_iso,
                     "import_since": import_floor.isoformat(),
@@ -112,7 +112,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         if last_completed == latest_iso and start_offset == 0:
             self.logger.info(
                 "[THREAT_FEED] Snapshot already ingested; skipping",
-                {
+                meta={
                     "feed_type": self.feed_type,
                     "last_update": latest_iso,
                 },
@@ -125,7 +125,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
 
         self.logger.info(
             "[THREAT_FEED] Fetching WhoisFreaks threat-feed snapshot",
-            {
+            meta={
                 "feed_type": self.feed_type,
                 "date": latest_iso,
                 "start_offset": start_offset,
@@ -176,7 +176,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
                     conversion_failed = True
                     self.logger.warning(
                         "[THREAT_FEED] Conversion failures; checkpoint frozen",
-                        {
+                        meta={
                             "feed_type": self.feed_type,
                             "date": feed_date.isoformat(),
                             "page_end_offset": offset,
@@ -192,7 +192,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
                     pages_since_checkpoint = 0
                     self.logger.debug(
                         "[THREAT_FEED] Updated offset",
-                        {
+                        meta={
                             "feed_type": self.feed_type,
                             "offset": offset,
                             "date": feed_date.isoformat(),
@@ -201,14 +201,14 @@ class ThreatFeedProcessor(BaseDataProcessor):
         except WhoisFreaksSubscriptionError as exc:
             self.logger.warning(
                 "[THREAT_FEED] Subscription error; feed skipped",
-                {"feed_type": self.feed_type, "error": str(exc)},
+                meta={"feed_type": self.feed_type, "error": str(exc)},
             )
             return
 
         if conversion_failed:
             self.logger.warning(
                 "[THREAT_FEED] Snapshot not marked complete; will retry next run",
-                {"feed_type": self.feed_type, "date": feed_date.isoformat()},
+                meta={"feed_type": self.feed_type, "date": feed_date.isoformat()},
             )
             return
 
@@ -217,7 +217,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
         self.state.set_next_date(self.feed_type, completed_date)
         self.logger.info(
             "[THREAT_FEED] Completed snapshot",
-            {
+            meta={
                 "feed_type": self.feed_type,
                 "date": completed_date,
                 "records_processed_from_offset": offset,
@@ -243,7 +243,7 @@ class ThreatFeedProcessor(BaseDataProcessor):
                     self._page_conversion_failed = True
                     self.logger.warning(
                         "[THREAT_FEED] Skipping record that failed conversion",
-                        {
+                        meta={
                             "feed_type": self.feed_type,
                             "domain": getattr(record, "domain", None),
                             "error": str(err),
