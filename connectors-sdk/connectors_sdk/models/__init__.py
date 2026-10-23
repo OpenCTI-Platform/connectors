@@ -17,6 +17,7 @@ from connectors_sdk.models.country import Country
 from connectors_sdk.models.course_of_action import CourseOfAction
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.email_address import EmailAddress
+from connectors_sdk.models.exceptions import ProvenanceSummaryError
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
@@ -35,6 +36,10 @@ from connectors_sdk.models.note import Note
 from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.organization_author import OrganizationAuthor
+from connectors_sdk.models.provenance_summary import (
+    STIX_EXT_OCTI_PROVENANCE,
+    ProvenanceSummary,
+)
 from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.region import Region
 from connectors_sdk.models.relationship import Relationship
@@ -106,4 +111,8 @@ __all__ = [
     "UserAccount",
     "Vulnerability",
     "X509Certificate",
+    # Read-only models, parsed from OpenCTI STIX objects and never sent to OpenCTI
+    "ProvenanceSummary",
+    "ProvenanceSummaryError",
+    "STIX_EXT_OCTI_PROVENANCE",
 ]
