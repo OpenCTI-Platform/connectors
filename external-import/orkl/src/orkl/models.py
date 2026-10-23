@@ -76,11 +76,17 @@ class OrklThreatActor(BaseModel):
 
     @property
     def other_aliases(self) -> list[str]:
-        """Deduplicated aliases excluding the `main_name` itself, order preserved."""
+        """Stripped, deduplicated aliases excluding the `main_name`, order preserved.
+
+        ORKL aliases carry stray whitespace (``"Lotus Blossom "``); OpenCTI
+        matches entities on aliases, so they are stripped before comparison.
+        """
+        main_name = (self.main_name or "").strip()
         seen: set[str] = set()
         result: list[str] = []
-        for alias in self.aliases:
-            if alias == self.main_name or alias in seen:
+        for raw_alias in self.aliases:
+            alias = (raw_alias or "").strip()
+            if not alias or alias == main_name or alias in seen:
                 continue
             seen.add(alias)
             result.append(alias)

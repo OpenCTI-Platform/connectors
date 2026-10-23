@@ -270,3 +270,15 @@ class TestExtractionQuality:
         full_entry_data["extraction_quality"] = value
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.extraction_quality == value
+
+
+class TestActorAliasesWhitespace:
+    """Found live: ORKL aliases such as "Lotus Blossom " end with a space."""
+
+    def test_aliases_are_stripped_deduplicated_and_exclude_main_name(self):
+        actor = OrklThreatActor(
+            id="00000000-0000-4000-8000-000000000001",
+            main_name="BRONZE ELGIN",
+            aliases=["Lotus Blossom ", "Lotus Blossom", " BRONZE ELGIN", ""],
+        )
+        assert actor.other_aliases == ["Lotus Blossom"]
