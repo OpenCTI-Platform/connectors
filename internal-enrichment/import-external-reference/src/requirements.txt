@@ -1,4 +1,4 @@
-pycti==7.261021.1
+pycti==7.261023.0
 markdownify==1.2.3
 pdfminer.six==20251107
 playwright==1.64.0
