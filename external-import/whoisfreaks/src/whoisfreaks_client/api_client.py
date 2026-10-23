@@ -281,6 +281,10 @@ class WhoisFreaksClient:
         """Parse one CSV page from a streamed HTTP response body."""
 
         # Decode incrementally; page size is bounded by limit so memory is OK.
+        # urllib3 closes response.raw once the last body byte is read, while
+        # TextIOWrapper may still hold buffered rows; keep it open until the
+        # finally block closes the response.
+        response.raw.auto_close = False
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",

@@ -299,6 +299,10 @@ class WhoisFreaksNRDClient:
     ) -> NRDPage:
         """Parse a WHOIS-enriched NRD CSV page from a stream."""
 
+        # urllib3 closes response.raw once the last body byte is read, while
+        # TextIOWrapper may still hold buffered rows; keep it open until the
+        # finally block closes the response.
+        response.raw.auto_close = False
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",
@@ -325,6 +329,10 @@ class WhoisFreaksNRDClient:
     ) -> NRDPage:
         """Parse a domains-only NRD page (no CSV header)."""
 
+        # urllib3 closes response.raw once the last body byte is read, while
+        # TextIOWrapper may still hold buffered rows; keep it open until the
+        # finally block closes the response.
+        response.raw.auto_close = False
         text_stream = io.TextIOWrapper(
             response.raw,
             encoding=response.encoding or "utf-8",

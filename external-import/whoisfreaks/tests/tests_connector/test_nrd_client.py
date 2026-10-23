@@ -72,13 +72,25 @@ def test_domains_without_whois_do_not_treat_first_domain_as_header():
 
 
 class _AutoClosingBytesIO(BytesIO):
-    """BytesIO that closes itself after EOF, like urllib3 response.raw."""
+    """BytesIO that closes as soon as its last byte is read, like urllib3.
 
-    def read(self, size=-1):
-        data = super().read(size)
-        if not data:
+    urllib3 closes response.raw on the read that returns the final bytes
+    (not on a later empty read) unless ``auto_close`` is False. TextIOWrapper
+    reads through ``read1()``, so both methods are covered.
+    """
+
+    auto_close = True
+
+    def _close_at_end(self, data):
+        if self.auto_close and data and self.tell() == len(self.getbuffer()):
             self.close()
         return data
+
+    def read(self, size=-1):
+        return self._close_at_end(super().read(size))
+
+    def read1(self, size=-1):
+        return self._close_at_end(super().read1(size))
 
 
 def _fake_response(payload: str, status_code: int = 200):
@@ -92,7 +104,9 @@ def _fake_response(payload: str, status_code: int = 200):
 
 
 def test_parse_whois_stream_survives_auto_closed_raw():
-    payload = "domain_name,create_date\nexample.com,2026-09-01\n"
+    payload = (
+        "domain_name,create_date\nexample.com,2026-09-01\nexample.org,2026-09-02\n"
+    )
     response = MagicMock()
     response.encoding = "utf-8"
     response.raw = _AutoClosingBytesIO(payload.encode("utf-8"))
@@ -101,8 +115,7 @@ def test_parse_whois_stream_survives_auto_closed_raw():
     client = WhoisFreaksNRDClient("test-api-key")
     records = client._parse_whois_stream(response)
 
-    assert len(records) == 1
-    assert records[0].domain_name == "example.com"
+    assert [r.domain_name for r in records] == ["example.com", "example.org"]
     response.close.assert_called_once()
 
 

@@ -340,12 +340,9 @@ class ThreatFeedProcessor(BaseDataProcessor):
             indicator_types=["malicious-activity"],
             pattern_type="stix",
             pattern=pattern,
+            # last_seen is the last observation, not an expiry from the source,
+            # so no valid_until is set; it stays in the x_whoisfreaks_* fields.
             valid_from=record.first_seen,
-            # STIX requires valid_until > valid_from; a single observation
-            # (first_seen == last_seen) has no interval, so omit it.
-            valid_until=(
-                record.last_seen if record.last_seen > record.first_seen else None
-            ),
             labels=labels,
             object_marking_refs=[tlp],
             created_by_ref=_AUTHOR_ID,

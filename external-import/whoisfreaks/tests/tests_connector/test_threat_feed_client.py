@@ -12,13 +12,25 @@ from whoisfreaks_client.api_client import (
 
 
 class _AutoClosingBytesIO(BytesIO):
-    """BytesIO that closes itself after EOF, like urllib3 response.raw."""
+    """BytesIO that closes as soon as its last byte is read, like urllib3.
 
-    def read(self, size=-1):
-        data = super().read(size)
-        if not data:
+    urllib3 closes response.raw on the read that returns the final bytes
+    (not on a later empty read) unless ``auto_close`` is False. TextIOWrapper
+    reads through ``read1()``, so both methods are covered.
+    """
+
+    auto_close = True
+
+    def _close_at_end(self, data):
+        if self.auto_close and data and self.tell() == len(self.getbuffer()):
             self.close()
         return data
+
+    def read(self, size=-1):
+        return self._close_at_end(super().read(size))
+
+    def read1(self, size=-1):
+        return self._close_at_end(super().read1(size))
 
 
 def test_parse_csv_stream_survives_auto_closed_raw():
@@ -27,6 +39,8 @@ def test_parse_csv_stream_survives_auto_closed_raw():
         "No_of_threat_matched_pivots\n"
         "example.com,malware,1,2026-09-01 10:00:00+00,"
         "2026-09-02 10:00:00+00,3\n"
+        "example.org,phishing,0.5,2026-09-01 11:00:00+00,"
+        "2026-09-02 11:00:00+00,1\n"
     )
     response = MagicMock()
     response.encoding = "utf-8"
@@ -36,8 +50,8 @@ def test_parse_csv_stream_survives_auto_closed_raw():
     client = WhoisFreaksClient("test-api-key")
     records = client._parse_csv_stream(response)
 
-    assert len(records) == 1
-    assert records[0].domain == "example.com"
+    # Rows still buffered in TextIOWrapper after the raw stream hit EOF.
+    assert [r.domain for r in records] == ["example.com", "example.org"]
     response.close.assert_called_once()
 
 
