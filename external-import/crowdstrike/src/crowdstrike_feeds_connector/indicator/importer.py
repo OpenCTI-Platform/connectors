@@ -78,7 +78,7 @@ class IndicatorImporter(BaseImporter):
             config.tlp_marking,
         )
 
-        self.indicators_api_cs = IndicatorsAPI(config.config, config.helper)
+        self.indicators_api_cs = IndicatorsAPI(config.config, config.helper, False)
         self.related_actor_importer = RelatedActorImporter(
             config.config,
             config.helper,
