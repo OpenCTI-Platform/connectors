@@ -14,6 +14,7 @@ from importlib import resources
 
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
+    AttackPattern,
     BaseIdentifiedEntity,
     ExternalReference,
     Incident,
@@ -30,6 +31,7 @@ from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
 from wiz_cloud.observables import Credential
+from wiz_cloud.processors.ttps_processor import WizTtpsProcessor
 from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 
 ISSUES_QUERY = (
@@ -58,6 +60,8 @@ class WizIssuesProcessor(BaseDataProcessor):
     # Set in post_init() when vulnerability import is enabled. Declared here
     # so conversion works on a processor whose post_init() was skipped.
     _vulnerabilities: WizVulnerabilitiesProcessor | None = None
+    # Same for TTPs, which need no client and no state.
+    _ttps: WizTtpsProcessor | None = None
 
     def process(self) -> None:
         """Run the full processing pipeline: collect → transform → send.
@@ -106,6 +110,14 @@ class WizIssuesProcessor(BaseDataProcessor):
                 marking=self._marking,
             )
 
+        self._ttps: WizTtpsProcessor | None = None
+        if self._config.import_ttps:
+            self._ttps = WizTtpsProcessor(
+                logger=self.logger,
+                author=self._author,
+                marking=self._marking,
+            )
+
     # -- collect -------------------------------------------------------------
 
     def collect(self) -> Iterator[list[dict]]:
@@ -121,7 +133,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         self.work_name = f"Wiz Cloud issues import since {since:%Y-%m-%d %H:%M}"
         self.logger.info(
             "[WIZ-CLOUD] Collecting issues",
-            {
+            meta={
                 "since": since.isoformat(),
                 "severity": self._config.issue_severity,
                 "status": self._config.issue_status,
@@ -173,6 +185,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         issues_converted = 0
         bundles_sent = 0
         vulnerabilities_sent = 0
+        ttps_sent = 0
 
         for page in data:
             page_objects: list = []
@@ -183,12 +196,14 @@ class WizIssuesProcessor(BaseDataProcessor):
                 except ValidationError as err:
                     self.logger.warning(
                         "[WIZ-CLOUD] Skipping unparseable issue",
-                        {"id": raw.get("id"), "error": str(err)},
+                        meta={"id": raw.get("id"), "error": str(err)},
                     )
                     continue
 
                 objects = self._convert(issue, entities_cache)
                 issues_converted += 1
+                ttps = sum(1 for obj in objects if isinstance(obj, AttackPattern))
+                ttps_sent += ttps
                 if max_created is None or issue.created_at > max_created:
                     max_created = issue.created_at
 
@@ -216,7 +231,7 @@ class WizIssuesProcessor(BaseDataProcessor):
 
                 self.logger.info(
                     "[WIZ-CLOUD] Sending an incident with its vulnerabilities",
-                    {
+                    meta={
                         "issue_id": issue.id,
                         "asset": (
                             issue.entity_snapshot.name
@@ -226,6 +241,7 @@ class WizIssuesProcessor(BaseDataProcessor):
                         # Zero when the asset was already scanned this run:
                         # its vulnerabilities went out with an earlier issue.
                         "vulnerabilities": vulnerabilities,
+                        "ttps": ttps,
                     },
                 )
                 yield self._with_shared(objects, shared_sent)
@@ -240,7 +256,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         if issues_converted == 0:
             self.logger.info(
                 "[WIZ-CLOUD] Nothing to ingest, no new issue since the last run",
-                (
+                meta=(
                     {"since": _utc(self.state.issues_last_created_at)}
                     if self.state.issues_last_created_at
                     else {}
@@ -249,9 +265,10 @@ class WizIssuesProcessor(BaseDataProcessor):
         else:
             self.logger.info(
                 "[WIZ-CLOUD] Import finished",
-                {
+                meta={
                     "incidents": issues_converted,
                     "vulnerabilities": vulnerabilities_sent,
+                    "ttps": ttps_sent,
                     "bundles": bundles_sent,
                 },
             )
@@ -259,19 +276,46 @@ class WizIssuesProcessor(BaseDataProcessor):
         self._advance_cursor(max_created)
 
     def _with_shared(self, objects: list, already_sent: bool) -> list:
-        """Prepend the author and marking to the first bundle carrying data.
+        """Finalise a bundle: drop its repeats, then prepend the shared objects.
 
         Args:
             objects: The bundle objects.
             already_sent: Whether a previous bundle carried them.
 
         Returns:
-            The bundle, with author and marking in front when they are still
-            owed. They never travel in a bundle of their own.
+            The bundle, without the repeats it does not need, and with author
+            and marking in front when they are still owed. They never travel
+            in a bundle of their own.
         """
+        objects = self._deduplicated(objects)
         if already_sent:
             return objects
         return [self._author, self._marking, *objects]
+
+    @staticmethod
+    def _deduplicated(objects: list) -> list:
+        """Drop the objects a bundle already carries, keeping the first copy.
+
+        Systems and attack patterns are appended for every issue that
+        references them, so that each bundle resolves on its own whatever
+        order the workers consume them in. Inside one bundle the first copy
+        already grants that, and ids are deterministic, so the later copies
+        are byte-identical noise.
+
+        Args:
+            objects: The bundle objects, in emission order.
+
+        Returns:
+            The same objects, in the same order, without repeated ids.
+        """
+        seen: set[str] = set()
+        unique: list = []
+        for obj in objects:
+            if obj.id in seen:
+                continue
+            seen.add(obj.id)
+            unique.append(obj)
+        return unique
 
     def _advance_cursor(self, max_created: datetime | None) -> None:
         """Store the newest issue createdAt, unless vulnerabilities failed.
@@ -295,7 +339,7 @@ class WizIssuesProcessor(BaseDataProcessor):
             self.logger.warning(
                 "[WIZ-CLOUD] Holding the issues cursor back after vulnerability "
                 "failures, the window will be imported again on the next run",
-                {"failed_assets": failures},
+                meta={"failed_assets": failures},
             )
             return
 
@@ -311,14 +355,16 @@ class WizIssuesProcessor(BaseDataProcessor):
         Args:
             issue: Parsed Wiz issue.
             entities_cache: Entities already built during this run, keyed by
-                entitySnapshot id, so a resource shared by several issues is
-                emitted once and linked many times.
+                entitySnapshot id, so a resource shared by several issues
+                reuses the same object instead of being rebuilt for each one.
 
         Returns:
-            A list holding the Incident, plus the resource entity and the
-            Relationship linking them when the issue carries an entity
-            snapshot of a mapped type. A list is returned so further entities
-            can be appended without changing the signature.
+            A list holding the Incident, the AttackPatterns and their uses
+            Relationships for the issue's MITRE techniques when TTP import is
+            enabled, plus the resource entity and the Relationship linking
+            them when the issue carries an entity snapshot of a mapped type.
+            A list is returned so further entities can be appended without
+            changing the signature.
         """
         objects: list = []
 
@@ -339,14 +385,20 @@ class WizIssuesProcessor(BaseDataProcessor):
         )
         objects.append(incident)
 
+        if self._ttps is not None:
+            objects.extend(self._ttps.objects_for_issue(issue, incident))
+
         if issue.entity_snapshot is None:
             return objects
 
-        entity, is_new = self._entity_for(issue.entity_snapshot, entities_cache)
+        # Appended to every bundle that references it, not just the first:
+        # bundles are split across workers and ingested in any order, so a
+        # relationship pointing at an entity from an earlier bundle can
+        # fail to resolve. The id is deterministic, so the repeat upserts.
+        entity = self._entity_for(issue.entity_snapshot, entities_cache)
         if entity is None:
             return objects
-        if is_new:
-            objects.append(entity)
+        objects.append(entity)
         objects.append(
             Relationship(
                 # OpenCTI only allows related-to between an Incident and an
@@ -422,7 +474,7 @@ class WizIssuesProcessor(BaseDataProcessor):
 
     def _entity_for(
         self, snapshot: WizEntitySnapshot, cache: dict[str, BaseIdentifiedEntity]
-    ) -> tuple[BaseIdentifiedEntity | None, bool]:
+    ) -> BaseIdentifiedEntity | None:
         """Return the entity for a snapshot, building it on first sight.
 
         Args:
@@ -431,14 +483,13 @@ class WizIssuesProcessor(BaseDataProcessor):
                 entitySnapshot id.
 
         Returns:
-            The entity, or None when the snapshot type is not mapped, and
-            whether it was built by this call and still has to be emitted.
+            The entity, or None when the snapshot type is not mapped.
         """
         if snapshot.id in cache:
-            return cache[snapshot.id], False
+            return cache[snapshot.id]
         if not snapshot.name:
             # Every mapped model requires a non-empty name or value.
-            return None, False
+            return None
 
         common = {
             "description": self._snapshot_context(snapshot),
@@ -471,10 +522,10 @@ class WizIssuesProcessor(BaseDataProcessor):
                 # Mapping every Wiz resource type costs a lot for little
                 # benefit: any other type (SUBSCRIPTION included) only appears
                 # in the incident description.
-                return None, False
+                return None
 
         cache[snapshot.id] = entity
-        return entity, True
+        return entity
 
     @staticmethod
     def _snapshot_context(snapshot: WizEntitySnapshot) -> str | None:

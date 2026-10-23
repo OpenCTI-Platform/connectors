@@ -9,7 +9,6 @@ import sys
 from pathlib import Path
 
 import pytest
-
 from connectors_sdk.models import (
     AssociatedFile,
     ExternalReference,
@@ -17,6 +16,9 @@ from connectors_sdk.models import (
     TLPMarking,
     Reference,
 )
+
+# `pytester` runs pytest on test files written by a test (see `test_pytest_plugin.py`)
+pytest_plugins = ["pytester"]
 
 
 @pytest.fixture

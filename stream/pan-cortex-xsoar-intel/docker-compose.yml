@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=PAN Cortex XSOAR Intel"
       - CONNECTOR_SCOPE=xsoar
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - XSOAR_URL=https://xsoar.changeme.com
       - XSOAR_KEY_ID=ChangeMe

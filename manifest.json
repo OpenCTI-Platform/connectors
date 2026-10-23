@@ -8358,6 +8358,172 @@
       "container_type": "EXTERNAL_IMPORT"
     },
     {
+      "title": "CrowdStrike Incidents",
+      "slug": "crowdstrike-incidents",
+      "description": "CrowdStrike Falcon Next-Gen SIEM raises alerts when its correlation rules match the logs ingested in the platform.\n\nThe OpenCTI CrowdStrike Incidents connector retrieves these Next-Gen SIEM alerts through the CrowdStrike Falcon Alerts API and imports each of them as an Incident, with the affected hosts, IP addresses and user accounts as observables, and the MITRE ATT&CK techniques declared by the correlation rule as Attack Patterns linked to the existing ATT&CK dataset. Optionally, each Incident is enriched with the threat observables of the alert's source event in Next-Gen SIEM: the executed file and its hashes, and its execution context.",
+      "short_description": "Imports CrowdStrike Falcon Next-Gen SIEM alerts into OpenCTI as Incidents, with the victim and threat observables and the MITRE ATT&CK techniques.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Detection & Response Enablement"
+      ],
+      "solution_categories": [
+        "SIEM & Security Analytics"
+      ],
+      "license_type": "Commercial",
+      "contact": null,
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": false,
+      "max_confidence_level": 50,
+      "support_version": ">=7.261008.0",
+      "subscription_link": "https://www.crowdstrike.com/platform/next-gen-siem/",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike-incidents",
+      "manager_supported": true,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-crowdstrike-incidents",
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/crowdstrike-incidents_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "CrowdStrike Incidents",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "crowdstrike-incidents"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT5M",
+            "description": "The period of time to await between two runs of the connector (e.g. 'PT5M' for 5 minutes).",
+            "format": "duration",
+            "type": "string"
+          },
+          "CROWDSTRIKE_INCIDENTS_API_BASE_URL": {
+            "default": "https://api.crowdstrike.com",
+            "description": "Base URL of the CrowdStrike API for the tenant's cloud region (e.g. 'https://api.us-2.crowdstrike.com', 'https://api.eu-1.crowdstrike.com').",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "CROWDSTRIKE_INCIDENTS_CLIENT_ID": {
+            "description": "CrowdStrike API client ID. The API client needs the 'Alerts: Read' scope.",
+            "type": "string"
+          },
+          "CROWDSTRIKE_INCIDENTS_CLIENT_SECRET": {
+            "description": "CrowdStrike API client secret.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CROWDSTRIKE_INCIDENTS_IMPORT_START_DATE": {
+            "default": "P7D",
+            "description": "How far back to look on the first import (e.g. 'P7D' for 7 days, 'P30D' for 30 days).",
+            "format": "duration",
+            "type": "string"
+          },
+          "CROWDSTRIKE_INCIDENTS_PRODUCTS": {
+            "default": [
+              "ngsiem"
+            ],
+            "description": "Comma-separated list of CrowdStrike alert products to import. Only 'ngsiem' (Next-Gen SIEM) is supported for now.",
+            "items": {
+              "description": "CrowdStrike alert products supported by the connector.",
+              "enum": [
+                "ngsiem"
+              ],
+              "title": "Product",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "CROWDSTRIKE_INCIDENTS_SEVERITY_MIN": {
+            "description": "Minimum severity of the alerts to import: 'informational', 'low', 'medium', 'high' or 'critical'. All alerts are imported when unset.",
+            "enum": [
+              "informational",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "type": "string",
+            "default": null
+          },
+          "CROWDSTRIKE_INCIDENTS_INCLUDE_HIDDEN": {
+            "default": false,
+            "description": "Whether to also import the alerts hidden in the Falcon console (show_in_ui: false).",
+            "type": "boolean"
+          },
+          "CROWDSTRIKE_INCIDENTS_ENRICH_FROM_EVENTS": {
+            "default": false,
+            "description": "Whether to enrich each Incident with the threat observables (executed file, hashes, execution context) of the alert's source event in Next-Gen SIEM. Requires the 'NGSIEM: Write' scope, needed to run LogScale searches.",
+            "type": "boolean"
+          },
+          "CROWDSTRIKE_INCIDENTS_TLP_LEVEL": {
+            "description": "TLP marking level applied to every created STIX object.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber+strict"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "CROWDSTRIKE_INCIDENTS_CLIENT_ID",
+          "CROWDSTRIKE_INCIDENTS_CLIENT_SECRET"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "MISP",
       "slug": "misp",
       "description": "The MISP connector imports threat intelligence from MISP (Malware Information Sharing Platform) instances into OpenCTI. It enables organizations to leverage existing MISP threat intelligence feeds, events, attributes, objects, and galaxies within the OpenCTI platform. The connector supports incremental imports, custom filtering by tags, organizations, and event types, and maintains full traceability between MISP and OpenCTI entities.",
@@ -10659,6 +10825,11 @@
             "description": "Whether to import indicators of compromise (IoCs) or not.",
             "type": "boolean"
           },
+          "FLASHPOINT_IMPORT_EXTRACTED_CONFIG_DOMAINS_URLS": {
+            "default": false,
+            "description": "Whether to create Domain-Name and URL observables from the network endpoints of extracted malware configurations. Disabled by default: these lists can mix real C2 servers with legitimate domains (false positives).",
+            "type": "boolean"
+          },
           "FLASHPOINT_IMPORT_ALERTS": {
             "default": true,
             "description": "Whether to import alert data from Flashpoint or not.",
@@ -11627,6 +11798,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "GOOGLE_DTM_IMPORT_PASSWORDS": {
+            "default": true,
+            "description": "Whether to import plaintext passwords from Compromised Credentials alerts. When false, UserAccount observables are created without a credential and the password is redacted in the alert content.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -11666,8 +11842,8 @@
     {
       "title": "Intel 471 v2",
       "slug": "intel471_v2",
-      "description": "Intel 471 delivers structured intelligence on cyber threats and cybercriminal activity. This connector brings that intelligence into OpenCTI as STIX 2.1 objects. It is built for Verity471, Intel 471's intelligence platform, and also works with the legacy Titan platform. The connector runs four streams, each configured independently: malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities, and watcher alerts. Watcher alerts arrive as Incidents, each linked to what triggered it: a report, forum post, leaked credential, indicator or malware event. The other streams produce indicators, malware, vulnerabilities and reports, along with their related observables and relationships.",
-      "short_description": "Ingests malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities and watcher alerts from Intel 471's Verity471 platform into OpenCTI.",
+      "description": "Intel 471 delivers structured intelligence on cyber threats and cybercriminal activity. This connector brings that intelligence into OpenCTI as STIX 2.1 objects. It is built for Verity471, Intel 471's intelligence platform, and also works with the legacy Titan platform. The connector runs several streams, each configured independently: malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities, leaked credentials, and watcher alerts. Leaked credentials arrive as UserAccounts, with the associated email address, affected domains and the harvesting infostealer malware. Watcher alerts arrive as Incidents, each linked to what triggered it: a report, forum post, leaked credential, indicator or malware event. The other streams produce indicators, malware, vulnerabilities and reports, along with their related observables and relationships.",
+      "short_description": "Ingests malware and bulletproof hosting indicators, threat reports, CVE vulnerabilities, leaked credentials and watcher alerts from Intel 471's Verity471 platform into OpenCTI.",
       "logo": "data:image/png;base64,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",
       "use_cases": [
         "Adversary & Campaign Insights",
@@ -11780,6 +11956,29 @@
             "default": 0,
             "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
             "type": "integer"
+          },
+          "INTEL471_INTERVAL_CREDENTIALS": {
+            "default": 0,
+            "description": "How often leaked credentials should be fetched in minutes (Verity471 only). Defaults to `0`, which leaves the stream disabled; set a non-zero interval to enable it.",
+            "type": "integer"
+          },
+          "INTEL471_INITIAL_HISTORY_CREDENTIALS": {
+            "default": 0,
+            "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the leaked credentials should be fetched from on the connector's first run (Verity471 only). If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+            "type": "integer"
+          },
+          "INTEL471_ENABLE_CREDENTIALS_PLAIN_PASSWORD": {
+            "default": false,
+            "description": "Whether to store the cleartext password in the UserAccount `credential` field for leaked credentials (Verity471 only; affects both the credentials stream and watcher alerts). Defaults to `false`.",
+            "type": "boolean"
+          },
+          "INTEL471_AFFILIATION_GROUP": {
+            "default": [],
+            "description": "Optional comma-separated list of affiliation groups used to narrow the leaked-credentials stream (Verity471 only). Allowed values: `my_employees`, `my_customers`, `third_parties`, `vip_emails`. If not set, credentials from all affiliation groups are fetched. A Verity471 cursor is only valid for the filter set it was issued against, so changing this makes the connector discard the stored cursor and re-anchor to the last processed credential minus a small margin.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "INTEL471_INTERVAL_REPORTS": {
             "default": 120,
@@ -14375,6 +14574,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "WIZ_CLOUD_IMPORT_TTPS": {
+            "default": true,
+            "description": "Whether to import the MITRE ATT&CK techniques mapped to the source rules of the imported issues. They are returned by the issues query itself, so importing them costs no extra API call.",
+            "type": "boolean"
           },
           "WIZ_CLOUD_IMPORT_VULNERABILITIES": {
             "default": false,
@@ -23791,10 +23995,111 @@
       "support_version": ">=6.0.6",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/google-safebrowsing",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-google-safebrowsing",
-      "container_type": "INTERNAL_ENRICHMENT"
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/google-safebrowsing_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Google Safe Browsing",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "Url",
+              "Domain-Name",
+              "Hostname"
+            ],
+            "description": "The scope of the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
+          "SAFE_BROWSING_API_KEY": {
+            "description": "Safe Browsing API key (Google or Yandex).",
+            "format": "password",
+            "minLength": 1,
+            "type": "string",
+            "writeOnly": true
+          },
+          "SAFE_BROWSING_API_URL": {
+            "default": "https://safebrowsing.googleapis.com/",
+            "description": "Safe Browsing API base URL. Use `https://sba.yandex.net` for Yandex Safe Browsing.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "GOOGLE_SAFE_BROWSING_API_KEY": {
+            "default": null,
+            "description": "Use SAFE_BROWSING_API_KEY instead.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true,
+            "deprecated": true
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "SAFE_BROWSING_API_KEY"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "ReversingLabs Spectra Analyze",
@@ -33589,13 +33894,6 @@
             ],
             "type": "string"
           },
-          "CONNECTOR_CONFIDENCE_LEVEL": {
-            "default": 80,
-            "description": "The default confidence level for created entities (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
-          },
           "CONNECTOR_LIVE_STREAM_ID": {
             "description": "The ID of the live stream to listen to.",
             "minLength": 1,
@@ -36156,13 +36454,6 @@
               "error"
             ],
             "type": "string"
-          },
-          "CONNECTOR_CONFIDENCE_LEVEL": {
-            "default": 100,
-            "description": "The default confidence level for created entities (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
           },
           "CONNECTOR_LIVE_STREAM_ID": {
             "default": "ChangeMe",

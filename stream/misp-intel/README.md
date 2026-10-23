@@ -14,9 +14,6 @@ The MISP Intel connector streams threat intelligence from OpenCTI to MISP, autom
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -60,48 +57,10 @@ Key features:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                      | config.yml                | Docker environment variable             | Default                                      | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|----------------------------------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                        | `CONNECTOR_ID`                          |                                              | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Name                 | name                      | `CONNECTOR_NAME`                        | MISP Intel                                   | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | misp                                         | No        | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                                              | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                                         | No        | Listen to delete events.                                                       |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| false                                        | No        | Set to `false` to auto-resolve dependencies.                                   |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            | 80                                           | No        | Confidence level (0-100).                                                      |
-| Container Types                | container_types           | `CONNECTOR_CONTAINER_TYPES`             | report,grouping,case-incident,case-rfi,case-rft | No     | Comma-separated list of container types to process.                            |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info                                         | No        | Determines the verbosity of the logs.                                          |
-
-### Connector extra parameters environment variables
-
-| Parameter            | config.yml                | Docker environment variable   | Default           | Mandatory | Description                                                |
-|----------------------|---------------------------|-------------------------------|-------------------|-----------|------------------------------------------------------------|
-| MISP URL             | misp.url                  | `MISP_URL`                    |                   | Yes       | URL of your MISP instance.                                 |
-| MISP API Key         | misp.api_key              | `MISP_API_KEY`                |                   | Yes       | API key for MISP authentication.                           |
-| MISP SSL Verify      | misp.ssl_verify           | `MISP_SSL_VERIFY`             | true              | No        | Verify SSL certificates for MISP.                          |
-| MISP Owner Org       | misp.owner_org            | `MISP_OWNER_ORG`              |                   | No        | Organization that will own events in MISP.                 |
-| Distribution Level   | misp.distribution_level   | `MISP_DISTRIBUTION_LEVEL`     | 1                 | No        | MISP distribution level (0-3).                             |
-| Threat Level         | misp.threat_level         | `MISP_THREAT_LEVEL`           | 2                 | No        | MISP threat level (1-4), used as fallback.                 |
-| Publish on Create    | misp.publish_on_create    | `MISP_PUBLISH_ON_CREATE`      | false             | No        | Automatically publish events when created.                 |
-| Publish on Update    | misp.publish_on_update    | `MISP_PUBLISH_ON_UPDATE`      | false             | No        | Automatically publish events when updated.                 |
-| Hard Delete          | misp.hard_delete          | `MISP_HARD_DELETE`            | true              | No        | Permanently delete events without blocklisting.            |
-| Tag OpenCTI          | misp.tag_opencti          | `MISP_TAG_OPENCTI`            | true              | No        | Add OpenCTI-specific tags to MISP events.                  |
-| Tag Prefix           | misp.tag_prefix           | `MISP_TAG_PREFIX`             | opencti:          | No        | Prefix for OpenCTI tags.                                   |
-| Marking Types to Convert | misp.marking_types_to_convert | `MISP_MARKING_TYPES_TO_CONVERT` | TLP,PAP | No | Marking definition types whose container markings are converted to MISP event tags. Only controls tag conversion, does not filter exported objects. |
-| HTTP Proxy           | proxy.http                | `PROXY_HTTP`                  |                   | No        | HTTP proxy URL.                                            |
-| HTTPS Proxy          | proxy.https               | `PROXY_HTTPS`                 |                   | No        | HTTPS proxy URL.                                           |
-| No Proxy             | proxy.no_proxy            | `PROXY_NO_PROXY`              | localhost,127.0.0.1| No       | Comma-separated list of hosts to bypass proxy.             |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -248,7 +207,7 @@ The MISP threat level is dynamically calculated based on the average `x_opencti_
 | >= 25         | 3 (Low)           |
 | < 25          | 4 (Undefined)     |
 
-If no scores are found, the connector falls back to the container's confidence level:
+If no scores are found, the connector falls back to the container's own `confidence` attribute (as set in OpenCTI), or 50 (Low) when it is not set:
 
 | Confidence Level | MISP Threat Level |
 |------------------|-------------------|

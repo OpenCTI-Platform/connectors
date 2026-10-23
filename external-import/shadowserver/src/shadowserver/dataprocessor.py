@@ -97,7 +97,7 @@ class ShadowserverProcessor(BaseDataProcessor):
                         if report_rows:
                             yield date_str, report_meta, report_rows
                     except Exception as e:
-                        self.logger.error(f"Error downloading report: {e}")
+                        self.logger.exception(f"Error downloading report: {e}")
 
     def transform(
         self, data: Generator[tuple[str, dict, list], None, None]
@@ -136,7 +136,7 @@ class ShadowserverProcessor(BaseDataProcessor):
                 )
                 yield unique_objects
             except Exception as e:
-                self.logger.error(f"Error transforming report: {e}")
+                self.logger.exception(f"Error transforming report: {e}")
 
     # ------------------------------------------------------------------
     # Private helpers
