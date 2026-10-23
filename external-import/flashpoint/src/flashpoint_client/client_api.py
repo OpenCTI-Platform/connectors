@@ -4,10 +4,9 @@ from datetime import datetime, timedelta
 from typing import Generator
 
 import requests
+from flashpoint_client.models import CompromisedCredentialSighting
 from pydantic import ValidationError
 from requests.adapters import HTTPAdapter, Retry
-
-from .models import CompromisedCredentialSighting
 
 
 class FlashpointClientError(Exception):
