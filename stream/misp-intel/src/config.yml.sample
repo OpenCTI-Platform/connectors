@@ -7,7 +7,6 @@ connector:
   id: 'ChangeMe'  # Connector UUID
   name: 'MISP Intel'
   scope: 'misp'
-  confidence_level: 80  # From 0 (not confident) to 100 (fully confident)
   log_level: 'info'  # Logging level (debug, info, warning, error)
   live_stream_id: 'ChangeMe'  # ID of the live stream to listen to
   live_stream_listen_delete: true  # Listen to delete events
