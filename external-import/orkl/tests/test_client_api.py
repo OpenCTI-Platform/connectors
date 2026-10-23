@@ -8,6 +8,7 @@ from orkl.client_api import (
     BACKOFF_FACTOR,
     MAX_PAGES,
     MAX_RETRIES,
+    PAGE_SIZE,
     RATE_LIMIT,
     TIMEOUT,
     OrklClient,
@@ -153,14 +154,14 @@ class TestIterLibraryEntries:
         assert first_call.kwargs["params"] == {
             "limit": 100,
             "offset": 0,
-            "order_by": "updated_at",
-            "order": "desc",
+            "order_by": "created_at",
+            "order": "asc",
         }
         assert second_call.kwargs["params"] == {
             "limit": 100,
             "offset": 100,
-            "order_by": "updated_at",
-            "order": "desc",
+            "order_by": "created_at",
+            "order": "asc",
         }
 
     def test_short_first_page_terminates_without_second_request(
@@ -289,3 +290,109 @@ class TestGetLibraryEntry:
         result = client_with_mocked_get.get_library_entry("abc")
         client_with_mocked_get._get.assert_called_once_with("/library/entry/abc")
         assert result == {"id": "abc"}
+
+
+class TestGetLibraryVersion:
+    def test_returns_integer_id(self, client_with_mocked_get):
+        client_with_mocked_get._get.return_value = {
+            "ID": 589,
+            "date": "2026-10-23T02:29:15Z",
+        }
+        assert client_with_mocked_get.get_library_version() == 589
+        client_with_mocked_get._get.assert_called_once_with("/library/version")
+
+    @pytest.mark.parametrize("payload", [None, {}, {"ID": "589"}, {"ID": None}])
+    def test_missing_or_non_integer_id_raises(self, client_with_mocked_get, payload):
+        client_with_mocked_get._get.return_value = payload
+        with pytest.raises(ApiClientError):
+            client_with_mocked_get.get_library_version()
+
+
+class TestIterLibraryVersionsSince:
+    """The version log is read newest first and stops at the known version."""
+
+    @staticmethod
+    def _versions(ids):
+        return {"entries": [{"ID": i, "created_library_entries": []} for i in ids]}
+
+    def test_yields_only_versions_newer_than_given(self, client_with_mocked_get):
+        client_with_mocked_get._get.return_value = self._versions([12, 11, 9, 7])
+        got = list(client_with_mocked_get.iter_library_versions_since(9))
+        assert [v["ID"] for v in got] == [12, 11]
+        call = client_with_mocked_get._get.call_args
+        assert call.args[0] == "/library/version/entries"
+        assert call.kwargs["params"] == {
+            "limit": PAGE_SIZE,
+            "offset": 0,
+            "order": "desc",
+        }
+
+    def test_stops_at_version_ids_that_are_not_contiguous(self, client_with_mocked_get):
+        # Version 10 does not exist upstream; 9 is the first id <= 10.
+        client_with_mocked_get._get.return_value = self._versions([12, 11, 9, 7])
+        got = list(client_with_mocked_get.iter_library_versions_since(10))
+        assert [v["ID"] for v in got] == [12, 11]
+
+    def test_nothing_new_yields_nothing(self, client_with_mocked_get):
+        client_with_mocked_get._get.return_value = self._versions([12, 11])
+        assert list(client_with_mocked_get.iter_library_versions_since(12)) == []
+
+    @pytest.mark.parametrize("payload", [None, {}, {"entries": None}, {"entries": []}])
+    def test_empty_log_yields_nothing(self, client_with_mocked_get, payload):
+        client_with_mocked_get._get.return_value = payload
+        assert list(client_with_mocked_get.iter_library_versions_since(0)) == []
+
+    def test_paginates_until_known_version(self, client_with_mocked_get):
+        first = self._versions(range(300, 300 - PAGE_SIZE, -1))
+        second = self._versions([199, 198, 150])
+        client_with_mocked_get._get.side_effect = [first, second]
+        got = list(client_with_mocked_get.iter_library_versions_since(198))
+        assert len(got) == PAGE_SIZE + 1
+        assert got[-1]["ID"] == 199
+        second_call = client_with_mocked_get._get.call_args_list[1]
+        assert second_call.kwargs["params"]["offset"] == PAGE_SIZE
+
+    def test_short_page_ends_the_walk_without_another_request(
+        self, client_with_mocked_get
+    ):
+        client_with_mocked_get._get.return_value = self._versions([12, 11])
+        list(client_with_mocked_get.iter_library_versions_since(0))
+        assert client_with_mocked_get._get.call_count == 1
+
+    def test_real_fixture_shape(
+        self, client_with_mocked_get, library_versions_page_response
+    ):
+        client_with_mocked_get._get.return_value = library_versions_page_response[
+            "data"
+        ]
+        got = list(client_with_mocked_get.iter_library_versions_since(7))
+        assert [v["ID"] for v in got] == [12, 11, 9]
+        assert got[2]["created_library_entries"] is None
+
+    def test_hitting_the_page_cap_raises_instead_of_truncating(
+        self, client_with_mocked_get, monkeypatch
+    ):
+        import orkl.client_api as client_api
+
+        monkeypatch.setattr(client_api, "MAX_PAGES", 2)
+        client_with_mocked_get._get.return_value = self._versions(
+            range(1000, 1000 - PAGE_SIZE, -1)
+        )
+        with pytest.raises(ApiClientError):
+            list(client_with_mocked_get.iter_library_versions_since(0))
+        assert client_with_mocked_get._get.call_count == 2
+
+    def test_version_without_integer_id_stops_with_warning(
+        self, client_with_mocked_get
+    ):
+        client_with_mocked_get._get.return_value = {
+            "entries": [
+                {"ID": 12, "created_library_entries": []},
+                {"ID": "oops", "created_library_entries": []},
+                {"ID": 11, "created_library_entries": []},
+            ]
+        }
+        client_with_mocked_get.logger = MagicMock()
+        got = list(client_with_mocked_get.iter_library_versions_since(0))
+        assert [v["ID"] for v in got] == [12]
+        client_with_mocked_get.logger.warning.assert_called_once()

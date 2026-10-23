@@ -1,6 +1,7 @@
 """ORKL report processor: collect library entries and convert them to STIX.
 
-Owns both the incremental-sync strategy and the ORKL -> STIX mapping, using the
+Owns both the sync strategy (full import, then new entries per ORKL library
+version, with a periodic full re-import) and the ORKL -> STIX mapping, using the
 SDK ``BaseDataProcessor`` contract. Every STIX object is built through
 connectors-sdk models (deterministic pycti ids); the stix2 constructors are
 never called directly, so the repository's STIX-id pylint plugin stays happy.
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlparse
 
-from connectors_sdk import BaseDataProcessor
+from connectors_sdk import ApiClientError, ApiNotFoundError, BaseDataProcessor
 from connectors_sdk.models import (
     ExternalReference,
     IntrusionSet,
@@ -26,8 +27,9 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import RelationshipType
-from orkl.client_api import OrklClient
+from orkl.client_api import PAGE_SIZE, OrklClient
 from orkl.models import OrklLibraryEntry, OrklThreatActor, _parse_iso8601
+from orkl.state import OrklState
 from pydantic import ValidationError
 
 # --- Constants ---
@@ -43,15 +45,6 @@ _MIN_VALID_YEAR = 1970
 # the id stable and is a visible signal that ORKL supplied no usable date.
 _ID_STABILITY_SENTINEL_DATE = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
-# Safety overlap subtracted from ``state.last_run`` when computing the next
-# incremental-sync cutoff. The SDK stamps ``last_run`` only after every
-# processor finishes (T_end), while ``collect()`` reads its first page at the
-# start of the run. Any entry whose ``updated_at`` falls in that window would
-# otherwise be imported by neither run. Re-scanning a few minutes of boundary is
-# harmless because every emitted STIX id is deterministic, so re-processing an
-# entry updates it in place rather than duplicating it.
-_CUTOFF_OVERLAP = timedelta(minutes=5)
-
 # Module-level author reused across every emitted object; identity is stable so
 # ``created_by_ref`` resolves to a single Identity in the produced bundle.
 ORKL_AUTHOR = OrganizationAuthor(
@@ -61,6 +54,11 @@ ORKL_AUTHOR = OrganizationAuthor(
         "intelligence reports, sponsored by Sunet."
     ),
 )
+
+# Incremental sync: a few entries failing to fetch must not block the import of
+# everything newer forever, but an ORKL outage must fail the run so the cursor
+# stays put. The run fails when every fetch failed or when failures exceed this.
+_MAX_FETCH_FAILURES = 10
 
 _ARCHIVE_SOURCE_NAME = "ORKL Archive"
 _REFERENCE_FALLBACK_SOURCE_NAME = "ORKL reference"
@@ -132,13 +130,27 @@ def _dedupe_by_id(objects: list[Any]) -> list[Any]:
 class OrklReportProcessor(BaseDataProcessor):
     """Collect ORKL library entries and convert them into STIX Reports.
 
-    Pipeline:
-        collect() -> lazily page ORKL entries (newest-updated first), apply the
-            incremental-sync cutoff, yield surviving raw dicts.
-        transform() -> parse each dict, convert to STIX objects, yield one
-            deduplicated bundle per page.
+    Sync strategy (``collect()``):
+        - first run, or when ``full_resync_period`` has elapsed since the last
+          full import: walk the whole library (full sync);
+        - otherwise: read the ORKL library versions created since the one stored
+          in the state and fetch the entries they list (incremental sync).
+        ORKL rewrites ``updated_at`` on every entry during its nightly rebuild,
+        so a timestamp cursor cannot be used; the library version counter is the
+        only reliable change signal, and it only records creations. Changes on
+        existing entries (new actor tags, better titles) are therefore picked up
+        by the periodic full sync only.
+
+    The state fields (``last_library_version``, ``last_full_sync``) are written
+    once ``collect()`` has yielded its last page; the SDK saves the state only
+    when the whole run succeeded, so a failed run restarts from the previous
+    cursor.
+
+    transform() -> parse each dict, convert to STIX objects, yield one
+        deduplicated bundle per page.
     """
 
+    state: OrklState
     _config: Any
     _client: OrklClient
     _api_base_url: str
@@ -164,63 +176,60 @@ class OrklReportProcessor(BaseDataProcessor):
     # ------------------------------------------------------------------
 
     def collect(self) -> Generator[list[dict[str, Any]], None, None]:
-        """Page through ORKL entries, applying the incremental-sync cutoff.
+        """Yield pages of raw entry dicts, from a full or an incremental sync.
 
-        ORKL exposes no server-side date filter, only ``order_by=updated_at&
-        order=desc``. Entries arrive newest-updated first, so once one is older
-        than or equal to the cutoff every entry after it is too and we stop; the
-        lazy client generator then issues no further HTTP requests.
-
-        Yields:
-            Pages of surviving raw entry dicts. Fully-filtered pages are skipped.
+        Deleted entries (``deleted_at`` set) are skipped in both modes. Pages
+        with no surviving entry are not yielded.
         """
-        cutoff = self._resolve_cutoff()
-        self.work_name = f"ORKL reports since {cutoff.isoformat()}"
-        self.logger.info(
-            "Collecting ORKL reports", meta={"updated_after": cutoff.isoformat()}
-        )
+        current_version = self._client.get_library_version()
+        last_version = self.state.last_library_version
+        # ORKL sometimes rolls versions back and renumbers from there: a current
+        # version lower than the stored one means the version log can no longer
+        # be trusted to list what changed, so start over.
+        rolled_back = last_version is not None and current_version < last_version
+        full_sync = last_version is None or rolled_back or self._full_resync_due()
 
-        pages_fetched = 0
-        entries_seen = 0
-        skipped_deleted = 0
-        kept_unparseable = 0
-        stop = False
+        if full_sync:
+            if last_version is None:
+                reason = "first run"
+            elif rolled_back:
+                reason = "library version rollback"
+            else:
+                reason = "periodic"
+            self.work_name = f"ORKL full sync (library version {current_version})"
+            self.logger.info(
+                "Importing the whole ORKL library",
+                meta={
+                    "library_version": current_version,
+                    "last_library_version": last_version,
+                    "reason": reason,
+                },
+            )
+            pages = self._client.iter_library_entries()
+        else:
+            self.work_name = (
+                f"ORKL new entries (library versions {last_version + 1} to "
+                f"{current_version})"
+            )
+            self.logger.info(
+                "Importing ORKL entries created since the last run",
+                meta={
+                    "last_library_version": last_version,
+                    "library_version": current_version,
+                },
+            )
+            pages = self._iter_new_entries(since_version=last_version)
 
-        for page in self._client.iter_library_entries():
+        pages_fetched = entries_seen = skipped_deleted = 0
+        for page in pages:
             pages_fetched += 1
             surviving: list[dict[str, Any]] = []
             for raw in page:
                 entries_seen += 1
-                updated = _parse_iso8601(raw.get("updated_at"))
-
-                if updated is not None and updated <= cutoff:
-                    # Descending order guarantees everything after this is also
-                    # older than the cutoff; stop paging entirely.
-                    stop = True
-                    break
-
-                if updated is None:
-                    # An unparseable date cannot be positioned against the
-                    # cutoff. Stopping here would silently truncate the import,
-                    # so keep the entry and keep going instead.
-                    kept_unparseable += 1
-                    self.logger.warning(
-                        "ORKL entry has an unparseable updated_at; keeping it "
-                        "and continuing rather than stopping the run",
-                        meta={
-                            "entry_id": raw.get("id"),
-                            "updated_at": raw.get("updated_at"),
-                        },
-                    )
-
                 if raw.get("deleted_at") is not None:
-                    # Tombstoned rows are ordinary entries that happen to be
-                    # deleted, not a stop signal: live entries may follow.
                     skipped_deleted += 1
                     continue
-
                 surviving.append(raw)
-
             if surviving:
                 self.logger.info(
                     "Collected ORKL entries page",
@@ -228,18 +237,94 @@ class OrklReportProcessor(BaseDataProcessor):
                 )
                 yield surviving
 
-            if stop:
-                break
-
         self.logger.info(
             "ORKL collection complete",
             meta={
+                "mode": "full" if full_sync else "incremental",
                 "pages_fetched": pages_fetched,
                 "entries_seen": entries_seen,
                 "skipped_deleted": skipped_deleted,
-                "kept_unparseable": kept_unparseable,
             },
         )
+        # Only reached when every page was consumed, i.e. sent: the SDK persists
+        # the state at the end of a successful run.
+        self.state.last_library_version = current_version
+        if full_sync:
+            self.state.last_full_sync = datetime.now(timezone.utc)
+
+    def _full_resync_due(self) -> bool:
+        """True when the periodic full re-import is enabled and overdue."""
+        period = self._config.full_resync_period
+        if period <= timedelta(0):
+            return False
+        last_full_sync = self.state.last_full_sync
+        if last_full_sync is None:
+            return True
+        if last_full_sync.tzinfo is None:
+            last_full_sync = last_full_sync.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) - last_full_sync >= period
+
+    def _iter_new_entries(
+        self, *, since_version: int
+    ) -> Generator[list[dict[str, Any]], None, None]:
+        """Fetch the entries created in the library versions after ``since_version``.
+
+        Entries are fetched one by one (the version log only carries ids) and
+        yielded in pages of ``PAGE_SIZE``. An entry that ORKL no longer serves
+        (HTTP 404) is skipped silently with a warning: it was created and removed
+        between two runs. Any other API error on one entry is skipped too, so a
+        single broken entry cannot block the import of everything newer forever;
+        the run still fails when every fetch failed or when more than
+        ``_MAX_FETCH_FAILURES`` did, which is an ORKL outage rather than bad data.
+
+        Raises:
+            ApiClientError: Too many entries could not be fetched.
+        """
+        seen: set[str] = set()
+        page: list[dict[str, Any]] = []
+        attempted = failures = 0
+        for version in self._client.iter_library_versions_since(since_version):
+            for ref in version.get("created_library_entries") or []:
+                entry_id = ref.get("id") if isinstance(ref, dict) else None
+                if not entry_id or entry_id in seen:
+                    continue
+                seen.add(entry_id)
+                attempted += 1
+                try:
+                    raw = self._client.get_library_entry(entry_id)
+                except ApiNotFoundError:
+                    self.logger.warning(
+                        "ORKL entry listed in a library version no longer exists",
+                        meta={
+                            "entry_id": entry_id,
+                            "library_version": version.get("ID"),
+                        },
+                    )
+                    continue
+                except ApiClientError as err:
+                    failures += 1
+                    self.logger.warning(
+                        "Skipping ORKL entry: failed to fetch",
+                        meta={
+                            "entry_id": entry_id,
+                            "library_version": version.get("ID"),
+                            "error": str(err),
+                        },
+                    )
+                    continue
+                if not raw:
+                    continue
+                page.append(raw)
+                if len(page) >= PAGE_SIZE:
+                    yield page
+                    page = []
+        if failures and (failures == attempted or failures > _MAX_FETCH_FAILURES):
+            raise ApiClientError(
+                f"ORKL incremental sync: {failures} of {attempted} entries could "
+                "not be fetched; not advancing the library version cursor"
+            )
+        if page:
+            yield page
 
     def transform(
         self, data: Generator[list[dict[str, Any]], None, None]
@@ -516,25 +601,3 @@ class OrklReportProcessor(BaseDataProcessor):
             author=ORKL_AUTHOR,
             markings=[self._marking],
         )
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
-
-    def _resolve_cutoff(self) -> datetime:
-        """Return the incremental-sync cutoff as a tz-aware datetime.
-
-        Uses ``state.last_run`` when set (minus ``_CUTOFF_OVERLAP``), otherwise
-        ``now(UTC) - import_start_date``. A naive ``last_run`` is treated as UTC
-        so it can be compared against tz-aware entry timestamps.
-        """
-        last_run = self.state.last_run
-        if last_run is not None:
-            if last_run.tzinfo is None:
-                last_run = last_run.replace(tzinfo=timezone.utc)
-            # Overlap only on the last_run path (never the first-run
-            # import_start_date path) so entries updated mid-run are re-scanned
-            # instead of permanently missed. Safe because deterministic ids
-            # update an entry in place rather than duplicating it.
-            return last_run - _CUTOFF_OVERLAP
-        return datetime.now(timezone.utc) - self._config.import_start_date

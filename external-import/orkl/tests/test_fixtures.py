@@ -12,6 +12,7 @@ ALL_RESOURCE_FILES = [
     "library_entries_page.json",
     "library_entries_empty.json",
     "library_entry_deleted.json",
+    "library_versions_page.json",
 ]
 
 # `library_entry_full.json` is a verified byte-for-byte copy of a real
@@ -178,3 +179,21 @@ def test_hand_written_fixture_iso_and_epoch_timestamps_agree_as_utc(
         f"match {iso_field} ({entry[iso_field]}) interpreted as UTC "
         f"(expected {expected_epoch})"
     )
+
+
+def test_library_versions_page_ids_are_decreasing_and_reference_known_entries(
+    library_versions_page_response, entries_page_data, library_entry_deleted_response
+):
+    versions = library_versions_page_response["data"]["entries"]
+    ids = [version["ID"] for version in versions]
+    assert ids == sorted(ids, reverse=True)
+    assert library_versions_page_response["data"]["latest"] == ids[0]
+    known = {entry["id"] for entry in entries_page_data}
+    known.add(library_entry_deleted_response["data"]["id"])
+    listed = {
+        ref["id"]
+        for version in versions
+        for ref in (version["created_library_entries"] or [])
+    }
+    assert listed <= known
+    assert any(version["created_library_entries"] is None for version in versions)

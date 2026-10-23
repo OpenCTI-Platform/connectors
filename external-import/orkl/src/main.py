@@ -4,13 +4,14 @@ import sys
 import traceback
 
 from connectors_sdk import ExternalImportConnector
-from orkl import ConnectorSettings, OrklReportProcessor
+from orkl import ConnectorSettings, OrklReportProcessor, OrklState
 
 if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
         connector = ExternalImportConnector(
             settings=settings,
+            state=OrklState(),
             data_processors=[OrklReportProcessor()],
         )
         connector.start()

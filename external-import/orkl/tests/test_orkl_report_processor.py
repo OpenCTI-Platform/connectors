@@ -8,6 +8,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from connectors_sdk import ApiClientError, ApiNotFoundError, ApiServerError
 from connectors_sdk.models import (
     IntrusionSet,
     Relationship,
@@ -17,14 +18,16 @@ from connectors_sdk.models import (
     Tool,
 )
 from connectors_sdk.models.enums import RelationshipType
+from orkl.client_api import PAGE_SIZE
 from orkl.models import OrklLibraryEntry
 from orkl.processors.orkl_report_processor import (
-    _CUTOFF_OVERLAP,
     _ID_STABILITY_SENTINEL_DATE,
+    _MAX_FETCH_FAILURES,
     ORKL_AUTHOR,
     OrklReportProcessor,
     _dedupe_by_id,
 )
+from orkl.state import OrklState
 
 UTC = timezone.utc
 API_BASE_URL = "https://orkl.eu/api/v1"
@@ -36,22 +39,52 @@ API_BASE_URL = "https://orkl.eu/api/v1"
 
 
 class FakeClient:
-    """Lazy stand-in for OrklClient.iter_library_entries.
+    """Stand-in for OrklClient covering both sync modes.
 
-    Tracks how many pages have actually been consumed so tests can assert
-    the early-break stops paging (the laziness is the feature under test).
+    ``pages`` feeds the full walk (``iter_library_entries``); ``versions`` and
+    ``entries_by_id`` feed the incremental walk. Counters let tests assert
+    laziness and the number of per-entry fetches.
     """
 
-    def __init__(self, pages: list[list[dict[str, Any]]]) -> None:
-        self._pages = pages
+    def __init__(
+        self,
+        pages: list[list[dict[str, Any]]] | None = None,
+        *,
+        version: int = 100,
+        versions: list[dict[str, Any]] | None = None,
+        entries_by_id: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
+        self._pages = pages or []
+        self._version = version
+        self._versions = versions or []
+        self._entries_by_id = entries_by_id or {}
         self.pages_served = 0
-        self.call_kwargs: dict[str, Any] | None = None
+        self.versions_requested_since: int | None = None
+        self.fetched_ids: list[str] = []
+
+    def get_library_version(self) -> int:
+        return self._version
 
     def iter_library_entries(self, **kwargs: Any):
-        self.call_kwargs = kwargs
         for page in self._pages:
             self.pages_served += 1
             yield page
+
+    def iter_library_versions_since(self, version: int, **kwargs: Any):
+        self.versions_requested_since = version
+        for entry in self._versions:
+            if entry["ID"] <= version:
+                return
+            yield entry
+
+    def get_library_entry(self, entry_id: str) -> dict[str, Any] | None:
+        self.fetched_ids.append(entry_id)
+        if entry_id not in self._entries_by_id:
+            raise ApiNotFoundError(f"No LibraryEntry found with ID {entry_id}")
+        value = self._entries_by_id[entry_id]
+        if isinstance(value, Exception):
+            raise value
+        return value
 
 
 class _Obj:
@@ -78,8 +111,8 @@ def _make_processor(
     """
     proc = OrklReportProcessor.__new__(OrklReportProcessor)
     proc.logger = MagicMock()
-    proc._config = config or MagicMock(import_start_date=timedelta(days=30))
-    proc.state = state if state is not None else MagicMock(last_run=None)
+    proc._config = config or MagicMock(full_resync_period=timedelta(days=30))
+    proc.state = state if state is not None else OrklState()
     proc._client = client or MagicMock()
     proc._api_base_url = api_base_url.rstrip("/")
     proc._marking = TLPMarking(level=tlp_level)
@@ -150,131 +183,293 @@ class TestDedupeById:
 
 
 # ---------------------------------------------------------------------------
-# _resolve_cutoff
+# _full_resync_due
 # ---------------------------------------------------------------------------
 
 
-class TestResolveCutoff:
-    def test_uses_last_run_when_set(self):
-        last_run = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
-        proc = _make_processor(state=MagicMock(last_run=last_run))
-        assert proc._resolve_cutoff() == last_run - _CUTOFF_OVERLAP
+class TestFullResyncDue:
+    def test_due_when_never_fully_synced(self):
+        proc = _make_processor(state=OrklState(last_library_version=10))
+        assert proc._full_resync_due() is True
 
-    def test_overlap_applied_to_last_run_path(self):
-        last_run = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
-        proc = _make_processor(state=MagicMock(last_run=last_run))
-        # The cutoff is pulled back by exactly the safety overlap so entries
-        # updated mid-run are re-scanned instead of being permanently missed.
-        assert last_run - proc._resolve_cutoff() == _CUTOFF_OVERLAP
+    def test_not_due_within_period(self):
+        state = OrklState(last_full_sync=datetime.now(UTC) - timedelta(days=10))
+        proc = _make_processor(state=state)
+        assert proc._full_resync_due() is False
 
-    def test_overlap_not_applied_to_import_start_date_path(self):
+    def test_due_once_period_elapsed(self):
+        state = OrklState(last_full_sync=datetime.now(UTC) - timedelta(days=31))
+        proc = _make_processor(state=state)
+        assert proc._full_resync_due() is True
+
+    def test_zero_period_disables_periodic_resync(self):
+        state = OrklState(last_full_sync=datetime(2000, 1, 1, tzinfo=UTC))
         proc = _make_processor(
-            state=MagicMock(last_run=None),
-            config=MagicMock(import_start_date=timedelta(days=30)),
+            state=state, config=MagicMock(full_resync_period=timedelta(0))
         )
-        cutoff = proc._resolve_cutoff()
-        diff = datetime.now(UTC) - cutoff
-        # No overlap here: the window is exactly import_start_date (30 days),
-        # not 30 days + _CUTOFF_OVERLAP.
-        assert timedelta(days=29, hours=23) <= diff <= timedelta(days=30, minutes=1)
+        assert proc._full_resync_due() is False
 
-    def test_falls_back_to_now_minus_import_start_date(self):
-        proc = _make_processor(
-            state=MagicMock(last_run=None),
-            config=MagicMock(import_start_date=timedelta(days=30)),
-        )
-        cutoff = proc._resolve_cutoff()
-        diff = datetime.now(UTC) - cutoff
-        assert timedelta(days=29, hours=23) <= diff <= timedelta(days=30, minutes=1)
-
-    def test_fallback_honours_configured_timedelta(self):
-        proc = _make_processor(
-            state=MagicMock(last_run=None),
-            config=MagicMock(import_start_date=timedelta(days=7)),
-        )
-        cutoff = proc._resolve_cutoff()
-        diff = datetime.now(UTC) - cutoff
-        assert timedelta(days=6, hours=23) <= diff <= timedelta(days=7, minutes=1)
-
-    def test_naive_last_run_made_utc_aware(self):
-        proc = _make_processor(state=MagicMock(last_run=datetime(2025, 1, 1)))
-        cutoff = proc._resolve_cutoff()
-        assert cutoff.tzinfo is not None
+    def test_naive_last_full_sync_treated_as_utc(self):
+        state = OrklState(last_full_sync=datetime.now() - timedelta(days=1))
+        proc = _make_processor(state=state)
+        assert proc._full_resync_due() is False
 
 
 # ---------------------------------------------------------------------------
-# collect() — cutoff, early break, deleted, unparseable
+# collect() — full sync (first run / periodic) and incremental sync
 # ---------------------------------------------------------------------------
 
 
-class TestCollect:
-    def test_sets_work_name_with_window(self, entries_page_data):
-        state = MagicMock(last_run=datetime(2025, 1, 1, tzinfo=UTC))
+class TestCollectFullSync:
+    def test_first_run_walks_the_whole_library(self, entries_page_data):
+        client = FakeClient([entries_page_data[:2], entries_page_data[2:]], version=588)
+        proc = _make_processor(client=client)
+        pages = list(proc.collect())
+        assert client.pages_served == 2
+        assert [e["id"] for page in pages for e in page] == [
+            e["id"] for e in entries_page_data
+        ]
+        assert client.versions_requested_since is None
+        assert "full sync" in proc.work_name
+        assert "588" in proc.work_name
+
+    def test_first_run_records_version_and_full_sync_time(self, entries_page_data):
+        state = OrklState()
         proc = _make_processor(state=state, client=FakeClient([entries_page_data]))
         list(proc.collect())
-        # Cutoff is last_run minus the safety overlap (2025-01-01 - 5min).
-        expected = (datetime(2025, 1, 1, tzinfo=UTC) - _CUTOFF_OVERLAP).isoformat()
-        assert expected in proc.work_name
+        assert state.last_library_version == 100
+        assert state.last_full_sync is not None
+        assert datetime.now(UTC) - state.last_full_sync < timedelta(minutes=1)
 
-    def test_excludes_entries_older_than_cutoff(self, entries_page_data):
-        # last_run 2025-01-01 keeps the three 2026 entries, drops the 2020 one.
-        state = MagicMock(last_run=datetime(2025, 1, 1, tzinfo=UTC))
-        proc = _make_processor(state=state, client=FakeClient([entries_page_data]))
-        pages = list(proc.collect())
-        surviving = [e for page in pages for e in page]
-        ids = [e["id"] for e in surviving]
-        assert len(surviving) == 3
-        assert "16e09120-0576-4d9c-bec2-3a0ce381033c" not in ids  # the 2020 entry
-
-    def test_early_break_stops_requesting_pages(self, entries_page_data):
-        recent, _empty, _dup, old = entries_page_data
-        client = FakeClient([[recent, old], [_empty]])
-        state = MagicMock(last_run=datetime(2026, 8, 24, tzinfo=UTC))
+    def test_periodic_resync_when_period_elapsed(self, entries_page_data):
+        state = OrklState(
+            last_library_version=90,
+            last_full_sync=datetime.now(UTC) - timedelta(days=45),
+        )
+        client = FakeClient([entries_page_data], version=100)
         proc = _make_processor(state=state, client=client)
         pages = list(proc.collect())
-        # `old` (2020) is <= cutoff → break; the second page is never fetched.
         assert client.pages_served == 1
-        assert pages == [[recent]]
+        assert len(pages[0]) == 4
+        assert state.last_library_version == 100
 
-    def test_deleted_entry_skipped_but_does_not_stop_run(
+    def test_deleted_entry_skipped_and_empty_page_not_yielded(
         self, entries_page_data, library_entry_deleted_response
     ):
         deleted = library_entry_deleted_response["data"]
         live = entries_page_data[0]
-        client = FakeClient([[deleted, live]])
-        # Cutoff old enough that both entries are newer than it.
-        state = MagicMock(last_run=datetime(2019, 1, 1, tzinfo=UTC))
-        proc = _make_processor(state=state, client=client)
-        pages = list(proc.collect())
-        surviving = [e for page in pages for e in page]
-        ids = [e["id"] for e in surviving]
-        assert live["id"] in ids
-        assert deleted["id"] not in ids
-
-    def test_unparseable_updated_at_kept_and_does_not_stop(self, entries_page_data):
-        bad = copy.deepcopy(entries_page_data[0])
-        bad["id"] = "bad-date-entry"
-        bad["updated_at"] = None
-        live = entries_page_data[0]
-        client = FakeClient([[bad, live]])
-        state = MagicMock(last_run=datetime(2025, 1, 1, tzinfo=UTC))
-        proc = _make_processor(state=state, client=client)
-        pages = list(proc.collect())
-        surviving = [e for page in pages for e in page]
-        ids = [e["id"] for e in surviving]
-        assert "bad-date-entry" in ids
-        assert live["id"] in ids
-
-    def test_fully_filtered_page_not_yielded(
-        self, entries_page_data, library_entry_deleted_response
-    ):
-        deleted = library_entry_deleted_response["data"]
-        live = entries_page_data[0]
-        client = FakeClient([[deleted], [live]])
-        state = MagicMock(last_run=datetime(2019, 1, 1, tzinfo=UTC))
-        proc = _make_processor(state=state, client=client)
+        proc = _make_processor(client=FakeClient([[deleted], [live, deleted]]))
         pages = list(proc.collect())
         assert pages == [[live]]
+
+    def test_state_not_advanced_when_consumer_stops_early(self, entries_page_data):
+        state = OrklState()
+        client = FakeClient([entries_page_data[:2], entries_page_data[2:]])
+        proc = _make_processor(state=state, client=client)
+        gen = proc.collect()
+        next(gen)
+        gen.close()
+        # The run did not consume every page (e.g. a send failed): the cursor
+        # must stay where it was so the next run redoes the import.
+        assert state.last_library_version is None
+        assert state.last_full_sync is None
+
+    def test_entries_arrive_regardless_of_updated_at(self, entries_page_data):
+        # ORKL rewrites updated_at nightly; it must play no role in collection.
+        for entry in entries_page_data:
+            entry["updated_at"] = "2026-10-22T02:30:00.000000Z"
+        proc = _make_processor(client=FakeClient([entries_page_data]))
+        pages = list(proc.collect())
+        assert len(pages[0]) == 4
+
+
+class TestCollectIncremental:
+    @pytest.fixture
+    def recent_state(self) -> OrklState:
+        return OrklState(
+            last_library_version=9,
+            last_full_sync=datetime.now(UTC) - timedelta(days=1),
+        )
+
+    @pytest.fixture
+    def incremental_client(
+        self,
+        entries_page_data,
+        library_versions_page_response,
+        library_entry_deleted_response,
+    ) -> FakeClient:
+        deleted = library_entry_deleted_response["data"]
+        return FakeClient(
+            version=12,
+            versions=library_versions_page_response["data"]["entries"],
+            entries_by_id={
+                **{e["id"]: e for e in entries_page_data},
+                deleted["id"]: deleted,
+            },
+        )
+
+    def test_fetches_entries_created_in_newer_versions_only(
+        self, recent_state, incremental_client
+    ):
+        proc = _make_processor(state=recent_state, client=incremental_client)
+        pages = list(proc.collect())
+        ids = [e["id"] for page in pages for e in page]
+        # Versions 12 and 11 are newer than 9; version 7 is not read.
+        assert incremental_client.versions_requested_since == 9
+        assert "709bf9ad-7489-460c-b5f6-03d9737d5c77" not in ids
+        assert "bb301bd1-f53f-481f-9425-c60d9a2ca521" in ids
+        assert "dde3cc0c-8158-4e2a-b258-c632546bdbca" in ids
+        assert incremental_client.pages_served == 0
+        assert "new entries" in proc.work_name
+        assert "10 to 12" in proc.work_name
+
+    def test_entry_listed_in_two_versions_fetched_once(
+        self, recent_state, incremental_client
+    ):
+        proc = _make_processor(state=recent_state, client=incremental_client)
+        list(proc.collect())
+        fetched = incremental_client.fetched_ids
+        assert fetched.count("bb301bd1-f53f-481f-9425-c60d9a2ca521") == 1
+
+    def test_deleted_entry_fetched_but_skipped(self, recent_state, incremental_client):
+        proc = _make_processor(state=recent_state, client=incremental_client)
+        pages = list(proc.collect())
+        ids = [e["id"] for page in pages for e in page]
+        assert "3f34e1e6-fa38-4804-8cb7-7e555415269c" not in ids
+
+    def test_missing_entry_is_skipped_with_warning(
+        self, recent_state, library_versions_page_response, entries_page_data
+    ):
+        client = FakeClient(
+            version=12,
+            versions=library_versions_page_response["data"]["entries"],
+            entries_by_id={entries_page_data[0]["id"]: entries_page_data[0]},
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        pages = list(proc.collect())
+        ids = [e["id"] for page in pages for e in page]
+        assert ids == [entries_page_data[0]["id"]]
+        proc.logger.warning.assert_called()
+        assert recent_state.last_library_version == 12
+
+    def test_advances_version_without_touching_full_sync_time(
+        self, recent_state, incremental_client
+    ):
+        before = recent_state.last_full_sync
+        proc = _make_processor(state=recent_state, client=incremental_client)
+        list(proc.collect())
+        assert recent_state.last_library_version == 12
+        assert recent_state.last_full_sync == before
+
+    def test_nothing_new_yields_nothing_but_advances_version(self, recent_state):
+        # Versions 10..12 exist upstream but created nothing: the cursor still
+        # moves to 12 so they are not re-read next time.
+        client = FakeClient(
+            version=12,
+            versions=[{"ID": i, "created_library_entries": []} for i in (12, 11, 10)],
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        assert list(proc.collect()) == []
+        assert recent_state.last_library_version == 12
+
+    def test_version_rollback_triggers_full_sync(self, entries_page_data):
+        # ORKL rolled back from 500 to 480 and rebuilt 481: the version log can
+        # no longer tell what changed, so the whole library is walked again.
+        state = OrklState(
+            last_library_version=500,
+            last_full_sync=datetime.now(UTC) - timedelta(days=1),
+        )
+        client = FakeClient(
+            [entries_page_data],
+            version=481,
+            versions=[{"ID": 481, "created_library_entries": []}],
+        )
+        proc = _make_processor(state=state, client=client)
+        pages = list(proc.collect())
+        assert client.pages_served == 1
+        assert client.versions_requested_since is None
+        assert len(pages[0]) == 4
+        assert "full sync" in proc.work_name
+        assert state.last_library_version == 481
+        assert datetime.now(UTC) - state.last_full_sync < timedelta(minutes=1)
+
+    def test_one_failing_fetch_is_skipped_and_cursor_advances(
+        self, recent_state, library_versions_page_response, entries_page_data
+    ):
+        live = entries_page_data[0]
+        client = FakeClient(
+            version=12,
+            versions=library_versions_page_response["data"]["entries"],
+            entries_by_id={
+                live["id"]: live,
+                "dde3cc0c-8158-4e2a-b258-c632546bdbca": ApiServerError("boom"),
+                "3f34e1e6-fa38-4804-8cb7-7e555415269c": ApiServerError("boom"),
+            },
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        pages = list(proc.collect())
+        assert [e["id"] for page in pages for e in page] == [live["id"]]
+        assert recent_state.last_library_version == 12
+        assert proc.logger.warning.call_count == 2
+
+    def test_every_fetch_failing_fails_the_run_without_advancing(
+        self, recent_state, library_versions_page_response
+    ):
+        ids = {
+            ref["id"]: ApiServerError("ORKL down")
+            for v in library_versions_page_response["data"]["entries"]
+            for ref in (v["created_library_entries"] or [])
+        }
+        client = FakeClient(
+            version=12,
+            versions=library_versions_page_response["data"]["entries"],
+            entries_by_id=ids,
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        with pytest.raises(ApiClientError):
+            list(proc.collect())
+        assert recent_state.last_library_version == 9
+
+    def test_too_many_failures_fail_the_run(self, recent_state, entries_page_data):
+        template = entries_page_data[0]
+        entries: dict[str, Any] = {}
+        refs = []
+        for i in range(_MAX_FETCH_FAILURES + 5):
+            entry_id = f"00000000-0000-4000-8000-{i:012d}"
+            refs.append({"id": entry_id, "label": f"Synthetic {i}"})
+            if i <= _MAX_FETCH_FAILURES:  # _MAX_FETCH_FAILURES + 1 failures
+                entries[entry_id] = ApiServerError("boom")
+            else:
+                entry = copy.deepcopy(template)
+                entry["id"] = entry_id
+                entries[entry_id] = entry
+        client = FakeClient(
+            version=10,
+            versions=[{"ID": 10, "created_library_entries": refs}],
+            entries_by_id=entries,
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        with pytest.raises(ApiClientError):
+            list(proc.collect())
+        assert recent_state.last_library_version == 9
+
+    def test_new_entries_are_chunked_in_pages(self, recent_state, entries_page_data):
+        template = entries_page_data[0]
+        entries = {}
+        refs = []
+        for i in range(PAGE_SIZE + 5):
+            entry = copy.deepcopy(template)
+            entry["id"] = f"00000000-0000-4000-8000-{i:012d}"
+            entries[entry["id"]] = entry
+            refs.append({"id": entry["id"], "label": f"Synthetic {i}"})
+        client = FakeClient(
+            version=10,
+            versions=[{"ID": 10, "created_library_entries": refs}],
+            entries_by_id=entries,
+        )
+        proc = _make_processor(state=recent_state, client=client)
+        pages = list(proc.collect())
+        assert [len(page) for page in pages] == [PAGE_SIZE, 5]
 
 
 # ---------------------------------------------------------------------------
@@ -359,7 +554,7 @@ class TestStateOwnership:
     def test_processor_never_loads_or_saves_state(
         self, entries_page_data, library_entry_deleted_response
     ):
-        state = MagicMock(last_run=datetime(2025, 1, 1, tzinfo=UTC))
+        state = MagicMock(last_library_version=None, last_full_sync=None)
         client = FakeClient([entries_page_data])
         proc = _make_processor(state=state, client=client)
         list(proc.transform(proc.collect()))

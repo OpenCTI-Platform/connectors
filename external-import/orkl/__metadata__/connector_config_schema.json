@@ -62,9 +62,9 @@
       "minLength": 1,
       "type": "string"
     },
-    "ORKL_IMPORT_START_DATE": {
+    "ORKL_FULL_RESYNC_PERIOD": {
       "default": "P30D",
-      "description": "How far back to look on the first import (e.g. 'P30D' for 30 days, 'P6M' for 6 months).",
+      "description": "How often the whole ORKL library is re-imported to pick up changes on existing entries (e.g. 'P30D' for 30 days). The first run always imports the whole library; between two full re-imports, only entries created since the last run are imported. Set to 'P0D' to disable periodic re-imports.",
       "format": "duration",
       "type": "string"
     },

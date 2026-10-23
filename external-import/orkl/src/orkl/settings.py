@@ -40,8 +40,14 @@ class OrklConfig(BaseConfigModel):
         description="Base URL of the ORKL API.",
         default="https://orkl.eu/api/v1",
     )
-    import_start_date: timedelta = Field(
-        description="How far back to look on the first import (e.g. 'P30D' for 30 days, 'P6M' for 6 months).",
+    full_resync_period: timedelta = Field(
+        description=(
+            "How often the whole ORKL library is re-imported to pick up changes on "
+            "existing entries (e.g. 'P30D' for 30 days). The first run always imports "
+            "the whole library; between two full re-imports, only entries created "
+            "since the last run are imported. Set to 'P0D' to disable periodic "
+            "re-imports."
+        ),
         default=timedelta(days=30),
     )
     tlp_level: TLPLevel = Field(

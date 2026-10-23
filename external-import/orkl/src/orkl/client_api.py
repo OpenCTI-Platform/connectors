@@ -105,17 +105,21 @@ class OrklClient(BaseClientApi):
     def iter_library_entries(
         self, *, page_size: int = PAGE_SIZE
     ) -> Generator[list[dict[str, Any]], None, None]:
-        """Lazily paginate through ORKL library entries, newest-updated first.
+        """Lazily paginate through the whole ORKL library, oldest-created first.
 
-        Lazy: no page is fetched until it is consumed, so a caller (e.g. the
-        incremental-sync processor) that stops iterating once it passes its
-        cutoff triggers no further requests.
+        Ordering by ``created_at`` ascending keeps offsets stable while the walk
+        is in progress: ORKL only appends entries (newest ``created_at``), so an
+        insertion during the walk lands after the current offset instead of
+        shifting the pages already read. ``updated_at`` is not usable for that:
+        the nightly rebuild rewrites it on every entry.
+
+        Lazy: no page is fetched until it is consumed.
 
         Args:
             page_size: Entries requested per page, clamped to 1..100.
 
         Yields:
-            Lists of raw entry dicts, one per page, ordered newest-first.
+            Lists of raw entry dicts, one per page, ordered oldest-created first.
         """
         page_size = max(1, min(page_size, PAGE_SIZE))
         offset = 0
@@ -132,8 +136,8 @@ class OrklClient(BaseClientApi):
             params = {
                 "limit": page_size,
                 "offset": offset,
-                "order_by": "updated_at",
-                "order": "desc",
+                "order_by": "created_at",
+                "order": "asc",
             }
             entries = self._get("/library/entries", params=params) or []
 
@@ -166,17 +170,81 @@ class OrklClient(BaseClientApi):
                 meta={"max_pages": MAX_PAGES},
             )
 
+    def get_library_version(self) -> int:
+        """Return the current ORKL library version number.
+
+        ORKL bumps this counter once per nightly rebuild; each version lists the
+        entries created that day (see ``iter_library_versions_since``).
+        """
+        data = self._get("/library/version") or {}
+        version = data.get("ID")
+        if not isinstance(version, int):
+            raise ApiClientError(
+                "ORKL /library/version returned no integer `ID`",
+                response_body=data,
+            )
+        return version
+
+    def iter_library_versions_since(
+        self, version: int, *, page_size: int = PAGE_SIZE
+    ) -> Generator[dict[str, Any], None, None]:
+        """Yield the library versions strictly newer than ``version``, newest first.
+
+        Each yielded dict is one nightly version with its ``ID``, ``date`` and
+        ``created_library_entries`` (list of ``{"id", "label"}``, or ``None``).
+        Version IDs are increasing but not contiguous, so the walk stops at the
+        first version whose ID is lower than or equal to ``version``.
+
+        Raises:
+            ApiClientError: The walk hit ``MAX_PAGES`` before reaching ``version``.
+
+        Args:
+            version: The library version already processed.
+            page_size: Versions requested per page, clamped to 1..100.
+        """
+        page_size = max(1, min(page_size, PAGE_SIZE))
+        offset = 0
+        for _ in range(1, MAX_PAGES + 1):
+            params = {"limit": page_size, "offset": offset, "order": "desc"}
+            data = self._get("/library/version/entries", params=params) or {}
+            versions = data.get("entries") or []
+            if not versions:
+                return
+            for entry in versions:
+                if not isinstance(entry.get("ID"), int):
+                    self.logger.warning(
+                        "ORKL library version without an integer `ID`; stopping "
+                        "the version walk here",
+                        meta={"entry": entry, "since_version": version},
+                    )
+                    return
+                if entry["ID"] <= version:
+                    return
+                yield entry
+            if len(versions) < page_size:
+                return
+            offset += len(versions)
+        # Unlike the entries walk, a truncated version walk must fail the run:
+        # the caller would otherwise advance its cursor past versions it never
+        # read.
+        raise ApiClientError(
+            f"ORKL library versions pagination hit the {MAX_PAGES} pages cap "
+            f"without reaching version {version}"
+        )
+
     def get_library_entry(self, entry_id: str) -> dict[str, Any] | None:
         """Retrieve a single library entry by its UUID.
 
-        Not used by the Phase 1 processor, since list payloads already
-        include full entry content (`plain_text`, `threat_actors`,
-        `files`, ...). Kept thin, for debugging and future processors.
+        Used by the incremental sync to fetch the entries listed in the
+        library versions created since the last run.
 
         Args:
             entry_id: The ORKL library entry UUID.
 
         Returns:
-            The entry dict, or `None` if not present.
+            The entry dict, or `None` if the API returned no data.
+
+        Raises:
+            ApiNotFoundError: When ORKL knows no entry with this id (HTTP 404).
         """
         return self._get(f"/library/entry/{entry_id}")

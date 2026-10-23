@@ -58,6 +58,16 @@ def library_entry_deleted_response() -> dict:
 
 
 @pytest.fixture
+def library_versions_page_response() -> dict:
+    """Envelope for a page of 4 library versions (IDs 12, 11, 9, 7), newest first.
+
+    Version 12 lists a live entry and the deleted one; version 11 repeats the
+    live entry of version 12; version 9 has a null created list.
+    """
+    return copy.deepcopy(_load_resource("library_versions_page.json"))
+
+
+@pytest.fixture
 def full_entry_data(library_entry_full_response: dict) -> dict:
     """The unwrapped `data` object of the real single-entry response.
 

@@ -15,7 +15,7 @@
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
   - [Behavior](#behavior)
-    - [Incremental sync](#incremental-sync)
+    - [Sync strategy](#sync-strategy)
     - [Data mapping](#data-mapping)
   - [Resilience and rate limiting](#resilience-and-rate-limiting)
   - [Known caveats](#known-caveats)
@@ -76,7 +76,7 @@ There are a number of configuration options, which are set either in
 | Parameter                        | config.yml                        | Docker environment variable            | Default                     | Mandatory | Description                                                                                                                                     |
 |-----------------------------------|-------------------------------------|-------------------------------------------|-------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 | API base URL                      | `orkl.api_base_url`                 | `ORKL_API_BASE_URL`                        | `https://orkl.eu/api/v1`      | No        | Base URL of the ORKL API.                                                                                                                          |
-| Import start date                 | `orkl.import_start_date`            | `ORKL_IMPORT_START_DATE`                   | `P30D`                        | No        | How far back to look on the first import (ISO 8601 duration, e.g. `P30D` for 30 days, `P6M` for 6 months). Ignored on subsequent runs, which resume from the last run's cutoff. |
+| Full re-import period             | `orkl.full_resync_period`           | `ORKL_FULL_RESYNC_PERIOD`                  | `P30D`                        | No        | How often the whole ORKL library is re-imported to pick up changes on existing entries (ISO 8601 duration, e.g. `P30D`, `P6M`). The first run always imports the whole library; between two full re-imports, only entries created since the last run are imported. `P0D` disables periodic re-imports. |
 | TLP level                         | `orkl.tlp_level`                    | `ORKL_TLP_LEVEL`                           | `clear`                       | No        | TLP marking level applied to created STIX objects. Valid values: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                        |
 | Threat actor as Intrusion Set     | `orkl.threat_actor_as_intrusion_set`| `ORKL_THREAT_ACTOR_AS_INTRUSION_SET`       | `true`                        | No        | Create ORKL threat actors as Intrusion Sets (`true`) or as Threat Actors (`false`).                                                                |
 | Ingest tools                      | `orkl.ingest_tools`                 | `ORKL_INGEST_TOOLS`                        | `false`                       | No        | Create Tool entities from the threat actors' tools. Disabled by default: the ORKL feed does not distinguish malware from tools, so enabling this will create Tool entities for what are in fact malware families. |
@@ -116,27 +116,41 @@ cd src && python3 main.py
 
 ## Behavior
 
-### Incremental sync
+### Sync strategy
 
-ORKL exposes no server-side date filter on its `/library/entries` endpoint.
-Instead, the connector pages through entries sorted by `updated_at`
-descending (`order_by=updated_at&order=desc`) and stops as soon as it reaches
-an entry whose `updated_at` is older than or equal to its cutoff — since
-entries arrive newest-first, everything after that point is guaranteed to be
-older too, so pagination (and the underlying HTTP requests) stop immediately.
+ORKL rebuilds its whole library every night: a new library version is
+published (`/library/version`, one per day) and **every entry gets a fresh
+`updated_at`**, whether or not its content changed. A timestamp cursor
+therefore cannot tell new entries from untouched ones, and the connector uses
+ORKL's own version log instead.
 
-The cutoff is:
+- **First run: full import.** The connector walks the whole library
+  (`order_by=created_at&order=asc`, about 300 pages of 100 entries, roughly
+  five minutes of API time at 1 request/second) and imports every live entry,
+  then records the current library version and the time of this full import
+  in its state. Expect roughly 30,000 reports on a first run.
+- **Following runs: new entries only.** The connector reads the library
+  versions published since the one stored in its state
+  (`/library/version/entries`), collects the ids of the entries each version
+  created, fetches them one by one (`/library/entry/{id}`) and imports them.
+  This is typically between 1 and 70 entries a day. The stored version is
+  advanced only when the run succeeded.
+- **Periodic full re-import.** ORKL's version log only records creations, so
+  changes on existing entries (new threat actors tagged on an old report, a
+  better title) are only picked up by re-importing the whole library. This
+  happens every `full_resync_period` (default 30 days); set it to `P0D` to
+  disable it. Re-importing is harmless for the data itself because every STIX
+  id is deterministic: existing objects are updated in place, never
+  duplicated.
 
-- the connector's last successful run time minus a small safety overlap (a few
-  minutes), on every run after the first. The overlap re-scans the boundary so
-  entries updated while a run is still in progress cannot be permanently missed;
-  re-processing them is harmless because every STIX id is deterministic;
-- `import_start_date` before now (default 30 days), on the very first run.
-
-Tombstoned entries (`deleted_at` set) are skipped but do not stop pagination,
-since live entries may still follow them in the same page. Entries with an
-unparseable `updated_at` are kept and processed rather than used to stop the
-run, since their position relative to the cutoff can't be determined.
+In both modes, tombstoned entries (`deleted_at` set) are skipped, and an entry
+listed in a version but no longer served by ORKL (HTTP 404) is skipped with a
+warning. ORKL occasionally rolls a nightly version back, removing it from the
+version log together with the entries it created (entries already imported
+from such a version stay in OpenCTI). When the current library version is
+lower than the one stored in the state, the version log can no longer tell
+what changed, so the connector runs a full import. Resetting the connector
+state in OpenCTI also triggers a new full import.
 
 ### Data mapping
 

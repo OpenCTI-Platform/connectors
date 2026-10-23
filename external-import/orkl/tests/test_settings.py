@@ -48,7 +48,7 @@ FULL_VALID: dict[str, Any] = {
     },
     "orkl": {
         "api_base_url": "https://orkl.eu/api/v1",
-        "import_start_date": "P7D",
+        "full_resync_period": "P7D",
         "tlp_level": "amber",
         "threat_actor_as_intrusion_set": False,
         "ingest_tools": True,
@@ -85,14 +85,14 @@ class TestValidSettings:
         assert settings.connector.duration_period == timedelta(days=1)
         assert str(settings.orkl.api_base_url) == "https://orkl.eu/api/v1"
         assert settings.orkl.tlp_level == "clear"
-        assert settings.orkl.import_start_date == timedelta(days=30)
+        assert settings.orkl.full_resync_period == timedelta(days=30)
         assert settings.orkl.threat_actor_as_intrusion_set is True
         assert settings.orkl.ingest_tools is False
 
     def test_full_settings_override_defaults(self):
         settings = _make_settings(FULL_VALID)
 
-        assert settings.orkl.import_start_date == timedelta(days=7)
+        assert settings.orkl.full_resync_period == timedelta(days=7)
         assert settings.orkl.tlp_level == "amber"
         assert settings.orkl.threat_actor_as_intrusion_set is False
         assert settings.orkl.ingest_tools is True
@@ -150,9 +150,26 @@ class TestInvalidSettings:
                 "orkl.threat_actor_as_intrusion_set",
                 id="invalid_threat_actor_as_intrusion_set",
             ),
+            pytest.param(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "t"},
+                    "connector": {},
+                    "orkl": {"full_resync_period": "every month"},
+                },
+                "orkl.full_resync_period",
+                id="invalid_full_resync_period",
+            ),
         ],
     )
     def test_raises_on_invalid_input(self, settings_dict, field_name):
         with pytest.raises(ConfigValidationError) as err:
             _make_settings(settings_dict)
         assert "Error validating configuration" in str(err)
+
+
+class TestFullResyncPeriod:
+    def test_zero_period_is_accepted_and_disables_resync(self):
+        settings = _make_settings(
+            {**MINIMAL_VALID, "orkl": {"full_resync_period": "P0D"}}
+        )
+        assert settings.orkl.full_resync_period == timedelta(0)
