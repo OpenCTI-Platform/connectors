@@ -11,6 +11,7 @@ from itertools import count
 from typing import Any, Iterator
 
 import requests
+import urllib3.exceptions as _urllib3_exc
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.logger import get_logger
 
@@ -225,8 +226,13 @@ class WhoisFreaksNRDClient:
     @classmethod
     def _parse_whois_rows(cls, reader: Any) -> NRDPage:
         """Parse WHOIS rows and retain source offsets for skipped records."""
-        if not reader.fieldnames:
+        fieldnames = reader.fieldnames
+        if not fieldnames:
             return NRDPage([], 0)
+        if "domain_name" not in fieldnames:
+            raise WhoisFreaksNRDError(
+                "WhoisFreaks WHOIS NRD CSV response is missing required 'domain_name' header"
+            )
 
         records: list[NRDRecord] = []
         source_record_count = 0
@@ -312,6 +318,8 @@ class WhoisFreaksNRDClient:
         try:
             reader = csv.DictReader(text_stream)
             return self._parse_whois_rows(reader)
+        except (_urllib3_exc.HTTPError, _urllib3_exc.IncompleteRead) as exc:
+            raise requests.ConnectionError(f"NRD WHOIS stream read failed: {exc}") from exc
         finally:
             # urllib3 may auto-close response.raw after EOF, which marks the
             # TextIOWrapper closed and makes detach() raise ValueError — that
@@ -341,6 +349,8 @@ class WhoisFreaksNRDClient:
         )
         try:
             return self._parse_domain_lines(text_stream)
+        except (_urllib3_exc.HTTPError, _urllib3_exc.IncompleteRead) as exc:
+            raise requests.ConnectionError(f"NRD domains stream read failed: {exc}") from exc
         finally:
             try:
                 if not text_stream.closed:

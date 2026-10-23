@@ -276,3 +276,60 @@ def test_client_does_not_advertise_compression():
     """Feeds are plain-text CSV read from undecoded response.raw."""
     client = WhoisFreaksNRDClient("test-api-key")
     assert client._session.headers["Accept-Encoding"] == "identity"
+
+
+def test_parse_whois_rows_raises_on_missing_domain_name_header():
+    """A nonempty WHOIS CSV response without 'domain_name' header must raise."""
+    payload = "create_date,registrant_name\n2026-09-01,Example\n"
+    with pytest.raises(WhoisFreaksNRDError, match="missing required 'domain_name' header"):
+        WhoisFreaksNRDClient._parse_whois_csv(payload)
+
+
+def test_iter_retries_whois_stream_transport_error(monkeypatch):
+    """urllib3 transport errors raised during stream body reads are retried."""
+    import urllib3.exceptions
+
+    good_payload = "domain_name,create_date\nexample.com,2026-09-01\n"
+
+    class _FailingRaw(BytesIO):
+        """Proper BytesIO subclass that raises a urllib3 error when read."""
+
+        auto_close = True
+
+        def read(self, size=-1):
+            raise urllib3.exceptions.ProtocolError("connection broken")
+
+        def read1(self, size=-1):
+            raise urllib3.exceptions.ProtocolError("connection broken")
+
+    call_count = 0
+
+    def fake_get(url, params=None, timeout=None, stream=False):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            response = MagicMock()
+            response.status_code = 200
+            response.encoding = "utf-8"
+            response.raise_for_status.return_value = None
+            response.close.return_value = None
+            response.raw = _FailingRaw(b"domain_name,create_date\n")
+            return response
+        return _fake_response(good_payload)
+
+    client = WhoisFreaksNRDClient("test-api-key", max_retries=1, retry_backoff_seconds=0)
+    monkeypatch.setattr(client._session, "get", fake_get)
+    sleep = MagicMock()
+    monkeypatch.setattr("whoisfreaks_client.nrd_client.time.sleep", sleep)
+
+    pages = list(
+        client.iter_feed(
+            feed_type="gtld",
+            whois=True,
+            feed_date=date(2026, 9, 1),
+            limit=10,
+        )
+    )
+
+    assert call_count == 2
+    assert [r.domain_name for r in pages[0]] == ["example.com"]

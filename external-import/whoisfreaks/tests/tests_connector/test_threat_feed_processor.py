@@ -64,7 +64,7 @@ def test_threat_feed_processor_creates_indicator_observable_and_relationship():
     assert "first_seen" in note.content
     assert "last_seen" in note.content
     assert "No_of_threat_matched_pivots" in note.content
-    assert note.note_types == "external"
+    assert note.note_types == ["external"]
 
     assert indicator.pattern == "[domain-name:value = 'example.com']"
     assert indicator.pattern_type == "stix"

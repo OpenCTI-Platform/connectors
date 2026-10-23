@@ -196,3 +196,10 @@ def test_client_does_not_advertise_compression():
     """Feeds are plain-text CSV read from undecoded response.raw."""
     client = WhoisFreaksClient("test-api-key")
     assert client._session.headers["Accept-Encoding"] == "identity"
+
+
+def test_parse_csv_raises_on_missing_domain_header():
+    """A nonempty CSV response without a 'domain' header must raise, not silently return empty."""
+    payload = "threat_type,confidence,first_seen,last_seen,No_of_threat_matched_pivots\nmalware,1,2026-09-01 10:00:00+00,2026-09-02 10:00:00+00,1\n"
+    with pytest.raises(WhoisFreaksClientError, match="missing required 'domain' header"):
+        WhoisFreaksClient._parse_csv(payload)

@@ -234,6 +234,12 @@ class WhoisFreaksClient:
     def _parse_csv_rows(cls, reader: Any) -> ThreatFeedPage:
         """Parse CSV rows while retaining source offsets for skipped rows."""
 
+        fieldnames = reader.fieldnames
+        if fieldnames is not None and "domain" not in fieldnames:
+            raise WhoisFreaksClientError(
+                "WhoisFreaks threat-feed CSV response is missing required 'domain' header"
+            )
+
         records: list[ThreatFeedRecord] = []
         source_record_count = 0
 

@@ -536,7 +536,7 @@ class NRDProcessor(BaseDataProcessor):
             ],
             allow_custom=True,
             custom_properties={
-                "note_types": "external",
+                "note_types": ["external"],
             },
         )
 

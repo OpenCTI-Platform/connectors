@@ -75,7 +75,7 @@ def test_nrd_to_stix_with_indicators():
     assert "registrant_name" in note.content
     assert "create_date" in note.content
     assert "name_server_1" in note.content
-    assert note.note_types == "external"
+    assert note.note_types == ["external"]
     assert observable.id in note.object_refs
 
     assert indicator.type == "indicator"
