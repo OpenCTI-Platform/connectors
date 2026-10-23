@@ -51,6 +51,7 @@ FULL_VALID: dict[str, Any] = {
         "full_resync_period": "P7D",
         "tlp_level": "amber",
         "threat_actor_as_intrusion_set": False,
+        "ingest_actor_aliases": True,
         "ingest_tools": True,
     },
 }
@@ -87,6 +88,7 @@ class TestValidSettings:
         assert settings.orkl.tlp_level == "clear"
         assert settings.orkl.full_resync_period == timedelta(days=30)
         assert settings.orkl.threat_actor_as_intrusion_set is True
+        assert settings.orkl.ingest_actor_aliases is False
         assert settings.orkl.ingest_tools is False
 
     def test_full_settings_override_defaults(self):
@@ -95,6 +97,7 @@ class TestValidSettings:
         assert settings.orkl.full_resync_period == timedelta(days=7)
         assert settings.orkl.tlp_level == "amber"
         assert settings.orkl.threat_actor_as_intrusion_set is False
+        assert settings.orkl.ingest_actor_aliases is True
         assert settings.orkl.ingest_tools is True
 
 

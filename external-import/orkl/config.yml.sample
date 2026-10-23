@@ -14,4 +14,5 @@ orkl:
   full_resync_period: 'P30D'
   tlp_level: 'clear'
   threat_actor_as_intrusion_set: true
+  ingest_actor_aliases: false
   ingest_tools: false

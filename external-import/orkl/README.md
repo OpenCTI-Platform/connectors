@@ -79,6 +79,7 @@ There are a number of configuration options, which are set either in
 | Full re-import period             | `orkl.full_resync_period`           | `ORKL_FULL_RESYNC_PERIOD`                  | `P30D`                        | No        | How often the whole ORKL library is re-imported to pick up changes on existing entries (ISO 8601 duration, e.g. `P30D`, `P6M`). The first run always imports the whole library; between two full re-imports, only entries created since the last run are imported. `P0D` disables periodic re-imports. |
 | TLP level                         | `orkl.tlp_level`                    | `ORKL_TLP_LEVEL`                           | `clear`                       | No        | TLP marking level applied to created STIX objects. Valid values: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                        |
 | Threat actor as Intrusion Set     | `orkl.threat_actor_as_intrusion_set`| `ORKL_THREAT_ACTOR_AS_INTRUSION_SET`       | `true`                        | No        | Create ORKL threat actors as Intrusion Sets (`true`) or as Threat Actors (`false`).                                                                |
+| Ingest actor aliases              | `orkl.ingest_actor_aliases`         | `ORKL_INGEST_ACTOR_ALIASES`                | `false`                       | No        | Send the ORKL aliases of threat actors to OpenCTI. Disabled by default: ORKL names and aliases overlap across distinct actors, and OpenCTI rejects an alias already carried by another entity (see [Known caveats](#known-caveats)). |
 | Ingest tools                      | `orkl.ingest_tools`                 | `ORKL_INGEST_TOOLS`                        | `false`                       | No        | Create Tool entities from the threat actors' tools. Disabled by default: the ORKL feed does not distinguish malware from tools, so enabling this will create Tool entities for what are in fact malware families. |
 
 ## Deployment
@@ -166,7 +167,7 @@ state in OpenCTI also triggers a new full import.
 | `references[]` (original publisher links)                        | `Report` external references, one per usable URL                         |
 | `files.pdf` / `files.text` / `files.img`                          | `Report` external references (`source_name: "ORKL Archive"`)              |
 | `threat_actors[].main_name`                                      | `Intrusion Set.name` or `Threat Actor.name` (per `threat_actor_as_intrusion_set`) |
-| `threat_actors[].other_aliases`                                  | `aliases` on the actor entity                                             |
+| `threat_actors[].aliases` (only if `ingest_actor_aliases` is `true`) | `aliases` on the actor entity, stripped and deduplicated, `main_name` excluded |
 | `threat_actors[].source_name` / `source_id`                      | actor external reference (`source_name: source_id or "ORKL"`, `external_id: source_name`) |
 | `threat_actors[].tools[]` (only if `ingest_tools` is `true`)      | `Tool.name`, plus a `uses` `Relationship` from the actor to the tool       |
 
@@ -216,6 +217,16 @@ alias `UAC-0056`.
 The connector emits these **as-is** — it does not attempt fuzzy or
 heuristic deduplication of actors across sources. Operators should expect to
 merge such duplicates manually in OpenCTI.
+
+For the same reason, actor **aliases are not sent by default**
+(`ingest_actor_aliases: false`). Across ORKL's ~2,000 actors, more than a
+thousand names or aliases are shared by two or more distinct actors (for
+example `UNC2452` is an actor of its own and an alias of `APT 29`, `IRON
+HEMLOCK` and `IRON RITUAL`). OpenCTI enforces unique names and aliases across
+entities, so sending them produces `This update will produce a duplicate`
+errors in the connector works whenever an alias is already carried by another
+entity. Enable `ingest_actor_aliases` only if that noise is acceptable in
+exchange for richer alias lists on the actors that do not conflict.
 
 ### Tools may actually be malware
 

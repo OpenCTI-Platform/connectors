@@ -17,5 +17,6 @@ services:
       #- ORKL_FULL_RESYNC_PERIOD=P30D
       #- ORKL_TLP_LEVEL=clear
       #- ORKL_THREAT_ACTOR_AS_INTRUSION_SET=true
+      #- ORKL_INGEST_ACTOR_ALIASES=false
       #- ORKL_INGEST_TOOLS=false
     restart: always

@@ -156,6 +156,7 @@ class OrklReportProcessor(BaseDataProcessor):
     _api_base_url: str
     _marking: TLPMarking
     _threat_actor_as_intrusion_set: bool
+    _ingest_actor_aliases: bool
     _ingest_tools: bool
 
     # ------------------------------------------------------------------
@@ -169,6 +170,7 @@ class OrklReportProcessor(BaseDataProcessor):
         self._client = OrklClient(base_url=self._api_base_url)
         self._marking = TLPMarking(level=self._config.tlp_level.value)
         self._threat_actor_as_intrusion_set = self._config.threat_actor_as_intrusion_set
+        self._ingest_actor_aliases = self._config.ingest_actor_aliases
         self._ingest_tools = self._config.ingest_tools
 
     # ------------------------------------------------------------------
@@ -552,7 +554,9 @@ class OrklReportProcessor(BaseDataProcessor):
             ]
         return actor_class(
             name=name,
-            aliases=actor.other_aliases or None,
+            aliases=(
+                (actor.other_aliases or None) if self._ingest_actor_aliases else None
+            ),
             author=ORKL_AUTHOR,
             markings=[self._marking],
             external_references=external_references,

@@ -101,6 +101,7 @@ def _make_processor(
     client: Any = None,
     tlp_level: str = "clear",
     threat_actor_as_intrusion_set: bool = True,
+    ingest_actor_aliases: bool = False,
     ingest_tools: bool = False,
     api_base_url: str = API_BASE_URL,
 ) -> OrklReportProcessor:
@@ -117,6 +118,7 @@ def _make_processor(
     proc._api_base_url = api_base_url.rstrip("/")
     proc._marking = TLPMarking(level=tlp_level)
     proc._threat_actor_as_intrusion_set = threat_actor_as_intrusion_set
+    proc._ingest_actor_aliases = ingest_actor_aliases
     proc._ingest_tools = ingest_tools
     return proc
 
@@ -533,6 +535,7 @@ class TestPostInit:
             api_base_url="https://orkl.eu/api/v1/",
             tlp_level=MagicMock(value="green"),
             threat_actor_as_intrusion_set=False,
+            ingest_actor_aliases=True,
             ingest_tools=True,
         )
         with patch("orkl.processors.orkl_report_processor.OrklClient") as mock_client:
@@ -542,6 +545,7 @@ class TestPostInit:
         assert proc._api_base_url == "https://orkl.eu/api/v1"
         assert proc._marking.level == "green"
         assert proc._threat_actor_as_intrusion_set is False
+        assert proc._ingest_actor_aliases is True
         assert proc._ingest_tools is True
 
 
@@ -805,6 +809,14 @@ class TestThreatActors:
         actors = [obj for obj in result if isinstance(obj, IntrusionSet)]
         assert len(actors) == 1
         assert actors[0].name == "APT28"
+        # Aliases are opt-in: ORKL aliases overlap across distinct actors and
+        # OpenCTI rejects an alias already carried by another entity.
+        assert actors[0].aliases is None
+
+    def test_actor_aliases_sent_when_opted_in(self, page_entries):
+        converter = _make_processor(ingest_actor_aliases=True)
+        entry = page_entries[0]  # single actor: APT28
+        actors = _actors(converter._convert_entry(entry))
         assert "APT28" not in (actors[0].aliases or [])
         assert set(actors[0].aliases) == {"Fancy Bear", "Sofacy", "STRONTIUM", "Sednit"}
 
@@ -854,7 +866,8 @@ class TestThreatActors:
         for obj in result:
             assert obj.to_stix2_object().get("id") == obj.id
 
-    def test_actor_aliases_none_when_empty(self, converter, entries_page_data):
+    def test_actor_aliases_none_when_empty(self, entries_page_data):
+        converter = _make_processor(ingest_actor_aliases=True)
         data = entries_page_data[0]
         data["threat_actors"][0]["aliases"] = ["APT28"]  # equals main_name -> excluded
         entry = OrklLibraryEntry.model_validate(data)

@@ -58,6 +58,15 @@ class OrklConfig(BaseConfigModel):
         description="Create ORKL threat actors as Intrusion Sets (true) or as Threat Actors (false).",
         default=True,
     )
+    ingest_actor_aliases: bool = Field(
+        description=(
+            "Send the ORKL aliases of threat actors to OpenCTI. Disabled by default: "
+            "ORKL merges several sources whose names and aliases overlap across "
+            "distinct actors (e.g. 'UNC2452' is both an actor and an alias of 'APT 29'), "
+            "and OpenCTI rejects an alias already carried by another entity."
+        ),
+        default=False,
+    )
     ingest_tools: bool = Field(
         description="Create Tool entities from the threat actors' tools. Disabled by default: the ORKL feed does not distinguish malware from tools, so enabling this will create Tool entities for what are in fact malware families.",
         default=False,

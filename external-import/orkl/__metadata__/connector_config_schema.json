@@ -86,6 +86,11 @@
       "description": "Create ORKL threat actors as Intrusion Sets (true) or as Threat Actors (false).",
       "type": "boolean"
     },
+    "ORKL_INGEST_ACTOR_ALIASES": {
+      "default": false,
+      "description": "Send the ORKL aliases of threat actors to OpenCTI. Disabled by default: ORKL merges several sources whose names and aliases overlap across distinct actors (e.g. 'UNC2452' is both an actor and an alias of 'APT 29'), and OpenCTI rejects an alias already carried by another entity.",
+      "type": "boolean"
+    },
     "ORKL_INGEST_TOOLS": {
       "default": false,
       "description": "Create Tool entities from the threat actors' tools. Disabled by default: the ORKL feed does not distinguish malware from tools, so enabling this will create Tool entities for what are in fact malware families.",
