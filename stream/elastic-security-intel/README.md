@@ -227,6 +227,18 @@ The connector automatically creates vocabulary entries in OpenCTI for Elastic-sp
 | File (SHA-256)          | threat.indicator.file.hash.sha256 |
 | Email-Addr              | threat.indicator.email.address |
 
+### Score Mapping
+
+The connector reads the OpenCTI score from the STIX extensions of the streamed indicator or observable.
+
+| Elastic Output          | Field                         | Value                                                                 |
+|-------------------------|-------------------------------|-----------------------------------------------------------------------|
+| Threat indicator        | `opencti.indicator.score`     | OpenCTI score (0-100). Omitted when the entity has no score.          |
+| SIEM rule               | `risk_score`                  | OpenCTI score clamped to 0-100, or 50 when the entity has no score.   |
+| SIEM rule               | `severity`                    | From the rule risk score: `critical` (80+), `high` (60-79), `medium` (40-59), `low` (below 40). |
+
+ECS has no score field: `threat.indicator.sightings` is a count of observations, so the connector uses `opencti.indicator.score`, the same field as the official Elastic OpenCTI integration. The default of 50 matches the OpenCTI default score.
+
 ## Debugging
 
 Enable verbose logging by setting:
