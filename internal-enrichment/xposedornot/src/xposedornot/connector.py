@@ -83,7 +83,8 @@ class XposedOrNotConnector:
     ) -> list[Any]:
         """Every TLP value the source carries: resolved markings, well-known
         reference ids and TLP definitions bundled alongside the entity. A
-        reference that resolves to nothing is refused."""
+        reference that resolves to nothing, and a marking whose definition
+        type cannot be read, are refused."""
         bundled = {
             obj.get("id"): obj
             for obj in stix_objects
@@ -92,13 +93,26 @@ class XposedOrNotConnector:
         resolved = set(bundled) | set(TLP_IDS)
         values = []
         for marking in markings:
-            if marking.get("definition_type") == "TLP":
-                values.append(marking.get("definition"))
             ref = marking.get("standard_id")
-            if not ref and marking.get("definition_type") and marking.get("definition"):
-                ref = PyctiMarkingDefinition.generate_id(
-                    marking["definition_type"], marking["definition"]
+            kind = marking.get("definition_type") or marking.get(
+                "x_opencti_definition_type"
+            )
+            definition = marking.get("definition") or marking.get(
+                "x_opencti_definition"
+            )
+            if ref in TLP_IDS:
+                values.append(TLP_IDS[ref])
+                if isinstance(definition, str) and definition:
+                    values.append(definition)
+            elif str(kind or "").upper() == "TLP":
+                values.append(definition)
+            elif not kind:
+                raise MaxTlpError(
+                    f"Marking {ref!r} of the observable carries no readable"
+                    " definition type; skipping"
                 )
+            if not ref and kind and definition:
+                ref = PyctiMarkingDefinition.generate_id(kind, definition)
             resolved.add(ref)
         for ref in stix_entity.get("object_marking_refs") or []:
             definition = bundled.get(ref) or {}

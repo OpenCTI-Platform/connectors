@@ -320,6 +320,61 @@ def test_unreadable_tlp_marking_is_skipped_not_treated_as_unmarked(definition):
     helper.send_stix2_bundle.assert_not_called()
 
 
+@pytest.mark.parametrize("kind", ["tlp", "Tlp", "TLP"])
+def test_tlp_definition_type_is_matched_whatever_its_case(kind):
+    connector, helper, client = make_connector()
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {
+            "standard_id": "marking-definition--11111111-2222-4333-8444-555555555555",
+            "definition_type": kind,
+            "definition": "TLP:RED",
+        }
+    ]
+    message = connector._message_callback(data)
+    assert "unreadable or above the maximum allowed" in message
+    client.lookup.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_marking_without_a_readable_definition_type_gates():
+    connector, helper, client = make_connector()
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {
+            "standard_id": "marking-definition--11111111-2222-4333-8444-555555555555",
+            "definition_type": None,
+            "definition": None,
+        }
+    ]
+    message = connector._message_callback(data)
+    assert "carries no readable definition type" in message
+    client.lookup.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_known_tlp_id_gates_even_when_its_definition_is_missing():
+    connector, _, client = make_connector()
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {"standard_id": red, "definition_type": None, "definition": None}
+    ]
+    message = connector._message_callback(data)
+    assert "'TLP:RED'" in message and "skipping" in message
+    client.lookup.assert_not_called()
+
+
+def test_known_tlp_id_below_the_maximum_is_derived_and_allowed():
+    connector, _, client = make_connector()
+    data = make_data(markings=())
+    data["enrichment_entity"]["objectMarking"] = [
+        {"standard_id": TLP_GREEN_ID, "definition_type": None, "definition": None}
+    ]
+    connector._message_callback(data)
+    client.lookup.assert_called_once()
+
+
 def test_non_tlp_markings_do_not_gate_the_enrichment():
     connector, _, client = make_connector()
     data = make_data(markings=())
