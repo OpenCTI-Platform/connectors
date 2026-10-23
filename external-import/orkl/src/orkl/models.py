@@ -20,7 +20,7 @@ _ELLIPSIS = "…"
 # The API's "no known date" sentinel is year 1 (0001-01-01T00:00:00Z). Any year
 # below this threshold is treated as unset; 1970 (the Unix epoch) is a safe
 # cutoff that no genuine CTI report predates.
-_MIN_VALID_YEAR = 1970
+MIN_VALID_YEAR = 1970
 
 
 def _normalise_list(v: Any) -> Any:
@@ -30,9 +30,12 @@ def _normalise_list(v: Any) -> Any:
     return v
 
 
-def _parse_iso8601(value: str | None) -> datetime | None:
-    """Parse an ISO-8601 timestamp (optionally with a trailing `Z`) to a tz-aware datetime."""
-    if not value:
+def parse_iso8601(value: Any) -> datetime | None:
+    """Parse an ISO-8601 timestamp (optionally with a trailing `Z`) to a tz-aware datetime.
+
+    Returns `None` for anything that is not a non-empty, parseable string.
+    """
+    if not isinstance(value, str) or not value:
         return None
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -137,11 +140,6 @@ class OrklLibraryEntry(BaseModel):
         return _normalise_list(v)
 
     @property
-    def is_deleted(self) -> bool:
-        """True when this entry has been soft-deleted upstream."""
-        return self.deleted_at is not None
-
-    @property
     def name(self) -> str:
         """Best available title for this entry, never empty.
 
@@ -185,15 +183,10 @@ class OrklLibraryEntry(BaseModel):
     def publication_date(self) -> datetime | None:
         """Best available publication date, ignoring the year-1 sentinel."""
         for candidate in (self.file_creation_date, self.created_at):
-            parsed = _parse_iso8601(candidate)
-            if parsed is not None and parsed.year >= _MIN_VALID_YEAR:
+            parsed = parse_iso8601(candidate)
+            if parsed is not None and parsed.year >= MIN_VALID_YEAR:
                 return parsed
         return None
-
-    @property
-    def updated_datetime(self) -> datetime | None:
-        """Timezone-aware datetime parsed from `updated_at`, used as pagination cursor."""
-        return _parse_iso8601(self.updated_at)
 
     @property
     def labels(self) -> list[str]:

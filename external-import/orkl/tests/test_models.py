@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
-from orkl.models import DESCRIPTION_MAX_LENGTH, OrklLibraryEntry, OrklThreatActor
+from orkl.models import (
+    DESCRIPTION_MAX_LENGTH,
+    OrklLibraryEntry,
+    OrklThreatActor,
+    parse_iso8601,
+)
 from pydantic import ValidationError
 
 
@@ -15,17 +20,6 @@ class TestOrklLibraryEntryParsing:
         assert entry.id == full_entry_data["id"]
         assert len(entry.threat_actors) == len(full_entry_data["threat_actors"])
         assert all(isinstance(ta, OrklThreatActor) for ta in entry.threat_actors)
-
-    def test_deleted_entry_is_deleted_true(self, library_entry_deleted_response):
-        entry = OrklLibraryEntry.model_validate(library_entry_deleted_response["data"])
-        assert entry.is_deleted is True
-
-    def test_non_deleted_entries_are_not_deleted(
-        self, full_entry_data, entries_page_data
-    ):
-        assert OrklLibraryEntry.model_validate(full_entry_data).is_deleted is False
-        for raw in entries_page_data:
-            assert OrklLibraryEntry.model_validate(raw).is_deleted is False
 
     def test_extra_field_does_not_raise(self, full_entry_data):
         full_entry_data["some_new_unknown_field"] = "unexpected"
@@ -175,21 +169,26 @@ class TestOrklLibraryEntryPublicationDate:
         assert entry.publication_date is None
 
 
-class TestOrklLibraryEntryUpdatedDatetime:
-    def test_parses_each_page_entry_and_sorts_strictly_descending(
-        self, entries_page_data
-    ):
-        entries = [OrklLibraryEntry.model_validate(raw) for raw in entries_page_data]
-        updated = [entry.updated_datetime for entry in entries]
-        assert all(dt is not None for dt in updated)
-        assert all(dt.tzinfo is not None for dt in updated)
-        assert updated == sorted(updated, reverse=True)
-        assert len(updated) == len(set(updated))
+class TestParseIso8601:
+    @pytest.mark.parametrize(
+        "value",
+        [1724544000, 1724544000.5, ["2024-01-01"], {"a": 1}, None, ""],
+    )
+    def test_non_string_or_empty_input_returns_none(self, value):
+        assert parse_iso8601(value) is None
 
-    def test_unparseable_updated_at_returns_none(self, full_entry_data):
-        full_entry_data["updated_at"] = "not-a-date"
-        entry = OrklLibraryEntry.model_validate(full_entry_data)
-        assert entry.updated_datetime is None
+    def test_z_suffix_is_parsed_as_aware_utc(self):
+        assert parse_iso8601("2024-01-01T00:00:00Z") == datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
+
+    def test_unparseable_string_returns_none(self):
+        assert parse_iso8601("not-a-date") is None
+
+    def test_naive_timestamp_is_assumed_utc(self):
+        assert parse_iso8601("2024-01-01T00:00:00") == datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
 
 
 class TestOrklLibraryEntryLabels:

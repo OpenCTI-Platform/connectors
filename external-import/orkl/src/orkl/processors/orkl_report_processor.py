@@ -3,8 +3,7 @@
 Owns both the sync strategy (full import, then new entries per ORKL library
 version, with a periodic full re-import) and the ORKL -> STIX mapping, using the
 SDK ``BaseDataProcessor`` contract. Every STIX object is built through
-connectors-sdk models (deterministic pycti ids); the stix2 constructors are
-never called directly, so the repository's STIX-id pylint plugin stays happy.
+connectors-sdk models, which generate deterministic ids.
 """
 
 from __future__ import annotations
@@ -28,15 +27,17 @@ from connectors_sdk.models import (
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import RelationshipType
 from orkl.client_api import PAGE_SIZE, OrklClient
-from orkl.models import OrklLibraryEntry, OrklThreatActor, _parse_iso8601
+from orkl.models import (
+    MIN_VALID_YEAR,
+    OrklLibraryEntry,
+    OrklThreatActor,
+    parse_iso8601,
+)
+from orkl.settings import OrklConfig
 from orkl.state import OrklState
 from pydantic import ValidationError
 
 # --- Constants ---
-
-# Any parsed date before this year is the API's "no known date" sentinel and is
-# treated as unusable (mirrors ``orkl.models._MIN_VALID_YEAR``).
-_MIN_VALID_YEAR = 1970
 
 # Last-resort publication date. A Report's STIX id derives from
 # ``PyctiReport.generate_id(name, published)``, so a non-deterministic fallback
@@ -69,7 +70,7 @@ _REFERENCE_FALLBACK_SOURCE_NAME = "ORKL reference"
 
 def _usable_datetime(value: datetime | None) -> datetime | None:
     """Return `value` only when it is a genuine date past the year sentinel."""
-    if value is None or value.year < _MIN_VALID_YEAR:
+    if value is None or value.year < MIN_VALID_YEAR:
         return None
     return value
 
@@ -151,7 +152,7 @@ class OrklReportProcessor(BaseDataProcessor):
     """
 
     state: OrklState
-    _config: Any
+    _config: OrklConfig
     _client: OrklClient
     _api_base_url: str
     _marking: TLPMarking
@@ -350,7 +351,7 @@ class OrklReportProcessor(BaseDataProcessor):
                 try:
                     entry = OrklLibraryEntry.model_validate(raw)
                 except ValidationError as err:
-                    self.logger.error(
+                    self.logger.warning(
                         "Skipping ORKL entry: failed to parse",
                         meta={"entry_id": raw.get("id"), "error": str(err)},
                     )
@@ -359,7 +360,7 @@ class OrklReportProcessor(BaseDataProcessor):
                 try:
                     objects = self._convert_entry(entry)
                 except Exception as err:  # noqa: BLE001
-                    self.logger.error(
+                    self.logger.warning(
                         "Skipping ORKL entry: failed to convert to STIX",
                         meta={"entry_id": entry.id, "error": str(err)},
                     )
@@ -369,12 +370,7 @@ class OrklReportProcessor(BaseDataProcessor):
 
             if stix_objects:
                 unique = _dedupe_by_id(stix_objects)
-                page_reports = sum(
-                    1
-                    for obj in unique
-                    if isinstance(obj, BaseIdentifiedEntity)
-                    and obj.id.startswith("report--")
-                )
+                page_reports = sum(1 for obj in unique if isinstance(obj, Report))
                 reports_produced += page_reports
                 self.logger.info(
                     "Sending STIX objects for page",
@@ -413,12 +409,9 @@ class OrklReportProcessor(BaseDataProcessor):
 
         report_objects = _dedupe_by_id([*actors, *tools, *relationships])
         report = self._build_report(entry, report_objects)
-        # The author and marking SDOs must travel in the bundle themselves: the
-        # SDK serialises exactly the objects it is given, so referencing them
-        # via ``author=``/``markings=`` alone leaves ``created_by_ref`` and
-        # ``object_marking_refs`` dangling and the platform displays no author.
-        # They are deliberately kept out of ``report_objects`` so they do not
-        # end up in the Report's ``object_refs``.
+        # The SDK serialises only the objects it is given, so the author and
+        # marking must be in the bundle or their refs dangle. They stay out of
+        # ``report_objects`` so they do not land in the Report's ``object_refs``.
         return [ORKL_AUTHOR, self._marking, report, *actors, *tools, *relationships]
 
     # --- Report ---
@@ -448,14 +441,13 @@ class OrklReportProcessor(BaseDataProcessor):
         # keeping the id stable rather than duplicating the Report on every sync.
         #
         # Update timestamps (``updated_at`` / ``ts_updated_at``) are deliberately
-        # excluded: the incremental cursor re-fetches an entry *precisely because*
-        # its ``updated_at`` changed, so deriving the id from an update timestamp
-        # would mint a brand-new id on every re-fetch and duplicate the Report
-        # instead of updating it. Do not re-add them.
+        # excluded: ORKL rewrites ``updated_at`` on every entry during its
+        # nightly rebuild, so deriving the id from it would mint a new Report id
+        # on each re-sync and duplicate the Report. Do not re-add them.
         candidates = (
             # ``entry.publication_date`` already covers file_creation_date/created_at.
             entry.publication_date,
-            _usable_datetime(_parse_iso8601(entry.file_modification_date)),
+            _usable_datetime(parse_iso8601(entry.file_modification_date)),
             _datetime_from_epoch(entry.ts_creation_date),
             _datetime_from_epoch(entry.ts_modification_date),
             _datetime_from_epoch(entry.ts_created_at),
@@ -537,13 +529,9 @@ class OrklReportProcessor(BaseDataProcessor):
         actor_class = (
             IntrusionSet if self._threat_actor_as_intrusion_set else ThreatActorGroup
         )
-        # The external reference exists only to preserve the cross-source
-        # identifier carried by `source_name` (e.g. ``MITRE:APT28``). When it is
-        # absent the reference would carry a `source_name` but no `external_id`,
-        # `url` or `description`, which satisfies the SDK's ExternalReference
-        # model but violates STIX's at-least-one-property invariant and blows up
-        # at bundle serialization (AtLeastOnePropertyError). With no identifier
-        # to record, there is nothing to reference, so omit the reference.
+        # The reference only preserves the cross-source identifier in the actor's
+        # `source_name` (e.g. ``MITRE:APT28``); without it the reference would
+        # have no `external_id`, `url` or `description` and fail STIX serialization.
         external_references = None
         if actor.source_name:
             external_references = [

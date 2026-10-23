@@ -489,6 +489,10 @@ class TestTransform:
         assert len(_reports(bundle)) == 2
         ids = [obj.id for obj in bundle]
         assert len(ids) == len(set(ids))
+        proc.logger.info.assert_any_call(
+            "Sending STIX objects for page",
+            meta={"objects": len(bundle), "reports": 2},
+        )
 
     def test_skips_malformed_row_and_converts_the_rest(self, entries_page_data):
         recent = entries_page_data[0]
@@ -496,7 +500,8 @@ class TestTransform:
         results = list(proc.transform(iter([[{"no_id_field": True}, recent]])))
         assert len(results) == 1
         assert len(_reports(results[0])) == 1
-        proc.logger.error.assert_called()
+        proc.logger.warning.assert_called()
+        proc.logger.error.assert_not_called()
 
     def test_conversion_error_skipped_and_rest_converts(self, entries_page_data):
         recent, empty, _dup, _old = entries_page_data
@@ -513,7 +518,8 @@ class TestTransform:
         results = list(proc.transform(iter([[recent, empty]])))
         assert len(results) == 1
         assert len(results[0]) == 1
-        proc.logger.error.assert_called()
+        proc.logger.warning.assert_called()
+        proc.logger.error.assert_not_called()
 
     def test_empty_page_yields_nothing(self):
         proc = _make_processor()
@@ -636,7 +642,7 @@ class TestPublicationDate:
         full_entry_data["updated_at"] = "2026-08-20T12:00:00Z"
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.publication_date is None  # precondition
-        assert entry.updated_datetime is not None  # updated_at is genuinely present
+        assert entry.updated_at is not None  # updated_at is genuinely present
         report = _report(converter._convert_entry(entry))
         assert report.publication_date == _ID_STABILITY_SENTINEL_DATE
 
@@ -662,7 +668,7 @@ class TestPublicationDate:
         _blank_all_dates(full_entry_data)
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.publication_date is None
-        assert entry.updated_datetime is None
+        assert entry.updated_at is None
         report = _report(converter._convert_entry(entry))
         assert report.publication_date == _ID_STABILITY_SENTINEL_DATE
         assert report.publication_date.utcoffset() is not None
