@@ -95,9 +95,34 @@ def test_cti_pattern_keeps_rules_without_modules_unchanged():
     assert rule.cti_pattern == rule.content
 
 
-def test_cti_pattern_does_not_repeat_imports():
-    """A module listed twice or already imported in the content is imported once."""
-    rule_data = make_rule("PE_Rule", "pe.is_32bit()", required_modules=["pe", "pe"])
+def test_cti_pattern_imports_a_module_listed_twice_once():
+    """A module listed twice in `required_modules` is imported once."""
+    rule = YaraRule.parse_obj(
+        make_rule("PE_Rule", "pe.is_32bit()", required_modules=["pe", "pe"])
+    )
+
+    assert rule.cti_pattern == f'import "pe"\n\n{rule.content}'
+
+
+@pytest.mark.parametrize(
+    "comment",
+    [
+        pytest.param('// Requires import "pe" in the ruleset header\n', id="line"),
+        pytest.param('/*\nimport "pe"\n*/\n', id="block"),
+    ],
+)
+def test_cti_pattern_ignores_imports_in_comments(comment: str):
+    """An import mentioned in a comment is not a directive, so it is still added."""
+    rule_data = make_rule("PE_Rule", "pe.is_32bit()", required_modules=["pe"])
+    rule_data["content"] = comment + rule_data["content"]
+    rule = YaraRule.parse_obj(rule_data)
+
+    assert rule.cti_pattern == f'import "pe"\n\n{rule.content}'
+
+
+def test_cti_pattern_keeps_rules_that_already_import_the_module():
+    """A rule importing the module itself keeps its pattern, hence its indicator ID."""
+    rule_data = make_rule("PE_Rule", "pe.is_32bit()", required_modules=["pe"])
     rule_data["content"] = 'import "pe"\n\n' + rule_data["content"]
     rule = YaraRule.parse_obj(rule_data)
 
