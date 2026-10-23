@@ -176,6 +176,8 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         entries: list[dict[str, Any]] = []
         fetched = filtered = 0
         resumed = page_token is not None
+        # Set when a window too short to split must be read to its end.
+        uncapped = False
         page_num = 0
         # The cap is checked between pages, never mid-page: a resume token
         # points at a page boundary, so stopping mid-page would skip the rest
@@ -187,11 +189,30 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             )
             if status >= 400 or not isinstance(data, dict):
                 if resumed and page_num == 1 and 400 <= status < 500 and status != 429:
-                    # The saved token is no longer accepted: restart the same
-                    # window from its first page within this run.
+                    # The saved token is no longer accepted. Re-read the first
+                    # half of the window from its first page: the watermark
+                    # then commits at the midpoint, and the next window starts
+                    # there, so the second half is read later and nothing is
+                    # skipped. Re-reading the whole window would stop at the
+                    # same cap and save a token at the same place, so a token
+                    # that kept expiring would never let the window finish.
+                    # The filter has whole-second bounds, so a window that
+                    # cannot be split is read to its end in this run.
+                    midpoint = (cutoff + (window_end - cutoff) / 2).replace(
+                        microsecond=0
+                    )
+                    if midpoint > cutoff.replace(microsecond=0):
+                        window_end = midpoint
+                        cel = build_cel_filter(cutoff=cutoff, window_end=window_end)
+                    else:
+                        uncapped = True
                     self.logger.warning(
                         "Stairwell rejected the saved page token; restarting window",
-                        {"status": status},
+                        {
+                            "status": status,
+                            "window_end": _iso(window_end),
+                            "uncapped": uncapped,
+                        },
                     )
                     page_token, resumed, page_num = None, False, 0
                     continue
@@ -234,7 +255,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     None,
                 )
             page_token = next_token
-            if len(entries) >= self.max_indicators:
+            if len(entries) >= self.max_indicators and not uncapped:
                 return Batch(
                     run_started,
                     cutoff,

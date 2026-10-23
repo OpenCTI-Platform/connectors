@@ -105,3 +105,13 @@ def test_build_cel_filter_bounds_the_window_and_normalises_to_utc():
     assert '>= "2026-05-04T00:00:00.000Z"' in build_cel_filter(
         cutoff=datetime(2026, 5, 4), window_end=None
     )
+
+
+@pytest.mark.parametrize("value", ["P", "PT", "P2DT", " PT "])
+def test_parse_iso_duration_rejects_designators_without_components(value):
+    assert parse_iso_duration(value) == timedelta(days=1)
+
+
+def test_parse_iso_duration_keeps_an_explicit_zero():
+    assert parse_iso_duration("P0D") == timedelta(0)
+    assert parse_iso_duration("PT0S") == timedelta(0)

@@ -26,8 +26,11 @@ def parse_iso_duration(value: str) -> timedelta:
     """
     if not value:
         return timedelta(days=1)
-    match = _ISO_DURATION_RE.match(value.strip())
-    if not match:
+    text = value.strip()
+    match = _ISO_DURATION_RE.match(text)
+    # Every component is optional in the pattern, so "P", "PT", and "P2DT"
+    # match with nothing after a designator; ISO 8601 requires a component.
+    if not match or not any(match.groupdict().values()) or text.endswith("T"):
         return timedelta(days=1)
     parts = {k: int(v) for k, v in match.groupdict(default="0").items()}
     return timedelta(

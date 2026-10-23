@@ -241,9 +241,54 @@ def test_rejected_resume_token_restarts_window_within_the_run(env):
     retry = processor.client.list_objects_metadata.call_args_list[1].kwargs
     assert retry["page_token"] is None
     assert "2026-05-04T00:00:00.000Z" in retry["cel_filter"]
-    assert state.watermark == datetime(2026, 5, 5, tzinfo=timezone.utc)
+    # The retry reads the first half of the window; the watermark commits at
+    # its end and the next window starts there.
+    assert state.watermark == datetime(2026, 5, 4, 12, tzinfo=timezone.utc)
     assert state.pending_page_token is None
     assert processor.logger.warnings
+
+
+def test_repeated_token_expiry_still_drains_a_capped_window(env):
+    env.setenv("STAIRWELL_IMPORT_MAX_INDICATORS", "2")
+    state = _pending_state("expired")  # window 2026-05-04 .. 2026-05-05
+
+    # Each rejection halves the window and re-reads it from its first page,
+    # importing everything it returns; nothing is skipped by position.
+    first = _processor([(400, None), _page("a", 2, "a2")], state)
+    assert len(_file_patterns(_run(first))) == 2
+    retry = first.client.list_objects_metadata.call_args_list[1].kwargs
+    assert retry["page_token"] is None
+    assert "2026-05-04T12:00:00.000Z" in retry["cel_filter"]
+    assert state.pending_window_end == datetime(2026, 5, 4, 12, tzinfo=timezone.utc)
+    state.pending_page_token = "expired-again"
+
+    second = _processor([(400, None), _page("b", 2, "")], state)
+    assert len(_file_patterns(_run(second))) == 2
+    # The quarter window finished, so the watermark commits there and the
+    # next window starts at it, covering the rest of the original window.
+    assert state.watermark == datetime(2026, 5, 4, 6, tzinfo=timezone.utc)
+    assert state.pending_cutoff is None and state.pending_page_token is None
+
+    third = _processor(_one_page(), state)
+    _run(third)
+    cel = third.client.list_objects_metadata.call_args.kwargs["cel_filter"]
+    assert "2026-05-04T06:00:00.000Z" in cel
+
+
+def test_rejected_token_on_a_one_second_window_reads_it_to_the_end(env):
+    env.setenv("STAIRWELL_IMPORT_MAX_INDICATORS", "2")
+    second = datetime(2026, 5, 4, tzinfo=timezone.utc)
+    state = ConnectorState(
+        watermark=second,
+        pending_cutoff=second,
+        pending_window_end=second.replace(second=1),
+        pending_page_token="expired",
+    )
+    pages = [(400, None), _page("a", 2, "p2"), _page("b", 2, "")]
+    processor = _processor(pages, state)
+    assert len(_file_patterns(_run(processor))) == 4
+    assert state.watermark == second.replace(second=1)
+    assert state.pending_page_token is None
 
 
 @pytest.mark.parametrize("status", [429, 503, 0])

@@ -43,7 +43,7 @@ Environment variables override the file.
 | Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
 | Import TLP | `stairwell.import_tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
-| First-run window | `stairwell.import_first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run |
+| First-run window | `stairwell.import_first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run (days, hours, minutes, seconds; an invalid value falls back to `P1D`) |
 | Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
 | Page size | `stairwell.import_page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
 | Indicator validity | `stairwell.import_indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
@@ -69,8 +69,11 @@ Environment variables override the file.
   watermark advances only after the window's last page is sent. A failed page
   fetch or bundle send fails the run and no state is saved, so the next run
   retries the same window. If Stairwell rejects a saved page token (4xx other
-  than 429), the run restarts the window from its first page. Re-sent objects
-  are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
+  than 429), the run re-reads the first half of the window from its first
+  page; the watermark then commits at the midpoint and the next window covers
+  the rest. Each further rejection halves the window again, so a token that
+  keeps expiring between runs still lets the import advance, and nothing is
+  skipped. Re-sent objects are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
   `generate_id()` for SDOs and relationships, spec-standard IDs for
   observables), so the same entity from another connector merges with ours.
   Each bundle carries the Stairwell author identity and the TLP marking
@@ -93,8 +96,9 @@ Environment variables override the file.
 - **Input validation.** An object whose SHA-256 is not 64 hex characters is
   skipped (logged), since an invalid Indicator pattern would make OpenCTI
   reject the whole run's bundle; malformed SHA-1/MD5 values are left off the
-  file, extracted IPs that are not valid addresses are dropped, and source
-  timestamps are normalised to UTC. Objects without a MalEval bucket at or
+  file, extracted IPs that are not valid addresses and URLs without an
+  http(s)/ftp(s) scheme, a hostname, and a valid nonzero port are dropped, and
+  source timestamps are normalised to UTC. Objects without a MalEval bucket at or
   above `import_min_bucket` are filtered.
 - **Per-run wrapper.** Each run's objects are grouped under their own
   Grouping (default) or Report SDO, so reviewers can see exactly what landed
