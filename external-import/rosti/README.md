@@ -44,7 +44,7 @@ Use cases: block and detect infrastructure from fresh public reporting, hunt wit
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261008.0
+- OpenCTI Platform >= 7.261023.1
 - A Rösti API key: <https://rosti.dev/api>
 - Rösti API version 2 (`https://api.rosti.dev/v2`). The connector supports all features of Rösti API v2.10.0.
 - Recommended: the [MITRE ATT&CK connector](https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre), needed to link ATT&CK software (see [What is imported](#what-is-imported))
