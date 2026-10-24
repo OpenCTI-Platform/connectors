@@ -23489,6 +23489,149 @@
       "container_type": "INTERNAL_ENRICHMENT"
     },
     {
+      "title": "XposedOrNot",
+      "slug": "xposedornot",
+      "description": "XposedOrNot is an open, free data-breach search service tracking 760+ breaches. Given an email address, it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry, password-storage risk and a short description, plus an overall risk score.\n\nIntegrating XposedOrNot with OpenCTI lets analysts enrich an Email-Addr observable in place: the observable receives `data-breach` labels (plus a `plaintext-password-exposure` label when applicable), an external reference and, optionally, a score, and a markdown summary note is attached with a per-breach table covering the most recent breaches (50 by default, configurable), with a line naming how many more were found whenever the table is capped. The score is the XposedOrNot risk score (community API only): it measures how exposed the address is, not how malicious it is, and it overwrites the observable's existing score. The score is off by default; set `XPOSEDORNOT_UPDATE_SCORE=true` to write it. The connector works without any API key via the free community API (rate limits apply); an optional commercial key raises limits. Breach exposure tied to an email address is personal information and must only be used for lawful, authorised investigations (GDPR / legal basis / proper investigative framework).",
+      "short_description": "Enrich an email address with its data-breach exposure: breach names, dates, records, exposed data classes, password-storage risk and descriptions. Labels the observable, scores its exposure (optional) and attaches a summary note. No API key required.",
+      "logo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAMAAABrrFhUAAACK1BMVEUAAABbAM0+AKQ5AKA4AJ42AJ01AJw1AJw0AJo0AJozAJo0AJozAJozAJozAJozAJkzAJozAJkzAJkzAJkzAJkzAJkzAJkzAJkzAJkzAJkzAJkyAJkyAJkyAJkzAJkyAJkzAJn////+/v79/f78+/77+/v5+fn5+Pz39fv19fX18/rz8Pnw7fjv7+/u6vbp6enp5fPl5eXm4fPj2/Hg3O3f39/e1e/Z2dnZ1era0O3VzenR0dHRyOfLy8vNwObJw+DGxsbIuuTCu9vAwMDDtOG8tdm7u7u/rt+2tra2rtW5p92wsLCwqNKyntmpqampoc6jo6OjmsupktWelMecnJyfiNCXjcOVlZWagc2Pj4+WfMuNgr+Hh4ePc8iDebyAgICIa8R+craAb697e3uDZcF2dnZ1Zq9+Xr9xcXFtYK54V7xqampsWqNyULljY2NhU6hrSLVdXV1iTZtmQ7NYWFhWSKNiPrFSUlJdOa5WQZZMPp9NTU1XMqxMOZdISEhFRUVRKqhERERCM5lCQkJEL45AQEA9PT1KIaU6Ojo3JpI8JII1NTVCGaE8E54vLy8xG4YqG5ApGY03DpsoGIwpF4soFYgtFXcoFIUjFI4mEoQxCJkmEYIiEYgnD4AmDn4rBpU0AJozAJkzAJkmDHwiDIAwAJgkCnksAJYcCoYoAJQkB3UmAJMdCH8jAJEfBnojBXIfAI8iAm4WBIEcA3QYA3sYAW8UAXcZAGkSAGSrKNyyAAAAonRSTlMAAgcNExgfKjQ7Q0lTYm94go+Yn6myusLL0tjf5uzw9Pr///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////5TbopuAAAphElEQVR42t1d+V9S2fsH3HPPBXfhgiIuZGouhNtoWTpW2milmZqapl9bxrZJS01BHLXMamY0KiEJCXFKzT5/3vecC/fec+Eil81lnp/mNSlynuX9rOc5HM4+EzcgOCwiOiYunp+QmJQMKSkpMYEfHxcTFREa5M/5zxIv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",
+      "use_cases": [
+        "Brand, Digital Risk & Underground Exposure",
+        "Detection & Response Enablement"
+      ],
+      "solution_categories": [
+        "Enrichment & Reputation",
+        "Digital Risk Protection"
+      ],
+      "license_type": "Free",
+      "contact": "help@xposedornot.com",
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": true,
+      "max_confidence_level": 75,
+      "support_version": ">=7.261023.1",
+      "subscription_link": "https://console.xposedornot.com",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/xposedornot",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-xposedornot",
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/xposedornot_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "XposedOrNot",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "Email-Addr"
+            ],
+            "description": "The scope of the connector (observable types to enrich).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Enables or disables automatic enrichment of observables. The keyless community API is rate limited (2/s, 25/hour per IP); keep disabled or configure an API key before enabling on busy platforms.",
+            "type": "boolean"
+          },
+          "CONNECTOR_MAX_TLP": {
+            "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "amber"
+          },
+          "XPOSEDORNOT_API_KEY": {
+            "default": null,
+            "description": "Optional XposedOrNot API key (console.xposedornot.com). When set, the connector uses the commercial Plus API with higher rate limits. The connector is fully functional without it.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "XPOSEDORNOT_API_BASE_URL": {
+            "default": "https://api.xposedornot.com",
+            "description": "Base URL of the free XposedOrNot community API. Must use https: the observable's email address is sent to this endpoint. It does not affect the Plus API, whose endpoint is fixed and is used instead whenever XPOSEDORNOT_API_KEY is set.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "pattern": "^https://",
+            "type": "string"
+          },
+          "XPOSEDORNOT_MAX_NOTE_BREACHES": {
+            "default": 50,
+            "description": "Maximum number of breaches rendered in the summary note's table, newest first. A line names how many more were found. Set 0 to render every breach; large values make the note hard to read.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "XPOSEDORNOT_TLP_LEVEL": {
+            "default": "amber",
+            "description": "TLP marking applied to the summary note, in addition to the markings the source observable already carries. Results contain personal data; a restrictive level is recommended. 'white' is the deprecated alias of 'clear'.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string"
+          },
+          "XPOSEDORNOT_UPDATE_SCORE": {
+            "default": false,
+            "description": "Write the XposedOrNot risk score (community API only) to the observable's score. The score measures how exposed the address is, not how malicious it is, and overwrites the existing score. Off by default; enable to write it.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "VisionHeight",
       "slug": "visionheight",
       "description": "VisionHeight is a threat intelligence platform that aggregates risk signals across IP addresses and domains. This OpenCTI internal-enrichment connector queries the VisionHeight API to enrich IPv4 and Domain observables with risk scores, threat labels, infrastructure context (ASN, country, vulnerabilities), DNS resolutions, SSL certificates, and WHOIS data. Observables with risk score >= 75 are automatically promoted to Indicators with a based-on relationship. Every enriched object is stamped with a VisionHeight Identity (created_by_ref) and an external_reference linking back to the VisionHeight UI for analyst pivoting.",
