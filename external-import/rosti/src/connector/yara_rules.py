@@ -6,8 +6,7 @@ rejects the indicator if that fails. Each Rösti rule becomes one indicator,
 so a rule that uses another rule of the same report (for example a private
 helper rule) does not compile on its own.
 
-``prepare_yara_patterns`` compiles every rule the same way (see
-``connector.test_yara_rule.valid_rule``). A rule that only
+``prepare_yara_patterns`` compiles every rule the same way. A rule that only
 fails because it references other rules of the report gets those rules
 prepended to its pattern; anything that still does not compile is skipped
 with the compiler's error message instead of failing in OpenCTI.
@@ -18,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from connector.test_yara_rule import valid_rule
+import yara
 from rosti_client.models import Yara
 
 
@@ -32,12 +31,17 @@ class YaraPattern:
 @dataclass
 class SkippedYara:
     rule: Yara
-    errors: list[str]
+    # The compiler's message, e.g. 'line 3: undefined string identifier "$b"'
+    error: str
 
-    @property
-    def reason(self) -> str:
-        """All problems in one line, for logs."""
-        return " ".join(self.errors)
+
+def compile_error(source: str) -> str | None:
+    """Compile ``source`` as OpenCTI does: the error message, or None if it compiles."""
+    try:
+        yara.compile(source=source)
+    except yara.Error as e:
+        return str(e)
+    return None
 
 
 def _references(rule: Yara, names: set[str]) -> set[str]:
@@ -76,8 +80,8 @@ def prepare_yara_patterns(
     skipped: list[SkippedYara] = []
     for rule in rules:
         source = rule.rule.strip()
-        ok, errors = valid_rule(source)
-        if ok:
+        error = compile_error(source)
+        if error is None:
             accepted.append(YaraPattern(rule, source, []))
             continue
         dependencies = _with_dependencies(rule, by_name)
@@ -85,8 +89,8 @@ def prepare_yara_patterns(
             combined = "\n\n".join(
                 [by_name[d].rule.strip() for d in dependencies] + [source]
             )
-            if valid_rule(combined)[0]:
+            if compile_error(combined) is None:
                 accepted.append(YaraPattern(rule, combined, dependencies))
                 continue
-        skipped.append(SkippedYara(rule, errors))
+        skipped.append(SkippedYara(rule, error))
     return accepted, skipped

@@ -214,6 +214,7 @@ class RostiConverter:
         tlp_level: TLPLevel | str = TLPLevel.CLEAR,
         default_score: int = 50,
         software_resolver: SoftwareResolver | None = None,
+        replace_report_objects: bool = False,
     ) -> None:
         self.author = OrganizationAuthor(
             name="Rösti",
@@ -224,6 +225,7 @@ class RostiConverter:
         self.tlp_marking = TLPMarking(level=tlp_level)
         self.default_score = default_score
         self.software_resolver = software_resolver
+        self.replace_report_objects = replace_report_objects
         self._ioc_mappers = self._mappers()
 
     # ------------------------------------------------------------------
@@ -767,10 +769,12 @@ class RostiConverter:
 
         Its STIX ID depends only on the Rösti report ID (``report_stix_id``),
         so a corrected title or date updates the same report in OpenCTI.
-        The report carries an OpenCTI upsert operation that *replaces* its
-        contained objects. Without it, OpenCTI only adds references when a
-        report is updated, so IOCs removed from a Rösti report would stay in
-        the OpenCTI report forever.
+
+        By default OpenCTI only adds references when a report is updated.
+        With ``replace_report_objects``, the report carries an OpenCTI upsert
+        operation that *replaces* its contained objects: IOCs removed from the
+        Rösti report leave the OpenCTI report, and so do objects analysts
+        added to it in OpenCTI.
         """
         lines = []
         if report.source is not None:
@@ -801,16 +805,19 @@ class RostiConverter:
             markings=[self.tlp_marking],
             external_references=external_references,
         ).to_stix2_object()
-        # Stable ID from the Rösti report ID instead of the SDK's name + date ID.
-        return ReportStix(
-            id=report_stix_id(report.id),
-            **{key: stix_report[key] for key in stix_report if key != "id"},
-            allow_custom=True,
-            opencti_upsert_operations=[
+        custom = {}
+        if self.replace_report_objects:
+            custom["opencti_upsert_operations"] = [
                 {
                     "key": "objects",
                     "value": list(stix_report.get("object_refs") or []),
                     "operation": "replace",
                 }
-            ],
+            ]
+        # Stable ID from the Rösti report ID instead of the SDK's name + date ID.
+        return ReportStix(
+            id=report_stix_id(report.id),
+            **{key: stix_report[key] for key in stix_report if key != "id"},
+            **custom,
+            allow_custom=True,
         )

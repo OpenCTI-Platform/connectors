@@ -1,8 +1,7 @@
 """Tests for YARA rule preparation (OpenCTI compiles every YARA indicator)."""
 
 from conftest import load_fixture
-from connector.test_yara_rule import valid_rule
-from connector.yara_rules import prepare_yara_patterns
+from connector.yara_rules import compile_error, prepare_yara_patterns
 from rosti_client.models import Yara
 
 
@@ -29,7 +28,7 @@ def test_rule_using_private_helper_gets_it_prepended():
     assert by_name["Main"].pattern.index("rule Helper") < by_name["Main"].pattern.index(
         "rule Main"
     )
-    assert valid_rule(by_name["Main"].pattern) == (True, [])
+    assert compile_error(by_name["Main"].pattern) is None
     assert by_name["Helper"].dependencies == []
 
 
@@ -49,9 +48,18 @@ def test_external_variables_and_syntax_errors_are_skipped():
     missing = rule("Missing", "rule Missing { condition: NotInThisReport }")
     accepted, skipped = prepare_yara_patterns([externals, broken, missing])
     assert not accepted
-    reasons = {s.rule.name: s.reason for s in skipped}
-    assert set(reasons) == {"Ext", "Broken", "Missing"}
-    assert "external variable" in reasons["Ext"]
+    errors = {s.rule.name: s.error for s in skipped}
+    assert set(errors) == {"Ext", "Broken", "Missing"}
+    # The compiler's own message is kept
+    assert errors["Ext"] == 'line 1: undefined identifier "filename"'
+    assert errors["Missing"] == 'line 1: undefined identifier "NotInThisReport"'
+
+
+def test_compile_error():
+    assert compile_error('rule A { strings: $a = "x" condition: $a }') is None
+    assert compile_error('rule A { strings: $a = "x" condition: $b }') == (
+        'line 1: undefined string "$b"'
+    )
 
 
 def test_modules_are_allowed():

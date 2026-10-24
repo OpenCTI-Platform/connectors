@@ -4,7 +4,7 @@ Values are read from environment variables (e.g. ``ROSTI_API_KEY``) or from
 ``config.yml`` (section ``rosti:``). Pydantic validates them at startup.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -68,7 +68,7 @@ class RostiConfig(BaseConfigModel):
         description="Where to start on the first run. Either an absolute date "
         "(e.g. '2026-01-01T00:00:00Z') or a duration relative to now (e.g. 'P30D'). "
         "Later runs resume from the connector state.",
-        default_factory=lambda: (datetime.now(timezone.utc) - timedelta(days=30)),
+        default="P30D",
     )
     import_iocs: bool = Field(
         description="Import IOCs as indicators and observables.",
@@ -108,6 +108,14 @@ class RostiConfig(BaseConfigModel):
         default=50,
         ge=0,
         le=100,
+    )
+
+    replace_report_objects: bool = Field(
+        description="When a Rösti report is updated, replace the objects the report "
+        "contains in OpenCTI instead of adding to them. IOCs removed from the report "
+        "in Rösti then leave the OpenCTI report too, but so does anything an analyst "
+        "added to the report in OpenCTI.",
+        default=False,
     )
 
     # --- Markings ---

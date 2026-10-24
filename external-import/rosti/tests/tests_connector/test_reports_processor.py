@@ -1,12 +1,15 @@
 """Tests for ReportsProcessor: fetching, filtering, checkpointing."""
 
 import datetime as dt
+import logging
 
 import pytest
+import requests
 from conftest import load_fixture, make_settings
 from connector import ConnectorState
 from connector.data_processors import ReportsProcessor, reports_processor
 from connectors_sdk.client.exceptions import ApiRateLimitError, ApiServerError
+from connectors_sdk.exceptions.error import DataRetrievalError
 from rosti_client.models import IOC, Report, ReportBundle, Yara
 
 UTC = dt.timezone.utc
@@ -142,11 +145,16 @@ def test_quota_exceeded_keeps_checkpoint_of_last_sent_report(fake_logger):
     assert processor.state.last_report_updated == dt.datetime(
         2026, 10, 1, 10, tzinfo=UTC
     )
-    assert (
-        "warning",
+    [quota] = fake_logger.find(
         "Rösti API quota exceeded, the import continues from the last "
-        "checkpoint on the first run after the quota resets",
-    ) in fake_logger.messages
+        "checkpoint on the first run after the quota resets"
+    )
+    assert quota.level == "warning"
+    assert quota.meta == {
+        "detail": "Your free plan allows 1000 requests per day.",
+        "reset": "2026-10-08T00:00:00Z",
+        "reports_sent": 1,
+    }
     assert not any(level == "error" for level, _ in fake_logger.messages)
 
 
@@ -333,38 +341,59 @@ def test_entity_ref_split_in_the_response_is_logged(fake_logger):
     )
 
 
-def test_other_api_errors_fail_the_run(fake_logger):
-    """Not swallowed: the SDK marks the work as failed and keeps the old checkpoint."""
+def two_reports():
+    return [
+        [summary("A", "2026-10-01T10:00:00Z"), summary("B", "2026-10-01T11:00:00Z")]
+    ]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ApiServerError("Server error (502) on GET /reports/B", status_code=502),
+        requests.ConnectionError("Connection refused"),
+    ],
+    ids=["api_error", "network_error"],
+)
+def test_api_and_network_errors_fail_the_run(fake_logger, error):
+    """Not skipped: the SDK marks the work as failed and keeps the old checkpoint."""
 
     class BrokenClient(FakeClient):
         def get_report(self, report_id):
             if report_id == "B":
-                raise ApiServerError(
-                    "Server error (502) on GET /reports/B", status_code=502
-                )
+                raise error
             return super().get_report(report_id)
 
-    client = BrokenClient(
-        [[summary("A", "2026-10-01T10:00:00Z"), summary("B", "2026-10-01T11:00:00Z")]]
-    )
-    processor = make_processor(client, fake_logger=fake_logger)
+    processor = make_processor(BrokenClient(two_reports()), fake_logger=fake_logger)
     bundles = []
-    with pytest.raises(ApiServerError):
+    with pytest.raises(DataRetrievalError) as raised:
         for bundle in processor.transform(processor.collect()):
             bundles.append(bundle)
+    assert raised.value.__cause__ is error
+    assert str(error) in str(raised.value)
+    assert "Reports imported before the error: 1." in str(raised.value)
     assert len(bundles) == 1
-    assert (
-        "error",
-        "Import failed, the next run retries from the last saved checkpoint",
-    ) in fake_logger.messages
+    # Logged once, by the SDK, not by the processor
+    assert not any(level == "error" for level, _ in fake_logger.messages)
 
 
-def test_conversion_failure_stops_the_run_without_skipping_the_report(
-    fake_logger, monkeypatch
-):
-    client = FakeClient(
-        [[summary("A", "2026-10-01T10:00:00Z"), summary("B", "2026-10-01T11:00:00Z")]]
-    )
+def test_api_error_while_loading_ioc_pages_fails_the_run(fake_logger):
+    class BrokenClient(FakeClient):
+        def iter_report_ioc_groups(self, report_id):
+            yield from super().iter_report_ioc_groups(report_id)
+            raise ApiServerError("Server error (503)", status_code=503)
+
+    processor = make_processor(BrokenClient(two_reports()), fake_logger=fake_logger)
+    with pytest.raises(DataRetrievalError) as raised:
+        run(processor)
+    assert "while importing report A" in str(raised.value)
+    assert processor.state.last_report_updated is None
+    assert not fake_logger.find("Failed to convert report, skipping it")
+
+
+def test_report_that_fails_to_convert_is_skipped(fake_logger, monkeypatch):
+    """One broken report must not block the import of the following ones."""
+    client = FakeClient(two_reports())
     processor = make_processor(client, fake_logger=fake_logger)
     original = processor.converter.convert_report
 
@@ -374,11 +403,129 @@ def test_conversion_failure_stops_the_run_without_skipping_the_report(
         return original(report, refs)
 
     monkeypatch.setattr(processor.converter, "convert_report", broken)
-    with pytest.raises(ValueError):
-        run(processor)
-    # B was not processed and the checkpoint did not move past A
-    assert client.detail_calls == ["A"]
-    assert processor.state.last_report_updated is None
+    bundles = run(processor)
+
+    assert client.detail_calls == ["A", "B"]
+    assert [b[-1]["name"] for b in bundles] == ["Report B"]
+    [skipped] = fake_logger.find("Failed to convert report, skipping it")
+    assert skipped.level == "warning"
+    assert skipped.meta == {
+        "report_id": "A",
+        "error": "unexpected data",
+        "bundles_sent": 0,
+    }
+    # the checkpoint moved past both reports
+    assert processor.state.last_report_updated == dt.datetime(
+        2026, 10, 1, 11, tzinfo=UTC
+    )
+    [finished] = fake_logger.find("Rösti import finished")
+    assert finished.meta == {"reports_sent": 1, "reports_skipped": 1}
+
+
+def test_invalid_ioc_page_skips_the_report(fake_logger, monkeypatch):
+    """A page that does not match the data model is a data error: skip, don't retry."""
+    monkeypatch.setattr(reports_processor, "MAX_BUNDLE_OBJECTS", 3)
+
+    class InvalidPageClient(FakeClient):
+        def iter_report_ioc_groups(self, report_id):
+            yield from super().iter_report_ioc_groups(report_id)
+            if report_id == "A":
+                IOC.model_validate({"id": "x", "type": "domain"})  # raises
+
+    processor = make_processor(
+        InvalidPageClient(two_reports()), fake_logger=fake_logger
+    )
+    bundles = run(processor)
+
+    reports = [
+        o.name for b in bundles for o in b if getattr(o, "type", None) == "report"
+    ]
+    assert reports == ["Report B"]
+    # A: one IOC bundle was sent before the error, then the report was skipped
+    assert any(getattr(o, "name", None) == "a.evil.example" for o in bundles[0])
+    [skipped] = fake_logger.find("Failed to convert report, skipping it")
+    assert skipped.meta["report_id"] == "A"
+    assert skipped.meta["bundles_sent"] == 1
+    assert processor.state.last_report_ids == ["B"]
+
+
+def test_unreadable_report_details_are_skipped(fake_logger):
+    class InvalidDetailClient(FakeClient):
+        def get_report(self, report_id):
+            if report_id == "A":
+                return Report.model_validate({"id": "A"})  # raises
+            return super().get_report(report_id)
+
+    processor = make_processor(
+        InvalidDetailClient(two_reports()), fake_logger=fake_logger
+    )
+    bundles = run(processor)
+
+    assert [b[-1]["name"] for b in bundles] == ["Report B"]
+    [skipped] = fake_logger.find("Failed to convert report, skipping it")
+    assert skipped.meta["report_id"] == "A"
+    assert "validation error" in skipped.meta["error"]
+    assert processor.state.last_report_updated == dt.datetime(
+        2026, 10, 1, 11, tzinfo=UTC
+    )
+
+
+def test_report_objects_are_only_replaced_when_enabled(fake_logger):
+    report_bundle = ReportBundle(report=_report(), iocs=[])
+    default = make_processor(FakeClient([]), fake_logger=fake_logger)
+    replacing = make_processor(
+        FakeClient([]), fake_logger=fake_logger, replace_report_objects=True
+    )
+    assert "opencti_upsert_operations" not in default.convert_bundle(report_bundle)[-1]
+    assert replacing.convert_bundle(report_bundle)[-1]["opencti_upsert_operations"]
+
+
+def test_log_context_is_passed_as_meta(fake_logger):
+    """The SDK logger only keeps context given as `meta=` (connectors-sdk #8005)."""
+    iocs = [
+        {
+            "id": "a",
+            "type": "md5",
+            "value": "not-a-hash",
+            "date": "2026-10-06",
+            "report": "r",
+        }
+    ]
+    processor = make_processor(FakeClient([]), fake_logger=fake_logger)
+    processor.convert_bundle(ReportBundle(report=_report(), iocs=iocs))
+    [skipped] = fake_logger.find("IOC skipped")
+    assert skipped.meta == {
+        "report_id": _report().id,
+        "ioc_id": "a",
+        "type": "md5",
+        "value": "not-a-hash",
+        "reason": "Invalid MD5 hash: 'not-a-hash'",
+    }
+    assert all(record.meta for record in fake_logger.records)
+
+
+def test_context_reaches_the_sdk_logger(caplog):
+    """With the SDK's real logger, the context ends up in the record's attributes."""
+    processor = ReportsProcessor(client=FakeClient([]))
+    processor.settings = make_settings()
+    processor.state = ConnectorState()
+    processor.helper = None
+    processor.post_init()
+    iocs = [
+        {
+            "id": "a",
+            "type": "md5",
+            "value": "not-a-hash",
+            "date": "2026-10-06",
+            "report": "r",
+        }
+    ]
+    with caplog.at_level(logging.DEBUG, logger=reports_processor.__name__):
+        processor.convert_bundle(ReportBundle(report=_report(), iocs=iocs))
+    [record] = [r for r in caplog.records if r.getMessage() == "IOC skipped"]
+    assert record.levelname == "WARNING"
+    assert record.attributes["ioc_id"] == "a"
+    assert record.attributes["reason"] == "Invalid MD5 hash: 'not-a-hash'"
 
 
 def test_software_lookup_cache_is_reset_every_run(fake_logger):

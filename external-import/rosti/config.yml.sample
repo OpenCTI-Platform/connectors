@@ -19,4 +19,5 @@ rosti:
   ids_only: false # optional, only IOCs flagged for detection
   max_risk_level: 5 # optional, 0-5, skip IOCs with a higher false-positive risk
   default_score: 50 # optional, score for IOCs without risk information
+  replace_report_objects: false # optional, replace a report's objects on update instead of adding
   tlp_level: 'clear' # optional: clear, green, amber, amber+strict, red

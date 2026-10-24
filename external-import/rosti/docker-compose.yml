@@ -21,5 +21,6 @@ services:
       - ROSTI_IDS_ONLY=false # optional
       - ROSTI_MAX_RISK_LEVEL=5 # optional, 0-5
       - ROSTI_DEFAULT_SCORE=50 # optional
+      - ROSTI_REPLACE_REPORT_OBJECTS=false # optional
       - ROSTI_TLP_LEVEL=clear # optional
     restart: always

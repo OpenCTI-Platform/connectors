@@ -84,6 +84,7 @@ The connector is configured with environment variables or with a `config.yml` fi
 | IDS only       | ids_only       | `ROSTI_IDS_ONLY`            | false                      | No        | Only import IOCs that Rösti flags as suitable for detection.               |
 | Max risk level | max_risk_level | `ROSTI_MAX_RISK_LEVEL`      | 5                          | No        | Skip IOCs with a higher false-positive risk (0 = nothing found, 5 = very high). |
 | Default score  | default_score  | `ROSTI_DEFAULT_SCORE`       | 50                         | No        | Score of IOCs without risk information.                                     |
+| Replace report objects | replace_report_objects | `ROSTI_REPLACE_REPORT_OBJECTS` | false   | No        | On a report update, replace the report's objects instead of adding to them (see [Updates and removed IOCs](#updates-and-removed-iocs)). |
 | TLP            | tlp_level      | `ROSTI_TLP_LEVEL`           | clear                      | No        | TLP marking applied to every imported object.                               |
 
 ## Deployment
@@ -191,24 +192,25 @@ A higher false-positive risk gives a lower OpenCTI score:
 ### Updates and removed IOCs
 
 - **Incremental.** The connector remembers the last report it sent and only asks for newer changes. Rösti timestamps have one-second resolution, so each run starts one second earlier and skips what it already sent.
-- **Updated reports.** When a report changes, including when an IOC is added or removed, it is sent again as a whole. The report replaces its contents in OpenCTI instead of only adding to them, so removed IOCs disappear from the report. Objects added to a Rösti report by hand in OpenCTI are removed on its next update.
+- **Updated reports.** When a report changes, including when an IOC is added or removed, it is sent again as a whole. By default OpenCTI only adds to the report: new IOCs appear, removed ones stay in the report, and objects analysts added to it in OpenCTI are kept. With `ROSTI_REPLACE_REPORT_OBJECTS=true` the report replaces its contents instead: IOCs removed in Rösti leave the report, but so does anything added to it by hand in OpenCTI.
 - **Report identity.** The report's STIX ID is derived from its Rösti ID, not from its title and date, so a corrected title updates the same report instead of creating a second one. OpenCTI does not change the publication date of an existing report, so a corrected date keeps the first imported date.
 - **Large reports.** The IOCs of a report are converted while their pages arrive and sent in bundles of at most 5,000 objects; the report follows last and references all of them.
-- **Removed IOCs.** The indicator itself stays in OpenCTI because other reports may contain it; OpenCTI's decay rules lower its score over time until it is revoked. The same applies when IOCs become a group: the report then contains the combined indicator, and the earlier single indicators stay in OpenCTI outside the report.
-- **Interruptions, rate limits and quota.** The checkpoint advances after every complete report. Server errors and `429` responses with a `Retry-After` (the Rösti API sends at most 60 seconds) are retried. When the quota of the API key is used up, the API answers `429` with a "quota exceeded" problem; the run then ends with a warning showing the API's message (`detail`, and `reset` if present), keeps its checkpoint, and the first run after the reset continues where it stopped.
-- **Errors.** Any other error (an API error after the retries, or a report that cannot be converted) fails the run and is shown as a failed work in OpenCTI. No report is skipped: the run's checkpoint is not saved, and the next run retries from the last saved one. Single bad values (invalid hashes, domains, YARA rules that do not compile) are skipped and logged without failing the run, see below.
+- **Removed IOCs.** The indicator itself always stays in OpenCTI because other reports may contain it; OpenCTI's decay rules lower its score over time until it is revoked. The same applies when IOCs become a group: the report then contains the combined indicator, and the earlier single indicators stay too (inside the report by default, outside it with `ROSTI_REPLACE_REPORT_OBJECTS=true`).
+- **Interruptions, rate limits and quota.** The checkpoint advances after every report. Server errors and `429` responses with a `Retry-After` (the Rösti API sends at most 60 seconds) are retried. When the quota of the API key is used up, the API answers `429` with a "quota exceeded" problem; the run then ends with a warning showing the API's message (`detail`, and `reset` if present), keeps its checkpoint, and the first run after the reset continues where it stopped.
+- **Reports that cannot be imported.** A report whose data does not match what the connector expects, or that fails to convert, is skipped with a warning (`Failed to convert report, skipping it`, with the report ID and the error), so it does not block the reports after it. Bundles of that report sent before the error stay in OpenCTI. The report is imported again the next time it changes in Rösti.
+- **API and network errors.** Any other API error (after the retries) or network error fails the run and is shown as a failed work in OpenCTI. Nothing is skipped: the run's checkpoint is not saved, and the next run retries from the last saved one. Single bad values (invalid hashes, domains, YARA rules that do not compile) are skipped and logged without failing the run, see below.
 - **API usage.** One request per page of 100 reports, plus per report one for the report, one per 1,000 IOCs and one for its YARA rules if it has any.
 
 ### Data quality checks
 
 OpenCTI rejects indicators and observables it considers malformed. The connector applies the same checks first, so one bad value never breaks an import:
 
-- **YARA rules** are compiled with yara-python 4.5.4, the version OpenCTI uses. A rule that relies on a helper rule from the same report gets the helper added to its pattern. Rules that still do not compile are skipped and logged with a plain-language explanation of every problem found (for example a missing `{`, undefined or unused strings, a missing `import`). Rules of reports marked `hide_yara` are not imported. The check can also be run on its own: `python src/connector/test_yara_rule.py rule.yar`.
+- **YARA rules** are compiled with yara-python 4.5.4, the version OpenCTI uses. A rule that relies on a helper rule from the same report gets the helper added to its pattern. Rules that still do not compile are skipped and logged with the compiler's error message. Rules of reports marked `hide_yara` are not imported.
 - **Domains, email addresses and file hashes** are validated with OpenCTI's own rules; invalid values are skipped and logged. In a group, only the invalid IOC is skipped; the rest of the group is still combined.
 
 ## Debugging
 
-Skipped IOCs (with value and reason), skipped YARA rules and IOC groups that could not be combined are logged as warnings: set `CONNECTOR_LOG_LEVEL=warn` (the default is `error`) to see them. `CONNECTOR_LOG_LEVEL=debug` also shows every MITRE software entry that could not be linked. Each run is also listed with its status under *Data → Ingestion → Connectors* in OpenCTI.
+Skipped reports, skipped IOCs (with value and reason), skipped YARA rules and IOC groups that could not be combined are logged as warnings: set `CONNECTOR_LOG_LEVEL=warn` (the default is `error`) to see them. `CONNECTOR_LOG_LEVEL=debug` also shows every MITRE software entry that could not be linked. Each run is also listed with its status under *Data → Ingestion → Connectors* in OpenCTI.
 
 ## Additional information
 

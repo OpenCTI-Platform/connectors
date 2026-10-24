@@ -1,3 +1,4 @@
+import datetime as dt
 from typing import Any
 
 import pytest
@@ -174,3 +175,27 @@ def test_settings_parse_ioc_types_list():
             )
 
     assert FakeConnectorSettings().rosti.ioc_types == ["domain", "ip", "url"]
+
+
+def test_settings_defaults():
+    """`import_since` defaults to P30D (kept in the JSON schema); replacing is opt-in."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "t"},
+                    "rosti": {"api_key": "k"},
+                }
+            )
+
+    before = dt.datetime.now(dt.timezone.utc)
+    rosti = FakeConnectorSettings().rosti
+    after = dt.datetime.now(dt.timezone.utc)
+
+    thirty_days = dt.timedelta(days=30)
+    assert before - thirty_days <= rosti.import_since <= after - thirty_days
+    assert rosti.replace_report_objects is False
+    field = type(rosti).model_fields["import_since"]
+    assert field.default == "P30D" and field.default_factory is None

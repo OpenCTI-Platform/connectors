@@ -305,8 +305,19 @@ def test_report_id_depends_only_on_the_rosti_id(converter):
     assert first["id"].startswith("report--")
 
 
-def test_report_replaces_its_objects_on_update(converter):
-    """IOCs removed from a Rösti report must disappear from the OpenCTI report."""
+def test_report_objects_are_added_by_default(converter):
+    """Without the option, OpenCTI's normal upsert applies: objects are only added."""
+    report = Report.model_validate(load_fixture("report_r1xSdqAy.json"))
+    vulnerabilities = [converter.convert_cve(c) for c in report.cve]
+    stix_report = converter.convert_report(report, vulnerabilities)
+
+    assert "opencti_upsert_operations" not in stix_report
+    assert len(stix_report["object_refs"]) == len(vulnerabilities)
+
+
+def test_report_replaces_its_objects_when_enabled():
+    """With replace_report_objects, IOCs removed in Rösti leave the OpenCTI report."""
+    converter = RostiConverter(replace_report_objects=True)
     report = Report.model_validate(load_fixture("report_r1xSdqAy.json"))
     vulnerabilities = [converter.convert_cve(c) for c in report.cve]
     stix_report = converter.convert_report(report, vulnerabilities)
@@ -320,7 +331,8 @@ def test_report_replaces_its_objects_on_update(converter):
     ]
 
 
-def test_empty_report_removes_all_objects(converter):
+def test_empty_report_removes_all_objects_when_enabled():
+    converter = RostiConverter(replace_report_objects=True)
     report = Report.model_validate(load_fixture("report_r1xSdqAy.json"))
     stix_report = converter.convert_report(report, [])
 

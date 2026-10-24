@@ -5,10 +5,17 @@ checkpoint (oldest change first). The IOCs of a report are converted while
 their pages arrive and sent in bundles of at most ``MAX_BUNDLE_OBJECTS``
 objects; the report itself goes last, with references to all of them.
 
-The checkpoint advances after every complete report. When the API key's
-quota is used up, the run ends early and keeps that checkpoint, so the next
-run continues there. Any other error fails the run; the SDK then discards
-the run's checkpoint and the next run retries from the previous one.
+The checkpoint advances after every report, whether it was imported or
+skipped:
+
+- A report whose data cannot be read or converted is skipped with a warning,
+  so it cannot block the reports after it. It is imported again when it
+  changes in Rösti.
+- When the API key's quota is used up, the run ends early and keeps the
+  checkpoint, so the next run continues there.
+- Any other API or network error fails the run (``DataRetrievalError``); the
+  SDK then discards the run's checkpoint and the next run retries from the
+  previous one.
 """
 
 from __future__ import annotations
@@ -18,12 +25,16 @@ from collections.abc import Generator, Iterable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+import requests
 from connector.converter import UNSUPPORTED_IOC_TYPES, RostiConverter
 from connector.yara_rules import prepare_yara_patterns
 from connectors_sdk import BaseDataProcessor
+from connectors_sdk.client.exceptions import ApiClientError
+from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import BaseIdentifiedEntity, Reference
 from pycti import Malware as PyctiMalware
 from pycti import Tool as PyctiTool
+from pydantic import ValidationError
 from rosti_client import RostiClient
 from rosti_client.api_client import quota_exceeded
 from rosti_client.models import IOC, Mitre, Report, ReportBundle, Yara
@@ -42,6 +53,11 @@ CHECKPOINT_OVERLAP = dt.timedelta(seconds=1)
 # at most, and the last bundle of a report adds YARA, MITRE, CVEs and the report.
 MAX_BUNDLE_OBJECTS = 5000
 
+# Errors of the Rösti API (after the client's retries) or of the network.
+# They fail the run instead of skipping a report: the data is not wrong, it
+# could not be fetched, and the next run may succeed.
+API_ERRORS = (ApiClientError, requests.RequestException)
+
 
 @dataclass
 class ReportData:
@@ -53,6 +69,15 @@ class ReportData:
     # Lazy: IOC pages are requested while the groups are converted.
     ioc_groups: Iterable[list[IOC]] = field(default_factory=list)
     yara_rules: list[Yara] = field(default_factory=list)
+
+
+@dataclass
+class UnreadableReport:
+    """A listed report whose details the API returned in an unexpected form."""
+
+    report_id: str
+    listed_last_updated: dt.datetime | None
+    error: str
 
 
 class ReportsProcessor(BaseDataProcessor):
@@ -83,6 +108,7 @@ class ReportsProcessor(BaseDataProcessor):
             tlp_level=config.tlp_level,
             default_score=config.default_score,
             software_resolver=self._resolve_software,
+            replace_report_objects=config.replace_report_objects,
         )
 
     # ------------------------------------------------------------------
@@ -112,7 +138,7 @@ class ReportsProcessor(BaseDataProcessor):
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.warning(
                         "MITRE software lookup failed",
-                        {"mitre_id": entry.id, "error": str(e)},
+                        meta={"mitre_id": entry.id, "error": str(e)},
                     )
                     break
                 if entity:
@@ -122,7 +148,7 @@ class ReportsProcessor(BaseDataProcessor):
             self.logger.debug(
                 "MITRE software not found in OpenCTI, not linked "
                 "(is the MITRE ATT&CK connector running?)",
-                {"mitre_id": entry.id, "name": entry.description},
+                meta={"mitre_id": entry.id, "name": entry.description},
             )
         self._software_cache[entry.id] = reference
         return reference
@@ -146,43 +172,53 @@ class ReportsProcessor(BaseDataProcessor):
             self.state.last_report_ids or []
         )
 
-    def collect(self) -> Generator[ReportData, None, None]:
+    def _collect_report(self, summary: Report) -> ReportData:
+        """Fetch the details and YARA rules of a listed report."""
+        config = self.settings.rosti
+        report = self.client.get_report(summary.id)
+        yara_rules = (
+            self.client.get_report_yara_rules(report.id)
+            if config.import_yara
+            and report.count.yara_rules > 0
+            and not report.hide_yara
+            else []
+        )
+        ioc_groups = (
+            self.client.iter_report_ioc_groups(report.id)
+            if config.import_iocs and report.count.iocs > 0
+            else []
+        )
+        return ReportData(
+            report=report,
+            listed_last_updated=summary.last_updated,
+            ioc_groups=ioc_groups,
+            yara_rules=yara_rules,
+        )
+
+    def collect(self) -> Generator[ReportData | UnreadableReport, None, None]:
         """Yield every new or updated report with its YARA rules and IOC groups.
 
         The IOC groups are a generator: their pages are only requested while
         ``transform`` converts them, so a large report is never held in memory.
+        A report whose details do not match the expected data model is
+        yielded as ``UnreadableReport``, for ``transform`` to skip.
         """
         # MITRE software may have been added to OpenCTI since the last run.
         self._software_cache = {}
-        config = self.settings.rosti
         since = self._query_start()
         self.logger.info(
-            "Fetching Rösti reports updated since", {"since": since.isoformat()}
+            "Fetching Rösti reports updated since", meta={"since": since.isoformat()}
         )
 
         for page in self.client.iter_updated_reports(since):
             for summary in page:
                 if self._already_sent(summary.id, summary.last_updated):
                     continue
-                report = self.client.get_report(summary.id)
-                yara_rules = (
-                    self.client.get_report_yara_rules(report.id)
-                    if config.import_yara
-                    and report.count.yara_rules > 0
-                    and not report.hide_yara
-                    else []
-                )
-                ioc_groups = (
-                    self.client.iter_report_ioc_groups(report.id)
-                    if config.import_iocs and report.count.iocs > 0
-                    else []
-                )
-                yield ReportData(
-                    report=report,
-                    listed_last_updated=summary.last_updated,
-                    ioc_groups=ioc_groups,
-                    yara_rules=yara_rules,
-                )
+                try:
+                    item = self._collect_report(summary)
+                except ValidationError as e:
+                    item = UnreadableReport(summary.id, summary.last_updated, str(e))
+                yield item
 
     # ------------------------------------------------------------------
     # Transform
@@ -213,7 +249,7 @@ class ReportsProcessor(BaseDataProcessor):
                     self.logger.warning(
                         "IOCs of one entity_ref are not next to each other in the "
                         "API response, they are combined in parts",
-                        {"report_id": report.id, "entity_ref": entity_ref},
+                        meta={"report_id": report.id, "entity_ref": entity_ref},
                     )
                 seen_refs.add(entity_ref)
             kept = [ioc for ioc in group if self._keep_ioc(ioc)]
@@ -230,7 +266,7 @@ class ReportsProcessor(BaseDataProcessor):
                 )
                 log(
                     "IOC skipped",
-                    {
+                    meta={
                         "report_id": report.id,
                         "ioc_id": ioc.id,
                         "type": ioc.type,
@@ -241,7 +277,7 @@ class ReportsProcessor(BaseDataProcessor):
             for warning in result.warnings:
                 self.logger.warning(
                     "IOC group not combined",
-                    {"report_id": report.id, "reason": warning},
+                    meta={"report_id": report.id, "reason": warning},
                 )
             for kind in result.combined:
                 combined[kind] = combined.get(kind, 0) + 1
@@ -249,11 +285,11 @@ class ReportsProcessor(BaseDataProcessor):
                 yield result.objects
         if skipped:
             self.logger.info(
-                "IOCs not imported", {"report_id": report.id, "by_type": skipped}
+                "IOCs not imported", meta={"report_id": report.id, "by_type": skipped}
             )
         if combined:
             self.logger.debug(
-                "IOC groups combined", {"report_id": report.id, "groups": combined}
+                "IOC groups combined", meta={"report_id": report.id, "groups": combined}
             )
 
     def _other_objects(
@@ -270,10 +306,10 @@ class ReportsProcessor(BaseDataProcessor):
         for skipped_rule in rejected:
             self.logger.warning(
                 "YARA rule does not compile, not imported",
-                {
+                meta={
                     "report_id": report.id,
                     "rule": skipped_rule.rule.name,
-                    "errors": skipped_rule.errors,
+                    "error": skipped_rule.error,
                 },
             )
         for item in accepted:
@@ -347,41 +383,89 @@ class ReportsProcessor(BaseDataProcessor):
             self.state.last_report_updated = last_updated
             self.state.last_report_ids = [report_id]
 
+    def _skip_report(self, report_id: str, error: Exception | str, sent: int) -> None:
+        self.logger.warning(
+            "Failed to convert report, skipping it",
+            meta={
+                "report_id": report_id,
+                "error": str(error),
+                # Bundles of the report sent before the error stay in OpenCTI.
+                "bundles_sent": sent,
+            },
+        )
+
+    def _report_bundles(self, bundle: ReportData) -> Generator[list[Any], None, bool]:
+        """Yield the bundles of one report; return False if it had to be skipped.
+
+        Only the conversion is guarded, not the sending of the bundles (which
+        happens in the SDK while this generator is suspended at ``yield``).
+        API and network errors are raised; any other error skips the report.
+        """
+        chunks = self.convert_report_chunks(bundle)
+        sent = 0
+        while True:
+            try:
+                chunk = next(chunks)
+            except StopIteration:
+                return True
+            except API_ERRORS:
+                raise
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                self._skip_report(bundle.report.id, e, sent)
+                return False
+            yield chunk
+            sent += 1
+
     def transform(
-        self, data: Generator[ReportData, None, None]
+        self, data: Generator[ReportData | UnreadableReport, None, None]
     ) -> Generator[list[Any], None, None]:
         """Yield the bundles of each report and move the checkpoint after each report.
 
-        A used-up quota ends the run quietly: the checkpoint of the reports
-        sent so far is kept and the next run continues there. Any other error
-        (API, conversion) is logged and raised, so the run is marked as failed
-        and its checkpoint is not saved; nothing is skipped.
+        - A report that cannot be read or converted is skipped with a warning
+          and the checkpoint moves past it, so it does not block the import.
+        - A used-up quota ends the run quietly: the checkpoint of the reports
+          handled so far is kept and the next run continues there.
+        - Any other API or network error is raised as ``DataRetrievalError``:
+          the run is marked as failed and its checkpoint is not saved.
         """
-        sent = 0
+        sent = skipped = 0
         report_id = None
         try:
-            for bundle in data:
-                report_id = bundle.report.id
-                yield from self.convert_report_chunks(bundle)
+            for item in data:
+                if isinstance(item, UnreadableReport):
+                    report_id = item.report_id
+                    self._skip_report(report_id, item.error, 0)
+                    imported = False
+                else:
+                    report_id = item.report.id
+                    imported = yield from self._report_bundles(item)
                 # All bundles of the report have been sent once the generator resumes here.
-                self._advance_checkpoint(report_id, bundle.listed_last_updated)
-                sent += 1
+                self._advance_checkpoint(report_id, item.listed_last_updated)
+                if imported:
+                    sent += 1
+                else:
+                    skipped += 1
                 report_id = None
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except API_ERRORS as e:
             quota = quota_exceeded(e)
             if quota is None:
-                self.logger.error(
-                    "Import failed, the next run retries from the last saved checkpoint",
-                    {"report_id": report_id, "error": str(e), "reports_sent": sent},
-                )
-                raise
+                # The client's message names the request, e.g. "on GET /reports/B".
+                where = f" while importing report {report_id}" if report_id else ""
+                raise DataRetrievalError(
+                    f"Rösti API request failed{where}: {e}. Reports imported "
+                    f"before the error: {sent}. The next run retries from the "
+                    "last saved checkpoint."
+                ) from e
             self.logger.warning(
                 "Rösti API quota exceeded, the import continues from the last "
                 "checkpoint on the first run after the quota resets",
-                {
+                meta={
                     "detail": quota.get("detail") or quota.get("title"),
                     "reset": quota.get("reset"),
                     "reports_sent": sent,
                 },
             )
-        self.logger.info("Rösti import finished", {"reports_sent": sent})
+        self.logger.info(
+            "Rösti import finished",
+            meta={"reports_sent": sent, "reports_skipped": skipped},
+        )
