@@ -29,7 +29,7 @@ Appended STIX objects:
 
 ## Behavior and safety
 
-- **Max TLP check** (`OpenCTIConnectorHelper.check_max_tlp`) - observables above `MACADRESS_MAX_TLP` are skipped.
+- **Max TLP check** (`OpenCTIConnectorHelper.check_max_tlp`) - observables above `CONNECTOR_MAX_TLP` are skipped.
 - A `400` from the API (not a MAC address) and an invalid result return the original bundle unchanged.
 - `401` / `403` / `429` / `5xx` are raised so the failure is visible in the OpenCTI UI.
 - Playbook compatible (`playbook_compatible=True`).
@@ -48,9 +48,9 @@ Appended STIX objects:
 | `CONNECTOR_SCOPE` | no | `mac-addr` | Observable types to enrich |
 | `CONNECTOR_AUTO` | no | `false` | Auto-enrich on observable creation |
 | `CONNECTOR_LOG_LEVEL` | no | `info` | Log level |
+| `CONNECTOR_MAX_TLP` | no | `TLP:AMBER` | Max TLP to enrich. Replaces the deprecated `MACADRESS_MAX_TLP` |
 | `MACADRESS_API_BASE_URL` | no | `https://api.macadress.com` | API base URL |
 | `MACADRESS_API_KEY` | yes | - | macadress.com API key |
-| `MACADRESS_MAX_TLP` | no | `TLP:AMBER` | Max TLP to enrich |
 | `MACADRESS_DEFAULT_SCORE` | no | `30` | Score written on the observable |
 | `MACADRESS_CREATE_NOTE` | no | `true` | Attach the analysis summary as a Note |
 | `MACADRESS_CREATE_VENDOR_IDENTITY` | no | `true` | Create and link the vendor Organization identity |

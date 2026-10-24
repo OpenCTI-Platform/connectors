@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-doppel
 WORKDIR /opt/opencti-connector-doppel
 
 # Install required OS packages and Python dependencies
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN pip install --upgrade pip && \

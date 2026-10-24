@@ -14,9 +14,6 @@ The crt.sh connector imports certificate transparency data from crt.sh into Open
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -40,35 +37,10 @@ This connector fetches certificate data for a specified domain, extracts related
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter            | config.yml           | Docker environment variable      | Default | Mandatory | Description                                                              |
-|----------------------|----------------------|----------------------------------|---------|-----------|--------------------------------------------------------------------------|
-| Connector ID         | id                   | `CONNECTOR_ID`                   |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name       | name                 | `CONNECTOR_NAME`                 | crtsh   | Yes       | Name of the connector.                                                   |
-| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | stix2   | Yes       | The scope or type of data the connector is importing.                    |
-| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Run Every            | run_every            | `CONNECTOR_RUN_EVERY`            |         | Yes       | Polling interval (e.g., `30s`, `1h`, `1d`).                              |
-| Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | false   | No        | Whether to update existing data in OpenCTI.                              |
-
-### Connector extra parameters environment variables
-
-| Parameter       | config.yml       | Docker environment variable | Default    | Mandatory | Description                                                    |
-|-----------------|------------------|-----------------------------|------------|-----------|----------------------------------------------------------------|
-| Domain          | crtsh.domain     | `CRTSH_DOMAIN`              |            | Yes       | Domain to search for certificates (e.g., `google.com`).        |
-| Labels          | crtsh.labels     | `CRTSH_LABELS`              |            | Yes       | Comma-separated list of labels (e.g., `crtsh,osint`).          |
-| TLP Marking     | crtsh.marking    | `CRTSH_MARKING_REFS`        |            | Yes       | TLP marking level: `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`. |
-| Filter Expired  | crtsh.is_expired | `CRTSH_IS_EXPIRED`          | false      | Yes       | Exclude expired certificates: `true` or `false`.               |
-| Wildcard Search | crtsh.is_wildcard| `CRTSH_IS_WILDCARD`         | false      | Yes       | Apply wildcard to domain search: `true` or `false`.            |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -92,8 +64,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=crtsh
       - CONNECTOR_SCOPE=stix2
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_RUN_EVERY=1d
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - CONNECTOR_DURATION_PERIOD=P1D
       - CRTSH_DOMAIN=example.com
       - CRTSH_LABELS=crtsh,certificate-transparency
       - CRTSH_MARKING_REFS=TLP:WHITE
@@ -126,7 +97,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CONNECTOR_RUN_EVERY`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 
@@ -212,7 +183,7 @@ CONNECTOR_LOG_LEVEL=debug
 Common issues:
 - **Invalid domain**: Ensure `CRTSH_DOMAIN` is a valid domain format
 - **No results**: Domain may have no certificates logged in Certificate Transparency logs
-- **Rate limiting**: crt.sh may rate limit requests; increase `CONNECTOR_RUN_EVERY` interval
+- **Rate limiting**: crt.sh may rate limit requests; increase `CONNECTOR_DURATION_PERIOD` interval
 
 ## Additional information
 

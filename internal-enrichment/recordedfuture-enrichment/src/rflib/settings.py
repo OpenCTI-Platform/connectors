@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr, field_validator
@@ -62,16 +61,11 @@ class RecordedfutureEnrichmentConfig(BaseConfigModel):
         le=100,
         default=0,
     )
-    info_max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    info_max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP marking of the entity to enrich (inclusive).",
-        default="TLP:AMBER",
     )
     threat_actor_to_intrusion_set: bool = Field(
         default=False,

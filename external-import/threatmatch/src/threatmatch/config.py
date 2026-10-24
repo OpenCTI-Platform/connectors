@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Literal
 
 from connectors_sdk import (
@@ -46,7 +46,7 @@ class ThreatmatchConfig(BaseConfigModel):
         description="Base URL of the ThreatMatch API.",
     )
     import_from_date: DatetimeFromIsoString = Field(
-        default_factory=lambda: datetime.now(tz=timezone.utc) - timedelta(days=30),
+        default="P30D",
         description=(
             "Relative ISO-8601 duration (e.g., 'P30D') used to set the first import "
             "window. Applied on the first run only. Defaults to 30 days ago from the current date. "

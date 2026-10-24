@@ -1,0 +1,27 @@
+{
+  "title": "WhoisFreaks",
+  "slug": "whoisfreaks",
+  "description": "Ingests WhoisFreaks commercial domain threat intelligence (malware, phishing, spam) and newly registered domain (NRD) feeds into OpenCTI. Supports per-feed enable/disable aligned with subscription tiers, day-level incremental import with mid-day offset checkpoints for multi-million-record daily files, and streamed CSV pagination against the WhoisFreaks stream API.",
+  "short_description": "WhoisFreaks threat feeds and newly registered domains for OpenCTI.",
+  "logo": "external-import/whoisfreaks/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Brand, Digital Risk & Underground Exposure"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@whoisfreaks.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 70,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://whoisfreaks.com/pricing",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/whoisfreaks",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-whoisfreaks",
+  "container_type": "EXTERNAL_IMPORT"
+}

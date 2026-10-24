@@ -13,6 +13,7 @@ def fixture_config_dict() -> dict[str, Any]:
         "opencti": {
             "url": "http://test-opencti-url/",
             "token": "test-opencti-token",
+            "json_logging": True,  # SDK default
         },
         "connector": {
             "id": "threatmatch-connector-id",

@@ -1,0 +1,40 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'                    # generate: python3 -c "import uuid; print(uuid.uuid4())"
+  name: 'WhoisFreaks'
+  scope: 'indicator,domain-name'
+  log_level: 'info'
+  duration_period: 'PT24H'
+
+whoisfreaks:
+  api_key: 'ChangeMe'
+  api_base_url: 'https://files.whoisfreaks.com/v3.4/stream'
+  status_api_base_url: 'https://files.whoisfreaks.com'
+
+  # Toggle by subscription. Only list feeds your plan includes.
+  # Threat feeds: malware, phishing, spam
+  feed_types: 'malware,phishing,spam'
+
+  # NRD feeds: nrd_gtld_with_whois, nrd_cctld_with_whois,
+  #            nrd_gtld_without_whois, nrd_cctld_without_whois
+  nrd_feed_types: 'nrd_gtld_with_whois,nrd_cctld_with_whois,nrd_gtld_without_whois,nrd_cctld_without_whois'
+
+  # Scale: page size, timeouts, retries, checkpoint frequency
+  page_limit: 5000
+  threat_timeout: 180
+  nrd_timeout: 180
+  max_retries: 5
+  retry_backoff_seconds: 2.0
+  checkpoint_every_pages: 10
+
+  # Absolute ISO-8601 datetime or relative duration (e.g. P30D)
+  import_since: 'P1D'
+
+  tlp_level: 'clear'
+
+  # false recommended for high-volume NRD (observables only)
+  create_indicators_for_nrd: false

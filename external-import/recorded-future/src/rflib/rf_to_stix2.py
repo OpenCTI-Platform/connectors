@@ -16,6 +16,7 @@ from collections import OrderedDict
 from datetime import datetime
 
 import pycti  # type: ignore
+import requests
 import stix2
 from stix2 import Report
 from stix2.properties import ListProperty, ReferenceProperty
@@ -1208,6 +1209,7 @@ class StixNote:
         risk_as_score=False,
         risk_threshold=None,
         analyst_notes_guess_relationships=False,
+        analyst_notes_include_context_entities=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -1227,6 +1229,9 @@ class StixNote:
         self.rfapi = rfapi
         self.attachments = None
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
+        self.analyst_notes_include_context_entities = (
+            analyst_notes_include_context_entities
+        )
 
     @staticmethod
     def _create_author():
@@ -1247,9 +1252,26 @@ class StixNote:
             refs.append({"source_name": source_name, "url": external_url})
         return refs
 
+    def _get_entity_risk_score(self, type_, name):
+        """Gets the risk score of a note entity
+        An entity can be mentioned in a note without being known by the Connect API,
+        the note is still complete without its risk score.
+        Returns:
+            The risk score as an int, or None when the Connect API does not know the entity
+        """
+        try:
+            return self.rfapi.get_risk_score(INDICATOR_TYPE_URL_MAPPER[type_], name)
+        except requests.exceptions.HTTPError as err:
+            if err.response is not None and err.response.status_code == 404:
+                self.helper.connector_logger.warning(
+                    "[ANALYST NOTES] Risk score not found for entity",
+                    {"entity": name, "type": type_},
+                )
+                return None
+            raise
+
     def from_json(self, note, tlp):
         """Converts to STIX Bundle from JSON objects"""
-        # TODO: catch errors in for loop here
         attr = note["attributes"]
         self.name = attr["title"]
         self.text = attr["text"]
@@ -1269,7 +1291,25 @@ class StixNote:
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
         self.attachments = attr["attachments"]
-        for entity in attr.get("note_entities", []):
+        # Recorded Future Analyst Notes carry two entity arrays: "note_entities"
+        # are the primary entities the note is directly about, while
+        # "context_entities" are related/referenced entities (which can include
+        # threat actors) discussed in the note's context but not tagged as
+        # primary. They are only converted when explicitly enabled, as they can
+        # add a lot of noise and false positives, but without them a threat
+        # actor mentioned only in context is absent from the resulting STIX
+        # bundle. Entities are deduplicated by id in case the same entity
+        # appears in both arrays.
+        seen_entity_ids = set()
+        all_entities = list(attr.get("note_entities", []))
+        if self.analyst_notes_include_context_entities:
+            all_entities += attr.get("context_entities", [])
+        for entity in all_entities:
+            entity_id = entity.get("id")
+            if entity_id is not None:
+                if entity_id in seen_entity_ids:
+                    continue
+                seen_entity_ids.add(entity_id)
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
@@ -1304,25 +1344,25 @@ class StixNote:
                     "Hash",
                 ]:
                     risk_score = None
-                    if self.risk_threshold:
-                        # If a min threshold was defined, we ignore the indicator if the score is lower than the defined threshold
-                        risk_score = self.rfapi.get_risk_score(
-                            INDICATOR_TYPE_URL_MAPPER[type_], name
+                    if self.risk_threshold or self.risk_as_score:
+                        risk_score = self._get_entity_risk_score(type_, name)
+                    # If a min threshold was defined, we ignore the indicator if its score
+                    # is unknown or lower than the defined threshold
+                    if self.risk_threshold and (
+                        risk_score is None or risk_score < self.risk_threshold
+                    ):
+                        self.helper.connector_logger.info(
+                            "[ANALYST NOTES] Ignoring entity below risk threshold or without risk score",
+                            {
+                                "entity": name,
+                                "type": type_,
+                                "risk_score": risk_score,
+                                "risk_threshold": self.risk_threshold,
+                            },
                         )
-                        if risk_score < self.risk_threshold:
-                            self.helper.connector_logger.info(
-                                f"[ANALYST NOTES] Ignoring entity {name} as its risk score is lower than the defined risk threshold"
-                            )
-                            continue
+                        continue
                     if self.risk_as_score:
-                        # We get the risk_score if it was already set. Otherwise, we get it from the API
-                        rf_object.risk_score = (
-                            risk_score
-                            if risk_score
-                            else self.rfapi.get_risk_score(
-                                INDICATOR_TYPE_URL_MAPPER[type_], name
-                            )
-                        )
+                        rf_object.risk_score = risk_score
                 stix_objs = rf_object.to_stix_objects()
             self.objects.extend(stix_objs)
 

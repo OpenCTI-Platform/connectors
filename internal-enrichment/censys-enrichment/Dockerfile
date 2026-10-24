@@ -2,9 +2,14 @@ FROM python:3.12-alpine
 
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-# hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk add --no-cache  \
+      build-base  \
+      git  \
+      libffi-dev  \
+      libmagic  \
+      libxml2-dev  \
+      libxslt-dev
 
 COPY src/censys_enrichment /opt/opencti-connector-censys-enrichment/src/censys_enrichment
 COPY pyproject.toml /opt/opencti-connector-censys-enrichment/pyproject.toml

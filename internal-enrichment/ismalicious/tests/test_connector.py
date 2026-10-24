@@ -1,31 +1,38 @@
 """Tests for isMalicious connector API client."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from connector import IsMaliciousConnector
+from connector import ConnectorSettings, IsMaliciousConnector
 from connector.ismalicious import USER_AGENT
-from connector.models import (
-    ConfigLoader,
-    ConnectorConfig,
-    IsMaliciousConfig,
-    OpenCTIConfig,
-)
-from pydantic import SecretStr
+
+
+def _make_settings(**ismalicious: Any) -> ConnectorSettings:
+    """Build connector settings from a config dict instead of the environment."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "opencti-token",
+                    },
+                    "connector": {},
+                    "ismalicious": {"api_key": "test-credential", **ismalicious},
+                }
+            )
+
+    return FakeConnectorSettings()
 
 
 def _make_connector(
-    api_key: str = "test-credential",
+    api_key: str = "test-credential", **ismalicious: Any
 ) -> tuple[IsMaliciousConnector, MagicMock]:
-    config = ConfigLoader(
-        opencti=OpenCTIConfig(
-            url="http://localhost:8080",
-            token=SecretStr("opencti-token"),
-        ),
-        connector=ConnectorConfig(id="ismalicious-enrichment"),
-        ismalicious=IsMaliciousConfig(api_key=SecretStr(api_key)),
-    )
+    config = _make_settings(api_key=api_key, **ismalicious)
     helper = MagicMock()
     helper.api.label.read_or_create_unchecked = MagicMock()
     return IsMaliciousConnector(config, helper), helper
@@ -60,16 +67,9 @@ def test_call_api_strips_trailing_slash_from_api_url(mock_get):
     mock_response.json.return_value = {"malicious": True}
     mock_get.return_value = mock_response
 
-    config = ConfigLoader(
-        opencti=OpenCTIConfig(
-            url="http://localhost:8080",
-            token=SecretStr("opencti-token"),
-        ),
-        connector=ConnectorConfig(id="ismalicious-enrichment"),
-        ismalicious=IsMaliciousConfig(
-            api_url="https://api.ismalicious.com/",
-            api_key=SecretStr("test-key"),
-        ),
+    config = _make_settings(
+        api_url="https://api.ismalicious.com/",
+        api_key="test-key",
     )
     helper = MagicMock()
     helper.api.label.read_or_create_unchecked = MagicMock()
@@ -222,6 +222,8 @@ def _enrich(connector, api_data, value="203.0.113.7"):
         helper_cls.check_max_tlp.return_value = True
         result = connector._process_message(
             {
+                "event_type": "INTERNAL_ENRICHMENT",
+                "entity_id": stix_entity["id"],
                 "enrichment_entity": {"entity_type": "IPv4-Addr", "objectMarking": []},
                 "stix_entity": stix_entity,
                 "stix_objects": [],
@@ -259,19 +261,23 @@ def test_infrastructure_only_observable_is_not_reported_as_threat():
     assert "Detected by" not in description
 
 
-def _message(entity_type="IPv4-Addr", value="203.0.113.7"):
+def _message(entity_type="IPv4-Addr", value="203.0.113.7", from_playbook=False):
     from connector.ismalicious import STIX_EXT_OCTI_SCO
 
     entity = {
-        "id": "ipv4-addr--test",
+        "id": f"{entity_type.lower()}--test",
         "value": value,
         "extensions": {STIX_EXT_OCTI_SCO: {"score": 85}},
     }
-    return {
+    message = {
+        "entity_id": entity["id"],
         "enrichment_entity": {"entity_type": entity_type, "objectMarking": []},
         "stix_entity": entity,
         "stix_objects": [entity],
     }
+    if not from_playbook:
+        message["event_type"] = "INTERNAL_ENRICHMENT"
+    return message
 
 
 @pytest.mark.parametrize(
@@ -305,8 +311,7 @@ def test_unknown_score_does_not_downgrade_existing_score(api_data, expected_verd
     "api_data", [{"malicious": False}, {"riskScore": {"score": 59}}]
 )
 def test_missing_or_below_threshold_score_does_not_enrich(api_data):
-    connector, helper = _make_connector()
-    connector.config.ismalicious.min_score_to_report = 60
+    connector, helper = _make_connector(min_score=60)
     with (
         patch.object(connector, "_call_api", return_value=api_data),
         patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
@@ -374,4 +379,83 @@ def test_api_failure_leaves_observable_unchanged():
         result = connector._process_message(_message())
     assert result == "API call failed for 203.0.113.7"
     stix2_cls.put_attribute_in_extension.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def _playbook_skip(connector, message, api_data=None, tlp_ok=True):
+    """Run a playbook message through _process_message with the given API answer."""
+    with (
+        patch.object(connector, "_call_api", return_value=api_data) as api_call,
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+        patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = tlp_ok
+        result = connector._process_message(message)
+    return result, api_call, stix2_cls
+
+
+@pytest.mark.parametrize(
+    "settings, message_kwargs, api_data, tlp_ok, expected",
+    [
+        pytest.param(
+            {},
+            {"entity_type": "Url", "value": "https://example.org"},
+            None,
+            True,
+            "Entity not in connector scope, skipping",
+            id="out_of_scope",
+        ),
+        pytest.param(
+            {}, {}, None, False, "TLP too high, skipping enrichment", id="tlp_too_high"
+        ),
+        pytest.param(
+            {}, {"value": ""}, None, True, "No observable value found", id="no_value"
+        ),
+        pytest.param(
+            {"enrich_ipv4": False},
+            {},
+            None,
+            True,
+            "IPv4 enrichment disabled",
+            id="type_disabled",
+        ),
+        pytest.param(
+            {}, {}, None, True, "API call failed for 203.0.113.7", id="api_failure"
+        ),
+        pytest.param(
+            {"min_score": 60},
+            {},
+            {"riskScore": {"score": 59}},
+            True,
+            "Score 59 below threshold, skipping",
+            id="below_threshold",
+        ),
+    ],
+)
+def test_skipped_entity_from_playbook_sends_original_bundle(
+    settings, message_kwargs, api_data, tlp_ok, expected
+):
+    """A playbook MUST get the original bundle back, otherwise it stalls."""
+    connector, helper = _make_connector(**settings)
+    message = _message(**message_kwargs, from_playbook=True)
+
+    result, _api_call, stix2_cls = _playbook_skip(connector, message, api_data, tlp_ok)
+
+    assert result == expected
+    stix2_cls.put_attribute_in_extension.assert_not_called()
+    helper.stix2_create_bundle.assert_called_once_with(message["stix_objects"])
+    helper.send_stix2_bundle.assert_called_once_with(
+        helper.stix2_create_bundle.return_value
+    )
+
+
+def test_out_of_scope_entity_never_calls_api():
+    """An entity outside the connector scope MUST NOT be sent to the isMalicious API."""
+    connector, helper = _make_connector()
+    message = _message("Url", "https://example.org")
+
+    result, api_call, _stix2_cls = _playbook_skip(connector, message)
+
+    assert result == "Entity not in connector scope, skipping"
+    api_call.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()

@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/whoisfreaks_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "WhoisFreaks",
+      "description": "Display name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "indicator",
+        "domain-name"
+      ],
+      "description": "OpenCTI entity types imported by the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "Time between connector runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "WHOISFREAKS_API_KEY": {
+      "description": "WhoisFreaks API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WHOISFREAKS_API_BASE_URL": {
+      "default": "https://files.whoisfreaks.com/v3.4/stream",
+      "description": "WhoisFreaks threat-feed stream API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WHOISFREAKS_STATUS_API_BASE_URL": {
+      "default": "https://files.whoisfreaks.com",
+      "description": "WhoisFreaks API status base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WHOISFREAKS_FEED_TYPES": {
+      "default": [
+        "malware",
+        "phishing",
+        "spam"
+      ],
+      "description": "Threat feeds to import (subset of: malware, phishing, spam). Leave empty or omit feeds you are not subscribed to.",
+      "items": {
+        "enum": [
+          "malware",
+          "phishing",
+          "spam"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WHOISFREAKS_NRD_FEED_TYPES": {
+      "default": [
+        "nrd_gtld_with_whois",
+        "nrd_cctld_with_whois",
+        "nrd_gtld_without_whois",
+        "nrd_cctld_without_whois"
+      ],
+      "description": "NRD feeds to import. Valid values: nrd_gtld_with_whois, nrd_cctld_with_whois, nrd_gtld_without_whois, nrd_cctld_without_whois. Only enable feeds covered by your subscription.",
+      "items": {
+        "enum": [
+          "nrd_gtld_with_whois",
+          "nrd_cctld_with_whois",
+          "nrd_gtld_without_whois",
+          "nrd_cctld_without_whois"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WHOISFREAKS_NRD_BASE_URL": {
+      "default": "https://files.whoisfreaks.com/v3.3/stream/domainer",
+      "description": "WhoisFreaks NRD stream API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WHOISFREAKS_PAGE_LIMIT": {
+      "default": 5000,
+      "description": "Number of CSV records requested per page. Higher values reduce HTTP overhead; keep within API limits and available memory (recommended 5000-10000 for large feeds).",
+      "maximum": 100000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WHOISFREAKS_NRD_TIMEOUT": {
+      "default": 180,
+      "description": "HTTP timeout in seconds for NRD feed requests.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WHOISFREAKS_THREAT_TIMEOUT": {
+      "default": 180,
+      "description": "HTTP timeout in seconds for threat-feed requests.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WHOISFREAKS_MAX_RETRIES": {
+      "default": 5,
+      "description": "Max HTTP retries on transient errors (429/5xx).",
+      "maximum": 20,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "WHOISFREAKS_RETRY_BACKOFF_SECONDS": {
+      "default": 2.0,
+      "description": "Base seconds for exponential backoff between retries.",
+      "minimum": 0.1,
+      "type": "number"
+    },
+    "WHOISFREAKS_CHECKPOINT_EVERY_PAGES": {
+      "default": 10,
+      "description": "Update the in-memory offset every N pages; the connector persists state at the end of its callback.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WHOISFREAKS_IMPORT_SINCE": {
+      "default": "P1D",
+      "description": "Latest-snapshot floor date; snapshots older than this date are skipped. This does not trigger historical backfill. Accepts an ISO-8601 date-time or relative duration such as P7D.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "WHOISFREAKS_TLP_LEVEL": {
+      "description": "TLP marking applied to imported STIX objects.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "WHOISFREAKS_CREATE_INDICATORS_FOR_NRD": {
+      "default": false,
+      "description": "When true, create Indicator + based-on for NRD domains. When false, only Domain-Name observables are created (recommended for high-volume NRD feeds).",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "WHOISFREAKS_API_KEY"
+  ],
+  "additionalProperties": true
+}

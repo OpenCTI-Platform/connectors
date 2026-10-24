@@ -19,11 +19,10 @@ class StubConnectorSettings(ConnectorSettings):
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {},
+                "connector": {"max_tlp": "TLP:AMBER"},
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )

@@ -10,11 +10,15 @@ requires-python = ">=3.11, <3.13"
 
 dependencies = [
     "limits>=5.0,<6",
-    "pycti==7.261008.0",
+    "pycti==7.261023.1",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
     "requests>=2.31.0,<3",
 ]
+
+# Loaded by pytest when the SDK is installed (see `_connectors_sdk_plugins`)
+[project.entry-points.pytest11]
+connectors_sdk = "_connectors_sdk_plugins.pytest_plugin"
 
 [project.optional-dependencies]
 dev = [
@@ -38,7 +42,7 @@ doc = [
 
 [tool.poetry]
 version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
-packages = [{include = "connectors_sdk"}]
+packages = [{include = "connectors_sdk"}, {include = "_connectors_sdk_plugins"}]
 
 [tool.pytest.ini_options]
 testpaths = [

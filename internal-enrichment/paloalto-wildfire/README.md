@@ -46,7 +46,7 @@ turns it into OpenCTI knowledge.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.261008.0
+- OpenCTI Platform >= 7.261023.1
 - A Palo Alto Networks WildFire API key
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
@@ -77,6 +77,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Scope | scope          | `CONNECTOR_SCOPE`           | StixFile,Artifact | No      | The observable types the connector enriches.                                           |
 | Log Level       | log_level      | `CONNECTOR_LOG_LEVEL`       | error           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 | Connector Auto  | auto           | `CONNECTOR_AUTO`            | false           | No        | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Max TLP         | max_tlp        | `CONNECTOR_MAX_TLP`         | `TLP:AMBER`     | No        | Maximum TLP of the observable the connector is allowed to enrich. Replaces the deprecated `PALOALTO_WILDFIRE_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
@@ -89,7 +90,6 @@ Below are the parameters you'll need to set for the connector:
 | Submit unknown | submit_unknown | `PALOALTO_WILDFIRE_SUBMIT_UNKNOWN` | `false`                                        | No        | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet (opt-in). |
 | Max file size | max_file_size | `PALOALTO_WILDFIRE_MAX_FILE_SIZE` | `33554432`                                       | No        | Max size (bytes) of a file the connector downloads from OpenCTI and submits (32 MiB).                      |
 | Submission timeout | submission_timeout | `PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT` | `600`                                 | No        | Max time (seconds) to wait for a submitted file's verdict.                                                 |
-| Max TLP      | max_tlp      | `PALOALTO_WILDFIRE_MAX_TLP`        | `TLP:AMBER`                                       | No        | Maximum TLP of the observable the connector is allowed to enrich.                                          |
 
 ## Deployment
 

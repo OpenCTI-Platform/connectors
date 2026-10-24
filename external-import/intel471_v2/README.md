@@ -23,6 +23,7 @@ The following table outlines the data availability across both platforms.
 | **YARA** | ✅ | ❌ | `Indicator`, `Malware` | **Verity:** Merged into the **Indicators** stream for a unified experience. |
 | **Reports** | ✅ | ✅ | `Report`, `Malware`, Observables | **Titan:** Fintel, Info, Malware, Spot, Breach Alerts.<br>**Verity:** Adds Geopol intel reports. |
 | **Vulnerabilities** | ✅ | ✅ | `Vulnerability` | Full parity across both platforms. |
+| **Credentials** | ❌ | ✅ | `User-Account`, `Email-Addr`, `Domain-Name`, `Malware` | **Verity only.** Leaked credentials; one `User-Account` per credential (an email login is also emitted as `Email-Addr`), linked `related-to` the affected domains and the harvesting infostealer `Malware`. Disabled by default; the cleartext password is not stored unless explicitly enabled; filterable by affiliation group. |
 | **Alerts** | ❌ | ✅ | `Incident` + the alert target's objects | **Verity only.** Watcher alerts; each alert's target (post, report, credential, indicator, …) is resolved and wrapped in an `Incident`. Disabled by default; filterable by watcher group/watcher/status. |
 
 > Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
@@ -89,6 +90,7 @@ Verity471 credentials are the **Client ID** and **Client Secret** of an applicat
 | **Indicators** | `INTEL471_INTERVAL_INDICATORS` | Indicators, Malware |
 | **Reports** | `INTEL471_INTERVAL_REPORTS` | Reports |
 | **Vulnerabilities** (CVEs) | `INTEL471_INTERVAL_CVES` | Reports |
+| **Credentials** | `INTEL471_INTERVAL_CREDENTIALS` | Credentials |
 | **Alerts** | `INTEL471_INTERVAL_ALERTS` | **Watchers**, plus one content API per alert target type — see [Alerts: which APIs to grant](#alerts-which-apis-to-grant) below |
 
 If an API is missing, the streams depending on it log an authorization error on every run while the remaining streams keep ingesting, as each stream runs as its own scheduled job.
@@ -109,6 +111,20 @@ Grant only the APIs your watchers match. If you are unsure which those are, or w
 | **Malware** | Malware families and malware-intel events |
 
 An alert whose target needs an API you have not granted is skipped (logged, not fatal); the rest of the alerts keep ingesting.
+
+> **Credentials** is a Verity471-only stream, disabled by default. Set a non-zero
+> `INTEL471_INTERVAL_CREDENTIALS` to enable it. Each leaked credential becomes a `User-Account`
+> (an email login is also emitted as an `Email-Addr` linked back to it), related to the affected
+> `Domain-Name`s and the harvesting infostealer `Malware`. The cleartext password is **not** stored
+> by default; set `INTEL471_ENABLE_CREDENTIALS_PLAIN_PASSWORD=true` to store it in the `User-Account`
+> `credential` field. That flag also governs leaked-credential targets surfaced through the **Alerts**
+> stream. Optionally narrow the stream to one or more affiliation groups with
+> `INTEL471_AFFILIATION_GROUP` (comma-separated: `my_employees`, `my_customers`, `third_parties`,
+> `vip_emails`); if unset, credentials from all affiliation groups are fetched. A Verity471 cursor is
+> only valid for the filter set it was issued against, so changing this makes the connector discard the
+> stored cursor and re-anchor to the last processed credential minus a small margin (expect a small
+> overlapping re-ingest). On a fresh state the stream starts from the connector's start date unless
+> `INTEL471_INITIAL_HISTORY_CREDENTIALS` is set.
 
 > **Alerts** is disabled by default. Set a non-zero `INTEL471_INTERVAL_ALERTS` to enable it, and optionally narrow it with `INTEL471_WATCHER_GROUP_IDS`, `INTEL471_WATCHER_IDS`, `INTEL471_STATUSES` (`generated`, `needs_action`, `in_progress`, `completed`, `false_positive`) and `INTEL471_IS_TRASHED_INCLUDED`. A Verity471 cursor is only valid for the filter set it was issued against, so changing any of these filters makes the connector discard the stored cursor and re-anchor to the last processed alert minus a small margin: expect a small overlapping re-ingest, and note that widening a filter backfills only that margin. To backfill further, reset the alerts stream's initial-history state (or set `INTEL471_INITIAL_HISTORY_ALERTS` to the desired start on a fresh state).
 
@@ -158,6 +174,8 @@ To see the malware objects created by Indicators stream and YARA stream, navigat
 To see the Reports created by Reports stream, navigate to **Analysis->Reports**.
 
 To see the CVEs created by Vulnerabilities stream, navigate to **Arsenal->Vulnerabilities**.
+
+To see the user accounts created by the Credentials stream, navigate to **Observations->Observables**.
 
 To see the Incidents created by the Alerts stream, navigate to **Events->Incidents**.
 

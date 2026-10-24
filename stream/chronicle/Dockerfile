@@ -6,7 +6,8 @@ COPY src /opt/opencti-connector-chronicle
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-chronicle && \
     pip3 install --no-cache-dir -r requirements.txt && \
