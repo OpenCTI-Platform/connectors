@@ -10,13 +10,10 @@ from censys_collections.converter import Converter
 from censys_collections.settings import ConfigLoader
 from censys_platform import Collection
 from connectors_sdk import (
-    BaseConnectorSettings,
     BaseDataProcessor,
-    ExternalImportConnectorState,
 )
 from connectors_sdk.exceptions.error import DataRetrievalError
 from connectors_sdk.models import BaseObject
-from pycti import OpenCTIConnectorHelper
 
 
 class CollectionsProcessor(BaseDataProcessor):
@@ -31,16 +28,6 @@ class CollectionsProcessor(BaseDataProcessor):
     # ------------------------------------------------------------------
     # BaseDataProcessor interface
     # ------------------------------------------------------------------
-
-    def inject_dependencies(
-        self,
-        settings: BaseConnectorSettings,
-        helper: OpenCTIConnectorHelper,
-        state: ExternalImportConnectorState,
-    ) -> None:
-        """Inject dependencies, keeping a direct helper reference for grouping maintenance."""
-        super().inject_dependencies(settings, helper, state)
-        self._helper = helper
 
     def collect(self) -> list[Collection]:
         """Return all collections that should be ingested this run.
@@ -107,11 +94,7 @@ class CollectionsProcessor(BaseDataProcessor):
                 continue
 
             if objects:
-                object_refs = [obj.id for obj in objects if hasattr(obj, "id")]
                 grouping = self.converter.build_grouping(collection, objects)
-                if grouping is not None:
-                    self._prune_stale_grouping_members(grouping.id, object_refs)
-
                 bundle = self.converter.bootstrap_objects() + objects
                 if grouping is not None:
                     bundle.append(grouping)
@@ -131,56 +114,3 @@ class CollectionsProcessor(BaseDataProcessor):
                 f"Censys Collections: failed to fetch assets for all "
                 f"{failed_collections} collection(s); marking this run as failed."
             )
-
-    # ------------------------------------------------------------------
-    # Grouping maintenance
-    # ------------------------------------------------------------------
-
-    def _prune_stale_grouping_members(
-        self, grouping_stix_id: str, current_refs: list[str]
-    ) -> None:
-        """Unlink any Grouping member that's no longer part of the collection.
-
-        STIX bundle ingestion only ever *adds* to a Grouping's membership, so
-        Censys assets removed from a collection between runs would otherwise
-        stay attached forever. This diffs the existing Grouping's current
-        members (fetched via the OpenCTI API) against *current_refs* and
-        explicitly removes any that are no longer present.
-        """
-        try:
-            existing = self._helper.api.grouping.read(id=grouping_stix_id)
-        except Exception as error:
-            self.logger.error(
-                f"Censys Collections: failed to read existing grouping "
-                f"{grouping_stix_id} for pruning: {error}"
-            )
-            return
-
-        if not existing:
-            return  # First run for this collection - nothing to prune yet.
-
-        current_ref_set = set(current_refs)
-        stale_ids = [
-            member["standard_id"]
-            for member in existing.get("objects") or []
-            if member.get("standard_id")
-            and member["standard_id"] not in current_ref_set
-        ]
-        if not stale_ids:
-            return
-
-        self.logger.info(
-            f"Censys Collections: pruning {len(stale_ids)} stale member(s) "
-            f"from grouping '{existing.get('name')}'."
-        )
-        for stale_id in stale_ids:
-            try:
-                self._helper.api.grouping.remove_stix_object_or_stix_relationship(
-                    id=existing["id"],
-                    stixObjectOrStixRelationshipId=stale_id,
-                )
-            except Exception as error:
-                self.logger.error(
-                    f"Censys Collections: failed to remove stale member "
-                    f"{stale_id} from grouping: {error}"
-                )
