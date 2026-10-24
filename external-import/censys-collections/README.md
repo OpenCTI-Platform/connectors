@@ -41,7 +41,7 @@ For every asset in a collection, the connector creates:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261008.0
+- OpenCTI Platform >= 7.261023.1
 - Censys account with API access (Organisation ID and Token) and at least one existing [Collection](https://docs.censys.com/docs/platform-collections)
 
 ## Configuration variables
@@ -119,16 +119,16 @@ docker compose up -d
 ### Manual Deployment
 
 1. Copy `.env.sample` to `.env` and configure with your credentials.
-2. Install dependencies:
+2. Install the connector and its dependencies from the connector directory:
 
    ```bash
-   pip3 install -r requirements.txt
+   pip3 install .
    ```
 
-3. Start the connector from the `src` directory:
+3. Start the connector:
 
    ```bash
-   python3 main.py
+   censys-collections-connector
    ```
 
 ## Usage
