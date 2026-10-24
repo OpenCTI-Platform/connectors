@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from censys_enrichment.settings import ConfigLoader
 from connectors_sdk import ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 
 
 @pytest.mark.parametrize(
@@ -68,7 +69,7 @@ def test_settings_should_reject_missing_required_fields():
         FakeConfigLoader()
 
 
-def test_default_max_tlp_is_amber():
+def test_default_connector_max_tlp_is_amber():
     class FakeConfigLoader(ConfigLoader):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
@@ -84,7 +85,7 @@ def test_default_max_tlp_is_amber():
             )
 
     cfg = FakeConfigLoader()
-    assert cfg.censys_enrichment.max_tlp == "TLP:AMBER"
+    assert cfg.connector.max_tlp == TLPLevel.AMBER
 
 
 def test_default_nvd_enabled_is_true():
