@@ -28,7 +28,7 @@ configurable TLP, with related network observables.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.261021.1
+- OpenCTI Platform >= 7.261023.1
 - A reachable FortiSIEM Supervisor with the REST API enabled
 - A FortiSIEM REST API user
 
