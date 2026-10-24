@@ -281,7 +281,9 @@ def test_client_does_not_advertise_compression():
 def test_parse_whois_rows_raises_on_missing_domain_name_header():
     """A nonempty WHOIS CSV response without 'domain_name' header must raise."""
     payload = "create_date,registrant_name\n2026-09-01,Example\n"
-    with pytest.raises(WhoisFreaksNRDError, match="missing required 'domain_name' header"):
+    with pytest.raises(
+        WhoisFreaksNRDError, match="missing required 'domain_name' header"
+    ):
         WhoisFreaksNRDClient._parse_whois_csv(payload)
 
 
@@ -317,7 +319,9 @@ def test_iter_retries_whois_stream_transport_error(monkeypatch):
             return response
         return _fake_response(good_payload)
 
-    client = WhoisFreaksNRDClient("test-api-key", max_retries=1, retry_backoff_seconds=0)
+    client = WhoisFreaksNRDClient(
+        "test-api-key", max_retries=1, retry_backoff_seconds=0
+    )
     monkeypatch.setattr(client._session, "get", fake_get)
     sleep = MagicMock()
     monkeypatch.setattr("whoisfreaks_client.nrd_client.time.sleep", sleep)

@@ -319,7 +319,9 @@ class WhoisFreaksNRDClient:
             reader = csv.DictReader(text_stream)
             return self._parse_whois_rows(reader)
         except (_urllib3_exc.HTTPError, _urllib3_exc.IncompleteRead) as exc:
-            raise requests.ConnectionError(f"NRD WHOIS stream read failed: {exc}") from exc
+            raise requests.ConnectionError(
+                f"NRD WHOIS stream read failed: {exc}"
+            ) from exc
         finally:
             # urllib3 may auto-close response.raw after EOF, which marks the
             # TextIOWrapper closed and makes detach() raise ValueError — that
@@ -350,7 +352,9 @@ class WhoisFreaksNRDClient:
         try:
             return self._parse_domain_lines(text_stream)
         except (_urllib3_exc.HTTPError, _urllib3_exc.IncompleteRead) as exc:
-            raise requests.ConnectionError(f"NRD domains stream read failed: {exc}") from exc
+            raise requests.ConnectionError(
+                f"NRD domains stream read failed: {exc}"
+            ) from exc
         finally:
             try:
                 if not text_stream.closed:
