@@ -1,8 +1,9 @@
+import sys
 from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connector.settings import parse_threat_level_score_mapping
+from connector.settings import MispConfig, parse_threat_level_score_mapping
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 
 
@@ -214,6 +215,59 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.misp, BaseConfigModel) is True
+
+
+@pytest.mark.parametrize(
+    "guess_key, filter_key",
+    [
+        ("guess_threats_from_tags", "report_description_attribute_filters"),
+        ("guess_threat_from_tags", "report_description_attribute_filter"),
+    ],
+)
+def test_misp_settings_accept_documented_and_legacy_names(guess_key, filter_key):
+    settings = MispConfig.model_validate(
+        {
+            "url": "http://test.com",
+            "key": "test-api-key",
+            guess_key: True,
+            filter_key: "type=text",
+        }
+    )
+
+    assert settings.guess_threats_from_tags is True
+    assert settings.report_description_attribute_filters == {"type": "text"}
+    assert not settings.model_extra
+
+
+@pytest.mark.parametrize(
+    "guess_env, filter_env",
+    [
+        ("MISP_GUESS_THREATS_FROM_TAGS", "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS"),
+        ("MISP_GUESS_THREAT_FROM_TAGS", "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER"),
+    ],
+)
+def test_misp_settings_load_documented_and_legacy_env_vars(
+    monkeypatch, tmp_path, guess_env, filter_env
+):
+    monkeypatch.setattr(sys.modules["__main__"], "__file__", str(tmp_path / "main.py"))
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+    monkeypatch.setenv("MISP_URL", "http://test.com")
+    monkeypatch.setenv("MISP_KEY", "test-api-key")
+    for env_name in (
+        "MISP_GUESS_THREATS_FROM_TAGS",
+        "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTERS",
+        "MISP_GUESS_THREAT_FROM_TAGS",
+        "MISP_REPORT_DESCRIPTION_ATTRIBUTE_FILTER",
+    ):
+        monkeypatch.delenv(env_name, raising=False)
+    monkeypatch.setenv(guess_env, "true")
+    monkeypatch.setenv(filter_env, "type=text")
+
+    settings = MispConfig.model_validate(ConnectorSettings().misp)
+    assert settings.guess_threats_from_tags is True
+    assert settings.report_description_attribute_filters == {"type": "text"}
+    assert not settings.model_extra
 
 
 @pytest.mark.parametrize(
