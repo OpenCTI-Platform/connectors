@@ -24,3 +24,4 @@ services:
 
       # --- Target Client List (IP type only) ---
       - AKAMAI_CLIENT_LIST_ID=ChangeMe
+      - AKAMAI_ASN_CLIENT_LIST_ID=ChangeMe
