@@ -1,5 +1,5 @@
-# Main dependencies needs to be installed
--r ../requirements.txt
-pytest==9.0.3
-pytest-mock==3.15.1
-factory-boy==3.3.3
+# Install connector dependencies first, then test extras.
+# `-e .` resolves relative to the *invoking* working directory (the repo
+# root, per run_test.sh), not relative to this file's own location -- so the
+# path must be spelled out from the repo root rather than as a bare ".".
+-e ./external-import/censys-collections[test]
