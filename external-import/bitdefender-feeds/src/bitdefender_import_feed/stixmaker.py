@@ -82,7 +82,6 @@ class StixMaker:
         self.helper.send_stix2_bundle(
             bundle=outbundle,
             work_id=self.work_id,
-            cleanup_inconsistent_bundle=True,
             update=True,
         )
 
@@ -253,6 +252,11 @@ class StixMakerPrivate:
         if "suspicious_entry" in self.data:
             self._getValue("suspicious_entry")
 
+    def _createRelationship( **args ):
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id( args["relationship_type"], args["source_ref"], args["target_ref"] ),
+            **args )
+
     def _parseRelatedIndicator(self, indicator, source_id):
 
         RELATIONSHIP_MAP = {
@@ -362,7 +366,7 @@ class StixMakerPrivate:
         reldata = RELATIONSHIP_MAP[indicator["relationship"]]
 
         if reldata[1]:
-            stix_rel = stix2.Relationship(
+            stix_rel = self._createRelationship(
                 relationship_type=reldata[0],
                 source_ref=source_id,
                 target_ref=stix_obj.id,
@@ -370,7 +374,7 @@ class StixMakerPrivate:
                 created_by_ref=self.maker.creator_identity,
             )
         else:
-            stix_rel = stix2.Relationship(
+            stix_rel = self._createRelationship(
                 relationship_type=reldata[0],
                 source_ref=stix_obj.id,
                 target_ref=source_id,
@@ -418,7 +422,7 @@ class StixMakerPrivate:
 
                 country_refs.append((ref_id, percent))
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type=(
                             "targets" if source_type == "malware" else "related-to"
                         ),
@@ -427,8 +431,7 @@ class StixMakerPrivate:
                         created_by_ref=self.maker.creator_identity,
                         custom_properties={"x_opencti_impact_percentage": percent},
                         allow_custom=True
-                    )
-                )
+                    ) )
 
         #
         # Affected industries
@@ -451,7 +454,7 @@ class StixMakerPrivate:
 
                 industry_refs.append((ref_id, percent))
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type=(
                             "targets" if source_type == "malware" else "related-to"
                         ),
@@ -474,7 +477,7 @@ class StixMakerPrivate:
                 "threat_actor", threatactordata
             )
             additional_bundle.append(
-                stix2.Relationship(
+                self._createRelationship(
                     relationship_type=(
                         "uses" if source_type == "malware" else "related-to"
                     ),
@@ -487,7 +490,7 @@ class StixMakerPrivate:
             # Link threat actor to countries (targets relationship)
             for country_id, percent in country_refs:
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type="targets",
                         source_ref=ref_id,
                         target_ref=country_id,
@@ -500,7 +503,7 @@ class StixMakerPrivate:
             # Link threat actor to industries (targets relationship)
             for industry_id, percent in industry_refs:
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type="targets",
                         source_ref=ref_id,
                         target_ref=industry_id,
@@ -537,7 +540,7 @@ class StixMakerPrivate:
                     "vulnerability", vulndata
                 )
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type=(
                             "exploits" if source_type == "malware" else "related-to"
                         ),
@@ -569,7 +572,7 @@ class StixMakerPrivate:
                     "attack_pattern", attackpatterndata
                 )
                 additional_bundle.append(
-                    stix2.Relationship(
+                    self._createRelationship(
                         relationship_type=(
                             "uses" if source_type == "malware" else "related-to"
                         ),
@@ -664,7 +667,7 @@ class StixMakerPrivate:
 
         # Link file to indicator
         stix_bundle.append(
-            stix2.Relationship(
+            self._createRelationship(
                 relationship_type="based-on",
                 source_ref=stix_indicator.id,
                 target_ref=stix_file.id,
@@ -699,7 +702,7 @@ class StixMakerPrivate:
 
             # Link indicator to malware
             stix_bundle.append(
-                stix2.Relationship(
+                self._createRelationship(
                     relationship_type="indicates",
                     source_ref=stix_indicator.id,
                     target_ref=stix_malware.id,
@@ -729,7 +732,7 @@ class StixMakerPrivate:
                 "malware_family", malware_family_data
             )
             stix_bundle.append(
-                stix2.Relationship(
+                self._createRelationship(
                     relationship_type="variant-of",
                     source_ref=stix_malware.id,
                     target_ref=ref_id,
@@ -829,11 +832,12 @@ class StixMakerPrivate:
             if p in self.data:
                 indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
 
+        indicatordata["id"] = pycti.Indicator.generate_id( indicatordata["pattern"] )
         stix_indicator = stix2.Indicator(**indicatordata, allow_custom=True)
         stix_bundle.append(stix_indicator)
 
         stix_bundle.append(
-            stix2.Relationship(
+            self._createRelationship(
                 relationship_type="related-to",
                 source_ref=stix_indicator.id,
                 target_ref=stix_ip.id,
@@ -886,12 +890,14 @@ class StixMakerPrivate:
             if p in self.data:
                 indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
 
-        stix_indicator = stix2.Indicator(**indicatordata, allow_custom=True)
+        indicatordata["allow_custom"] = True
+        indicatordata["id"] = pycti.Indicator.generate_id( indicatordata["pattern"] )
+        stix_indicator = stix2.Indicator(**indicatordata)
 
         stix_bundle.append(stix_obj)
         stix_bundle.append(stix_indicator)
         stix_bundle.append(
-            stix2.Relationship(
+            self._createRelationship(
                 relationship_type="based-on",
                 source_ref=stix_indicator.id,
                 target_ref=stix_obj.id,
