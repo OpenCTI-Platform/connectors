@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-darkmoon:
+    image: opencti/connector-darkmoon:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Darkmoon # optional (default: 'Darkmoon')
+      - CONNECTOR_SCOPE=Vulnerability,Note,Report,Attack-Pattern
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, ISO-8601 interval between two runs (default: 'PT1H')
+      # Custom parameters for connector-darkmoon
+      - DARKMOON_EXPORT_PATH=/opt/darkmoon-data # path, inside the container, to the mounted Darkmoon OSS data directory
+      - DARKMOON_TLP_LEVEL=red # optional, one of: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'red')
+      - DARKMOON_IMPORT_SINCE=P30D # optional, import campaigns dated since this absolute date or relative period (default: 30 days ago)
+      - DARKMOON_IMPORT_FINDINGS=true # optional, enable/disable the import of findings (default: true)
+      - DARKMOON_IMPORT_ATTACK_PATTERNS=true # optional, create ATT&CK attack patterns from findings (default: true)
+    volumes:
+      # Mount the Darkmoon OSS data directory read-only. On the Darkmoon host this
+      # is the directory the stack binds to /root/.local/share/opencode (named
+      # 'darkmoon-settings' in the reference Darkmoon docker-compose).
+      - /path/to/darkmoon-settings:/opt/darkmoon-data:ro
+    restart: always
