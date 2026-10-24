@@ -161,7 +161,7 @@ class TemplateClient(BaseClientApi):
             # Validate response
             return [Report(**report) for report in data]
         except ApiClientError as err:
-            self._logger.error(
+            self._logger.exception(
                 "[API] Error while fetching reports",
                 meta={"endpoint": endpoint, "error": str(err)},
             )
@@ -218,7 +218,7 @@ class TemplateClient(BaseClientApi):
                 # Validate response page by page.
                 yield [CVE(**cve) for cve in cves_page]
         except ApiClientError as err:
-            self._logger.error(
+            self._logger.exception(
                 "[API] Error while fetching CVEs",
                 meta={"endpoint": endpoint, "error": str(err)},
             )

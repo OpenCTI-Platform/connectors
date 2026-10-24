@@ -2,7 +2,8 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 ENV CONNECTOR_DURATION_PERIOD=PT12H
 
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev 
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev 
 
 # Copy the connector
 COPY src /opt/abuseipdb-ipblacklist

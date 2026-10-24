@@ -64,7 +64,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id             | `CONNECTOR_LIVE_STREAM_ID`               |                     | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Listen Delete      | live_stream_listen_delete  | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`    | true                | No        | Listen to delete events.                                                       |
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`  | true                | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Confidence Level               | confidence_level           | `CONNECTOR_CONFIDENCE_LEVEL`             | 80                  | No        | Default confidence level (0-100).                                              |
 | Log Level                      | log_level                  | `CONNECTOR_LOG_LEVEL`                    | info                | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
@@ -96,7 +95,6 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=VirusTotal LiveHunts
       - CONNECTOR_SCOPE=yara
-      - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true

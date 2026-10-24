@@ -8,7 +8,8 @@ COPY src ${CONNECTOR_DIR}
 
 WORKDIR ${CONNECTOR_DIR}
 
-RUN apk --no-cache --virtual .build-deps add \
+RUN apk --no-cache upgrade \
+    && apk --no-cache --virtual .build-deps add \
         git \
         build-base \
         libxslt-dev \
