@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whoisfreaks-connector"
+version = "0.1.0"
+description = "WhoisFreaks external-import connector for OpenCTI."
+requires-python = ">=3.11, <3.13"
+dependencies = [
+    "pycti==7.261023.1",
+    "pydantic~=2.13.5",
+    "requests~=2.33.0",
+    "stix2~=3.0.1",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.0.3,<10",
+]
+dev = [
+    "black>=26.1,<27",
+    "isort>=7,<8",
+    "flake8>=7.3,<8",
+]
+all = ["whoisfreaks-connector[test,dev]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.deptry]
+# Test/dev extras are intentional; CI only fails on DEP001 (undeclared imports).
+ignore = ["DEP002"]
