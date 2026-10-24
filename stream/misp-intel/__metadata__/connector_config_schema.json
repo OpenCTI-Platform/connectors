@@ -50,13 +50,6 @@
       ],
       "type": "string"
     },
-    "CONNECTOR_CONFIDENCE_LEVEL": {
-      "default": 80,
-      "description": "The default confidence level for created entities (0-100).",
-      "maximum": 100,
-      "minimum": 0,
-      "type": "integer"
-    },
     "CONNECTOR_LIVE_STREAM_ID": {
       "description": "The ID of the live stream to listen to.",
       "minLength": 1,
@@ -147,6 +140,12 @@
     "MISP_TAG_PREFIX": {
       "default": "opencti:",
       "description": "Prefix for OpenCTI tags in MISP.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "MISP_MARKING_TYPES_TO_CONVERT": {
+      "default": "TLP,PAP",
+      "description": "Comma-separated list of marking definition types (case-insensitive, e.g. TLP, PAP) whose container markings are converted to MISP event tags. This only controls tag conversion, it does not filter which containers or objects are exported.",
       "minLength": 1,
       "type": "string"
     },

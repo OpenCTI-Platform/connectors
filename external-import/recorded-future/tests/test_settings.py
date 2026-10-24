@@ -153,6 +153,7 @@ def test_missing_keys_get_default_values():
     assert isinstance(config.interval, int)
     assert isinstance(config.last_published_notes, int)
     assert isinstance(config.analyst_notes_guess_relationships, bool)
+    assert config.analyst_notes_include_context_entities is False
 
 
 @pytest.mark.parametrize(
@@ -172,6 +173,25 @@ def test_none_or_empty_raises_value_error(field, value, error_message):
         _ConfigLoaderRecordedFuture(**kwargs)
 
     assert error_message in str(err)
+
+
+def test_analyst_notes_include_context_entities_accepts_true():
+    kwargs = _minimal_kwargs()
+    kwargs["analyst_notes_include_context_entities"] = True
+
+    config = _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert config.analyst_notes_include_context_entities is True
+
+
+def test_analyst_notes_include_context_entities_rejects_blank_string():
+    kwargs = _minimal_kwargs()
+    kwargs["analyst_notes_include_context_entities"] = "   "
+
+    with pytest.raises(ValidationError) as err:
+        _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert "Input should be a valid boolean" in str(err.value)
 
 
 def test_ta_to_intrusion_set_default_is_false():

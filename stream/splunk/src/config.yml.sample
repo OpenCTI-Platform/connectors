@@ -7,7 +7,6 @@ connector:
   type: 'STREAM'
   name: 'OpenCTI Splunk Connector'
   scope: 'splunk'
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'error' # optional (default: 'error')
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true # optional (default: true)

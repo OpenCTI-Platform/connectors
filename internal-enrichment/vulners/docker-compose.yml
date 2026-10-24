@@ -13,10 +13,10 @@ services:
       - CONNECTOR_SCOPE=Vulnerability
       - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of entities
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER # TLP:CLEAR | TLP:WHITE | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED
       # Vulners
       - VULNERS_API_KEY=ChangeMe
       - VULNERS_API_BASE_URL=https://vulners.com
-      - VULNERS_MAX_TLP_LEVEL=TLP:AMBER # TLP:CLEAR | TLP:WHITE | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED
     deploy:
       mode: replicated
       replicas: 1

@@ -8,6 +8,7 @@ connector:
   #scope: 'Report' # Optional
   #auto: false # Optional (default: false)
   #log_level: 'error' # Optional (default: 'error')
+  #max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
 
 ioc_extractor:
   #extract_hashes: true # Optional (default: true)
