@@ -228,6 +228,14 @@ skills and agents from `.claude/` (Claude Code, GitHub Copilot) pick up the
 `connector-manager-supported-migrator` agent. With other tools, follow the
 procedure file directly.
 
+## Deprecating a connector
+
+There is no formal ceremony yet. Follow `docs/06-connector-deprecation-process.md`:
+mark the manifest `title`, `description` and `short_description` first, add a
+runtime warning, a README banner, a `DEPRECATION.md` and a `CHANGELOG.md`
+entry, and use `[PLACEHOLDER]` tokens for any date, replacement or contact that
+is not known. Never invent them.
+
 ## Validation commands
 
 Run these from the repository root before proposing a commit. CI runs the same

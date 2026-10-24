@@ -1,6 +1,9 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
+# DEPRECATED: see DEPRECATION.md
+LABEL org.opencontainers.image.description="[DEPRECATED] Group-IB connector, use group-ib-ti"
+
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
