@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/censys-collections_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Censys Collections",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "X509-Certificate",
+        "Malware",
+        "Threat-Actor-Group",
+        "Vulnerability",
+        "Indicator"
+      ],
+      "description": "The entity types this connector ingests into OpenCTI.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "How long to wait between two ingestion runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CENSYS_COLLECTIONS_ORGANISATION_ID": {
+      "description": "Censys organisation ID.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CENSYS_COLLECTIONS_TOKEN": {
+      "description": "Censys API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CENSYS_COLLECTIONS_COLLECTION_IDS": {
+      "default": null,
+      "description": "Comma-separated list of Censys collection IDs to ingest. Leave empty to ingest all collections for the organisation. Takes precedence over 'excluded_collection_ids' if both are set.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CENSYS_COLLECTIONS_EXCLUDED_COLLECTION_IDS": {
+      "default": null,
+      "description": "Comma-separated list of Censys collection IDs to exclude from ingestion; every other collection visible to the organisation is ingested. Ignored if 'collection_ids' is set.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CENSYS_COLLECTIONS_TLP_LEVEL": {
+      "default": "TLP:AMBER",
+      "description": "TLP marking applied to all ingested observables and indicators.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "CENSYS_COLLECTIONS_INDICATOR_SCORE": {
+      "default": 50,
+      "description": "Confidence score (0–100) assigned to ingested observables and indicators.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE": {
+      "default": false,
+      "description": "If enabled, an indicator is only auto-created for an observable when its score meets or exceeds 'indicator_score_threshold'. If disabled (default), an indicator is always auto-created for every ingested observable, regardless of score.",
+      "type": "boolean"
+    },
+    "CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD": {
+      "default": 50,
+      "description": "Minimum score (0–100) an observable must have for an indicator to be auto-created. Only used when 'auto_indicator_by_score' is enabled.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS": {
+      "default": 60,
+      "description": "Per-request timeout (in seconds) for calls to the Censys API. Increase this if large collections cause read timeouts.",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CENSYS_COLLECTIONS_ORGANISATION_ID",
+    "CENSYS_COLLECTIONS_TOKEN"
+  ],
+  "additionalProperties": true
+}
