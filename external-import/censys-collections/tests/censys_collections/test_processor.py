@@ -53,10 +53,6 @@ def _make_processor(
     processor.work_manager = MagicMock()
     processor.state = MagicMock()
 
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = None
-    processor._helper = mock_helper
-
     return processor
 
 
@@ -152,10 +148,6 @@ def test_transform_updates_work_name_per_collection() -> None:
     processor.work_manager = MagicMock()
     processor.state = MagicMock()
 
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = None
-    processor._helper = mock_helper
-
     work_names: list[str] = []
     # Consume generator and capture work_name at each yield.
     for _ in processor.transform([c1, c2]):
@@ -192,10 +184,6 @@ def test_transform_skips_failing_collection_and_continues() -> None:
     processor.logger = MagicMock()
     processor.work_manager = MagicMock()
     processor.state = MagicMock()
-
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = None
-    processor._helper = mock_helper
 
     bundles = list(processor.transform([c1, c2]))
 
@@ -248,105 +236,3 @@ def test_process_propagates_total_failure_to_work_manager() -> None:
     exit_args = work_manager.__exit__.call_args.args
     assert exit_args[0] is DataRetrievalError
     work_manager.send.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# _prune_stale_grouping_members
-# ---------------------------------------------------------------------------
-
-
-def _make_bare_processor() -> CollectionsProcessor:
-    client = MagicMock(spec=Client)
-    converter = Converter(tlp_level="TLP:AMBER", score=50)
-    processor = CollectionsProcessor(client=client, converter=converter)
-    processor.logger = MagicMock()
-    return processor
-
-
-def test_prune_stale_grouping_members_noop_when_grouping_missing() -> None:
-    processor = _make_bare_processor()
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = None
-    processor._helper = mock_helper
-
-    processor._prune_stale_grouping_members("grouping--123", ["ipv4-addr--1"])
-
-    mock_helper.api.grouping.remove_stix_object_or_stix_relationship.assert_not_called()
-
-
-def test_prune_stale_grouping_members_noop_when_no_stale_refs() -> None:
-    processor = _make_bare_processor()
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = {
-        "id": "internal-id-1",
-        "name": "Test Grouping",
-        "objects": [
-            {"standard_id": "ipv4-addr--1"},
-            {"standard_id": "ipv4-addr--2"},
-        ],
-    }
-    processor._helper = mock_helper
-
-    processor._prune_stale_grouping_members(
-        "grouping--123", ["ipv4-addr--1", "ipv4-addr--2", "ipv4-addr--3"]
-    )
-
-    mock_helper.api.grouping.remove_stix_object_or_stix_relationship.assert_not_called()
-
-
-def test_prune_stale_grouping_members_removes_stale_refs() -> None:
-    processor = _make_bare_processor()
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = {
-        "id": "internal-id-1",
-        "name": "Test Grouping",
-        "objects": [
-            {"standard_id": "ipv4-addr--1"},
-            {"standard_id": "ipv4-addr--2"},
-            {"standard_id": "ipv4-addr--3"},
-        ],
-    }
-    processor._helper = mock_helper
-
-    # ipv4-addr--2 and ipv4-addr--3 are no longer part of the collection.
-    processor._prune_stale_grouping_members("grouping--123", ["ipv4-addr--1"])
-
-    calls = (
-        mock_helper.api.grouping.remove_stix_object_or_stix_relationship.call_args_list
-    )
-    removed_ids = {c.kwargs["stixObjectOrStixRelationshipId"] for c in calls}
-    assert removed_ids == {"ipv4-addr--2", "ipv4-addr--3"}
-    for c in calls:
-        assert c.kwargs["id"] == "internal-id-1"
-
-
-def test_prune_stale_grouping_members_handles_read_error() -> None:
-    processor = _make_bare_processor()
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.side_effect = RuntimeError("API unavailable")
-    processor._helper = mock_helper
-
-    # Should not raise.
-    processor._prune_stale_grouping_members("grouping--123", ["ipv4-addr--1"])
-
-    mock_helper.api.grouping.remove_stix_object_or_stix_relationship.assert_not_called()
-    cast(MagicMock, processor.logger).error.assert_called_once()
-
-
-def test_prune_stale_grouping_members_handles_remove_error() -> None:
-    processor = _make_bare_processor()
-    mock_helper = MagicMock()
-    mock_helper.api.grouping.read.return_value = {
-        "id": "internal-id-1",
-        "name": "Test Grouping",
-        "objects": [{"standard_id": "ipv4-addr--stale"}],
-    }
-    mock_helper.api.grouping.remove_stix_object_or_stix_relationship.side_effect = (
-        RuntimeError("mutation failed")
-    )
-    processor._helper = mock_helper
-
-    # Should not raise even if the removal mutation fails.
-    processor._prune_stale_grouping_members("grouping--123", [])
-
-    cast(MagicMock, processor.logger).error.assert_called_once()
