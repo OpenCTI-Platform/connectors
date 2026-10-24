@@ -323,7 +323,7 @@ class Converter:
             yield Relationship(
                 source=observable,
                 target=actor_obj,
-                type=RelationshipType.ATTRIBUTED_TO,
+                type=RelationshipType.RELATED_TO,
                 **self._common_props,
             )
 

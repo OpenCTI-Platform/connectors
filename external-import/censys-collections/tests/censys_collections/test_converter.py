@@ -389,11 +389,10 @@ def test_from_hit_host_with_actor_creates_actor_and_relationship() -> None:
     assert actor_objs[0].name == "APT28"
 
     rel_objs = [
-        o
-        for o in objects
-        if isinstance(o, Relationship) and o.type == RelationshipType.ATTRIBUTED_TO
+        o for o in objects if isinstance(o, Relationship) and o.target is actor_objs[0]
     ]
     assert len(rel_objs) == 1
+    assert rel_objs[0].type == RelationshipType.RELATED_TO
 
 
 # ---------------------------------------------------------------------------

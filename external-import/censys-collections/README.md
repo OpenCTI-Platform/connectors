@@ -59,7 +59,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter       | config.yml      | Docker environment variable | Default                                                                                             | Mandatory | Description                                                                  |
 | --------------- | --------------- | --------------------------- | --------------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- |
-| Connector ID    | id              | `CONNECTOR_ID`              | censys-collections--00000000-...                                                                    | No        | A unique `UUIDv4` identifier for this connector instance.                    |
+| Connector ID    | id              | `CONNECTOR_ID`              | `123bea30-6b2a-4df9-8bbd-bc8883a19f48`                                                              | No        | A unique `UUIDv4` identifier for this connector instance.                    |
 | Connector Name  | name            | `CONNECTOR_NAME`            | Censys Collections                                                                                  | No        | Name of the connector.                                                       |
 | Connector Scope | scope           | `CONNECTOR_SCOPE`           | IPv4-Addr,IPv6-Addr,Domain-Name,X509-Certificate,Malware,Threat-Actor-Group,Vulnerability,Indicator | No        | The entity types this connector ingests into OpenCTI.                        |
 | Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT                                                                                     | Yes       | Should always be `EXTERNAL_IMPORT` for this connector.                       |
@@ -173,7 +173,7 @@ The connector queries the [Censys Collections API](https://docs.censys.com/refer
 ### Threat, malware, and vulnerability relationships
 
 - **Malware**: each unique `threat.malware` on an asset becomes a `Malware` entity (with any alternate names as aliases), linked to the observable via a `related-to` relationship.
-- **Threat actors**: each unique `threat.actors` entry becomes a `Threat-Actor-Group` entity, linked via an `attributed-to` relationship.
+- **Threat actors**: each unique `threat.actors` entry becomes a `Threat-Actor-Group` entity, linked via a `related-to` relationship (OpenCTI does not allow `attributed-to` from observables).
 - **Vulnerabilities**: each `Vuln` (identified by CVE ID where available) becomes a `Vulnerability` entity, linked via a `related-to` relationship.
 
 ### External references
@@ -245,7 +245,7 @@ graph LR
 | Relationship Type | Source                 | Target             | Description                                 |
 | ----------------- | ---------------------- | ------------------ | ------------------------------------------- |
 | `related-to`      | Host/Domain Observable | Malware            | Malware family associated with the asset    |
-| `attributed-to`   | Host/Domain Observable | Threat-Actor-Group | Threat actor attributed to the asset        |
+| `related-to`      | Host/Domain Observable | Threat-Actor-Group | Threat actor attributed to the asset        |
 | `related-to`      | Host/Domain Observable | Vulnerability      | CVE reported against a service on the asset |
 
 ### Processing Details
