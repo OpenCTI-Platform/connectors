@@ -386,7 +386,7 @@ class StixMakerPrivate:
 
     def _validateRemaining(self) -> None:
         if self.data:
-            raise Exception(f"Entry left data unconsumed: {self.data}")
+            self.maker.helper.log_warning( f"Entry left data unconsumed: {self.data}" )
 
     # Parse additional data which is present in all feeds
     def _parseAdditional(self, source_id, source_type):
