@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-misp-enrichment:
+    image: opencti/connector-misp-enrichment:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=MISP Enrichment
+      # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr,Indicator
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=TLP:AMBER+STRICT
+      # Custom parameters for connector-misp-enrichment
+      - MISP_URL=ChangeMe
+      - MISP_API_KEY=ChangeMe
+      # - MISP_SSL_VERIFY=true
+      # - MISP_IMPORT_ATTRIBUTE_TAGS_AS_LABELS=true
+      # - MISP_IMPORT_ASSOCIATED_EVENTS_TAGS_AS_LABELS=false
+      # - MISP_EVENT_FILTER_CREATOR_ORGS= # comma-separated names or UUIDs
+      # - MISP_EVENT_FILTER_CREATOR_ORGS_NOT= # comma-separated names or UUIDs
+      # - MISP_EVENT_FILTER_OWNER_ORGS= # comma-separated names or UUIDs
+      # - MISP_EVENT_FILTER_OWNER_ORGS_NOT= # comma-separated names or UUIDs
+      # - MISP_EVENT_FILTER_NAME_REGEX=
+      # - MISP_ATTRIBUTE_COMMENT_FILTER_REGEX=
+      # - MISP_IMPORT_EVENTS=false
+    restart: always
