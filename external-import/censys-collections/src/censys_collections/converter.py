@@ -55,8 +55,8 @@ class Converter:
         self,
         tlp_level: str,
         score: int,
-        auto_indicator_by_score: bool = False,
-        indicator_score_threshold: int = 50,
+        auto_indicator_by_score: bool = True,
+        indicator_score_threshold: int = 70,
     ) -> None:
         self.author = OrganizationAuthor(name="Censys Collection")  # type: ignore[call-arg]
         self.marking = TLPMarking(level=_TLP_LEVEL_MAP.get(tlp_level, TLPLevel.AMBER))
@@ -374,10 +374,9 @@ class Converter:
     def _should_create_indicator(self, score: int) -> bool:
         """Return whether an indicator should be auto-created for *score*.
 
-        When ``auto_indicator_by_score`` is disabled (default), an indicator
-        is always created, preserving prior behavior. When enabled, an
-        indicator is only created if *score* meets or exceeds
-        ``indicator_score_threshold``.
+        When ``auto_indicator_by_score`` is enabled (default), an indicator is
+        only created if *score* meets or exceeds ``indicator_score_threshold``.
+        When disabled, an indicator is always created.
         """
         if not self.auto_indicator_by_score:
             return True

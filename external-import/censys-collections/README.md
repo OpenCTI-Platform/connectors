@@ -57,28 +57,29 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Base connector environment variables
 
-| Parameter       | config.yml      | Docker environment variable | Default                                                                                             | Mandatory | Description                                                                  |
-| --------------- | --------------- | --------------------------- | --------------------------------------------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------- |
-| Connector ID    | id              | `CONNECTOR_ID`              | `123bea30-6b2a-4df9-8bbd-bc8883a19f48`                                                              | No        | A unique `UUIDv4` identifier for this connector instance.                    |
-| Connector Name  | name            | `CONNECTOR_NAME`            | Censys Collections                                                                                  | No        | Name of the connector.                                                       |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           | IPv4-Addr,IPv6-Addr,Domain-Name,X509-Certificate,Malware,Threat-Actor-Group,Vulnerability,Indicator | No        | The entity types this connector ingests into OpenCTI.                        |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT                                                                                     | Yes       | Should always be `EXTERNAL_IMPORT` for this connector.                       |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error                                                                                               | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H                                                                                                | No        | ISO 8601 duration to wait between two ingestion runs (e.g. `PT1H` = 1 hour). |
+| Parameter       | config.yml      | Docker environment variable | Default                                                                                             | Mandatory | Description                                                                |
+| --------------- | --------------- | --------------------------- | --------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------- |
+| Connector ID    | id              | `CONNECTOR_ID`              | `123bea30-6b2a-4df9-8bbd-bc8883a19f48`                                                              | No        | A unique `UUIDv4` identifier for this connector instance.                  |
+| Connector Name  | name            | `CONNECTOR_NAME`            | Censys Collections                                                                                  | No        | Name of the connector.                                                     |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | IPv4-Addr,IPv6-Addr,Domain-Name,X509-Certificate,Malware,Threat-Actor-Group,Vulnerability,Indicator | No        | The entity types this connector ingests into OpenCTI.                      |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT                                                                                     | Yes       | Should always be `EXTERNAL_IMPORT` for this connector.                     |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error                                                                                               | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`. |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | P1D                                                                                                 | No        | ISO 8601 duration to wait between two ingestion runs (e.g. `P1D` = 1 day). |
 
 ### Connector extra parameters environment variables
 
-| Parameter                 | config.yml                                   | Docker environment variable                    | Default   | Mandatory | Description                                                                                                                                                                                       |
-| ------------------------- | -------------------------------------------- | ---------------------------------------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Organisation ID           | censys_collections.organisation_id           | `CENSYS_COLLECTIONS_ORGANISATION_ID`           |           | Yes       | Your Censys organisation ID for API authentication.                                                                                                                                               |
-| API Token                 | censys_collections.token                     | `CENSYS_COLLECTIONS_TOKEN`                     |           | Yes       | Your Censys API token for authentication.                                                                                                                                                         |
-| Collection IDs            | censys_collections.collection_ids            | `CENSYS_COLLECTIONS_COLLECTION_IDS`            | (all)     | No        | Comma-separated allow-list of Censys collection IDs to ingest. Leave unset to ingest every collection visible to the organisation. Takes precedence over Excluded Collection IDs if both are set. |
-| Excluded Collection IDs   | censys_collections.excluded_collection_ids   | `CENSYS_COLLECTIONS_EXCLUDED_COLLECTION_IDS`   | (none)    | No        | Comma-separated deny-list of Censys collection IDs to skip; every other collection is ingested. Ignored if Collection IDs is set.                                                                 |
-| TLP Level                 | censys_collections.tlp_level                 | `CENSYS_COLLECTIONS_TLP_LEVEL`                 | TLP:AMBER | No        | TLP marking applied to every ingested observable, indicator, and related entity.                                                                                                                  |
-| Indicator Score           | censys_collections.indicator_score           | `CENSYS_COLLECTIONS_INDICATOR_SCORE`           | 50        | No        | Fallback confidence score (0–100) used when Censys does not provide its own reputation score for a host.                                                                                          |
-| Auto Indicator by Score   | censys_collections.auto_indicator_by_score   | `CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE`   | false     | No        | Toggle: when enabled, an indicator is only auto-created for an observable if its score meets or exceeds Indicator Score Threshold. When disabled (default), an indicator is always auto-created.  |
-| Indicator Score Threshold | censys_collections.indicator_score_threshold | `CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD` | 50        | No        | Minimum score (0–100) an observable must have for an indicator to be auto-created. Only used when Auto Indicator by Score is enabled.                                                             |
-| Request Timeout           | censys_collections.request_timeout_seconds   | `CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS`   | 60        | No        | Per-request timeout (in seconds) for calls to the Censys API. Increase this if large collections cause read timeouts.                                                                             |
+| Parameter                  | config.yml                                    | Docker environment variable                     | Default   | Mandatory | Description                                                                                                                                                                                       |
+| -------------------------- | --------------------------------------------- | ----------------------------------------------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organisation ID            | censys_collections.organisation_id            | `CENSYS_COLLECTIONS_ORGANISATION_ID`            |           | Yes       | Your Censys organisation ID for API authentication.                                                                                                                                               |
+| API Token                  | censys_collections.token                      | `CENSYS_COLLECTIONS_TOKEN`                      |           | Yes       | Your Censys API token for authentication.                                                                                                                                                         |
+| Collection IDs             | censys_collections.collection_ids             | `CENSYS_COLLECTIONS_COLLECTION_IDS`             | (all)     | No        | Comma-separated allow-list of Censys collection IDs to ingest. Leave unset to ingest every collection visible to the organisation. Takes precedence over Excluded Collection IDs if both are set. |
+| Excluded Collection IDs    | censys_collections.excluded_collection_ids    | `CENSYS_COLLECTIONS_EXCLUDED_COLLECTION_IDS`    | (none)    | No        | Comma-separated deny-list of Censys collection IDs to skip; every other collection is ingested. Ignored if Collection IDs is set.                                                                 |
+| TLP Level                  | censys_collections.tlp_level                  | `CENSYS_COLLECTIONS_TLP_LEVEL`                  | TLP:AMBER | No        | TLP marking applied to every ingested observable, indicator, and related entity.                                                                                                                  |
+| Indicator Score            | censys_collections.indicator_score            | `CENSYS_COLLECTIONS_INDICATOR_SCORE`            | 50        | No        | Fallback confidence score (0–100) used when Censys does not provide its own reputation score for a host.                                                                                          |
+| Auto Indicator by Score    | censys_collections.auto_indicator_by_score    | `CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE`    | true      | No        | Toggle: when enabled (default), an indicator is only auto-created for an observable if its score meets or exceeds Indicator Score Threshold. When disabled, an indicator is always auto-created.  |
+| Indicator Score Threshold  | censys_collections.indicator_score_threshold  | `CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD`  | 70        | No        | Minimum score (0–100) an observable must have for an indicator to be auto-created. Only used when Auto Indicator by Score is enabled.                                                             |
+| Skip Unchanged Collections | censys_collections.skip_unchanged_collections | `CENSYS_COLLECTIONS_SKIP_UNCHANGED_COLLECTIONS` | true      | No        | When enabled (default), a collection already ingested is skipped if Censys reports no asset additions since its last successful ingestion. See [Incremental ingestion](#incremental-ingestion).   |
+| Request Timeout            | censys_collections.request_timeout_seconds    | `CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS`    | 60        | No        | Per-request timeout (in seconds) for calls to the Censys API. Increase this if large collections cause read timeouts.                                                                             |
 
 ## Deployment
 
@@ -101,7 +102,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe_UUID4
       - CONNECTOR_NAME=Censys Collections
       - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
+      - CONNECTOR_DURATION_PERIOD=P1D
       - CENSYS_COLLECTIONS_ORGANISATION_ID=ChangeMe
       - CENSYS_COLLECTIONS_TOKEN=ChangeMe
       # - CENSYS_COLLECTIONS_COLLECTION_IDS=
@@ -133,7 +134,7 @@ docker compose up -d
 
 ## Usage
 
-This connector requires no manual triggering. Once configured and started, it runs automatically on the schedule set by `CONNECTOR_DURATION_PERIOD` (default: every hour).
+This connector requires no manual triggering. Once configured and started, it runs automatically on the schedule set by `CONNECTOR_DURATION_PERIOD` (default: once a day).
 
 A typical workflow looks like:
 
@@ -166,8 +167,16 @@ The connector queries the [Censys Collections API](https://docs.censys.com/refer
 
 ### Indicator creation
 
-- By default (`CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE=false`), an indicator is always auto-created alongside every observable, regardless of its score.
-- When `CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE=true`, an indicator is only auto-created if the observable's score (see Hosts above; certificates/domains use the configured `CENSYS_COLLECTIONS_INDICATOR_SCORE`) meets or exceeds `CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD`. The observable itself is always created either way — only automatic indicator generation is gated.
+- By default (`CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE=true`, `CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD=70`), an indicator is only auto-created if the observable's score (see Hosts above; certificates/domains use the configured `CENSYS_COLLECTIONS_INDICATOR_SCORE`) meets or exceeds `CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD`. With the default fallback score of `50`, this means only hosts with a Censys reputation score of 70 or more get an indicator; certificates and domains only do if `CENSYS_COLLECTIONS_INDICATOR_SCORE` is raised to the threshold. The observable itself is always created either way — only automatic indicator generation is gated.
+- Set `CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE=false` to auto-create an indicator alongside every observable, regardless of its score. As indicators usually end up in detection tooling, only do this for collections curated tightly enough to block on.
+
+### Incremental ingestion
+
+- On its first ingestion, every asset of a collection is fetched and sent.
+- On later runs, with `CENSYS_COLLECTIONS_SKIP_UNCHANGED_COLLECTIONS=true` (default), the connector asks the Censys collection events endpoint (which does not consume credits) whether any asset was added to the collection since its last successful ingestion, and skips the collection if none was. Collections with additions are fetched and sent in full, since Censys asset records carry no per-asset update timestamp to filter on.
+- The checkpoint for each collection is the time its last successful fetch started, stored in the connector state. It is only persisted when the whole run succeeds, and a collection whose fetch failed keeps its previous checkpoint, so it is retried on the next run.
+- If the events lookup fails, the collection is ingested in full rather than skipped.
+- **Limitation**: changes to assets already in a collection (e.g. a new vulnerability or threat on a host) do not produce an asset-added event, so they are only picked up the next time the collection is ingested. Set `CENSYS_COLLECTIONS_SKIP_UNCHANGED_COLLECTIONS=false` to re-ingest every collection on every run.
 - **In short: is scoring manual?** Only for hosts is it not — an `IPv4-Addr`/`IPv6-Addr` observable gets Censys's own `reputation.score` when Censys provides one. Certificates and domains have no such field in the Censys API, so their score is always the static `CENSYS_COLLECTIONS_INDICATOR_SCORE` value you configure, not something calculated per-asset by this connector or by Censys.
 
 ### Threat, malware, and vulnerability relationships
@@ -271,7 +280,7 @@ Log output includes:
 
 ### Handling read timeouts on large collections
 
-Very large collections can occasionally trigger `httpx.ReadTimeout` / "The read operation timed out" errors while paging through assets. The connector automatically retries transient network errors and 429/5xx responses with exponential backoff before giving up. If a collection still fails after retries are exhausted, that collection is logged as an error and skipped for the current run — it does **not** abort ingestion of the other collections, and it will be retried again on the next scheduled run. If **every** selected collection fails in the same run (for example because the Censys token is invalid or expired), the run is reported as failed with an error and the connector state (`last_run`) is not advanced.
+Very large collections can occasionally trigger `httpx.ReadTimeout` / "The read operation timed out" errors while paging through assets. The connector automatically retries transient network errors and 429/5xx responses with exponential backoff before giving up. If a collection still fails after retries are exhausted, that collection is logged as an error and skipped for the current run — it does **not** abort ingestion of the other collections, and it will be retried again on the next scheduled run. If **every** collection fetched in the same run fails (for example because the Censys token is invalid or expired), the run is reported as failed with an error and the connector state (`last_run`) is not advanced.
 
 If timeouts persist for a specific collection, increase `CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS` (default `60`).
 
@@ -279,6 +288,6 @@ If timeouts persist for a specific collection, increase `CENSYS_COLLECTIONS_REQU
 
 - **API Reference**: [Censys Collections API Documentation](https://docs.censys.com/reference/v3-collections-crud-list)
 - **Relationship to `censys-enrichment`**: This connector is intentionally scoped to Collections ingestion only. Ad-hoc enrichment of arbitrary observables (not sourced from a collection) is handled by the separate `censys-enrichment` connector.
-- **Rate Limits**: API calls are subject to Censys rate limits based on subscription tier; listing collections and reading their assets does not consume Censys credits.
+- **Rate Limits**: API calls are subject to Censys rate limits based on subscription tier; listing collections, reading their assets and reading their events does not consume Censys credits.
 - **TLP Handling**: All objects created by this connector are marked with the connector-configured `CENSYS_COLLECTIONS_TLP_LEVEL`; there is no per-observable TLP check since this connector ingests from Censys rather than enriching existing OpenCTI observables.
 - **Scheduling**: This is an external-import connector — it runs on the schedule set by `CONNECTOR_DURATION_PERIOD`, not on-demand.

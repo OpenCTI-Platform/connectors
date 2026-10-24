@@ -37,7 +37,7 @@ class _ConnectorConfig(BaseExternalImportConnectorConfig):
         description="The minimum level of logs to display.",
     )
     duration_period: timedelta = Field(
-        default=timedelta(hours=1),
+        default=timedelta(days=1),
         description="How long to wait between two ingestion runs.",
     )
 
@@ -82,22 +82,33 @@ class _CensysCollectionsConfig(BaseConfigModel):
         description="Confidence score (0–100) assigned to ingested observables and indicators.",
     )
     auto_indicator_by_score: bool = Field(
-        default=False,
+        default=True,
         description=(
-            "If enabled, an indicator is only auto-created for an observable "
-            "when its score meets or exceeds 'indicator_score_threshold'. "
-            "If disabled (default), an indicator is always auto-created for "
-            "every ingested observable, regardless of score."
+            "If enabled (default), an indicator is only auto-created for an "
+            "observable when its score meets or exceeds "
+            "'indicator_score_threshold'. If disabled, an indicator is "
+            "auto-created for every ingested observable, regardless of score."
         ),
     )
     indicator_score_threshold: int = Field(
-        default=50,
+        default=70,
         ge=0,
         le=100,
         description=(
             "Minimum score (0–100) an observable must have for an indicator "
             "to be auto-created. Only used when 'auto_indicator_by_score' is "
             "enabled."
+        ),
+    )
+    skip_unchanged_collections: bool = Field(
+        default=True,
+        description=(
+            "If enabled (default), a collection that has already been ingested "
+            "is skipped when Censys reports no asset additions since its last "
+            "successful ingestion. Changes to existing assets (e.g. new "
+            "vulnerabilities on a host) are only picked up once the collection "
+            "is ingested again. If disabled, every collection is fully "
+            "re-ingested on every run."
         ),
     )
     request_timeout_seconds: int = Field(

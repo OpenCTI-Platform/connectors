@@ -10,6 +10,7 @@ def main() -> None:
         from censys_collections.converter import Converter
         from censys_collections.processor import CollectionsProcessor
         from censys_collections.settings import ConfigLoader
+        from censys_collections.state import CensysCollectionsState
         from connectors_sdk import ExternalImportConnector
 
         settings = ConfigLoader()
@@ -28,6 +29,7 @@ def main() -> None:
         connector = ExternalImportConnector(
             settings=settings,
             data_processors=[processor],
+            state=CensysCollectionsState(),
         )
         connector.start()
     except Exception:

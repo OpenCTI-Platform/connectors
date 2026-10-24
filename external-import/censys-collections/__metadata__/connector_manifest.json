@@ -1,7 +1,7 @@
 {
   "title": "Censys Collections",
   "slug": "censys-collections",
-  "description": "The Censys Collections connector ingests analyst-curated threat collections from Censys into OpenCTI as observables and indicators. For each asset (host IP, X.509 certificate, web property domain) in a collection, the connector creates the corresponding OpenCTI observable, auto-generates a linked indicator for enterprise blocking, attaches any associated malware families, threat-actor groups, or CVE vulnerabilities as relationships, and adds an external reference back to the Censys collection for analyst drill-down.",
+  "description": "The Censys Collections connector ingests analyst-curated threat collections from Censys into OpenCTI as observables and indicators. For each asset (host IP, X.509 certificate, web property domain) in a collection, the connector creates the corresponding OpenCTI observable, auto-generates a linked indicator for enterprise blocking when the asset score meets a configurable threshold, attaches any associated malware families, threat-actor groups, or CVE vulnerabilities as relationships, and adds an external reference back to the Censys collection for analyst drill-down.",
   "short_description": "Ingests Censys analyst collections into OpenCTI as observables and indicators, with malware/threat-actor/CVE relationships and Censys collection external references.",
   "logo": "external-import/censys-collections/__metadata__/logo.png",
   "use_cases": [

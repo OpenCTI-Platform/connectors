@@ -224,6 +224,28 @@ def test_auto_indicator_by_score_disabled_always_creates_indicator() -> None:
     assert ip_obs.create_indicator is True
 
 
+def test_default_converter_gates_indicators_on_threshold_70() -> None:
+    """With default settings, assets at the fallback score of 50 get no indicator."""
+    converter = Converter(tlp_level="TLP:AMBER", score=50)
+    collection = _make_collection()
+    low = Host(ip="5.6.7.8")
+    high = Host(ip="5.6.7.9", reputation=Reputation(score=85))
+    low_obs = converter.from_hit(
+        SearchQueryHit(
+            host_v1=HostAssetWithMatchedServices(extensions={}, resource=low)
+        ),
+        collection,
+    )[0]
+    high_obs = converter.from_hit(
+        SearchQueryHit(
+            host_v1=HostAssetWithMatchedServices(extensions={}, resource=high)
+        ),
+        collection,
+    )[0]
+    assert low_obs.create_indicator is False
+    assert high_obs.create_indicator is True
+
+
 def test_auto_indicator_by_score_enabled_creates_indicator_above_threshold() -> None:
     converter = _make_converter(
         auto_indicator_by_score=True, indicator_score_threshold=60

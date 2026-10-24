@@ -1,5 +1,7 @@
 """Tests for censys_collections.settings."""
 
+from datetime import timedelta
+
 import pytest
 from censys_collections.settings import ConfigLoader
 
@@ -20,9 +22,11 @@ def test_config_defaults() -> None:
     assert config.censys_collections.indicator_score == 50
     assert config.censys_collections.collection_ids is None
     assert config.censys_collections.excluded_collection_ids is None
-    assert config.censys_collections.auto_indicator_by_score is False
-    assert config.censys_collections.indicator_score_threshold == 50
+    assert config.censys_collections.auto_indicator_by_score is True
+    assert config.censys_collections.indicator_score_threshold == 70
+    assert config.censys_collections.skip_unchanged_collections is True
     assert config.connector.name == "Censys Collections"
+    assert config.connector.duration_period == timedelta(days=1)
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -55,3 +59,12 @@ def test_config_custom_tlp_and_score(monkeypatch: pytest.MonkeyPatch) -> None:
     config = ConfigLoader()
     assert config.censys_collections.tlp_level == "TLP:GREEN"
     assert config.censys_collections.indicator_score == 75
+
+
+@pytest.mark.usefixtures("mock_config")
+def test_config_skip_unchanged_collections_toggle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("CENSYS_COLLECTIONS_SKIP_UNCHANGED_COLLECTIONS", "false")
+    config = ConfigLoader()
+    assert config.censys_collections.skip_unchanged_collections is False

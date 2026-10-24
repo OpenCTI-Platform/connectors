@@ -1,10 +1,14 @@
 from collections.abc import Generator
+from datetime import datetime
 
 from censys_platform import (
     SDK,
+    AssetChangeTypes,
+    ChangeTypes,
     Collection,
     SearchQueryHit,
     SearchQueryInputBody,
+    V3CollectionsListEventsRequest,
 )
 from censys_platform.utils.retries import BackoffStrategy, RetryConfig
 
@@ -87,3 +91,25 @@ class Client:
                 if not next_page_token:
                     break
                 page_token = next_page_token
+
+    def has_added_assets_since(self, collection_id: str, since: datetime) -> bool:
+        """Return whether Censys recorded an asset addition to *collection_id* after *since*.
+
+        Uses the collection events endpoint, which does not consume Censys
+        credits. Only one event is requested since its presence is enough.
+        """
+        with self._new_sdk() as sdk:
+            response = sdk.collections.list_events(
+                request=V3CollectionsListEventsRequest(
+                    collection_uid=collection_id,
+                    organization_id=self.organisation_id,
+                    page_size=1,
+                    change_types=[ChangeTypes.ASSET],
+                    asset_change_types=[AssetChangeTypes.ADDED],
+                    start_time=since,
+                )
+            )
+            result = response.result.result
+            if result is None:
+                return False
+            return bool(result.events)
