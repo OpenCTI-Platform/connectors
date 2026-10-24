@@ -34,11 +34,6 @@ class BitdefenderConfig(BaseConfigModel):
         description="Bitdefender Threat Intelligence API key.",
     )
 
-    user_agent: str = Field(
-        description="HTTP User Agent.",
-        default="opencti-bitdefender-import-feed/1.0",
-    )
-
     http_timeout_seconds: int = Field(
         description="HTTP timeout in seconds for requesting feeds.",
         default=600,
