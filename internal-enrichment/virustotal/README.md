@@ -78,6 +78,7 @@ Key features:
 | `virustotal_token` | `VIRUSTOTAL_TOKEN` | Yes | VirusTotal API key |
 | `virustotal_max_tlp` | `VIRUSTOTAL_MAX_TLP` | No | Maximum TLP for processing |
 | `virustotal_replace_with_lower_score` | `VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE` | No | Replace score even if lower (default: true) |
+| `virustotal_indicator_min_score` | `VIRUSTOTAL_INDICATOR_MIN_SCORE` | No | Minimum score required to create an Indicator (default: 0) |
 | `virustotal_file_create_note_full_report` | `VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT` | No | Include full report as Note |
 | `virustotal_file_upload_unseen_artifacts` | `VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS` | No | Upload unknown artifacts (<32MB) |
 | `virustotal_file_indicator_create_positives` | `VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES` | No | Create indicator threshold (default: 10) |
@@ -211,7 +212,8 @@ threshold above, **or**, when `gti_enrichment_enabled` is `true`, as soon as
 GTI's own assessment already calls the observable malicious
 (`gti_assessment.verdict.value == "VERDICT_MALICIOUS"`), whichever comes
 first — this catches samples GTI has scored as malicious before traditional
-AV engines have caught up. Setting a threshold to `0` still fully disables
+AV engines have caught up. The score must also be at least
+`indicator_min_score`. Setting a threshold to `0` still fully disables
 indicator creation for that observable type, regardless of the GTI verdict.
 
 ### Generated STIX Objects
