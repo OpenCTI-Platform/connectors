@@ -52,7 +52,7 @@ def client():
     """Create a CrtSHClient instance with default parameters."""
     return CrtSHClient(
         marking_refs=DEFAULT_MARKING_DEFINITION,
-        labels=DEFAULT_LABEL,
+        labels=[DEFAULT_LABEL],
         domain=DEFAULT_DOMAIN,
         is_expired=False,
         is_wildcard=False,
@@ -64,7 +64,7 @@ def client_wildcard():
     """Create a CrtSHClient instance with default parameters."""
     return CrtSHClient(
         marking_refs=DEFAULT_MARKING_DEFINITION,
-        labels=DEFAULT_LABEL,
+        labels=[DEFAULT_LABEL],
         domain=DEFAULT_DOMAIN,
         is_expired=False,
         is_wildcard=True,
@@ -76,7 +76,7 @@ def client_expired():
     """Create a CrtSHClient instance with default parameters."""
     return CrtSHClient(
         marking_refs=DEFAULT_MARKING_DEFINITION,
-        labels=DEFAULT_LABEL,
+        labels=[DEFAULT_LABEL],
         domain=DEFAULT_DOMAIN,
         is_expired=True,
         is_wildcard=False,
@@ -88,7 +88,7 @@ def client_wildcard_expired():
     """Create a CrtSHClient instance with default parameters."""
     return CrtSHClient(
         marking_refs=DEFAULT_MARKING_DEFINITION,
-        labels=DEFAULT_LABEL,
+        labels=[DEFAULT_LABEL],
         domain=DEFAULT_DOMAIN,
         is_expired=True,
         is_wildcard=True,
@@ -101,7 +101,7 @@ class TestCrtSHClient:
         with pytest.raises(ValueError, match="Domain provided failed validation"):
             CrtSHClient(
                 marking_refs=DEFAULT_MARKING_DEFINITION,
-                labels=DEFAULT_LABEL,
+                labels=[DEFAULT_LABEL],
                 domain=INVALID_DOMAIN,
                 is_expired=False,
                 is_wildcard=False,

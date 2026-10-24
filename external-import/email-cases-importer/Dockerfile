@@ -3,7 +3,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 ENV PYTHONUNBUFFERED=1
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk add --no-cache \
         libmagic \
         p7zip \

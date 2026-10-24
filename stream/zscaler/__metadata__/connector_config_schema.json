@@ -94,6 +94,14 @@
       "type": "string",
       "writeOnly": true
     },
+    "ZSCALER_API_BASE_URL": {
+      "default": "https://zsapi.zscalertwo.net/",
+      "description": "Base URL of the Zscaler ZIA API for your Zscaler cloud, without the `/api/v1` path (e.g. `https://zsapi.zscalerone.net`).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
     "ZSCALER_BLACKLIST_NAME": {
       "default": "BLACK_LIST_DYNDNS",
       "description": "Name of the Zscaler URL category used as blacklist.",

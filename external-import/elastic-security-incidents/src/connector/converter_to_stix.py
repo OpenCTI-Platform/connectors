@@ -258,8 +258,11 @@ class ConverterToStix:
         note_title = f"Investigation Guide - {rule_name}"
         created_at = alert.get("@timestamp", datetime.now(timezone.utc).isoformat())
 
-        # Generate predictive ID for the note
-        note_id = Note.generate_id(created_at, investigation_guide)
+        # The investigation guide is rule-level content, not alert-level: every
+        # alert fired by the same rule carries the same note. Generating the ID
+        # from the per-alert timestamp made each occurrence a distinct STIX
+        # object; keying on content alone lets OpenCTI merge repeats into one.
+        note_id = Note.generate_id(None, investigation_guide)
 
         # Create the note with predictive ID
         note = stix2.Note(

@@ -7,7 +7,8 @@ its tests live in `tests/X/test_y.py`.
 ## Running
 
 ```bash
-# all tests + coverage
+# all tests + coverage (pytest-cov is installed by run_test.sh in CI)
+pip install pytest-cov
 pytest tests/ --cov=src --cov-report=term-missing
 
 # subset (e.g. adapters only)

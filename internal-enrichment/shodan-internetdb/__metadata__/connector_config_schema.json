@@ -53,17 +53,23 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "SHODAN_MAX_TLP": {
-      "default": "TLP:WHITE",
-      "description": "The maximum TLP marking of observables the connector is allowed to process.",
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
       "enum": [
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:RED",
-        "TLP:CLEAR",
-        "TLP:AMBER+STRICT"
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
       ],
+      "type": "string",
+      "default": "white"
+    },
+    "SHODAN_MAX_TLP": {
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
       "type": "string"
     },
     "SHODAN_SSL_VERIFY": {

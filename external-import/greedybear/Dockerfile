@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY src /opt/opencti-connector-greedybear
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev procps
 
 RUN cd /opt/opencti-connector-greedybear && \
