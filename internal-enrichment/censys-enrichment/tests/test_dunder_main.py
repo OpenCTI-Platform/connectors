@@ -18,7 +18,6 @@ def test_main_happy_path() -> None:
         "org-id"
     )
     fake_config.censys_enrichment.token.get_secret_value.return_value = "token"
-    fake_config.censys_enrichment.nvd_api_key = None
     fake_helper = MagicMock()
     fake_client = MagicMock()
     fake_connector = MagicMock()
@@ -37,39 +36,13 @@ def test_main_happy_path() -> None:
     m_helper.assert_called_once_with(
         config=fake_config.to_helper_config(), playbook_compatible=True
     )
-    m_client.assert_called_once_with(
-        organisation_id="org-id", token="token", nvd_api_key=None
-    )
+    m_client.assert_called_once_with(organisation_id="org-id", token="token")
     m_connector.assert_called_once_with(
         config=fake_config,
         helper=fake_helper,
         client=fake_client,
     )
     fake_connector.run.assert_called_once()
-
-
-# Scenario: main() passes the NVD API key through when configured
-def test_main_passes_nvd_api_key_when_set() -> None:
-    """Test that main() unwraps a configured NVD API key SecretStr."""
-    fake_config = MagicMock()
-    fake_config.censys_enrichment.organisation_id.get_secret_value.return_value = (
-        "org-id"
-    )
-    fake_config.censys_enrichment.token.get_secret_value.return_value = "token"
-    fake_config.censys_enrichment.nvd_api_key.get_secret_value.return_value = "nvd-key"
-
-    with patch(
-        "censys_enrichment.settings.ConfigLoader", return_value=fake_config
-    ), patch("pycti.OpenCTIConnectorHelper"), patch(
-        "censys_enrichment.client.Client"
-    ) as m_client, patch(
-        "censys_enrichment.connector.Connector"
-    ):
-        main()
-
-    m_client.assert_called_once_with(
-        organisation_id="org-id", token="token", nvd_api_key="nvd-key"
-    )
 
 
 # Scenario: main() exits with an error code on unexpected startup failures

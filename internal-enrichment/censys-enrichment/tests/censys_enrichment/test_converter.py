@@ -2,11 +2,9 @@ from unittest.mock import Mock
 
 import stix2
 from censys_enrichment.builder import CensysStixBuilder
-from censys_enrichment.client import NVDAffectedSoftware, NVDData, NVDReference
 from censys_enrichment.converters.certificate import CertificateConverter
 from censys_enrichment.converters.domain import DomainConverter
 from censys_enrichment.converters.host import HostConverter
-from censys_enrichment.errors import NVDLookupError
 from censys_platform import (
     SSH,
     TLS,
@@ -42,18 +40,6 @@ from censys_platform import (
     Vuln,
     Winrm,
 )
-
-
-def _nvd_host_converter(nvd_data_map: dict[str, NVDData]) -> HostConverter:
-    """Return a HostConverter with NVD enabled whose lookups are served from
-    *nvd_data_map* (no existing OpenCTI vulnerability descriptions)."""
-    converter = HostConverter()
-    converter.nvd_enabled = True
-    converter.client = Mock()
-    converter.client.fetch_nvd_data.side_effect = nvd_data_map.get
-    converter.helper = Mock()
-    converter.helper.api.vulnerability.read.return_value = None
-    return converter
 
 
 def test_converter_ipv4(host_ipv4: Host) -> None:
@@ -1382,41 +1368,8 @@ def test_converter_cvss4_score_is_preserved() -> None:
     assert not getattr(vuln_obj, "x_opencti_cvss_v4_vector_string", None)
 
 
-def test_converter_vulnerability_description_from_cve_descriptions() -> None:
-    """An explicit nvd_data_map entry overrides the vuln.name fallback."""
-    host = Host(
-        ip="203.0.113.42",
-        services=[
-            Service(
-                port=443,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[Vuln(id="CVE-2021-44228", name="Log4Shell")],
-            )
-        ],
-    )
-
-    nvd_text = (
-        "Apache Log4j2 2.0-beta9 through 2.15.0 JNDI features used in "
-        "configuration, log messages, and parameters do not protect against "
-        "attacker controlled LDAP and other JNDI related endpoints."
-    )
-    converter = _nvd_host_converter({"CVE-2021-44228": NVDData(description=nvd_text)})
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.42"),
-            data=host,
-        )
-    ]
-
-    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
-    assert vuln_obj.name == "CVE-2021-44228"
-    # NVD text should win over the shorter vuln.name fallback
-    assert vuln_obj.description == nvd_text
-
-
 def test_converter_vulnerability_description_fallback_to_vuln_name() -> None:
-    """When no nvd_data_map entry is supplied vuln.name is used as the fallback."""
+    """vuln.name is used as the description when it differs from the CVE ID."""
     converter = HostConverter()
     host = Host(
         ip="203.0.113.43",
@@ -1545,44 +1498,8 @@ def test_converter_vulnerability_cvss3_components() -> None:
     assert vuln_obj.x_opencti_cvss_availability_impact == "HIGH"
 
 
-def test_converter_vulnerability_cvss3_severity_from_nvd() -> None:
-    """NVD-provided v3 base severity takes priority over the Censys severity field."""
-    from censys_platform.models.vuln import VulnSeverity
-
-    # NVD says CRITICAL — should win
-    converter = _nvd_host_converter(
-        {"CVE-2021-44228": NVDData(cvss_v3_base_severity="CRITICAL")}
-    )
-    host = Host(
-        ip="203.0.113.52",
-        services=[
-            Service(
-                port=443,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[
-                    Vuln(
-                        id="CVE-2021-44228",
-                        severity=VulnSeverity.MEDIUM,  # Censys says MEDIUM
-                    )
-                ],
-            )
-        ],
-    )
-
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.52"),
-            data=host,
-        )
-    ]
-
-    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
-    assert vuln_obj.x_opencti_cvss_base_severity.value == "CRITICAL"
-
-
-def test_converter_vulnerability_cvss3_severity_fallback_to_censys() -> None:
-    """When NVD has no severity, Censys vuln.severity is used as fallback."""
+def test_converter_vulnerability_cvss3_severity_from_censys() -> None:
+    """Censys vuln.severity is mapped onto the CVSS v3 base severity."""
     from censys_platform.models.vuln import VulnSeverity
 
     converter = HostConverter()
@@ -1612,239 +1529,6 @@ def test_converter_vulnerability_cvss3_severity_fallback_to_censys() -> None:
 
     vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
     assert vuln_obj.x_opencti_cvss_base_severity.value == "HIGH"
-
-
-def test_converter_vulnerability_nvd_cvss_v2() -> None:
-    """CVSS v2 fields from NVDData are propagated onto the Vulnerability object."""
-    host = Host(
-        ip="203.0.113.54",
-        services=[
-            Service(
-                port=80,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[Vuln(id="CVE-2008-4250")],
-            )
-        ],
-    )
-
-    nvd = NVDData(
-        cvss_v2_base_score=10.0,
-        cvss_v2_vector_string="AV:N/AC:L/Au:N/C:C/I:C/A:C",
-        cvss_v2_access_vector="NETWORK",
-        cvss_v2_access_complexity="LOW",
-        cvss_v2_authentication="NONE",
-        cvss_v2_confidentiality_impact="COMPLETE",
-        cvss_v2_integrity_impact="COMPLETE",
-        cvss_v2_availability_impact="COMPLETE",
-    )
-    converter = _nvd_host_converter({"CVE-2008-4250": nvd})
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.54"),
-            data=host,
-        )
-    ]
-
-    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
-    # Note: cvss_v2_base_score is not serialised as a STIX extension field
-    assert vuln_obj.x_opencti_cvss_v2_vector_string == "AV:N/AC:L/Au:N/C:C/I:C/A:C"
-    assert vuln_obj.x_opencti_cvss_v2_access_vector == "NETWORK"
-    assert vuln_obj.x_opencti_cvss_v2_access_complexity == "LOW"
-    assert vuln_obj.x_opencti_cvss_v2_authentication == "NONE"
-    assert vuln_obj.x_opencti_cvss_v2_confidentiality_impact == "COMPLETE"
-    assert vuln_obj.x_opencti_cvss_v2_integrity_impact == "COMPLETE"
-    assert vuln_obj.x_opencti_cvss_v2_availability_impact == "COMPLETE"
-
-
-def test_converter_vulnerability_nvd_external_references() -> None:
-    """NVD external references are surfaced as ExternalReference objects on the Vulnerability."""
-    host = Host(
-        ip="203.0.113.55",
-        services=[
-            Service(
-                port=443,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[Vuln(id="CVE-2021-44228")],
-            )
-        ],
-    )
-
-    nvd = NVDData(
-        references=[
-            NVDReference(
-                url="https://logging.apache.org/log4j/2.x/security.html",
-                source_name="Vendor Advisory",
-            ),
-            NVDReference(
-                url="https://github.com/apache/logging-log4j2/releases/tag/rel%2F2.15.0",
-                source_name="Patch, Release Notes",
-            ),
-        ]
-    )
-    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.55"),
-            data=host,
-        )
-    ]
-
-    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
-    ext_refs = vuln_obj.external_references
-    assert ext_refs is not None and len(ext_refs) == 2
-    urls = {r.url for r in ext_refs}
-    assert "https://logging.apache.org/log4j/2.x/security.html" in urls
-    assert "https://github.com/apache/logging-log4j2/releases/tag/rel%2F2.15.0" in urls
-    source_names = {r.source_name for r in ext_refs}
-    assert "Vendor Advisory" in source_names
-    assert "Patch, Release Notes" in source_names
-
-
-def test_converter_vulnerability_affected_software_yields_software_and_has_rel() -> (
-    None
-):
-    """Software observables are created for each NVD affected_software entry and
-    linked to the Vulnerability via a HAS relationship."""
-    host = Host(
-        ip="203.0.113.60",
-        services=[
-            Service(
-                port=443,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[Vuln(id="CVE-2021-44228")],
-            )
-        ],
-    )
-    nvd = NVDData(
-        affected_software=[
-            NVDAffectedSoftware(
-                vendor="Apache",
-                product="Log4J",
-                cpe="cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
-                version_info=">= 2.0, < 2.15.0",
-            )
-        ]
-    )
-    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.60"),
-            data=host,
-        )
-    ]
-
-    vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
-    sw_objects = [o for o in stix_objects if o.type == "software"]
-    assert len(sw_objects) == 1
-    sw = sw_objects[0]
-    assert sw.name == "Log4J"
-    assert sw.vendor == "Apache"
-    assert sw.version == ">= 2.0, < 2.15.0"
-
-    has_rels = [
-        o
-        for o in stix_objects
-        if o.type == "relationship"
-        and o.relationship_type == "related-to"
-        and o.source_ref == sw.id
-    ]
-    assert len(has_rels) == 1
-    assert has_rels[0].source_ref == sw.id
-    assert has_rels[0].target_ref == vuln_obj.id
-
-
-def test_converter_vulnerability_no_software_when_affected_software_empty() -> None:
-    """No Software objects are yielded when NVDData.affected_software is empty."""
-    host = Host(
-        ip="203.0.113.61",
-        services=[
-            Service(
-                port=443,
-                scan_time="2025-06-01T10:00:00Z",
-                vulns=[Vuln(id="CVE-2021-44228")],
-            )
-        ],
-    )
-    nvd = NVDData()  # affected_software defaults to []
-    converter = _nvd_host_converter({"CVE-2021-44228": nvd})
-    stix_objects = [
-        obj.to_stix2_object()
-        for obj in converter.to_stix(
-            observable=stix2.IPv4Address(value="203.0.113.61"),
-            data=host,
-        )
-    ]
-    assert not any(o.type == "software" for o in stix_objects)
-
-
-def test_fetch_nvd_data_parses_cpe_configurations() -> None:
-    """fetch_nvd_data populates affected_software from CPE configurations."""
-    from unittest.mock import MagicMock, patch
-
-    from censys_enrichment.client import Client
-
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "vulnerabilities": [
-            {
-                "cve": {
-                    "descriptions": [{"lang": "en", "value": "A critical RCE."}],
-                    "metrics": {},
-                    "references": [],
-                    "configurations": [
-                        {
-                            "nodes": [
-                                {
-                                    "operator": "OR",
-                                    "cpeMatch": [
-                                        {
-                                            "vulnerable": True,
-                                            "criteria": "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*",
-                                            "versionStartIncluding": "2.0.0",
-                                            "versionEndExcluding": "2.15.0",
-                                        },
-                                        {
-                                            "vulnerable": False,
-                                            "criteria": "cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*",
-                                        },
-                                        {
-                                            "vulnerable": True,
-                                            "criteria": "cpe:2.3:a:oracle:weblogic_server:12.2.1.4.0:*:*:*:*:*:*:*",
-                                        },
-                                    ],
-                                }
-                            ]
-                        }
-                    ],
-                }
-            }
-        ]
-    }
-
-    client = Client(organisation_id="org", token="tok")
-    with patch("requests.get", return_value=mock_response):
-        result = client.fetch_nvd_data("CVE-2021-44228")
-
-    assert result is not None
-    assert len(result.affected_software) == 2
-
-    sw_by_product = {sw.product: sw for sw in result.affected_software}
-
-    log4j = sw_by_product["Log4J"]
-    assert log4j.vendor == "Apache"
-    assert log4j.cpe == "cpe:2.3:a:apache:log4j:*:*:*:*:*:*:*:*"
-    assert log4j.version_info == ">= 2.0.0, < 2.15.0"
-
-    weblogic = sw_by_product["Weblogic Server"]
-    assert weblogic.vendor == "Oracle"
-    assert weblogic.version_info == "12.2.1.4.0"
-
-    # The non-vulnerable OS entry must be excluded
-    assert not any(sw.vendor == "Linux" for sw in result.affected_software)
 
 
 def test_converter_whois_abuse_email_invalid_values_are_dropped() -> None:
@@ -2010,184 +1694,13 @@ def test_builder_add_note_skips_without_port_or_scan_time() -> None:
     assert notes == []
 
 
-def _nvd_converter(client: Mock, helper: Mock) -> HostConverter:
-    converter = HostConverter()
-    converter.nvd_enabled = True
-    converter.client = client
-    converter.helper = helper
-    return converter
+def test_domain_converter_reemits_domain_and_enriches_hosts() -> None:
+    """Domain enrichment skips hosts without an IP, enriches each host and
+    re-emits the domain with resolves-to refs and a Censys link."""
+    from censys_platform.models.vuln import VulnSeverity
 
-
-def test_build_nvd_data_map_disabled_returns_none() -> None:
-    """NVD lookups are skipped entirely when NVD enrichment is disabled."""
-    converter = HostConverter()
-    converter.client = Mock()
-    host = Host(
-        ip="1.2.3.4",
-        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
-    )
-
-    assert converter._build_nvd_data_map(host) is None
-    converter.client.fetch_nvd_data.assert_not_called()
-
-
-def test_build_nvd_data_map_no_cves_returns_empty() -> None:
-    """No vulns on any service means no NVD lookups and an empty map."""
-    converter = _nvd_converter(client=Mock(), helper=Mock())
-    host = Host(ip="1.2.3.4", services=[Service(port=443)])
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result == {}
-    converter.client.fetch_nvd_data.assert_not_called()
-
-
-def test_build_nvd_data_map_skips_cve_with_no_nvd_data() -> None:
-    """A CVE for which fetch_nvd_data returns None is skipped entirely."""
-    client = Mock()
-    client.fetch_nvd_data.return_value = None
-    converter = _nvd_converter(client=client, helper=Mock())
-    host = Host(
-        ip="1.2.3.4",
-        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result == {}
-
-
-def test_build_nvd_data_map_all_lookups_failing_is_not_an_error() -> None:
-    """When every NVD lookup fails, each CVE is noted as not enriched and the
-    enrichment carries on without warnings or errors."""
-    client = Mock()
-    client.fetch_nvd_data.side_effect = NVDLookupError("NVD down")
-    helper = Mock()
-    converter = _nvd_converter(client=client, helper=helper)
-    host = Host(
-        ip="1.2.3.4",
-        services=[
-            Service(
-                port=443,
-                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
-            )
-        ],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result == {}
-    assert helper.connector_logger.info.call_count == 2
-    helper.connector_logger.info.assert_any_call(
-        "CVE-2024-0001 not enriched from NVD, continuing without it: NVD down"
-    )
-    helper.connector_logger.warning.assert_not_called()
-    helper.connector_logger.error.assert_not_called()
-
-
-def test_build_nvd_data_map_partial_failure_keeps_successful_lookups() -> None:
-    """A partial NVD failure keeps successful results without warnings or errors."""
-    nvd_data = NVDData(description="from NVD")
-
-    def _fetch(cve_id: str) -> NVDData:
-        if cve_id == "CVE-2024-0001":
-            raise NVDLookupError("NVD down")
-        return nvd_data
-
-    client = Mock()
-    client.fetch_nvd_data.side_effect = _fetch
-    helper = Mock()
-    helper.api.vulnerability.read.return_value = None
-    converter = _nvd_converter(client=client, helper=helper)
-    host = Host(
-        ip="1.2.3.4",
-        services=[
-            Service(
-                port=443,
-                vulns=[Vuln(id="CVE-2024-0001"), Vuln(id="CVE-2024-0002")],
-            )
-        ],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result == {"CVE-2024-0002": nvd_data}
-    helper.connector_logger.info.assert_called_once()
-    helper.connector_logger.warning.assert_not_called()
-    helper.connector_logger.error.assert_not_called()
-
-
-def test_build_nvd_data_map_clears_description_when_opencti_already_has_one() -> None:
-    """An existing OpenCTI vulnerability description is not overwritten."""
-    client = Mock()
-    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
-    helper = Mock()
-    helper.api.vulnerability.read.return_value = {
-        "description": "already documented in OpenCTI"
-    }
-    converter = _nvd_converter(client=client, helper=helper)
-    host = Host(
-        ip="1.2.3.4",
-        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result["CVE-2024-1234"].description is None
-    helper.api.vulnerability.read.assert_called_once_with(
-        filters={
-            "mode": "and",
-            "filters": [{"key": "name", "values": ["CVE-2024-1234"]}],
-            "filterGroups": [],
-        }
-    )
-
-
-def test_build_nvd_data_map_keeps_description_without_existing_entity() -> None:
-    """The NVD description is kept when OpenCTI has no existing description."""
-    client = Mock()
-    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
-    helper = Mock()
-    helper.api.vulnerability.read.return_value = None
-    converter = _nvd_converter(client=client, helper=helper)
-    host = Host(
-        ip="1.2.3.4",
-        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result["CVE-2024-1234"].description == "from NVD"
-
-
-def test_build_nvd_data_map_swallows_opencti_lookup_error() -> None:
-    """A failure reading the existing OpenCTI vulnerability does not abort enrichment."""
-    client = Mock()
-    client.fetch_nvd_data.return_value = NVDData(description="from NVD")
-    helper = Mock()
-    helper.api.vulnerability.read.side_effect = RuntimeError("boom")
-    converter = _nvd_converter(client=client, helper=helper)
-    host = Host(
-        ip="1.2.3.4",
-        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
-    )
-
-    result = converter._build_nvd_data_map(host)
-
-    assert result["CVE-2024-1234"].description == "from NVD"
-
-
-def test_domain_converter_reemits_domain_and_propagates_nvd() -> None:
-    """Domain enrichment skips hosts without an IP, enriches each host (with NVD
-    lookups) and re-emits the domain with resolves-to refs and a Censys link."""
-    client = Mock()
-    client.fetch_nvd_data.return_value = NVDData(cvss_v3_base_severity="CRITICAL")
-    helper = Mock()
-    helper.api.vulnerability.read.return_value = None
     converter = DomainConverter()
-    converter.nvd_enabled = True
-    converter.client = client
-    converter.helper = helper
+    converter.client = Mock()
     domain = stix2.DomainName(value="example.com")
 
     stix_objects = [
@@ -2199,7 +1712,17 @@ def test_domain_converter_reemits_domain_and_propagates_nvd() -> None:
                     Host(ip=None),
                     Host(
                         ip="203.0.113.10",
-                        services=[Service(port=443, vulns=[Vuln(id="CVE-2021-44228")])],
+                        services=[
+                            Service(
+                                port=443,
+                                vulns=[
+                                    Vuln(
+                                        id="CVE-2021-44228",
+                                        severity=VulnSeverity.CRITICAL,
+                                    )
+                                ],
+                            )
+                        ],
                     ),
                 ],
                 "certs": [],
@@ -2207,7 +1730,6 @@ def test_domain_converter_reemits_domain_and_propagates_nvd() -> None:
         )
     ]
 
-    client.fetch_nvd_data.assert_called_once_with("CVE-2021-44228")
     vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
     assert vuln_obj.x_opencti_cvss_base_severity.value == "CRITICAL"
 

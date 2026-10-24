@@ -2,7 +2,6 @@ import datetime
 import ipaddress
 from typing import Any
 
-from censys_enrichment.client import NVDData
 from censys_platform import (
     SMTP,
     SSH,
@@ -61,7 +60,7 @@ from connectors_sdk.models.enums import (
     TLPLevel,
 )
 
-# Maps common lowercase severity strings (from Censys or NVD) to the SDK enum.
+# Maps common lowercase Censys severity strings to the SDK enum.
 _SEVERITY_MAP: dict[str, CvssSeverity] = {
     "critical": CvssSeverity.CRITICAL,
     "high": CvssSeverity.HIGH,
@@ -313,7 +312,6 @@ class CensysStixBuilder:
         self,
         observable: Reference,
         vuln: Vuln,
-        nvd_data: NVDData | None = None,
     ) -> None:
         # Use the CVE/Censys ID as the name; fall back to the human-readable name
         name = vuln.id or vuln.name
@@ -348,11 +346,9 @@ class CensysStixBuilder:
         # --- CVSS v4 components (from Censys) ---
         cvss4_comps = cvss4.components if cvss4 else None
 
-        # --- CVSS v3 severity: prefer NVD (authoritative) then Censys ---
+        # --- CVSS v3 severity (from Censys) ---
         cvss3_severity: CvssSeverity | None = None
-        if nvd_data and nvd_data.cvss_v3_base_severity:
-            cvss3_severity = _SEVERITY_MAP.get(nvd_data.cvss_v3_base_severity.lower())
-        if cvss3_severity is None and vuln.severity and vuln.severity.value:
+        if vuln.severity and vuln.severity.value:
             cvss3_severity = _SEVERITY_MAP.get(vuln.severity.value.lower())
 
         # --- CWE labels (from Censys) ---
@@ -362,16 +358,8 @@ class CensysStixBuilder:
             if cwe.entry
         ]
 
-        # --- Description: prefer NVD then vuln.name fallback ---
-        final_description = (nvd_data.description if nvd_data else None) or (
-            vuln.name if vuln.name != name else None
-        )
-
-        # --- External references from NVD ---
-        ext_refs: list[ExternalReference] = [
-            ExternalReference(source_name=ref.source_name, url=ref.url)
-            for ref in (nvd_data.references if nvd_data else [])
-        ]
+        # --- Description: vuln.name when it differs from the ID ---
+        final_description = vuln.name if vuln.name != name else None
 
         # Build as a dict so a single type:ignore suppresses all inherited-field
         # false-positives from Pyright's incomplete Pydantic v2 multi-inheritance
@@ -380,7 +368,6 @@ class CensysStixBuilder:
             "name": name,
             "description": final_description,
             "labels": cwes or None,
-            "external_references": ext_refs or None,
             # CVSS v3
             "cvss_v3_base_score": cvss3.score if cvss3 else None,
             "cvss_v3_vector_string": cvss3.vector if cvss3 else None,
@@ -424,29 +411,6 @@ class CensysStixBuilder:
             "cvss_v4_vs_availability_impact": _cvss_component(
                 cvss4_comps, "availability"
             ),
-            # CVSS v2 (from NVD)
-            "cvss_v2_base_score": nvd_data.cvss_v2_base_score if nvd_data else None,
-            "cvss_v2_vector_string": (
-                nvd_data.cvss_v2_vector_string if nvd_data else None
-            ),
-            "cvss_v2_access_vector": (
-                nvd_data.cvss_v2_access_vector if nvd_data else None
-            ),
-            "cvss_v2_access_complexity": (
-                nvd_data.cvss_v2_access_complexity if nvd_data else None
-            ),
-            "cvss_v2_authentication": (
-                nvd_data.cvss_v2_authentication if nvd_data else None
-            ),
-            "cvss_v2_confidentiality_impact": (
-                nvd_data.cvss_v2_confidentiality_impact if nvd_data else None
-            ),
-            "cvss_v2_integrity_impact": (
-                nvd_data.cvss_v2_integrity_impact if nvd_data else None
-            ),
-            "cvss_v2_availability_impact": (
-                nvd_data.cvss_v2_availability_impact if nvd_data else None
-            ),
             # EPSS + CISA KEV
             "epss_score": epss_score,
             "epss_percentile": epss_percentile,
@@ -465,29 +429,6 @@ class CensysStixBuilder:
                 ),
             ]
         )
-        # Software observables for each NVD-listed affected package.
-        # Linked via RELATED_TO rather than HAS: Software→HAS→Vulnerability is
-        # not universally accepted across OpenCTI v7 builds, whereas RELATED_TO
-        # is always valid between any two STIX objects.
-        for sw_entry in nvd_data.affected_software if nvd_data else []:
-            software = Software(
-                name=sw_entry.product,
-                vendor=sw_entry.vendor,
-                cpe=sw_entry.cpe,
-                version=sw_entry.version_info,
-                **self.common_props,
-            )
-            self.bundle.extend(
-                [
-                    software,
-                    Relationship(
-                        source=software,
-                        target=vulnerability,
-                        type=RelationshipType.RELATED_TO,
-                        **self.common_props,
-                    ),
-                ]
-            )
 
     def add_malware(self, observable: Reference, threat: Threat) -> None:
         # Prefer the malware family name; fall back to the generic threat name
@@ -1419,7 +1360,6 @@ class CensysStixBuilder:
         self,
         observable: Reference,
         services: list[Service] | None,
-        nvd_data_map: dict[str, NVDData] | None = None,
     ) -> None:
         for service in services or []:
             for software in service.software or []:
@@ -1447,9 +1387,6 @@ class CensysStixBuilder:
                 self.add_vulnerability(
                     observable=observable,
                     vuln=vuln,
-                    nvd_data=(
-                        nvd_data_map.get(vuln.id or "") if nvd_data_map else None
-                    ),
                 )
             for threat in service.threats or []:
                 self.add_malware(observable=observable, threat=threat)

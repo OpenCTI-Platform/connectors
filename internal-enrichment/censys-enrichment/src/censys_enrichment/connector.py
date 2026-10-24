@@ -75,8 +75,6 @@ class Connector:
     def _get_converter(self, entity_type: str) -> CensysConverter:
         converter = get_converter(entity_type=entity_type)
         converter.client = self.client
-        converter.helper = self.helper
-        converter.nvd_enabled = self.config.censys_enrichment.nvd_enabled
         return converter
 
     def _process(

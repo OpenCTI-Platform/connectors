@@ -86,22 +86,6 @@ class _CensysEnrichmentConfig(BaseConfigModel):
     token: SecretStr = Field(
         description="Censys API token.",
     )
-    nvd_api_key: SecretStr | None = Field(
-        default=None,
-        description=(
-            "Optional NVD API key.  Without a key requests are limited to "
-            "5 per 30 seconds; with a key the limit rises to 50 per 30 seconds.  "
-            "Register at https://nvd.nist.gov/developers/request-an-api-key."
-        ),
-    )
-    nvd_enabled: bool = Field(
-        default=True,
-        description=(
-            "Set to false to disable NVD CVE enrichment entirely.  Useful when "
-            "another connector (e.g. OpenCTI's own CVE connector) already handles "
-            "vulnerability data and you want to avoid duplication."
-        ),
-    )
 
 
 class ConfigLoader(BaseConnectorSettings):

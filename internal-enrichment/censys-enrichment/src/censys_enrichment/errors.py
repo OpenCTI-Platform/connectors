@@ -12,7 +12,3 @@ class EntityTypeNotSupportedError(Exception):
 
 class EntityHasNoUsableHashError(Exception):
     """Custom exception for entity having no usable hash"""
-
-
-class NVDLookupError(Exception):
-    """Raised when a CVE lookup against the NVD API fails (network, HTTP or parsing error)."""

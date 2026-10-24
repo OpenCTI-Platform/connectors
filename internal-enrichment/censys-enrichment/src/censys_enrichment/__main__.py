@@ -19,11 +19,6 @@ def main() -> None:
         client = Client(
             organisation_id=config.censys_enrichment.organisation_id.get_secret_value(),
             token=config.censys_enrichment.token.get_secret_value(),
-            nvd_api_key=(
-                config.censys_enrichment.nvd_api_key.get_secret_value()
-                if config.censys_enrichment.nvd_api_key
-                else None
-            ),
         )
         connector = Connector(
             config=config,

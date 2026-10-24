@@ -1,7 +1,5 @@
-from censys_enrichment.client import NVDData
 from censys_enrichment.converters.base import CensysConverter, ObservableLike
-from censys_enrichment.errors import NVDLookupError
-from censys_platform import Host, Label, Service
+from censys_platform import Host, Label
 from connectors_sdk.models import Reference, Relationship
 from connectors_sdk.models.enums import RelationshipType
 
@@ -44,7 +42,6 @@ class HostConverter(CensysConverter):
             observable=observable,
             # Normalise OptionalNullable: treat the Unset sentinel the same as None
             services=data.services if isinstance(data.services, list) else None,
-            nvd_data_map=self._build_nvd_data_map(data),
         )
         country = self.builder.add_country(
             observable=observable,
@@ -207,62 +204,3 @@ class HostConverter(CensysConverter):
                 all_labels.append(risk_label)
 
         return all_labels
-
-    def _build_nvd_data_map(self, data: Host) -> dict[str, NVDData] | None:
-        """Return a CVE-ID → NVDData mapping for use during enrichment.
-
-        Returns ``None`` when NVD enrichment is disabled.
-
-        For each CVE referenced by the host's services, we fetch full NVD data
-        (description, CVSS v2, v3 severity, external references).  If OpenCTI
-        already holds a non-empty description for a given CVE, we clear the
-        ``description`` field on the returned :class:`NVDData` to avoid
-        overwriting it — all other enrichment fields are still applied.
-
-        NVD is a secondary source: a failed lookup is noted at info level and
-        the CVE is simply left without NVD data, so it never blocks or fails
-        an otherwise valid Censys enrichment.
-        """
-        if not self.nvd_enabled:
-            return None
-
-        cve_ids: set[str] = set()
-        for service in data.services if isinstance(data.services, list) else []:
-            if not isinstance(service, Service):
-                continue
-            for vuln in service.vulns if isinstance(service.vulns, list) else []:
-                if vuln.id:
-                    cve_ids.add(vuln.id)
-
-        nvd_data_map: dict[str, NVDData] = {}
-        if not cve_ids:
-            return nvd_data_map
-
-        client = self._require_client()
-        helper = self._require_helper()
-        for cve_id in cve_ids:
-            try:
-                nvd_data = client.fetch_nvd_data(cve_id)
-            except NVDLookupError as e:
-                helper.connector_logger.info(
-                    f"{cve_id} not enriched from NVD, continuing without it: {e}"
-                )
-                continue
-            if nvd_data is None:
-                continue
-            try:
-                existing = helper.api.vulnerability.read(
-                    filters={
-                        "mode": "and",
-                        "filters": [{"key": "name", "values": [cve_id]}],
-                        "filterGroups": [],
-                    }
-                )
-                if existing and existing.get("description"):
-                    # OpenCTI already has a description — leave it untouched.
-                    nvd_data.description = None
-            except Exception:
-                pass
-            nvd_data_map[cve_id] = nvd_data
-
-        return nvd_data_map

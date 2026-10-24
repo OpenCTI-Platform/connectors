@@ -23,8 +23,6 @@ class DomainConverter(CensysConverter):
         host_converter = HostConverter()
         host_converter.builder = self.builder
         host_converter.client = self.client
-        host_converter.helper = self.helper
-        host_converter.nvd_enabled = self.nvd_enabled
 
         ip_addresses: list[IPV4Address | IPV6Address] = []
         for host in hosts:

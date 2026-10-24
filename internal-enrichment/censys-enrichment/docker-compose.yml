@@ -16,6 +16,4 @@ services:
       # Censys configuration
       - CENSYS_ENRICHMENT_ORGANISATION_ID=ChangeMe  # Censys organisation ID (required)
       - CENSYS_ENRICHMENT_TOKEN=ChangeMe            # Censys API token (required)
-      # - CENSYS_ENRICHMENT_NVD_ENABLED=true        # Optional – set to false to disable NVD CVE enrichment (e.g. if another connector already handles it)
-      # - CENSYS_ENRICHMENT_NVD_API_KEY=            # Optional – NVD API key; raises rate limit from 5 to 50 requests/30s (https://nvd.nist.gov/developers/request-an-api-key)
     restart: always
