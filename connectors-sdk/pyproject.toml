@@ -22,7 +22,7 @@ connectors_sdk = "_connectors_sdk_plugins.pytest_plugin"
 
 [project.optional-dependencies]
 dev = [
-    "black==26.5.1",  # Aligned with ci-requirements
+    "black==26.10.1",  # Aligned with ci-requirements
     "isort==7.0.0",  # Aligned with ci-requirements
 ]
 test = [
