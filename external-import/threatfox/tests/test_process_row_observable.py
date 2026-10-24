@@ -63,40 +63,70 @@ def _connector(create_indicators: bool = False, score_overrides=None) -> ThreatF
 
 
 @pytest.mark.parametrize(
-    "ioc_type,value,expected_observable_type,expected_hash_field",
+    "ioc_type,value,expected_stix_type",
     [
-        ("ip:port", "1.2.3.4:8080", "IPv4-Addr", None),
-        ("domain", "bad.example.com", "Domain-Name", None),
-        ("url", "http://bad.example.com/x", "Url", None),
-        ("md5_hash", "d41d8cd98f00b204e9800998ecf8427e", "StixFile", "hashes.MD5"),
-        (
-            "sha1_hash",
-            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-            "StixFile",
-            "hashes.SHA-1",
-        ),
+        ("ip:port", "1.2.3.4:8080", "ipv4-addr"),
+        ("domain", "bad.example.com", "domain-name"),
+        ("url", "http://bad.example.com/x", "url"),
+        ("md5_hash", "d41d8cd98f00b204e9800998ecf8427e", "file"),
+        ("sha1_hash", "da39a3ee5e6b4b0d3255bfef95601890afd80709", "file"),
         (
             "sha256_hash",
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "StixFile",
-            "hashes.SHA-256",
+            "file",
         ),
     ],
 )
 def test_process_row_observable_maps_score_onto_each_type(
-    ioc_type, value, expected_observable_type, expected_hash_field
+    ioc_type, value, expected_stix_type
 ):
     connector = _connector()
     ioc = _row(ioc_type, value, confidence_level=77)
 
-    stix_observable, stix_indicator, obs_metadata = connector.process_row_observable(
-        ioc
-    )
+    stix_observable, stix_indicator = connector.process_row_observable(ioc)
 
-    assert obs_metadata["observable_type"] == expected_observable_type
-    assert obs_metadata["hash_field"] == expected_hash_field
+    assert stix_observable.type == expected_stix_type
     assert stix_observable["x_opencti_score"] == 77
     assert stix_indicator is None
+
+
+@pytest.mark.parametrize(
+    "ioc_type,value",
+    [
+        ("ip:port", "1.2.3.4:8080"),
+        ("domain", "bad.example.com"),
+        ("url", "http://bad.example.com/x"),
+        (
+            "sha256_hash",
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        ),
+    ],
+)
+def test_process_row_observable_carries_reference_on_observable_and_indicator(
+    ioc_type, value
+):
+    connector = _connector(create_indicators=True)
+    ioc = _row(ioc_type, value, reference="https://example.org/report")
+
+    stix_observable, stix_indicator = connector.process_row_observable(ioc)
+
+    observable_refs = stix_observable["x_opencti_external_references"]
+    assert [(r.source_name, r.url) for r in observable_refs] == [
+        ("ThreatFox", "https://example.org/report")
+    ]
+    assert [(r.source_name, r.url) for r in stix_indicator.external_references] == [
+        ("ThreatFox", "https://example.org/report")
+    ]
+
+
+def test_process_row_observable_without_reference_has_no_external_references():
+    connector = _connector(create_indicators=True)
+    ioc = _row("domain", "bad.example.com", reference="None")
+
+    stix_observable, stix_indicator = connector.process_row_observable(ioc)
+
+    assert "x_opencti_external_references" not in stix_observable
+    assert "external_references" not in stix_indicator
 
 
 def test_process_row_observable_applies_type_override_to_observable_and_indicator():
@@ -113,7 +143,7 @@ def test_process_row_observable_applies_type_override_to_observable_and_indicato
     )
     ioc = _row("domain", "bad.example.com", confidence_level=10)
 
-    stix_observable, stix_indicator, _ = connector.process_row_observable(ioc)
+    stix_observable, stix_indicator = connector.process_row_observable(ioc)
 
     assert stix_observable["x_opencti_score"] == 95
     assert stix_indicator["x_opencti_score"] == 95
@@ -132,7 +162,7 @@ def test_process_row_observable_no_indicator_when_disabled():
     connector = _connector(create_indicators=False)
     ioc = _row("url", "http://bad.example.com/x")
 
-    _, stix_indicator, _ = connector.process_row_observable(ioc)
+    _, stix_indicator = connector.process_row_observable(ioc)
 
     assert stix_indicator is None
 

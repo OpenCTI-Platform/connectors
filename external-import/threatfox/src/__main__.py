@@ -1,13 +1,12 @@
 """
-ThreatFox connector (STIX-bundle ingestion + API post-pass for observable external references)
+ThreatFox connector (STIX-bundle ingestion)
 
-- Ingests via STIX bundle.
-    - Same behaviour as before: process as bundles
+- Ingests via STIX bundle only; no direct writes to the OpenCTI API.
 - STRICT REQUIREMENT: external reference is ONLY the 12th CSV column ('reference') exactly as provided by the API.
     - We don't want to mistake malicious domains as a clickable reference!!
-- Adds external references to Indicator & Malware in STIX.
-- After bundle ingestion, attaches the same external reference to the Observable via OpenCTI API.
-    - A limitation of the bundle approach. It does not allow you to append references on creation. Has to be done using the API.
+- Adds external references to Indicator & Malware (external_references) and to
+  Observables (x_opencti_external_references, as STIX SCOs have no
+  external_references property).
 - Maps ThreatFox confidence_level (0-100) to x_opencti_score on Observables & Indicators.
     - Fixes the "fixed score" issue. Now it reflects what Abuse.ch is saying.
 - Creates Observable --related-to--> Malware family (is_family=True) for graph linkage even without indicators.
@@ -42,21 +41,9 @@ ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
-class PostPassError(Exception):
-    """Raised when the post-ingestion API pass fails for every pending observable."""
-
-
 # pylint:disable=too-many-instance-attributes
 class ThreatFox:
-    """ThreatFox connector (STIX bundle ingestion with post-attach of refs to SCOs)"""
-
-    # OpenCTI API lookup calls made by the post-pass helpers during the current
-    # post-pass that raised / returned normally (even with no match). Some
-    # lookups deliberately try alternative filter shapes, so an individual
-    # error is expected; only "errors and no call ever returned" means the API
-    # itself is failing rather than the observable not being ingested yet.
-    _lookup_errors: int = 0
-    _lookup_ok: int = 0
+    """ThreatFox connector (STIX bundle ingestion)"""
 
     def __init__(self):
         """Initializer"""
@@ -106,23 +93,6 @@ class ThreatFox:
         )
         # Prefer a STIX id for created_by_ref; fallback if needed
         self.identity_id = self.identity.get("standard_id") or self.identity["id"]
-
-        # Pending observables to process post-ingestion (external refs + relationships)
-        # Each item: {
-        #   "entity_type": str, "value": str, "hash_field": Optional[str],
-        #   "urls": List[str], "indicator_id": Optional[str], "stix_id": str,
-        #   "malware_stix_id": Optional[str], "confidence": Optional[int]
-        # }
-        self._pending_observables: List[Dict] = []
-
-        # Cache to reduce ext-ref recreation during the post-pass
-        self._cache_ext_ref_ids: Dict[str, str] = {}
-
-        # Optional extra delay (seconds) before post-pass to allow indexing to settle
-        try:
-            self.postpass_delay = float(os.getenv("THREATFOX_POSTPASS_DELAY_SEC", "5"))
-        except Exception:
-            self.postpass_delay = 5.0
 
     # ------------------------ Utility & config ------------------------ #
     def get_interval(self) -> float:
@@ -194,12 +164,11 @@ class ThreatFox:
 
     # -------------------------- Import pipeline ----------------------- #
     def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> bool:
-        """Pull and import ThreatFox data via STIX; then post-attach external refs to SCOs.
+        """Pull and import ThreatFox data via STIX.
 
         Returns True when the run succeeded and state was advanced. On failure
-        (download, bundle send, or a post-pass in which every observable
-        failed) the work is marked in error and state is left untouched so the
-        next run retries the same window.
+        (download or bundle send) the work is marked in error and state is left
+        untouched so the next run retries the same window.
         """
 
         work_id = self.helper.api.work.initiate_work(
@@ -227,10 +196,6 @@ class ThreatFox:
                 last_processed_entry = 0
 
             last_processed_entry_running_max = last_processed_entry
-
-            # reset per run
-            self._pending_observables = []
-            self._cache_ext_ref_ids = {}
 
             for i, row in enumerate(csv_reader):
                 if len(row) > 15:
@@ -283,16 +248,6 @@ class ThreatFox:
                     bundle,
                     work_id=work_id,
                 )
-
-            # ---- delay before post-pass (tunable) ----
-            if self.postpass_delay > 0:
-                self.helper.log_info(
-                    f"[ThreatFox] sleeping {self.postpass_delay:.1f}s before post-pass attach"
-                )
-                time.sleep(self.postpass_delay)
-
-            # ---- 2nd pass: attach external references to Observables via API ----
-            self._attach_external_refs_to_observables()
 
         except Exception:  # pylint:disable=broad-exception-caught
             self.helper.log_error(traceback.format_exc())
@@ -348,7 +303,7 @@ class ThreatFox:
         if result is None:
             return
 
-        stix_observable, stix_indicator, obs_metadata = result
+        stix_observable, stix_indicator = result
         if stix_observable:
             yield stix_observable
         if stix_indicator:
@@ -380,33 +335,21 @@ class ThreatFox:
                 stix_observable, "related-to", stix_malware, ioc.confidence_level
             )
 
-        # --- Queue for post-pass API processing (external refs + relationships) ---
-        self._pending_observables.append(
-            {
-                "entity_type": obs_metadata["observable_type"],
-                "value": obs_metadata["value_for_lookup"],
-                "hash_field": obs_metadata["hash_field"],
-                "urls": self._reference_urls(ioc),
-                "indicator_id": stix_indicator.id if stix_indicator else None,
-                "stix_id": stix_observable.id,
-                "malware_stix_id": stix_malware.id if stix_malware else None,
-                "confidence": ioc.confidence_level,
-            }
-        )
-
     def process_row_observable(
         self, ioc: "FeedRow"
-    ) -> Optional[
-        Tuple[Observable, Optional[stix2.Indicator], Dict[str, Union[str, None]]]
-    ]:
-        """Process the IOC record and return an observable, indicator, and metadata for post-pass."""
+    ) -> Optional[Tuple[Observable, Optional[stix2.Indicator]]]:
+        """Process the IOC record and return an observable and optional indicator."""
 
         description = None
         score = self._resolve_score(ioc)
+        ext_refs = [
+            stix2.ExternalReference(source_name="ThreatFox", url=u)
+            for u in self._reference_urls(ioc)
+        ]
 
         # --- Map the IOC to a STIX SCO (+ pattern metadata) ---
-        # NOTE: external_references is NOT valid on STIX SCOs, only SDOs
-        # External references are attached via API in the post-pass
+        # STIX SCOs have no external_references property; OpenCTI reads them
+        # from x_opencti_external_references on bundle ingestion.
 
         if ioc.type == "ip:port":
             ioc.value, port = ioc.value.split(":", maxsplit=1)
@@ -417,15 +360,10 @@ class ThreatFox:
             stix_observable = stix2.IPv4Address(
                 value=ioc.value,
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = None
 
         elif ioc.type == "domain":
             pattern_value = f"[domain-name:value = '{ioc.value}']"
@@ -434,15 +372,10 @@ class ThreatFox:
             stix_observable = stix2.DomainName(
                 value=ioc.value,
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = None
 
         elif ioc.type == "url":
             pattern_value = f"[url:value = '{ioc.value}']"
@@ -451,15 +384,10 @@ class ThreatFox:
             stix_observable = stix2.URL(
                 value=ioc.value,
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = None
 
         elif ioc.type == "md5_hash":
             pattern_value = f"[file:hashes.MD5 = '{ioc.value}']"
@@ -469,15 +397,10 @@ class ThreatFox:
                 name=ioc.value,
                 hashes={"MD5": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = "hashes.MD5"
 
         elif ioc.type == "sha1_hash":
             pattern_value = f"[file:hashes.SHA1 = '{ioc.value}']"
@@ -487,15 +410,10 @@ class ThreatFox:
                 name=ioc.value,
                 hashes={"SHA-1": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = "hashes.SHA-1"  # IMPORTANT: exact key
 
         elif ioc.type == "sha256_hash":
             pattern_value = f"[file:hashes.'SHA-256' = '{ioc.value}']"
@@ -505,15 +423,10 @@ class ThreatFox:
                 name=ioc.value,
                 hashes={"SHA-256": ioc.value},
                 object_marking_refs=[stix2.TLP_WHITE],
-                custom_properties={
-                    "created_by_ref": self.identity_id,
-                    "x_opencti_description": description,
-                    "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score,
-                },
+                custom_properties=self._observable_custom_properties(
+                    ioc, description, score, ext_refs
+                ),
             )
-            value_for_lookup = ioc.value
-            hash_field = "hashes.SHA-256"
 
         else:
             self.helper.log_warning(f"Unrecognized ioc_type: {ioc.type}")
@@ -536,10 +449,7 @@ class ThreatFox:
                 object_marking_refs=[stix2.TLP_WHITE],
                 created_by_ref=self.identity_id,
                 confidence=ioc.confidence_level,
-                external_references=[
-                    stix2.ExternalReference(source_name="ThreatFox", url=u)
-                    for u in self._reference_urls(ioc)
-                ],
+                external_references=ext_refs,
                 custom_properties={
                     "x_opencti_main_observable_type": observable_type,
                     "x_opencti_score": score,
@@ -547,14 +457,23 @@ class ThreatFox:
             )
             self.helper.log_debug(f"Indicator created: {stix_indicator}")
 
-        # Return metadata for post-pass queueing (done in process_row)
-        obs_metadata = {
-            "observable_type": observable_type,
-            "value_for_lookup": value_for_lookup,
-            "hash_field": hash_field,
-        }
+        return stix_observable, stix_indicator
 
-        return stix_observable, stix_indicator, obs_metadata
+    def _observable_custom_properties(
+        self,
+        ioc: "FeedRow",
+        description: Optional[str],
+        score: int,
+        ext_refs: List[stix2.ExternalReference],
+    ) -> Dict:
+        """Return the OpenCTI custom properties shared by every ThreatFox SCO."""
+        return {
+            "created_by_ref": self.identity_id,
+            "x_opencti_description": description,
+            "x_opencti_labels": ioc.tags,
+            "x_opencti_score": score,
+            "x_opencti_external_references": ext_refs or None,
+        }
 
     def process_row_malware(self, ioc: "FeedRow") -> Optional[stix2.Malware]:
         """Process the IOC record and generate a malware SDO (family)"""
@@ -623,7 +542,7 @@ class ThreatFox:
 
         return stix_rel
 
-    # ---------------------- 2nd pass (post-ingestion) ----------------------
+    # ---------------------- External references ----------------------
     def _reference_urls(self, ioc: "FeedRow") -> List[str]:
         """
         STRICT requirement:
@@ -634,356 +553,6 @@ class ThreatFox:
         if not ref or ref.lower() == "none":
             return []
         return [ref]
-
-    def _resolve_via_indicator(self, indicator_id: str) -> Optional[str]:
-        """
-        Resolve the observable by following the Indicator --based-on--> Observable relationship.
-        Uses 6.8.x-style kwargs (no filters payload).
-        """
-        try:
-            # Primary: indicator is the 'from' side in "based-on"
-            rels = (
-                self.helper.api.stix_core_relationship.list(
-                    fromId=indicator_id,
-                    relationship_type="based-on",
-                    first=1,
-                )
-                or []
-            )
-            self._lookup_ok += 1
-            if rels:
-                rel = rels[0]
-                to_obj = rel.get("to") or {}
-                to_id = to_obj.get("id") or rel.get("toId") or rel.get("to_id")
-                if to_id:
-                    return to_id
-
-            # Fallback: direction-agnostic variant
-            rels = (
-                self.helper.api.stix_core_relationship.list(
-                    fromOrToId=indicator_id,
-                    relationship_type="based-on",
-                    first=1,
-                )
-                or []
-            )
-            self._lookup_ok += 1
-            if rels:
-                rel = rels[0]
-                to_obj = rel.get("to") or {}
-                to_id = to_obj.get("id") or rel.get("toId") or rel.get("to_id")
-                if to_id:
-                    return to_id
-        except Exception:
-            # swallow and fallback to value-based lookup
-            self._lookup_errors += 1
-        return None
-
-    def _read_observable_by_stix_id(self, stix_id: str) -> Optional[str]:
-        """Return the OpenCTI internal id for a SCO given its STIX (standard) id."""
-        try:
-            obj = self.helper.api.stix_cyber_observable.read(id=stix_id)
-            self._lookup_ok += 1
-            if obj:
-                return obj["id"]  # OpenCTI internal id
-        except Exception:
-            self._lookup_errors += 1
-        return None
-
-    def _find_observable_id(
-        self,
-        entity_type: str,
-        value: str,
-        hash_field: Optional[str],
-        max_attempts: int = 12,
-        initial_sleep: float = 0.8,
-    ) -> Optional[str]:
-        """
-        Value-based fallback with normalization & retries.
-        entity_type: "Url" | "Domain-Name" | "IPv4-Addr" | "StixFile"
-        value:       original value we emitted in STIX (or the hash string for files)
-        hash_field:  "hashes.MD5" | "hashes.SHA-1" | "hashes.SHA-256" | None
-        """
-
-        def _read(filters_dict) -> Optional[str]:
-            try:
-                oid_obj = self.helper.api.stix_cyber_observable.read(
-                    filters=filters_dict
-                )
-                self._lookup_ok += 1
-                if oid_obj:
-                    return oid_obj["id"]
-            except Exception:
-                self._lookup_errors += 1
-            try:
-                oid_obj = self.helper.api.stix_cyber_observable.read(
-                    filters=filters_dict.get("filters", filters_dict)
-                )
-                self._lookup_ok += 1
-                if oid_obj:
-                    return oid_obj["id"]
-            except Exception:
-                self._lookup_errors += 1
-            try:
-                items = (
-                    self.helper.api.stix_cyber_observable.list(
-                        filters=filters_dict, first=1
-                    )
-                    or []
-                )
-                self._lookup_ok += 1
-                if items:
-                    return items[0]["id"]
-            except Exception:
-                self._lookup_errors += 1
-            try:
-                items = (
-                    self.helper.api.stix_cyber_observable.list(
-                        filters=filters_dict.get("filters", filters_dict), first=1
-                    )
-                    or []
-                )
-                self._lookup_ok += 1
-                if items:
-                    return items[0]["id"]
-            except Exception:
-                self._lookup_errors += 1
-            return None
-
-        # Candidates to try (ordered)
-        candidates: List[Dict] = []
-        if entity_type == "StixFile":
-            if hash_field:
-                candidates.append(
-                    {
-                        "mode": "and",
-                        "filters": [
-                            {"key": "entity_type", "values": [entity_type]},
-                            {"key": hash_field, "values": [value]},
-                        ],
-                    }
-                )
-            candidates.append(
-                {
-                    "mode": "and",
-                    "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value", "values": [value]},
-                    ],
-                }
-            )
-        elif entity_type == "Url":
-            v = value.strip()
-            candidates.append(
-                {
-                    "mode": "and",
-                    "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value", "values": [v]},
-                    ],
-                }
-            )
-            if v.endswith("/"):
-                candidates.append(
-                    {
-                        "mode": "and",
-                        "filters": [
-                            {"key": "entity_type", "values": [entity_type]},
-                            {"key": "value", "values": [v[:-1]]},
-                        ],
-                    }
-                )
-        elif entity_type == "Domain-Name":
-            v = value.strip()
-            candidates.append(
-                {
-                    "mode": "and",
-                    "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value", "values": [v]},
-                    ],
-                }
-            )
-            if v.lower() != v:
-                candidates.append(
-                    {
-                        "mode": "and",
-                        "filters": [
-                            {"key": "entity_type", "values": [entity_type]},
-                            {"key": "value", "values": [v.lower()]},
-                        ],
-                    }
-                )
-        elif entity_type == "IPv4-Addr":
-            candidates.append(
-                {
-                    "mode": "and",
-                    "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value", "values": [value.strip()]},
-                    ],
-                }
-            )
-
-        # Retry loop (trimmed to reduce noise)
-        sleep = initial_sleep
-        for _attempt in range(1, max_attempts + 1):
-            for f in candidates:
-                oid = _read(f)
-                if oid:
-                    return oid
-            time.sleep(sleep)
-            sleep *= 1.4
-        return None
-
-    def _attach_external_refs_to_observables(self) -> None:
-        """Attach ThreatFox external refs and relationships to SCOs via API (post-ingestion).
-
-        Individual failures are logged and skipped. If no pending observable
-        could be processed successfully and OpenCTI API calls raised errors,
-        PostPassError is raised so the run is marked as failed.
-        """
-        total = len(self._pending_observables or [])
-        if total == 0:
-            self.helper.log_info(
-                "[ThreatFox] post-pass: no pending observables to update"
-            )
-            return
-
-        self.helper.log_info(
-            f"[ThreatFox] post-pass starting with {total} pending observable(s)"
-        )
-
-        self._lookup_errors = 0
-        self._lookup_ok = 0
-        refs_attached = 0
-        rels_created = 0
-        not_found = 0
-        errors = 0
-        entries_ok = 0
-
-        for entry in self._pending_observables:
-            entity_type: str = entry[
-                "entity_type"
-            ]  # "Url" | "Domain-Name" | "IPv4-Addr" | "StixFile"
-            value: str = entry["value"]
-            hash_field: Optional[str] = entry[
-                "hash_field"
-            ]  # "hashes.MD5" | "hashes.SHA-1" | "hashes.SHA-256" | None
-            urls: List[str] = entry.get("urls") or []
-            indicator_id: Optional[str] = entry.get("indicator_id")  # type: ignore[assignment]
-            stix_id: Optional[str] = entry.get("stix_id")  # type: ignore[assignment]
-            malware_stix_id: Optional[str] = entry.get("malware_stix_id")  # type: ignore[assignment]
-            confidence: Optional[int] = entry.get("confidence")  # type: ignore[assignment]
-
-            # 0) Best-effort: resolve directly by the STIX id we emitted in the bundle
-            obs_id = None
-            if stix_id:
-                obs_id = self._read_observable_by_stix_id(stix_id)
-
-            # 1) If not found, try via Indicator --based-on--> Observable
-            if not obs_id and indicator_id:
-                obs_id = self._resolve_via_indicator(indicator_id)
-
-            # 2) Fallback: value/hash lookup with retries
-            if not obs_id:
-                obs_id = self._find_observable_id(entity_type, value, hash_field)
-
-            if not obs_id:
-                not_found += 1
-                self.helper.log_warning(
-                    f"[ThreatFox] Observable not found for post-pass after all strategies: "
-                    f"{entity_type} / {value} (hash_field={hash_field}, indicator_id={indicator_id}, stix_id={stix_id})"
-                )
-                continue
-
-            entry_errors = 0
-
-            # --- Create/attach external references ---
-            for url in urls:
-                try:
-                    ext_ref_id = self._cache_ext_ref_ids.get(url)
-                    if not ext_ref_id:
-                        ext_ref = self.helper.api.external_reference.create(
-                            source_name="ThreatFox",
-                            url=url,
-                        )
-                        ext_ref_id = ext_ref["id"]
-                        self._cache_ext_ref_ids[url] = ext_ref_id
-
-                    # Primary: singular attach method
-                    try:
-                        self.helper.api.stix_cyber_observable.add_external_reference(
-                            id=obs_id, external_reference_id=ext_ref_id
-                        )
-                    except Exception:
-                        # Fallback: plural attach (for pycti variants)
-                        self.helper.api.stix_cyber_observable.add_external_references(
-                            id=obs_id, external_references_ids=[ext_ref_id]
-                        )
-
-                    refs_attached += 1
-                    self.helper.log_debug(
-                        f"[ThreatFox] attached ext-ref {url} to {entity_type}:{value} ({obs_id})"
-                    )
-
-                except Exception:  # pylint:disable=broad-exception-caught
-                    entry_errors += 1
-                    self.helper.log_error(
-                        f"[ThreatFox] Failed attaching external ref '{url}' to observable {obs_id}:\n{traceback.format_exc()}"
-                    )
-
-            # --- Create observable --related-to--> malware relationship via API ---
-            if malware_stix_id:
-                try:
-                    # Resolve malware internal ID from STIX ID
-                    malware_obj = self.helper.api.malware.read(id=malware_stix_id)
-                    if malware_obj:
-                        malware_internal_id = malware_obj["id"]
-
-                        # Create relationship via API
-                        self.helper.api.stix_core_relationship.create(
-                            fromId=obs_id,
-                            toId=malware_internal_id,
-                            relationship_type="related-to",
-                            createdBy=self.identity["id"],
-                            confidence=(
-                                int(confidence) if confidence is not None else None
-                            ),
-                        )
-                        rels_created += 1
-                        self.helper.log_debug(
-                            f"[ThreatFox] created relationship {entity_type}:{value} --related-to--> malware ({malware_stix_id})"
-                        )
-                    else:
-                        self.helper.log_warning(
-                            f"[ThreatFox] Malware not found for relationship: {malware_stix_id}"
-                        )
-                except Exception:  # pylint:disable=broad-exception-caught
-                    entry_errors += 1
-                    self.helper.log_error(
-                        f"[ThreatFox] Failed creating relationship for observable {obs_id} to malware {malware_stix_id}:\n{traceback.format_exc()}"
-                    )
-
-            errors += entry_errors
-            entry_operations = len(urls) + (1 if malware_stix_id else 0)
-            if entry_errors < entry_operations or entry_operations == 0:
-                entries_ok += 1
-
-        self.helper.log_info(
-            f"[ThreatFox] post-pass finished: refs_attached={refs_attached} rels_created={rels_created} not_found={not_found} errors={errors} lookup_errors={self._lookup_errors}"
-        )
-
-        # Total failure: nothing could be processed and the OpenCTI API raised,
-        # either on attach/relationship calls or on every lookup call. "Not
-        # found" while lookups return normally (e.g. ingestion still in
-        # progress) is only logged, as before.
-        api_failing = errors > 0 or (self._lookup_errors > 0 and self._lookup_ok == 0)
-        if entries_ok == 0 and api_failing:
-            raise PostPassError(
-                f"[ThreatFox] post-pass failed for all {total} pending observable(s) "
-                f"(not_found={not_found}, errors={errors}, lookup_errors={self._lookup_errors})"
-            )
 
     # ----------------------------- Utilities -----------------------------
     def _normalize_family_name(self, ioc: "FeedRow") -> Optional[str]:
