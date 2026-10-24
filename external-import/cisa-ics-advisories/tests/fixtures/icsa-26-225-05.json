@@ -1,0 +1,496 @@
+{
+  "document": {
+    "acknowledgments": [
+      {
+        "names": [
+          "Duc Anh Nguyen",
+          "Ta Duc Thien"
+        ],
+        "organization": "NTCS OT Penetration Testing Team",
+        "summary": "reported these vulnerabilities to CISA"
+      }
+    ],
+    "category": "csaf_security_advisory",
+    "csaf_version": "2.0",
+    "distribution": {
+      "text": "Disclosure is not limited",
+      "tlp": {
+        "label": "WHITE",
+        "url": "https://www.cisa.gov/news-events/news/traffic-light-protocol-tlp-definitions-and-usage"
+      }
+    },
+    "lang": "en-US",
+    "notes": [
+      {
+        "category": "legal_disclaimer",
+        "text": "This product is provided subject to this Notification (https://www.cisa.gov/notification) and this Privacy & Use policy (https://www.cisa.gov/privacy-policy).",
+        "title": "Legal Notice and Terms of Use"
+      },
+      {
+        "category": "summary",
+        "text": "Successful exploitation of these vulnerabilities could allow an attacker to read data from the device or gain access to affected workstations.",
+        "title": "Advisory Summary"
+      },
+      {
+        "category": "other",
+        "text": "Energy",
+        "title": "Critical infrastructure sectors"
+      },
+      {
+        "category": "other",
+        "text": "Worldwide",
+        "title": "Countries/areas deployed"
+      },
+      {
+        "category": "other",
+        "text": "Austria",
+        "title": "Company headquarters location"
+      },
+      {
+        "category": "general",
+        "text": "CISA recommends users take defensive measures to minimize the risk of exploitation of these vulnerabilities. Minimize network exposure for all control system devices and/or systems, ensuring they are not accessible from the internet. Locate control system networks and remote devices behind firewalls and isolating them from business networks. When remote access is required, use more secure methods, such as virtual private networks (VPNs), recognizing VPNs may have vulnerabilities and should be updated to the most current version available. Also recognize VPN is only as secure as the connected devices.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "CISA reminds organizations to perform proper impact analysis and risk assessment prior to deploying defensive measures.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "CISA also provides a section for control systems security recommended practices on the ICS webpage on cisa.gov/ics. Several CISA products detailing cyber defense best practices are available for reading and download, including Improving Industrial Control Systems Cybersecurity with Defense-in-Depth Strategies.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "CISA encourages organizations to implement recommended cybersecurity strategies for proactive defense of ICS assets.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "Additional mitigation guidance and recommended practices are publicly available on the ICS webpage at cisa.gov/ics in the technical information paper, ICS-TIP-12-146-01B--Targeted Cyber Intrusion Detection and Mitigation Strategies.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "Organizations observing suspected malicious activity should follow established internal procedures and report findings to CISA for tracking and correlation against other incidents.",
+        "title": "Recommended Practices"
+      },
+      {
+        "category": "general",
+        "text": "No known public exploitation specifically targeting these vulnerabilities has been reported to CISA at this time.",
+        "title": "Recommended Practices"
+      }
+    ],
+    "publisher": {
+      "category": "coordinator",
+      "contact_details": "central@cisa.dhs.gov",
+      "name": "CISA",
+      "namespace": "https://www.cisa.gov/"
+    },
+    "references": [
+      {
+        "category": "self",
+        "summary": "ICS Advisory ICSA-26-225-05 JSON",
+        "url": "https://raw.githubusercontent.com/cisagov/CSAF/develop/csaf_files/OT/white/2026/icsa-26-225-05.json"
+      },
+      {
+        "category": "self",
+        "summary": "ICSA Advisory ICSA-26-225-05 - Web Version",
+        "url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-225-05"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/uscert/ics/alerts/ICS-ALERT-10-301-01"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/resources-tools/resources/ics-recommended-practices"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/sites/default/files/publications/Cybersecurity_Best_Practices_for_Industrial_Control_Systems.pdf"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/topics/industrial-control-systems"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/news-events/ics-alerts/ics-alert-10-301-01"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/sites/default/files/recommended_practices/NCCIC_ICS-CERT_Defense_in_Depth_2016_S508C.pdf"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/news-events/news/targeted-cyber-intrusion-detection-and-mitigation-strategies-update-b"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/secure-our-world/teach-employees-avoid-phishing"
+      },
+      {
+        "category": "external",
+        "summary": "Recommended Practices",
+        "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+      }
+    ],
+    "title": "ANDRITZ HIPASE-250 and 250 SCALA",
+    "tracking": {
+      "current_release_date": "2026-08-13T06:00:00.000000Z",
+      "generator": {
+        "date": "2026-08-12T23:38:24.195479Z",
+        "engine": {
+          "name": "CISA CSAF Generator",
+          "version": "1.0.0"
+        }
+      },
+      "id": "ICSA-26-225-05",
+      "initial_release_date": "2026-08-13T06:00:00.000000Z",
+      "revision_history": [
+        {
+          "date": "2026-08-13T06:00:00.000000Z",
+          "legacy_version": "Initial",
+          "number": "1",
+          "summary": "Initial Publication"
+        }
+      ],
+      "status": "final",
+      "version": "1"
+    }
+  },
+  "product_tree": {
+    "branches": [
+      {
+        "branches": [
+          {
+            "branches": [
+              {
+                "category": "product_version_range",
+                "name": "<=7.20",
+                "product": {
+                  "name": "ANDRITZ HIPASE-250: <=7.20",
+                  "product_id": "CSAFPID-0001"
+                }
+              }
+            ],
+            "category": "product_name",
+            "name": "HIPASE-250"
+          },
+          {
+            "branches": [
+              {
+                "category": "product_version_range",
+                "name": "<=7.20",
+                "product": {
+                  "name": "ANDRITZ 250 SCALA: <=7.20",
+                  "product_id": "CSAFPID-0002"
+                }
+              }
+            ],
+            "category": "product_name",
+            "name": "250 SCALA"
+          }
+        ],
+        "category": "vendor",
+        "name": "ANDRITZ"
+      }
+    ]
+  },
+  "vulnerabilities": [
+    {
+      "cve": "CVE-2026-65309",
+      "cwe": {
+        "id": "CWE-257",
+        "name": "Storing Passwords in a Recoverable Format"
+      },
+      "notes": [
+        {
+          "category": "summary",
+          "text": "ANDRITZ HIPASE-250 (formerly 250 SCALA) in affected versions stores and transmits user passwords using a reversible format instead of a one-way password hash. This allows an attacker able to read the credential store or capture network traffic to recover all stored passwords.",
+          "title": "Vulnerability Summary"
+        },
+        {
+          "category": "details",
+          "text": "SSVCv2/E:N/A:Y/2026-08-12T06:00:00.000000Z",
+          "title": "SSVC"
+        }
+      ],
+      "product_status": {
+        "known_affected": [
+          "CSAFPID-0001",
+          "CSAFPID-0002"
+        ]
+      },
+      "references": [
+        {
+          "category": "external",
+          "summary": "cwe.mitre.org",
+          "url": "https://cwe.mitre.org/data/definitions/257.html"
+        },
+        {
+          "category": "external",
+          "summary": "www.cve.org",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2026-65309"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/4.0#CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N"
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "ANDRITZ has addressed these issues in version V8.00.00 (released 2024-12) and in version V8.15.00 (released 2026-07) and encourages users to keep their systems updated to the latest version (currently HIPASE-250 Version V8.15.00).  For more information, users can contact ANDRITZ at the following website: https://www.andritz.com/group-en/contact",
+          "product_ids": [
+            "CSAFPID-0001"
+          ],
+          "url": "https://www.andritz.com/group-en/contact"
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "baseScore": 7.5,
+            "baseSeverity": "HIGH",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "CSAFPID-0001",
+            "CSAFPID-0002"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-65310",
+      "cwe": {
+        "id": "CWE-306",
+        "name": "Missing Authentication for Critical Function"
+      },
+      "notes": [
+        {
+          "category": "summary",
+          "text": "ANDRITZ HIPASE-250 (formerly 250 SCALA), in the default configuration of affected versions, exposes its data and configuration endpoint without any authentication and permissive CORS on every response. An unauthenticated attacker with network access can read live process values and server configuration.",
+          "title": "Vulnerability Summary"
+        },
+        {
+          "category": "details",
+          "text": "SSVCv2/E:N/A:Y/2026-08-12T06:00:00.000000Z",
+          "title": "SSVC"
+        }
+      ],
+      "product_status": {
+        "known_affected": [
+          "CSAFPID-0001",
+          "CSAFPID-0002"
+        ]
+      },
+      "references": [
+        {
+          "category": "external",
+          "summary": "cwe.mitre.org",
+          "url": "https://cwe.mitre.org/data/definitions/306.html"
+        },
+        {
+          "category": "external",
+          "summary": "www.cve.org",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2026-65310"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/4.0#CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N"
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "ANDRITZ has addressed these issues in version V8.00.00 (released 2024-12) and in version V8.15.00 (released 2026-07) and encourages users to keep their systems updated to the latest version (currently HIPASE-250 Version V8.15.00).  For more information, users can contact ANDRITZ at the following website: https://www.andritz.com/group-en/contact",
+          "product_ids": [
+            "CSAFPID-0001"
+          ],
+          "url": "https://www.andritz.com/group-en/contact"
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "baseScore": 7.5,
+            "baseSeverity": "HIGH",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "CSAFPID-0001",
+            "CSAFPID-0002"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-65311",
+      "cwe": {
+        "id": "CWE-306",
+        "name": "Missing Authentication for Critical Function"
+      },
+      "notes": [
+        {
+          "category": "summary",
+          "text": "The HTTP server component of ANDRITZ HIPASE-250 (formerly 250 SCALA) in affected versions exposes an undocumented endpoint that changes the server's logging level and target without requiring authentication. A remote, unauthenticated attacker with network access to the service may suppress audit logging, potentially concealing other activity on the system.",
+          "title": "Vulnerability Summary"
+        },
+        {
+          "category": "details",
+          "text": "SSVCv2/E:N/A:Y/2026-08-12T06:00:00.000000Z",
+          "title": "SSVC"
+        }
+      ],
+      "product_status": {
+        "known_affected": [
+          "CSAFPID-0001",
+          "CSAFPID-0002"
+        ]
+      },
+      "references": [
+        {
+          "category": "external",
+          "summary": "cwe.mitre.org",
+          "url": "https://cwe.mitre.org/data/definitions/306.html"
+        },
+        {
+          "category": "external",
+          "summary": "www.cve.org",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2026-65311"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/4.0#CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N"
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "ANDRITZ has addressed these issues in version V8.00.00 (released 2024-12) and in version V8.15.00 (released 2026-07) and encourages users to keep their systems updated to the latest version (currently HIPASE-250 Version V8.15.00).  For more information, users can contact ANDRITZ at the following website: https://www.andritz.com/group-en/contact",
+          "product_ids": [
+            "CSAFPID-0001"
+          ],
+          "url": "https://www.andritz.com/group-en/contact"
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "baseScore": 5.3,
+            "baseSeverity": "MEDIUM",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "CSAFPID-0001",
+            "CSAFPID-0002"
+          ]
+        }
+      ]
+    },
+    {
+      "cve": "CVE-2026-65313",
+      "cwe": {
+        "id": "CWE-798",
+        "name": "Use of Hard-coded Credentials"
+      },
+      "notes": [
+        {
+          "category": "summary",
+          "text": "A provisioning script used when installing HIPASE-250 (formerly 250 SCALA) engineering workstations sets a fixed, hard-coded x11vnc password. Because the same credential is applied to every workstation provisioned this way, an attacker with adjacent-network access who knows the password can gain VNC access to affected workstations.",
+          "title": "Vulnerability Summary"
+        },
+        {
+          "category": "details",
+          "text": "SSVCv2/E:N/A:Y/2026-08-12T06:00:00.000000Z",
+          "title": "SSVC"
+        }
+      ],
+      "product_status": {
+        "known_affected": [
+          "CSAFPID-0001",
+          "CSAFPID-0002"
+        ]
+      },
+      "references": [
+        {
+          "category": "external",
+          "summary": "cwe.mitre.org",
+          "url": "https://cwe.mitre.org/data/definitions/798.html"
+        },
+        {
+          "category": "external",
+          "summary": "www.cve.org",
+          "url": "https://www.cve.org/CVERecord?id=CVE-2026-65313"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/3.1#CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"
+        },
+        {
+          "category": "external",
+          "summary": "www.first.org",
+          "url": "https://www.first.org/cvss/calculator/4.0#CVSS:4.0/AV:A/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N"
+        }
+      ],
+      "remediations": [
+        {
+          "category": "vendor_fix",
+          "details": "ANDRITZ has addressed these issues in version V8.00.00 (released 2024-12) and in version V8.15.00 (released 2026-07) and encourages users to keep their systems updated to the latest version (currently HIPASE-250 Version V8.15.00).  For more information, users can contact ANDRITZ at the following website: https://www.andritz.com/group-en/contact",
+          "product_ids": [
+            "CSAFPID-0001"
+          ],
+          "url": "https://www.andritz.com/group-en/contact"
+        }
+      ],
+      "scores": [
+        {
+          "cvss_v3": {
+            "baseScore": 8.1,
+            "baseSeverity": "HIGH",
+            "vectorString": "CVSS:3.1/AV:A/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+            "version": "3.1"
+          },
+          "products": [
+            "CSAFPID-0001",
+            "CSAFPID-0002"
+          ]
+        }
+      ]
+    }
+  ]
+}
