@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Censys Collections",
@@ -54,7 +56,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "P1D",
       "description": "How long to wait between two ingestion runs.",
       "format": "duration",
       "type": "string"
@@ -101,22 +103,27 @@
     },
     "CENSYS_COLLECTIONS_INDICATOR_SCORE": {
       "default": 50,
-      "description": "Confidence score (0–100) assigned to ingested observables and indicators.",
+      "description": "Confidence score (0\u2013100) assigned to ingested observables and indicators.",
       "maximum": 100,
       "minimum": 0,
       "type": "integer"
     },
     "CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE": {
-      "default": false,
-      "description": "If enabled, an indicator is only auto-created for an observable when its score meets or exceeds 'indicator_score_threshold'. If disabled (default), an indicator is always auto-created for every ingested observable, regardless of score.",
+      "default": true,
+      "description": "If enabled (default), an indicator is only auto-created for an observable when its score meets or exceeds 'indicator_score_threshold'. If disabled, an indicator is auto-created for every ingested observable, regardless of score.",
       "type": "boolean"
     },
     "CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD": {
-      "default": 50,
-      "description": "Minimum score (0–100) an observable must have for an indicator to be auto-created. Only used when 'auto_indicator_by_score' is enabled.",
+      "default": 70,
+      "description": "Minimum score (0\u2013100) an observable must have for an indicator to be auto-created. Only used when 'auto_indicator_by_score' is enabled.",
       "maximum": 100,
       "minimum": 0,
       "type": "integer"
+    },
+    "CENSYS_COLLECTIONS_SKIP_UNCHANGED_COLLECTIONS": {
+      "default": true,
+      "description": "If enabled (default), a collection that has already been ingested is skipped when Censys reports no asset additions since its last successful ingestion. Changes to existing assets (e.g. new vulnerabilities on a host) are only picked up once the collection is ingested again. If disabled, every collection is fully re-ingested on every run.",
+      "type": "boolean"
     },
     "CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS": {
       "default": 60,
