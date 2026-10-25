@@ -100,7 +100,7 @@ def test_wallet_is_enriched_with_summary_and_reference():
     assert "Sending" in result
     conn.client.address_summary.assert_called_once_with("BTC", ADDRESS)
     conn.client.address_poisoning.assert_called_once_with("BTC", ADDRESS)
-    assert "- Balance: 0.12771030 BTC" in ext["x_opencti_description"]
+    assert "- Balance: 0.12771030 BTC" in ext["description"]
     urls = [ref["url"] for ref in ext["external_references"]]
     assert urls == [f"https://sochain.com/btc/address/{ADDRESS}"]
     assert POISONING_LABEL not in ext.get("labels", [])
@@ -173,7 +173,7 @@ def test_poisoning_failure_still_sends_the_summary():
     result = conn.process_message(msg)
 
     assert "Sending" in result
-    assert "x_opencti_description" in _ext(msg["stix_entity"])
+    assert "description" in _ext(msg["stix_entity"])
 
 
 def test_network_is_detected_from_the_address():
@@ -216,6 +216,23 @@ def test_tlp_above_max_raises_without_a_lookup():
 
     with pytest.raises(ValueError, match="MAX TLP"):
         conn.process_message(_message(marking="TLP:RED"))
+
+    conn.client.address_summary.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "markings", [["TLP:RED", "TLP:GREEN"], ["TLP:GREEN", "TLP:RED"]]
+)
+def test_any_tlp_above_max_raises_whatever_the_marking_order(markings):
+    conn, helper = _connector(max_tlp=TLPLevel.AMBER)
+    msg = _message()
+    msg["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": m} for m in markings
+    ]
+
+    with pytest.raises(ValueError, match="MAX TLP"):
+        conn.process_message(msg)
 
     conn.client.address_summary.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()

@@ -30,8 +30,8 @@ class SochainClient:
         self.helper = helper
         self.base_url = str(base_url).rstrip("/")
         # The key is optional: lookups work without one, up to a daily limit.
-        # Sent per request rather than on the session, so it is not replayed
-        # to another host if the API ever answers with a redirect.
+        # Sent per request, and requests never follow redirects (see _get),
+        # so the key cannot be replayed to another host.
         self._auth_header = {"API-KEY": api_key} if api_key else {}
 
         self.session = requests.Session()
@@ -61,7 +61,10 @@ class SochainClient:
         url = f"{self.base_url}/{path}"
         try:
             resp = self.session.get(
-                url, headers=self._auth_header, timeout=self._TIMEOUT
+                url,
+                headers=self._auth_header,
+                timeout=self._TIMEOUT,
+                allow_redirects=False,
             )
         except requests.exceptions.RequestException as exc:
             raise SochainAPIError(f"Request to SoChain failed: {exc}") from exc
@@ -80,6 +83,12 @@ class SochainClient:
         if isinstance(body, dict) and isinstance(body.get("data"), dict):
             message = body["data"].get("error_message")
 
+        if 300 <= resp.status_code < 400:
+            raise SochainAPIError(
+                f"SoChain answered with a redirect (HTTP {resp.status_code}); "
+                "not followed",
+                resp.status_code,
+            )
         if resp.status_code == 401:
             raise SochainAPIError(
                 "SoChain refused the request (HTTP 401): "

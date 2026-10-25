@@ -36,12 +36,16 @@ class SochainConnector:
         self.converter = ConverterToStix(self.author)
 
     def _check_tlp(self, entity: dict) -> None:
-        """Raise when the observable's TLP is above MAX TLP."""
-        tlp = "TLP:CLEAR"
-        for marking_definition in entity.get("objectMarking", []):
-            if marking_definition.get("definition_type") == "TLP":
-                tlp = marking_definition.get("definition", tlp)
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        """Raise when any of the observable's TLP markings is above MAX TLP."""
+        tlps = [
+            marking_definition.get("definition", "TLP:CLEAR")
+            for marking_definition in entity.get("objectMarking", [])
+            if marking_definition.get("definition_type") == "TLP"
+        ] or ["TLP:CLEAR"]
+        # Every marking is checked, so their order cannot hide a stricter one.
+        if not all(
+            OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp) for tlp in tlps
+        ):
             raise ValueError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
@@ -176,7 +180,7 @@ class SochainConnector:
         OpenCTIStix2.put_attribute_in_extension(
             stix_entity,
             STIX_EXT_OCTI_SCO,
-            "x_opencti_description",
+            "description",
             SochainUtils.build_description(network, summary),
         )
         OpenCTIStix2.put_attribute_in_extension(

@@ -116,3 +116,11 @@ def test_non_json_200_raises():
     client, _ = _client(FakeResp(200, text="<html>blocked</html>"))
     with pytest.raises(SochainAPIError):
         client.address_summary("BTC", ADDRESS)
+
+
+def test_redirects_are_not_followed():
+    client, session = _client(FakeResp(302, None))
+
+    with pytest.raises(SochainAPIError, match="redirect"):
+        client.address_summary("BTC", ADDRESS)
+    assert session.get.call_args.kwargs["allow_redirects"] is False
