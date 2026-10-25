@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import stix2
 from pycti import (
-    AttackPattern,
+
     Identity,
     Indicator,
     MarkingDefinition,
@@ -19,7 +19,7 @@ from pycti import (
 from src.main import (
     DectraxConnector,
     resolve_tlp_marking,
-    statement_marking,
+
     validate_ipv4_address,
 )
 
