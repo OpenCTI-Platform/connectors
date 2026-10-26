@@ -73,7 +73,11 @@ Environment variables override the file.
   page; the watermark then commits at the midpoint and the next window covers
   the rest. Each further rejection halves the window again, so a token that
   keeps expiring between runs still lets the import advance, and nothing is
-  skipped. Re-sent objects are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
+  skipped. A window too short to split (one second) is read with ten times
+  the cap, and a cursor is saved if even that is not enough, so memory stays
+  bounded. If one second holds more than that and every saved token expires
+  before the next run, the runs re-read that second without finishing it;
+  each logs a "rejected the saved page token" warning naming the window. Re-sent objects are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
   `generate_id()` for SDOs and relationships, spec-standard IDs for
   observables), so the same entity from another connector merges with ours.
   Each bundle carries the Stairwell author identity and the TLP marking

@@ -291,6 +291,36 @@ def test_rejected_token_on_a_one_second_window_reads_it_to_the_end(env):
     assert state.pending_page_token is None
 
 
+def test_unsplittable_window_is_still_bounded_in_memory(env):
+    env.setenv("STAIRWELL_IMPORT_MAX_INDICATORS", "2")
+    second = datetime(2026, 5, 4, tzinfo=timezone.utc)
+    state = ConnectorState(
+        watermark=second,
+        pending_cutoff=second,
+        pending_window_end=second.replace(second=1),
+        pending_page_token="expired",
+    )
+    # 30 full pages: far more than the 10x ceiling (20 indicators) allows.
+    pages = [(400, None)] + [_page(f"{i:x}", 2, f"t{i}") for i in range(1, 31)]
+    processor = _processor(pages, state)
+    objects = _run(processor)
+    assert len(_file_patterns(objects)) == 20
+    assert processor.client.list_objects_metadata.call_count == 11
+    # The run's description and Note report the limit that applied.
+    note = next(
+        o for o in objects if o.get("abstract") == "Stairwell Import Truncation"
+    )
+    assert "reached 20 indicators (10 x STAIRWELL_IMPORT_MAX_INDICATORS=2" in (
+        note["content"]
+    )
+    wrapper = next(o for o in objects if o["type"] in ("grouping", "report"))
+    assert "capped at 20 indicators (10 x" in wrapper["description"]
+    # The cursor is saved, so the next run resumes after what was sent.
+    assert state.pending_page_token == "t10"
+    assert state.watermark == second
+    assert processor.logger.warnings
+
+
 @pytest.mark.parametrize("status", [429, 503, 0])
 def test_transient_failure_on_resume_keeps_cursor(env, status):
     state = _pending_state("p2")

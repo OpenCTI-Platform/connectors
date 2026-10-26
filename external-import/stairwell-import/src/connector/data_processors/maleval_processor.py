@@ -59,6 +59,11 @@ def _bucket(raw: dict[str, Any]) -> str | None:
     return mal_eval.get("probabilityBucket") or mal_eval.get("probability_bucket")
 
 
+# How many times `import_max_indicators` one run may collect from a window too
+# short to split after its token expired.
+_UNSPLITTABLE_LIMIT_FACTOR = 10
+
+
 @dataclass
 class Batch:
     """What one run fetched: the window, its objects, and where it stopped."""
@@ -73,6 +78,8 @@ class Batch:
     # Token of the first unread page when the run stopped at the cap; None
     # when the window was read to its end.
     resume_token: str | None
+    # The cap this run collected under (see _UNSPLITTABLE_LIMIT_FACTOR).
+    limit: int
 
 
 class MalEvalFilesProcessor(BaseDataProcessor):
@@ -176,8 +183,10 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         entries: list[dict[str, Any]] = []
         fetched = filtered = 0
         resumed = page_token is not None
-        # Set when a window too short to split must be read to its end.
-        uncapped = False
+        # The run's limit on collected objects. A window too short to split
+        # gets a higher one, so it can finish in one run despite a token
+        # that keeps expiring, but stays bounded in memory.
+        limit = self.max_indicators
         page_num = 0
         # The cap is checked between pages, never mid-page: a resume token
         # points at a page boundary, so stopping mid-page would skip the rest
@@ -197,7 +206,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     # same cap and save a token at the same place, so a token
                     # that kept expiring would never let the window finish.
                     # The filter has whole-second bounds, so a window that
-                    # cannot be split is read to its end in this run.
+                    # cannot be split is read with a higher limit instead.
                     midpoint = (cutoff + (window_end - cutoff) / 2).replace(
                         microsecond=0
                     )
@@ -205,13 +214,13 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                         window_end = midpoint
                         cel = build_cel_filter(cutoff=cutoff, window_end=window_end)
                     else:
-                        uncapped = True
+                        limit = self.max_indicators * _UNSPLITTABLE_LIMIT_FACTOR
                     self.logger.warning(
                         "Stairwell rejected the saved page token; restarting window",
                         {
                             "status": status,
                             "window_end": _iso(window_end),
-                            "uncapped": uncapped,
+                            "limit": limit,
                         },
                     )
                     page_token, resumed, page_num = None, False, 0
@@ -253,9 +262,10 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     fetched,
                     filtered,
                     None,
+                    limit,
                 )
             page_token = next_token
-            if len(entries) >= self.max_indicators and not uncapped:
+            if len(entries) >= limit:
                 return Batch(
                     run_started,
                     cutoff,
@@ -265,6 +275,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     fetched,
                     filtered,
                     page_token,
+                    limit,
                 )
 
     # ------------------------------------------------------------------
@@ -316,6 +327,15 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             [stairwell_identity(), *objects, *self._wrapper(batch, objects, emitted)]
         )
 
+    def _cap_text(self, batch: Batch) -> str:
+        setting = f"STAIRWELL_IMPORT_MAX_INDICATORS={self.max_indicators}"
+        if batch.limit == self.max_indicators:
+            return setting
+        return (
+            f"{batch.limit} indicators ({_UNSPLITTABLE_LIMIT_FACTOR} x {setting}, "
+            "for a one-second window whose page token had expired)"
+        )
+
     def _wrapper(
         self, batch: Batch, objects: list[dict[str, Any]], emitted: int
     ) -> list[dict[str, Any]]:
@@ -338,10 +358,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             f"- **Indicators emitted:** {emitted}",
         ]
         if truncated:
-            lines.append(
-                "- **Truncated:** capped at "
-                f"STAIRWELL_IMPORT_MAX_INDICATORS={self.max_indicators}"
-            )
+            lines.append(f"- **Truncated:** capped at {self._cap_text(batch)}")
         refs = [o["id"] for o in objects]
         if self.wrapper == "report":
             wrapper = make_report(
@@ -368,7 +385,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     content=(
                         f"Run {_iso(batch.run_started)} (window "
                         f"{_iso(batch.cutoff)} → {_iso(batch.window_end)}) reached "
-                        f"STAIRWELL_IMPORT_MAX_INDICATORS={self.max_indicators} "
+                        f"{self._cap_text(batch)} "
                         f"after {batch.fetched} objects ({emitted} indicators "
                         "emitted). The remaining objects in this window are "
                         "imported by the next run."
