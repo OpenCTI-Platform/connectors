@@ -10,7 +10,13 @@ from connector import ConnectorState
 from connector.data_processors import ReportsProcessor, reports_processor
 from connectors_sdk.client.exceptions import ApiRateLimitError, ApiServerError
 from connectors_sdk.exceptions.error import DataRetrievalError
-from rosti_client.models import IOC, Report, ReportBundle, Yara
+from rosti_client.models import (
+    IOC,
+    InvalidReportSummary,
+    Report,
+    ReportBundle,
+    Yara,
+)
 
 UTC = dt.timezone.utc
 
@@ -468,6 +474,29 @@ def test_unreadable_report_details_are_skipped(fake_logger):
     assert processor.state.last_report_updated == dt.datetime(
         2026, 10, 1, 11, tzinfo=UTC
     )
+
+
+def test_malformed_list_entries_are_skipped(fake_logger):
+    """One broken entry in the report list must not block the reports after it."""
+    bad = InvalidReportSummary(
+        "A", dt.datetime(2026, 10, 1, 10, tzinfo=UTC), "title: Input should be a string"
+    )
+    no_id = InvalidReportSummary(None, None, "id: Field required")
+    client = FakeClient([[bad, no_id, summary("B", "2026-10-01T11:00:00Z")]])
+    processor = make_processor(client, fake_logger=fake_logger)
+    bundles = run(processor)
+
+    assert client.detail_calls == ["B"]
+    assert [b[-1]["name"] for b in bundles] == ["Report B"]
+    skipped = fake_logger.find("Failed to convert report, skipping it")
+    assert [r.meta["report_id"] for r in skipped] == ["A", None]
+    assert skipped[0].meta["error"] == "title: Input should be a string"
+    assert processor.state.last_report_updated == dt.datetime(
+        2026, 10, 1, 11, tzinfo=UTC
+    )
+    assert processor.state.last_report_ids == ["B"]
+    [finished] = fake_logger.find("Rösti import finished")
+    assert finished.meta == {"reports_sent": 1, "reports_skipped": 2}
 
 
 def test_report_objects_are_only_replaced_when_enabled(fake_logger):

@@ -154,6 +154,28 @@ def test_two_different_md5_cannot_be_one_file(converter):
     assert "different MD5 hashes" in result.warnings[0]
 
 
+def test_ssdeep_hashes_differing_only_in_case_are_different(converter):
+    """SSDEEP is base64: unlike hex hashes, case matters."""
+    group = [
+        make_ioc("ssdeep", "3:abcD:efgH"),
+        make_ioc("ssdeep", "3:ABCd:EFGh"),
+        make_ioc("md5", MD5),
+    ]
+    result = converter.convert_ioc_group(group)
+    assert result.combined == []
+    assert "different SSDEEP hashes" in result.warnings[0]
+    patterns = [i.pattern for i in by_type(result.objects, "indicator")]
+    assert any("3:abcD:efgH" in p for p in patterns)
+    assert any("3:ABCd:EFGh" in p for p in patterns)
+
+
+def test_hex_hashes_differing_only_in_case_are_the_same(converter):
+    result = converter.convert_ioc_group(
+        [make_ioc("md5", MD5), make_ioc("md5", MD5.upper()), make_ioc("sha1", SHA1)]
+    )
+    assert result.combined == ["file"]
+
+
 def test_invalid_member_is_skipped_and_the_rest_combined(converter):
     group = [make_ioc("md5", "nothex"), make_ioc("md5", MD5), make_ioc("sha1", SHA1)]
     result = converter.convert_ioc_group(group)

@@ -98,6 +98,14 @@ HASH_ALGORITHMS = {
 HASH_PATTERN_ORDER = ["MD5", "SHA-1", "SHA-224", "SHA-256", "SHA-512", "SSDEEP"]
 HASH_NAME_PRIORITY = ["SHA-256", "SHA-512", "SHA-1", "MD5", "SHA-224", "SSDEEP"]
 
+
+def _same_hash(algorithm: str, first: str, second: str) -> bool:
+    """Hex hashes compare without case; SSDEEP hashes (base64) are case-sensitive."""
+    if algorithm == "SSDEEP":
+        return first == second
+    return first.lower() == second.lower()
+
+
 # IOC types that are combined when they share an entity_ref. File and network
 # IOCs of the same group are never mixed; other types stay separate.
 FILE_IOC_TYPES = {*HASH_ALGORITHMS, "filename", "filepath"}
@@ -566,7 +574,7 @@ class RostiConverter:
                     algorithm = HASH_ALGORITHMS[ioc.type]
                     self._check_hash(algorithm, value)
                     known = parts.hashes.setdefault(algorithm, value)
-                    if known.lower() != value.lower():
+                    if not _same_hash(algorithm, known, value):
                         parts.conflict = algorithm
                 else:
                     name, note = self._file_name(value, ioc.type == "filepath")

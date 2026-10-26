@@ -42,8 +42,10 @@ class SkippedYara:
 # The compiler's message for a rule (or variable) that is not defined.
 _UNDEFINED = re.compile(r'undefined identifier "(\w+)"')
 # A rule header, with its modifiers (private, global) if any.
+# Helpers declared in other layouts (e.g. after a comment on the same line)
+# are not rewritten; ``_resolve`` then finds them still public and skips the rule.
 _RULE_HEADER = re.compile(
-    r"^(?P<indent>[ \t]*)(?P<modifiers>(?:(?:private|global)[ \t]+)*)rule(?=[ \t])",
+    r"^(?P<indent>[ \t]*)(?P<modifiers>(?:(?:private|global)\s+)*)rule(?=\s)",
     re.MULTILINE,
 )
 
@@ -71,23 +73,38 @@ def _as_private(source: str) -> str:
     return _RULE_HEADER.sub(make_private, source)
 
 
-def _combine(rule: Yara, dependencies: list[str], by_name: dict[str, Yara]) -> str:
-    helpers = [_as_private(by_name[name].rule.strip()) for name in dependencies]
-    return "\n\n".join([*helpers, rule.rule.strip()])
+def _helpers(dependencies: list[str], by_name: dict[str, Yara]) -> list[str]:
+    return [_as_private(by_name[name].rule.strip()) for name in dependencies]
+
+
+def _public_helpers(helpers: list[str]) -> list[str]:
+    """Rules in ``helpers`` that are still public, as YARA itself parses them."""
+    compiled = yara.compile(source="\n\n".join(helpers), includes=False)
+    return sorted(r.identifier for r in compiled if not r.is_private)
 
 
 def _resolve(rule: Yara, by_name: dict[str, Yara]) -> YaraPattern | SkippedYara:
     """Compile ``rule``, adding the rules of the report the compiler reports missing.
 
     Only names the compiler reports as undefined are added, so names that
-    appear in comments, metadata or strings never pull in other rules.
+    appear in comments, metadata or strings never pull in other rules. Each
+    round adds a missing rule or moves one in front of the rule that uses it;
+    the search ends when an order of rules repeats, so it always terminates.
     """
     dependencies: list[str] = []
-    # Each round adds a missing rule or moves one before the rule that uses it.
-    for _ in range(2 * len(by_name) + 1):
-        pattern = _combine(rule, dependencies, by_name)
+    tried: set[tuple[str, ...]] = set()
+    while tuple(dependencies) not in tried:
+        tried.add(tuple(dependencies))
+        helpers = _helpers(dependencies, by_name)
+        pattern = "\n\n".join([*helpers, rule.rule.strip()])
         error = compile_error(pattern)
         if error is None:
+            public = _public_helpers(helpers) if helpers else []
+            if public:
+                # A public helper could match on its own and report a hit for
+                # this rule, so the combined pattern is not used.
+                error = f"helper rule {', '.join(public)} could not be made private"
+                break
             return YaraPattern(rule, pattern, dependencies)
         match = _UNDEFINED.search(error)
         name = match[1] if match else None

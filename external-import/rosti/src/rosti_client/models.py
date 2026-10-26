@@ -6,9 +6,17 @@ Unknown fields are ignored so that API additions never break the connector.
 
 import datetime as dt
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    model_validator,
+)
 
 # All IOC types returned by `GET /ioc-types`.
 IOC_TYPES = [
@@ -120,6 +128,36 @@ class Report(_Model):
     def hide_yara(self) -> bool:
         """True if a note asks to hide this report's YARA rules."""
         return any(note.action == "hide_yara" for note in self.notes or [])
+
+
+@dataclass
+class InvalidReportSummary:
+    """A report in the report list that does not match ``Report``.
+
+    ``id`` and ``last_updated`` are kept when they are readable, so the report
+    can be skipped and the checkpoint can move past it.
+    """
+
+    id: str | None
+    last_updated: dt.datetime | None
+    error: str
+
+
+_OPTIONAL_DATETIME = TypeAdapter(dt.datetime | None)
+
+
+def parse_report_summary(item: Any) -> Report | InvalidReportSummary:
+    """One entry of the report list, validated on its own."""
+    try:
+        return Report.model_validate(item)
+    except ValidationError as e:
+        data = item if isinstance(item, dict) else {}
+        report_id = data.get("id") if isinstance(data.get("id"), str) else None
+        try:
+            last_updated = _OPTIONAL_DATETIME.validate_python(data.get("last_updated"))
+        except ValidationError:
+            last_updated = None
+        return InvalidReportSummary(report_id, last_updated, str(e))
 
 
 def group_iocs(iocs: Iterable[IOC]) -> Iterator[list[IOC]]:

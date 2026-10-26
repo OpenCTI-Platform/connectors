@@ -153,3 +153,49 @@ def test_failing_helper_is_named_in_the_error():
     assert errors["Main"] == (
         'line 1: undefined identifier "filename" (with helper rules Helper prepended)'
     )
+
+
+def test_helpers_that_stay_public_are_never_used():
+    """Helpers in a layout that cannot be rewritten must not make a pattern that matches wrongly."""
+    main = rule("Main", "rule Main { condition: Helper and filesize < 10 }")
+    for text in (
+        '/* helper */ rule Helper { strings: $a = "x" condition: $a }',
+        'import "pe" rule Helper { strings: $a = "x" condition: $a }',
+    ):
+        accepted, skipped = prepare_yara_patterns([rule("Helper", text), main])
+        assert [a.rule.name for a in accepted] == ["Helper"]
+        assert skipped[0].rule.name == "Main"
+        assert skipped[0].error.startswith(
+            "helper rule Helper could not be made private"
+        )
+
+
+def test_line_break_after_rule_keyword_is_made_private():
+    helper = rule("Helper", 'rule\nHelper { strings: $a = "x" condition: $a }')
+    main = rule("Main", "rule Main { condition: Helper and filesize < 10 }")
+    accepted, skipped = prepare_yara_patterns([helper, main])
+    assert not skipped
+    combined = {a.rule.name: a for a in accepted}["Main"].pattern
+    assert yara.compile(source=combined).match(data=b"x" * 100) == []
+
+
+def test_long_dependency_chain_is_resolved():
+    """Main uses A to E, each of B to E uses the previous one."""
+    rules = [rule("A", 'private rule A { strings: $a = "a" condition: $a }')]
+    for previous, name in zip("ABCD", "BCDE"):
+        rules.append(rule(name, f"private rule {name} {{ condition: {previous} }}"))
+    rules.append(rule("Main", "rule Main { condition: A and B and C and D and E }"))
+    accepted, skipped = prepare_yara_patterns(rules)
+    assert not skipped
+    main = {a.rule.name: a for a in accepted}["Main"]
+    assert main.dependencies == ["A", "B", "C", "D", "E"]
+    assert [m.rule for m in yara.compile(source=main.pattern).match(data=b"a")] == [
+        "Main"
+    ]
+
+
+def test_dependency_cycle_ends():
+    a = rule("A", "rule A { condition: B }")
+    b = rule("B", "rule B { condition: A }")
+    accepted, skipped = prepare_yara_patterns([a, b])
+    assert not accepted and len(skipped) == 2

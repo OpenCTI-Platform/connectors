@@ -37,7 +37,14 @@ from pycti import Tool as PyctiTool
 from pydantic import ValidationError
 from rosti_client import RostiClient
 from rosti_client.api_client import quota_exceeded
-from rosti_client.models import IOC, Mitre, Report, ReportBundle, Yara
+from rosti_client.models import (
+    IOC,
+    InvalidReportSummary,
+    Mitre,
+    Report,
+    ReportBundle,
+    Yara,
+)
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
@@ -73,9 +80,10 @@ class ReportData:
 
 @dataclass
 class UnreadableReport:
-    """A listed report whose details the API returned in an unexpected form."""
+    """A report whose list entry or details the API returned in an unexpected form."""
 
-    report_id: str
+    # None if even the ID could not be read from the list entry.
+    report_id: str | None
     listed_last_updated: dt.datetime | None
     error: str
 
@@ -162,7 +170,9 @@ class ReportsProcessor(BaseDataProcessor):
             return self.state.last_report_updated - CHECKPOINT_OVERLAP
         return self.settings.rosti.import_since
 
-    def _already_sent(self, report_id: str, last_updated: dt.datetime | None) -> bool:
+    def _already_sent(
+        self, report_id: str | None, last_updated: dt.datetime | None
+    ) -> bool:
         checkpoint = self.state.last_report_updated
         if checkpoint is None or last_updated is None:
             return False
@@ -200,8 +210,8 @@ class ReportsProcessor(BaseDataProcessor):
 
         The IOC groups are a generator: their pages are only requested while
         ``transform`` converts them, so a large report is never held in memory.
-        A report whose details do not match the expected data model is
-        yielded as ``UnreadableReport``, for ``transform`` to skip.
+        A report whose list entry or details do not match the expected data
+        model is yielded as ``UnreadableReport``, for ``transform`` to skip.
         """
         # MITRE software may have been added to OpenCTI since the last run.
         self._software_cache = {}
@@ -213,6 +223,11 @@ class ReportsProcessor(BaseDataProcessor):
         for page in self.client.iter_updated_reports(since):
             for summary in page:
                 if self._already_sent(summary.id, summary.last_updated):
+                    continue
+                if isinstance(summary, InvalidReportSummary):
+                    yield UnreadableReport(
+                        summary.id, summary.last_updated, summary.error
+                    )
                     continue
                 try:
                     item = self._collect_report(summary)
@@ -383,7 +398,9 @@ class ReportsProcessor(BaseDataProcessor):
             self.state.last_report_updated = last_updated
             self.state.last_report_ids = [report_id]
 
-    def _skip_report(self, report_id: str, error: Exception | str, sent: int) -> None:
+    def _skip_report(
+        self, report_id: str | None, error: Exception | str, sent: int
+    ) -> None:
         self.logger.warning(
             "Failed to convert report, skipping it",
             meta={
@@ -440,7 +457,10 @@ class ReportsProcessor(BaseDataProcessor):
                     report_id = item.report.id
                     imported = yield from self._report_bundles(item)
                 # All bundles of the report have been sent once the generator resumes here.
-                self._advance_checkpoint(report_id, item.listed_last_updated)
+                # A list entry without a readable ID cannot be checkpointed; the
+                # next report moves the checkpoint past it.
+                if report_id is not None:
+                    self._advance_checkpoint(report_id, item.listed_last_updated)
                 if imported:
                     sent += 1
                 else:

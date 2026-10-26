@@ -15,7 +15,14 @@ from typing import Any
 
 from connectors_sdk.client.base_client_api import BaseClientApi
 from connectors_sdk.client.exceptions import ApiRateLimitError
-from rosti_client.models import IOC, Report, Yara, group_iocs
+from rosti_client.models import (
+    IOC,
+    InvalidReportSummary,
+    Report,
+    Yara,
+    group_iocs,
+    parse_report_summary,
+)
 
 CONNECTOR_VERSION = "0.1.0"
 USER_AGENT = f"opencti-connector-rosti/{CONNECTOR_VERSION}"
@@ -85,10 +92,12 @@ class RostiClient(BaseClientApi):
 
     def iter_updated_reports(
         self, since: dt.datetime, page_size: int = 100
-    ) -> Generator[list[Report], None, None]:
+    ) -> Generator[list[Report | InvalidReportSummary], None, None]:
         """Reports created or updated after ``since``, oldest change first.
 
-        ``GET /reports?timestamp=…&sort=last_updated``
+        ``GET /reports?timestamp=…&sort=last_updated``. Each entry is checked
+        on its own: one that does not match ``Report`` is returned as
+        ``InvalidReportSummary`` instead of failing the whole page.
         """
         params = {
             "timestamp": since.astimezone(dt.timezone.utc).strftime(
@@ -98,7 +107,7 @@ class RostiClient(BaseClientApi):
             "limit": page_size,
         }
         for page in self._paginate_cursor("/reports", params):
-            yield [Report.model_validate(item) for item in page]
+            yield [parse_report_summary(item) for item in page]
 
     def get_report(self, report_id: str) -> Report:
         """Report metadata with MITRE IDs, CVEs and notes.

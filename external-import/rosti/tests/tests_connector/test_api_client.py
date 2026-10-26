@@ -11,6 +11,7 @@ from conftest import load_fixture
 from connectors_sdk.client.exceptions import ApiRateLimitError
 from rosti_client import RostiClient
 from rosti_client.api_client import quota_exceeded
+from rosti_client.models import InvalidReportSummary, Report
 
 
 class RecordingClient(RostiClient):
@@ -77,6 +78,39 @@ def test_report_list_query_and_cursor_pagination():
         "limit": 100,
     }
     assert client.requests[1][1]["cursor"] == "cur1"
+
+
+def test_malformed_report_in_list_does_not_fail_the_page():
+    valid = {
+        "id": "good",
+        "title": "Good",
+        "date": "2026-10-01",
+        "url": "u",
+        "last_updated": "2026-10-01T10:00:00Z",
+    }
+    no_title = {
+        "id": "bad",
+        "title": None,
+        "date": "2026-10-01",
+        "url": "u",
+        "last_updated": "2026-10-01T11:00:00Z",
+    }
+    garbage = {"title": "no id", "last_updated": "not a date"}
+    client = RecordingClient(
+        {"/reports": {"data": [no_title, valid, garbage], "meta": {"has_more": False}}}
+    )
+    [page] = client.iter_updated_reports(
+        dt.datetime(2026, 10, 1, tzinfo=dt.timezone.utc)
+    )
+
+    bad, good, unknown = page
+    assert isinstance(good, Report) and good.id == "good"
+    assert isinstance(bad, InvalidReportSummary)
+    assert bad.id == "bad"
+    assert bad.last_updated == dt.datetime(2026, 10, 1, 11, tzinfo=dt.timezone.utc)
+    assert "title" in bad.error
+    assert isinstance(unknown, InvalidReportSummary)
+    assert (unknown.id, unknown.last_updated) == (None, None)
 
 
 def test_get_report_requests_mitre_cve_and_notes():
