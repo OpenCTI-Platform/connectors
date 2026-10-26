@@ -27,4 +27,7 @@ VC321: Enrichment connector must be playbook-compatible.
 VC322: Enrichment connector must read data['stix_objects'] (former bundle).
 VC323: Stream connectors must use helper.listen_stream().
 VC324: Relationship should not set both start_time and stop_time.
+VC325: Connector must have minimal settings tests covering valid and invalid inputs.
+VC326: ListFromString settings must define a default value.
+VC327: connectors-sdk log messages must be static, with variable data passed in meta.
 """

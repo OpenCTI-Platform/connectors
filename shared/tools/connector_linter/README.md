@@ -201,6 +201,9 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC322 | ERROR | Enrichment | `former-bundle-read` | Must read `data['stix_objects']` for playbook compatibility |
 | VC323 | ERROR | Stream | `helper-listen-stream` | Must use `self.helper.listen_stream()` |
 | VC324 | WARNING | Common | `relationship-start-stop-time` | Relationship should not set both `start_time` and `stop_time` (overloads Redis with time-bucketed duplicates) |
+| VC325 | ERROR | Common | `minimal-settings-tests` | Connector must have minimal settings tests covering valid and invalid inputs |
+| VC326 | ERROR | Common | `list-from-string-default` | `ListFromString` settings must define a default value (even an empty list) |
+| VC327 | WARNING | Common | `log-meta` | connectors-sdk log messages must be static, with variable data passed in `meta` (no f-string, `%`, `.format()` or `str(err)` message). pycti and stdlib loggers are not checked |
 
 ### VC4xx — Docker
 
