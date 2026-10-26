@@ -6,4 +6,4 @@ pydantic==2.13.5
 pydantic-core==2.46.5
 pydantic-settings==2.15.0
 stix2==3.0.2
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.261026.0#subdirectory=connectors-sdk

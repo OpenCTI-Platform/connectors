@@ -15,7 +15,7 @@ dependencies = [
     "stix2~=3.0.1",
     "validators==0.35.0",
     "zetalytics-api>=1.0.0",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.261026.0#subdirectory=connectors-sdk",
 ]
 
 [project.scripts]
