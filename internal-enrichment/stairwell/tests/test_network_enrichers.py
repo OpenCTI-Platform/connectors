@@ -624,3 +624,65 @@ def test_identical_intelligence_on_two_ips_gives_two_notes():
         objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
         notes += [o for o in objects if o["type"] == "note"]
     assert len({n["id"] for n in notes}) == 2
+
+
+@pytest.mark.parametrize(
+    "bodies",
+    [
+        # (status, body) per endpoint: v1, v2, whitelist, resolutions.
+        [(200, None)] * 4,
+        [(200, None), (500, None), (200, None), (0, None)],
+    ],
+)
+def test_domain_ok_status_without_a_parsed_body_is_not_success(bodies):
+    names = (
+        "get_hostname_metadata_v1",
+        "get_hostname_v2",
+        "get_hostname_whitelist_status",
+        "get_hostname_resolutions",
+    )
+    helper = _helper()
+    client = _client(dict(zip(names, bodies)))
+    with pytest.raises(DataRetrievalError):
+        DomainEnricher(helper, client, "amber").enrich(_DOMAIN_OBS)
+    helper.send_stix2_bundle.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "ip, whois",
+    [((200, None), (200, None)), ((200, None), (503, None)), ((0, None), (200, None))],
+)
+def test_ip_ok_status_without_a_parsed_body_is_not_success(ip, whois):
+    client = _client(
+        {"get_ip": ip, "get_ip_whois": whois, "get_ip_hostnames": (500, None)}
+    )
+    helper = _helper()
+    with pytest.raises(DataRetrievalError):
+        IpEnricher(helper, client, "amber").enrich(_IP_OBS)
+    helper.send_stix2_bundle.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "wl, v2, labelled",
+    [
+        ({"whitelisted": False}, {"whitelisted": True}, False),
+        ({"is_whitelisted": False}, {"status": "WHITELISTED"}, False),
+        ({}, {"whitelisted": True}, True),
+        ({"whitelisted": True}, {"whitelisted": False}, True),
+        (None, {"status": "WHITELISTED"}, True),
+    ],
+)
+def test_dedicated_whitelist_answer_takes_precedence(wl, v2, labelled):
+    client = _client(
+        {
+            "get_hostname_metadata_v1": (200, {}),
+            "get_hostname_v2": (200, v2),
+            "get_hostname_whitelist_status": (200 if wl is not None else 500, wl),
+            "get_hostname_resolutions": (200, {"resolutions": []}),
+        }
+    )
+    helper = _helper()
+    DomainEnricher(helper, client, "amber").enrich(_DOMAIN_OBS)
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    domain = next(o for o in objects if o["type"] == "domain-name")
+    assert ("stairwell:whitelisted" in domain.get("labels", [])) is labelled

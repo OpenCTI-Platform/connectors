@@ -78,7 +78,12 @@ class IpEnricher:
         # hostnames endpoint is best-effort; ignore failures.
         _, hosts = self.client.get_ip_hostnames(ip_value)
 
-        if not any(200 <= s < 300 for s in (ip_status, whois_status)):
+        # A 2xx whose body did not parse as a JSON object carries no data.
+        answered = [
+            200 <= s < 300 and isinstance(body, dict)
+            for s, body in ((ip_status, ip_data), (whois_status, whois_resp))
+        ]
+        if not any(answered):
             if ip_status == 404 and whois_status == 404:
                 return f"Stairwell: IP {ip_value} not found"
             raise DataRetrievalError(

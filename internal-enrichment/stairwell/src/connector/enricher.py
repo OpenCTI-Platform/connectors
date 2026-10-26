@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from pycti import OpenCTIConnectorHelper
 
@@ -10,6 +10,7 @@ from .domain_enricher import DomainEnricher
 from .file_enricher import DEFAULT_SIGHTINGS_LIMIT, FileEnricher
 from .ip_enricher import IpEnricher
 from .stairwell import StairwellClient
+from .stix_builder import TLP_IDS
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,77 @@ def observable_tlps(observable: dict[str, Any]) -> list[str]:
     for marking in observable.get("objectMarking") or []:
         if isinstance(marking, dict) and marking.get("definition_type") == "TLP":
             out.append(str(marking.get("definition") or ""))
+    return out
+
+
+# Standard TLP marking IDs to their level. CLEAR and WHITE share an ID, and
+# both levels gate the same way.
+_TLP_BY_MARKING_ID = {
+    marking_id: f"TLP:{level.upper()}" for level, marking_id in TLP_IDS.items()
+}
+
+
+# Stands in for a marking whose type could not be determined. pycti does not
+# recognise it, so the max-TLP check refuses it.
+UNRESOLVED_MARKING = "TLP:UNRESOLVED"
+
+
+def _marking_tlp(marking: dict[str, Any]) -> str | None:
+    """The TLP level of a marking definition, "" if it is another kind of
+    marking (PAP, statement), or None if its kind is not stated.
+
+    Accepts the STIX form (`definition_type: tlp`, `definition: {tlp: red}`)
+    and OpenCTI's forms (`definition_type` or `x_opencti_definition_type`
+    `TLP`, with `definition` or `x_opencti_definition` `TLP:RED`).
+    """
+    kind = str(
+        marking.get("x_opencti_definition_type") or marking.get("definition_type") or ""
+    ).upper()
+    if not kind:
+        return None
+    if kind != "TLP":
+        return ""
+    definition = marking.get("x_opencti_definition") or marking.get("definition")
+    if isinstance(definition, dict):
+        return f"TLP:{str(definition.get('tlp') or '').upper()}"
+    return str(definition or UNRESOLVED_MARKING)
+
+
+def stix_marking_tlps(
+    entity: dict[str, Any],
+    objects: list[dict[str, Any]],
+    lookup: Callable[[str], dict[str, Any] | None] | None = None,
+) -> list[str]:
+    """TLP levels of a STIX object's `object_marking_refs` (may be empty).
+
+    A ref resolves through the standard TLP marking IDs, a marking-definition
+    object in `objects`, or `lookup` (OpenCTI's marking definitions). A
+    marking of another kind, such as PAP, is not a TLP restriction. A ref
+    that cannot be resolved yields `UNRESOLVED_MARKING`, which the gate
+    refuses: it could be a RED marking.
+    """
+    definitions = {
+        o.get("id"): o
+        for o in objects
+        if isinstance(o, dict) and o.get("type") == "marking-definition"
+    }
+    out: list[str] = []
+    for ref in entity.get("object_marking_refs") or []:
+        if ref in _TLP_BY_MARKING_ID:
+            out.append(_TLP_BY_MARKING_ID[ref])
+            continue
+        level = _marking_tlp(definitions[ref]) if ref in definitions else None
+        if level is None and lookup is not None:
+            try:
+                found = lookup(ref)
+            except Exception:  # noqa: BLE001 - unresolvable means refused
+                found = None
+            if isinstance(found, dict):
+                level = _marking_tlp(found)
+        if level is None:
+            out.append(UNRESOLVED_MARKING)
+        elif level:
+            out.append(level)
     return out
 
 
@@ -92,11 +164,15 @@ class Dispatcher:
     def supports(self, observable: dict[str, Any]) -> bool:
         return self._enricher_for(observable) is not None
 
-    def dispatch(self, observable: dict[str, Any]) -> str:
+    def dispatch(
+        self, observable: dict[str, Any], extra_tlps: list[str] | None = None
+    ) -> str:
         # Every enricher sends the observable's value to Stairwell, so the
-        # gate runs before any of them. An observable carrying a TLP that
-        # pycti does not recognise fails the check and is refused.
-        for tlp in observable_tlps(observable):
+        # gate runs before any of them. `extra_tlps` are the markings on the
+        # playbook's copy of the entity, which an earlier step may have
+        # raised. A TLP that pycti does not recognise fails the check and is
+        # refused.
+        for tlp in [*observable_tlps(observable), *(extra_tlps or [])]:
             if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
                 raise ValueError(
                     f"Observable is marked {tlp}, above the connector's max TLP "

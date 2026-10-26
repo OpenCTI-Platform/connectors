@@ -49,7 +49,17 @@ class DomainEnricher:
         res_status, res = self.client.get_hostname_resolutions(hostname)
 
         statuses = [v1_status, v2_status, wl_status, res_status]
-        if not any(200 <= s < 300 for s in statuses):
+        # A 2xx whose body did not parse as a JSON object carries no data.
+        answered = [
+            200 <= s < 300 and isinstance(body, dict)
+            for s, body in (
+                (v1_status, v1),
+                (v2_status, v2),
+                (wl_status, wl),
+                (res_status, res),
+            )
+        ]
+        if not any(answered):
             if all(s == 404 for s in statuses):
                 return f"Stairwell: hostname {hostname} not found"
             raise DataRetrievalError(
@@ -140,17 +150,17 @@ class DomainEnricher:
     def _extract_whitelisted(
         wl: dict[str, Any] | None, v2: dict[str, Any] | None
     ) -> bool:
+        # The dedicated whitelist endpoint is checked first, and an explicit
+        # answer from it (true or false) is final; the general hostname
+        # response is consulted only when the dedicated one has none.
         for blob in (wl, v2):
-            if isinstance(blob, dict):
-                val = (
-                    blob.get("whitelisted")
-                    if "whitelisted" in blob
-                    else blob.get("is_whitelisted")
-                )
-                if val is True:
-                    return True
-                if blob.get("status") == "WHITELISTED":
-                    return True
+            if not isinstance(blob, dict):
+                continue
+            for key in ("whitelisted", "is_whitelisted"):
+                if isinstance(blob.get(key), bool):
+                    return blob[key]
+            if blob.get("status") == "WHITELISTED":
+                return True
         return False
 
     def _collect_resolutions(

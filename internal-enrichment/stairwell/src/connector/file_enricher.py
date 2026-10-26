@@ -33,6 +33,9 @@ DEFAULT_SIGHTINGS_LIMIT = 0
 
 logger = logging.getLogger(__name__)
 
+# Display names for the algorithm `_choose_hash` looked the file up by.
+_HASH_LABELS = {"SHA256": "SHA-256", "SHA1": "SHA-1", "MD5": "MD5"}
+
 _SEVERITY_LABELS = {
     "SEVERITY_HIGH": "stairwell:severity-high",
     "SEVERITY_MEDIUM": "stairwell:severity-medium",
@@ -299,9 +302,13 @@ class FileEnricher:
             metadata=metadata,
         )
         objects.append(file_sco)
+        # On the MD5/SHA-1 fallback, the file's own SHA-256 (from the metadata
+        # backfill) is what variant and lineage entries must be compared
+        # with, or the file is listed as related to itself.
+        self_sha256 = (file_sco.get("hashes") or {}).get("SHA-256") or primary_hash
 
         # Lineage from relationships.parents/children
-        objects.extend(self._lineage_objects(entity_id, primary_hash, metadata))
+        objects.extend(self._lineage_objects(entity_id, self_sha256, metadata))
 
         # Signing certificates are reported in the summary Note only: Stairwell
         # gives signature bytes, issuer, subject, and validity, but no
@@ -325,8 +332,8 @@ class FileEnricher:
             objects.append(
                 make_note(
                     abstract="Stairwell AI File Triage",
-                    content=f"**SHA-256:** {md_code(primary_hash)}\n\n"
-                    + md_prose(full_summary),
+                    content=f"**{_HASH_LABELS.get(hash_algo, hash_algo)}:** "
+                    f"{md_code(primary_hash)}\n\n" + md_prose(full_summary),
                     object_refs=[entity_id],
                     tlp=self.tlp,
                 )
@@ -349,7 +356,7 @@ class FileEnricher:
         objects.extend(self._network_indicator_objects(entity_id, metadata))
 
         # Variant SCOs + `derived-from` rels + descriptive Variants Note
-        capped_variants = self._capped_variants(primary_hash, variants_payload)
+        capped_variants = self._capped_variants(self_sha256, variants_payload)
         variant_displayed = len(capped_variants)
         objects.extend(self._variant_objects(entity_id, primary_hash, capped_variants))
         if variant_displayed > 0:

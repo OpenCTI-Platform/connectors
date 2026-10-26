@@ -335,3 +335,109 @@ def test_playbook_not_found_merges_the_label_into_the_incoming_bundle(env):
     assert sent["file--1"]["hashes"] == {"SHA-256": "a" * 64}
     assert sent["file--1"]["labels"] == ["from-earlier-step", "stairwell:not-found"]
     assert sent["report--9"] == ORIGINAL[1]
+
+
+RED = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+
+
+@pytest.mark.parametrize(
+    "refs, extra_objects, refused",
+    [
+        # The playbook input is RED while the stored entity is GREEN.
+        ([RED], [], True),
+        # A TLP carried as a marking-definition object in the bundle.
+        (
+            ["marking-definition--custom-red"],
+            [
+                {
+                    "id": "marking-definition--custom-red",
+                    "type": "marking-definition",
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:RED",
+                }
+            ],
+            True,
+        ),
+        (
+            ["marking-definition--stix-red"],
+            [
+                {
+                    "id": "marking-definition--stix-red",
+                    "type": "marking-definition",
+                    "definition_type": "tlp",
+                    "definition": {"tlp": "red"},
+                }
+            ],
+            True,
+        ),
+        # The SDK's AMBER+STRICT form: a STIX statement carrying an OpenCTI TLP.
+        (
+            ["marking-definition--custom-strict"],
+            [
+                {
+                    "id": "marking-definition--custom-strict",
+                    "type": "marking-definition",
+                    "definition_type": "statement",
+                    "definition": {"statement": "custom"},
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                }
+            ],
+            True,
+        ),
+        ([AMBER], [], False),
+        # A non-TLP marking OpenCTI knows is not a TLP restriction.
+        (["marking-definition--pap"], [], False),
+        # Resolved through OpenCTI: a TLP stored under OpenCTI's own ID.
+        (["marking-definition--opencti-red"], [], True),
+        (["marking-definition--opencti-green"], [], False),
+        # Neither standard, nor in the bundle, nor known to OpenCTI: refused.
+        (["marking-definition--unknown"], [], True),
+        (["marking-definition--lookup-fails"], [], True),
+    ],
+)
+def test_playbook_input_markings_are_gated_too(env, refs, extra_objects, refused):
+    connector, helper = _connector()
+    known = {
+        "marking-definition--pap": {"definition_type": "PAP", "definition": "PAP:RED"},
+        "marking-definition--opencti-red": {
+            "definition_type": "TLP",
+            "definition": "TLP:RED",
+        },
+        "marking-definition--opencti-green": {
+            "definition_type": "TLP",
+            "definition": "TLP:GREEN",
+        },
+    }
+
+    def read(id):
+        if id == "marking-definition--lookup-fails":
+            raise RuntimeError("OpenCTI unavailable")
+        return known.get(id)
+
+    helper.api.marking_definition.read.side_effect = read
+    data = _playbook_message(tlp="TLP:GREEN")
+    data["stix_entity"]["object_marking_refs"] = refs
+    data["stix_objects"].extend(extra_objects)
+    connector.dispatcher.file.enrich = MagicMock(return_value="enriched")
+    connector.process_message(data)
+    if refused:
+        connector.dispatcher.file.enrich.assert_not_called()
+        assert _sent_objects(helper) == ORIGINAL + extra_objects
+    else:
+        connector.dispatcher.file.enrich.assert_called_once()
+
+
+def test_playbook_merge_never_lowers_the_score(env):
+    connector, helper = _connector()
+    data = _playbook_message()
+    data["stix_objects"][0]["x_opencti_score"] = 95
+
+    def enrich(_):
+        _send_from_enricher(connector, [{"id": "file--1", "x_opencti_score": 75}])
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    assert merged["x_opencti_score"] == 95

@@ -62,7 +62,12 @@ Environment variables override the file.
   TLP marking above `CONNECTOR_MAX_TLP` (or a TLP marking pycti does not
   recognise) is refused and the enrichment fails with an error; its value
   never leaves OpenCTI. An observable with no TLP marking at all is treated
-  as unrestricted and is enriched whatever this setting is.
+  as unrestricted and is enriched whatever this setting is. In a playbook, the
+  markings on the step's input are checked as well, since an earlier step may
+  have raised its TLP; if either is above the maximum, the bundle is handed on
+  unchanged. A marking on the input that cannot be identified (not a standard
+  TLP ID, not defined in the bundle, and not readable from OpenCTI) is treated
+  as above the maximum.
 - **Untrusted text is escaped before it reaches markdown.** File names, YARA
   rule names, certificate fields, network indicators, WHOIS, DNS answers, and
   asset names come from sources an attacker can influence, and OpenCTI renders
@@ -88,8 +93,8 @@ Environment variables override the file.
 - **Playbooks.** In a playbook, the bundle sent back always carries the
   objects the step received, with the enrichment added when there is one.
   The enriched observable is merged into the incoming one: properties the
-  enrichment does not set are kept, hashes are merged, and labels, external
-  references, and markings are combined. An out-of-scope entity, a refused
+  enrichment does not set are kept, hashes are merged, labels, external
+  references, and markings are combined, and the higher score is kept. An out-of-scope entity, a refused
   TLP, no Stairwell data, or an error hands the incoming bundle on unchanged
   so the playbook continues.
 - **Sightings are off by default.** With `STAIRWELL_SIGHTINGS_LIMIT` above

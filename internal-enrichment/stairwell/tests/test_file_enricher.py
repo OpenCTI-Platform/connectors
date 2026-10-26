@@ -1158,3 +1158,62 @@ def test_note_lists_exactly_the_network_values_that_became_observables():
     section = note["content"].split("## Network indicators")[1].split("##")[0]
     listed = set(re.findall(r"`([^`]+)`", section))
     assert listed == observed
+
+
+_MD5 = "44d88612fea8a8f36de82e1278abb02f"
+_MD5_OBS = {
+    "id": "stix-cyber-observable--md5only",
+    "standard_id": "file--md5only-aaaa-bbbb-cccc-dddddddddddd",
+    "entity_type": "StixFile",
+    "hashes": [{"algorithm": "MD5", "hash": _MD5}],
+}
+_OTHER = "b" * 64
+
+
+def _fallback_run():
+    """An MD5-only observable whose metadata names its own SHA-256."""
+    metadata = {
+        "sha256": SHA256,
+        "md5": _MD5,
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "relationships": {
+            "parents": [{"sha256": SHA256}, {"sha256": _OTHER}],
+            "children": [{"sha256": SHA256.upper()}],
+        },
+    }
+    variants = {
+        "variants": [
+            {"sha256": SHA256, "similarity": 1.0},
+            {"sha256": "c" * 64, "similarity": 0.9},
+        ]
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {"tldr": "t", "summary": "Long writeup"}),
+            "get_variants": (200, variants),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(dict(_MD5_OBS))
+    return json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+
+
+def test_fallback_triage_note_names_the_hash_actually_used():
+    objects = _fallback_run()
+    note = next(o for o in objects if o.get("abstract") == "Stairwell AI File Triage")
+    assert note["content"].startswith(f"**MD5:** `{_MD5}`")
+    assert "SHA-256" not in note["content"].split("\n")[0]
+
+
+def test_fallback_never_links_the_file_to_itself():
+    objects = _fallback_run()
+    files = [o for o in objects if o["type"] == "file"]
+    shas = [f.get("hashes", {}).get("SHA-256") for f in files]
+    # The enriched file itself, plus one lineage parent and one variant.
+    assert sorted(shas) == sorted([SHA256, _OTHER, "c" * 64])
+    entity_id = _MD5_OBS["standard_id"]
+    rels = [o for o in objects if o["type"] == "relationship"]
+    assert all(r["source_ref"] != r["target_ref"] for r in rels)
+    assert len([r for r in rels if r["relationship_type"] == "derived-from"]) == 2
+    assert all(entity_id in (r["source_ref"], r["target_ref"]) for r in rels)

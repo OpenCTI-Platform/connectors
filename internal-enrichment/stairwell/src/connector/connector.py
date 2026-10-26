@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from connector.enricher import Dispatcher
+from connector.enricher import Dispatcher, stix_marking_tlps
 from connector.settings import ConnectorSettings
 from connector.stairwell import StairwellClient
 from pycti import OpenCTIConnectorHelper
@@ -18,13 +18,17 @@ def _merge_object(incoming: dict[str, Any], ours: dict[str, Any]) -> dict[str, A
 
     Enrichers send partial objects, so a field they omit keeps its incoming
     value. Dicts present in both (hashes) merge key by key, and labels,
-    external references, and `*_refs` lists (markings) are unioned in order;
-    for any other field the enricher's value wins.
+    external references, and `*_refs` lists (markings) are unioned in order,
+    and the higher `x_opencti_score` is kept; for any other field the
+    enricher's value wins.
     """
     merged = dict(incoming)
     for key, value in ours.items():
         previous = merged.get(key)
-        if isinstance(previous, dict) and isinstance(value, dict):
+        if key == "x_opencti_score" and isinstance(previous, int):
+            # Scores only ever go up (see stairwell.score.monotonic_score).
+            merged[key] = max(previous, value) if isinstance(value, int) else previous
+        elif isinstance(previous, dict) and isinstance(value, dict):
             merged[key] = {**previous, **value}
         elif (
             _is_union_list(key)
@@ -154,8 +158,19 @@ class StairwellConnector:
                 "is not a supported entity type."
             )
 
+        # In a playbook the step's input may carry markings the stored entity
+        # does not (an earlier step can raise its TLP); both are gated.
+        input_tlps = (
+            stix_marking_tlps(
+                stix_entity,
+                data.get("stix_objects") or [],
+                lookup=lambda ref: self.helper.api.marking_definition.read(id=ref),
+            )
+            if playbook
+            else []
+        )
         try:
-            message = self.dispatcher.dispatch(observable)
+            message = self.dispatcher.dispatch(observable, extra_tlps=input_tlps)
         except Exception as err:  # noqa: BLE001
             self.helper.connector_logger.error(
                 "[CONNECTOR] Stairwell enrichment failed",
