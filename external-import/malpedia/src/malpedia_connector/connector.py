@@ -148,10 +148,11 @@ class MalpediaConnector:
             sys.exit(0)
         except Exception as e:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Error while processing data:", {"error": str(e)}
+                "[CONNECTOR] Error while processing data, retrying next run:",
+                {"error": str(e)},
             )
             self.helper.metric.state("stopped")
-            sys.exit(1)
+            return
         self.helper.metric.state("idle")
 
     def _run_malpedia_process(self):
