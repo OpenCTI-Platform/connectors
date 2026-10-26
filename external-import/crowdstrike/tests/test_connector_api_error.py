@@ -1,8 +1,17 @@
+import copy
 from unittest.mock import MagicMock
 
 import pytest
+from crowdstrike_feeds_connector.actor.importer import ActorImporter
 from crowdstrike_feeds_connector.connector import CrowdStrike
+from crowdstrike_feeds_connector.malware.importer import MalwareImporter
+from crowdstrike_feeds_connector.report.importer import ReportImporter
+from crowdstrike_feeds_connector.vulnerability.importer import VulnerabilityImporter
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
+from crowdstrike_feeds_services.client.malware import MalwareAPI
+from crowdstrike_feeds_services.client.reports import ReportsAPI
+from crowdstrike_feeds_services.client.vulnerabilities import VulnerabilitiesAPI
 from crowdstrike_feeds_services.utils import CrowdStrikeAPIError
 
 
@@ -72,3 +81,37 @@ def test_process_message_marks_api_error_as_failed_work_and_runs_next_importer()
     stored_states = [c.args[0] for c in connector.helper.set_state.call_args_list]
     assert all("malware_latest" in state for state in stored_states)
     assert stored_states
+
+
+class _UnauthorizedIntel:
+    """Stands in for falconpy ``Intel``: every call returns a 401 envelope."""
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: copy.deepcopy(UNAUTHORIZED)
+
+
+@pytest.mark.parametrize(
+    "importer_cls, api_attr, api_cls",
+    [
+        (ActorImporter, "actors_api_cs", ActorsAPI),
+        (MalwareImporter, "malware_api_cs", MalwareAPI),
+        (ReportImporter, "reports_api_cs", ReportsAPI),
+        (VulnerabilityImporter, "vulnerabilities_api_cs", VulnerabilitiesAPI),
+    ],
+)
+def test_paginated_importers_raise_api_error(importer_cls, api_attr, api_cls):
+    api = api_cls.__new__(api_cls)
+    api.helper = MagicMock()
+    api.cs_intel = _UnauthorizedIntel()
+
+    importer = importer_cls.__new__(importer_cls)
+    importer.helper = MagicMock()
+    importer.default_latest_timestamp = 0
+    importer.include_types = None
+    importer.target_industries = None
+    setattr(importer, api_attr, api)
+
+    with pytest.raises(CrowdStrikeAPIError, match=r"^Unauthorized \(401\)$"):
+        importer.start("work-1", {})
+
+    importer.helper.set_state.assert_not_called()

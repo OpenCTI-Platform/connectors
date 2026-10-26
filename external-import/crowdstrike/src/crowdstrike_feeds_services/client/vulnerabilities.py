@@ -11,7 +11,14 @@ class VulnerabilitiesAPI(BaseCrowdstrikeClient):
     def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         super().__init__(config, helper)
 
-    def query_vulnerabilities(self, limit: int, offset: int, sort: str, filter: str):
+    def query_vulnerabilities(
+        self,
+        limit: int,
+        offset: int,
+        sort: str,
+        filter: str,
+        raise_on_error: bool = False,
+    ):
         """
         Query vulnerability IDs that match provided FQL filters.
         :param limit: Maximum number of records to return (Max: 5000) in integer
@@ -25,7 +32,7 @@ class VulnerabilitiesAPI(BaseCrowdstrikeClient):
             limit=limit, offset=offset, sort=sort, filter=filter
         )
 
-        self.handle_api_error(response)
+        self.handle_api_error(response, raise_on_error=raise_on_error)
         self.helper.connector_logger.info("Getting vulnerability IDs...")
 
         return response.get("body") if response else {"resources": []}
