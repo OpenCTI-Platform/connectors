@@ -8,6 +8,7 @@ what may leave the platform.
 """
 
 import ipaddress
+import re
 from typing import Any
 from urllib.parse import urlparse
 
@@ -29,6 +30,10 @@ TLP_LEVELS = (
 TLP_IDS = {
     PyctiMarkingDefinition.generate_id("TLP", level): level for level in TLP_LEVELS
 }
+
+
+# a URL scheme without an authority (mailto:, urn:, data: ...); "host:8080/path" is not one
+HOSTLESS_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:(?![0-9]|//)")
 
 
 class EnrichmentSkipped(Exception):
@@ -142,8 +147,16 @@ class NetAPIConnector:
         """The host to look up: a URL is checked by its host, names in punycode."""
         value = str(stix_entity.get("value") or "").strip()
         stix_type = str(stix_entity.get("type") or "")
+        if stix_type == "ipv4-addr":
+            return NetAPIConnector.lookup_ipv4(value)
         if stix_type == "url":
-            parsed = urlparse(value if "://" in value else "//" + value)
+            if "://" in value or value.startswith("//"):
+                parsed = urlparse(value)
+            elif HOSTLESS_SCHEME.match(value):
+                # mailto:, urn:, data: ... carry no host to look up
+                raise EnrichmentSkipped("The URL has no host to look up")
+            else:
+                parsed = urlparse("//" + value)
             host = parsed.hostname or ""
         else:
             host = value.lower()
@@ -171,6 +184,24 @@ class NetAPIConnector:
         if "." not in host or len(host) > 253:
             raise EnrichmentSkipped("The observable value is not a valid host name")
         return host
+
+    @staticmethod
+    def lookup_ipv4(value: str) -> str:
+        """An IPv4-Addr value: one public address, a /32 counts as one; ranges are not sent."""
+        try:
+            network = ipaddress.ip_network(value, strict=False)
+        except ValueError as err:
+            raise EnrichmentSkipped(
+                "The observable value is not a valid IPv4 address"
+            ) from err
+        if network.version != 4:
+            raise EnrichmentSkipped("The observable value is not a valid IPv4 address")
+        if network.num_addresses != 1:
+            raise EnrichmentSkipped("IPv4 range: only single addresses are looked up")
+        address = network.network_address
+        if not address.is_global:
+            raise EnrichmentSkipped("Private or reserved address: not looked up")
+        return str(address)
 
     def _forward(self, data: dict[str, Any], message: str) -> str:
         """Inside a playbook, hand the bundle back untouched; return the status."""

@@ -131,7 +131,9 @@ class ConverterToStix:
         own_reference = {
             "source_name": OWN_SOURCE_NAME,
             "url": lists.get("page") or "https://netapi.com/compromised-urls/",
-            "description": f"NetAPI compromised feed: {self.status_line(check)}",
+            # OpenCTI keys external references by URL, so this one is shared by every
+            # observable on the same feed page: the status of each one is in its note
+            "description": "NetAPI compromised feed (the status of this observable is in the NetAPI note)",
         }
         entity["x_opencti_external_references"] = kept + [own_reference]
         return entity

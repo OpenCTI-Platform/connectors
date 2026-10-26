@@ -172,8 +172,8 @@ def test_current_listing_adds_the_label_reference_and_score():
             "source_name": "NetAPI",
             "url": "https://netapi.com/compromised-urls/",
             "description": (
-                "NetAPI compromised feed: listed now (seen in the compromised feed "
-                "within the last 24 hours)"
+                "NetAPI compromised feed (the status of this observable is in the "
+                "NetAPI note)"
             ),
         },
     ]
@@ -198,8 +198,9 @@ def test_past_listing_keeps_every_label_and_the_score():
     assert enriched["x_opencti_labels"] == ["NetAPI-Compromised", "keep-me", "legacy"]
     reference = enriched["x_opencti_external_references"][-1]
     assert reference["url"] == "https://netapi.com/compromised-ips/"
-    assert reference["description"].startswith(
-        "NetAPI compromised feed: listed in the past (last seen 2026-06-17)"
+    # the reference is shared by every observable of the feed page: no status in it
+    assert reference["description"] == (
+        "NetAPI compromised feed (the status of this observable is in the NetAPI note)"
     )
 
 
