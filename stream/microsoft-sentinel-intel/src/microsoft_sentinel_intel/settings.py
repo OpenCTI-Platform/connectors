@@ -76,7 +76,7 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         default=True,
     )
     use_score_as_confidence: bool = Field(
-        description="Send the OpenCTI score in the STIX confidence property, replacing the OpenCTI confidence. Microsoft Sentinel has no score field and does not index STIX extensions.",
+        description="Send the OpenCTI score in the STIX confidence property instead of the OpenCTI confidence. Objects without a score are sent without confidence. Microsoft Sentinel has no score field and does not index STIX extensions.",
         default=False,
     )
     extra_labels: ListFromString = Field(

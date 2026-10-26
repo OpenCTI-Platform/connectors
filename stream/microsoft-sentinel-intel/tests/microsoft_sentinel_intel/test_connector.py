@@ -150,7 +150,7 @@ def test_handle_event_create_should_send_score_as_confidence_when_enabled(
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_score_as_confidence_config")
-def test_handle_event_create_should_keep_confidence_when_enabled_and_no_score(
+def test_handle_event_create_should_drop_confidence_when_enabled_and_no_score(
     mocker: MockerFixture,
     score_as_confidence_connector: Connector,
     event_data_indicator: dict,
@@ -168,7 +168,7 @@ def test_handle_event_create_should_keep_confidence_when_enabled_and_no_score(
 
     request = mocked_send_request.call_args.kwargs["request"]
     uploaded = json.loads(request.body)["stixobjects"][0]
-    assert uploaded["confidence"] == 42
+    assert "confidence" not in uploaded
     assert "extensions" not in uploaded
 
 

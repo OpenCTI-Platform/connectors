@@ -28,7 +28,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP | `string` |  | string | `"default"` | The name of the resource group where the log analytics is |
 | MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM | `string` |  | string | `"Opencti Stream Connector"` | The name of the source system displayed in Microsoft Sentinel |
 | MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS | `boolean` |  | boolean | `true` | Delete the extensions in the stix bundle sent to the SIEM |
-| MICROSOFT_SENTINEL_INTEL_USE_SCORE_AS_CONFIDENCE | `boolean` |  | boolean | `false` | Send the OpenCTI score in the STIX confidence property, replacing the OpenCTI confidence. Microsoft Sentinel has no score field and does not index STIX extensions. |
+| MICROSOFT_SENTINEL_INTEL_USE_SCORE_AS_CONFIDENCE | `boolean` |  | boolean | `false` | Send the OpenCTI score in the STIX confidence property instead of the OpenCTI confidence. Objects without a score are sent without confidence. Microsoft Sentinel has no score field and does not index STIX extensions. |
 | MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS | `array` |  | string | `[]` | Extra labels added to the bundle sent. String separated by comma |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION | `string` |  | string | `"2024-02-01-preview"` | API version of the Microsoft log analytics workspace interface |
 | MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION | `string` |  | string | `"2025-03-01"` | API version of the Microsoft management interface |
