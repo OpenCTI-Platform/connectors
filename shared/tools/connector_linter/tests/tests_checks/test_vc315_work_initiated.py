@@ -25,6 +25,15 @@ def run_import(helper):
     return wid
 """
 
+_SDK_MAIN = """\
+from connectors_sdk.connectors.external_import.external_import_connector import (
+    ExternalImportConnector,
+)
+
+if __name__ == "__main__":
+    ExternalImportConnector(settings=settings, state=state, data_processors=[]).start()
+"""
+
 
 class TestVC315WorkInitiated:
     """VC315 applies to EXTERNAL_IMPORT connectors only."""
@@ -53,6 +62,16 @@ class TestVC315WorkInitiated:
         )
         results = run_checks(path, select=["VC315"])
         assert all(r.severity == Severity.INFO for r in results)
+
+    def test_passes_with_sdk_external_import_connector(self, connector_src):
+        """The SDK base connector initiates the work itself."""
+        path = connector_src(
+            ("src/main.py", _SDK_MAIN),
+            connector_type="EXTERNAL_IMPORT",
+        )
+        results = run_checks(path, select=["VC315"])
+        assert all(r.severity == Severity.INFO for r in results)
+        assert any("connectors-sdk" in r.message for r in results)
 
     def test_skipped_for_stream_connector(self, connector_src):
         """VC315 is EXTERNAL_IMPORT-only — stream connectors skip it."""

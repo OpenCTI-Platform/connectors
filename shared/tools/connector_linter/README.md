@@ -190,9 +190,9 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC311 | WARNING | Common | `tlp-markings-on-entities` | STIX entities should include TLP markings |
 | VC312 | ERROR | Common | `cleanup-inconsistent-bundle` | `send_stix2_bundle()` must use `cleanup_inconsistent_bundle=True` |
 | VC313 | ERROR | Common | `pycti-generate-id` | STIX SDO/SRO objects must use `pycti.XXX.generate_id()` for deterministic IDs |
-| VC314 | ERROR | External Import | `auto-backpressure` | Must use `schedule_process()` or `schedule_iso()` for scheduling |
-| VC315 | ERROR | External Import | `work-initiated` | Must call `initiate_work()` before processing |
-| VC316 | ERROR | External Import | `work-closed` | Must close work with `to_processed()` after processing |
+| VC314 | ERROR | External Import | `auto-backpressure` | Must use `schedule_process()` or `schedule_iso()` for scheduling (passes with connectors-sdk `ExternalImportConnector`) |
+| VC315 | ERROR | External Import | `work-initiated` | Must call `initiate_work()` before processing (passes with connectors-sdk `ExternalImportConnector`) |
+| VC316 | ERROR | External Import | `work-closed` | Must close work with `to_processed()` after processing (passes with connectors-sdk `ExternalImportConnector`) |
 | VC317 | WARNING | External Import | `initiate-work-conditional` | `initiate_work` should only be called when data is available |
 | VC318 | ERROR | Enrichment | `helper-listen` | Must use `self.helper.listen()` for message callback |
 | VC319 | WARNING | Enrichment | `scope-fallback-bundle` | Must return original bundle when entity is not in scope |
