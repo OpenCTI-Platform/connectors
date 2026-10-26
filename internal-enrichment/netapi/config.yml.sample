@@ -12,7 +12,7 @@ connector:
 
 netapi:
   # api_token: 'ChangeMe' # optional, only raises the request limits
-  # api_base_url: 'https://netapi.com/api-json/'
+  api_base_url: 'https://netapi.com/api-json/' # optional (default), keeps the section a mapping
   # timeout: 30
   # include_rank: true # add the Top 1M rank of a listed domain to the note
   # update_score: false # write `score` to a currently listed observable

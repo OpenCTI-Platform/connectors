@@ -46,6 +46,8 @@ class NetAPIClient:
             status_forcelist=(502, 503, 504),
             allowed_methods=("GET",),
             raise_on_status=False,
+            # urllib3 would otherwise sleep through Retry-After on a 429.
+            respect_retry_after_header=False,
         )
         self._session = requests.Session()
         self._session.mount("https://", HTTPAdapter(max_retries=retry))

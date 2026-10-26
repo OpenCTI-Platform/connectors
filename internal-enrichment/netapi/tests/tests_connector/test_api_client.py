@@ -127,3 +127,11 @@ def test_network_failure_is_a_data_retrieval_error():
         client.compromised_check("000359.xyz")
 
     assert "Could not reach the NetAPI API" in str(err.value)
+
+
+def test_rate_limit_is_not_retried_on_retry_after():
+    """A 429 must reach the work at once, not sleep through Retry-After."""
+    adapter = NetAPIClient()._session.get_adapter("https://netapi.com/")
+
+    assert adapter.max_retries.respect_retry_after_header is False
+    assert 429 not in adapter.max_retries.status_forcelist

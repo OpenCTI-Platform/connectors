@@ -20,6 +20,7 @@ from pycti import MarkingDefinition as PyctiMarkingDefinition
 DOMAIN_ID = "domain-name--11111111-1111-4111-8111-111111111111"
 TLP_CLEAR_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR")
 TLP_GREEN_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:GREEN")
+TLP_RED_ID = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
 TLP_ORDER = [
     "TLP:CLEAR",
     "TLP:WHITE",
@@ -299,7 +300,7 @@ def test_score_is_written_only_when_enabled_and_listed_now():
     assert "x_opencti_score" not in by_type(helper)["ipv4-addr"]
 
 
-def test_past_listing_attaches_the_note_without_the_label():
+def test_past_listing_attaches_the_note_and_leaves_the_labels_alone():
     connector, helper, client = make_connector(check=CHECK_LISTED_PAST)
     data = make_data(
         entity_id="ipv4-addr--22222222-2222-4222-8222-222222222222",
@@ -312,7 +313,8 @@ def test_past_listing_attaches_the_note_without_the_label():
     assert message.startswith("NetAPI: listed in the past (last seen 2026-06-17)")
     client.domain_rank.assert_not_called()  # the rank exists for domains only
     objects = by_type(helper)
-    assert objects["ipv4-addr"]["x_opencti_labels"] == []
+    # an earlier label stays: OpenCTI merges labels on import, the note has the status
+    assert objects["ipv4-addr"]["x_opencti_labels"] == [OWN_LABEL]
     assert (
         objects["note"]["abstract"]
         == "NetAPI - listed in the compromised feed in the past"
@@ -385,3 +387,76 @@ def test_run_listens_with_the_message_callback():
     connector.run()
 
     helper.listen.assert_called_once_with(message_callback=connector.process_message)
+
+
+# --- markings from both representations ----------------------------------------
+
+
+def test_tlp_red_on_the_stix_entity_alone_is_never_sent_to_netapi():
+    """A marking may be present only in object_marking_refs of the STIX entity."""
+    connector, helper, client = make_connector()
+    data = make_data(tlp=None, entity={"object_marking_refs": [TLP_RED_ID]})
+
+    message = connector.process_message(data)
+
+    assert (
+        message
+        == "Observable is TLP:RED, above the maximum TLP:AMBER: not sent to NetAPI"
+    )
+    client.compromised_check.assert_not_called()
+
+
+def test_unresolvable_marking_is_never_sent_to_netapi():
+    """A marking that cannot be resolved is refused, not treated as no marking."""
+    connector, helper, client = make_connector()
+    unknown = "marking-definition--99999999-9999-4999-8999-999999999999"
+    data = make_data(tlp=None, entity={"object_marking_refs": [unknown]})
+
+    message = connector.process_message(data)
+
+    assert message == (
+        f"Marking {unknown} of the observable cannot be resolved: not sent to NetAPI"
+    )
+    client.compromised_check.assert_not_called()
+
+
+def test_bundled_non_tlp_marking_is_accepted_and_kept_on_the_note():
+    connector, helper, client = make_connector()
+    statement_id = "marking-definition--88888888-8888-4888-8888-888888888888"
+    data = make_data(entity={"object_marking_refs": [statement_id]})
+    data["stix_objects"].append(
+        {
+            "type": "marking-definition",
+            "id": statement_id,
+            "definition_type": "statement",
+            "definition": {"statement": "internal"},
+        }
+    )
+
+    connector.process_message(data)
+
+    client.compromised_check.assert_called_once()
+    assert statement_id in by_type(helper)["note"]["object_marking_refs"]
+
+
+def test_note_gets_the_markings_of_the_opencti_entity_too():
+    """objectMarking may carry a TLP that the STIX entity does not list."""
+    connector, helper, _ = make_connector()
+
+    connector.process_message(make_data(tlp="TLP:GREEN"))
+
+    assert set(by_type(helper)["note"]["object_marking_refs"]) == {
+        TLP_CLEAR_ID,
+        TLP_GREEN_ID,
+    }
+
+
+def test_unreadable_opencti_marking_is_never_sent_to_netapi():
+    connector, helper, client = make_connector()
+    data = make_data(tlp=None)
+    data["enrichment_entity"]["objectMarking"] = [{"standard_id": "x"}]
+
+    message = connector.process_message(data)
+
+    assert "cannot be read" in message
+    client.compromised_check.assert_not_called()

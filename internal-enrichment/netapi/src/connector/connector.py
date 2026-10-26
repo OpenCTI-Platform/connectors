@@ -15,7 +15,20 @@ from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connectors_sdk.models import Reference, TLPMarking
 from netapi_client import NetAPIClient
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
+
+TLP_LEVELS = (
+    "TLP:CLEAR",
+    "TLP:WHITE",
+    "TLP:GREEN",
+    "TLP:AMBER",
+    "TLP:AMBER+STRICT",
+    "TLP:RED",
+)
+TLP_IDS = {
+    PyctiMarkingDefinition.generate_id("TLP", level): level for level in TLP_LEVELS
+}
 
 
 class EnrichmentSkipped(Exception):
@@ -63,15 +76,64 @@ class NetAPIConnector:
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         return data["entity_id"].split("--")[0].lower() in scopes
 
-    def _check_tlp(self, opencti_entity: dict[str, Any]) -> None:
+    @staticmethod
+    def source_markings(data: dict[str, Any]) -> tuple[list[str], list[str]]:
+        """The TLP values and the marking ids of the observable.
+
+        Both representations are read: the resolved `objectMarking` of the
+        OpenCTI entity and the `object_marking_refs` of the STIX entity, whose
+        definitions are looked up among the well-known TLP ids and the marking
+        definitions bundled with it. A marking that cannot be read is refused
+        rather than treated as no marking.
+        """
+        stix_entity = data["stix_entity"]
+        bundled = {
+            obj.get("id"): obj
+            for obj in data.get("stix_objects") or []
+            if isinstance(obj, dict) and obj.get("type") == "marking-definition"
+        }
+        tlps: list[str] = []
+        refs: list[str] = []
+        for marking in data["enrichment_entity"].get("objectMarking") or []:
+            kind = marking.get("definition_type")
+            definition = marking.get("definition")
+            if not kind or not definition:
+                raise EnrichmentSkipped(
+                    "A marking of the observable cannot be read: not sent to NetAPI"
+                )
+            if kind == "TLP":
+                tlps.append(definition)
+            refs.append(
+                marking.get("standard_id")
+                or PyctiMarkingDefinition.generate_id(kind, definition)
+            )
+        for ref in stix_entity.get("object_marking_refs") or []:
+            if ref in TLP_IDS:
+                tlps.append(TLP_IDS[ref])
+            elif ref in bundled:
+                definition = bundled[ref]
+                kind = definition.get("x_opencti_definition_type") or definition.get(
+                    "definition_type"
+                )
+                if str(kind).upper() == "TLP":
+                    tlps.append(
+                        definition.get("x_opencti_definition") or definition.get("name")
+                    )
+            elif ref not in refs:
+                raise EnrichmentSkipped(
+                    f"Marking {ref} of the observable cannot be resolved: "
+                    "not sent to NetAPI"
+                )
+            refs.append(ref)
+        return tlps, list(dict.fromkeys(refs))
+
+    def _check_tlp(self, tlps: list[str]) -> None:
         """Refuse an observable whose TLP is above CONNECTOR_MAX_TLP."""
         max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
-        for marking in opencti_entity.get("objectMarking") or []:
-            if marking.get("definition_type") != "TLP":
-                continue
-            if not self.helper.check_max_tlp(marking["definition"], max_tlp):
+        for tlp in tlps:
+            if not isinstance(tlp, str) or not self.helper.check_max_tlp(tlp, max_tlp):
                 raise EnrichmentSkipped(
-                    f"Observable is {marking['definition']}, above the maximum "
+                    f"Observable is {tlp}, above the maximum "
                     f"{max_tlp}: not sent to NetAPI"
                 )
 
@@ -120,7 +182,8 @@ class NetAPIConnector:
         if not self._entity_in_scope(data):
             raise EnrichmentSkipped("Entity type not in scope")
 
-        self._check_tlp(data["enrichment_entity"])
+        tlps, marking_refs = self.source_markings(data)
+        self._check_tlp(tlps)
         stix_entity = data["stix_entity"]
         value = self.lookup_value(stix_entity)
 
@@ -148,9 +211,7 @@ class NetAPIConnector:
 
         tlp = TLPMarking(level=settings.tlp_level)
         note_markings = [tlp] + [
-            Reference(id=ref)
-            for ref in stix_entity.get("object_marking_refs") or []
-            if ref != tlp.id
+            Reference(id=ref) for ref in marking_refs if ref != tlp.id
         ]
         note = self.converter.build_note(
             stix_entity["id"],

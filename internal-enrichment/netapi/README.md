@@ -21,7 +21,7 @@ The NetAPI connector checks domain names, hostnames, URLs and IPv4 addresses aga
 
 [NetAPI](https://netapi.com/) publishes a feed of compromised domains and IP addresses collected from public threat feeds (URLhaus, CERT Polska, blackbook and others), refreshed daily, with the date each entry was first and last seen, and a daily Top 1M ranking of the most popular domains. Both are free (CC BY 4.0) and reachable through the [NetAPI JSON API](https://netapi.com/help/api/#json-api).
 
-For each observable the connector makes one request to the `compromised-check` method and, for a listed domain, one more to `domain-rank`. A listed observable is enriched in place: it gets the label `netapi-compromised` while it is in the current feed, an external reference to NetAPI, optionally a score, and one note with the details. An observable that was never listed is left as it is.
+For each observable the connector makes one request to the `compromised-check` method and, for a listed domain, one more to `domain-rank`. A listed observable is enriched in place: it gets the label `netapi-compromised` when it is in the current feed, an external reference to NetAPI, optionally a score, and one note with the details. An observable that was never listed is left as it is.
 
 ## Installation
 
@@ -114,10 +114,10 @@ graph LR
 What is sent back:
 
 - **Listed now** (seen within the last 24 hours): the observable gets the label `netapi-compromised`, an external reference to the feed page and, when `NETAPI_UPDATE_SCORE` is true, the configured score. One note is attached with the status, the matched entry, first and last seen, the reporting feed, the registrar and the Top 1M rank.
-- **Listed in the past only**: the same note and external reference, but no label and no score. The label `netapi-compromised` is removed if an earlier enrichment set it, so a cleaned-up host loses it on the next run. Most such entries reflect past incidents, often a legitimate site that was compromised and fixed.
+- **Listed in the past only**: the same note and external reference, but no new label and no score. A label set by an earlier enrichment stays, because OpenCTI merges the labels of an imported bundle, while the note is updated to the past status. Most such entries reflect past incidents, often a legitimate site that was compromised and fixed.
 - **Never listed**: nothing is changed or created. Absence from the feed is not a clearance.
 
-The connector owns only the label `netapi-compromised` and its own external reference: labels and references of other sources stay as they are. The note's STIX id derives from the observable, so re-enrichment updates the note instead of adding another one. The note carries the TLP of `NETAPI_TLP_LEVEL` plus the markings of the observable.
+The connector adds only the label `netapi-compromised` and replaces only its own external reference: labels and references of other sources stay as they are. The note's STIX id derives from the observable, so re-enrichment updates the note instead of adding another one. The note carries the TLP of `NETAPI_TLP_LEVEL` plus every marking of the observable. Markings are read from both the OpenCTI entity and the STIX entity, and an observable with a marking that cannot be resolved is not sent to NetAPI.
 
 An API failure (network error, HTTP error, request limit reached) puts the work in error with the message of the API, for example `NetAPI error 429 (rate_limited): Too many requests (retry after 42 s)`.
 

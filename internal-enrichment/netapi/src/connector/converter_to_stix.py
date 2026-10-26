@@ -96,9 +96,10 @@ class ConverterToStix:
     ) -> dict[str, Any]:
         """A copy of the observable carrying the label, the reference and the score.
 
-        The connector owns the label `netapi-compromised` only: it is set while the
-        value is listed now and removed once the listing is historical; every other
-        label and every reference of another source is kept.
+        The label `netapi-compromised` is added when the value is listed now.
+        It is never removed: OpenCTI merges the labels of an imported bundle, so
+        leaving it out would not take it off, and the note carries the current
+        status. Every other label and every reference of another source is kept.
         """
         entity = deepcopy(stix_entity)
         if score is not None:
@@ -107,12 +108,10 @@ class ConverterToStix:
         existing = (entity.get("x_opencti_labels") or []) + (
             entity.pop("labels", None) or []
         )
-        labels = [
-            label
-            for label in dict.fromkeys(existing)
-            if isinstance(label, str) and label.casefold() != OWN_LABEL
-        ]
-        if check.get("listed_now"):
+        labels = [label for label in dict.fromkeys(existing) if isinstance(label, str)]
+        if check.get("listed_now") and OWN_LABEL not in {
+            label.casefold() for label in labels
+        }:
             labels.append(OWN_LABEL)
         entity["x_opencti_labels"] = labels
 

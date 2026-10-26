@@ -182,7 +182,7 @@ def test_current_listing_adds_the_label_reference_and_score():
     assert "x_opencti_score" not in entity
 
 
-def test_past_listing_removes_the_own_label_and_keeps_the_score():
+def test_past_listing_keeps_every_label_and_the_score():
     entity = {
         "type": "ipv4-addr",
         "id": IP_ID,
@@ -195,9 +195,22 @@ def test_past_listing_removes_the_own_label_and_keeps_the_score():
     enriched = make_converter().enrich_observable(entity, CHECK_LISTED_PAST, None)
 
     assert enriched["x_opencti_score"] == 60
-    assert enriched["x_opencti_labels"] == ["keep-me", "legacy"]
+    assert enriched["x_opencti_labels"] == ["NetAPI-Compromised", "keep-me", "legacy"]
     reference = enriched["x_opencti_external_references"][-1]
     assert reference["url"] == "https://netapi.com/compromised-ips/"
     assert reference["description"].startswith(
         "NetAPI compromised feed: listed in the past (last seen 2026-06-17)"
     )
+
+
+def test_current_listing_does_not_add_the_label_twice():
+    entity = {
+        "type": "domain-name",
+        "id": DOMAIN_ID,
+        "value": "000359.xyz",
+        "x_opencti_labels": ["NetAPI-Compromised"],
+    }
+
+    enriched = make_converter().enrich_observable(entity, CHECK_LISTED_NOW, None)
+
+    assert enriched["x_opencti_labels"] == ["NetAPI-Compromised"]
