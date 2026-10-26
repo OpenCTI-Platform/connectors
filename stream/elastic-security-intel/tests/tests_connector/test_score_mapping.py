@@ -173,19 +173,6 @@ def test_update_siem_rule_should_derive_risk_and_severity_from_score(
     assert rule["severity"] == "medium"
 
 
-def test_create_siem_rule_should_use_default_score_when_score_is_missing(
-    handler, requests_mock
-):
-    requests_mock.post(RULES_URL, json={"id": "rule-1"}, status_code=200)
-    indicator = make_indicator(score=None, pattern_type="kql", confidence=90)
-
-    handler._create_siem_rule(indicator)
-
-    rule = _sent_rule(requests_mock)
-    assert rule["risk_score"] == 50
-    assert rule["severity"] == "medium"
-
-
 def test_process_indicator_update_should_send_score_to_rule_and_document(
     handler, requests_mock
 ):
@@ -201,24 +188,20 @@ def test_process_indicator_update_should_send_score_to_rule_and_document(
 
 
 @pytest.mark.parametrize(
-    "score, expected_risk, expected_severity",
-    [(0, 0, "low"), (39, 39, "low"), (60, 60, "high"), (150, 100, "critical")],
+    "risk_score, expected_severity",
+    [
+        (100, "critical"),
+        (80, "critical"),
+        (79, "high"),
+        (60, "high"),
+        (59, "medium"),
+        (40, "medium"),
+        (39, "low"),
+        (0, "low"),
+    ],
 )
-def test_rule_score_should_be_clamped_and_mapped_to_severity(
-    handler, score, expected_risk, expected_severity
-):
-    indicator = make_indicator(score=score)
-
-    assert handler._calculate_risk_score(indicator) == expected_risk
-    assert handler._get_severity(indicator) == expected_severity
-
-
-@pytest.mark.parametrize("score", ["high", True, None])
-def test_rule_score_should_use_default_when_score_is_not_a_number(handler, score):
-    indicator = make_indicator()
-    indicator["extensions"][INDICATOR_EXTENSION]["score"] = score
-
-    assert handler._calculate_risk_score(indicator) == 50
+def test_rule_severity_should_follow_score_thresholds(risk_score, expected_severity):
+    assert ElasticApiHandler._get_severity(risk_score) == expected_severity
 
 
 def test_index_template_should_map_score_as_long(handler, requests_mock):

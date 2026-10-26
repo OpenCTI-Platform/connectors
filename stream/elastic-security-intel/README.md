@@ -234,10 +234,12 @@ The connector reads the OpenCTI score from the STIX extensions of the streamed i
 | Elastic Output          | Field                         | Value                                                                 |
 |-------------------------|-------------------------------|-----------------------------------------------------------------------|
 | Threat indicator        | `opencti.indicator.score`     | OpenCTI score (0-100). Omitted when the entity has no score.          |
-| SIEM rule               | `risk_score`                  | OpenCTI score clamped to 0-100, or 50 when the entity has no score.   |
+| SIEM rule               | `risk_score`                  | OpenCTI score of the indicator (0-100).                               |
 | SIEM rule               | `severity`                    | From the rule risk score: `critical` (80+), `high` (60-79), `medium` (40-59), `low` (below 40). |
 
-ECS has no score field: `threat.indicator.sightings` is a count of observations, so the connector uses `opencti.indicator.score`, the same field as the official Elastic OpenCTI integration. The default of 50 matches the OpenCTI default score.
+ECS has no score field: `threat.indicator.sightings` is a count of observations, so the connector uses `opencti.indicator.score`, the same field as the official Elastic OpenCTI integration.
+
+Only indicators create SIEM rules, and OpenCTI gives every indicator a score at creation (50 by default), so a rule always has a score. Observables may have no score: their threat indicator document then has no `opencti.indicator.score` field.
 
 ## Debugging
 
