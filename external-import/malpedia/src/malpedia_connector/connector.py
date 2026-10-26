@@ -156,6 +156,8 @@ class MalpediaConnector:
         self.helper.metric.state("idle")
 
     def _run_malpedia_process(self):
+        self.stix_objects = []
+        self.stix_relationships = []
         malpedia_identity = self.converter.generate_malpedia_stix_identity()
         self.stix_objects.append(malpedia_identity)
         self._process_families()

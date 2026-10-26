@@ -122,3 +122,14 @@ def test_start_survives_unreachable_api():
 
     connector.helper.connector_logger.error.assert_called_once()
     connector._run_malpedia_process.assert_not_called()
+
+
+def test_run_sends_only_objects_from_current_run():
+    connector = MagicMock()
+    connector.stix_objects = ["stale-object"]
+    connector.stix_relationships = ["stale-relationship"]
+    connector.converter.generate_malpedia_stix_identity.return_value = "identity"
+
+    MalpediaConnector._run_malpedia_process(connector)
+
+    connector.helper.stix2_create_bundle.assert_called_once_with(["identity"])
