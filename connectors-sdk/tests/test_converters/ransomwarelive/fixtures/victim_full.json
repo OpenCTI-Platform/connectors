@@ -1,0 +1,25 @@
+{
+  "victim": {
+    "victim": "Acme Industries",
+    "group": "akira",
+    "attackdate": "2025-01-01 07:20:50.000000",
+    "discovered": "2025-01-02 08:00:00.000000",
+    "activity": "Manufacturing",
+    "country": "France",
+    "domain": "https://www.acme-industries.example.com/about",
+    "description": "Acme Industries data leaked.",
+    "screenshot": "https://images.ransomware.live/victims/acme.png",
+    "website": "https://acme-industries.example.com",
+    "post_url": "http://akiraleak.onion/post/acme"
+  },
+  "group": {
+    "name": "akira",
+    "altname": " Akira Ransomware ",
+    "description": "Akira is a ransomware group active since 2023.",
+    "url": "https://www.ransomware.live/group/akira",
+    "locations": [
+      {"fqdn": "akiraleak.onion", "slug": "http://akiraleak.onion", "title": "Akira leak site"},
+      {"fqdn": "akira2.onion", "slug": "http://akira2.onion"}
+    ]
+  }
+}
