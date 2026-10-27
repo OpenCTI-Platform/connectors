@@ -12,6 +12,10 @@ from pycti import (
 )
 from src import ConfigLoader
 
+# Without a timeout, a stalled IPinfo API call blocks the message being
+# processed forever and the connector stops consuming its queue.
+REQUEST_TIMEOUT_SECONDS = 30
+
 
 class IpInfoConnector:
     def __init__(self):
@@ -159,6 +163,7 @@ class IpInfoConnector:
                     "accept": "application/json",
                     "content-type": "application/json",
                 },
+                timeout=REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
             json_data = response.json()
