@@ -110,9 +110,15 @@ class DomainEnricher:
         capped = all_resolutions[: self.resolutions_limit]
 
         # Build the related-observables + relationships.
+        own_value = (make_domain(hostname) or {}).get("value")
         for entry in capped:
             target_sco, rel_type = self._sco_for_resolution(entry)
             if not target_sco:
+                continue
+            # An answer naming the enriched domain itself (an MX or CNAME
+            # pointing back) would replace the enriched object in the bundle
+            # and relate it to itself; it stays in the DNS history Note.
+            if target_sco["id"] == entity_id or target_sco["value"] == own_value:
                 continue
             for k in ("first_seen", "last_seen"):
                 if entry.get(k):
@@ -227,7 +233,17 @@ class DomainEnricher:
                 return None, "resolves-to"
             return sco, "resolves-to"
         if record_type in ("MX", "CNAME", "NS", "SOA", "PTR", "SRV"):
-            return make_domain(answer, tlp=self.tlp), "related-to"
+            # MX ("10 mx.example.com") and SRV ("0 5 5060 sip.example.com")
+            # end with the hostname; SOA starts with the primary name server.
+            # CNAME, NS, and PTR answers are the hostname itself.
+            fields = answer.split() or [""]
+            if record_type == "SOA":
+                name = fields[0]
+            elif record_type in ("MX", "SRV"):
+                name = fields[-1]
+            else:
+                name = answer
+            return make_domain(name, tlp=self.tlp), "related-to"
         # TXT / CAA / unknown — values are usually free-text; skip SCO creation.
         return None, "related-to"
 

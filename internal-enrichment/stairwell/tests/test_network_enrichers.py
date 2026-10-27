@@ -686,3 +686,40 @@ def test_dedicated_whitelist_answer_takes_precedence(wl, v2, labelled):
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     domain = next(o for o in objects if o["type"] == "domain-name")
     assert ("stairwell:whitelisted" in domain.get("labels", [])) is labelled
+
+
+def test_dns_answers_become_valid_hostnames_and_never_the_domain_itself():
+    own = _DOMAIN_OBS["value"]
+    res = {
+        "resolutions": [
+            {"recordType": "MX", "answer": "10 mx.example.net"},
+            {"recordType": "SRV", "answer": "0 5 5060 sip.example.net."},
+            {"recordType": "SOA", "answer": "ns1.example.net. host.example.net. 1 2"},
+            {"recordType": "NS", "answer": "NS2.Example.net."},
+            {"recordType": "MX", "answer": f"10 {own}"},
+            {"recordType": "CNAME", "answer": f"{own}."},
+            {"recordType": "CNAME", "answer": "not a hostname"},
+            {"recordType": "PTR", "answer": "junk other.example.net"},
+        ]
+    }
+    helper = _helper()
+    DomainEnricher(helper, _domain_client((200,) * 4, res), "amber").enrich(_DOMAIN_OBS)
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    domains = [o for o in objects if o["type"] == "domain-name"]
+    entity_id = _DOMAIN_OBS["standard_id"]
+    # The enriched domain appears once, as the enrichment's own object.
+    assert [d["id"] for d in domains].count(entity_id) == 1
+    own_sco = next(d for d in domains if d["id"] == entity_id)
+    assert own_sco["external_references"]
+    assert sorted(d["value"] for d in domains if d["id"] != entity_id) == [
+        "mx.example.net",
+        "ns1.example.net",
+        "ns2.example.net",
+        "sip.example.net",
+    ]
+    rels = [o for o in objects if o["type"] == "relationship"]
+    assert all(r["source_ref"] != r["target_ref"] for r in rels)
+    assert len(rels) == 4
+    # Every answer is still listed in the DNS history Note.
+    note = next(o for o in objects if o.get("abstract") == "Stairwell DNS History")
+    assert "not a hostname" in note["content"]

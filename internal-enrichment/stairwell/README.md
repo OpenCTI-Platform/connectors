@@ -101,18 +101,26 @@ Environment variables override the file.
   `0`, file sightings are aggregated per asset: each unique Stairwell-managed
   host that has seen the hash becomes one Sighting SDO (`first_seen` /
   `last_seen` / `count` from the per-asset event window) plus an Identity for
-  the host. If paging stops early (a failed page, or the 50-page limit), a
+  the host. The Identity is named by the host's stable Stairwell asset token,
+  with its display name in the description, never an alias: OpenCTI also
+  merges identities by alias, which would combine hosts that share a name.
+  If paging stops early (a failed page, or the 50-page limit), a
   "Stairwell Sightings Incomplete" Note says the counts are partial.
   Enabling this writes your asset names, Stairwell environment ids,
   and sample file paths (which often contain usernames) into OpenCTI, at
   `STAIRWELL_DEFAULT_TLP`, visible to everyone who can read the file
   observable.
 - **File metadata** from `/v1/objects/{hash}/metadata` is mapped onto the file
-  observable: `name`, `size`, `mime_type`, plus custom Stairwell properties
-  (`x_stairwell_magic`, `x_stairwell_imphash`, `x_stairwell_tlsh`,
-  `x_stairwell_shannon_entropy`, `x_stairwell_first_seen`,
-  `x_stairwell_environments`). Stairwell analyst tags become labels prefixed
-  `stairwell:tag:`. **Detonation data is intentionally excluded.**
+  observable: `name`, `size`, `mime_type`, the score, description, and labels.
+  Stairwell analyst tags become labels prefixed `stairwell:tag:`. Other values
+  (magic, imphash, TLSH, entropy, first seen, prevalence, variant count,
+  environments, and the network and WHOIS details of domains, IPs, and ASNs)
+  are also sent as `x_stairwell_*` properties, but OpenCTI stores only its
+  standard observable fields, so they are shown in each observable's Notes
+  (the Enrichment Summary, DNS History, IP Intelligence, and ASN WHOIS).
+  Bundles are sent with `update=True`, so an enrichment refreshes an existing
+  observable's score and description. **Detonation data is intentionally
+  excluded.**
 - **IDs are OpenCTI's canonical ones.** SDOs and relationships use pycti's
   `generate_id()`, and observables use spec-standard IDs, so entities from
   other connectors merge with ours. Notes are keyed by their content, which

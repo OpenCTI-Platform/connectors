@@ -25,6 +25,11 @@ def _merge_object(incoming: dict[str, Any], ours: dict[str, Any]) -> dict[str, A
     merged = dict(incoming)
     for key, value in ours.items():
         previous = merged.get(key)
+        if key == "x_opencti_score" and previous is None:
+            # OpenCTI may hold the incoming score in its STIX extension.
+            previous = OpenCTIConnectorHelper.get_attribute_in_extension(
+                "score", incoming
+            )
         if key == "x_opencti_score" and isinstance(previous, int):
             # Scores only ever go up (see stairwell.score.monotonic_score).
             merged[key] = max(previous, value) if isinstance(value, int) else previous
@@ -71,6 +76,9 @@ class _PlaybookBundles:
         self.sent = False
 
     def send_stix2_bundle(self, bundle: str, **kwargs: Any) -> Any:
+        # Enrichment refreshes existing observables, so it must overwrite
+        # their score and description (pycti's default is not to).
+        kwargs.setdefault("update", True)
         if self.incoming:
             payload = json.loads(bundle)
             ours = {o.get("id"): o for o in payload.get("objects", [])}

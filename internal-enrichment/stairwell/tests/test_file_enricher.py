@@ -369,7 +369,8 @@ def test_sightings_aggregated_per_asset_with_count_first_last():
         i for i in identities if i["id"] == riser["where_sighted_refs"][0]
     )
     assert riser_identity["name"] == "assets/RISER-ID"
-    assert riser_identity["x_opencti_aliases"] == ["RISER"]
+    assert "x_opencti_aliases" not in riser_identity
+    assert "RISER" in riser_identity["description"]
 
 
 def test_sightings_truncation_emits_note_and_stops_at_limit():
@@ -1217,3 +1218,31 @@ def test_fallback_never_links_the_file_to_itself():
     assert all(r["source_ref"] != r["target_ref"] for r in rels)
     assert len([r for r in rels if r["relationship_type"] == "derived-from"]) == 2
     assert all(entity_id in (r["source_ref"], r["target_ref"]) for r in rels)
+
+
+def test_summary_note_carries_the_values_opencti_drops_from_the_observable():
+    # pycti's observable import keeps a fixed set of File fields, so custom
+    # x_stairwell_* properties never reach OpenCTI; the Note must carry them.
+    metadata = {
+        "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
+        "prevalence": 0.0123,
+        "variants": {"total": 7},
+        "environments": ["env-1", "env-2"],
+    }
+    client = _client(
+        {
+            "get_object_metadata": (200, metadata),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    note = next(
+        o for o in objects if o.get("abstract") == "Stairwell Enrichment Summary"
+    )
+    content = note["content"]
+    assert "**Prevalence:** 0.0123" in content
+    assert "**Variants:** 7" in content
+    assert "**Environments:** `env-1`, `env-2`" in content

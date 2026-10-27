@@ -323,6 +323,8 @@ class FileEnricher:
             observable=observable,
             metadata=metadata,
             mal_eval=mal_eval,
+            prevalence=max_prevalence,
+            variant_count=variant_count,
         )
         if summary_note:
             objects.append(summary_note)
@@ -524,8 +526,14 @@ class FileEnricher:
         observable: dict[str, Any],
         metadata: dict[str, Any],
         mal_eval: dict[str, Any],
+        prevalence: float | None = None,
+        variant_count: int | None = None,
     ) -> dict[str, Any] | None:
         """Build the single consolidated `Stairwell Enrichment Summary` Note.
+
+        OpenCTI's observable import keeps only a fixed set of File fields, so
+        the `x_stairwell_*` properties set on the file are not stored; every
+        one of them is also shown here.
 
         Sections (in order): Hashes, File properties, Stairwell observation,
         YARA matches, Network indicators, Object signature.
@@ -613,6 +621,14 @@ class FileEnricher:
         if isinstance(mal_labels, list) and mal_labels:
             joined = ", ".join(md_code(lbl) for lbl in mal_labels)
             obs_lines.append(f"- **MalEval labels:** {joined}")
+        if prevalence is not None:
+            obs_lines.append(f"- **Prevalence:** {prevalence:g}")
+        if variant_count is not None:
+            obs_lines.append(f"- **Variants:** {variant_count}")
+        environments = metadata.get("environments")
+        if isinstance(environments, list) and environments:
+            joined_envs = ", ".join(md_code(str(e)) for e in environments)
+            obs_lines.append(f"- **Environments:** {joined_envs}")
         if obs_lines:
             lines.append("## Stairwell observation")
             lines.extend(obs_lines)

@@ -198,9 +198,25 @@ def test_playbook_result_keeps_the_objects_of_earlier_steps(env):
     sent = {o["id"]: o for o in _sent_objects(helper)}
     assert set(sent) == {"file--1", "note--2", "report--9"}
     assert sent["file--1"]["x_opencti_score"] == 75
+    # update=True, or OpenCTI keeps an observable's existing score and
+    # description instead of the enrichment's.
     assert helper.send_stix2_bundle.call_args.kwargs == {
-        "cleanup_inconsistent_bundle": True
+        "cleanup_inconsistent_bundle": True,
+        "update": True,
     }
+
+
+def test_manual_enrichment_sends_with_update(env):
+    connector, helper = _connector()
+    data, _ = _message("TLP:GREEN")
+
+    def enrich(_):
+        _send_from_enricher(connector, [{"id": "file--1", "type": "file"}])
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    assert helper.send_stix2_bundle.call_args.kwargs["update"] is True
 
 
 GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
@@ -428,6 +444,23 @@ def test_playbook_input_markings_are_gated_too(env, refs, extra_objects, refused
         connector.dispatcher.file.enrich.assert_called_once()
 
 
+def test_playbook_merge_reads_a_score_held_in_the_opencti_extension(env):
+    connector, helper = _connector()
+    data = _playbook_message()
+    data["stix_objects"][0]["extensions"] = {
+        "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {"score": 95}
+    }
+
+    def enrich(_):
+        _send_from_enricher(connector, [{"id": "file--1", "x_opencti_score": 75}])
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    assert merged["x_opencti_score"] == 95
+
+
 def test_playbook_merge_never_lowers_the_score(env):
     connector, helper = _connector()
     data = _playbook_message()
@@ -441,3 +474,12 @@ def test_playbook_merge_never_lowers_the_score(env):
     connector.process_message(data)
     merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
     assert merged["x_opencti_score"] == 95
+
+
+def test_manual_not_found_is_sent_with_update(env):
+    connector, helper = _connector()
+    connector.client.get_object_metadata = MagicMock(return_value=(404, None))
+    data, _ = _message("TLP:GREEN")
+    assert "not in corpus" in connector.process_message(data)
+    helper.send_stix2_bundle.assert_called_once()
+    assert helper.send_stix2_bundle.call_args.kwargs["update"] is True
