@@ -223,9 +223,38 @@ def make_ipv6(value: str, tlp: str = "amber") -> dict[str, Any]:
     }
 
 
-def make_domain(value: str, tlp: str = "amber") -> dict[str, Any]:
+# One DNS label: letters, digits, hyphens and underscores (SRV/DKIM names),
+# not starting or ending with a hyphen.
+_DNS_LABEL = re.compile(r"(?!-)[a-z0-9_-]{1,63}(?<!-)")
+
+
+def make_domain(value: str, tlp: str = "amber") -> dict[str, Any] | None:
+    """Domain-Name SCO for a well-formed DNS name of two or more labels, or None.
+
+    Values come from file strings and DNS answers; one malformed
+    `domain-name.value` makes OpenCTI reject the bundle it is in. A trailing
+    root dot is dropped, and internationalised names are stored in their
+    ASCII (punycode) form.
+    """
+    if not isinstance(value, str):
+        return None
     # DNS names are case-insensitive; one name must be one object.
-    value = value.lower()
+    name = value.strip().rstrip(".").lower()
+    # Only internationalised names go through the IDNA codec: it can reject
+    # the underscore labels of service names (`_sip._tcp`), which are ASCII.
+    if not name.isascii():
+        try:
+            name = name.encode("idna").decode("ascii")
+        except UnicodeError:
+            return None
+    labels = name.split(".")
+    if (
+        len(name) > 253
+        or len(labels) < 2
+        or not all(_DNS_LABEL.fullmatch(label) for label in labels)
+    ):
+        return None
+    value = name
     return {
         "type": "domain-name",
         "spec_version": "2.1",
@@ -427,7 +456,9 @@ def make_identity_system(
     Named by the stable Stairwell asset token (e.g. `assets/EAGJSW-...`), so
     the ID (OpenCTI's for that name and class) survives a rename or a response
     without the display name, and two assets sharing a display name stay
-    distinct. The display name is kept as an alias.
+    distinct. The display name goes in the description, never in an alias:
+    OpenCTI also deduplicates identities by alias, which would merge hosts
+    that share a name.
     """
     ts = now_iso()
     display_name = name if name and name != asset_id else None
@@ -442,8 +473,8 @@ def make_identity_system(
         "identity_class": "system",
         "object_marking_refs": [tlp_marking(tlp)],
     }
-    if display_name:
-        obj["x_opencti_aliases"] = [display_name]
+    if description is None and display_name:
+        description = f"Stairwell-managed asset {md_text(display_name)}"
     if description:
         obj["description"] = description
     return obj
@@ -460,11 +491,10 @@ def make_sighting(
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
 ) -> dict[str, Any]:
+    where_sighted = list(where_sighted_refs)
     # No first/last seen in the ID: they move on every enrichment, and the
     # sighting of one file on one asset must stay one object.
-    sighting_id = StixSightingRelationship.generate_id(
-        sighting_of_ref, list(where_sighted_refs)
-    )
+    sighting_id = StixSightingRelationship.generate_id(sighting_of_ref, where_sighted)
     ts = now_iso()
     obj: dict[str, Any] = {
         "type": "sighting",
@@ -477,7 +507,7 @@ def make_sighting(
         "last_seen": last_seen,
         "count": int(count),
         "sighting_of_ref": sighting_of_ref,
-        "where_sighted_refs": list(where_sighted_refs),
+        "where_sighted_refs": where_sighted,
         "object_marking_refs": [tlp_marking(tlp)],
     }
     if confidence is not None:

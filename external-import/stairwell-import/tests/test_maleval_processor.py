@@ -214,6 +214,9 @@ def test_capped_window_drains_across_runs_without_losing_objects(env):
         [_page("a", 2, "p2"), (503, None)],
         [(500, None)],
         [(200, {"objectMetadatas": "nope", "nextPageToken": ""})],
+        # Falsy but not a list: must not read as an empty page.
+        [(200, {"objectMetadatas": {}, "nextPageToken": ""})],
+        [(200, {"object_metadatas": 0, "nextPageToken": ""})],
     ],
 )
 def test_fetch_failure_raises_without_moving_checkpoints(env, pages):
@@ -335,7 +338,7 @@ def test_network_values_are_related_observables_not_indicators(env):
     url = "http://c2.example.com/a'b?q=1&r=2"
     net = {
         "ipAddresses": ["1.2.3.4", "2001:DB8::1", "1.2.3.4:80", "not-an-ip"],
-        "hostnames": ["C2.Example.com"],
+        "hostnames": ["C2.Example.com", "not a hostname", "localhost"],
         "urls": [url],
     }
     objects = _run(_processor(_one_page(_file_obj("f" * 64, net=net))))

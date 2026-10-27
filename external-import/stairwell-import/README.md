@@ -85,7 +85,11 @@ Environment variables override the file.
   Each window is bounded on both ends (`cutoff <= first seen < window end`,
   both truncated to whole seconds, so adjacent windows still meet exactly),
   so a cursor resumed on a later day fetches the same objects, and newer files
-  wait for the next window. If the very first run fails, retries reuse its
+  wait for the next window. Because windows are keyed on first-seen time, a
+  file whose MalEval verdict reaches `import_min_bucket` only after its window
+  was read is not imported later: Stairwell's API exposes no verdict-update
+  time to query on. The enrichment connector reflects the current verdict for
+  any file it is run on. If the very first run fails, retries reuse its
   window, so its backfill is not skipped (this is held in memory: a restart
   before the retry recomputes it).
   State saved by versions of this connector that predate the SDK (`last_run`

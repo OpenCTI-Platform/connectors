@@ -229,11 +229,15 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     f"Stairwell list_objects_metadata returned status {status} "
                     f"on page {page_num}; the watermark was not advanced."
                 )
-            page = (
-                data.get("objectMetadatas")
-                or data.get("object_metadatas")
-                or data.get("objects")
-                or []
+            # The first field present is the page; a falsy non-list (`{}`)
+            # must fail the type check, not read as an empty page.
+            page = next(
+                (
+                    data[key]
+                    for key in ("objectMetadatas", "object_metadatas", "objects")
+                    if data.get(key) is not None
+                ),
+                [],
             )
             if not isinstance(page, list):
                 raise DataRetrievalError(
@@ -480,6 +484,8 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             ui_url = self.client.ip_ui_url(sco["value"])
         elif kind == "hostname":
             sco = make_domain(value, tlp=self.tlp)
+            if sco is None:
+                return []
             ui_url = self.client.hostname_ui_url(sco["value"])
         elif kind == "url":
             sco = make_url(value, tlp=self.tlp)

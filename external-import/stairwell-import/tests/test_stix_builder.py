@@ -406,5 +406,44 @@ def test_asset_identity_is_keyed_by_its_stable_token():
     assert named["id"] == renamed["id"] == unnamed["id"] != other["id"]
     assert named["id"] == Identity.generate_id("assets/A1", "system")
     assert named["name"] == "assets/A1"
-    assert named["x_opencti_aliases"] == ["DESKTOP"]
-    assert "x_opencti_aliases" not in unnamed
+    # OpenCTI also deduplicates identities by alias, so a display name shared
+    # by two hosts must not be one; it is kept in the description instead.
+    assert "x_opencti_aliases" not in named and "x_opencti_aliases" not in other
+    assert "DESKTOP" in named["description"]
+    assert "description" not in unnamed
+    assert make_identity_system("assets/A1", "DESKTOP", "given")["description"] == (
+        "given"
+    )
+
+
+@pytest.mark.parametrize(
+    "value, want",
+    [
+        ("mx.example.com", "mx.example.com"),
+        ("MX.Example.COM.", "mx.example.com"),
+        ("_sip._tcp.example.com", "_sip._tcp.example.com"),
+        ("xn--bcher-kva.example", "xn--bcher-kva.example"),
+        ("bücher.example", "xn--bcher-kva.example"),
+        ("10 mx.example.com", None),
+        ("exa mple.com", None),
+        ("-bad.example.com", None),
+        ("bad-.example.com", None),
+        ("a" * 64 + ".example.com", None),
+        ("example..com", None),
+        ("localhost", None),
+        ("", None),
+        pytest.param("a." * 130 + "com", None, id="overlong"),
+    ],
+)
+def test_make_domain_validates_and_normalises(value, want):
+    sco = make_domain(value, tlp="green")
+    assert (sco and sco["value"]) == want
+    assert network_observable_for(value, "hostname", "green") == sco
+
+
+def test_make_sighting_accepts_any_iterable_of_refs():
+    kwargs = dict(first_seen="2026-01-01T00:00:00Z", last_seen="2026-01-01T00:00:00Z")
+    from_list = make_sighting("file--1", ["identity--a"], count=1, **kwargs)
+    from_iter = make_sighting("file--1", iter(["identity--a"]), count=1, **kwargs)
+    assert from_iter["where_sighted_refs"] == ["identity--a"]
+    assert from_iter["id"] == from_list["id"]
