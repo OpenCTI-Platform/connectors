@@ -8,6 +8,7 @@ from taxii_post_connector.connector import (
     TaxiiPostConnector,
     accept_header_by_taxii_version,
     content_type_by_stix_version,
+    remap_identity_ids,
 )
 
 # --------------------------
@@ -78,6 +79,7 @@ def _make_taxii_config(**overrides):
         stix_version="2.1",
         delete_created_by_ref=True,
         delete_marking_definition=True,
+        identity_id_mapping={},
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -132,3 +134,83 @@ def test_valid_token_uses_bearer_auth(mock_post):
     headers = call_kwargs.kwargs.get("headers", {})
     assert headers.get("Authorization") == "Bearer my-secret-token"
     assert "auth" not in call_kwargs.kwargs
+
+
+# ----------------------------
+# --- Identity ID remapping --
+# ----------------------------
+
+
+ORIGINAL_ID_1 = "identity--00000000-0000-4000-8000-000000000011"
+REPLACEMENT_ID_1 = "identity--00000000-0000-4000-8000-000000000021"
+ORIGINAL_ID_2 = "identity--00000000-0000-4000-8000-000000000012"
+REPLACEMENT_ID_2 = "identity--00000000-0000-4000-8000-000000000022"
+IDENTITY_ID_MAPPING = {ORIGINAL_ID_1: REPLACEMENT_ID_1, ORIGINAL_ID_2: REPLACEMENT_ID_2}
+
+OTHER_ID = "identity--00000000-0000-4000-8000-000000000099"
+
+
+def test_remap_identity_ids_rewrites_own_id():
+    """A parsed identity object with an id as an original in the mapping should have its own id replaced"""
+
+    stix_object = {"id": ORIGINAL_ID_1, "type": "identity", "name": "testidentity"}
+    remap_identity_ids(stix_object, IDENTITY_ID_MAPPING)
+
+    assert stix_object == {
+        "id": REPLACEMENT_ID_1,
+        "type": "identity",
+        "name": "testidentity",
+    }
+
+
+def test_remap_identity_ids_rewrites_refs():
+    """
+    An object who has one of the original identity ids in either their single or list reference properties
+    has them correctly mapped to the replacement ids
+    """
+
+    stix_object = {
+        "id": "sighting--1c68244b-3ec9-4eea-aded-808bbdec7836",
+        "type": "sighting",
+        # set each of these fields to the original id, and one to a generic id not to be mapped
+        "created_by_ref": ORIGINAL_ID_1,
+        "sighting_of_ref": ORIGINAL_ID_2,
+        "where_sighted_refs": [ORIGINAL_ID_1, OTHER_ID, ORIGINAL_ID_2],
+        "object_marking_refs": ["marking-definition--abc"],
+    }
+
+    remap_identity_ids(stix_object, IDENTITY_ID_MAPPING)
+
+    assert stix_object == {
+        "id": "sighting--1c68244b-3ec9-4eea-aded-808bbdec7836",
+        "type": "sighting",
+        # each original id should be mapped, and the other id should remain
+        "created_by_ref": REPLACEMENT_ID_1,
+        "sighting_of_ref": REPLACEMENT_ID_2,
+        "where_sighted_refs": [REPLACEMENT_ID_1, OTHER_ID, REPLACEMENT_ID_2],
+        "object_marking_refs": ["marking-definition--abc"],
+    }
+
+
+@patch("taxii_post_connector.connector.requests.post")
+def test_process_message_posts_remapped_identity_ids(mock_post):
+    """The object posted to the TAXII server correctly contains the remapped identity"""
+
+    mock_post.return_value = MagicMock(status_code=200, content=b"ok")
+
+    sighting = {
+        "id": "sighting--1c68244b-3ec9-4eea-aded-808bbdec7836",
+        "type": "sighting",
+        "sighting_of_ref": "indicator--00000000-0000-4000-8000-000000000001",
+        "where_sighted_refs": [ORIGINAL_ID_1],
+        "extensions": {},
+    }
+
+    connector = _make_connector(
+        _make_taxii_config(identity_id_mapping=IDENTITY_ID_MAPPING)
+    )
+    connector._process_message(SimpleNamespace(data=json.dumps({"data": sighting})))
+
+    mock_post.assert_called_once()
+    (posted_object,) = mock_post.call_args.kwargs["json"]["objects"]
+    assert posted_object["where_sighted_refs"] == [REPLACEMENT_ID_1]

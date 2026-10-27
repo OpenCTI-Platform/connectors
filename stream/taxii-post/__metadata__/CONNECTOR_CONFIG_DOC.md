@@ -29,3 +29,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | TAXII_STIX_VERSION | `string` |  | string | `"2.1"` | STIX output version. |
 | TAXII_DELETE_CREATED_BY_REF | `boolean` |  | boolean | `true` | Strip created_by_ref from objects before posting. |
 | TAXII_DELETE_MARKING_DEFINITION | `boolean` |  | boolean | `true` | Strip object_marking_refs from objects before posting. |
+| TAXII_IDENTITY_ID_MAPPING | `string` |  | string | `""` | The IDs of Identity objects to be replaced before posting, including the identity's own id and every reference to it. Written as comma separated original_id:replacement_id pairs (e.g. identity--<uuid>:identity--<uuid>). This change does not propogate back to the OpenCTI instance, it only alters the bundles being delivered to the TAXII server. |

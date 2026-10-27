@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -6,7 +6,51 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    SecretStr,
+    WithJsonSchema,
+    model_validator,
+)
+
+
+def parse_identity_id_mapping(value: str | dict[str, str]) -> dict[str, str]:
+    """
+    Converts a comma separated list of original_id:replacement_id into a dictionary
+    """
+    # if parsed from config.yml it is already a dictionary and can be returned
+    if not isinstance(value, str):
+        return value
+
+    mapping = {}
+    for pair in value.split(","):
+        # for an unset value of "", such that we will return the empty dictionary
+        if not pair.strip():
+            continue
+
+        if pair.count(":") != 1:
+            raise ValueError(
+                f"Invalid identity ID mapping pair {pair!r}, expected original_id:replacement_id"
+            )
+
+        original_id, replacement_id = pair.split(":")
+        mapping[original_id.strip()] = replacement_id.strip()
+    return mapping
+
+
+# A type for the identity_id_mapping config variable, which is a string of the form original_id:replacement_id,original_id:replacement_id
+# which this will parse into a dictionary
+IdentityIdMapping = Annotated[
+    # the final value for identity_id_mapping becomes a dictionary: {original_id: replacement_id}
+    dict[str, str],
+    # converts the env string into said dictionary
+    BeforeValidator(parse_identity_id_mapping),
+    # enforces the generated schema to describe identity_id_mapping as a string instead of a dictionary
+    # because what is entered is indeed a string, it is just converted afterwards
+    WithJsonSchema({"type": "string"}),
+]
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -77,6 +121,12 @@ class TaxiiConfig(BaseConfigModel):
     delete_marking_definition: bool = Field(
         description="Strip object_marking_refs from objects before posting.",
         default=True,
+    )
+    identity_id_mapping: IdentityIdMapping = Field(
+        description=(
+            "The IDs of Identity objects to be replaced before posting, including the identity's own id and every reference to it. Written as comma separated original_id:replacement_id pairs (e.g. identity--<uuid>:identity--<uuid>). This change does not propogate back to the OpenCTI instance, it only alters the bundles being delivered to the TAXII server."
+        ),
+        default="",
     )
 
     @model_validator(mode="after")
