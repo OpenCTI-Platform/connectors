@@ -1,7 +1,6 @@
 # pragma: no cover # Do not compute coverage on test files
 """Offer tests for ShodanInternetDbHostConverter."""
 
-import json
 from pathlib import Path
 
 import pytest
