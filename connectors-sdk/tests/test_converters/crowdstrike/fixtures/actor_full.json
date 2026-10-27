@@ -1,0 +1,125 @@
+{
+  "actor": {
+    "id": 123456,
+    "name": "SCION SPIDER",
+    "url": "https://test.example.com/intelligence/actors/scion-spider/",
+    "description": "SCION SPIDER is a test eCrime actor.",
+    "rich_text_description": "<p>SCION SPIDER is a <em>test</em> eCrime actor.</p>",
+    "short_description": "Test eCrime actor.",
+    "known_as": "TestRansomware Group, MockCrime, TestCriminal",
+    "actor_type": "ecrime",
+    "first_activity_date": 1577836800,
+    "last_activity_date": 1640995200,
+    "motivations": [
+      {
+        "id": 354,
+        "slug": "criminal",
+        "value": "Criminal"
+      }
+    ],
+    "origins": [
+      {
+        "id": 5001,
+        "slug": "test-region-alpha",
+        "value": "Test Region Alpha"
+      },
+      {
+        "id": 5002,
+        "slug": "mock-continent",
+        "value": "Mock Continent"
+      }
+    ],
+    "target_countries": [
+      {
+        "id": 4001,
+        "slug": "xx",
+        "value": "Test Country"
+      },
+      {
+        "id": 4002,
+        "slug": "yy",
+        "value": "Sample Nation"
+      },
+      {
+        "id": 4003,
+        "slug": "zz",
+        "value": "Mock State"
+      },
+      {
+        "id": 4004,
+        "slug": "aa",
+        "value": "Fake Country"
+      },
+      {
+        "id": 4005,
+        "slug": "bb",
+        "value": "Example Land"
+      },
+      {
+        "id": 4006,
+        "slug": "cc",
+        "value": "Test Territory"
+      }
+    ],
+    "target_industries": [
+      {
+        "id": 3001,
+        "slug": "test-sector-alpha",
+        "value": "Test Sector Alpha"
+      },
+      {
+        "id": 3002,
+        "slug": "mock-industry-beta",
+        "value": "Mock Industry Beta"
+      },
+      {
+        "id": 3003,
+        "slug": "sample-vertical-gamma",
+        "value": "Sample Vertical Gamma"
+      },
+      {
+        "id": 3004,
+        "slug": "fake-business-delta",
+        "value": "Fake Business Delta"
+      },
+      {
+        "id": 3005,
+        "slug": "test-commerce-epsilon",
+        "value": "Test Commerce Epsilon"
+      },
+      {
+        "id": 3006,
+        "slug": "mock-enterprise-zeta",
+        "value": "Mock Enterprise Zeta"
+      }
+    ],
+    "uses_threats": [
+      {
+        "family_name": "TestRansomware"
+      },
+      {
+        "family_name": "TestStealer"
+      },
+      {
+        "family_name": "TestBuilder"
+      }
+    ],
+    "develops_threats": [
+      {
+        "family_name": "TestRansomware"
+      },
+      {
+        "family_name": "TestBuilder"
+      }
+    ]
+  },
+  "mitre_attack_ids": [
+    "scion-spider_TA0001_T1190",
+    "scion-spider_TA0002_T1047",
+    "scion-spider_TA0002_T1059.001",
+    "scion-spider_TA0002_T1059.003",
+    "scion-spider_TA0002_T1059.005",
+    "scion-spider_TA0002_T1047",
+    "malformed"
+  ]
+}
