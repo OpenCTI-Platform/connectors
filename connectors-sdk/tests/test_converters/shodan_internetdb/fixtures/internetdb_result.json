@@ -1,0 +1,8 @@
+{
+  "cpes": ["cpe:/a:openbsd:openssh:8.2p1", "cpe:/a:nginx:nginx"],
+  "hostnames": ["dns.example.com", "example.com"],
+  "ip": "198.51.100.7",
+  "ports": [22, 443],
+  "tags": ["cloud", "self-signed"],
+  "vulns": ["CVE-2023-38408", "CVE-2021-41617"]
+}
