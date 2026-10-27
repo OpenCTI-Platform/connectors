@@ -19,8 +19,8 @@ class SentinelOneIntelConnector:
     def process_message(self, msg) -> None:
         """
         Main process if connector successfully works.
-        Processes incoming steam messages and filters for the creation
-        of Stix Indicators and creates them in SentinelOne
+        Processes incoming stream messages and filters for the creation
+        or update of Stix Indicators and pushes them to SentinelOne
 
         :param msg: Message event from stream containing event data
         :return: None
@@ -30,21 +30,24 @@ class SentinelOneIntelConnector:
         except Exception as e:
             raise ValueError(f"Cannot process the message: {e}")
 
-        # Handle the Creation of an Indicator with a stix pattern
+        # Handle the Creation or Update of an Indicator with a stix pattern.
+        # An update carries the full indicator, so it is pushed again to
+        # propagate changes such as a new score.
         if data["type"] == "indicator" and data["pattern_type"] == "stix":
-            if msg.event == "create":
+            if msg.event in ("create", "update"):
                 if self.helper.connector_logger.local_logger.isEnabledFor(logging.INFO):
                     # `get_attribute_in_extension` can take a while to execute,
                     # so we check if the logger is enabled for INFO level first
                     indicator_id = self.helper.get_attribute_in_extension("id", data)
                     self.helper.connector_logger.info(
-                        "[CREATE] Processing indicator",
-                        {"Indicator ID": indicator_id},
+                        "Processing indicator",
+                        {"event": msg.event, "Indicator ID": indicator_id},
                     )
 
                 if self.client.create_indicator(data):
                     self.helper.connector_logger.info(
-                        "[CREATE] Successfully created Indicator in SentinelOne"
+                        "Successfully pushed Indicator to SentinelOne",
+                        {"event": msg.event},
                     )
 
     def run(self) -> None:

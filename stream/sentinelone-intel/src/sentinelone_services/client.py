@@ -77,7 +77,7 @@ class SentinelOneClient:
 
     def create_indicator(self, indicator_msg: dict) -> bool:
         """
-        Create an indicator in SentinelOne from a STIX indicator object
+        Create or update an indicator in SentinelOne from a STIX indicator object
 
         :param indicator: STIX indicator dictionary containing pattern and metadata
         :return: None
@@ -114,6 +114,12 @@ class SentinelOneClient:
         :param indicator: STIX indicator dictionary
         :return: Formatted payload dictionary for SentinelOne API
         """
+        # SentinelOne uses the STIX confidence as the IOC risk score, so send
+        # the OpenCTI score instead of the OpenCTI confidence level
+        score = self.helper.get_attribute_in_extension("score", indicator)
+        if score is not None:
+            indicator = {**indicator, "confidence": score}
+
         payload = {"bundle": {"objects": [indicator]}, "filter": {"tenant": "false"}}
 
         # Add scope filters based on the configuration combination
