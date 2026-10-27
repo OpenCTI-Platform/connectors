@@ -80,6 +80,7 @@ Configure the connector in `docker-compose.yml`:
       - GOOGLE_DTM_IMPORT_START_DATE=P10D
       - GOOGLE_DTM_ALERT_SEVERITY=
       - GOOGLE_DTM_ALERT_TYPE=
+      - GOOGLE_DTM_IMPORT_PASSWORDS=true
     restart: always
 ```
 
@@ -116,6 +117,12 @@ Find the connector and click the refresh button to reset the state and trigger a
 ## Behavior
 
 The connector imports Google DTM alerts as Incidents and Observables (Domain, URL, IP, Email).
+
+### Compromised Credentials alerts and plaintext passwords
+
+When a Compromised Credentials alert contains an unmasked password, the connector stores it by default as the `credential` of the `User Account` observable and in the `alert.md` file attached to the Incident.
+
+Set `GOOGLE_DTM_IMPORT_PASSWORDS=false` to keep ingesting these alerts without the password: the `User Account` observable is created without a `credential`, and the `Password` line of `alert.md` reads `[redacted]`. The login, email, service URL, domain and source file observables are unchanged, so the credential exposure context stays available for triage and correlation.
 
 ## Debugging
 

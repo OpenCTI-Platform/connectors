@@ -1,3 +1,3 @@
-pycti==7.261019.0
+pycti==7.261026.0
 requests<=2.33.0
 schedule

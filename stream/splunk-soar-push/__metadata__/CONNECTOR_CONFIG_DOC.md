@@ -13,7 +13,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | string | `["splunk-soar-push"]` | The scope or type of data the connector is processing. |
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
-| CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `100` | The default confidence level for created entities (0-100). |
 | CONNECTOR_LIVE_STREAM_ID | `string` |  | Length: `string >= 1` | `"ChangeMe"` | The ID of the live stream to listen to. |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Listen to delete events in the stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `false` | Do not auto-resolve dependencies. |

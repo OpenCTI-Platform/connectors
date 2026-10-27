@@ -3,6 +3,7 @@ FROM registry.access.redhat.com/ubi9/ubi-minimal
 ARG EXTRA_PACKAGES=""
 
 RUN set -eux; \
+    microdnf -y upgrade --refresh; \
     microdnf -y --setopt=install_weak_deps=0 install python3.12 ${EXTRA_PACKAGES}; \
     microdnf clean all;
 
