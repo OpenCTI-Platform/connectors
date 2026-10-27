@@ -12,6 +12,7 @@ import re
 from typing import Any
 from urllib.parse import urlparse
 
+import idna
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connectors_sdk.models import Reference, TLPMarking
@@ -106,7 +107,7 @@ class NetAPIConnector:
                 raise EnrichmentSkipped(
                     "A marking of the observable cannot be read: not sent to NetAPI"
                 )
-            if kind == "TLP":
+            if str(kind).upper() == "TLP":
                 tlps.append(definition)
             refs.append(
                 marking.get("standard_id")
@@ -170,8 +171,14 @@ class NetAPIConnector:
             raise EnrichmentSkipped("IP address: the NetAPI feed holds domains only")
 
         try:
-            host = host.encode("idna").decode("ascii")
-        except UnicodeError as err:
+            # a Unicode name goes through IDNA2008 with UTS 46 mapping, so that it and
+            # its A-label look up the same entry (the built-in IDNA 2003 codec maps
+            # "ß" to "ss"); an ASCII name keeps the built-in label checks
+            if host.isascii():
+                host = host.encode("idna").decode("ascii")
+            else:
+                host = idna.encode(host, uts46=True).decode("ascii")
+        except (idna.IDNAError, UnicodeError) as err:
             raise EnrichmentSkipped(
                 "The observable value is not a valid host name"
             ) from err

@@ -200,6 +200,9 @@ def test_values_that_cannot_be_looked_up_are_skipped(entity_id, value, reason):
     [
         (DOMAIN_ID, "Example.COM.", "example.com"),
         (DOMAIN_ID, "пример.рф", "xn--e1afmkfd.xn--p1ai"),
+        # IDNA2008: the Unicode form and its A-label are the same name
+        (DOMAIN_ID, "faß.de", "xn--fa-hia.de"),
+        (DOMAIN_ID, "xn--fa-hia.de", "xn--fa-hia.de"),
         (
             "hostname--55555555-5555-4555-8555-555555555555",
             "www.Example.org",
@@ -461,6 +464,23 @@ def test_note_gets_the_markings_of_the_opencti_entity_too():
         TLP_CLEAR_ID,
         TLP_GREEN_ID,
     }
+
+
+def test_lower_case_tlp_type_of_the_opencti_entity_is_still_checked():
+    """definition_type may come as "tlp" or "Tlp"; it must still gate the lookup."""
+    connector, helper, client = make_connector()
+    data = make_data(tlp=None)
+    data["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "tlp", "definition": "TLP:RED"}
+    ]
+
+    message = connector.process_message(data)
+
+    assert (
+        message
+        == "Observable is TLP:RED, above the maximum TLP:AMBER: not sent to NetAPI"
+    )
+    client.compromised_check.assert_not_called()
 
 
 def test_unreadable_opencti_marking_is_never_sent_to_netapi():
