@@ -1,0 +1,8 @@
+{
+  "domain": "Example.COM.",
+  "threat_type": "malware",
+  "confidence": 0.8,
+  "first_seen": "2026-09-01T10:00:00Z",
+  "last_seen": "2026-09-02T10:00:00Z",
+  "No_of_threat_matched_pivots": 3
+}
