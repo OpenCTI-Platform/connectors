@@ -20,9 +20,9 @@ from connectors_sdk.models.enums import RelationshipType
 class ShodanInternetDbHostConverter(AbstractConverter[ShodanInternetDbHostInput]):
     """Convert a Shodan InternetDB result into objects enriching an IPv4 observable.
 
-    Unlike the connector, the ``related-to`` relationships have no start and
-    stop times and the note has no creation date: both made the ids change on
-    every run.
+    Unlike the connector, the note id does not depend on the conversion date,
+    and the ``related-to`` relationships have no start and stop times (the
+    connector used now and now + 60 days, which made the output time-dependent).
 
     Examples:
         >>> from connectors_sdk.models import OrganizationAuthor, TLPMarking
