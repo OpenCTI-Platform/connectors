@@ -53,3 +53,11 @@ class CrowdStrikeActorInput(BaseModel):
 
     actor: CrowdStrikeActor
     mitre_attack_ids: list[str] = Field(default_factory=list)
+
+
+class CrowdStrikeReportPdf(BaseModel):
+    """The PDF attachment of a CrowdStrike Intel report."""
+
+    report_id: int
+    file_name: str
+    content: bytes

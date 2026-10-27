@@ -6,6 +6,7 @@ from connectors_sdk.converters import AbstractConverter
 from connectors_sdk.converters.crowdstrike import (
     CrowdStrikeActorConverter,
     CrowdStrikeLocationConverter,
+    CrowdStrikeReportPdfConverter,
     CrowdStrikeSectorConverter,
 )
 from connectors_sdk.converters.ransomwarelive import RansomwareLiveVictimConverter
@@ -21,6 +22,7 @@ from connectors_sdk.converters.whoisfreaks import WhoisFreaksThreatFeedConverter
     [
         (CrowdStrikeActorConverter, "CrowdStrike", "Actor"),
         (CrowdStrikeLocationConverter, "CrowdStrike", "Location"),
+        (CrowdStrikeReportPdfConverter, "CrowdStrike", "ReportPdf"),
         (CrowdStrikeSectorConverter, "CrowdStrike", "Sector"),
         (RansomwareLiveVictimConverter, "RansomwareLive", "Victim"),
         (ShodanInternetDbHostConverter, "ShodanInternetDb", "Host"),

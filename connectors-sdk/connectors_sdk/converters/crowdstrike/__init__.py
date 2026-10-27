@@ -8,6 +8,10 @@ from connectors_sdk.converters.crowdstrike.models import (
     CrowdStrikeActor,
     CrowdStrikeActorInput,
     CrowdStrikeEntity,
+    CrowdStrikeReportPdf,
+)
+from connectors_sdk.converters.crowdstrike.report_pdf import (
+    CrowdStrikeReportPdfConverter,
 )
 from connectors_sdk.converters.crowdstrike.sector import CrowdStrikeSectorConverter
 
@@ -17,5 +21,7 @@ __all__ = [
     "CrowdStrikeActorInput",
     "CrowdStrikeEntity",
     "CrowdStrikeLocationConverter",
+    "CrowdStrikeReportPdf",
+    "CrowdStrikeReportPdfConverter",
     "CrowdStrikeSectorConverter",
 ]
