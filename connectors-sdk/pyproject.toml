@@ -33,6 +33,10 @@ test = [
     "pydocstyle>=6.3.0,<7",
     "mypy>=1.15.0,<2",
     "ruff>=0.14.0,<1",
+    "crowdstrike-falconpy==1.6.5", # Type-checks and tests the CrowdStrike providers
+]
+crowdstrike = [
+    "crowdstrike-falconpy==1.6.5", # Aligned with the CrowdStrike connector
 ]
 doc = [
     "sphinx>=7.0",
@@ -54,6 +58,11 @@ pythonpath = [
 addopts = [
     "--cov=connectors_sdk",
     "--cov-fail-under=100",
+]
+
+[tool.coverage.run]
+omit = [
+    "*/providers/crowdstrike/*", # PoC: CrowdStrike providers are not required to be fully covered
 ]
 
 [tool.coverage.path]
