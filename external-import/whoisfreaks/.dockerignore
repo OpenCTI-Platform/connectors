@@ -1,0 +1,9 @@
+**/.venv
+**/.pytest_cache
+**/__pycache__
+**/*.pyc
+**/*.egg-info
+**/config.yml
+**/.git
+**/.env
+**/uv.lock
