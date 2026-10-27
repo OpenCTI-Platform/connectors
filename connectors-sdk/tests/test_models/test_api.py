@@ -10,6 +10,7 @@ def test_public_models_are_present():
     # Then it should all be present
     models_import = {
         "AdministrativeArea",
+        "Artifact",
         "AssociatedFile",
         "AttackPattern",
         "AutonomousSystem",
