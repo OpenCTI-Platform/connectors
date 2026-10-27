@@ -4,7 +4,7 @@
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -70,13 +70,18 @@ def test_default_client() -> None:
     assert provider.client._base_url == "https://internetdb.shodan.io"
 
 
-def test_client_queries_the_ip_path() -> None:
-    """Test that the client GETs `/<ip>`."""
+@pytest.mark.parametrize("ip", [IP, "2001:db8::1"])
+def test_client_queries_the_ip_url(ip: str) -> None:
+    """Test that the client GETs `https://internetdb.shodan.io/<ip>`."""
+    response = MagicMock(spec=requests.Response, status_code=200, ok=True)
+    response.headers = {"Content-Type": "application/json"}
+    response.json.return_value = {"ip": ip}
     client = ShodanInternetDbClient()
-    with patch.object(client, "_get", return_value={"ip": IP}) as get:
-        assert client.get_host(IP) == {"ip": IP}
+    with patch.object(client._session, "request", return_value=response) as request:
+        assert client.get_host(ip) == {"ip": ip}
 
-    get.assert_called_once_with(IP)
+    args, _ = request.call_args
+    assert args == ("GET", f"https://internetdb.shodan.io/{ip}")
 
 
 def test_known_ip(body: dict[str, Any]) -> None:
