@@ -53,7 +53,7 @@ def make_settings(**overrides: Any) -> ConnectorSettings:
 
 def make_connector(check=CHECK_LISTED_NOW, rank=RANK_NOT_IN_TOP_1M, **overrides):
     helper = MagicMock()
-    helper.connect_scope = "Domain-Name,Hostname,IPv4-Addr,Url"  # as pycti keeps it
+    helper.connect_scope = "Domain-Name,Hostname,Url"  # as pycti keeps it
     helper.check_max_tlp.side_effect = lambda tlp, max_tlp: TLP_ORDER.index(tlp) <= max(
         TLP_ORDER.index(max_tlp), 1
     )
@@ -163,26 +163,20 @@ def test_tlp_within_a_raised_maximum_is_enriched():
 @pytest.mark.parametrize(
     "entity_id, value, reason",
     [
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "10.0.0.1", "Private"),
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "127.0.0.1", "Private"),
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "10.0.0.0/8", "range"),
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "8.8.8.0/24", "range"),
-        (
-            "ipv4-addr--22222222-2222-4222-8222-222222222222",
-            "evil.example",
-            "valid IPv4",
-        ),
-        (
-            "ipv4-addr--22222222-2222-4222-8222-222222222222",
-            "2001:db8::1",
-            "valid IPv4",
-        ),
+        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "8.8.8.8", "not in scope"),
+        (DOMAIN_ID, "8.8.8.8", "IP address"),
+        ("hostname--55555555-5555-4555-8555-555555555555", "10.0.0.1", "IP address"),
+        ("url--44444444-4444-4444-8444-444444444444", "http://8.8.4.4/x", "IP address"),
         (
             "url--44444444-4444-4444-8444-444444444444",
             "mailto:security@example.com",
             "no host",
         ),
-        ("url--44444444-4444-4444-8444-444444444444", "http://[2001:db8::1]/", "IPv6"),
+        (
+            "url--44444444-4444-4444-8444-444444444444",
+            "http://[2001:db8::1]/",
+            "IP address",
+        ),
         ("hostname--55555555-5555-4555-8555-555555555555", "localhost", "not a valid"),
         ("url--44444444-4444-4444-8444-444444444444", "/relative/path", "no host"),
         (DOMAIN_ID, "   ", "no host"),
@@ -211,8 +205,6 @@ def test_values_that_cannot_be_looked_up_are_skipped(entity_id, value, reason):
             "www.Example.org",
             "www.example.org",
         ),
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "8.8.8.8", "8.8.8.8"),
-        ("ipv4-addr--22222222-2222-4222-8222-222222222222", "8.8.8.8/32", "8.8.8.8"),
         (
             "url--44444444-4444-4444-8444-444444444444",
             "//Example.com/path",
@@ -231,8 +223,8 @@ def test_values_that_cannot_be_looked_up_are_skipped(entity_id, value, reason):
         ("url--44444444-4444-4444-8444-444444444444", "example.io/path", "example.io"),
         (
             "url--44444444-4444-4444-8444-444444444444",
-            "http://user:pw@8.8.4.4/x",
-            "8.8.4.4",
+            "http://user:pw@Example.org/x",
+            "example.org",
         ),
     ],
 )
@@ -320,29 +312,21 @@ def test_score_is_written_only_when_enabled_and_listed_now():
     connector, helper, _ = make_connector(
         check=CHECK_LISTED_PAST, update_score=True, score=95
     )
-    connector.process_message(
-        make_data(
-            entity_id="ipv4-addr--22222222-2222-4222-8222-222222222222", value="1.1.1.1"
-        )
-    )
-    assert "x_opencti_score" not in by_type(helper)["ipv4-addr"]
+    connector.process_message(make_data(value="0-07.ru"))
+    assert "x_opencti_score" not in by_type(helper)["domain-name"]
 
 
 def test_past_listing_attaches_the_note_and_leaves_the_labels_alone():
     connector, helper, client = make_connector(check=CHECK_LISTED_PAST)
-    data = make_data(
-        entity_id="ipv4-addr--22222222-2222-4222-8222-222222222222",
-        value="1.1.1.1",
-        entity={"x_opencti_labels": [OWN_LABEL]},
-    )
+    data = make_data(value="0-07.ru", entity={"x_opencti_labels": [OWN_LABEL]})
 
     message = connector.process_message(data)
 
-    assert message.startswith("NetAPI: listed in the past (last seen 2026-06-17)")
-    client.domain_rank.assert_not_called()  # the rank exists for domains only
+    assert message.startswith("NetAPI: listed in the past (last seen 2019-12-25)")
+    client.domain_rank.assert_called_once_with("0-07.ru")
     objects = by_type(helper)
     # an earlier label stays: OpenCTI merges labels on import, the note has the status
-    assert objects["ipv4-addr"]["x_opencti_labels"] == [OWN_LABEL]
+    assert objects["domain-name"]["x_opencti_labels"] == [OWN_LABEL]
     assert (
         objects["note"]["abstract"]
         == "NetAPI - listed in the compromised feed in the past"

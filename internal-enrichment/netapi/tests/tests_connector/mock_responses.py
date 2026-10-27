@@ -7,11 +7,6 @@ LISTS_DOMAINS = {
     "current": "https://netapi.com/api2/?method=compromised&dataset_type=url",
     "all_time": "https://netapi.com/api2/?method=compromised&dataset_type=url-all",
 }
-LISTS_IPS = {
-    "page": "https://netapi.com/compromised-ips/",
-    "current": "https://netapi.com/api2/?method=compromised&dataset_type=ip",
-    "all_time": "https://netapi.com/api2/?method=compromised&dataset_type=ip-all",
-}
 SOURCE = "NetAPI compromised feed, updated daily (CC BY 4.0)"
 
 # compromised-check: a domain listed now
@@ -41,22 +36,22 @@ CHECK_LISTED_VIA_DOMAIN = {
     "value": "www.000359.xyz",
 }
 
-# compromised-check: an IP listed in the past only
+# compromised-check: a domain listed in the past only
 CHECK_LISTED_PAST = {
-    "value": "1.1.1.1",
-    "type": "ip",
+    "value": "0-07.ru",
+    "type": "domain",
     "listed_now": False,
     "listed_ever": True,
-    "matched_value": "1.1.1.1",
-    "first_seen": "2026-06-14",
-    "last_seen": "2026-06-17 01:05:02 UTC",
-    "block_reason": "urlhaus.abuse.ch",
+    "matched_value": "0-07.ru",
+    "first_seen": "2019-12-18",
+    "last_seen": "2019-12-25 00:00:00 UTC",
+    "block_reason": "suspicious",
     "registrar": None,
     "note": (
         "Listed in the past but not seen in the last 24 hours; most such entries "
         "reflect past incidents only."
     ),
-    "lists": LISTS_IPS,
+    "lists": LISTS_DOMAINS,
     "source": SOURCE,
 }
 
@@ -104,6 +99,6 @@ RANK_NOT_IN_TOP_1M = {
 ERROR_INVALID_VALUE = {
     "error": {
         "code": "invalid_value",
-        "message": "value must be a domain name, a hostname or an IPv4 address",
+        "message": "value must be a domain name or a hostname",
     }
 }

@@ -78,7 +78,7 @@ class ConverterToStix:
         return OrganizationAuthor(
             name=OWN_SOURCE_NAME,
             description=(
-                "Compromised domain and IP feed and Top 1M ranking provided by the "
+                "Compromised domain feed and Top 1M ranking provided by the "
                 "NetAPI JSON API (https://netapi.com/)."
             ),
             organization_type="vendor",

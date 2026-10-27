@@ -4,7 +4,7 @@
 |-----------|------|---------|
 | Community | -    | -       |
 
-The NetAPI connector checks domain names, hostnames, URLs and IPv4 addresses against the free [NetAPI compromised feed](https://netapi.com/compromised-urls/), the hosts that public threat feeds report for malware or phishing, and adds the position of a listed domain in the [NetAPI Top 1M](https://netapi.com/top-1-mln-websites/). No account or API key is needed.
+The NetAPI connector checks domain names, hostnames and URLs against the free [NetAPI compromised feed](https://netapi.com/compromised-urls/), the hosts that public threat feeds report for malware or phishing, and adds the position of a listed domain in the [NetAPI Top 1M](https://netapi.com/top-1-mln-websites/). No account or API key is needed.
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ The NetAPI connector checks domain names, hostnames, URLs and IPv4 addresses aga
 
 ## Introduction
 
-[NetAPI](https://netapi.com/) publishes a feed of compromised domains and IP addresses collected from public threat feeds (URLhaus, CERT Polska, blackbook and others), refreshed daily, with the date each entry was first and last seen, and a daily Top 1M ranking of the most popular domains. Both are free (CC BY 4.0) and reachable through the [NetAPI JSON API](https://netapi.com/help/api/#json-api).
+[NetAPI](https://netapi.com/) publishes a feed of compromised domains collected from public threat feeds (CERT Polska, blackbook and others), refreshed daily, with the date each entry was first and last seen, and a daily Top 1M ranking of the most popular domains. Both are free (CC BY 4.0) and reachable through the [NetAPI JSON API](https://netapi.com/help/api/#json-api).
 
 For each observable the connector makes one request to the `compromised-check` method and, for a listed domain, one more to `domain-rank`. A listed observable is enriched in place: it gets the label `netapi-compromised` when it is in the current feed, an external reference to NetAPI, optionally a score, and one note with the details. An observable that was never listed is left as it is.
 
@@ -47,7 +47,7 @@ Configuration comes from environment variables or from `config.yml` (see `config
 |-----------------|-----------------------|-----------------------------|---------------------------------------|-----------|---------------------------------------------------------------------------------------------------------|
 | Connector ID    | `connector.id`        | `CONNECTOR_ID`              |                                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                               |
 | Connector Name  | `connector.name`      | `CONNECTOR_NAME`            | `NetAPI`                              | No        | Name of the connector.                                                                                  |
-| Connector Scope | `connector.scope`     | `CONNECTOR_SCOPE`           | `Domain-Name,Hostname,IPv4-Addr,Url`  | No        | The observable types the connector enriches. Any subset of the default.                                 |
+| Connector Scope | `connector.scope`     | `CONNECTOR_SCOPE`           | `Domain-Name,Hostname,Url`            | No        | The observable types the connector enriches. Any subset of the default.                                 |
 | Log Level       | `connector.log_level` | `CONNECTOR_LOG_LEVEL`       | `error`                               | No        | `debug`, `info`, `warn` or `error`.                                                                     |
 | Auto            | `connector.auto`      | `CONNECTOR_AUTO`            | `false`                               | No        | Enrich new observables automatically. Off by default because of the keyless request limits.             |
 | Max TLP         | `connector.max_tlp`   | `CONNECTOR_MAX_TLP`         | `amber`                               | No        | Highest TLP of the observables the connector sends to NetAPI. Observables above it are skipped.         |
@@ -91,20 +91,20 @@ python3 main.py
 
 ## Usage
 
-Open a Domain-Name, Hostname, Url or IPv4-Addr observable in OpenCTI and run the NetAPI enrichment from its Enrichment panel, or let it run automatically with `CONNECTOR_AUTO=true`. The connector can also be a step of a playbook: it always hands the bundle on, enriched or unchanged.
+Open a Domain-Name, Hostname or Url observable in OpenCTI and run the NetAPI enrichment from its Enrichment panel, or let it run automatically with `CONNECTOR_AUTO=true`. The connector can also be a step of a playbook: it always hands the bundle on, enriched or unchanged.
 
 ## Behavior
 
 For each observable the connector:
 
 1. checks the entity type against the scope and the TLP of the observable against `CONNECTOR_MAX_TLP` before anything leaves the platform.
-2. takes the value to look up: a domain name or hostname in lower case and punycode, the host of a URL, or a public IPv4 address. Private and reserved addresses, IPv6 addresses and URLs without a host are skipped.
+2. takes the value to look up: a domain name or hostname in lower case and punycode, or the host of a URL. IP addresses (also as the host of a URL) and URLs without a host are skipped.
 3. calls `compromised-check`. A hostname is also matched through its registered domain, and the answer says which entry matched, when it was first and last seen, the feed that reported it and the registrar of the domain.
 4. calls `domain-rank` for a listed domain or hostname (`NETAPI_INCLUDE_RANK`).
 
 ```mermaid
 graph LR
-    A[Domain-Name / Hostname / Url / IPv4-Addr] -->|compromised-check| B{Listed?}
+    A[Domain-Name / Hostname / Url] -->|compromised-check| B{Listed?}
     B -->|never| C[Nothing changes]
     B -->|now or in the past| D[Observable: label, external reference, optional score]
     B -->|now or in the past| E[Note: status, first and last seen, feed, registrar, Top 1M rank]
@@ -132,6 +132,6 @@ curl "https://netapi.com/api-json/?method=domain-rank&domain=example.com"
 
 ## Additional information
 
-- The feed and the Top 1M are published by NetAPI under CC BY 4.0. Feed page: <https://netapi.com/compromised-urls/>, IP page: <https://netapi.com/compromised-ips/>, Top 1M: <https://netapi.com/top-1-mln-websites/>.
-- API documentation: <https://netapi.com/help/api/#json-api>. The full lists are also available for download there (one domain or IP per line).
+- The feed and the Top 1M are published by NetAPI under CC BY 4.0. Feed page: <https://netapi.com/compromised-urls/>, Top 1M: <https://netapi.com/top-1-mln-websites/>.
+- API documentation: <https://netapi.com/help/api/#json-api>. The full lists are also available for download there (one domain per line).
 - Disclosure: this connector is contributed by NetAPI.

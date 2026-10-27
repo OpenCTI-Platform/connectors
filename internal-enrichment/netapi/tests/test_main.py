@@ -37,7 +37,7 @@ class StubConnectorSettings(ConnectorSettings):
                 "connector": {
                     "id": "connector-id",
                     "name": "NetAPI test",
-                    "scope": "Domain-Name, IPv4-Addr",
+                    "scope": "Domain-Name, Url",
                     "log_level": "error",
                     "auto": True,
                     "max_tlp": "TLP:CLEAR",
@@ -76,7 +76,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
     assert helper.connect_name == "NetAPI test"
-    assert helper.connect_scope == "Domain-Name,IPv4-Addr"
+    assert helper.connect_scope == "Domain-Name,Url"
     assert helper.log_level == "ERROR"
     assert helper.connect_auto is True
 

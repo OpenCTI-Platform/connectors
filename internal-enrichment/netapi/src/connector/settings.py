@@ -10,9 +10,7 @@ from connectors_sdk import (
 )
 from pydantic import Field, HttpUrl, SecretStr, field_validator
 
-SUPPORTED_SCOPE_ENTITY_TYPES = frozenset(
-    {"Domain-Name", "Hostname", "IPv4-Addr", "Url"}
-)
+SUPPORTED_SCOPE_ENTITY_TYPES = frozenset({"Domain-Name", "Hostname", "Url"})
 TLPLevel = Literal["clear", "white", "green", "amber", "amber+strict", "red"]
 
 
@@ -30,7 +28,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The observable types the connector enriches.",
-        default=["Domain-Name", "Hostname", "IPv4-Addr", "Url"],
+        default=["Domain-Name", "Hostname", "Url"],
     )
     auto: bool = Field(
         description=(

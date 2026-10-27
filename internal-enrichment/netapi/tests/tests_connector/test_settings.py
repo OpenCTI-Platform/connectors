@@ -27,7 +27,7 @@ def test_minimal_settings_use_the_defaults():
     assert isinstance(settings.connector, BaseConfigModel)
     assert isinstance(settings.netapi, BaseConfigModel)
     assert settings.connector.name == "NetAPI"
-    assert settings.connector.scope == ["Domain-Name", "Hostname", "IPv4-Addr", "Url"]
+    assert settings.connector.scope == ["Domain-Name", "Hostname", "Url"]
     assert settings.connector.auto is False
     assert settings.connector.max_tlp == "amber"
     assert settings.netapi.api_token is None
@@ -46,7 +46,7 @@ def test_full_settings_are_accepted():
             "connector": {
                 "id": "connector-id",
                 "name": "NetAPI test",
-                "scope": "Domain-Name, IPv4-Addr",
+                "scope": "Domain-Name, Url",
                 "log_level": "info",
                 "auto": True,
                 "max_tlp": "TLP:CLEAR",
@@ -63,11 +63,11 @@ def test_full_settings_are_accepted():
         }
     )
 
-    assert settings.connector.scope == ["Domain-Name", "IPv4-Addr"]
+    assert settings.connector.scope == ["Domain-Name", "Url"]
     assert settings.connector.max_tlp == "clear"
     assert settings.netapi.api_token.get_secret_value() == "secret-token"
     assert settings.netapi.score == 95
-    assert settings.to_helper_config()["connector"]["scope"] == "Domain-Name,IPv4-Addr"
+    assert settings.to_helper_config()["connector"]["scope"] == "Domain-Name,Url"
 
 
 @pytest.mark.parametrize(
@@ -84,6 +84,10 @@ def test_full_settings_are_accepted():
         pytest.param(
             {"opencti": OPENCTI, "connector": {"scope": "Email-Addr"}},
             id="unsupported_scope",
+        ),
+        pytest.param(
+            {"opencti": OPENCTI, "connector": {"scope": "Domain-Name,IPv4-Addr"}},
+            id="ip_scope",
         ),
         pytest.param(
             {"opencti": OPENCTI, "connector": {}, "netapi": {"score": 101}},

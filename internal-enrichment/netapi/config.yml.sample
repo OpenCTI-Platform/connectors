@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   # name: 'NetAPI'
-  # scope: 'Domain-Name,Hostname,IPv4-Addr,Url'
+  # scope: 'Domain-Name,Hostname,Url'
   # log_level: 'error'
   # auto: false # without a token the API allows 30 requests a minute and 1,000 a day per IP
   # max_tlp: 'amber' # 'clear', 'white', 'green', 'amber', 'amber+strict' or 'red'

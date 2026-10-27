@@ -9,7 +9,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_NAME | `string` |  | string | `"NetAPI"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["Domain-Name", "Hostname", "IPv4-Addr", "Url"]` | The observable types the connector enriches. |
+| CONNECTOR_SCOPE | `array` |  | string | `["Domain-Name", "Hostname", "Url"]` | The observable types the connector enriches. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Enrich new observables automatically. Without an API token the NetAPI JSON API allows 30 requests a minute and 1,000 a day per IP address, so this is off by default. |

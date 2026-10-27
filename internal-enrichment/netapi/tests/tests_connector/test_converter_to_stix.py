@@ -20,7 +20,6 @@ from mock_responses import (
 )
 
 DOMAIN_ID = "domain-name--11111111-1111-4111-8111-111111111111"
-IP_ID = "ipv4-addr--22222222-2222-4222-8222-222222222222"
 
 
 def make_converter() -> ConverterToStix:
@@ -125,15 +124,15 @@ def test_note_of_a_hostname_names_the_matched_registered_domain():
 
 def test_note_of_a_past_listing_has_no_registrar_and_no_rank():
     note = make_converter().build_note(
-        IP_ID, "1.1.1.1", CHECK_LISTED_PAST, None, [TLPMarking(level="clear")]
+        DOMAIN_ID, "0-07.ru", CHECK_LISTED_PAST, None, [TLPMarking(level="clear")]
     )
     content = note.to_stix2_object()["content"]
 
     assert note.abstract == "NetAPI - listed in the compromised feed in the past"
-    assert "**Status:** listed in the past (last seen 2026-06-17)" in content
+    assert "**Status:** listed in the past (last seen 2019-12-25)" in content
     assert "Registrar" not in content
     assert "Top 1M" not in content
-    assert "| Reported by | urlhaus.abuse.ch |" in content
+    assert "| Reported by | suspicious |" in content
 
 
 def test_table_cells_are_flattened_and_escaped():
@@ -184,9 +183,9 @@ def test_current_listing_adds_the_label_reference_and_score():
 
 def test_past_listing_keeps_every_label_and_the_score():
     entity = {
-        "type": "ipv4-addr",
-        "id": IP_ID,
-        "value": "1.1.1.1",
+        "type": "domain-name",
+        "id": DOMAIN_ID,
+        "value": "0-07.ru",
         "x_opencti_score": 60,
         "x_opencti_labels": ["NetAPI-Compromised", "keep-me"],
         "labels": ["legacy"],
@@ -197,7 +196,7 @@ def test_past_listing_keeps_every_label_and_the_score():
     assert enriched["x_opencti_score"] == 60
     assert enriched["x_opencti_labels"] == ["NetAPI-Compromised", "keep-me", "legacy"]
     reference = enriched["x_opencti_external_references"][-1]
-    assert reference["url"] == "https://netapi.com/compromised-ips/"
+    assert reference["url"] == "https://netapi.com/compromised-urls/"
     # the reference is shared by every observable of the feed page: no status in it
     assert reference["description"] == (
         "NetAPI compromised feed (the status of this observable is in the NetAPI note)"
