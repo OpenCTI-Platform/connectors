@@ -92,6 +92,110 @@ class Connector:
         self.logger.info(f"Fetched {count} items")
 """
 
+_ALIAS_IN_OTHER_MODULE = (
+    (
+        "src/sdk_logging.py",
+        "from connectors_sdk import get_logger\n\nLOGGER = get_logger(__name__)\n",
+    ),
+    (
+        "src/stdlib_logging.py",
+        "from logging import getLogger as get_logger\n\n"
+        "logger = get_logger(__name__)\n"
+        'logger.info(f"Stdlib {value}")\n',
+    ),
+)
+
+_NESTED_SCOPE = """\
+from connectors_sdk import get_logger
+
+def outer(logger, count):
+    def inner():
+        logger = get_logger(__name__)
+        logger.info(f"Inner {count}")
+    logger.info(f"Outer {count}")
+"""
+
+_PARAM_SHADOWS_MODULE_LOGGER = """\
+from connectors_sdk import get_logger
+
+logger = get_logger(__name__)
+
+def consume(logger, count):
+    logger.info(f"Count {count}")
+
+def produce(count):
+    logger.info(f"Produce {count}")
+"""
+
+_LOCAL_SHADOWS_MODULE_LOGGER = """\
+import logging
+
+from connectors_sdk import get_logger
+
+logger = get_logger(__name__)
+
+def run(count):
+    logger = logging.getLogger(__name__)
+    logger.info(f"Count {count}")
+"""
+
+_MIXED_ASSIGNMENTS = """\
+import logging
+
+from connectors_sdk import get_logger
+
+class Client:
+    def __init__(self, debug):
+        if debug:
+            self._logger = get_logger(__name__)
+        else:
+            self._logger = logging.getLogger(__name__)
+
+    def fetch(self, count):
+        self._logger.info(f"Fetched {count}")
+"""
+
+_CROSS_MODULE_CLASSES = (
+    (
+        "src/client/base.py",
+        "from connectors_sdk import BaseClientApi\n\n"
+        "class BaseClient(BaseClientApi):\n"
+        "    pass\n",
+    ),
+    ("src/client/__init__.py", "from client.base import BaseClient\n"),
+    (
+        "src/client/api.py",
+        "from client import BaseClient\n\n"
+        "class Api(BaseClient):\n"
+        "    def fetch(self, count):\n"
+        '        self.logger.info(f"Fetched {count}")\n',
+    ),
+    # Same class name, not an SDK class
+    ("src/other.py", "class BaseClient:\n    pass\n"),
+    (
+        "src/legacy.py",
+        "from other import BaseClient\n\n"
+        "class Legacy(BaseClient):\n"
+        "    def fetch(self, count):\n"
+        '        self.logger.info(f"Fetched {count}")\n',
+    ),
+)
+
+_IMPORTED_MODULE_LOGGER = (
+    (
+        "src/utils.py",
+        "from connectors_sdk import get_logger\n\nLOGGER = get_logger(__name__)\n",
+    ),
+    (
+        "src/main.py",
+        "import utils\n"
+        "from utils import LOGGER\n\n"
+        "def run(count):\n"
+        '    LOGGER.info(f"Direct {count}")\n'
+        '    utils.LOGGER.info(f"Qualified {count}")\n',
+    ),
+)
+
 
 class TestVC327LogMeta:
     """VC327 applies to every connector type, on connectors-sdk loggers only."""
@@ -144,6 +248,47 @@ class TestVC327LogMeta:
         path = connector_src(("src/main.py", source))
         results = run_checks(path, select=["VC327"])
         assert all(r.severity == Severity.INFO for r in results)
+
+    @pytest.mark.parametrize(
+        ("source", "lines"),
+        [
+            (_NESTED_SCOPE, [6]),
+            (_PARAM_SHADOWS_MODULE_LOGGER, [9]),
+            (_LOCAL_SHADOWS_MODULE_LOGGER, []),
+            (_MIXED_ASSIGNMENTS, []),
+        ],
+        ids=[
+            "nested-scope",
+            "param-shadows-module-logger",
+            "local-shadows-module-logger",
+            "mixed-assignments",
+        ],
+    )
+    def test_follows_python_scoping(self, connector_src, source, lines):
+        path = connector_src(("src/main.py", source))
+        results = run_checks(path, select=["VC327"])
+        assert [r.line for r in results if r.severity == Severity.WARNING] == lines
+
+    def test_resolves_imports_per_module(self, connector_src):
+        """An SDK import alias in one module does not leak into another."""
+        path = connector_src(*_ALIAS_IN_OTHER_MODULE)
+        results = run_checks(path, select=["VC327"])
+        assert all(r.severity == Severity.INFO for r in results)
+
+    def test_resolves_base_classes_through_imports(self, connector_src):
+        path = connector_src(*_CROSS_MODULE_CLASSES)
+        results = run_checks(path, select=["VC327"])
+        warnings = [r for r in results if r.severity == Severity.WARNING]
+        assert [(r.file_path.name, r.line) for r in warnings] == [("api.py", 5)]
+
+    def test_resolves_logger_imported_from_another_module(self, connector_src):
+        path = connector_src(*_IMPORTED_MODULE_LOGGER)
+        results = run_checks(path, select=["VC327"])
+        warnings = [r for r in results if r.severity == Severity.WARNING]
+        assert [(r.file_path.name, r.line) for r in warnings] == [
+            ("main.py", 5),
+            ("main.py", 6),
+        ]
 
     def test_skipped_without_sdk_logger(self, connector_src):
         path = connector_src(("src/main.py", _NO_SDK))
