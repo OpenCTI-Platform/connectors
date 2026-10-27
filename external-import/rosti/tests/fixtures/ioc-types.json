@@ -1,0 +1,28 @@
+{
+  "data": [
+    "domain",
+    "ip",
+    "url",
+    "sha256",
+    "domain:ip",
+    "filename",
+    "md5",
+    "sha1",
+    "email",
+    "filepath",
+    "ip:port",
+    "mutex",
+    "domain:port",
+    "cidr",
+    "sha224",
+    "sha512",
+    "ssdeep",
+    "user-agent",
+    "port",
+    "blockchain"
+  ],
+  "meta": {
+    "count": 20,
+    "paginated": false
+  }
+}
