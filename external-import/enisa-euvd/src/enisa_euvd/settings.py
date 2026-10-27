@@ -4,7 +4,7 @@ Configuration values are read from environment variables or `config.yml`
 (see `config.yml.sample` and the README's "Configuration variables" section).
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -50,7 +50,7 @@ class EnisaEuvdConfig(BaseConfigModel):
         description="The base URL of the ENISA EUVD API.",
     )
     import_start_date: DatetimeFromIsoString = Field(
-        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=90),
+        default="P90D",
         description="First run only: oldest last-update date to import. Can be "
         "absolute (e.g. '2026-01-01T00:00:00Z') or relative (e.g. 'P90D' for "
         "90 days ago). Subsequent runs resume from the connector's persisted state.",

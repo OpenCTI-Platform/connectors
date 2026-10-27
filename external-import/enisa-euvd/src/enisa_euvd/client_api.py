@@ -149,6 +149,6 @@ class EnisaEuvdClient(BaseClientApi):
                 self._logger.warning(
                     "Failed to parse EUVD vulnerability without a valid "
                     "dateUpdated, skipping it",
-                    {"raw_id": raw.get("id", "unknown"), "error": error},
+                    meta={"raw_id": raw.get("id", "unknown"), "error": error},
                 )
         return items
