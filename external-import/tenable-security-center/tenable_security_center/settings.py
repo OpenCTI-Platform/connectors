@@ -87,7 +87,7 @@ class TenableSecurityCenterConfig(BaseConfigModel):
     )
     export_since: DatetimeFromIsoString = Field(
         description=(
-            "Datetime (ISO-8601) used as the starting point of the very first data retrieval. "
+            "Starting point of the very first data retrieval, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). "
             "It is overwritten by the connector state after the first successful run."
         ),
     )

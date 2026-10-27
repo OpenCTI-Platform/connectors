@@ -7,7 +7,6 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
-from connectors_sdk.settings.annotated_types import parse_iso_string
 from pydantic import Field, SecretStr
 
 
@@ -50,12 +49,12 @@ class MicrosoftDefenderIncidentsConfig(BaseConfigModel):
     )
     import_start_date: DatetimeFromIsoString = Field(
         description=(
-            "Start date for importing incidents in ISO 8601 format "
-            "(e.g. '2025-01-01T00:00:00Z'). "
+            "Start date for importing incidents, as an ISO-8601 datetime "
+            "(e.g. '2025-01-01T00:00:00Z') or duration relative to now "
+            "(e.g. 'P30D' for 30 days ago). "
             "Used only on the first run; subsequent runs use the stored state."
         ),
-        # `default_factory` is used to set a dynamic default value (datetime) at runtime
-        default=parse_iso_string("2025-01-01T00:00:00Z"),
+        default="P30D",
     )
     api_base_url: str = Field(
         description="Microsoft Graph API base URL.",

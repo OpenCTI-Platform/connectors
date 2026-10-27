@@ -1,0 +1,14 @@
+FROM filigran/alpine-python-fips:python3.12
+ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+
+COPY src /opt/opencti-connector-export-report-pdf
+WORKDIR /opt/opencti-connector-export-report-pdf
+
+RUN apk --no-cache add git pango harfbuzz-subset && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git
+
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
