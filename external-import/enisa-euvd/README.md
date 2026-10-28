@@ -174,6 +174,8 @@ granularity.
 - **Vendor-only entries**: a vendor listed in `enisaIdVendor` without a matching
   product is not imported. Vendors only reach OpenCTI as the vendor of an
   ingested `Software`.
+- **Unnamed products**: a product whose `name` is null is not imported as a
+  `Software`. The vulnerability and its other products are still imported.
 - **No resume within a run**: pagination is by position, and new items shift
   every page, so a failed run is not resumed from a partial page. The state
   is only saved after a fully successful run, so the next run walks again

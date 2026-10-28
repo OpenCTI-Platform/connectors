@@ -46,23 +46,20 @@ def _split_lines(value: object) -> list[str]:
 class EUVDVendor(BaseModel):
     """A vendor, as nested under a product reference."""
 
-    name: str = Field(description="Name of the vendor.")
+    name: str | None = Field(default=None, description="Name of the vendor.")
 
 
 class EUVDProduct(BaseModel):
     """A product, as nested under a product reference."""
 
-    name: str = Field(description="Name of the product.")
+    name: str | None = Field(
+        default=None,
+        description="Name of the product, null on some items.",
+    )
     vendor: EUVDVendor | None = Field(
         default=None,
         description="Vendor of the product, absent on some items.",
     )
-
-
-class EUVDVendorRef(BaseModel):
-    """One entry of `enisaIdVendor`: a vendor affected by the vulnerability."""
-
-    vendor: EUVDVendor
 
 
 class EUVDProductRef(BaseModel):
@@ -108,11 +105,6 @@ class EUVDVulnerability(BaseModel):
         alias="enisaIdProduct",
         description="Affected products, each with its vendor and version range.",
     )
-    vendors: list[EUVDVendorRef] = Field(
-        default_factory=list,
-        alias="enisaIdVendor",
-        description="Affected vendors.",
-    )
 
     @field_validator("date_published", "date_updated", mode="before")
     @classmethod
@@ -124,9 +116,9 @@ class EUVDVulnerability(BaseModel):
     def _validate_lines(cls, value: object) -> list[str]:
         return _split_lines(value)
 
-    @field_validator("products", "vendors", mode="before")
+    @field_validator("products", mode="before")
     @classmethod
-    def _validate_nullable_lists(cls, value: object) -> object:
+    def _validate_nullable_list(cls, value: object) -> object:
         return [] if value is None else value
 
 

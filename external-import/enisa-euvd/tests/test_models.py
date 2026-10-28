@@ -28,7 +28,6 @@ def test_vulnerability_parses_a_full_item(single_vulnerability):
     assert vuln.products[0].product.vendor.name == "Example Vendor"
     assert vuln.products[0].product_version == "1.2.3"
     assert vuln.assigner == "Example-CERT"
-    assert [ref.vendor.name for ref in vuln.vendors] == ["Example Vendor"]
 
 
 def test_vulnerability_handles_missing_products_and_null_lists(search_page):
@@ -55,7 +54,6 @@ def test_vulnerability_coalesces_null_references_and_aliases_to_empty_lists():
     assert vuln.references == []
     assert vuln.aliases == []
     assert vuln.products == []
-    assert vuln.vendors == []
     assert vuln.assigner is None
     assert vuln.base_score is None
     assert vuln.epss is None
@@ -95,3 +93,19 @@ def test_vulnerability_accepts_a_product_without_vendor():
 
     assert vuln.products[0].product.name == "Example Product"
     assert vuln.products[0].product.vendor is None
+
+
+def test_vulnerability_accepts_a_product_and_vendor_without_name():
+    raw = {
+        "id": "EUVD-2024-99997",
+        "description": "Product and vendor with a null name.",
+        "datePublished": "Jan 1, 2024, 12:00:00 AM",
+        "dateUpdated": "Jan 1, 2024, 12:00:00 AM",
+        "enisaIdProduct": [{"product": {"name": None, "vendor": {"name": None}}}],
+        "enisaIdVendor": [{"vendor": {"name": None}}],
+    }
+
+    vuln = EUVDVulnerability.model_validate(raw)
+
+    assert vuln.products[0].product.name is None
+    assert vuln.products[0].product.vendor.name is None
