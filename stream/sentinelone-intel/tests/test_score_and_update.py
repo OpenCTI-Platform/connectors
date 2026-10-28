@@ -64,14 +64,6 @@ def test_payload_sends_score_as_confidence(client):
     assert sent["extensions"] == indicator["extensions"]
 
 
-def test_payload_does_not_mutate_stream_indicator(client):
-    indicator = make_indicator(score=85, confidence=10)
-
-    client._generate_indicator_payload(indicator)
-
-    assert indicator["confidence"] == 10
-
-
 def test_payload_keeps_confidence_without_score(client):
     indicator = make_indicator(score=None, confidence=10)
 

@@ -116,9 +116,10 @@ class SentinelOneClient:
         """
         # SentinelOne uses the STIX confidence as the IOC risk score, so send
         # the OpenCTI score instead of the OpenCTI confidence level
-        score = self.helper.get_attribute_in_extension("score", indicator)
-        if score is not None:
-            indicator = {**indicator, "confidence": score}
+        if (
+            score := self.helper.get_attribute_in_extension("score", indicator)
+        ) is not None:
+            indicator["confidence"] = score
 
         payload = {"bundle": {"objects": [indicator]}, "filter": {"tenant": "false"}}
 

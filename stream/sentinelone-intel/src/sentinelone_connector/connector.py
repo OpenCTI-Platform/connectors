@@ -34,7 +34,7 @@ class SentinelOneIntelConnector:
         # An update carries the full indicator, so it is pushed again to
         # propagate changes such as a new score.
         if data["type"] == "indicator" and data["pattern_type"] == "stix":
-            if msg.event in ("create", "update"):
+            if msg.event in {"create", "update"}:
                 if self.helper.connector_logger.local_logger.isEnabledFor(logging.INFO):
                     # `get_attribute_in_extension` can take a while to execute,
                     # so we check if the logger is enabled for INFO level first
