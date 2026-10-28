@@ -1,11 +1,13 @@
 """MediaContent."""
 
-from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.base_custom_observable_entity import (
+    BaseCustomObservableEntity,
+)
 from pycti import CustomObservableMediaContent
 from pydantic import AwareDatetime, Field
 
 
-class MediaContent(BaseObservableEntity):
+class MediaContent(BaseCustomObservableEntity):
     """Represent a Media Content observable."""
 
     url: str = Field(

@@ -1,7 +1,7 @@
 import pytest
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.media_content import MediaContent
-from pycti import CustomObservableMediaContent
+from pycti import STIX_EXT_OCTI_SCO, CustomObservableMediaContent
 from pydantic import ValidationError
 
 
@@ -50,6 +50,16 @@ def test_media_content_to_stix2_object_returns_valid_stix_object(
         publication_date="2024-01-01T00:00:00Z",
         allow_custom=True,
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        # Custom observable: the attributes are at the top level, as in OpenCTI exports.
+        extensions={STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}},
+        labels=["news"],
+        description="Test description",
+        score=80,
+        created_by_ref=fake_valid_organization_author.id,
+        external_references=[
+            external_ref.to_stix2_object()
+            for external_ref in fake_valid_external_references
+        ],
         x_opencti_score=80,
         x_opencti_description="Test description",
         x_opencti_labels=["news"],

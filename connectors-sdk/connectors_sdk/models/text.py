@@ -1,11 +1,13 @@
 """Text."""
 
-from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.base_custom_observable_entity import (
+    BaseCustomObservableEntity,
+)
 from pycti import CustomObservableText
 from pydantic import Field
 
 
-class Text(BaseObservableEntity):
+class Text(BaseCustomObservableEntity):
     """Represent a Text observable on OpenCTI.
 
     Examples:

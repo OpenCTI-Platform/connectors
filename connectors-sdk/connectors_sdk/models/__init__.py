@@ -5,6 +5,9 @@ from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.attack_pattern import AttackPattern
 from connectors_sdk.models.autonomous_system import AutonomousSystem
 from connectors_sdk.models.base_author_entity import BaseAuthorEntity
+from connectors_sdk.models.base_custom_observable_entity import (
+    BaseCustomObservableEntity,
+)
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.base_object import BaseObject
@@ -59,6 +62,7 @@ __all__ = [
     "BaseAuthorEntity",
     "BaseIdentifiedEntity",
     "BaseObservableEntity",
+    "BaseCustomObservableEntity",
     # Models flat list
     "AdministrativeArea",
     "AssociatedFile",

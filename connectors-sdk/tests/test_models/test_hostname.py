@@ -2,7 +2,7 @@ import pytest
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.hostname import Hostname
-from pycti import CustomObservableHostname
+from pycti import STIX_EXT_OCTI_SCO, CustomObservableHostname
 from pydantic import ValidationError
 
 
@@ -46,6 +46,13 @@ def test_hostname_to_stix2_object(
         allow_custom=True,
         object_marking_refs=[
             marking.to_stix2_object().id for marking in fake_valid_tlp_markings
+        ],
+        # Custom observable: the attributes are at the top level, as in OpenCTI exports.
+        extensions={STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}},
+        created_by_ref=fake_valid_organization_author.id,
+        external_references=[
+            external_ref.to_stix2_object()
+            for external_ref in fake_valid_external_references
         ],
         x_opencti_created_by_ref=fake_valid_organization_author.id,
         x_opencti_external_references=[

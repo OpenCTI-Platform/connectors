@@ -3,7 +3,7 @@ from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMark
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.text import Text
-from pycti import CustomObservableText
+from pycti import STIX_EXT_OCTI_SCO, CustomObservableText
 from pydantic import ValidationError
 
 
@@ -104,6 +104,13 @@ def test_text_to_stix2_object_with_author_and_markings(
         allow_custom=True,
         object_marking_refs=[
             marking.to_stix2_object().id for marking in fake_valid_tlp_markings
+        ],
+        # Custom observable: the attributes are at the top level, as in OpenCTI exports.
+        extensions={STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}},
+        created_by_ref=fake_valid_organization_author.id,
+        external_references=[
+            external_ref.to_stix2_object()
+            for external_ref in fake_valid_external_references
         ],
         x_opencti_created_by_ref=fake_valid_organization_author.id,
         x_opencti_external_references=[

@@ -1,11 +1,13 @@
 """Hostname."""
 
-from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.base_custom_observable_entity import (
+    BaseCustomObservableEntity,
+)
 from pycti import CustomObservableHostname
 from pydantic import Field
 
 
-class Hostname(BaseObservableEntity):
+class Hostname(BaseCustomObservableEntity):
     """Define a Hostname observable on OpenCTI.
 
     Examples:

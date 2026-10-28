@@ -5,6 +5,7 @@ from typing import Any
 
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import Field
 from stix2.v21 import _Observable as _Stix2Observable
 
@@ -44,17 +45,24 @@ class BaseObservableEntity(BaseIdentifiedEntity, ABC):
                 if self.markings is not None
                 else None
             ),
-            x_opencti_score=self.score,
-            x_opencti_description=self.description,
-            x_opencti_labels=self.labels,
-            x_opencti_external_references=[
-                external_ref.to_stix2_object()
-                for external_ref in self.external_references or []
-            ],
-            x_opencti_created_by_ref=self.author.id if self.author else None,
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI_SCO,
+                "property-extension",
+                labels=self.labels,
+                description=self.description,
+                score=self.score,
+                created_by_ref=self.author.id if self.author else None,
+                external_references=[
+                    external_ref.to_stix2_object()
+                    for external_ref in self.external_references or []
+                ],
+            ),
+            # Not duplicated in the extension: pycti reads files from both places
+            # and joins them, so each file would be uploaded twice.
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
+            # Top level only: pycti reads it only from the top level, never from the extension.
             x_opencti_create_indicator=self.create_indicator,
         )
 

@@ -5,6 +5,7 @@ import stix2
 import stix2.properties
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_object import BaseObject
+from pycti import STIX_EXT_OCTI
 from pydantic import Field, ValidationError
 
 
@@ -180,3 +181,66 @@ def test_base_identified_entity_common_stix2_properties_includes_created_as_none
     props = entity._common_stix2_properties()
     assert "created" in props
     assert props["created"] is None
+
+
+def test_base_identified_entity_common_properties_have_no_extension(
+    implemented_base_identified_entity,
+):
+    """Test that the common properties have no extension and no x_opencti_* property."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the common properties
+    properties = entity._common_stix2_properties()
+    # Then there is no extension and no x_opencti_* property
+    assert "extensions" not in properties
+    assert not [key for key in properties if key.startswith("x_opencti_")]
+
+
+def test_custom_stix2_properties_writes_attributes_in_extension(
+    implemented_base_identified_entity,
+):
+    """Test that the OpenCTI attributes go in the extension and stay top-level."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the OpenCTI properties
+    properties = entity._custom_stix2_properties(
+        STIX_EXT_OCTI,
+        reliability="A",
+        aliases=["alias"],
+        score=0,
+        location_type=None,
+        cwe=[],
+    )
+    # Then the extension holds the non-empty attributes, like OpenCTI exports
+    assert properties == {
+        "extensions": {
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "reliability": "A",
+                "aliases": ["alias"],
+                "score": 0,
+            }
+        },
+        # And the deprecated x_opencti_* properties are still there
+        "x_opencti_reliability": "A",
+        "x_opencti_aliases": ["alias"],
+        "x_opencti_score": 0,
+    }
+
+
+def test_custom_stix2_properties_new_sco_puts_attributes_at_top_level(
+    implemented_base_identified_entity,
+):
+    """Test that a new-sco extension only gives its type, and attributes are top-level."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the OpenCTI properties for a new-sco type
+    properties = entity._custom_stix2_properties(
+        STIX_EXT_OCTI, "new-sco", score=10, labels=None
+    )
+    # Then the attributes are at the top level, next to their x_opencti_* copies
+    assert properties == {
+        "extensions": {STIX_EXT_OCTI: {"extension_type": "new-sco"}},
+        "score": 10,
+        "x_opencti_score": 10,
+    }
