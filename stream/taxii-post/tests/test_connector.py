@@ -193,7 +193,7 @@ def test_remap_identity_ids_rewrites_refs():
 
 
 def test_remap_identity_ids_rewrites_relationship_refs():
-    """A relationship between two identities with original ids has both both sides replaced """
+    """A relationship between two identities with original ids has both both sides replaced"""
 
     stix_object = {
         "id": "relationship--1c68244b-3ec9-4eea-aded-808bbdec7836",
@@ -222,8 +222,6 @@ def test_remap_identity_ids_rewrites_object_refs():
     remap_identity_ids(stix_object, IDENTITY_ID_MAPPING)
 
     assert stix_object["object_refs"] == [REPLACEMENT_ID_1, indicator_id, OTHER_ID]
-
-
 
 
 def _post_through_connector(stix_object, identity_id_mapping):
