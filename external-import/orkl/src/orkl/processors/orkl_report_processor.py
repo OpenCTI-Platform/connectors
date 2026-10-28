@@ -540,9 +540,13 @@ class OrklReportProcessor(BaseDataProcessor):
         actor_class = (
             IntrusionSet if self._threat_actor_as_intrusion_set else ThreatActorGroup
         )
-        # The reference only preserves the cross-source identifier in the actor's
-        # `source_name` (e.g. ``MITRE:APT28``); without it the reference would
-        # have no `external_id`, `url` or `description` and fail STIX serialization.
+        # The external reference exists only to preserve the cross-source
+        # identifier carried by `source_name` (e.g. ``MITRE:APT28``). When it is
+        # absent the reference would carry a `source_name` but no `external_id`,
+        # `url` or `description`, which satisfies the SDK's ExternalReference
+        # model but violates STIX's at-least-one-property invariant and blows up
+        # at bundle serialization (AtLeastOnePropertyError). With no identifier
+        # to record, there is nothing to reference, so omit the reference.
         external_references = None
         if actor.source_name:
             external_references = [
