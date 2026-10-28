@@ -16,7 +16,7 @@ def test_config() -> None:
     assert config["connector"]["live_stream_id"] == "live-stream-id"
 
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
-    assert len(microsoft_sentinel_intel) == 19
+    assert len(microsoft_sentinel_intel) == 20
     assert microsoft_sentinel_intel["auth_type"] == "app_registration"
     assert not microsoft_sentinel_intel["batch_mode"]
     assert microsoft_sentinel_intel["batch_size"] == 100
@@ -31,6 +31,7 @@ def test_config() -> None:
     assert microsoft_sentinel_intel["source_system"] == "Opencti Stream Connector"
     assert microsoft_sentinel_intel["subscription_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["tenant_id"] == "ChangeMe"
+    assert not microsoft_sentinel_intel["use_score_as_confidence"]
     assert microsoft_sentinel_intel["workspace_api_version"] == "2024-02-01-preview"
     assert microsoft_sentinel_intel["workspace_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["workspace_name"] == "ChangeMe"
