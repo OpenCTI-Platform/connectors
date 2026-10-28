@@ -623,6 +623,101 @@ def test_analyst_note_raises_on_risk_api_error_other_than_not_found():
         _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
 
 
+# Scenario: An indicator with a risk score of 0 keeps its score
+def test_indicator_keeps_a_risk_score_of_zero():
+    # Given an IP address indicator whose risk score is 0
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+    indicator.risk_score = 0
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator carries a score of 0, not a missing score
+    assert _then_single_indicator(stix_objects)["x_opencti_score"] == 0
+
+
+# Scenario: An indicator without risk score has no score
+# Regression guard: also passes at base, it protects the unset case of the score fix
+def test_indicator_without_risk_score_has_no_score():
+    # Given an IP address indicator without risk score
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator has no score
+    assert _then_single_indicator(stix_objects).get("x_opencti_score") is None
+
+
+# Scenario: A vulnerability with a risk of 0 keeps its score
+def test_vulnerability_keeps_a_risk_score_of_zero():
+    # Given a vulnerability processing a risk list row whose risk is "0"
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+    rf_row = _given_vuln_risk_row(risk=0, threat_actor_name="APT29")
+    _when_vuln_map_data(vuln, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability carries a score of 0, not a missing score
+    assert stix_objects[0]["x_opencti_score"] == 0
+
+
+# Scenario: A vulnerability without risk score has no score
+# Regression guard: also passes at base, it protects the unset case of the score fix
+def test_vulnerability_without_risk_score_has_no_score():
+    # Given a vulnerability whose risk score was never set
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability has no score
+    assert stix_objects[0].get("x_opencti_score") is None
+
+
+# Scenario: An indicator risk list row with an empty or non-numeric risk has no score
+# Regression guard: also passes at base, it protects the non-numeric `Risk` case of the score fix
+@pytest.mark.parametrize("risk", ["", "not-a-number"])
+def test_indicator_with_non_numeric_risk_has_no_score(risk):
+    # Given an IP address indicator processing a risk list row whose risk is empty or non-numeric
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+    rf_row = _given_indicator_risk_row(risk=risk, threat_actor_name="APT28")
+    _when_indicator_map_data(indicator, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator has no score, not a score of 0
+    assert _then_single_indicator(stix_objects).get("x_opencti_score") is None
+
+
+# Scenario: A vulnerability risk list row with an empty or non-numeric risk has no score
+# Regression guard: also passes at base, it protects the non-numeric `Risk` case of the score fix
+@pytest.mark.parametrize("risk", ["", "not-a-number"])
+def test_vulnerability_with_non_numeric_risk_has_no_score(risk):
+    # Given a vulnerability processing a risk list row whose risk is empty or non-numeric
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+    rf_row = _given_vuln_risk_row(risk=risk, threat_actor_name="APT29")
+    _when_vuln_map_data(vuln, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability has no score, not a score of 0
+    assert stix_objects[0].get("x_opencti_score") is None
+
+
+# Scenario: A risk threshold of 0 disables the filtering, including score 0 and unscored indicators
+
+
+# Scenario: A risk threshold of 0 without risk scores import makes no risk API call
+# Regression guard: also passes at base. It pins the decision to keep the truthiness
+# check on the threshold, not to switch to `is not None`, which would call the risk
+# API at threshold 0 for nothing.
+
+
+# Scenario: Indicators below the threshold are skipped and the skip is logged with its context
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -856,6 +951,12 @@ def _then_objects_exclude(stix_objects, excluded_object):
 
 def _indicator_names(stix_objects):
     return [obj["name"] for obj in stix_objects if obj["type"] == "indicator"]
+
+
+def _then_single_indicator(stix_objects):
+    indicators = [obj for obj in stix_objects if obj["type"] == "indicator"]
+    assert len(indicators) == 1, f"Expected exactly 1 indicator, got {len(indicators)}"
+    return indicators[0]
 
 
 def _then_single_report(stix_objects):

@@ -161,7 +161,7 @@ class Indicator(RFStixEntity):
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
             custom_properties={
-                "x_opencti_score": self.risk_score or None,
+                "x_opencti_score": self.risk_score,
                 "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators(),
             },
         )
@@ -236,7 +236,7 @@ class Indicator(RFStixEntity):
         try:
             self.risk_score = int(rf_indicator["Risk"])
         except ValueError:
-            self.risk_score = 0
+            self.risk_score = None
 
         # Get related entities
         related_entities_links = json.loads(rf_indicator["Links"])
@@ -888,7 +888,7 @@ class Vulnerability(RFStixEntity):
             created=self.first_seen,
             modified=self.last_seen,
             custom_properties={
-                "x_opencti_score": self.risk_score or None,
+                "x_opencti_score": self.risk_score,
             },
         )
 
@@ -905,7 +905,7 @@ class Vulnerability(RFStixEntity):
         try:
             self.risk_score = int(rf_vuln["Risk"])
         except ValueError:
-            self.risk_score = 0
+            self.risk_score = None
 
         # Get related entities
         related_entities_links = json.loads(rf_vuln["Links"])
