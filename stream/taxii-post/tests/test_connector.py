@@ -192,12 +192,62 @@ def test_remap_identity_ids_rewrites_refs():
     }
 
 
-@patch("taxii_post_connector.connector.requests.post")
-def test_process_message_posts_remapped_identity_ids(mock_post):
+def test_remap_identity_ids_rewrites_relationship_refs():
+    """A relationship between two identities with original ids has both both sides replaced """
+
+    stix_object = {
+        "id": "relationship--1c68244b-3ec9-4eea-aded-808bbdec7836",
+        "type": "relationship",
+        "relationship_type": "related-to",
+        "source_ref": ORIGINAL_ID_1,
+        "target_ref": ORIGINAL_ID_2,
+    }
+
+    remap_identity_ids(stix_object, IDENTITY_ID_MAPPING)
+
+    assert stix_object["source_ref"] == REPLACEMENT_ID_1
+    assert stix_object["target_ref"] == REPLACEMENT_ID_2
+
+
+def test_remap_identity_ids_rewrites_object_refs():
+    """A report referencing an original id has that id replaced"""
+
+    indicator_id = "indicator--00000000-0000-4000-8000-000000000001"
+    stix_object = {
+        "id": "report--1c68244b-3ec9-4eea-aded-808bbdec7836",
+        "type": "report",
+        "object_refs": [ORIGINAL_ID_1, indicator_id, OTHER_ID],
+    }
+
+    remap_identity_ids(stix_object, IDENTITY_ID_MAPPING)
+
+    assert stix_object["object_refs"] == [REPLACEMENT_ID_1, indicator_id, OTHER_ID]
+
+
+
+
+def _post_through_connector(stix_object, identity_id_mapping):
+    """
+    Process a stream message with the given object and mapping and returns what gets
+    posted to the TAXII Server
+    """
+
+    connector = _make_connector(
+        _make_taxii_config(identity_id_mapping=identity_id_mapping)
+    )
+    with patch("taxii_post_connector.connector.requests.post") as mock_post:
+        mock_post.return_value = MagicMock(status_code=200, content=b"ok")
+        connector._process_message(
+            SimpleNamespace(data=json.dumps({"data": stix_object}))
+        )
+
+    mock_post.assert_called_once()
+    (posted_object,) = mock_post.call_args.kwargs["json"]["objects"]
+    return posted_object
+
+
+def test_process_message_posts_remapped_identity_ids():
     """The object posted to the TAXII server correctly contains the remapped identity"""
-
-    mock_post.return_value = MagicMock(status_code=200, content=b"ok")
-
     sighting = {
         "id": "sighting--1c68244b-3ec9-4eea-aded-808bbdec7836",
         "type": "sighting",
@@ -205,12 +255,13 @@ def test_process_message_posts_remapped_identity_ids(mock_post):
         "where_sighted_refs": [ORIGINAL_ID_1],
         "extensions": {},
     }
+    posted_object = _post_through_connector(sighting, IDENTITY_ID_MAPPING)
 
-    connector = _make_connector(
-        _make_taxii_config(identity_id_mapping=IDENTITY_ID_MAPPING)
-    )
-    connector._process_message(SimpleNamespace(data=json.dumps({"data": sighting})))
-
-    mock_post.assert_called_once()
-    (posted_object,) = mock_post.call_args.kwargs["json"]["objects"]
     assert posted_object["where_sighted_refs"] == [REPLACEMENT_ID_1]
+
+
+def test_process_message_posts_remapped_identity_own_id():
+    """An identity with the original id has its own id replaced"""
+    identity = {"id": ORIGINAL_ID_1, "type": "identity", "name": "testidentity"}
+    posted_object = _post_through_connector(identity, IDENTITY_ID_MAPPING)
+    assert posted_object["id"] == REPLACEMENT_ID_1
