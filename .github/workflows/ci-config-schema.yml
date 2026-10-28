@@ -100,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "$USE_LOCAL_SDK" = "true" ]; then
-            export CONNECTORS_SDK_PATH="$GITHUB_WORKSPACE/connectors-sdk"
+            export SDK_SOURCE=local
           fi
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
