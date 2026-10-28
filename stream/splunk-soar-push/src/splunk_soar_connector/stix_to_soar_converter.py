@@ -136,8 +136,10 @@ def get_severity_from_score(obj: Dict, default_severity: str = "medium") -> str:
         else:
             return "informational"
 
-    # Fallback to regular severity mapping
-    return get_severity_from_stix(obj) or default_severity
+    # Fallback to regular severity mapping, then to the inherited severity
+    if obj.get("severity"):
+        return get_severity_from_stix(obj)
+    return default_severity
 
 
 def convert_indicator_to_artifact(
@@ -167,6 +169,8 @@ def convert_indicator_to_artifact(
                 observable["_indicator_name"] = indicator.get("name", "")
                 observable["_indicator_pattern"] = pattern
                 observable["_indicator_id"] = get_internal_id(indicator, helper)
+                # Observables parsed from the pattern carry no score of their own
+                observable["x_opencti_score"] = indicator.get("x_opencti_score")
 
                 # Convert to artifact
                 artifact = convert_observable_to_artifact(
