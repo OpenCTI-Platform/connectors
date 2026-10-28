@@ -180,6 +180,14 @@ def test_tlp_within_a_raised_maximum_is_enriched():
         ("hostname--55555555-5555-4555-8555-555555555555", "localhost", "not a valid"),
         ("url--44444444-4444-4444-8444-444444444444", "/relative/path", "no host"),
         (DOMAIN_ID, "   ", "no host"),
+        (DOMAIN_ID, "bad host.example", "not a valid"),
+        (DOMAIN_ID, "-bad.example", "not a valid"),
+        (
+            "hostname--55555555-5555-4555-8555-555555555555",
+            "bad-.example",
+            "not a valid",
+        ),
+        (DOMAIN_ID, "a..example", "not a valid"),
     ],
 )
 def test_values_that_cannot_be_looked_up_are_skipped(entity_id, value, reason):
@@ -228,6 +236,17 @@ def test_values_that_cannot_be_looked_up_are_skipped(entity_id, value, reason):
             "url--44444444-4444-4444-8444-444444444444",
             "http://user:pw@Example.org/x",
             "example.org",
+        ),
+        # a URL in the query is no scheme of the observable
+        (
+            "url--44444444-4444-4444-8444-444444444444",
+            "example.com/login?next=https://other.example/",
+            "example.com",
+        ),
+        (
+            "hostname--55555555-5555-4555-8555-555555555555",
+            "_dmarc.example.com",
+            "_dmarc.example.com",
         ),
     ],
 )

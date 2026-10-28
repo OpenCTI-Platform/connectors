@@ -35,6 +35,10 @@ TLP_IDS = {
 
 # a URL scheme without an authority (mailto:, urn:, data: ...); "host:8080/path" is not one
 HOSTLESS_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:(?![0-9]|//)")
+# a scheme with an authority, anchored at the start (a URL in the query is no scheme)
+AUTHORITY_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+# an ASCII host name: labels of letters, digits, "-" and "_", no "-" at either end
+HOST_LABEL = re.compile(r"^(?!-)[a-z0-9_-]{1,63}(?<!-)$")
 
 
 class EnrichmentSkipped(Exception):
@@ -149,7 +153,7 @@ class NetAPIConnector:
         value = str(stix_entity.get("value") or "").strip()
         stix_type = str(stix_entity.get("type") or "")
         if stix_type == "url":
-            if "://" in value or value.startswith("//"):
+            if AUTHORITY_SCHEME.match(value) or value.startswith("//"):
                 parsed = urlparse(value)
             elif HOSTLESS_SCHEME.match(value):
                 # mailto:, urn:, data: ... carry no host to look up
@@ -182,7 +186,12 @@ class NetAPIConnector:
             raise EnrichmentSkipped(
                 "The observable value is not a valid host name"
             ) from err
-        if "." not in host or len(host) > 253:
+        labels = host.lower().split(".")
+        if (
+            len(labels) < 2
+            or len(host) > 253
+            or not all(HOST_LABEL.match(label) for label in labels)
+        ):
             raise EnrichmentSkipped("The observable value is not a valid host name")
         return host
 
