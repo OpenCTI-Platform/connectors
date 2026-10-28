@@ -25,7 +25,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_PERSON_TO_TA | `boolean` |  | boolean | `false` | Whether to convert Person entities to Threat Actor entities. |
 | RECORDED_FUTURE_TA_TO_INTRUSION_SET | `boolean` |  | boolean | `false` | Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor. |
 | RECORDED_FUTURE_RISK_AS_SCORE | `boolean` |  | boolean | `true` | Whether to import risk scores as confidence scores in OpenCTI. |
-| RECORDED_FUTURE_RISK_THRESHOLD | `integer` |  | `0 < x ` | `60` | Minimum risk score threshold (0-100) for importing entities. |
+| RECORDED_FUTURE_RISK_THRESHOLD | `integer` |  | `0 <= x ` | `60` | Minimum risk score (0-100) for the indicators (IP address, domain, URL, hash) found in analyst notes. Indicators with a lower risk score, or without any risk score, are not imported. Set to 0 to disable this filtering and import all indicators. Only applies to analyst notes: risk lists use `risk_list_threshold`. |
 | RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS | `boolean` |  | boolean | `false` | Enable or disable the automatic guessing of relationships between entities when processing analyst notes. |
 | RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES | `boolean` |  | boolean | `false` | Whether to also import the context entities of analyst notes, i.e. entities referenced in the note's context but not tagged as primary. Disabled by default as they can add a lot of noise and false positives. |
 | RECORDED_FUTURE_PULL_RISK_LIST | `boolean` |  | boolean | `false` | Whether to import Recorded Future risk lists. |
