@@ -237,7 +237,7 @@ Format (isort first, then black):
 
 ```bash
 uvx isort==7.0.0 --profile black --line-length 88 external-import/myconnector
-uvx black==26.5.1 external-import/myconnector
+uvx black==26.10.1 external-import/myconnector
 ```
 
 Lint:

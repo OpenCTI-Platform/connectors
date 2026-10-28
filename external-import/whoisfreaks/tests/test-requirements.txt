@@ -1,0 +1,4 @@
+# Installs the connector (runtime deps) plus the `test` extra so CI
+# (run_test.sh) discovers this connector and runs its pytest suite.
+# Path is relative to the connectors repo root.
+./external-import/whoisfreaks/.[test]
