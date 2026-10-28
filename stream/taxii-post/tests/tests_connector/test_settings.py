@@ -328,8 +328,21 @@ def test_parse_identity_id_mapping():
     assert parse_identity_id_mapping(expected) == expected
 
 
-def test_parse_identity_id_mapping_rejects_pair_without_separator():
-    """Pairs that are not of the form original_id:replacement_id should be rejected"""
+@pytest.mark.parametrize(
+    "identity_id_mapping",
+    [
+        pytest.param(f"{ORIGINAL_ID_1}{REPLACEMENT_ID_1}", id="missing_the_colon"),
+        pytest.param(f"{ORIGINAL_ID_1}:", id="empty_replacement_id"),
+        pytest.param(f":{REPLACEMENT_ID_1}", id="empty_original_id"),
+        pytest.param("malware--a:malware--b", id="non_identity_ids"),
+        pytest.param(
+            f"{ORIGINAL_ID_1}:{REPLACEMENT_ID_1},{ORIGINAL_ID_1}:{REPLACEMENT_ID_2}",
+            id="duplicate_original_id",
+        ),
+        pytest.param({ORIGINAL_ID_1: ""}, id="config_yml_empty_replacement_id"),
+    ],
+)
+def test_parse_identity_id_mapping_rejects_invalid_pairs(identity_id_mapping):
+    """Testing Pairs that dont meet the correct criteria of identity IDs in the form original_id:replacement_id"""
     with pytest.raises(ValueError):
-        parse_identity_id_mapping(f"{ORIGINAL_ID_1}{REPLACEMENT_ID_1}")
-        parse_identity_id_mapping(ORIGINAL_ID_1)
+        parse_identity_id_mapping(identity_id_mapping)

@@ -1,5 +1,6 @@
 from typing import Annotated, Literal
 
+import stix2.properties
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -20,23 +21,49 @@ def parse_identity_id_mapping(value: str | dict[str, str]) -> dict[str, str]:
     """
     Converts a comma separated list of original_id:replacement_id into a dictionary
     """
-    # if parsed from config.yml it is already a dictionary and can be returned
-    if not isinstance(value, str):
-        return value
+    # if parsed from config.yml it is already a dictionary of pairs
+    if isinstance(value, dict):
+        pairs = list(value.items())
+
+    else:
+        pairs = []
+
+        for pair in value.split(","):
+
+            # skip if empty
+            if not pair.strip():
+                continue
+
+            # format is original_id:replacement_id and thus there should exist exactly one colon
+            if pair.count(":") != 1:
+                raise ValueError(
+                    f"Invalid identity ID mapping pair '{pair}', expected original_id:replacement_id"
+                )
+
+            original_id, replacement_id = pair.split(":")
+            pairs.append((original_id.strip(), replacement_id.strip()))
 
     mapping = {}
-    for pair in value.split(","):
-        # for an unset value of "", such that we will return the empty dictionary
-        if not pair.strip():
-            continue
-
-        if pair.count(":") != 1:
+    for original_id, replacement_id in pairs:
+        # Ensures both are valid Identity IDs
+        try:
+            stix2.properties.IDProperty("identity", spec_version="2.1").clean(
+                original_id
+            )
+            stix2.properties.IDProperty("identity", spec_version="2.1").clean(
+                replacement_id
+            )
+        except ValueError as err:
             raise ValueError(
-                f"Invalid identity ID mapping pair {pair!r}, expected original_id:replacement_id"
+                f"Invalid identity ID mapping pair '{original_id}:{replacement_id}': {err}"
+            ) from err
+
+        if original_id in mapping:
+            raise ValueError(
+                f"Duplicate original identity ID '{original_id}' in identity ID mapping"
             )
 
-        original_id, replacement_id = pair.split(":")
-        mapping[original_id.strip()] = replacement_id.strip()
+        mapping[original_id] = replacement_id
     return mapping
 
 
