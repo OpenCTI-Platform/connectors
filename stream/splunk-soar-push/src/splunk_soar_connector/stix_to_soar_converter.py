@@ -120,13 +120,16 @@ def get_labels_and_markings(obj: Dict, helper, bundle: Dict = None) -> List[str]
     return sanitized_tags
 
 
-def get_severity_from_score(obj: Dict, default_severity: str = "medium") -> str:
+def get_severity_from_score(
+    obj: Dict, default_severity: str = "medium", low_score_severity: str = "low"
+) -> str:
     """Get severity from OpenCTI score or fallback to default"""
     # Try to get score from x_opencti_score
     score = obj.get("x_opencti_score")
 
     if score is not None:
-        # Map score to severity
+        # Map score to severity. SOAR only ships with high, medium and low and
+        # rejects an artifact whose severity an administrator has not created
         if score >= 80:
             return "high"
         elif score >= 50:
@@ -134,7 +137,7 @@ def get_severity_from_score(obj: Dict, default_severity: str = "medium") -> str:
         elif score >= 20:
             return "low"
         else:
-            return "informational"
+            return low_score_severity
 
     # Fallback to regular severity mapping, then to the inherited severity
     if obj.get("severity"):
@@ -143,7 +146,11 @@ def get_severity_from_score(obj: Dict, default_severity: str = "medium") -> str:
 
 
 def convert_indicator_to_artifact(
-    indicator: Dict, helper, container_severity: str = "medium", bundle: Dict = None
+    indicator: Dict,
+    helper,
+    container_severity: str = "medium",
+    bundle: Dict = None,
+    low_score_severity: str = "low",
 ) -> Optional[List[Dict]]:
     """
     Convert a STIX indicator to SOAR artifacts with evidence
@@ -174,7 +181,7 @@ def convert_indicator_to_artifact(
 
                 # Convert to artifact
                 artifact = convert_observable_to_artifact(
-                    observable, helper, container_severity, bundle
+                    observable, helper, container_severity, bundle, low_score_severity
                 )
 
                 if artifact:
@@ -225,7 +232,9 @@ def convert_indicator_to_artifact(
         artifact = {
             "name": name,
             "label": "indicator",
-            "severity": get_severity_from_score(indicator, container_severity),
+            "severity": get_severity_from_score(
+                indicator, container_severity, low_score_severity
+            ),
             "cef": {
                 "indicatorName": indicator.get("name", ""),
                 "indicatorPattern": pattern,
@@ -264,7 +273,11 @@ def convert_indicator_to_artifact(
 
 
 def convert_observable_to_artifact(
-    observable: Dict, helper, container_severity: str = "medium", bundle: Dict = None
+    observable: Dict,
+    helper,
+    container_severity: str = "medium",
+    bundle: Dict = None,
+    low_score_severity: str = "low",
 ) -> Optional[Dict]:
     """
     Convert a STIX observable to a SOAR artifact with evidence
@@ -275,7 +288,9 @@ def convert_observable_to_artifact(
         # Start with empty artifact
         artifact = {
             "label": obs_type.replace("-", "_"),
-            "severity": get_severity_from_score(observable, container_severity),
+            "severity": get_severity_from_score(
+                observable, container_severity, low_score_severity
+            ),
             "cef": {},
             "source_data_identifier": get_internal_id(observable, helper),
             "tags": get_labels_and_markings(observable, helper, bundle),
@@ -594,6 +609,7 @@ def convert_incident_to_soar_event(stix_bundle: Dict, helper, config) -> Optiona
 
         # Container severity for inheritance
         container_severity = soar_event["severity"]
+        low_score_severity = config.splunk_soar.low_score_severity
 
         # Convert observables to artifacts/evidence
         observable_types = [
@@ -614,7 +630,11 @@ def convert_incident_to_soar_event(stix_bundle: Dict, helper, config) -> Optiona
             if obs_type in entities_by_type:
                 for observable in entities_by_type[obs_type]:
                     artifact = convert_observable_to_artifact(
-                        observable, helper, container_severity, stix_bundle
+                        observable,
+                        helper,
+                        container_severity,
+                        stix_bundle,
+                        low_score_severity,
                     )
                     if artifact:
                         soar_event["artifacts"].append(artifact)
@@ -623,7 +643,11 @@ def convert_incident_to_soar_event(stix_bundle: Dict, helper, config) -> Optiona
         if "indicator" in entities_by_type:
             for indicator in entities_by_type["indicator"]:
                 artifacts = convert_indicator_to_artifact(
-                    indicator, helper, container_severity, stix_bundle
+                    indicator,
+                    helper,
+                    container_severity,
+                    stix_bundle,
+                    low_score_severity,
                 )
                 if artifacts:
                     soar_event["artifacts"].extend(artifacts)
@@ -740,6 +764,7 @@ def convert_container_to_soar_case(stix_bundle: Dict, helper, config) -> Optiona
 
         # Container severity for inheritance
         container_severity = soar_case["severity"]
+        low_score_severity = config.splunk_soar.low_score_severity
 
         # Convert referenced objects to artifacts
         for ref_id in object_refs:
@@ -771,13 +796,21 @@ def convert_container_to_soar_case(stix_bundle: Dict, helper, config) -> Optiona
                     "autonomous-system",
                 ]:
                     artifact = convert_observable_to_artifact(
-                        entity, helper, container_severity, stix_bundle
+                        entity,
+                        helper,
+                        container_severity,
+                        stix_bundle,
+                        low_score_severity,
                     )
 
                 # Check if it's an indicator
                 elif entity_type == "indicator":
                     artifacts = convert_indicator_to_artifact(
-                        entity, helper, container_severity, stix_bundle
+                        entity,
+                        helper,
+                        container_severity,
+                        stix_bundle,
+                        low_score_severity,
                     )
                     if artifacts:
                         soar_case["artifacts"].extend(artifacts)
@@ -828,11 +861,11 @@ def convert_container_to_soar_case(stix_bundle: Dict, helper, config) -> Optiona
                 "autonomous-system",
             ]:
                 artifact = convert_observable_to_artifact(
-                    obj, helper, container_severity, stix_bundle
+                    obj, helper, container_severity, stix_bundle, low_score_severity
                 )
             elif obj_type == "indicator":
                 artifacts = convert_indicator_to_artifact(
-                    obj, helper, container_severity, stix_bundle
+                    obj, helper, container_severity, stix_bundle, low_score_severity
                 )
                 if artifacts:
                     soar_case["artifacts"].extend(artifacts)

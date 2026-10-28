@@ -1,7 +1,10 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from models.configs.soar_configs import _ConfigLoaderSoar
 from splunk_soar_connector.stix_to_soar_converter import (
+    convert_incident_to_soar_event,
     convert_indicator_to_artifact,
     convert_observable_to_artifact,
     get_severity_from_score,
@@ -35,12 +38,29 @@ def make_indicator(pattern: str, pattern_type: str = "stix", **kwargs) -> dict:
         (50, "medium"),
         (49, "low"),
         (20, "low"),
-        (19, "informational"),
-        (0, "informational"),
+        (19, "low"),
+        (0, "low"),
     ],
 )
 def test_get_severity_from_score_maps_score(score: int, expected: str) -> None:
     assert get_severity_from_score({"x_opencti_score": score}, "low") == expected
+
+
+def test_get_severity_from_score_uses_low_score_severity_below_20() -> None:
+    assert (
+        get_severity_from_score({"x_opencti_score": 19}, "high", "informational")
+        == "informational"
+    )
+
+
+def test_get_severity_from_score_ignores_low_score_severity_from_20() -> None:
+    assert get_severity_from_score({"x_opencti_score": 20}, "high", "info") == "low"
+
+
+def test_low_score_severity_setting_defaults_to_low() -> None:
+    settings = _ConfigLoaderSoar(SPLUNK_SOAR_URL="https://soar.example.com")
+
+    assert settings.low_score_severity == "low"
 
 
 def test_get_severity_from_score_inherits_default_without_score() -> None:
@@ -111,7 +131,7 @@ def test_bare_observable_uses_its_score(helper: MagicMock) -> None:
 
     artifact = convert_observable_to_artifact(observable, helper, "high")
 
-    assert artifact["severity"] == "informational"
+    assert artifact["severity"] == "low"
     assert artifact["data"]["opencti_score"] == 10
 
 
@@ -124,3 +144,41 @@ def test_bare_observable_without_score_inherits_container_severity(
 
     assert artifact["severity"] == "high"
     assert artifact["data"]["opencti_score"] is None
+
+
+def test_indicator_with_low_score_uses_low_score_severity(helper: MagicMock) -> None:
+    indicator = make_indicator("[ipv4-addr:value = '1.2.3.4']", x_opencti_score=5)
+
+    artifacts = convert_indicator_to_artifact(
+        indicator, helper, "high", low_score_severity="informational"
+    )
+
+    assert artifacts[0]["severity"] == "informational"
+
+
+def test_incident_conversion_uses_configured_low_score_severity(
+    helper: MagicMock,
+) -> None:
+    bundle = {
+        "objects": [
+            {
+                "type": "incident",
+                "id": "incident--4f1b7d3c-2a8e-4c6f-9b0d-5e7a1c3f9d22",
+                "name": "Test incident",
+                "severity": "high",
+            },
+            {
+                "type": "ipv4-addr",
+                "id": "ipv4-addr--0d2b6e8a-1f4c-5a7e-9c3b-8e6d4f2a1b07",
+                "value": "1.2.3.4",
+                "x_opencti_score": 10,
+            },
+        ]
+    }
+    config = SimpleNamespace(
+        splunk_soar=SimpleNamespace(low_score_severity="informational")
+    )
+
+    soar_event = convert_incident_to_soar_event(bundle, helper, config)
+
+    assert soar_event["artifacts"][0]["severity"] == "informational"

@@ -24,6 +24,7 @@ splunk_soar:
   # Mapping configuration
   default_severity: 'medium'
   default_status: 'new'
+  low_score_severity: 'low' # Severity for scores below 20, must exist in SOAR
   
   # Performance settings
   max_artifacts_per_container: 1000
