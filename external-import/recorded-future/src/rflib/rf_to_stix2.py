@@ -1347,13 +1347,17 @@ class StixNote:
                     if self.risk_threshold or self.risk_as_score:
                         risk_score = self._get_entity_risk_score(type_, name)
                     # If a min threshold was defined, we ignore the indicator if its score
-                    # is unknown or lower than the defined threshold
+                    # is unknown or lower than the defined threshold.
+                    # The check is deliberately a truthiness one: a threshold of 0 (or None)
+                    # disables the filtering, so indicators with a score of 0 or without
+                    # any score (unknown to the risk API) are kept.
                     if self.risk_threshold and (
                         risk_score is None or risk_score < self.risk_threshold
                     ):
                         self.helper.connector_logger.info(
-                            "[ANALYST NOTES] Ignoring entity below risk threshold or without risk score",
-                            {
+                            "[ANALYST NOTES] Ignoring indicator below risk threshold or without risk score",
+                            meta={
+                                "note_id": note["id"],
                                 "entity": name,
                                 "type": type_,
                                 "risk_score": risk_score,
