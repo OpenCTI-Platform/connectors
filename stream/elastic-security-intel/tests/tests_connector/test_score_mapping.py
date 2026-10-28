@@ -5,43 +5,16 @@ Elastic, both in the threat intel document and in the SIEM rule body.
 """
 
 import pytest
-import requests_mock as rm_module
 from elastic_security_intel_connector.api_handler import ElasticApiHandler
 
-ELASTIC_URL = "http://elastic.test:9200"
-INDEX_NAME = "logs-ti_custom_opencti.indicator"
-DELETE_URL = f"{ELASTIC_URL}/{INDEX_NAME}/_delete_by_query"
-DOC_URL = f"{ELASTIC_URL}/{INDEX_NAME}/_doc"
+from tests.conftest import DELETE_URL, DOC_URL, ELASTIC_URL
+
 RULES_URL = f"{ELASTIC_URL}/api/detection_engine/rules"
 FIND_RULES_URL = f"{RULES_URL}/_find"
 TEMPLATE_URL = f"{ELASTIC_URL}/_index_template/logs-ti_custom_opencti"
 
 INDICATOR_EXTENSION = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 OBSERVABLE_EXTENSION = "extension-definition--f93e2c80-4231-4f9a-af8b-95c9bd566a82"
-
-
-class _Logger:
-    def info(self, *args, **kwargs):
-        pass
-
-    debug = warning = error = info
-
-
-class _Helper:
-    connector_logger = _Logger()
-
-
-class _Config:
-    load = {}
-    elastic_url = ELASTIC_URL
-    elastic_api_key = "dummy"
-    elastic_client_cert = None
-    elastic_client_key = None
-    elastic_ca_cert = None
-    elastic_verify_ssl = False
-    elastic_index_name = INDEX_NAME
-    elastic_kibana_url = None
-    elastic_opencti_external_url = "http://opencti.test"
 
 
 def make_indicator(score=None, pattern_type="stix", confidence=10):
@@ -81,16 +54,16 @@ def make_observable(score=None):
 
 
 @pytest.fixture
-def handler():
-    return ElasticApiHandler(_Helper(), _Config())
+def handler(helper, config):
+    return ElasticApiHandler(helper, config)
 
 
-@pytest.fixture
-def requests_mock():
-    with rm_module.Mocker() as m:
-        m.post(DELETE_URL, json={"deleted": 0})
-        m.post(DOC_URL, json={"_id": "abc", "result": "created"}, status_code=201)
-        yield m
+@pytest.fixture(autouse=True)
+def elastic_doc_endpoints(requests_mock):
+    requests_mock.post(DELETE_URL, json={"deleted": 0})
+    requests_mock.post(
+        DOC_URL, json={"_id": "abc", "result": "created"}, status_code=201
+    )
 
 
 def _sent_doc(mock):
@@ -198,6 +171,7 @@ def test_process_indicator_update_should_send_score_to_rule_and_document(
         (40, "medium"),
         (39, "low"),
         (0, "low"),
+        (-1, "low"),
     ],
 )
 def test_rule_severity_should_follow_score_thresholds(risk_score, expected_severity):
