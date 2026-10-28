@@ -151,9 +151,10 @@ class TaxiiConfig(BaseConfigModel):
     )
     identity_id_mapping: IdentityIdMapping = Field(
         description=(
-            "The IDs of Identity objects to be replaced before posting, including the identity's own id and every reference to it. Written as comma separated original_id:replacement_id pairs (e.g. identity--<uuid>:identity--<uuid>). This change does not propogate back to the OpenCTI instance, it only alters the bundles being delivered to the TAXII server."
+            "The IDs of Identity objects to be replaced before posting, including the identity's own id and every reference to it. Written as comma separated original_id:replacement_id pairs (e.g. identity--<uuid>:identity--<uuid>). This change does not propagate back to the OpenCTI instance, it only alters the bundles being delivered to the TAXII server. created_by_ref is only remapped when TAXII_DELETE_CREATED_BY_REF is false, since it is removed by default."
         ),
-        default="",
+        default_factory=dict,
+        json_schema_extra={"default": ""},
     )
 
     @model_validator(mode="after")
