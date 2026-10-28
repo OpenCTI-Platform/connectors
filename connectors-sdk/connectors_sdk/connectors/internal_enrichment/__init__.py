@@ -5,4 +5,5 @@ This module provides the foundational classes for building internal enrichment c
 - EnrichedEntity: New version of the entity to enrich, merged into it by the connector
 - BaseEnrichmentProcessor: Abstract base class to enrich one or more entity types
 - InternalEnrichmentConnector: Full orchestration for internal enrichment connectors
+- UnsupportedEntityError, EntityOutOfScopeError: Raised to skip an entity
 """
