@@ -1,135 +1,97 @@
 """Enrichment message module.
 
-This module provides the ``EnrichmentMessage`` class, a read-only view of the
-message that ``OpenCTIConnectorHelper.listen()`` passes to an internal enrichment
-connector's callback.
+This module provides ``EnrichmentMessage``, a read-only view of the message that
+``OpenCTIConnectorHelper.listen()`` passes to an internal enrichment connector's
+callback, with the two views of the entity to enrich: ``OpenCTIEntity`` (as read from
+OpenCTI) and ``StixEntity`` (as a STIX object).
 
-The message has the same shape in every mode, but some fields are only reliable in one:
-
-- Manual or automatic enrichment: the platform created a work, and ``data["event_type"]``
-  and ``data["entity_type"]`` are set. ``stix_entity`` is usually a separate dict, not the
-  object inside ``stix_objects`` (it is that object only when pycti builds ``stix_objects``
-  itself, because the platform did not send them).
-- Playbook: there is no work, ``data["event_type"]`` and ``data["entity_type"]`` are missing,
-  ``stix_objects`` is the bundle of the previous playbook step, and ``stix_entity`` is the
-  object inside it.
-
-Never modify ``stix_entity`` in place: depending on the mode, the change may or may not
-reach the bundle. Return ``enriched_entity(obj)`` from ``transform()`` instead.
-
-``EnrichmentMessage`` only exposes fields that are reliable in both modes
-(e.g. ``entity_type`` comes from ``enrichment_entity``).
+Their models only declare the fields the connector needs; any other field can still be
+read as an attribute (e.g. ``message.stix_entity.value``).
 """
 
 from __future__ import annotations
 
-import copy
-from dataclasses import dataclass
 from typing import Any
 
-from connectors_sdk.connectors.internal_enrichment.enriched_entity import EnrichedEntity
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass(frozen=True)
-class EnrichmentMessage:
-    """Read-only view of an enrichment message received from OpenCTI.
+class OpenCTIEntity(BaseModel):
+    """The entity to enrich, as read from OpenCTI.
 
-    Built by ``InternalEnrichmentConnector`` for each message and passed to
-    the processor's ``supports()``, ``collect()`` and ``transform()`` methods.
+    Only the id and the type are declared for now. The other fields sent by OpenCTI
+    (``objectMarking``, ``parent_types``, ``importFiles``, ...) can be read as
+    attributes.
 
     Attributes:
-        entity_id: The STIX standard id of the entity to enrich.
-        enrichment_entity: The entity as read from OpenCTI (``entity_type``,
-            ``objectMarking``, ``parent_types``, ``importFiles``, ...).
-        stix_entity: The entity to enrich, as a STIX 2.1 dict.
-        stix_objects: The STIX 2.1 dicts of the bundle containing the entity.
-            In a playbook, this is the bundle of the previous step.
-        is_playbook: Whether the message comes from a playbook step.
+        id: The OpenCTI id of the entity.
+        entity_type: The OpenCTI type of the entity (e.g. ``IPv4-Addr``, ``StixFile``).
+            The connector scope uses these type names.
     """
 
-    entity_id: str
-    enrichment_entity: dict[str, Any]
-    stix_entity: dict[str, Any]
-    stix_objects: list[dict[str, Any]]
-    is_playbook: bool
+    model_config = ConfigDict(frozen=True, extra="allow")
 
-    @classmethod
-    def from_data(cls, data: dict[str, Any], is_playbook: bool) -> EnrichmentMessage:
-        """Build an ``EnrichmentMessage`` from the data passed by ``OpenCTIConnectorHelper.listen()``.
-
-        Args:
-            data: The message data passed to the connector's callback.
-            is_playbook: Whether the message comes from a playbook step.
-
-        Returns:
-            The corresponding ``EnrichmentMessage``.
-        """
-        return cls(
-            entity_id=data["entity_id"],
-            enrichment_entity=data["enrichment_entity"],
-            stix_entity=data["stix_entity"],
-            stix_objects=data["stix_objects"],
-            is_playbook=is_playbook,
-        )
-
-    @property
-    def entity_type(self) -> str:
-        """The OpenCTI type of the entity to enrich (e.g. ``IPv4-Addr``, ``StixFile``).
-
-        This is the value to compare with the connector's scope: unlike
-        ``data["entity_type"]`` it is also set in playbooks, and unlike the
-        ``entity_id`` prefix it matches the OpenCTI type names (``StixFile``
-        and not ``file``).
-        """
-        entity_type: str = self.enrichment_entity["entity_type"]
-        return entity_type
+    id: str
+    entity_type: str
 
     @property
     def tlp_levels(self) -> list[str]:
-        """The TLP levels of the entity to enrich (e.g. ``["TLP:AMBER"]``), empty if none."""
-        markings = self.enrichment_entity.get("objectMarking") or []
+        """The TLP levels of the entity (e.g. ``["TLP:AMBER"]``), empty if none."""
+        markings = getattr(self, "objectMarking", None) or []
         return [
             marking["definition"]
             for marking in markings
             if marking.get("definition_type") == "TLP"
         ]
 
-    def entity_copy(self) -> dict[str, Any]:
-        """Return a deep copy of ``stix_entity``, safe to read or modify.
 
-        To return a new version of the entity, use ``enriched_entity()``.
+class StixEntity(BaseModel):
+    """The entity to enrich, as a STIX 2.1 object.
+
+    Only the fields the connector needs are declared. The other STIX properties
+    (``value``, ``hashes``, ``extensions``, ...) can be read as attributes.
+
+    Attributes:
+        id: The STIX id of the entity, as used in the bundle.
+        type: The STIX type of the entity (e.g. ``ipv4-addr``, ``file``).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="allow")
+
+    id: str
+    type: str
+
+
+class EnrichmentMessage(BaseModel):
+    """Read-only view of an enrichment message received from OpenCTI.
+
+    Built by ``InternalEnrichmentConnector`` for each message, with
+    ``EnrichmentMessage.model_validate(data)``, and passed to the processor's
+    ``can_process()``, ``collect()`` and ``transform()`` methods.
+
+    Attributes:
+        enrichment_entity: The entity to enrich, as read from OpenCTI.
+        stix_entity: The entity to enrich, as a STIX 2.1 object.
+        stix_objects: The STIX 2.1 dicts of the bundle containing the entity.
+            In a playbook, this is the bundle of the previous step.
+        from_playbook: Whether the message comes from a playbook step.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    enrichment_entity: OpenCTIEntity
+    stix_entity: StixEntity
+    stix_objects: list[dict[str, Any]]
+    from_playbook: bool
+
+    def to_log_metadata(self) -> dict[str, Any]:
+        """Return the context to log with every message about this enrichment.
 
         Returns:
-            A deep copy of ``stix_entity``.
+            The ``meta`` dict to pass to the logger.
         """
-        return copy.deepcopy(self.stix_entity)
-
-    def enriched_entity(self, entity: Any) -> EnrichedEntity:
-        """Declare the enriched version of the entity, to return from ``transform()``.
-
-        The connector merges ``entity`` into the entity received, in the shape the
-        platform sent it, instead of adding it to the bundle as a separate object:
-
-        - labels, external references, markings and hashes are added to the existing ones;
-        - score and description replace the existing ones, when ``entity`` provides them;
-        - other properties are only added when the entity does not have them;
-        - the id and the author of the entity are kept, even if ``entity`` has another id
-          (e.g. a model rebuilt with more file hashes); the objects referencing
-          ``entity`` (e.g. relationships built from it) are made to reference the entity.
-
-        Example:
-            >>> ip = IPV4Address(value=message.stix_entity["value"], score=80, labels=["vpn"])
-            >>> asn = AutonomousSystem(number=64500)
-            >>> return [
-            ...     message.enriched_entity(ip),
-            ...     asn,
-            ...     Relationship(type="belongs-to", source=ip, target=asn),
-            ... ]
-
-        Args:
-            entity: The enriched entity, as a connectors-sdk model, a stix2 object or a STIX dict.
-
-        Returns:
-            The ``EnrichedEntity`` to put in the list returned by ``transform()``.
-        """
-        return EnrichedEntity(entity)
+        return {
+            "octi_id": self.enrichment_entity.id,
+            "octi_entity_type": self.enrichment_entity.entity_type,
+            "from_playbook": self.from_playbook,
+        }
