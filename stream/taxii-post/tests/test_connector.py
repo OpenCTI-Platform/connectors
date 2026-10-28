@@ -265,3 +265,10 @@ def test_process_message_posts_remapped_identity_own_id():
     identity = {"id": ORIGINAL_ID_1, "type": "identity", "name": "testidentity"}
     posted_object = _post_through_connector(identity, IDENTITY_ID_MAPPING)
     assert posted_object["id"] == REPLACEMENT_ID_1
+
+
+def test_process_message_without_mapping_posts_ids_unchanged():
+    """When no mapping is configured the identity persists"""
+    identity = {"id": ORIGINAL_ID_1, "type": "identity", "name": "testidentity"}
+    posted_object = _post_through_connector(identity, {})
+    assert posted_object["id"] == ORIGINAL_ID_1
