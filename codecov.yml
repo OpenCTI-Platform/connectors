@@ -11,6 +11,7 @@ ignore:
   # changed" and blocks the required codecov/patch check.
   - ".github/**"
   - ".mise/**"
+  - "renovate.json"
 coverage:
   status:
     project:

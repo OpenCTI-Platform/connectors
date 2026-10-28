@@ -1,0 +1,5 @@
+tests/
+__metadata__/
+*.md
+.env*
+config.yml*
