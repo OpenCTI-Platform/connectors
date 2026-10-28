@@ -129,6 +129,15 @@ def _make_config_with_event_types(
     return config
 
 
+def _make_config_with_overrides(
+    base_config: dict[str, dict[str, Any]],
+    **overrides: Any,
+) -> dict[str, dict[str, Any]]:
+    config = deepcopy(base_config)
+    config["microsoft_sentinel_intel"].update(overrides)
+    return config
+
+
 def _mock_config_environ(
     mocker: MockerFixture,
     config_dict: dict[str, dict[str, Any]],
@@ -240,9 +249,12 @@ def fixture_mock_microsoft_sentinel_intel_score_as_confidence_config(
     mocker: MockerFixture,
     microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
 ) -> None:
-    config = deepcopy(microsoft_sentinel_intel_config_dict)
-    config["microsoft_sentinel_intel"]["use_score_as_confidence"] = True
-    _mock_config_environ(mocker, config)
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_config_dict, use_score_as_confidence=True
+        ),
+    )
 
 
 @pytest.fixture(
@@ -252,10 +264,14 @@ def fixture_mock_microsoft_sentinel_intel_score_as_confidence_keep_extensions_co
     mocker: MockerFixture,
     microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
 ) -> None:
-    config = deepcopy(microsoft_sentinel_intel_config_dict)
-    config["microsoft_sentinel_intel"]["use_score_as_confidence"] = True
-    config["microsoft_sentinel_intel"]["delete_extensions"] = False
-    _mock_config_environ(mocker, config)
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_config_dict,
+            use_score_as_confidence=True,
+            delete_extensions=False,
+        ),
+    )
 
 
 @pytest.fixture(name="mock_microsoft_sentinel_intel_batch_score_as_confidence_config")
@@ -263,6 +279,9 @@ def fixture_mock_microsoft_sentinel_intel_batch_score_as_confidence_config(
     mocker: MockerFixture,
     microsoft_sentinel_intel_batch_config_dict: dict[str, dict[str, Any]],
 ) -> None:
-    config = deepcopy(microsoft_sentinel_intel_batch_config_dict)
-    config["microsoft_sentinel_intel"]["use_score_as_confidence"] = True
-    _mock_config_environ(mocker, config)
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_batch_config_dict, use_score_as_confidence=True
+        ),
+    )
