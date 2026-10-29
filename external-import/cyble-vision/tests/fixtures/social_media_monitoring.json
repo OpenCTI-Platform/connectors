@@ -1,0 +1,272 @@
+{
+  "created_at": "2026-03-30T05:48:10.726043+00:00",
+  "updated_at": "2026-03-30T05:48:10.726043+00:00",
+  "deleted_at": null,
+  "id": "19d24057-72a0-5c53-83fd-8a6a4890090c",
+  "data_id": "04700826-b007-5e34-9762-0c30024830bb",
+  "entity_id": 176341,
+  "keyword_name": "Sam Example",
+  "entity_type": 0,
+  "service": "social_media_monitoring",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "LOW",
+  "updated_by_id": null,
+  "created_by": null,
+  "user_severity": "LOW",
+  "risk_score": null,
+  "bucket_id": 4135,
+  "source": "linkedin",
+  "category": "post",
+  "sentiment": "neutral",
+  "name": "Alex Example",
+  "title": null,
+  "type": "brand_mention",
+  "content_added_on": "2026-03-30T02:09:42+00:00",
+  "bucket_name": "Example Bucket",
+  "true_positive": false,
+  "llm_processed": true,
+  "llm_explanation": "The alert content is a positive post about Cyble's participation in an event and does not mention any fraudulent activities, scams, or negative sentiments related to the company.",
+  "data": {
+    "category": "post",
+    "confidence": "LOW",
+    "confidence_score": 92,
+    "finding_id": "c42db246-ab03-5946-bc9f-eeccb8df92c1",
+    "id": "19d24057-72a0-5c53-83fd-8a6a4890090c",
+    "language": "",
+    "location": {},
+    "metadata": {
+      "extras": {
+        "content": "Redacted sample content mentioning Sam Example.",
+        "content_hash": "859c306e393b720719a017f1e0a3a5b9345988c05b57f5c4db9dda67d10257b5",
+        "creator": {
+          "description": "Example profile description",
+          "followers": 9131,
+          "following": 7204,
+          "id": "ACoAAADWpTgBCVh7VD7w82dLOTvRGkK1iY2qlIw",
+          "is_public": false,
+          "is_verified": true,
+          "joined_at": "",
+          "language": "",
+          "media": [
+            {
+              "content_type": "image/jpeg",
+              "definition": "",
+              "dimension": "0x0",
+              "duration_sec": 0,
+              "extension": ".jpg",
+              "file_name": "1773047192474",
+              "impersonation": {
+                "match": false,
+                "tags": []
+              },
+              "key": "c06e50cb2fcc799957079bb00eee6d4bb1e443bbfb2d0c7070bdd4b20b443780.jpg",
+              "ocr": {
+                "accuracy": 0,
+                "text": ""
+              },
+              "projection": "",
+              "size": 19430,
+              "sub_type": "cover",
+              "type": "image",
+              "url": "https://host31.example56.com/dms/image/v2/D5616AQGopV_OJ6Vpuw/profile-displaybackgroundimage-shrink_350_1400/B56ZzR2RkJIsAY-/0/1773047192474?e=1776297600&v=beta&t=u5unq8CiJ2xyhNZe9jzpYgaLlz3YfG8HhViIyW3Ev5Y"
+            }
+          ],
+          "name": "Alex Example",
+          "url": "https://example24.com/in/alexexample",
+          "username": "user01",
+          "website_short_url": "",
+          "website_url": ""
+        },
+        "creator_type": "person",
+        "excerpts": [
+          {
+            "content": "",
+            "end": 533,
+            "match": "Sam Example",
+            "start": 518,
+            "type": "content"
+          }
+        ],
+        "extracts": {
+          "domains": [
+            "example56.com",
+            "example24.com"
+          ],
+          "ips": [],
+          "subdomains": [
+            "host31.example56.com",
+            "www.example24.com"
+          ],
+          "suspicious_urls": [],
+          "urls": [
+            "https://host31.example56.com/dms/image/v2/D5622AQGuLck2RpYUYQ/feedshare-shrink_2048_1536/B56Z08gPchG8Ag-/0/1774836578644?e=1776297600&v=beta&t=yRf7l9UBicRg0VFgjR3BDxmYhWE52g3U0peFigCiRl8",
+            "https://host31.example56.com/dms/image/v2/D5622AQGuBETS6JU3rA/feedshare-shrink_1280/B56Z08gPYMK0AM-/0/1774836578211?e=1776297600&v=beta&t=R6x3MvD6v2F2hTytuH1PBYyjndppyjKI-Iqwl8itF0Q",
+            "https://host31.example56.com/dms/image/v2/D5622AQEXIDnFZlCwZA/feedshare-shrink_2048_1536/B56Z08gPI2GYAk-/0/1774836577166?e=1776297600&v=beta&t=DOq_YHoUAAtODVW9ZuMy0XSNF2CFnVCG2o__Zk11O4k",
+            "https://host31.example56.com/dms/image/v2/D5622AQEd0KwXFVx5xg/feedshare-shrink_2048_1536/B56Z08gPYbJ8Ag-/0/1774836578375?e=1776297600&v=beta&t=-mi1AzD5n6-jDxG3WMmjIockhmxLgbEDkjkqNbFbSq0",
+            "https://www.example24.com/posts/alexexample_rsac2026-rsac2026-cyble-activity-7444204175242162176-81KY?utm_source=social_share_send&utm_medium=android_app",
+            "https://host31.example56.com/dms/image/v2/D5622AQEzTdwhc9L7_Q/feedshare-shrink_2048_1536/B56Z08gP2dJkAg-/0/1774836580835?e=1776297600&v=beta&t=euSyYXFslk-qyW4ND_kW7Napei_H1lr1JjsLowEBKUE"
+          ]
+        },
+        "hashtags": [
+          "RSAC2026",
+          "RSAC2026",
+          "Cyble",
+          "Cybersecurity",
+          "ThreatIntelligence",
+          "Partnerships",
+          "Growth"
+        ],
+        "id": "7444204175242162176",
+        "language": "",
+        "media": [
+          {
+            "content_type": "image/jpeg",
+            "definition": "",
+            "dimension": "0x0",
+            "duration_sec": 0,
+            "extension": ".jpg",
+            "file_name": "1774836578375",
+            "impersonation": {
+              "match": false,
+              "tags": []
+            },
+            "key": "5c70ff87f287b9b27e3857163d8cf719689ed5b3404c68c8bd8482be58bb61be.jpg",
+            "ocr": {
+              "accuracy": 0,
+              "text": ""
+            },
+            "projection": "",
+            "size": 367240,
+            "sub_type": "post",
+            "type": "image",
+            "url": "https://host31.example56.com/dms/image/v2/D5622AQEd0KwXFVx5xg/feedshare-shrink_2048_1536/B56Z08gPYbJ8Ag-/0/1774836578375?e=1776297600&v=beta&t=-mi1AzD5n6-jDxG3WMmjIockhmxLgbEDkjkqNbFbSq0"
+          },
+          {
+            "content_type": "image/jpeg",
+            "definition": "",
+            "dimension": "0x0",
+            "duration_sec": 0,
+            "extension": ".jpg",
+            "file_name": "1774836578644",
+            "impersonation": {
+              "match": false,
+              "tags": []
+            },
+            "key": "76b22e395c99326fa37ee33a7c4ea1462d3c834bc1372721b8ddd4bc0d0492b6.jpg",
+            "ocr": {
+              "accuracy": 0,
+              "text": ""
+            },
+            "projection": "",
+            "size": 323492,
+            "sub_type": "post",
+            "type": "image",
+            "url": "https://host31.example56.com/dms/image/v2/D5622AQGuLck2RpYUYQ/feedshare-shrink_2048_1536/B56Z08gPchG8Ag-/0/1774836578644?e=1776297600&v=beta&t=yRf7l9UBicRg0VFgjR3BDxmYhWE52g3U0peFigCiRl8"
+          },
+          {
+            "content_type": "image/jpeg",
+            "definition": "",
+            "dimension": "0x0",
+            "duration_sec": 0,
+            "extension": ".jpg",
+            "file_name": "1774836577166",
+            "impersonation": {
+              "match": false,
+              "tags": []
+            },
+            "key": "564910adfd33160f5b1a5c6bc2df129c5ec4e6a7a0bd0b3c85eba9470cfb0d0b.jpg",
+            "ocr": {
+              "accuracy": 0,
+              "text": ""
+            },
+            "projection": "",
+            "size": 366737,
+            "sub_type": "post",
+            "type": "image",
+            "url": "https://host31.example56.com/dms/image/v2/D5622AQEXIDnFZlCwZA/feedshare-shrink_2048_1536/B56Z08gPI2GYAk-/0/1774836577166?e=1776297600&v=beta&t=DOq_YHoUAAtODVW9ZuMy0XSNF2CFnVCG2o__Zk11O4k"
+          },
+          {
+            "content_type": "image/jpeg",
+            "definition": "",
+            "dimension": "0x0",
+            "duration_sec": 0,
+            "extension": ".jpg",
+            "file_name": "1774836578211",
+            "impersonation": {
+              "match": false,
+              "tags": []
+            },
+            "key": "c71b4ceea034c1eb4d8389738975ee957f3f6d6c03d5b3689662b114e3450653.jpg",
+            "ocr": {
+              "accuracy": 0,
+              "text": ""
+            },
+            "projection": "",
+            "size": 408322,
+            "sub_type": "post",
+            "type": "image",
+            "url": "https://host31.example56.com/dms/image/v2/D5622AQGuBETS6JU3rA/feedshare-shrink_1280/B56Z08gPYMK0AM-/0/1774836578211?e=1776297600&v=beta&t=R6x3MvD6v2F2hTytuH1PBYyjndppyjKI-Iqwl8itF0Q"
+          },
+          {
+            "content_type": "image/jpeg",
+            "definition": "",
+            "dimension": "0x0",
+            "duration_sec": 0,
+            "extension": ".jpg",
+            "file_name": "1774836580835",
+            "impersonation": {
+              "match": false,
+              "tags": []
+            },
+            "key": "312dc24ec4acfc7695577242d07188e4fadd1ca28eacb05a5a56d7db88274bb0.jpg",
+            "ocr": {
+              "accuracy": 0,
+              "text": ""
+            },
+            "projection": "",
+            "size": 420815,
+            "sub_type": "post",
+            "type": "image",
+            "url": "https://host31.example56.com/dms/image/v2/D5622AQEzTdwhc9L7_Q/feedshare-shrink_2048_1536/B56Z08gP2dJkAg-/0/1774836580835?e=1776297600&v=beta&t=euSyYXFslk-qyW4ND_kW7Napei_H1lr1JjsLowEBKUE"
+          }
+        ],
+        "mentions": [],
+        "posted_at": "2026-03-30 02:09:42",
+        "screenshot_key": "",
+        "title": "",
+        "url": "https://www.example24.com/posts/alexexample_rsac2026-rsac2026-cyble-activity-7444204175242162176-81KY?utm_source=social_share_send&utm_medium=android_app"
+      }
+    },
+    "rules": [
+      {
+        "name": "keyword_match",
+        "nice_name": "Keyword Match",
+        "weightage": 2
+      },
+      {
+        "name": "location_mention",
+        "nice_name": "Location Mention",
+        "weightage": 3
+      }
+    ],
+    "sentiment": "neutral",
+    "source": "linkedin",
+    "tags": [
+      {
+        "count": 1,
+        "name": "cybersecurity_discussions",
+        "nice_name": "Cybersecurity Discussions"
+      }
+    ],
+    "type": "brand_mention",
+    "weightage": 2
+  },
+  "tags": [
+    "Cybersecurity Discussions"
+  ]
+}

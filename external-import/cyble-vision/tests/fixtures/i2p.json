@@ -1,0 +1,41 @@
+{
+  "created_at": "2026-04-10T04:53:23.566515+00:00",
+  "updated_at": "2026-04-10T04:53:23.566515+00:00",
+  "deleted_at": null,
+  "id": "b5b4503c-7791-5ba0-aa67-6ad71d0c8771",
+  "data_id": "334d0d60-b52e-5fa6-afdd-c79c4a5adc61",
+  "entity_id": 176332,
+  "keyword_name": "data leakage",
+  "entity_type": 0,
+  "service": "i2p",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": "3cb90972-78d3-50df-8eb2-2de52efacb2e",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": 94.55960083007812,
+  "bucket_id": 2235,
+  "url": "http://mmgen-wallet.i2p/project/mmgen/mmgen-wallet/src/master/doc/wiki/Install-MMGen-Wallet-on-Microsoft-Windows.md",
+  "content_updated_on": "2026-04-10T05:00:29.519343+00:00",
+  "bucket_name": "Example Bucket",
+  "true_positive": false,
+  "llm_processed": true,
+  "llm_explanation": "The alert does not mention any compromised data, password exchanges, or financial fraud discussions related to Cyble.",
+  "data": {
+    "_id": "63d65882355aa61c3725393aabee4e36",
+    "data": "\n\n\\n\t\t\t\t© 2026 The MMGen Project\n\t\t\t\n\n\n\t\t\t\t\t\tPage: 31ms Template: 2ms\n\n\n\nEnglish\n\nEnglish\n\n\nJavascript Licenses\nWebsite\n\n\n\n\n\n\n\n\n\n\n",
+    "i2p_url": "http://mmgen-wallet.i2p/project/mmgen/mmgen-wallet/src/master/doc/wiki/Install-MMGen-Wallet-on-Microsoft-Windows.md",
+    "id": "63d65882355aa61c3725393aabee4e36",
+    "search_engine": "i2psearch.i2p",
+    "search_keyword": "example50.com",
+    "updated_on": "2026-04-10 05:00:29.519343"
+  },
+  "tags": [
+    "Cybersecurity Discussions"
+  ]
+}

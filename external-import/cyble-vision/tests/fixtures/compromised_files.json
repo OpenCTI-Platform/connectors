@@ -1,0 +1,51 @@
+{
+  "created_at": "2026-04-07T11:35:46.428800+00:00",
+  "updated_at": "2026-04-07T11:35:46.428800+00:00",
+  "deleted_at": null,
+  "id": "402e4a00-65ac-5261-9c7d-8536c5b0ec93",
+  "data_id": "c38b4c25-22b4-5264-a167-30083989dd69",
+  "entity_id": 3437605,
+  "keyword_name": "example1.com",
+  "entity_type": 0,
+  "service": "compromised_files",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": "3cb90972-78d3-50df-8eb2-2de52efacb2e",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": 93.52639770507812,
+  "bucket_id": 11643,
+  "filename": "LocalStorage.txt",
+  "extension": ".txt",
+  "compromised_date": "2026-02-23T09:54:55+00:00",
+  "bucket_name": "Example Bucket",
+  "true_positive": false,
+  "llm_processed": false,
+  "llm_explanation": "",
+  "data": {
+    "compromised_on": "2026-02-23T09:54:55.000000Z",
+    "content": "Redacted sample content mentioning example1.com.",
+    "created_on": "2026-04-07T08:08:47",
+    "doc_id": "b6f773e82ee551263d5cbb66d210bc7f",
+    "file_obj_path": "s3://clde-es-prod-stealerlogs/stlogs/extracted/compromised_files/20260407080847/session1/65b230788f832586a876dbc5b0974a07.txt",
+    "log_name": "example-log",
+    "log_obj_path": "s3://clde-es-prod-stealerlogs/stlogs/extracted/compromised_logs/20260407080847/session1/DF[QMEPUL9I5MORAFUR8XB76ICG8YMGSZHD89][@examplechannel]_6c66d761f1c9e1e45a9973756e819b6f.zip",
+    "meta_data": {
+      "c_date": "2026-04-07T08:52:02.368974",
+      "file_name": "LocalStorage.txt",
+      "file_path": "/mnt/extracted/example/session1/Passwords.txt",
+      "file_size": 948085,
+      "m_date": "2026-02-23T23:21:39"
+    },
+    "parent_folder_path_id": "69f51b77d1f3ff539c87d4c9cf8e0482",
+    "relative_path": "example-log/Chrome/Profile 1/Passwords.txt"
+  },
+  "tags": [
+    "Probable Token"
+  ]
+}

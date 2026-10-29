@@ -1,0 +1,30 @@
+{
+  "title": "Cyble Vision",
+  "slug": "cyble-vision",
+  "description": "The Cyble Vision connector imports digital risk protection alerts and threat intelligence from the Cyble Vision platform into OpenCTI as STIX 2.1 objects.\n\nOn each run the connector discovers the Vision services the API token is entitled to, pages through new alerts for each service and maps them to OpenCTI entities: Incidents with severity, labels and a deep link back to Vision, plus the observables, indicators, vulnerabilities, intrusion sets and relationships each alert type carries (for example leaked credentials, stealer logs, phishing domains, exposed assets, SSL certificates, ransomware and hacktivism activity). Customer-owned assets are never emitted as malicious indicators.\n\nIt can also import Cyble research advisories, newsfeed articles and newsflash spot reports as Reports. Progress is checkpointed per service so later runs are incremental, and alert services added by Cyble in the future fall back to a generic Incident instead of failing the import.",
+  "short_description": "Imports Cyble Vision digital risk alerts (leaked credentials, stealer logs, phishing, exposed assets, dark web and ransomware activity) and Cyble research reports into OpenCTI as STIX 2.1 incidents, observables and reports.",
+  "logo": "external-import/cyble-vision/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure",
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed",
+    "Attack Surface Management"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@cyble.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://cyble.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cyble-vision",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cyble-vision",
+  "container_type": "EXTERNAL_IMPORT"
+}

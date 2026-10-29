@@ -1,0 +1,29 @@
+{
+  "title": "DragonForce Leaks 156.32 GB Allegedly Stolen from American Retail Chain, Belk Inc",
+  "summaryOfThreatActivity": "DragonForce ransomware group has leaked 156.32 GB of data allegedly stolen from Belk Inc.",
+  "threatActivityDate": "2025-07-14T00:00:00.000Z",
+  "threatActorHandle": "Dragonforce",
+  "impactedOrganizations": [
+    "Belk Inc"
+  ],
+  "relatedWebsites": [
+    "example47.com"
+  ],
+  "extraFields": {
+    "May incident breach notification": "https://host28.example48.com/files/uploads/doj/remote-docs/belk-20250605.pdf"
+  },
+  "industryTypes": [
+    "Retail"
+  ],
+  "impactedCountries": [
+    "United States"
+  ],
+  "tags": [
+    "Ransomware Attack",
+    "Data Breach"
+  ],
+  "publishedDate": "2025-07-14 14:50:20",
+  "moderationStatus": [
+    "vetted"
+  ]
+}
