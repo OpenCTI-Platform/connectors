@@ -1,7 +1,9 @@
 import json
 from typing import Any
+from unittest.mock import patch
 
-from main import ReversingLabsSpectraAnalyzeConnector
+import pytest
+from main import A1000, ReversingLabsSpectraAnalyzeConnector
 from pycti import OpenCTIConnectorHelper
 from settings import ConfigLoader
 
@@ -196,3 +198,22 @@ def test_should_send_identity(file_enrichment_message, detailed_report_response)
             "malware",
         ]:
             assert item["created_by_ref"] == identity_id
+
+
+@pytest.mark.parametrize("ssl_verify", ["true", "false"])
+def test_should_create_client_with_configured_ssl_verification(
+    monkeypatch, ssl_verify, file_enrichment_message, detailed_report_response
+):
+    monkeypatch.setenv("REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY", ssl_verify)
+    config = ConfigLoader()
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    connector = ReversingLabsSpectraAnalyzeConnector(config=config, helper=helper)
+    connector.helper.send_stix2_bundle = lambda bundle, **_: []
+
+    with patch("main.A1000", wraps=A1000) as a1000_mock:
+        connector._process_message(file_enrichment_message)
+
+    assert (
+        a1000_mock.call_args.kwargs["verify"]
+        is config.reversinglabs_spectra_analyze.ssl_verify
+    )
