@@ -313,3 +313,13 @@ def test_risk_threshold_rejects_negative_value():
         _ConfigLoaderRecordedFuture(**kwargs)
 
     assert "greater than or equal to 0" in str(err.value)
+
+
+def test_risk_threshold_rejects_value_above_100():
+    kwargs = _minimal_kwargs()
+    kwargs["risk_threshold"] = 101
+
+    with pytest.raises(ValidationError) as err:
+        _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert "less than or equal to 100" in str(err.value)
