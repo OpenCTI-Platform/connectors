@@ -89,7 +89,10 @@ class VirusTotalClient:
             f"{retry_after} seconds. Reduce the enrichment volume or upgrade "
             "the VirusTotal API quota."
         )
-        self.helper.connector_logger.error(f"[VirusTotal] {message}")
+        self.helper.connector_logger.warning(
+            "[VirusTotal] Quota exceeded",
+            meta={"message": message, "retry_after": retry_after},
+        )
         raise VirusTotalQuotaExceededError(message)
 
     @staticmethod
