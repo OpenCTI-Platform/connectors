@@ -1,10 +1,12 @@
 """Converts a GTI threat actor to a STIX intrusion set object."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
+    SeenDetail,
     ThreatActorModel,
 )
 from connector.src.stix.octi.models.intrusion_set_model import OctiIntrusionSetModel
@@ -21,6 +23,9 @@ from connectors_sdk.models import (  # type: ignore[import-untyped]
     TLPMarking,
 )
 from stix2.v21 import IntrusionSet  # type: ignore
+
+LOG_PREFIX = "[GTIThreatActorToSTIXIntrusionSet]"
+_logger = logging.getLogger(__name__)
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
@@ -176,39 +181,47 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             tuple: (first_seen, last_seen) datetime objects or None if dates don't exist
 
         """
-        first_seen = None
-        if (
-            hasattr(attributes, "first_seen_details")
-            and attributes.first_seen_details
-            and len(attributes.first_seen_details) > 0
-            and hasattr(attributes.first_seen_details[0], "value")
-            and attributes.first_seen_details[0].value
-        ):
-            try:
-                first_seen_str = attributes.first_seen_details[0].value
-                first_seen = datetime.strptime(
-                    first_seen_str, "%Y-%m-%dT%H:%M:%SZ"
-                ).replace(tzinfo=timezone.utc)
-            except (ValueError, TypeError):
-                first_seen = None
-
-        last_seen = None
-        if (
-            hasattr(attributes, "last_seen_details")
-            and attributes.last_seen_details
-            and len(attributes.last_seen_details) > 0
-            and hasattr(attributes.last_seen_details[0], "value")
-            and attributes.last_seen_details[0].value
-        ):
-            try:
-                last_seen_str = attributes.last_seen_details[0].value
-                last_seen = datetime.strptime(
-                    last_seen_str, "%Y-%m-%dT%H:%M:%SZ"
-                ).replace(tzinfo=timezone.utc)
-            except (ValueError, TypeError):
-                last_seen = None
-
+        first_seen = GTIThreatActorToSTIXIntrusionSet._parse_seen_date(
+            attributes.first_seen_details, "first_seen"
+        )
+        last_seen = GTIThreatActorToSTIXIntrusionSet._parse_seen_date(
+            attributes.last_seen_details, "last_seen"
+        )
         return first_seen, last_seen
+
+    @staticmethod
+    def _parse_seen_date(
+        seen_details: list[SeenDetail] | None, field_name: str
+    ) -> datetime | None:
+        """Parse the first seen detail value into a UTC datetime.
+
+        The GTI API returns ISO 8601 dates with or without fractional seconds
+        (e.g. 2017-12-31T00:00:00Z or 2024-07-29T04:00:02.522Z).
+
+        Args:
+            seen_details: The first_seen_details or last_seen_details list
+            field_name: The STIX field name, used in the log on parsing failure
+
+        Returns:
+            datetime | None: The parsed date, or None if absent or invalid
+
+        """
+        if not seen_details or not seen_details[0].value:
+            return None
+
+        value = seen_details[0].value
+        try:
+            seen_date = datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            _logger.warning(
+                "Invalid threat actor seen date, field left empty",
+                {"log_prefix": LOG_PREFIX, "field": field_name, "value": value},
+            )
+            return None
+
+        if seen_date.tzinfo is None:
+            seen_date = seen_date.replace(tzinfo=timezone.utc)
+        return seen_date
 
     def _extract_motivations(
         self, attributes: ThreatActorModel
