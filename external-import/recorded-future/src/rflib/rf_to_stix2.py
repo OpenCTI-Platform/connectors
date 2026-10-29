@@ -161,7 +161,7 @@ class Indicator(RFStixEntity):
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
             custom_properties={
-                "x_opencti_score": self.risk_score or None,
+                "x_opencti_score": self.risk_score,
                 "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators(),
             },
         )
@@ -236,7 +236,7 @@ class Indicator(RFStixEntity):
         try:
             self.risk_score = int(rf_indicator["Risk"])
         except ValueError:
-            self.risk_score = 0
+            self.risk_score = None
 
         # Get related entities
         related_entities_links = json.loads(rf_indicator["Links"])
@@ -888,7 +888,7 @@ class Vulnerability(RFStixEntity):
             created=self.first_seen,
             modified=self.last_seen,
             custom_properties={
-                "x_opencti_score": self.risk_score or None,
+                "x_opencti_score": self.risk_score,
             },
         )
 
@@ -905,7 +905,7 @@ class Vulnerability(RFStixEntity):
         try:
             self.risk_score = int(rf_vuln["Risk"])
         except ValueError:
-            self.risk_score = 0
+            self.risk_score = None
 
         # Get related entities
         related_entities_links = json.loads(rf_vuln["Links"])
@@ -1347,13 +1347,17 @@ class StixNote:
                     if self.risk_threshold or self.risk_as_score:
                         risk_score = self._get_entity_risk_score(type_, name)
                     # If a min threshold was defined, we ignore the indicator if its score
-                    # is unknown or lower than the defined threshold
+                    # is unknown or lower than the defined threshold.
+                    # The check is deliberately a truthiness one: a threshold of 0 (or None)
+                    # disables the filtering, so indicators with a score of 0 or without
+                    # any score (unknown to the risk API) are kept.
                     if self.risk_threshold and (
                         risk_score is None or risk_score < self.risk_threshold
                     ):
                         self.helper.connector_logger.info(
-                            "[ANALYST NOTES] Ignoring entity below risk threshold or without risk score",
-                            {
+                            "[ANALYST NOTES] Ignoring indicator below risk threshold or without risk score",
+                            meta={
+                                "note_id": note["id"],
                                 "entity": name,
                                 "type": type_,
                                 "risk_score": risk_score,
