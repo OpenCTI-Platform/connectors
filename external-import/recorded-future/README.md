@@ -280,7 +280,9 @@ For Note entities, the following Recorded Future Entity types are supported:
 > such indicators are revoked at creation, since 0 is at or below the decay revoke score. This
 > applies to Analyst Notes indicators with `risk_as_score` enabled and a threshold of `0` or `null`,
 > and to risk lists with a `null` `risk_list_threshold`. An empty or non-numeric `Risk` value in a
-> risk list sends no score.
+> risk list sends no score. A later import of the same indicator without a score (`risk_as_score`
+> turned off, or a score the risk API no longer returns) resets its score to the platform default
+> of 50 and un-revokes it.
 
 The connector creates the following relationships between imported entities:
 
