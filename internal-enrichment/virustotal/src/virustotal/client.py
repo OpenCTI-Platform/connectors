@@ -5,11 +5,21 @@ import hashlib
 import json
 import time
 import urllib.parse
+from collections.abc import Callable
 
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+
+# Longest Retry-After (in seconds) the client waits for on HTTP 429. A longer
+# wait means a daily or monthly quota is exhausted: waiting for the reset would
+# block the whole enrichment queue for hours, so the request fails instead.
+QUOTA_MAX_WAIT = 60
+
+
+class VirusTotalQuotaExceededError(Exception):
+    """VirusTotal answered HTTP 429 and its quota does not reset soon."""
 
 
 class VirusTotalClient:
@@ -28,6 +38,82 @@ class VirusTotalClient:
             "accept": "application/json",
             "x-tool": f"OpenCTI VirusTotal Connector {self.helper.connector_id}",
         }
+
+    def _send(self, send: Callable[[], requests.Response]) -> requests.Response:
+        """
+        Send a request, waiting once when VirusTotal answers HTTP 429.
+
+        The request is sent again only when the Retry-After header asks for
+        at most QUOTA_MAX_WAIT seconds (per-minute quota). Otherwise, or when
+        the second attempt gets HTTP 429 too, the quota is reported as
+        exhausted.
+
+        Parameters
+        ----------
+        send : Callable[[], requests.Response]
+            Sends the request and returns the response.
+
+        Returns
+        -------
+        requests.Response
+            The first response that is not HTTP 429.
+
+        Raises
+        ------
+        VirusTotalQuotaExceededError
+            When the quota does not reset within QUOTA_MAX_WAIT seconds.
+        """
+        response = send()
+        if response.status_code != 429:
+            return response
+
+        retry_after = self._retry_after(response)
+        if retry_after <= QUOTA_MAX_WAIT:
+            self.helper.connector_logger.warning(
+                "[VirusTotal] Quota exceeded, waiting before retrying",
+                {"retry_after": retry_after},
+            )
+            time.sleep(retry_after)
+            response = send()
+            if response.status_code != 429:
+                return response
+            retry_after = self._retry_after(response)
+
+        try:
+            error = response.json().get("error") or {}
+        except (ValueError, AttributeError):
+            error = {}
+        message = (
+            f"VirusTotal quota exceeded ({error.get('code', 'HTTP 429')}: "
+            f"{error.get('message', 'Too many requests')}), retry after "
+            f"{retry_after} seconds. Reduce the enrichment volume or upgrade "
+            "the VirusTotal API quota."
+        )
+        self.helper.connector_logger.error(f"[VirusTotal] {message}")
+        raise VirusTotalQuotaExceededError(message)
+
+    @staticmethod
+    def _retry_after(response: requests.Response) -> int:
+        """
+        Read the Retry-After header of an HTTP 429 response, in seconds.
+
+        A missing or unreadable header counts as QUOTA_MAX_WAIT: a per-minute
+        quota resets within that time.
+
+        Parameters
+        ----------
+        response : requests.Response
+            HTTP 429 response.
+
+        Returns
+        -------
+        int
+            Seconds to wait before the quota resets.
+        """
+        try:
+            return max(0, int(response.headers["Retry-After"]))
+        except (KeyError, TypeError, ValueError):
+            return QUOTA_MAX_WAIT
 
     def _query(self, url):
         """
@@ -49,20 +135,28 @@ class VirusTotalClient:
             The result of the query, as JSON or None in case of failure.
         """
         # Configure the adapter for the retry strategy.
+        # HTTP 429 is handled by _send, see QUOTA_MAX_WAIT. urllib3 must ignore
+        # Retry-After, or it retries 429 itself and sleeps until the reset.
         retry_strategy = Retry(
             total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
+            status_forcelist=[500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
+            respect_retry_after_header=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
         response = None
         try:
-            response = http.get(
-                url, headers=self.headers | {"content-type": "application/json"}
+            response = self._send(
+                lambda: http.get(
+                    url, headers=self.headers | {"content-type": "application/json"}
+                )
             )
             response.raise_for_status()
+        except VirusTotalQuotaExceededError:
+            self.helper.metric.inc("client_error_count")
+            raise
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
             self.helper.metric.inc("client_error_count")
@@ -119,10 +213,15 @@ class VirusTotalClient:
             else self.headers | additional_headers
         )
         try:
-            response = requests.post(
-                url, data=data, files=files, headers=headers, timeout=60
+            response = self._send(
+                lambda: requests.post(
+                    url, data=data, files=files, headers=headers, timeout=60
+                )
             )
             response.raise_for_status()
+        except VirusTotalQuotaExceededError:
+            self.helper.metric.inc("client_error_count")
+            raise
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
             self.helper.metric.inc("client_error_count")
@@ -471,7 +570,10 @@ class VirusTotalClient:
             and len(collected_data) < limit
             and page.get("links", {}).get("next")
         ):
-            page = self._query(page["links"]["next"])
+            try:
+                page = self._query(page["links"]["next"])
+            except VirusTotalQuotaExceededError:
+                break
             if page is None or "error" in page:
                 break
             # Break and warn when consecutive pages return the same result
