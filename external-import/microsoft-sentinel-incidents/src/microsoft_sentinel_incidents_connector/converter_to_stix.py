@@ -352,10 +352,11 @@ class ConverterToStix:
             )
             return stix_identity_system
         else:
-            self.helper.connector_logger.error(
+            self.helper.connector_logger.warning(
                 "HostEntity HostName is none, unable to convert to System entity",
-                evidence,
+                meta={"entity_id": evidence.get("$id")},
             )
+            return None
 
     @handle_stix2_error
     def create_evidence_custom_observable_hostname(
@@ -366,6 +367,8 @@ class ConverterToStix:
         :param evidence: Evidence to create Observable Hostname from
         :return: Observable Hostname in STIX 2.1 format
         """
+        if not evidence.get("HostName"):
+            return None
         stix_hostname = CustomObservableHostname(
             value=evidence.get("HostName"),
             object_marking_refs=[self.tlp_marking],
