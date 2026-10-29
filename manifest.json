@@ -8027,8 +8027,9 @@
           },
           "RECORDED_FUTURE_RISK_THRESHOLD": {
             "default": 60,
-            "description": "Minimum risk score threshold (0-100) for importing entities.",
-            "exclusiveMinimum": 0,
+            "description": "Minimum risk score (0-100) for the indicators (IP address, domain, URL, hash) found in analyst notes. Indicators with a lower risk score, or without any risk score, are not imported. Set to 0 to disable this filtering and import all indicators. Only applies to analyst notes: risk lists use `risk_list_threshold`.",
+            "maximum": 100,
+            "minimum": 0,
             "type": "integer"
           },
           "RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS": {
@@ -37300,6 +37301,11 @@
           "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS": {
             "default": true,
             "description": "Delete the extensions in the stix bundle sent to the SIEM",
+            "type": "boolean"
+          },
+          "MICROSOFT_SENTINEL_INTEL_USE_SCORE_AS_CONFIDENCE": {
+            "default": false,
+            "description": "Send the OpenCTI score in the STIX confidence property instead of the OpenCTI confidence. Objects without a score are sent without confidence. Microsoft Sentinel has no score field and does not index STIX extensions.",
             "type": "boolean"
           },
           "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS": {
