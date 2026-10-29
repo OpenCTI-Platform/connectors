@@ -18,9 +18,11 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
 | REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS | `string` |  | `windows11` `windows10` `windows7` `macos11` `linux` |  | `"windows10"` | The platform to execute the sample on |
 | REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS | `boolean` |  | boolean |  | `true` | Enable cloud analysis |
+| REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY | `boolean` |  | boolean |  | `true` | Whether to verify the SSL certificate of the Spectra Analyze appliance. |
 | REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |
 | REVERSINGLABS_URL | `string` |  | string | ⛔️ |  | Use REVERSINGLABS_SPECTRA_ANALYZE_URL instead. |
 | REVERSINGLABS_TOKEN | `string` |  | string | ⛔️ |  | Use REVERSINGLABS_SPECTRA_ANALYZE_TOKEN instead. |
 | REVERSINGLABS_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |
 | REVERSINGLABS_SANDBOX_OS | `string` |  | `windows11` `windows10` `windows7` `macos11` `linux` | ⛔️ | `"windows10"` | Use REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS instead. |
 | REVERSINGLABS_CLOUD_ANALYSIS | `boolean` |  | boolean | ⛔️ | `true` | Use REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS instead. |
+| REVERSINGLABS_SSL_VERIFY | `boolean` |  | boolean | ⛔️ | `true` | Use REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY instead. |
