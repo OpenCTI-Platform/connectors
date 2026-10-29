@@ -54,13 +54,13 @@
       "format": "duration",
       "type": "string"
     },
-    "STAIRWELL_API_TOKEN": {
+    "STAIRWELL_IMPORT_API_TOKEN": {
       "description": "Stairwell API token (Bearer auth).",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "STAIRWELL_API_BASE_URL": {
+    "STAIRWELL_IMPORT_API_BASE_URL": {
       "default": "https://app.stairwell.com",
       "description": "Stairwell API base URL.",
       "format": "uri",
@@ -68,12 +68,12 @@
       "minLength": 1,
       "type": "string"
     },
-    "STAIRWELL_ORGANIZATION_ID": {
+    "STAIRWELL_IMPORT_ORGANIZATION_ID": {
       "default": "",
       "description": "Optional Stairwell organization id (rate-limit header).",
       "type": "string"
     },
-    "STAIRWELL_USER_ID": {
+    "STAIRWELL_IMPORT_USER_ID": {
       "default": "",
       "description": "Optional Stairwell user id (rate-limit header).",
       "type": "string"
@@ -134,7 +134,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "STAIRWELL_API_TOKEN"
+    "STAIRWELL_IMPORT_API_TOKEN"
   ],
   "additionalProperties": true
 }

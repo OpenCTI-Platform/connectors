@@ -26,6 +26,7 @@ from connector.stix_builder import (
     md_prose,
     md_text,
     network_observable_for,
+    stairwell_identity,
     tlp_marking,
     tlp_marking_object,
     valid_hash,
@@ -55,6 +56,9 @@ def test_sdo_and_sro_ids_are_opencti_canonical():
         Indicator.generate_id(pattern)
     )
     assert STAIRWELL_IDENTITY_ID == Identity.generate_id("Stairwell", "organization")
+    author = stairwell_identity()
+    assert author["id"] == STAIRWELL_IDENTITY_ID
+    assert author["created"] == author["modified"] == "2026-01-01T00:00:00.000Z"
     asset = make_identity_system("assets/X1", name="RISER")
     assert asset["id"] == Identity.generate_id("assets/X1", "system")
     sighting = make_sighting(

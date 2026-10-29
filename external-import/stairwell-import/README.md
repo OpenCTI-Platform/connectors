@@ -13,7 +13,8 @@ observables, not Indicators. Everything is wrapped in a Grouping or Report.
 ## Configuration
 
 Configuration is loaded via the `connectors-sdk` settings layer: from
-`src/config.yml` if present, otherwise from environment variables.
+`config.yml` in the connector directory if present, otherwise from
+environment variables.
 Environment variables override the file.
 
 ### OpenCTI
@@ -38,18 +39,18 @@ Environment variables override the file.
 
 | Parameter | config.yml | Env var | Required | Default | Description |
 |---|---|---|---|---|---|
-| API token | `stairwell.api_token` | `STAIRWELL_API_TOKEN` | yes | — | Stairwell API token |
-| API base URL | `stairwell.api_base_url` | `STAIRWELL_API_BASE_URL` | no | `https://app.stairwell.com` | Override for staging |
-| Organization ID | `stairwell.organization_id` | `STAIRWELL_ORGANIZATION_ID` | no | — | Adds rate-limit header |
-| User ID | `stairwell.user_id` | `STAIRWELL_USER_ID` | no | — | Adds rate-limit header |
-| Import TLP | `stairwell.import_tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
-| First-run window | `stairwell.import_first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run (days, hours, minutes, seconds; an invalid value falls back to `P1D`) |
-| Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
-| Page size | `stairwell.import_page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
-| Indicator validity | `stairwell.import_indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
-| Min bucket | `stairwell.import_min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` |
-| Import scope | `stairwell.import_scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | Reserved for forward-compat — accepted but **not yet effective**; every run currently queries the full corpus |
-| Wrapper | `stairwell.import_wrapper` | `STAIRWELL_IMPORT_WRAPPER` | no | `grouping` | `grouping` or `report` |
+| API token | `stairwell_import.api_token` | `STAIRWELL_IMPORT_API_TOKEN` | yes | — | Stairwell API token |
+| API base URL | `stairwell_import.api_base_url` | `STAIRWELL_IMPORT_API_BASE_URL` | no | `https://app.stairwell.com` | Override for staging |
+| Organization ID | `stairwell_import.organization_id` | `STAIRWELL_IMPORT_ORGANIZATION_ID` | no | — | Adds rate-limit header |
+| User ID | `stairwell_import.user_id` | `STAIRWELL_IMPORT_USER_ID` | no | — | Adds rate-limit header |
+| Import TLP | `stairwell_import.tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
+| First-run window | `stairwell_import.first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run (days, hours, minutes, seconds; an invalid value falls back to `P1D`) |
+| Max indicators | `stairwell_import.max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
+| Page size | `stairwell_import.page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
+| Indicator validity | `stairwell_import.indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
+| Min bucket | `stairwell_import.min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` |
+| Import scope | `stairwell_import.scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | Reserved for forward-compat — accepted but **not yet effective**; every run currently queries the full corpus |
+| Wrapper | `stairwell_import.wrapper` | `STAIRWELL_IMPORT_WRAPPER` | no | `grouping` | `grouping` or `report` |
 
 ## Behavior
 
@@ -86,7 +87,7 @@ Environment variables override the file.
   both truncated to whole seconds, so adjacent windows still meet exactly),
   so a cursor resumed on a later day fetches the same objects, and newer files
   wait for the next window. Because windows are keyed on first-seen time, a
-  file whose MalEval verdict reaches `import_min_bucket` only after its window
+  file whose MalEval verdict reaches `STAIRWELL_IMPORT_MIN_BUCKET` only after its window
   was read is not imported later: Stairwell's API exposes no verdict-update
   time to query on. The enrichment connector reflects the current verdict for
   any file it is run on. If the very first run fails, retries reuse its
@@ -107,13 +108,13 @@ Environment variables override the file.
   file, extracted IPs that are not valid addresses and URLs without an
   http(s)/ftp(s) scheme, a hostname, and a valid nonzero port are dropped, and
   source timestamps are normalised to UTC. Objects without a MalEval bucket at or
-  above `import_min_bucket` are filtered.
+  above `STAIRWELL_IMPORT_MIN_BUCKET` are filtered.
 - **Per-run wrapper.** Each run's objects are grouped under their own
   Grouping (default) or Report SDO, so reviewers can see exactly what landed
-  in one batch; `import_wrapper` accepts only `grouping` or `report`.
+  in one batch; `STAIRWELL_IMPORT_WRAPPER` accepts only `grouping` or `report`.
 - **Indicator validity.** Each Indicator's `valid_from` is derived from the
   Stairwell first-seen time (falling back to the run start time), and
-  `valid_until` = `valid_from + import_indicator_validity_days`.
+  `valid_until` = `valid_from` + `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` days.
 
 ## Installation
 
@@ -128,10 +129,9 @@ Then add the service from `docker-compose.yml` to your OpenCTI deployment.
 ### Local development
 
 ```bash
-cd src
-pip install -r requirements.txt
 cp config.yml.sample config.yml   # edit values
-python3 main.py
+pip install -r src/requirements.txt
+python3 src/main.py
 ```
 
 ## Tests

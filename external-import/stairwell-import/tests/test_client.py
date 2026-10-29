@@ -30,7 +30,7 @@ def _requested_url(client):
 
 
 def test_empty_token_is_rejected():
-    with pytest.raises(ValueError, match="STAIRWELL_API_TOKEN"):
+    with pytest.raises(ValueError, match="Stairwell API token"):
         StairwellClient(api_token="")
 
 

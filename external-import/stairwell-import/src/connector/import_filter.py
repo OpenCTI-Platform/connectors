@@ -84,7 +84,7 @@ def build_cel_filter(
     - `mal_eval.probability_bucket` isn't queryable with the `in` operator (the
       API returns 500 "Unable to query objects"), so the minimum-bucket filter
       runs client-side after each page is fetched.
-    - There is no known per-environment CEL field, so `import_scope` is
+    - There is no known per-environment CEL field, so `STAIRWELL_IMPORT_SCOPE` is
       accepted in settings but not applied.
     """
     clauses: list[str] = ["mal_eval.malicious==true"]

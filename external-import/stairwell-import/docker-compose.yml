@@ -1,25 +1,27 @@
 services:
   connector-stairwell-import:
-    image: opencti/connector-stairwell-import:rolling
+    image: opencti/connector-stairwell-import:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_STAIRWELL_IMPORT_ID}
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=Stairwell Import
-      - CONNECTOR_SCOPE=stairwell
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=P1D
-      - STAIRWELL_API_TOKEN=${STAIRWELL_API_TOKEN}
-      - STAIRWELL_API_BASE_URL=https://app.stairwell.com
-      - STAIRWELL_ORGANIZATION_ID=${STAIRWELL_ORGANIZATION_ID:-}
-      - STAIRWELL_USER_ID=${STAIRWELL_USER_ID:-}
-      - STAIRWELL_IMPORT_TLP=green
-      - STAIRWELL_IMPORT_FIRST_RUN_WINDOW=P1D
-      - STAIRWELL_IMPORT_MAX_INDICATORS=1000
-      - STAIRWELL_IMPORT_PAGE_SIZE=100
-      - STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS=90
-      - STAIRWELL_IMPORT_MIN_BUCKET=HIGH
-      - STAIRWELL_IMPORT_SCOPE=environment
-      - STAIRWELL_IMPORT_WRAPPER=grouping
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=Stairwell Import # optional (default: 'Stairwell Import')
+      #- CONNECTOR_SCOPE=stairwell # optional (default: 'stairwell')
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      #- CONNECTOR_DURATION_PERIOD=P1D # optional, ISO-8601 interval between two runs (default: 'P1D')
+      # Custom parameters for connector-stairwell-import
+      - STAIRWELL_IMPORT_API_TOKEN=ChangeMe
+      #- STAIRWELL_IMPORT_API_BASE_URL=https://app.stairwell.com # optional (default: 'https://app.stairwell.com')
+      #- STAIRWELL_IMPORT_ORGANIZATION_ID= # optional, adds a rate-limit header (default: none)
+      #- STAIRWELL_IMPORT_USER_ID= # optional, adds a rate-limit header (default: none)
+      #- STAIRWELL_IMPORT_TLP=green # optional, one of: clear, white, green, amber, amber+strict, red (default: 'green')
+      #- STAIRWELL_IMPORT_FIRST_RUN_WINDOW=P1D # optional, ISO-8601 backfill window on first run (default: 'P1D')
+      #- STAIRWELL_IMPORT_MAX_INDICATORS=1000 # optional, soft cap per run (default: 1000)
+      #- STAIRWELL_IMPORT_PAGE_SIZE=100 # optional (default: 100)
+      #- STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS=90 # optional (default: 90)
+      #- STAIRWELL_IMPORT_MIN_BUCKET=HIGH # optional, one of: LOW, MEDIUM, HIGH, VERY_HIGH (default: 'HIGH')
+      #- STAIRWELL_IMPORT_SCOPE=environment # optional, reserved, not yet effective (default: 'environment')
+      #- STAIRWELL_IMPORT_WRAPPER=grouping # optional, 'grouping' or 'report' (default: 'grouping')
     restart: always

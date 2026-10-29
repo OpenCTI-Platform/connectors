@@ -3,4 +3,5 @@
 **/.pytest_cache
 **/.venv
 tests
+config.yml
 src/config.yml

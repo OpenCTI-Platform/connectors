@@ -59,7 +59,7 @@ def _bucket(raw: dict[str, Any]) -> str | None:
     return mal_eval.get("probabilityBucket") or mal_eval.get("probability_bucket")
 
 
-# How many times `import_max_indicators` one run may collect from a window too
+# How many times `STAIRWELL_IMPORT_MAX_INDICATORS` one run may collect from a window too
 # short to split after its token expired.
 _UNSPLITTABLE_LIMIT_FACTOR = 10
 
@@ -88,7 +88,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
     in a per-run Grouping or Report.
 
     `collect()` reads one window (resuming a pending one first) up to
-    `import_max_indicators`, checked between pages; `transform()` converts it
+    `STAIRWELL_IMPORT_MAX_INDICATORS`, checked between pages; `transform()` converts it
     and moves the checkpoints in `ConnectorState`.
     """
 
@@ -98,7 +98,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
     work_name = "Stairwell MalEval import"
 
     def post_init(self) -> None:
-        s = self.settings.stairwell
+        s = self.settings.stairwell_import
         # The first window (no watermark yet), fixed at the first attempt so a
         # retry after a failed first run imports the same backfill. A failed
         # run saves no state, so this lives in memory: a restart between the
@@ -110,16 +110,14 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             organization_id=s.organization_id or None,
             user_id=s.user_id or None,
         )
-        self.tlp = s.import_tlp
-        self.wrapper = s.import_wrapper
-        self.min_bucket = s.import_min_bucket
-        self.allowed_buckets = set(normalize_min_bucket(s.import_min_bucket))
-        self.max_indicators = max(1, int(s.import_max_indicators))
-        self.page_size = max(1, int(s.import_page_size))
-        self.first_run_window = parse_iso_duration(s.import_first_run_window)
-        self.indicator_validity = timedelta(
-            days=max(1, int(s.import_indicator_validity_days))
-        )
+        self.tlp = s.tlp
+        self.wrapper = s.wrapper
+        self.min_bucket = s.min_bucket
+        self.allowed_buckets = set(normalize_min_bucket(s.min_bucket))
+        self.max_indicators = max(1, int(s.max_indicators))
+        self.page_size = max(1, int(s.page_size))
+        self.first_run_window = parse_iso_duration(s.first_run_window)
+        self.indicator_validity = timedelta(days=max(1, int(s.indicator_validity_days)))
 
     def process(self) -> None:
         """Run collect → transform → send, keeping checkpoints if any step fails.
@@ -438,7 +436,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             valid_from=_iso(valid_from),
             valid_until=_iso(valid_from + self.indicator_validity),
             description=f"MalEval bucket: {bucket}",
-            confidence=score_for_bucket(bucket),
+            score=score_for_bucket(bucket),
             external_references=[
                 make_external_reference(
                     "Stairwell",
@@ -457,7 +455,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         # Network values extracted from the file are related observables, not
         # Indicators: they include benign infrastructure (OS update hosts,
         # public resolvers, XML namespaces), and an Indicator would put them on
-        # blocklists fed from OpenCTI at the file's confidence.
+        # blocklists fed from OpenCTI at the file's score.
         net = raw.get("networkIndicators") or raw.get("network_indicators") or {}
         if isinstance(net, dict):
             for values, kind in (

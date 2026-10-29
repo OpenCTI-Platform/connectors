@@ -33,8 +33,8 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class StairwellConfig(BaseConfigModel):
-    """Stairwell-specific configuration (env prefix `STAIRWELL_`)."""
+class StairwellImportConfig(BaseConfigModel):
+    """Stairwell-specific configuration (env prefix `STAIRWELL_IMPORT_`)."""
 
     api_token: SecretStr = Field(description="Stairwell API token (Bearer auth).")
     api_base_url: HttpUrl = Field(
@@ -49,40 +49,38 @@ class StairwellConfig(BaseConfigModel):
         description="Optional Stairwell user id (rate-limit header).",
         default="",
     )
-    import_tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
-        Field(
-            description="TLP marking applied to imported entities.",
-            default="green",
-        )
+    tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
+        description="TLP marking applied to imported entities.",
+        default="green",
     )
-    import_first_run_window: str = Field(
+    first_run_window: str = Field(
         description="ISO-8601 duration to backfill on the first run.",
         default="P1D",
     )
-    import_max_indicators: int = Field(
+    max_indicators: int = Field(
         description="Maximum indicators emitted per run.",
         default=1000,
     )
-    import_page_size: int = Field(
+    page_size: int = Field(
         description="Stairwell API page size.",
         default=100,
     )
-    import_indicator_validity_days: int = Field(
+    indicator_validity_days: int = Field(
         description="Days added to valid_from to compute valid_until.",
         default=90,
     )
-    import_min_bucket: str = Field(
+    min_bucket: str = Field(
         description="Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH.",
         default="HIGH",
     )
-    import_scope: str = Field(
+    scope: str = Field(
         description=(
             "Reserved (forward-compat): accepted but not yet effective; every "
             "run currently queries the full corpus regardless of this value."
         ),
         default="environment",
     )
-    import_wrapper: Literal["grouping", "report"] = Field(
+    wrapper: Literal["grouping", "report"] = Field(
         description="Per-run wrapper SDO: 'grouping' or 'report'.",
         default="grouping",
     )
@@ -94,4 +92,6 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    stairwell: StairwellConfig = Field(default_factory=StairwellConfig)
+    stairwell_import: StairwellImportConfig = Field(
+        default_factory=StairwellImportConfig
+    )

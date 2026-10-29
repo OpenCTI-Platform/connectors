@@ -21,7 +21,7 @@ def env(monkeypatch):
         "OPENCTI_TOKEN": "token",
         "CONNECTOR_ID": "22222222-2222-4222-8222-222222222222",
         "CONNECTOR_SCOPE": "stairwell",
-        "STAIRWELL_API_TOKEN": "sw-token",
+        "STAIRWELL_IMPORT_API_TOKEN": "sw-token",
     }.items():
         monkeypatch.setenv(key, value)
 

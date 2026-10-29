@@ -10,7 +10,7 @@ class ConnectorState(ExternalImportConnectorState):
 
     `watermark` is the committed lower bound of the next window: every object
     first seen before it has been imported. While one window takes several
-    runs to drain (each run stops at `import_max_indicators`), the `pending_*`
+    runs to drain (each run stops at `STAIRWELL_IMPORT_MAX_INDICATORS`), the `pending_*`
     fields hold that window and the page token to resume from; the watermark
     advances to `pending_window_end` only once the window's last page has been
     sent. The SDK saves state only after a successful run, so a failed run

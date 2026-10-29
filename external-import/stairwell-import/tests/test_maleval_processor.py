@@ -34,7 +34,7 @@ def env(monkeypatch):
         "OPENCTI_TOKEN": "token",
         "CONNECTOR_ID": "22222222-2222-4222-8222-222222222222",
         "CONNECTOR_SCOPE": "stairwell",
-        "STAIRWELL_API_TOKEN": "sw-token",
+        "STAIRWELL_IMPORT_API_TOKEN": "sw-token",
         "STAIRWELL_IMPORT_MAX_INDICATORS": "100",
         "STAIRWELL_IMPORT_PAGE_SIZE": "10",
     }.items():
@@ -137,7 +137,7 @@ def test_wrapper_setting_rejects_unknown_values(env):
     env.setenv("STAIRWELL_IMPORT_WRAPPER", "grouppping")
     with pytest.raises(ConfigValidationError) as err:
         ConnectorSettings()
-    assert "import_wrapper" in str(err.value.__cause__)
+    assert "wrapper" in str(err.value.__cause__)
 
 
 def test_each_run_gets_its_own_wrapper(env):
@@ -147,13 +147,14 @@ def test_each_run_gets_its_own_wrapper(env):
     assert _of_type(first, "grouping")[0]["id"] != _of_type(second, "grouping")[0]["id"]
 
 
-def test_indicator_validity_window_and_confidence(env):
+def test_indicator_validity_window_and_score(env):
     env.setenv("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "30")
     objects = _run(_processor(_one_page(_file_obj("d" * 64))))
     indicator = _of_type(objects, "indicator")[0]
     assert indicator["valid_from"] == "2026-05-06T00:00:00.000Z"
     assert indicator["valid_until"] == "2026-06-05T00:00:00.000Z"
-    assert indicator["confidence"] == 75  # PROBABILITY_HIGH
+    assert indicator["x_opencti_score"] == 75  # PROBABILITY_HIGH
+    assert "confidence" not in indicator
 
 
 def test_source_timestamps_are_normalised_to_utc(env):
