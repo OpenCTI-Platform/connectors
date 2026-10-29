@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -14,14 +15,24 @@ from pydantic import Field, HttpUrl, SecretStr
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """`INTERNAL_ENRICHMENT` connector config with Stairwell defaults.
 
-    `type`, `id`, `scope`, `auto`, `log_level`, and `max_tlp` are inherited
-    from `BaseInternalEnrichmentConnectorConfig`. `max_tlp` (default amber) is
+    `type`, `id`, `auto`, `log_level`, and `max_tlp` are inherited from
+    `BaseInternalEnrichmentConnectorConfig`. `max_tlp` (default amber) is
     the highest TLP an observable may carry and still be sent to Stairwell.
     """
 
     name: str = Field(
         description="The name of the connector.",
         default="Stairwell",
+    )
+    scope: ListFromString = Field(
+        description="The observable types the connector enriches.",
+        default=[
+            "StixFile",
+            "Domain-Name",
+            "IPv4-Addr",
+            "IPv6-Addr",
+            "Autonomous-System",
+        ],
     )
 
 

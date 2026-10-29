@@ -21,7 +21,8 @@ AI File Triage, DNS history, IP intelligence, and WHOIS.
 ## Configuration
 
 Configuration is loaded via the `connectors-sdk` settings layer: from
-`src/config.yml` if present, otherwise from environment variables.
+`config.yml` in the connector directory if present, otherwise from
+environment variables.
 Environment variables override the file.
 
 ### OpenCTI
@@ -38,7 +39,7 @@ Environment variables override the file.
 | Connector ID | `connector.id` | `CONNECTOR_ID` | yes | — | UUIDv4 unique to this instance |
 | Connector type | `connector.type` | `CONNECTOR_TYPE` | yes | `INTERNAL_ENRICHMENT` | Must be `INTERNAL_ENRICHMENT` |
 | Connector name | `connector.name` | `CONNECTOR_NAME` | yes | `Stairwell` | Display name in OpenCTI |
-| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | yes | `StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System` | Observable types this connector handles |
+| Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | no | `StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System` | Observable types this connector handles |
 | Auto enrich | `connector.auto` | `CONNECTOR_AUTO` | no | `false` | Enrich every newly-created in-scope observable |
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | no | `error` | `debug`, `info`, `warn`, `error` |
 | Max TLP | `connector.max_tlp` | `CONNECTOR_MAX_TLP` | no | `amber` | Highest TLP an observable may carry and still be sent to Stairwell: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
@@ -145,10 +146,9 @@ Then add the service from `docker-compose.yml` to your OpenCTI deployment.
 ### Local development
 
 ```bash
-cd src
-pip install -r requirements.txt
 cp config.yml.sample config.yml   # edit values
-python3 main.py
+pip install -r src/requirements.txt
+python3 src/main.py
 ```
 
 ## Tests

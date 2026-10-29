@@ -25,7 +25,7 @@ class StairwellClient:
         timeout: int = DEFAULT_TIMEOUT,
     ) -> None:
         if not api_token:
-            raise ValueError("STAIRWELL_API_TOKEN is required")
+            raise ValueError("a Stairwell API token is required")
         self._base_url = (base_url or DEFAULT_BASE_URL).rstrip("/")
         self._timeout = timeout
         self._session = self._build_session(api_token, organization_id, user_id)

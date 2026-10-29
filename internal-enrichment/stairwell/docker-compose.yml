@@ -1,22 +1,24 @@
 services:
   connector-stairwell:
-    image: opencti/connector-stairwell:rolling
+    image: opencti/connector-stairwell:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_STAIRWELL_ID}
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=Stairwell
-      - CONNECTOR_SCOPE=StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System
-      - CONNECTOR_AUTO=false
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_MAX_TLP=amber
-      - STAIRWELL_API_TOKEN=${STAIRWELL_API_TOKEN}
-      - STAIRWELL_API_BASE_URL=https://app.stairwell.com
-      - STAIRWELL_ORGANIZATION_ID=${STAIRWELL_ORGANIZATION_ID:-}
-      - STAIRWELL_USER_ID=${STAIRWELL_USER_ID:-}
-      - STAIRWELL_DEFAULT_TLP=amber
-      - STAIRWELL_VARIANT_LIMIT=25
-      - STAIRWELL_RESOLUTIONS_LIMIT=50
-      - STAIRWELL_SIGHTINGS_LIMIT=0
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=Stairwell # optional (default: 'Stairwell')
+      #- CONNECTOR_SCOPE=StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System # optional (default: all five)
+      #- CONNECTOR_AUTO=false # optional, enrich every new in-scope observable (default: false)
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      #- CONNECTOR_MAX_TLP=amber # optional, observables marked above this are never sent to Stairwell (default: 'amber')
+      # Custom parameters for connector-stairwell
+      - STAIRWELL_API_TOKEN=ChangeMe
+      #- STAIRWELL_API_BASE_URL=https://app.stairwell.com # optional (default: 'https://app.stairwell.com')
+      #- STAIRWELL_ORGANIZATION_ID= # optional, adds a rate-limit header (default: none)
+      #- STAIRWELL_USER_ID= # optional, adds a rate-limit header (default: none)
+      #- STAIRWELL_DEFAULT_TLP=amber # optional, one of: clear, white, green, amber, amber+strict, red (default: 'amber')
+      #- STAIRWELL_VARIANT_LIMIT=25 # optional, max variant SCOs per file, 0 disables (default: 25)
+      #- STAIRWELL_RESOLUTIONS_LIMIT=50 # optional, max DNS resolution rows per domain, 0 disables (default: 50)
+      #- STAIRWELL_SIGHTINGS_LIMIT=0 # optional, max unique assets per file, 0 disables; see README before enabling (default: 0)
     restart: always

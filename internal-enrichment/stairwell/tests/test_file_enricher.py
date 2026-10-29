@@ -120,9 +120,9 @@ def test_score_does_not_lower_existing_higher_score():
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     file_sco = next(o for o in payload["objects"] if o["type"] == "file")
-    # Either x_opencti_score is not present (we omit when not raising),
-    # or it's still the existing 80 — never the proposed 25.
-    assert file_sco.get("x_opencti_score", 80) == 80
+    # The existing 80, never the proposed 25. It is sent even unchanged, so a
+    # playbook merge cannot keep a lower score from an earlier step.
+    assert file_sco["x_opencti_score"] == 80
 
 
 def test_404_path_marks_not_found_via_bundle_without_api_writes():
@@ -224,14 +224,16 @@ def test_variants_capped_sorted_and_family_label():
 
     # Top by similarity: b (0.95), c (0.80)
     variant_files = [f for f in files if f.get("hashes", {}).get("SHA-256") != SHA256]
-    sims = [f["x_stairwell_variant_similarity"] for f in variant_files]
-    assert sims == sorted(sims, reverse=True)
-    assert sims[0] == 0.95
+    assert [f["hashes"]["SHA-256"] for f in variant_files] == ["b" * 64, "c" * 64]
+    # Similarity is relative to this file, so it stays off the shared variant
+    # objects and goes in the Variants Note.
+    assert not [f for f in variant_files if "x_stairwell_variant_similarity" in f]
 
     # All three hashes propagated to variant SCOs
-    top_variant = next(
-        f for f in variant_files if f["x_stairwell_variant_similarity"] == 0.95
-    )
+    top_variant = variant_files[0]
+    assert [r["description"] for r in top_variant["external_references"]] == [
+        f"Stairwell file detail for {'b' * 64}"
+    ]
     assert top_variant["hashes"]["SHA-256"] == "b" * 64
     assert top_variant["hashes"]["SHA-1"] == "b" * 40
     assert top_variant["hashes"]["MD5"] == "b" * 32
@@ -265,12 +267,10 @@ def test_variants_accepts_confidence_synonym():
     enricher = FileEnricher(helper, client, default_tlp="amber", variant_limit=5)
     enricher.enrich(_observable_with_sha256())
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
-    variant_files = [
-        f
-        for f in payload["objects"]
-        if f["type"] == "file" and f.get("hashes", {}).get("SHA-256") == "d" * 64
-    ]
-    assert variant_files[0]["x_stairwell_variant_similarity"] == 0.42
+    var_note = next(
+        o for o in payload["objects"] if o.get("abstract") == "Stairwell Variants"
+    )
+    assert "42%" in var_note["content"]
 
 
 def test_variant_limit_zero_skips_variant_calls():
@@ -362,8 +362,8 @@ def test_sightings_aggregated_per_asset_with_count_first_last():
     assert len(riser["where_sighted_refs"]) == 1
     # The where_sighted_ref should point at one of our system identities
     assert riser["where_sighted_refs"][0] in {i["id"] for i in identities}
-    # Confidence should reflect the file's HIGH bucket
-    assert riser["confidence"] == 75
+    # Confidence is the platform's to set, from the importing user's level.
+    assert "confidence" not in riser
 
     riser_identity = next(
         i for i in identities if i["id"] == riser["where_sighted_refs"][0]

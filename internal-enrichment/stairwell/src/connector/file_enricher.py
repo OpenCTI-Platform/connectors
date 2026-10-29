@@ -5,11 +5,9 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-from .stairwell import StairwellClient
-from .stairwell.score import monotonic_score, score_for_bucket
-from .stix_builder import (
+from connector.stairwell import StairwellClient
+from connector.stairwell.score import monotonic_score, score_for_bucket
+from connector.stix_builder import (
     bundle,
     make_external_reference,
     make_file_by_sha256,
@@ -25,6 +23,7 @@ from .stix_builder import (
     tlp_marking,
     valid_hash,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 DEFAULT_VARIANT_LIMIT = 25
 # Sightings carry customer asset names, environment ids, and file paths
@@ -293,7 +292,6 @@ class FileEnricher:
             observable=observable,
             tldr=tldr,
             final_score=final_score,
-            current_score=current_score,
             labels=labels,
             ext_ref=ext_ref,
             prob_bucket=prob_bucket,
@@ -342,7 +340,6 @@ class FileEnricher:
             )
 
         # Sightings: per-asset aggregated Sighting SDOs + asset Identities
-        sighting_score = score_for_bucket(prob_bucket)
         objects.extend(
             self._sighting_objects(
                 entity_id=entity_id,
@@ -350,7 +347,6 @@ class FileEnricher:
                 records=sightings_records or [],
                 truncated=sightings_truncated,
                 incomplete=sightings_incomplete,
-                confidence=sighting_score,
             )
         )
 
@@ -360,7 +356,7 @@ class FileEnricher:
         # Variant SCOs + `derived-from` rels + descriptive Variants Note
         capped_variants = self._capped_variants(self_sha256, variants_payload)
         variant_displayed = len(capped_variants)
-        objects.extend(self._variant_objects(entity_id, primary_hash, capped_variants))
+        objects.extend(self._variant_objects(entity_id, capped_variants))
         if variant_displayed > 0:
             objects.append(
                 self._variants_note(
@@ -428,7 +424,6 @@ class FileEnricher:
     def _variant_objects(
         self,
         source_entity_id: str,
-        primary_hash: str,
         capped: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -438,12 +433,10 @@ class FileEnricher:
                     make_external_reference(
                         "Stairwell",
                         self.client.object_ui_url(v["sha256"]),
-                        f"Stairwell variant of {primary_hash}",
+                        f"Stairwell file detail for {v['sha256']}",
                     )
                 ]
             }
-            if v["similarity"] is not None:
-                extra["x_stairwell_variant_similarity"] = v["similarity"]
             sco = make_file_by_sha256(
                 v["sha256"],
                 tlp=self.tlp,
@@ -736,7 +729,6 @@ class FileEnricher:
         observable: dict[str, Any],
         tldr: str,
         final_score: int | None,
-        current_score: int | None,
         labels: list[str],
         ext_ref: dict[str, Any],
         prob_bucket: str | None,
@@ -772,7 +764,9 @@ class FileEnricher:
             sco["hashes"] = stix_hashes
         if tldr:
             sco["x_opencti_description"] = md_prose(tldr)
-        if final_score is not None and final_score != current_score:
+        # Sent even when unchanged: a playbook merge keeps the higher of this and
+        # the incoming object's score, which may be lower than the stored one.
+        if final_score is not None:
             sco["x_opencti_score"] = final_score
         if labels:
             sco["labels"] = labels
@@ -923,7 +917,6 @@ class FileEnricher:
         primary_hash: str,
         records: list[dict[str, Any]],
         truncated: bool,
-        confidence: int | None,
         incomplete: str | None = None,
     ) -> list[dict[str, Any]]:
         if not records:
@@ -1004,7 +997,6 @@ class FileEnricher:
                 first_seen=first_seen,
                 last_seen=last_seen,
                 count=len(asset_records),
-                confidence=confidence,
                 description="\n".join(description_lines),
                 external_references=[
                     make_external_reference(

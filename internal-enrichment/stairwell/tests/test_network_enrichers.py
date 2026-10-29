@@ -107,8 +107,17 @@ def test_domain_enricher_uses_resolutions_endpoint():
     )
     assert domain["x_stairwell_etld_plus_one"] == "example.com"
 
+    # Resolution times describe this domain's history, not the shared targets,
+    # so they stay in the Note.
+    targets = [
+        o for o in payload["objects"] if o["type"] in ("ipv4-addr", "domain-name")
+    ]
+    assert not [o for o in targets if "x_stairwell_first_seen" in o]
+    assert not [o for o in targets if "x_stairwell_last_seen" in o]
+
     note = next(o for o in payload["objects"] if o["type"] == "note")
     assert "By record type" in note["content"]
+    assert "2026-02-01T00:00:00Z" in note["content"]
     assert "A (2)" in note["content"]
     assert "MX (1)" in note["content"]
 
@@ -250,15 +259,17 @@ def test_ip_enricher_parses_v2_geo_and_asns_array():
     # Subnet
     assert ip_sco["x_stairwell_subnet"] == "52.0.0.0/14"
 
-    # Related ASN with org name pulled from whois.record.arinOrg.name
+    # The related ASN is shared across IPs, so it carries no name: the IP's
+    # WHOIS names the prefix holder, not the AS. The holder goes in the Note.
     asn = next(o for o in payload["objects"] if o["type"] == "autonomous-system")
     assert asn["number"] == 16509
-    assert asn["name"] == "Amazon Technologies Inc."
+    assert "name" not in asn
 
     # Note has formatted whois_string
     note = next(o for o in payload["objects"] if o["type"] == "note")
     assert "NetRange" in note["content"]
     assert "ec2-52-0-0-1.compute-1.amazonaws.com" in note["content"]
+    assert "**Prefix holder:** Amazon Technologies Inc." in note["content"]
 
 
 def test_ip_enricher_handles_unspecified_cloud_provider():
@@ -417,7 +428,7 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
         if o["type"] == "note"
     )["content"]
     assert md_fence(whois.strip()) in note
-    assert f"({md_text(org)})" in note
+    assert f"**Prefix holder:** {md_text(org)}" in note
     assert f"- {md_text(rdns)}" in note
     assert md_text("[c](http://e)") in note
 

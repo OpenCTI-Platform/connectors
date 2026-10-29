@@ -9,7 +9,7 @@ from typing import Any, Iterable
 from urllib.parse import urlsplit
 
 import stix2
-from connectors_sdk.models import TLPMarking
+from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from pycti import (
     Grouping,
     Identity,
@@ -38,7 +38,23 @@ _TLP_BY_ID: dict[str, dict[str, Any]] = {
     obj["id"]: obj for level, obj in _TLP_OBJECTS.items() if level != "white"
 }
 
-STAIRWELL_IDENTITY_ID = Identity.generate_id("Stairwell", "organization")
+# The author of every object these connectors create. Its ID is OpenCTI's
+# for an organization named "Stairwell", so it is the same object everywhere.
+# The SDK stamps `created`/`modified` with the build time; fixed values keep
+# a restart from re-dating the stored identity.
+_AUTHOR: dict[str, Any] = {
+    **json.loads(
+        OrganizationAuthor(
+            name="Stairwell",
+            description="Stairwell, Inc. — global file corpus and threat intelligence.",
+        )
+        .to_stix2_object()
+        .serialize()
+    ),
+    "created": "2026-01-01T00:00:00.000Z",
+    "modified": "2026-01-01T00:00:00.000Z",
+}
+STAIRWELL_IDENTITY_ID: str = _AUTHOR["id"]
 
 
 def _sco_id(sco_class: type, **properties: Any) -> str:
@@ -133,15 +149,21 @@ def tlp_marking_object(tlp: str) -> dict[str, Any]:
 
 
 def stairwell_identity() -> dict[str, Any]:
+    return dict(_AUTHOR)
+
+
+def _sdo(
+    sdo_type: str, sdo_id: str, created: str, tlp: str, *, created_by_ref: str
+) -> dict[str, Any]:
+    """The properties every SDO and SRO here starts with."""
     return {
-        "type": "identity",
+        "type": sdo_type,
         "spec_version": "2.1",
-        "id": STAIRWELL_IDENTITY_ID,
-        "created": "2026-01-01T00:00:00.000Z",
-        "modified": "2026-01-01T00:00:00.000Z",
-        "name": "Stairwell",
-        "identity_class": "organization",
-        "description": "Stairwell, Inc. — global file corpus and threat intelligence.",
+        "id": sdo_id,
+        "created_by_ref": created_by_ref,
+        "created": created,
+        "modified": created,
+        "object_marking_refs": [tlp_marking(tlp)],
     }
 
 
@@ -168,16 +190,10 @@ def make_note(
     note_id = Note.generate_id(None, content, abstract)
     ts = now_iso()
     return {
-        "type": "note",
-        "spec_version": "2.1",
-        "id": note_id,
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": ts,
-        "modified": ts,
+        **_sdo("note", note_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
         "abstract": abstract,
         "content": content,
         "object_refs": list(object_refs),
-        "object_marking_refs": [tlp_marking(tlp)],
     }
 
 
@@ -190,16 +206,10 @@ def make_relationship(
     rel_id = StixCoreRelationship.generate_id(relationship_type, source_id, target_id)
     ts = now_iso()
     return {
-        "type": "relationship",
-        "spec_version": "2.1",
-        "id": rel_id,
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": ts,
-        "modified": ts,
+        **_sdo("relationship", rel_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
         "relationship_type": relationship_type,
         "source_ref": source_id,
         "target_ref": target_id,
-        "object_marking_refs": [tlp_marking(tlp)],
     }
 
 
@@ -404,31 +414,31 @@ def make_indicator(
     valid_until: str | None = None,
     indicator_types: Iterable[str] = ("malicious-activity",),
     description: str | None = None,
-    confidence: int | None = None,
+    score: int | None = None,
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
 ) -> dict[str, Any]:
     indicator_id = Indicator.generate_id(pattern)
     obj: dict[str, Any] = {
-        "type": "indicator",
-        "spec_version": "2.1",
-        "id": indicator_id,
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": valid_from,
-        "modified": valid_from,
+        **_sdo(
+            "indicator",
+            indicator_id,
+            valid_from,
+            tlp,
+            created_by_ref=STAIRWELL_IDENTITY_ID,
+        ),
         "name": name,
         "pattern": pattern,
         "pattern_type": "stix",
         "valid_from": valid_from,
         "indicator_types": list(indicator_types),
-        "object_marking_refs": [tlp_marking(tlp)],
     }
     if valid_until:
         obj["valid_until"] = valid_until
     if description:
         obj["description"] = description
-    if confidence is not None:
-        obj["confidence"] = int(confidence)
+    if score is not None:
+        obj["x_opencti_score"] = int(score)
     if external_references:
         obj["external_references"] = list(external_references)
     return obj
@@ -463,15 +473,15 @@ def make_identity_system(
     ts = now_iso()
     display_name = name if name and name != asset_id else None
     obj: dict[str, Any] = {
-        "type": "identity",
-        "spec_version": "2.1",
-        "id": Identity.generate_id(asset_id, "system"),
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": ts,
-        "modified": ts,
+        **_sdo(
+            "identity",
+            Identity.generate_id(asset_id, "system"),
+            ts,
+            tlp,
+            created_by_ref=STAIRWELL_IDENTITY_ID,
+        ),
         "name": asset_id,
         "identity_class": "system",
-        "object_marking_refs": [tlp_marking(tlp)],
     }
     if description is None and display_name:
         description = f"Stairwell-managed asset {md_text(display_name)}"
@@ -486,7 +496,6 @@ def make_sighting(
     first_seen: str,
     last_seen: str,
     count: int,
-    confidence: int | None = None,
     description: str | None = None,
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
@@ -497,21 +506,13 @@ def make_sighting(
     sighting_id = StixSightingRelationship.generate_id(sighting_of_ref, where_sighted)
     ts = now_iso()
     obj: dict[str, Any] = {
-        "type": "sighting",
-        "spec_version": "2.1",
-        "id": sighting_id,
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": ts,
-        "modified": ts,
+        **_sdo("sighting", sighting_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
         "first_seen": first_seen,
         "last_seen": last_seen,
         "count": int(count),
         "sighting_of_ref": sighting_of_ref,
         "where_sighted_refs": where_sighted,
-        "object_marking_refs": [tlp_marking(tlp)],
     }
-    if confidence is not None:
-        obj["confidence"] = int(confidence)
     if description:
         obj["description"] = description
     if external_references:
@@ -531,15 +532,9 @@ def _container_sdo(
 ) -> dict[str, Any]:
     ts = created or now_iso()
     obj: dict[str, Any] = {
-        "type": sdo_type,
-        "spec_version": "2.1",
-        "id": container_id,
-        "created_by_ref": STAIRWELL_IDENTITY_ID,
-        "created": ts,
-        "modified": ts,
+        **_sdo(sdo_type, container_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
         "name": name,
         "object_refs": list(object_refs),
-        "object_marking_refs": [tlp_marking(tlp)],
     }
     if description:
         obj["description"] = description

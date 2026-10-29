@@ -3,10 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-from .stairwell import StairwellClient
-from .stix_builder import (
+from connector.stairwell import StairwellClient
+from connector.stix_builder import (
     bundle,
     make_domain,
     make_external_reference,
@@ -18,6 +16,7 @@ from .stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -120,10 +119,6 @@ class DomainEnricher:
             # and relate it to itself; it stays in the DNS history Note.
             if target_sco["id"] == entity_id or target_sco["value"] == own_value:
                 continue
-            for k in ("first_seen", "last_seen"):
-                if entry.get(k):
-                    prop = f"x_stairwell_{k}"
-                    target_sco[prop] = entry[k]
             objects.append(target_sco)
             objects.append(
                 make_relationship(

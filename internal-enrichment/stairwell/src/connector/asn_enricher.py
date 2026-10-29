@@ -3,10 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-from .stairwell import StairwellClient
-from .stix_builder import (
+from connector.stairwell import StairwellClient
+from connector.stix_builder import (
     bundle,
     make_external_reference,
     make_note,
@@ -15,6 +13,7 @@ from .stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 logger = logging.getLogger(__name__)
 

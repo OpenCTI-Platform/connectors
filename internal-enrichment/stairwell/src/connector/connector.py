@@ -79,6 +79,7 @@ class _PlaybookBundles:
         # Enrichment refreshes existing observables, so it must overwrite
         # their score and description (pycti's default is not to).
         kwargs.setdefault("update", True)
+        kwargs.pop("cleanup_inconsistent_bundle", None)
         if self.incoming:
             payload = json.loads(bundle)
             ours = {o.get("id"): o for o in payload.get("objects", [])}
@@ -89,14 +90,17 @@ class _PlaybookBundles:
             objects.extend(ours.values())
             payload["objects"] = objects
             bundle = json.dumps(payload)
-        result = self._helper.send_stix2_bundle(bundle, **kwargs)
+        result = self._helper.send_stix2_bundle(
+            bundle, cleanup_inconsistent_bundle=True, **kwargs
+        )
         self.sent = True
         return result
 
     def send_incoming(self) -> None:
         """Hand the incoming playbook bundle on unchanged."""
         self._helper.send_stix2_bundle(
-            self._helper.stix2_create_bundle(self.incoming or [])
+            self._helper.stix2_create_bundle(self.incoming or []),
+            cleanup_inconsistent_bundle=True,
         )
         self.sent = True
 
@@ -144,7 +148,7 @@ class StairwellConnector:
 
     def process_message(self, data: dict[str, Any]) -> str:
         playbook = not data.get("event_type")
-        self.bundles.begin(data.get("stix_objects") or [] if playbook else None)
+        self.bundles.begin(data["stix_objects"] if playbook else None)
 
         stix_entity = data.get("stix_entity") or {}
         entity_id = stix_entity.get("id") or data.get("entity_id")
@@ -171,7 +175,7 @@ class StairwellConnector:
         input_tlps = (
             stix_marking_tlps(
                 stix_entity,
-                data.get("stix_objects") or [],
+                data["stix_objects"],
                 lookup=lambda ref: self.helper.api.marking_definition.read(id=ref),
             )
             if playbook

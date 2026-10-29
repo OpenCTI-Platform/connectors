@@ -145,7 +145,8 @@ def test_playbook_entity_out_of_scope_gets_its_bundle_back_unchanged(env):
         [{"id": "report--1", "type": "report"}]
     )
     helper.send_stix2_bundle.assert_called_once_with(
-        {"objects": [{"id": "report--1", "type": "report"}]}
+        {"objects": [{"id": "report--1", "type": "report"}]},
+        cleanup_inconsistent_bundle=True,
     )
     connector.client._session.get.assert_not_called()
 
@@ -295,6 +296,17 @@ def test_manual_enrichment_errors_still_raise(env):
     with pytest.raises(RuntimeError):
         connector.process_message(data)
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_scope_defaults_to_every_supported_type(env):
+    env.delenv("CONNECTOR_SCOPE")
+    assert ConnectorSettings().connector.scope == [
+        "StixFile",
+        "Domain-Name",
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Autonomous-System",
+    ]
 
 
 def test_configured_scope_is_enforced(env):

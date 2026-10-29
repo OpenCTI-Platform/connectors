@@ -3,10 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-from .stairwell import StairwellClient
-from .stix_builder import (
+from connector.stairwell import StairwellClient
+from connector.stix_builder import (
     bundle,
     make_autonomous_system,
     make_external_reference,
@@ -18,6 +16,7 @@ from .stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 logger = logging.getLogger(__name__)
 
@@ -170,10 +169,10 @@ class IpEnricher:
             elif cidr:
                 custom_props["x_stairwell_subnet"] = str(cidr)
 
-        # ASN org name comes from the IP's WHOIS record (or from a separate
-        # /v2/asns/{asn}/whois call — we don't issue that here to keep this
-        # enrichment to a single API round-trip per IP).
-        asn_org = _whois_org_name(whois_record)
+        # The IP's WHOIS names the holder of the address prefix, which need not
+        # be the operator of the origin AS, so it goes in the Note and never
+        # names the shared Autonomous-System object.
+        prefix_holder = _whois_org_name(whois_record)
 
         ext_ref = make_external_reference(
             "Stairwell",
@@ -198,7 +197,7 @@ class IpEnricher:
 
         # Related ASN
         if asn_int is not None:
-            asn_sco = make_autonomous_system(asn_int, name=asn_org, tlp=self.tlp)
+            asn_sco = make_autonomous_system(asn_int, tlp=self.tlp)
             objects.append(asn_sco)
             objects.append(
                 make_relationship(
@@ -224,10 +223,9 @@ class IpEnricher:
         if cloud_provider and cloud_provider != "CLOUD_PROVIDER_UNSPECIFIED":
             note_lines.append(f"**Cloud provider:** {md_text(cloud_provider)}")
         if asn_int is not None:
-            asn_line = f"**ASN:** AS{asn_int}"
-            if asn_org:
-                asn_line += f" ({md_text(asn_org)})"
-            note_lines.append(asn_line)
+            note_lines.append(f"**ASN:** AS{asn_int}")
+        if prefix_holder:
+            note_lines.append(f"**Prefix holder:** {md_text(prefix_holder)}")
         if "x_stairwell_subnet" in custom_props:
             note_lines.append(
                 f"**Subnet:** {md_text(custom_props['x_stairwell_subnet'])}"

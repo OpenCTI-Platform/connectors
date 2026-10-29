@@ -3,14 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable
 
+from connector.asn_enricher import AsnEnricher
+from connector.domain_enricher import DomainEnricher
+from connector.file_enricher import DEFAULT_SIGHTINGS_LIMIT, FileEnricher
+from connector.ip_enricher import IpEnricher
+from connector.stairwell import StairwellClient
+from connector.stix_builder import TLP_IDS
 from pycti import OpenCTIConnectorHelper
-
-from .asn_enricher import AsnEnricher
-from .domain_enricher import DomainEnricher
-from .file_enricher import DEFAULT_SIGHTINGS_LIMIT, FileEnricher
-from .ip_enricher import IpEnricher
-from .stairwell import StairwellClient
-from .stix_builder import TLP_IDS
 
 logger = logging.getLogger(__name__)
 
