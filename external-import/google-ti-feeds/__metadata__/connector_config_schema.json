@@ -108,16 +108,16 @@
       "minLength": 1,
       "type": "string"
     },
+    "GTI_IMPORT_SOFTWARE_TOOLKITS": {
+      "default": false,
+      "description": "Whether to enable importing software toolkit data from GTI",
+      "type": "boolean"
+    },
     "GTI_SOFTWARE_TOOLKIT_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_SOFTWARE_TOOLKITS": {
-      "default": false,
-      "description": "Whether to enable importing software toolkit data from GTI",
-      "type": "boolean"
     },
     "GTI_SOFTWARE_TOOLKIT_ORIGINS": {
       "default": [
@@ -201,16 +201,16 @@
       "description": "Only import indicators that have at least one association with a Threat Actor. Combined with indicator_require_malware_family using OR logic, and with indicator_min_score using AND logic.",
       "type": "boolean"
     },
+    "GTI_IMPORT_CAMPAIGNS": {
+      "default": false,
+      "description": "Whether to enable importing campaign data from GTI",
+      "type": "boolean"
+    },
     "GTI_CAMPAIGN_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_CAMPAIGNS": {
-      "default": false,
-      "description": "Whether to enable importing campaign data from GTI",
-      "type": "boolean"
     },
     "GTI_CAMPAIGN_ORIGINS": {
       "default": [
@@ -257,16 +257,16 @@
       },
       "type": "array"
     },
+    "GTI_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to enable importing vulnerability data from GTI",
+      "type": "boolean"
+    },
     "GTI_VULNERABILITY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import vulnerabilities (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_VULNERABILITIES": {
-      "default": false,
-      "description": "Whether to enable importing vulnerability data from GTI",
-      "type": "boolean"
     },
     "GTI_VULNERABILITY_GET_RELATED_SOFTWARES": {
       "default": false,
@@ -316,16 +316,16 @@
       },
       "type": "array"
     },
+    "GTI_IMPORT_MALWARE_FAMILIES": {
+      "default": false,
+      "description": "Whether to enable importing malware family data from GTI",
+      "type": "boolean"
+    },
     "GTI_MALWARE_FAMILY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import malware families (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_MALWARE_FAMILIES": {
-      "default": false,
-      "description": "Whether to enable importing malware family data from GTI",
-      "type": "boolean"
     },
     "GTI_MALWARE_FAMILY_ORIGINS": {
       "default": [
@@ -375,16 +375,16 @@
       },
       "type": "array"
     },
+    "GTI_IMPORT_THREAT_ACTORS": {
+      "default": false,
+      "description": "Whether to enable importing threat actor data from GTI",
+      "type": "boolean"
+    },
     "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_THREAT_ACTORS": {
-      "default": false,
-      "description": "Whether to enable importing threat actor data from GTI",
-      "type": "boolean"
     },
     "GTI_THREAT_ACTOR_ORIGINS": {
       "default": [
@@ -435,16 +435,16 @@
       },
       "type": "array"
     },
+    "GTI_IMPORT_REPORTS": {
+      "default": true,
+      "description": "Whether to enable importing report data from GTI",
+      "type": "boolean"
+    },
     "GTI_REPORT_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
       "format": "duration",
       "type": "string"
-    },
-    "GTI_IMPORT_REPORTS": {
-      "default": true,
-      "description": "Whether to enable importing report data from GTI",
-      "type": "boolean"
     },
     "GTI_REPORT_TYPES": {
       "default": [

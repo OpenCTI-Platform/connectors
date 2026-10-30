@@ -7,7 +7,25 @@ from uuid import uuid4
 
 import isodate
 import pytest
+from connector.src.custom.configs.campaign.gti_config_campaign import (
+    GTICampaignConfig,
+)
 from connector.src.custom.configs.gti_config import GTIConfig
+from connector.src.custom.configs.gti_config_common import GTIBaseConfig
+from connector.src.custom.configs.indicator.gti_config_indicator import (
+    GTIIndicatorConfig,
+)
+from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
+from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.software_toolkit.gti_config_software_toolkit import (
+    GTISoftwareToolkitConfig,
+)
+from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
+    GTIThreatActorConfig,
+)
+from connector.src.custom.configs.vulnerability.gti_config_vulnerability import (
+    GTIVulnerabilityConfig,
+)
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
@@ -263,6 +281,35 @@ def test_gti_connector_invalid_gti_report_origins(  # type: ignore
     connector, config_ex = _when_connector_created()
     # Then the connector should raise a ConfigurationError
     _then_connector_configuration_exception(mock_env, connector, config_ex)
+
+
+# Scenario: The enable option comes first in each data collection of the configuration
+@pytest.mark.parametrize(
+    "collection_config, enable_option",
+    [
+        (GTISoftwareToolkitConfig, "import_software_toolkits"),
+        (GTIIndicatorConfig, "import_indicators"),
+        (GTICampaignConfig, "import_campaigns"),
+        (GTIVulnerabilityConfig, "import_vulnerabilities"),
+        (GTIMalwareConfig, "import_malware_families"),
+        (GTIThreatActorConfig, "import_threat_actors"),
+        (GTIReportConfig, "import_reports"),
+    ],
+)
+def test_gti_config_enable_option_first_in_each_collection(
+    collection_config: type[GTIBaseConfig], enable_option: str
+) -> None:
+    """Test that the composer form lists the enable option before its sub-options."""
+    # Given the options of a data collection
+    collection_options = set(collection_config.model_fields) - set(
+        GTIBaseConfig.model_fields
+    )
+    # When they are listed in the configuration schema order
+    ordered_options = [
+        name for name in GTIConfig.model_fields if name in collection_options
+    ]
+    # Then the enable option comes first
+    assert ordered_options[0] == enable_option  # noqa: S101
 
 
 # =====================
