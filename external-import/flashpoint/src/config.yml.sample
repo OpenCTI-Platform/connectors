@@ -28,6 +28,7 @@ flashpoint:
   guess_relationships_from_reports: false
   import_indicators: true
   indicator_tlp: 'TLP:CLEAR'
+  import_extracted_config_domains_urls: false # may create false positives, see README
   import_alerts: true
   alert_create_related_entities: false
   import_communities: false

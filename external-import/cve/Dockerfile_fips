@@ -1,0 +1,11 @@
+FROM filigran/alpine-python-fips:python3.12
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+
+COPY src /opt/opencti-connector-cve/src
+WORKDIR /opt/opencti-connector-cve
+
+RUN apk --no-cache add git && \
+    pip3 install --no-cache-dir -r src/requirements.txt && \
+    apk del git
+
+CMD ["python", "-m", "src"]

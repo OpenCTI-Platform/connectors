@@ -3,7 +3,12 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 WORKDIR /opt/opencti-connector-rst-threat-feed
 
-COPY src /opt/opencti-connector-rst-threat-feed/src
+# Install dependencies
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic && \
+    cd /opt/opencti-connector-threatfeed && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
 RUN apk --no-cache add --virtual .build-deps git build-base && \
     apk --no-cache add libmagic && \

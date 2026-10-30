@@ -1,0 +1,28 @@
+{
+  "title": "NetAPI",
+  "slug": "netapi",
+  "description": "NetAPI publishes a free feed of compromised domains, the hosts that public threat feeds (CERT Polska, blackbook and others) report for malware or phishing, refreshed daily, and the NetAPI Top 1M, a daily ranking of the most popular domains.\n\nThe connector checks Domain-Name, Hostname and Url (by its host) observables against the feed with the free NetAPI JSON API, no account needed. A listed observable is enriched in place: it gets the label `netapi-compromised` when it is in the current feed, an external reference, optionally a score, and one note with the details: first and last seen, the public feed that reported it, the registrar of the domain and its position in the Top 1M. A hostname is also matched through its registered domain. Re-enrichment updates the note instead of adding another one; a value that was never listed is left as it is. An optional API token only raises the request limits.",
+  "short_description": "Checks domains, hostnames and URLs against the free NetAPI compromised feed (hosts reported by public threat feeds for malware or phishing) and adds the Top 1M rank of listed domains. No API key required.",
+  "logo": "internal-enrichment/netapi/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "info@netapi.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261016.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/netapi",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-netapi",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

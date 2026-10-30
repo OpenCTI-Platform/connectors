@@ -1,3 +1,5 @@
+from connectors_sdk import ApiClientError
+from connectors_sdk.exceptions.error import DataRetrievalError
 from internal_enrichment_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
@@ -48,9 +50,7 @@ class FirstEPSSConnector:
         """
         self.config = config
         self.helper = helper
-        self.api = ConnectorClient(
-            self.helper, base_url=self.config.first_epss.api_base_url
-        )
+        self.api = ConnectorClient(str(self.config.first_epss.api_base_url))
         self.converter_to_stix = ConverterToStix(self.helper)
         self.author = None
         self.tlp = None
@@ -64,8 +64,12 @@ class FirstEPSSConnector:
         """
         self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
         self.author = self.converter_to_stix.create_author()
-        enrichment_response = self.api.get_entity({"cve": cve_name})
-        enrichment_infos = enrichment_response["data"]
+        try:
+            enrichment_infos = self.api.get_epss_scores(cve_name)
+        except ApiClientError as err:
+            raise DataRetrievalError(
+                f"Failed to fetch EPSS scores for {cve_name}: {err}"
+            ) from err
         stix_objects = []
         for info in enrichment_infos:
             cve_name = info["cve"]
@@ -121,7 +125,7 @@ class FirstEPSSConnector:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.first_epss.max_tlp
+            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
         )
         if not valid_max_tlp:
             raise ValueError(
@@ -166,9 +170,11 @@ class FirstEPSSConnector:
             self.helper.connector_logger.info(info_msg)
             return info_msg
         except Exception as err:
-            return self.helper.connector_logger.error(
+            # Re-raise so that pycti reports the work in error instead of completed
+            self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
+            raise
 
     def run(self) -> None:
         """

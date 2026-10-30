@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List
 
 import stix2
 from pycti import (
@@ -36,13 +36,8 @@ class ConverterToStix:
     automatically.
     """
 
-    def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-        tlp_level: Literal["clear", "green", "amber", "amber+strict", "red"],
-    ):
+    def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
-        self.tlp_level = tlp_level
         self.author = self.create_author()
 
     # ---------- Authoring helpers ----------

@@ -53,6 +53,19 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
+    "CONNECTOR_MAX_TLP": {
+      "description": "The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    },
     "IOC_EXTRACTOR_EXTRACT_HASHES": {
       "default": true,
       "description": "Extract file hashes (MD5, SHA-1, SHA-256).",
@@ -84,16 +97,9 @@
       "type": "boolean"
     },
     "IOC_EXTRACTOR_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "The maximal TLP of the observable being enriched.",
-      "enum": [
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
       "type": "string"
     }
   },

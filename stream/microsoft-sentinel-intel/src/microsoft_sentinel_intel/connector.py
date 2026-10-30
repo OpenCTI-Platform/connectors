@@ -28,6 +28,12 @@ class Connector:
 
     def _prepare_stix_object(self, stix_object: dict) -> dict:
         stix_object = dict(stix_object)
+        if self.config.microsoft_sentinel_intel.use_score_as_confidence:
+            score = self.helper.get_attribute_in_extension("score", stix_object)
+            if score is not None:
+                stix_object["confidence"] = score
+            else:
+                stix_object.pop("confidence", None)
         if self.config.microsoft_sentinel_intel.delete_extensions:
             stix_object.pop("extensions", None)
         if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:

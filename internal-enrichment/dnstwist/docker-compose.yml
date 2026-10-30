@@ -12,6 +12,7 @@ services:
       - CONNECTOR_SCOPE=Domain-Name # Optional (default: 'Domain-Name')
       - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
       - CONNECTOR_AUTO=false # Optional (default: false) /!\ Do not run the connector automatically, you will flood your opencti instance
+      #- CONNECTOR_MAX_TLP=TLP:RED # Optional (default: 'TLP:RED', no limit)
       # Custom parameters for connector-template
       - DNS_TWIST_FETCH_REGISTERED=true # Optional (default: true)
       - DNS_TWIST_THREADS=80 # Optional (default: 20)

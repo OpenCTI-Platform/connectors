@@ -1,0 +1,21 @@
+# Connector Configurations
+
+Below is an exhaustive enumeration of all configurable parameters available, each accompanied by detailed explanations of their purposes, default behaviors, and usage guidelines to help you understand and utilize them effectively.
+
+### Type: `object`
+
+| Property | Type | Required | Possible values | Default | Description |
+| -------- | ---- | -------- | --------------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
+| CONNECTOR_NAME | `string` |  | string | `"ORKL"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["orkl"]` | The scope of the connector. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P1D"` | The period of time to await between two runs of the connector. |
+| ORKL_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://orkl.eu/api/v1"` | Base URL of the ORKL API. |
+| ORKL_FULL_RESYNC_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | How often the whole ORKL library is re-imported to pick up changes on existing entries (e.g. 'P30D' for 30 days). The first run always imports the whole library; between two full re-imports, only entries created since the last run are imported. Set to 'P0D' to disable periodic re-imports. |
+| ORKL_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | TLP marking level applied to created STIX objects. |
+| ORKL_THREAT_ACTOR_AS_INTRUSION_SET | `boolean` |  | boolean | `true` | Create ORKL threat actors as Intrusion Sets (true) or as Threat Actors (false). |
+| ORKL_INGEST_ACTOR_ALIASES | `boolean` |  | boolean | `false` | Send the ORKL aliases of threat actors to OpenCTI. Disabled by default: ORKL merges several sources whose names and aliases overlap across distinct actors (e.g. 'UNC2452' is both an actor and an alias of 'APT 29'), and OpenCTI rejects an alias already carried by another entity. |
+| ORKL_INGEST_TOOLS | `boolean` |  | boolean | `false` | Create Tool entities from the threat actors' tools. Disabled by default: the ORKL feed does not distinguish malware from tools, so enabling this will create Tool entities for what are in fact malware families. |

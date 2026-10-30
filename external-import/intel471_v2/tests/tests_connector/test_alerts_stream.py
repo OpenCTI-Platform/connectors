@@ -187,3 +187,21 @@ def test_empty_page_leaves_lastseen_untouched():
 
     assert stream._get_cursor_value(api_response) == "c"
     assert stream._lastseen_ms == 123
+
+
+def test_changed_filters_after_failed_first_request_keep_initdate():
+    """
+    A first request that failed leaves a fingerprint and from-date but no cursor or
+    last-seen timestamp. A filter change then must not move the from-date to now.
+    """
+    old_initdate = 1_690_000_000_000
+    state = {
+        "alerts_filters_v471": "stale",
+        "alerts_initdate_v471": old_initdate,
+    }
+    stream, state = _build_alerts_stream(
+        state=state, connector_config=_config(statuses=["completed"])
+    )
+
+    assert stream._get_cursor() is None
+    assert state["alerts_initdate_v471"] == old_initdate

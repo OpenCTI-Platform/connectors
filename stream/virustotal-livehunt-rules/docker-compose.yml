@@ -11,7 +11,6 @@ services:
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=OpenCTI Virustotal Live Hunting"
       - CONNECTOR_SCOPE=Virustotal
-      - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
       - VIRUSTOTAL_LIVEHUNT_TOKEN=ChangeMe
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATION_EMAILS=[] #Example: ["wcoyte@acme.com", "rrunner@acme.com"]

@@ -39,7 +39,7 @@ class ShodanConnector:
         self.helper = helper
 
         self.token = self.config.shodan.token.get_secret_value()
-        self.max_tlp = self.config.shodan.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
@@ -178,11 +178,29 @@ class ShodanConnector:
             )
             self.stix_objects.append(observable_to_hostname)
 
+    @staticmethod
+    def _parse_asn_number(raw_asn):
+        # bool is a subclass of int, so it must be rejected explicitly
+        if isinstance(raw_asn, bool):
+            return None
+        if isinstance(raw_asn, int):
+            return raw_asn if raw_asn >= 0 else None
+        if isinstance(raw_asn, str):
+            cleaned = raw_asn.strip()
+            if cleaned.upper().startswith("AS"):
+                cleaned = cleaned[2:].strip()
+            try:
+                asn_number = int(cleaned)
+            except ValueError:
+                return None
+            return asn_number if asn_number >= 0 else None
+        return None
+
     def _generate_stix_asn(self, data):
-        if "asn" in data and data["asn"] is not None and (len(data["asn"]) > 0):
+        asn_number = self._parse_asn_number(data.get("asn"))
+        if asn_number is not None:
             # Generate ASN
-            entity_asn = data["isp"] if self.use_isp_name_for_asn else data["asn"]
-            asn_number = int(data["asn"].replace("AS", ""))
+            entity_asn = data["isp"] if self.use_isp_name_for_asn else f"AS{asn_number}"
             stix_asn = stix2.AutonomousSystem(
                 type="autonomous-system",
                 number=asn_number,

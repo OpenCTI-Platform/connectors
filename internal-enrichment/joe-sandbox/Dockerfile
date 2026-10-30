@@ -10,7 +10,8 @@ WORKDIR /opt/opencti-connector-joe-sandbox
 # single RUN layer so the published image never permanently retains the build
 # toolchain. libmagic / libffi are kept as runtime dependencies.
 # hadolint ignore=DL3003
-RUN apk --no-cache add libmagic libffi-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add libmagic libffi-dev && \
     apk --no-cache add --virtual .build-deps git build-base && \
     cd /opt/opencti-connector-joe-sandbox && \
     pip3 install --no-cache-dir -r requirements.txt && \
