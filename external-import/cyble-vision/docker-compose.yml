@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-cyble-vision:
+    image: opencti/connector-cyble-vision:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      # - CONNECTOR_ID=ChangeMe # optional, UUIDv4 (default: '7c2e8a4f-3b91-4d6e-9f12-a8c5e1d0b473')
+      # - CONNECTOR_NAME=Cyble Vision # optional (default: 'Cyble Vision')
+      # - CONNECTOR_SCOPE=Incident,Report,Note,Indicator,Vulnerability,Intrusion-Set,Domain-Name,IPv4-Addr,Url,X509-Certificate,User-Account # optional
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT1H # optional, ISO-8601 interval between runs (default: 'PT1H')
+      # Custom parameters for connector-cyble-vision
+      - CYBLE_VISION_API_TOKEN=ChangeMe
+      # - CYBLE_VISION_API_BASE_URL=https://bifrost.cyble.ai # optional
+      # - CYBLE_VISION_IMPORT_SINCE=P7D # optional, lookback on first run (default: 7 days ago)
+      # - CYBLE_VISION_ALERT_SERVICES= # optional, comma-separated allow-list (default: every entitled service)
+      # - CYBLE_VISION_EXCLUDE_STATUSES=FALSE_POSITIVE # optional
+      # - CYBLE_VISION_PAGE_SIZE=100 # optional
+      # - CYBLE_VISION_TLP_LEVEL=amber # optional, 'clear', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+      # - CYBLE_VISION_PORTAL_URL_TEMPLATE=https://cyble.ai/alerts/{service}?id=["{alert_id}"] # optional
+      # - CYBLE_VISION_ENGINE_API_BASE_URL=https://api.cyble.ai # optional
+      # - CYBLE_VISION_ENABLE_ADVISORIES=true # optional
+      # - CYBLE_VISION_ENABLE_NEWSFEED=true # optional
+      # - CYBLE_VISION_ENABLE_NEWSFLASH=true # optional
+      # - CYBLE_VISION_ENGINE_PAGE_SIZE=50 # optional
+    restart: always

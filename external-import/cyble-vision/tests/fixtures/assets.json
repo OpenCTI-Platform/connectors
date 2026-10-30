@@ -1,0 +1,34 @@
+{
+  "created_at": "2026-03-12T09:41:03.097621+00:00",
+  "updated_at": "2026-03-30T04:19:12.688+00:00",
+  "deleted_at": null,
+  "id": "08ddbb1d-fcc0-5ad0-820d-9afd19d1129c",
+  "data_id": "b7603267-e78a-5543-b15e-4aaee9e82a24",
+  "entity_id": 3630890,
+  "keyword_name": "example2.com",
+  "entity_type": 0,
+  "service": "assets",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "MEDIUM",
+  "updated_by_id": "c327c32d-05f6-5f41-95be-33f0fe774568",
+  "created_by": null,
+  "user_severity": "MEDIUM",
+  "risk_score": null,
+  "bucket_id": 12866,
+  "asset": "203.0.113.10",
+  "last_detected_at": "2026-03-11T04:53:00+00:00",
+  "bucket_name": "Example Bucket",
+  "data": {
+    "data": {
+      "keyword_id": 0,
+      "last_detected_at": "2026-03-11 04:53:00",
+      "value": "203.0.113.10"
+    }
+  },
+  "tags": []
+}

@@ -1,0 +1,69 @@
+{
+  "created_at": "2026-04-07T20:31:25.658206+00:00",
+  "updated_at": "2026-04-07T20:31:25.658206+00:00",
+  "deleted_at": null,
+  "id": "e1c18f92-3d5b-53a2-8793-5ba82c90809a",
+  "data_id": "22c02989-a115-5a79-8a5d-f72073c4adf5",
+  "entity_id": -1,
+  "keyword_name": "",
+  "entity_type": 0,
+  "service": "physical_threats",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": null,
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": null,
+  "bucket_id": 0,
+  "pin_name": "Qatar",
+  "city": "",
+  "title": "Qatar successfully intercepts a missile attack on 7 April 2026 - example54.com",
+  "threat_type": [
+    "Geopolitical"
+  ],
+  "bucket_name": "",
+  "data": {
+    "data": {
+      "address": "",
+      "base_source": {
+        "name": "example54.com",
+        "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOZFRHMzhHaWVzQzhTQzA1X1E0djZSTngtR2p6MEtySm40NGFFd1NYX0QyWnlMWHlBTDVrV0tRa3RvOXNrVGpFWXRrQjUxUDduM01GRW9Sb2lKai1uWVdRVXUzY1dxUUlRWGVRRzVJTU9HN3pRcnRKbkhBZlZ0NHRPRi1YcEloU1BHTTJQVkxJT1MxMEcxVzZmUm9sdDI0TXlyaEVxaUgzSXpyQQ?oc=5"
+      },
+      "city": "",
+      "company_id": 2,
+      "company_uuid": "0baecb5a-86e5-511c-a223-5da2d7d6619b",
+      "country": "Qatar",
+      "description": "Qatar successfully intercepts a missile attack on 7 April 2026&nbsp;&nbsp;example54.com",
+      "id": 37089,
+      "latitude": 25.354826,
+      "llm_severity_description": "The missile attack interception indicates an active threat to national security, which poses an immediate danger to human safety and could disrupt operations and logistics in the region. The potential for escalation or further attacks creates a credible operational risk.",
+      "location_name": "Qatar",
+      "location_type": "Warehouse",
+      "longitude": 51.183884,
+      "pin_id": 412,
+      "pin_name": "Qatar",
+      "pin_string": "Qatar",
+      "published_at": "2026-04-07T20:00:00Z",
+      "region": "Qatar",
+      "severity": "HIGH",
+      "source_count": 1,
+      "sources": [
+        {
+          "name": "example54.com",
+          "url": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxOZFRHMzhHaWVzQzhTQzA1X1E0djZSTngtR2p6MEtySm40NGFFd1NYX0QyWnlMWHlBTDVrV0tRa3RvOXNrVGpFWXRrQjUxUDduM01GRW9Sb2lKai1uWVdRVXUzY1dxUUlRWGVRRzVJTU9HN3pRcnRKbkhBZlZ0NHRPRi1YcEloU1BHTTJQVkxJT1MxMEcxVzZmUm9sdDI0TXlyaEVxaUgzSXpyQQ?oc=5"
+        }
+      ],
+      "state": "",
+      "threat_type": [
+        "Geopolitical"
+      ],
+      "title": "Qatar successfully intercepts a missile attack on 7 April 2026 - example54.com"
+    }
+  },
+  "tags": []
+}

@@ -1,0 +1,27 @@
+{
+  "id": 8082,
+  "title": "Malicious Firefox Extensions Steal Cryptocurrency Wallet Credentials",
+  "risk_score": "high",
+  "publish_date": "2026-10-13",
+  "status": "published",
+  "tlp_rating": "TLP:GREEN",
+  "classified": 0,
+  "is_exclusive": false,
+  "tags": {
+    "countries": [
+      "Worldwide"
+    ],
+    "regions": [
+      "Worldwide"
+    ],
+    "industries": [
+      "Internet"
+    ],
+    "vulnerabilities": [],
+    "customTags": [
+      "Firefox",
+      "Credential Stealer"
+    ]
+  },
+  "exclusive": false
+}
