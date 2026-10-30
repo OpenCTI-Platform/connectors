@@ -51,12 +51,12 @@ def test_is_observable_subtype(observable_type):
     assert issubclass(observable_type, BaseObservableEntity)
 
 
-def test_observable_writes_opencti_attributes_in_sco_extension(
+def test_observable_writes_opencti_properties_in_sco_extension(
     fake_valid_organization_author,
     fake_valid_external_references,
 ):
-    """Test that the OpenCTI attributes go in the SCO extension and stay top-level."""
-    # Given an observable with OpenCTI attributes
+    """Test that the OpenCTI properties go in the SCO extension and stay top-level."""
+    # Given an observable with OpenCTI properties
     observable = IPV4Address(
         value="127.0.0.1",
         score=0,
@@ -69,7 +69,7 @@ def test_observable_writes_opencti_attributes_in_sco_extension(
     )
     # When converting it to a STIX object
     stix2_obj = observable.to_stix2_object()
-    # Then the extension holds the attributes, like OpenCTI exports
+    # Then the extension holds the properties, like OpenCTI exports
     assert stix2_obj.extensions[STIX_EXT_OCTI_SCO] == {
         "extension_type": "property-extension",
         "labels": ["test"],
@@ -89,9 +89,9 @@ def test_observable_writes_opencti_attributes_in_sco_extension(
     assert stix2_obj.x_opencti_create_indicator is True
 
 
-def test_observable_sco_extension_without_attributes():
-    """Test that the SCO extension only has its type when no attribute is set."""
-    # Given an observable without OpenCTI attributes
+def test_observable_sco_extension_without_opencti_properties():
+    """Test that the SCO extension only has its type when no OpenCTI property is set."""
+    # Given an observable without OpenCTI properties
     observable = IPV4Address(value="127.0.0.1")
     # When converting it to a STIX object
     stix2_obj = observable.to_stix2_object()
@@ -108,14 +108,14 @@ def test_observable_sco_extension_without_attributes():
         pytest.param(Hostname(value="example.com"), id="opencti_custom_observable"),
     ],
 )
-def test_observable_attributes_do_not_change_id(
+def test_observable_opencti_properties_do_not_change_id(
     observable,
     fake_valid_organization_author,
     fake_valid_external_references,
 ):
-    """Test that the OpenCTI attributes do not change the STIX id."""
-    # Given the same observable with OpenCTI attributes
-    observable_with_attributes = observable.model_copy(
+    """Test that the OpenCTI properties do not change the STIX id."""
+    # Given the same observable with OpenCTI properties
+    observable_with_properties = observable.model_copy(
         update={
             "score": 50,
             "description": "Test description",
@@ -126,9 +126,9 @@ def test_observable_attributes_do_not_change_id(
     )
     # When converting both to STIX objects
     stix2_obj = observable.to_stix2_object()
-    stix2_obj_with_attributes = observable_with_attributes.to_stix2_object()
+    stix2_obj_with_properties = observable_with_properties.to_stix2_object()
     # Then they have the same id
-    assert stix2_obj.id == stix2_obj_with_attributes.id
+    assert stix2_obj.id == stix2_obj_with_properties.id
     # And the serialized object is still valid STIX
-    parsed = stix2.parse(stix2_obj_with_attributes.serialize(), allow_custom=True)
+    parsed = stix2.parse(stix2_obj_with_properties.serialize(), allow_custom=True)
     assert parsed.id == stix2_obj.id

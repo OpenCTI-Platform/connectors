@@ -3,8 +3,11 @@
 from typing import Any
 
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
-from connectors_sdk.models.enums import HashAlgorithm
-from pycti import STIX_EXT_OCTI_SCO
+from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
+    HashAlgorithm,
+)
 from pydantic import AwareDatetime, Field, PositiveInt, model_validator
 from stix2.v21 import File as Stix2File
 
@@ -87,6 +90,10 @@ class File(BaseObservableEntity):
 
     def to_stix2_object(self) -> Stix2File:
         """Make stix object."""
+        custom_properties = {
+            "additional_names": self.additional_names,
+        }
+
         return Stix2File(
             hashes=self.hashes,
             size=self.size,
@@ -99,8 +106,11 @@ class File(BaseObservableEntity):
             atime=self.atime,
             **self._merge_stix2_properties(
                 self._common_stix2_properties(),
-                self._custom_stix2_properties(
-                    STIX_EXT_OCTI_SCO, additional_names=self.additional_names
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI_SCO,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
                 ),
-            )
+                self._deprecated_x_opencti_properties(custom_properties),
+            ),
         )

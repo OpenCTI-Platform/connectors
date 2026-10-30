@@ -99,7 +99,7 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
 
 def test_indicator_writes_opencti_properties_in_extension():
     """Test that Indicator writes score and main observable type in the OpenCTI extension."""
-    # Given an Indicator with OpenCTI attributes
+    # Given an Indicator with OpenCTI properties
     indicator = Indicator(
         name="Test Indicator",
         pattern="[ipv4-addr:value = '0.0.0.0']",

@@ -57,8 +57,8 @@ def test_organization_to_stix2_object_returns_valid_stix_object(
 
 
 def test_organization_writes_opencti_properties_in_extension():
-    """Test that Organization writes its OpenCTI attributes in the OpenCTI extension."""
-    # Given an Organization with OpenCTI attributes
+    """Test that Organization writes its OpenCTI properties in the OpenCTI extension."""
+    # Given an Organization with OpenCTI properties
     organization = Organization(
         name="Test organization",
         organization_type="vendor",
@@ -67,7 +67,7 @@ def test_organization_writes_opencti_properties_in_extension():
     )
     # When converting it to a STIX object
     stix2_obj = organization.to_stix2_object()
-    # Then the extension holds the attributes
+    # Then the extension holds the properties
     assert stix2_obj.extensions[STIX_EXT_OCTI] == {
         "extension_type": "property-extension",
         "organization_type": "vendor",

@@ -31,13 +31,13 @@ def test_is_custom_observable_subtype(custom_observable_type):
     assert issubclass(custom_observable_type, BaseCustomObservableEntity)
 
 
-def test_custom_observable_writes_opencti_attributes_at_top_level(
+def test_custom_observable_writes_opencti_properties_at_top_level(
     fake_valid_organization_author,
     fake_valid_external_references,
 ):
-    """Test that the OpenCTI attributes are at the top level, as in OpenCTI exports."""
+    """Test that the OpenCTI properties are at the top level, as in OpenCTI exports."""
 
-    # Given a custom observable with OpenCTI attributes
+    # Given a custom observable with OpenCTI properties
     class DummyCustomObservable(BaseCustomObservableEntity):
         """Dummy custom observable for testing."""
 
@@ -56,7 +56,7 @@ def test_custom_observable_writes_opencti_attributes_at_top_level(
     )
     # When converting it to a STIX object
     stix2_obj = observable.to_stix2_object()
-    # Then the attributes are at the top level
+    # Then the properties are at the top level
     assert stix2_obj.labels == ["test"]
     assert stix2_obj.description == "Test description"
     assert stix2_obj.score == 0

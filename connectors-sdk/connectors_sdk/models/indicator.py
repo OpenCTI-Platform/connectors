@@ -4,8 +4,8 @@ from typing import Literal
 
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
-from pycti import STIX_EXT_OCTI
 from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Indicator as Stix2Indicator
@@ -131,6 +131,11 @@ class Indicator(BaseIdentifiedEntity):
 
     def to_stix2_object(self) -> Stix2Indicator:
         """Make stix object."""
+        custom_properties = {
+            "score": self.score,
+            "main_observable_type": self.main_observable_type,
+        }
+
         return Stix2Indicator(
             id=PyctiIndicator.generate_id(pattern=self.pattern),
             name=self.name,
@@ -145,18 +150,25 @@ class Indicator(BaseIdentifiedEntity):
                 for kill_chain_phase in self.kill_chain_phases or []
             ],
             allow_custom=True,
+            # Top level only, not in the OpenCTI MITRE extension: this is the format of
+            # MITRE ATT&CK STIX data, and pycti reads it before the extension.
             x_mitre_platforms=self.platforms,
-            # Top level only: the platform never exports it, it is an import option.
-            x_opencti_create_observables=self.create_observables,
-            # Not duplicated in the extension: pycti reads files from both places
-            # and joins them, so each file would be uploaded twice.
-            x_opencti_files=[
-                file.to_stix2_object() for file in self.associated_files or []
-            ],
-            **self._common_stix2_properties(),
-            **self._custom_stix2_properties(
-                STIX_EXT_OCTI,
-                score=self.score,
-                main_observable_type=self.main_observable_type,
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
+                {
+                    # Top level only: the platform never exports it, it is an import option.
+                    "x_opencti_create_observables": self.create_observables,
+                    # Not duplicated in the extension: pycti reads files from both places
+                    # and joins them, so each file would be uploaded twice.
+                    "x_opencti_files": [
+                        file.to_stix2_object() for file in self.associated_files or []
+                    ],
+                },
             ),
         )

@@ -5,6 +5,8 @@ from __future__ import annotations
 import warnings
 from enum import StrEnum
 
+from pycti import STIX_EXT_OCTI, STIX_EXT_OCTI_SCO
+
 __all__ = [
     "AccountType",
     "AttackMotivation",
@@ -14,6 +16,8 @@ __all__ = [
     "CaseIncidentResponseType",
     "ChannelType",
     "CvssSeverity",
+    "ExtensionDefinitionId",
+    "ExtensionType",
     "HashAlgorithm",
     "ImplementationLanguage",
     "IncidentSeverity",
@@ -165,6 +169,33 @@ class ChannelType(_PermissiveEnum):
 
     TWITTER = "Twitter"
     FACEBOOK = "Facebook"
+
+
+class ExtensionDefinitionId(StrEnum):
+    """Ids of the STIX extension definitions used by OpenCTI.
+
+    OpenCTI does not publish these extension definitions. The values come from pycti.
+    """
+
+    # OpenCTI properties of every object (SDO, SCO, SRO), and the domain object
+    # types OpenCTI adds.
+    OCTI = STIX_EXT_OCTI
+    # OpenCTI properties of observables, and the observable types OpenCTI adds.
+    OCTI_SCO = STIX_EXT_OCTI_SCO
+
+
+class ExtensionType(StrEnum):
+    """STIX extension types.
+
+    See section 7.3 (Extension Definition) of the STIX 2.1 specification:
+    https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html
+    """
+
+    PROPERTY_EXTENSION = "property-extension"
+    TOPLEVEL_PROPERTY_EXTENSION = "toplevel-property-extension"
+    NEW_SDO = "new-sdo"
+    NEW_SCO = "new-sco"
+    NEW_SRO = "new-sro"
 
 
 class HashAlgorithm(_PermissiveEnum):

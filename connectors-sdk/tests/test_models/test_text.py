@@ -105,7 +105,7 @@ def test_text_to_stix2_object_with_author_and_markings(
         object_marking_refs=[
             marking.to_stix2_object().id for marking in fake_valid_tlp_markings
         ],
-        # Custom observable: the attributes are at the top level, as in OpenCTI exports.
+        # Custom observable: the OpenCTI properties are at the top level, as in OpenCTI exports.
         extensions={STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}},
         created_by_ref=fake_valid_organization_author.id,
         external_references=[

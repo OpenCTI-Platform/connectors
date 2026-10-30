@@ -4,7 +4,7 @@ from abc import ABC
 from typing import Any
 
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
-from pycti import STIX_EXT_OCTI_SCO
+from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
 
 
 class BaseCustomObservableEntity(BaseObservableEntity, ABC):
@@ -12,7 +12,7 @@ class BaseCustomObservableEntity(BaseObservableEntity, ABC):
 
     STIX does not define these types: OpenCTI adds them, as "new-sco" types.
     For a new-sco type, the extension only declares the new type, and the
-    attributes are top-level properties. stix2 builds custom observables the
+    OpenCTI properties are at the top level. stix2 builds custom observables the
     same way when they have an `extension_name`, and the platform exports them
     the same way.
 
@@ -20,20 +20,21 @@ class BaseCustomObservableEntity(BaseObservableEntity, ABC):
     """
 
     def _common_stix2_properties(self) -> dict[str, Any]:
-        """Factorize custom params, with the OpenCTI attributes at the top level."""
+        """Factorize custom params, with the OpenCTI properties at the top level."""
+        properties = super()._common_stix2_properties()
+
+        # A custom observable is a new SCO: its properties are all at the top level,
+        # and its extension only defines the type ("new-sco").
+        # So move the properties from the extension to the top level.
+        top_level_properties = properties.pop("extensions")[
+            ExtensionDefinitionId.OCTI_SCO
+        ]
+        del top_level_properties["extension_type"]
+
         return {
-            **super()._common_stix2_properties(),
-            # Replaces the parent's "property-extension" with the "new-sco" layout.
-            **self._custom_stix2_properties(
-                STIX_EXT_OCTI_SCO,
-                "new-sco",
-                labels=self.labels,
-                description=self.description,
-                score=self.score,
-                created_by_ref=self.author.id if self.author else None,
-                external_references=[
-                    external_ref.to_stix2_object()
-                    for external_ref in self.external_references or []
-                ],
+            **properties,
+            **top_level_properties,
+            **self._custom_stix2_extensions(
+                ExtensionDefinitionId.OCTI_SCO, extension_type=ExtensionType.NEW_SCO
             ),
         }

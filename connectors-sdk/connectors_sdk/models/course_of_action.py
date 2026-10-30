@@ -1,7 +1,7 @@
 """CourseOfAction."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from pycti import STIX_EXT_OCTI
+from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
 from pycti import CourseOfAction as PyctiCourseOfAction
 from pydantic import Field
 from stix2.v21 import CourseOfAction as Stix2CourseOfAction
@@ -32,6 +32,10 @@ class CourseOfAction(BaseIdentifiedEntity):
 
     def to_stix2_object(self) -> Stix2CourseOfAction:
         """Make CourseOfAction STIX2.1 object."""
+        custom_properties = {
+            "aliases": self.aliases,
+        }
+
         return Stix2CourseOfAction(
             id=PyctiCourseOfAction.generate_id(
                 name=self.name,
@@ -40,10 +44,16 @@ class CourseOfAction(BaseIdentifiedEntity):
             name=self.name,
             description=self.description,
             allow_custom=True,
+            # Top level only, not in the OpenCTI MITRE extension: this is the format of
+            # MITRE ATT&CK STIX data, and pycti reads it before the extension.
             x_mitre_id=self.mitre_id,
-            **self._common_stix2_properties(),
-            **self._custom_stix2_properties(
-                STIX_EXT_OCTI,
-                aliases=self.aliases,
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
             ),
         )

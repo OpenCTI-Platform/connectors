@@ -2,8 +2,11 @@
 
 from connectors_sdk.models._location import Location
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.enums import LocationType
-from pycti import STIX_EXT_OCTI
+from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
+    LocationType,
+)
 from pycti import Location as PyctiLocation
 from pydantic import Field
 from stix2.v21 import Location as Stix2Location
@@ -41,6 +44,11 @@ class City(BaseIdentifiedEntity):
         """
         location_type = LocationType.CITY.value
 
+        custom_properties = {
+            "location_type": location_type,
+            "aliases": self.aliases,
+        }
+
         return Location(
             id=PyctiLocation.generate_id(
                 name=self.name,
@@ -54,10 +62,13 @@ class City(BaseIdentifiedEntity):
             latitude=self.latitude,
             longitude=self.longitude,
             allow_custom=True,
-            **self._common_stix2_properties(),
-            **self._custom_stix2_properties(
-                STIX_EXT_OCTI,
-                location_type=location_type,
-                aliases=self.aliases,
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
             ),
         )

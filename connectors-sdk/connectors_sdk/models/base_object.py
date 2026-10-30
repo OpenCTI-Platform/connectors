@@ -13,6 +13,7 @@ class BaseObject(BaseModel, ABC):
     model_config = ConfigDict(
         extra="forbid",
         validate_assignment=True,  # ensure model is revalidate when setting properties
+        allow_inf_nan=False,  # NaN and infinity are not valid JSON
     )
 
     def __hash__(self) -> int:

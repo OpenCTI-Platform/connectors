@@ -50,7 +50,7 @@ def test_media_content_to_stix2_object_returns_valid_stix_object(
         publication_date="2024-01-01T00:00:00Z",
         allow_custom=True,
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
-        # Custom observable: the attributes are at the top level, as in OpenCTI exports.
+        # Custom observable: the OpenCTI properties are at the top level, as in OpenCTI exports.
         extensions={STIX_EXT_OCTI_SCO: {"extension_type": "new-sco"}},
         labels=["news"],
         description="Test description",
