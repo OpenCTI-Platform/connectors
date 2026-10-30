@@ -1,2 +1,2 @@
 jsonschema==4.26.0
-Pillow==12.3.0
+Pillow==13.0.0

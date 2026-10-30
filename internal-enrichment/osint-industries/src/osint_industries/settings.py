@@ -14,6 +14,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -62,20 +63,15 @@ class OsintIndustriesConfig(BaseConfigModel):
         description="The TLP marking applied to the objects produced by the connector.",
         default="amber+strict",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description=(
             "The maximum TLP level of an observable the connector is allowed to "
             "enrich. Observables marked above this level are skipped and their "
             "value is never sent to the OSINT Industries API."
         ),
-        default="TLP:AMBER",
     )
     premium: bool = Field(
         description=(

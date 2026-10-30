@@ -62,6 +62,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT                     | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                   |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                                   | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
 | Auto Mode       | auto       | `CONNECTOR_AUTO`            | false                                   | No        | Enables or disables automatic enrichment of observables.                     |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | TLP:AMBER                               | No        | Maximum TLP level for observables to be enriched. Replaces the deprecated `CENSYS_ENRICHMENT_MAX_TLP`. |
 
 ### Connector extra parameters environment variables
 
@@ -69,7 +70,6 @@ There are a number of configuration options, which are set either in `docker-com
 |-----------------|------------------------------------|-----------------------------------------|------------|-----------|--------------------------------------------------------------------|
 | Organisation ID | censys_enrichment.organisation_id  | `CENSYS_ENRICHMENT_ORGANISATION_ID`     |            | Yes       | Your Censys organisation ID for API authentication.                |
 | API Token       | censys_enrichment.token            | `CENSYS_ENRICHMENT_TOKEN`               |            | Yes       | Your Censys API token for authentication.                          |
-| Max TLP         | censys_enrichment.max_tlp          | `CENSYS_ENRICHMENT_MAX_TLP`             | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.                  |
 
 ## Deployment
 
@@ -94,9 +94,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=false
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - CENSYS_ENRICHMENT_ORGANISATION_ID=ChangeMe
       - CENSYS_ENRICHMENT_TOKEN=ChangeMe
-      - CENSYS_ENRICHMENT_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -251,7 +251,7 @@ graph LR
 
 ### Processing Details
 
-1. **TLP Check**: Validates observable TLP against `max_tlp` setting
+1. **TLP Check**: Validates observable TLP against the `CONNECTOR_MAX_TLP` setting
 2. **API Query**: Queries appropriate Censys endpoint based on observable type
 3. **Location Processing**: Creates hierarchical location entities
 4. **DNS Processing**: Creates hostname observables with resolution relationships
@@ -278,6 +278,6 @@ Log output includes:
 - **API Reference**: [Censys Search API Documentation](https://search.censys.io/api)
 - **Rate Limits**: API calls are subject to Censys rate limits based on subscription tier
 - **Data Freshness**: Censys continuously scans the internet; data freshness depends on scan frequency
-- **TLP Handling**: Observables with TLP above `MAX_TLP` will not be sent to Censys
+- **TLP Handling**: Observables with TLP above `CONNECTOR_MAX_TLP` will not be sent to Censys
 - **Playbook Support**: This connector supports OpenCTI playbook automation
 - **Roadmap**: Potential future support for additional observable types (e.g., URL)

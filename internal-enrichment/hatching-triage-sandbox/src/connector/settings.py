@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -61,15 +60,11 @@ class HatchingTriageSandboxConfig(BaseConfigModel):
         description="Label color for all other labels.",
         default="#54483b",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP marking for observable submission.",
-        default="TLP:AMBER",
     )
 
 

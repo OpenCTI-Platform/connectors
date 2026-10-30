@@ -7,7 +7,7 @@ WORKDIR /opt/opencti-connector-cve
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev
 
 RUN cd /opt/opencti-connector-cve/src && \

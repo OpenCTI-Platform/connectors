@@ -42,7 +42,7 @@ Key features:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261008.0
+- OpenCTI Platform >= 7.261026.0
 - Azure subscription with Microsoft Sentinel
 - Azure AD Application or Managed Identity with appropriate permissions
 
@@ -229,3 +229,4 @@ CONNECTOR_LOG_LEVEL=debug
 - **STIX Bundles**: Indicators are sent as STIX bundles to preserve threat intelligence context
 - **Extra Labels**: Add comma-separated labels to all indicators sent to Sentinel
 - **Delete Extensions**: Set to `true` to remove OpenCTI-specific extensions from bundles
+- **Use Score As Confidence**: Microsoft Sentinel has no score field and does not index STIX extensions, so the OpenCTI score is not visible in Sentinel by default. Set to `true` to send the OpenCTI score in the STIX `confidence` property (0-100) instead of the OpenCTI confidence. The two are never mixed: objects without a score are sent without `confidence`. OpenCTI identities have no score, so with `publish_identities` enabled they are sent without `confidence`
