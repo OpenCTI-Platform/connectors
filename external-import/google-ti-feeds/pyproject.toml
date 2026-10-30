@@ -18,7 +18,7 @@ classifiers = [
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==7.261026.0",
+    "pycti==7.261030.1",
     "aiohttp~=3.14.1",
     "Markdown~=3.10.0",
     "markdownify~=1.2.0",
@@ -44,7 +44,7 @@ dev = [
     "ruff ~=0.16.4",         # linter
     "mypy ~=1.20.2",         # Type validator
     "pip_audit ~=2.10.0",     # Security checker
-    "pre-commit ~=4.6.2",    # Git hooks
+    "pre-commit ~=4.7.0",    # Git hooks
     "flake8 ~=7.3.0",        # Linter
     "types-PyYAML ~=6.0.12", # stubs for untyped module
 ]

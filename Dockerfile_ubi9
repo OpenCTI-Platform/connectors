@@ -30,7 +30,8 @@ COPY src /opt/connector/src
 RUN set -eux; \
     microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core; \
     pip3.12 install --no-cache-dir -r /opt/connector/src/requirements.txt; \
-    if [ -n "${POST_INSTALL}" ]; then ${POST_INSTALL}; fi; \
+    # POST_INSTALL is a shell command line, so it can chain commands (&&).
+    if [ -n "${POST_INSTALL}" ]; then sh -c "${POST_INSTALL}"; fi; \
     # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
     # world-readable so the connector can read it as an arbitrary non-root UID.
     chmod -R a+rX "$HOME"; \
