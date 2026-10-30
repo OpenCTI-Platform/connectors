@@ -31,6 +31,7 @@ from connector.src.custom.exceptions.fetch_errors import (
     GTIDomainFetchError,
     GTIFileFetchError,
     GTIIndicatorFetchError,
+    GTIIndicatorPackageUnavailableError,
     GTIIPFetchError,
     GTIMalwareFetchError,
     GTIPaginationError,
@@ -90,4 +91,5 @@ __all__ = [
     "GTIPartialDataProcessingError",
     "GTIApiClientError",
     "GTIIndicatorFetchError",
+    "GTIIndicatorPackageUnavailableError",
 ]
