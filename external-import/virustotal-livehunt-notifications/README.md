@@ -54,7 +54,7 @@ There are a number of configuration options, which are set either in `docker-com
 | --------------- | --------------- | --------------------------- | --------------------------------- | --------- | ------------------------------------------------------------------------------------------- |
 | Connector ID    | id              | `CONNECTOR_ID`              |                                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                                   |
 | Connector Name  | name            | `CONNECTOR_NAME`            | VirusTotal Livehunt Notifications | No        | Name of the connector.                                                                      |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           | StixFile,Indicator,Incident       | No        | The scope or type of data the connector is importing.                                       |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | StixFile,Indicator,Incident,Domain-Name,Url,IPv4-Addr,IPv6-Addr | No        | The scope or type of data the connector is importing.                                       |
 | Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error                             | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.                  |
 | Duration period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT5M                              | No        | The period of time to await between two runs of the connector, in ISO-8601 duration format. |
 
@@ -75,6 +75,11 @@ There are a number of configuration options, which are set either in `docker-com
 | Create YARA Rule    | virustotal.create_yara_rule    | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE`    | true     | No        | Create YARA indicator for the matching rule.                                                 |
 | Delete Notification | virustotal.delete_notification | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION` | false    | No        | Delete notification from VT after processing.                                                |
 | Filter with Tag     | virustotal.filter_with_tag     | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG`     |          | No        | Only process notifications with this tag.                                                    |
+| Get Malware Config  | virustotal.get_malware_config  | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG`  | false    | No        | Extract C2 infrastructure from malware configuration.                                           |
+| Create File Indicators | virustotal.create_file_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_INDICATORS` | false    | No        | Create a File Indicator (SHA-256) for each matched file.                                    |
+| Create Domain Indicators | virustotal.create_domain_name_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_DOMAIN_NAME_INDICATORS` | false    | No        | Create Domain-Name Indicators from malware configuration.                                     |
+| Create IP Indicators | virustotal.create_ip_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_IP_INDICATORS` | false    | No        | Create IPv4/IPv6 Indicators from malware configuration.                                    |
+| Create URL Indicators | virustotal.create_url_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_URL_INDICATORS` | false    | No        | Create URL Indicators from malware configuration.                                       |
 
 ⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` value takes precedence over `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC` value if both are explicitly set.
 
@@ -98,10 +103,10 @@ connector-virustotal-livehunt-notifications:
     - OPENCTI_TOKEN=ChangeMe
     - CONNECTOR_ID=ChangeMe
     - CONNECTOR_NAME=VirusTotal Livehunt Notifications
-    - CONNECTOR_SCOPE=StixFile,Indicator,Incident
+    - CONNECTOR_SCOPE=StixFile,Indicator,Incident,Domain-Name,Url,IPv4-Addr,IPv6-Addr
     - CONNECTOR_LOG_LEVEL=error
+    - CONNECTOR_DURATION_PERIOD=PT5M
     - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe
-    - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC=300
     - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True
     - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE=True
     - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True
@@ -177,6 +182,7 @@ graph LR
 | File Metadata   | File           | File observable with hashes    |
 | YARA Rule       | Indicator      | YARA pattern indicator         |
 | File Download   | Artifact       | Actual file content (optional) |
+| Malware Config  | Domain, IP, URL| C2 infrastructure observables  |
 
 ### Relationships Created
 
@@ -184,6 +190,9 @@ graph LR
 | ---------------- | ------------ | ------ |
 | Incident         | related-to   | File   |
 | Indicator (YARA) | based-on     | File   |
+| File             | related-to   | C2 Observable |
+| Incident         | related-to   | C2 Observable |
+| Indicator (C2)   | based-on     | C2 Observable |
 
 ### Filtering Options
 

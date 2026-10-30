@@ -5,11 +5,11 @@ import time
 from datetime import timedelta
 from typing import Any, Mapping, Optional
 
-import stix2
 import vt
+from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from livehunt.builder import LivehuntBuilder
 from livehunt.settings import ConnectorSettings
-from pycti import Identity, MarkingDefinition, OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 
 
 class VirustotalLivehuntNotifications:
@@ -21,45 +21,17 @@ class VirustotalLivehuntNotifications:
     # Number of days to load if no state
     _LAST_DAYS_TO_LOAD = 3
 
-    TLP_LEVELS = mapping = {
-        "white": stix2.TLP_WHITE,
-        "clear": stix2.TLP_WHITE,
-        "green": stix2.TLP_GREEN,
-        "amber": stix2.TLP_AMBER,
-        "amber+strict": stix2.MarkingDefinition(
-            id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-            definition_type="statement",
-            definition={"statement": "custom"},
-            custom_properties={
-                "x_opencti_definition_type": "TLP",
-                "x_opencti_definition": "TLP:AMBER+STRICT",
-            },
-        ),
-        "red": stix2.TLP_RED,
-    }
-
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
 
-        tlp_marking = self.TLP_LEVELS[
-            self.config.virustotal_livehunt_notifications.tlp_level
-        ]
-
-        author = stix2.Identity(
-            id=Identity.generate_id(
-                name="Virustotal Livehunt Notifications", identity_class="organization"
-            ),
+        tlp_marking = TLPMarking(
+            level=config.virustotal_livehunt_notifications.tlp_level
+        )
+        author = OrganizationAuthor(
             name="Virustotal Livehunt Notifications",
-            identity_class="organization",
             description="Download/upload files from Virustotal Livehunt Notifications.",
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="Virustotal Livehunt Notifications",
-                    url="https://www.virustotal.com",
-                    description="Virustotal Livehunt Notifications.",
-                )
-            ],
+            contact_information="https://www.virustotal.com",
         )
 
         client = vt.Client(
