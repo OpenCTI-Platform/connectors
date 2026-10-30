@@ -491,3 +491,57 @@ def test_future_dated_object_does_not_push_cursor_past_now(connector, helper):
     connector.process_message()
 
     assert "indicator--new" in _sent_ids(helper)
+
+
+def test_dwi_screenshot_external_references_are_removed(connector):
+    bundle = {
+        "type": "bundle",
+        "objects": [
+            {
+                "type": "report",
+                "id": "report--1",
+                "external_references": [
+                    {"source_name": "dwi-screenshot", "url": "https://dwi.test/1.png"},
+                    {
+                        "source_name": "dwi-screenshot-2",
+                        "url": "https://dwi.test/2.png",
+                    },
+                    {"source_name": "dwi-post", "url": "https://dwi.test/post"},
+                ],
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--2",
+                "external_references": [
+                    {"source_name": "dwi-screenshot", "url": "https://dwi.test/3.png"}
+                ],
+            },
+            {
+                "type": "malware",
+                "id": "malware--4",
+                "external_references": [
+                    {"source_name": "dwi-post", "url": "https://dwi.test/other"}
+                ],
+            },
+            {
+                "type": "marking-definition",
+                "id": "marking-definition--3",
+                "external_references": [
+                    {"source_name": "dwi-screenshot", "url": "https://dwi.test/4.png"}
+                ],
+            },
+        ],
+    }
+
+    sent = connector._with_provenance(bundle, bundle["objects"])
+    by_id = {o["id"]: o for o in sent["objects"]}
+
+    assert by_id["report--1"]["external_references"] == [
+        {"source_name": "dwi-post", "url": "https://dwi.test/post"}
+    ]
+    assert "external_references" not in by_id["indicator--2"]
+    assert by_id["malware--4"]["external_references"] == [
+        {"source_name": "dwi-post", "url": "https://dwi.test/other"}
+    ]
+    assert "external_references" not in by_id["marking-definition--3"]
+    assert len(bundle["objects"][0]["external_references"]) == 3
