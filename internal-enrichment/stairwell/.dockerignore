@@ -1,0 +1,7 @@
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.venv
+tests
+config.yml
+src/config.yml
