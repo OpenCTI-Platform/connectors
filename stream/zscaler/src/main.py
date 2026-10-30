@@ -21,6 +21,7 @@ if __name__ == "__main__":
             zscaler_username=config.zscaler.username,
             zscaler_password=config.zscaler.password.get_secret_value(),
             zscaler_api_key=config.zscaler.api_key.get_secret_value(),
+            zscaler_api_base_url=config.zscaler.api_base_url,
             zscaler_blacklist_name=config.zscaler.blacklist_name,
         )
 

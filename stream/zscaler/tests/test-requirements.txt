@@ -1,5 +1,6 @@
 -r ../src/requirements.txt
-pytest>=7.0
+# pytest 9.2 breaks pytest-bdd (pytest-dev/pytest-bdd#850)
+pytest>=7.0,<9.2
 pytest-bdd>=6.0
 pytest-mock>=3.0
 

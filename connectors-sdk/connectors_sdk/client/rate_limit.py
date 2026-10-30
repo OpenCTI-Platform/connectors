@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
 from typing import Any, Literal
 
 import requests
 from connectors_sdk.client.exceptions import ApiRateLimitError
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from limits import parse, storage, strategies
 from requests.adapters import HTTPAdapter
 
@@ -36,10 +36,7 @@ class RateLimit:
         return f"{self.limit}/{self.period}"
 
 
-logger = logging.getLogger(__name__)
-
-
-class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
+class _RateLimitAdapter(_ClassLoggerMixin, HTTPAdapter):  # type: ignore[misc]
     """HTTPAdapter that enforces a proactive rate limit before every send.
 
     This applies to each attempt including urllib3 retries, ensuring we never
@@ -97,7 +94,7 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
         # Block mode: sleep until the window resets
         while True:
             sleep_for = max(wait_time, 0.01)
-            logger.debug("Rate limit reached, sleeping %.2f seconds", sleep_for)
+            self.logger.debug("Rate limit reached, sleeping %.2f seconds", sleep_for)
             time.sleep(sleep_for)
             if self._limiter.hit(self._rate_limit_item, self._rate_limit_key):
                 break

@@ -1,5 +1,5 @@
-pycti==7.261008.0
+pycti==7.261026.0
 requests==2.33.0
-anyrun-sdk==1.14.12
+anyrun-sdk==1.16.0
 pydantic==2.14.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

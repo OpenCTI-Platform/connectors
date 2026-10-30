@@ -15,7 +15,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["misp"]` | The scope or type of data the connector is processing. |
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
-| CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `80` | The default confidence level for created entities (0-100). |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Listen to delete events in the stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `false` | Do not auto-resolve dependencies. |
 | CONNECTOR_CONTAINER_TYPES | `array` |  | Length: `string >= 1` | `["report", "grouping", "case-incident", "case-rfi", "case-rft"]` | List of container types to process. |
@@ -28,6 +27,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_PUBLISH_ALERT | `boolean` |  | boolean | `false` | Send email alert notifications when publishing events. |
 | MISP_TAG_OPENCTI | `boolean` |  | boolean | `true` | Add OpenCTI-specific tags to MISP events. |
 | MISP_TAG_PREFIX | `string` |  | Length: `string >= 1` | `"opencti:"` | Prefix for OpenCTI tags in MISP. |
+| MISP_MARKING_TYPES_TO_CONVERT | `string` |  | Length: `string >= 1` | `"TLP,PAP"` | Comma-separated list of marking definition types (case-insensitive, e.g. TLP, PAP) whose container markings are converted to MISP event tags. This only controls tag conversion, it does not filter which containers or objects are exported. |
 | MISP_HARD_DELETE | `boolean` |  | boolean | `true` | Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later. |
 | MISP_DETECT_ROUND_TRIP | `boolean` |  | boolean | `false` | Enable round-trip detection. When True, the connector checks if a container has an external reference from MISP (source_name='misp' with a valid external_id). If so, it updates the existing MISP event instead of creating a duplicate. |
 | PROXY_HTTP | `string` |  | string | `null` | HTTP proxy URL (e.g., http://proxy:8080). |
