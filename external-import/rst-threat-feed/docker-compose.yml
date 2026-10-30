@@ -9,13 +9,21 @@ services:
       - CONNECTOR_NAME=RST Threat Feed
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      - CONNECTOR_QUEUE_THRESHOLD=500
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT=true
+      - CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL=50
+      - HTTP_PROXY=
+      - HTTPS_PROXY=
+      - NO_PROXY=
       - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
-      - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
+      - RST_THREAT_FEED_APIKEY=ChangeMe
+      - RST_THREAT_FEED_PROXY=
       - RST_THREAT_FEED_SSL_VERIFY=true
       - RST_THREAT_FEED_CONTIMEOUT=30   # feed download connection parameters
       - RST_THREAT_FEED_READTIMEOUT=120
       - RST_THREAT_FEED_RETRY=2
-      - RST_THREAT_FEED_INTERVAL=86400 # in seconds. Change accordingly to the RST_THREAT_FEED_LATEST setting
       - RST_THREAT_FEED_MAX_RETRIES=3 # retry configuration for connection issues when sending the STIX bundle to OpenCTI
       - RST_THREAT_FEED_RETRY_DELAY=10
       - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
@@ -33,7 +41,8 @@ services:
       - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
       - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
       - RST_THREAT_FEED_CREATE_MITRE_TTPS=false # relationships: Indicator -> indicates -> Attack-Pattern (MITRE TTP). Will create a lot of Relationships, so, be careful with this setting.
-      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true # Custom Attack-Pattern objects + relationships: Indicator -> indicates -> Attack-Pattern (Named Techniques or Attacks that are not yet covered by MITRE).
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true
+      - RST_THREAT_FEED_CREATE_NETWORK_TRAFFIC_PATTERNS=skip
     restart: always
     depends_on:
       - opencti

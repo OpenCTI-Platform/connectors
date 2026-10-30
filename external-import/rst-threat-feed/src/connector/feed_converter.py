@@ -1,6 +1,5 @@
 import datetime
 import json
-import os
 import re
 from collections import OrderedDict
 from typing import Dict, List, Tuple
@@ -20,11 +19,10 @@ from pycti import (
 __all__ = [
     "FeedType",
     "ThreatTypes",
+    "custom_mapping_industry_sector",
+    "custom_mapping_threat_name",
     "feed_converter",
-    "MitreTtpDownloader",
 ]
-
-from rstcloud.MitreTtpDownloader import MitreTtpDownloader
 
 
 class FeedType:
@@ -83,17 +81,6 @@ def custom_mapping_industry_sector(input_name):
     return industries.get(input_name)
 
 
-# We have many thousands of unique threat names codes like:
-#    _group, _actor, _campaign, _tool, _technique, _vuln and all sorts of malware names
-# this is excluding aliases of the same threat name - so you can consume all intel from all sources using one taxonomy
-# Customers who want all aliases of the same threat name can subscribe to RST Threat Library.
-# It provides full threat profiles and aliases for codes in our taxonomy mapped to various taxonomies across the industry
-# meaning that you get intel from Recorded Future, Microsoft, CrowdStrike, Trend Micro, Check Point, Unit42, RST Cloud, etc. under one taxonomy
-
-
-# This function is used to map the threat names from our codename taxonomy to the public taxonomies from MITRE and Malpedia datasets (often used by OpenCTI users).
-# It is important to note that many threat names are not in the public taxonomy from MITRE (very scarce) and Malpedia (little depth).
-# this is a free feature for our customers who consume RST Threat Feed and have not yet subscribed to RST Threat Library.
 def custom_mapping_threat_name(input_name):
     keep_suffix = ""
     if input_name.endswith("_ransomware") or input_name.endswith("_raas"):
@@ -116,18 +103,14 @@ def custom_mapping_threat_name(input_name):
         "_maas",
         "_raas",
     ]
-    # remove suffixes from input_name
     for suffix in suffixes:
         if input_name.endswith(suffix):
             input_name = input_name[: -len(suffix)]
             break
-    # replace _ with space
     input_name = input_name.replace("_", " ")
-    # if name looks like apt59, uac-0200, apt-q-15, or stac1248, uppercase the whole line
-    if re.match(r"^[a-z]+-?[a-z]+?-?[0-9]+$", input_name):
+    if re.match(r"^[a-z]+-?[a-z]+?-?[0-9]+$", input_name, re.IGNORECASE):
         input_name = input_name.upper()
     else:
-        # capitalize first letter of each word
         input_name = input_name.title()
     if keep_suffix:
         if not input_name.lower().endswith(keep_suffix.lower()):
@@ -144,6 +127,117 @@ def custom_mapping_threat_name(input_name):
     return input_name
 
 
+def _indicator_ports(ports) -> List[int]:
+    """Unique ports in 0..65535. RST uses [-1] when an IP has no known ports."""
+    if not isinstance(ports, list):
+        return []
+    seen = set()
+    valid: List[int] = []
+    for raw in ports:
+        try:
+            port = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if port < 0 or port > 65535 or port in seen:
+            continue
+        seen.add(port)
+        valid.append(port)
+    valid.sort()
+    return valid
+
+
+# The STIX pattern validator walks each OR as another recursive call.
+# A few hundred ports in one pattern exceeds Python's recursion limit.
+_MAX_PORTS_PER_NETWORK_TRAFFIC_PATTERN = 40
+
+
+def _network_traffic_pattern(ip: str, ports: List[int]) -> str:
+    """One STIX pattern; multiple ports are OR-ed observation expressions."""
+    clauses = [
+        (
+            f"[network-traffic:dst_ref.value = '{ip}' AND "
+            f"network-traffic:dst_port = {port}]"
+        )
+        for port in ports
+    ]
+    return " OR ".join(clauses)
+
+
+def _port_chunks(ports: List[int]) -> List[List[int]]:
+    size = _MAX_PORTS_PER_NETWORK_TRAFFIC_PATTERN
+    return [ports[index : index + size] for index in range(0, len(ports), size)]
+
+
+def _indicator_specs(
+    feed_type: str,
+    ioc_raw: Dict,
+    create_network_traffic_patterns: str,
+) -> List[Tuple[str, str, str]]:
+    """Return (pattern, name, observable_type) entries for one feed record."""
+    if feed_type == FeedType.IP:
+        indicator_name = ioc_raw["ip"]["v4"]
+        ports = _indicator_ports(ioc_raw.get("ports"))
+        mode = create_network_traffic_patterns
+        if mode not in ("skip", "add", "replace"):
+            mode = "skip"
+        include_network = mode in ("add", "replace") and bool(ports)
+        include_ip = mode != "replace" or not include_network
+        specs: List[Tuple[str, str, str]] = []
+        if include_ip:
+            specs.append(
+                (
+                    f"[ipv4-addr:value = '{indicator_name}']",
+                    indicator_name,
+                    "IPv4-Addr",
+                )
+            )
+        if include_network:
+            for chunk in _port_chunks(ports):
+                port_label = ",".join(str(port) for port in chunk)
+                specs.append(
+                    (
+                        _network_traffic_pattern(indicator_name, chunk),
+                        f"{indicator_name}:{port_label}",
+                        "Network-Traffic",
+                    )
+                )
+        return specs
+
+    if feed_type == FeedType.DOMAIN:
+        indicator_name = ioc_raw["domain"]
+        return [
+            (
+                f"[domain-name:value = '{indicator_name}']",
+                indicator_name,
+                "Domain-Name",
+            )
+        ]
+
+    if feed_type == FeedType.URL:
+        indicator_name = ioc_raw["url"].replace("'", "%27")
+        return [(f"[url:value = '{indicator_name}']", indicator_name, "Url")]
+
+    if feed_type == FeedType.HASH:
+        hashes = list()
+        names = list()
+        if ioc_raw["md5"] and len(ioc_raw["md5"]) == 32:
+            md5_hash = ioc_raw["md5"]
+            hashes.append(f"file:hashes.MD5 = '{md5_hash}'")
+            names.append(md5_hash)
+        if ioc_raw["sha1"] and len(ioc_raw["sha1"]) == 40:
+            sha1_hash = ioc_raw["sha1"]
+            hashes.append(f"file:hashes.'SHA-1' = '{sha1_hash}'")
+            names.append(sha1_hash)
+        if ioc_raw["sha256"] and len(ioc_raw["sha256"]) == 64:
+            sha256_hash = ioc_raw["sha256"]
+            hashes.append(f"file:hashes.'SHA-256' = '{sha256_hash}'")
+            names.append(sha256_hash)
+        hashes_str = " OR ".join(hashes)
+        return [(f"[{hashes_str}]", names[-1], "StixFile")]
+
+    return []
+
+
 def feed_converter(
     filepath: str,
     feed_type: str,
@@ -154,6 +248,7 @@ def feed_converter(
     create_mitre_ttps=False,
     create_custom_ttps=True,
     mitre_ttp_mapping=None,
+    create_network_traffic_patterns="skip",
 ):
     ret_iocs: Dict = dict()
     ret_threats: Dict = dict()
@@ -166,7 +261,6 @@ def feed_converter(
             if only_new and (ioc_raw["lseen"] < ioc_raw["collect"] - 86400):
                 continue
 
-            # Skip IOCs w/o attribution
             threats: List = ioc_raw.get("threat", [])
             if attributed_only:
                 if len(threats) == 0 or (len(threats) == 1 and threats[0] == ""):
@@ -266,45 +360,11 @@ def feed_converter(
                 ioc_raw["collect"], tz=datetime.timezone.utc
             )
 
-            indicator_pattern = None
-            indicator_name = None
-            main_observable_type = None
-            if feed_type == FeedType.IP:
-                indicator_name = ioc_raw["ip"]["v4"]
-                indicator_pattern = f"[ipv4-addr:value = '{indicator_name}']"
-                main_observable_type = "IPv4-Addr"
-            elif feed_type == FeedType.DOMAIN:
-                indicator_name = ioc_raw["domain"]
-                indicator_pattern = f"[domain-name:value = '{indicator_name}']"
-                main_observable_type = "Domain-Name"
-            elif feed_type == FeedType.URL:
-                # encode apostrophe to avoid escaping as it is required
-                # in "9.2 Constants", STIX v2.1 OASIS Standard
-                indicator_name = ioc_raw["url"].replace("'", "%27")
-                indicator_pattern = f"[url:value = '{indicator_name}']"
-                main_observable_type = "Url"
-            elif feed_type == FeedType.HASH:
-                hashes = list()
-                names = list()
-                if ioc_raw["md5"] and len(ioc_raw["md5"]) == 32:
-                    md5_hash = ioc_raw["md5"]
-                    hashes.append(f"file:hashes.MD5 = '{md5_hash}'")
-                    names.append(md5_hash)
-                if ioc_raw["sha1"] and len(ioc_raw["sha1"]) == 40:
-                    sha1_hash = ioc_raw["sha1"]
-                    hashes.append(f"file:hashes.'SHA-1' = '{sha1_hash}'")
-                    names.append(sha1_hash)
-                if ioc_raw["sha256"] and len(ioc_raw["sha256"]) == 64:
-                    sha256_hash = ioc_raw["sha256"]
-                    hashes.append(f"file:hashes.'SHA-256' = '{sha256_hash}'")
-                    names.append(sha256_hash)
-                main_observable_type = "StixFile"
-                hashes_str = " OR ".join(hashes)
-                indicator_pattern = f"[{hashes_str}]"
-                indicator_name = names[-1]
-            ioc["name"] = indicator_name
-            ioc["pattern"] = indicator_pattern
-            ioc["observable_type"] = main_observable_type
+            indicator_specs = _indicator_specs(
+                feed_type, ioc_raw, create_network_traffic_patterns
+            )
+            if not indicator_specs:
+                continue
 
             for src in ioc_raw["src"]["report"].split(","):
                 domain_name = urlparse(src).netloc
@@ -312,10 +372,19 @@ def feed_converter(
                     domain_name = src
                 ioc["src"].append({"name": domain_name, "url": src})
 
-            ioc_key = Indicator.generate_id(indicator_pattern)
-            ret_iocs[ioc_key] = ioc
+            ioc_keys = []
+            for pattern, name, observable_type in indicator_specs:
+                stored = dict(ioc)
+                stored["name"] = name
+                stored["pattern"] = pattern
+                stored["observable_type"] = observable_type
+                stored["tags"] = list(ioc["tags"])
+                stored["threats"] = list(ioc["threats"])
+                stored["src"] = list(ioc["src"])
+                ioc_key = Indicator.generate_id(pattern)
+                ret_iocs[ioc_key] = stored
+                ioc_keys.append(ioc_key)
 
-            # find CVE mappings
             vulns: List = ioc_raw.get("cve", [])
             cve_keys = list()
             for v in vulns:
@@ -330,10 +399,10 @@ def feed_converter(
                         ret_threats[cve_key]["src"][source_name] = source_url
 
             for k in cve_keys:
-                mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
-                ret_mapping.append(mapping)
+                for ioc_key in ioc_keys:
+                    mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
+                    ret_mapping.append(mapping)
 
-            # find sector mappings
             industries: List = ioc_raw.get("industry", [])
             sector_keys = list()
             for i in industries:
@@ -353,12 +422,11 @@ def feed_converter(
                             source_url = s["url"]
                             ret_threats[sector_key]["src"][source_name] = source_url
             for k in sector_keys:
-                mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
-                ret_mapping.append(mapping)
+                for ioc_key in ioc_keys:
+                    mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
+                    ret_mapping.append(mapping)
 
-            # find threat mappings
             threats_keys = set()
-            # first populate mitre_id based ttps
             if ioc_raw.get("ttp") and create_mitre_ttps:
                 for ttp in ioc_raw.get("ttp"):
                     ttp_name = mitre_ttp_mapping.get(ttp.upper())
@@ -379,7 +447,6 @@ def feed_converter(
                             source_name = s["name"]
                             source_url = s["url"]
                             ret_threats[ttp_key]["src"][source_name] = source_url
-            # then pouplate all other threats objects including custom ttps
             for t in threats:
                 threat_tag = t.lower()
                 if t.endswith("_group") or t.endswith("_actor"):
@@ -419,9 +486,6 @@ def feed_converter(
                     threat_type = ThreatTypes.CRYPTOMINER
                     threat_key = Malware.generate_id(threat_name)
                 elif t.endswith("_vuln") and keep_named_vulns:
-                    # this is for named vulnerabilities like citrix bleed or printnightmare
-                    # usually such names are given to impactful vulnerabilities
-                    # which some teams want to track in their platforms under human readable names as well
                     threat_name = custom_mapping_threat_name(t)
                     threat_type = ThreatTypes.VULNERABILITY
                     threat_key = Vulnerability.generate_id(threat_name)
@@ -445,10 +509,8 @@ def feed_converter(
                     ret_threats[threat_key]["src"][source_name] = source_url
 
             for k in threats_keys:
-                mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
-                ret_mapping.append(mapping)
-
-    # Drop
-    os.remove(filepath)
+                for ioc_key in ioc_keys:
+                    mapping = (ioc_key, k, ioc["fseen"], ioc["collect"], ioc["src"])
+                    ret_mapping.append(mapping)
 
     return ret_iocs, ret_threats, ret_mapping
