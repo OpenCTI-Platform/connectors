@@ -603,6 +603,58 @@ def test_multiple_motivations(
     assert "Ideology" in secondary_values  # noqa: S101
 
 
+# Scenario: Parse seen dates with or without fractional seconds
+@pytest.mark.order(1)
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("2017-12-31T00:00:00Z", datetime(2017, 12, 31, tzinfo=timezone.utc)),
+        (
+            "2024-07-29T04:00:02.522Z",
+            datetime(2024, 7, 29, 4, 0, 2, 522000, tzinfo=timezone.utc),
+        ),
+        ("2024-07-29T04:00:02", datetime(2024, 7, 29, 4, 0, 2, tzinfo=timezone.utc)),
+    ],
+)
+def test_extract_seen_dates_parses_iso_formats(value: str, expected: datetime) -> None:
+    """Test that first_seen and last_seen are parsed whatever the ISO 8601 precision."""
+    # Given GTI threat actor attributes with seen dates in the given format
+    attributes = ThreatActorModelFactory.build(
+        first_seen_details=[SeenDetailFactory.build(value=value)],
+        last_seen_details=[SeenDetailFactory.build(value=value)],
+    )
+    # When extracting the seen dates
+    first_seen, last_seen = GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(
+        attributes
+    )
+    # Then both dates are parsed as UTC datetimes
+    assert first_seen == expected  # noqa: S101
+    assert last_seen == expected  # noqa: S101
+    assert first_seen.tzinfo is not None  # noqa: S101
+
+
+# Scenario: Log a warning when a seen date cannot be parsed
+@pytest.mark.order(1)
+def test_extract_seen_dates_logs_invalid_value(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that an invalid seen date is left empty and logged as a warning."""
+    # Given GTI threat actor attributes with an invalid last seen date
+    attributes = ThreatActorModelFactory.build(
+        first_seen_details=[SeenDetailFactory.build(value="2017-12-31T00:00:00Z")],
+        last_seen_details=[SeenDetailFactory.build(value="2023-13-32T25:61:61Z")],
+    )
+    # When extracting the seen dates
+    with caplog.at_level("WARNING"):
+        first_seen, last_seen = GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(
+            attributes
+        )
+    # Then the valid date is kept, the invalid one is empty and logged
+    assert first_seen == datetime(2017, 12, 31, tzinfo=timezone.utc)  # noqa: S101
+    assert last_seen is None  # noqa: S101
+    assert "Invalid threat actor seen date" in caplog.text  # noqa: S101
+
+
 # =====================
 # GWT Gherkin-style functions
 # =====================
