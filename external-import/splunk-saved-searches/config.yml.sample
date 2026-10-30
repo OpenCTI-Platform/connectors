@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Splunk Saved Searches'
+  scope: 'Indicator,Attack-Pattern,SecurityPlatform'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+splunk_saved_searches:
+  api_url: 'ChangeMe'
+  token: 'ChangeMe'
+  # app: '-'
+  # owner: '-'
+  # search_scope: 'alerts'
+  # web_url: 'https://splunk.example.com:8000'
+  # import_disabled_rules: true
+  # page_size: 100
+  # request_timeout: 60
+  # max_retries: 5
+  # verify_ssl: true
+  # platform_name: 'Splunk'
+  # platform_id: 'ChangeMe'
+  # platform_type: 'SIEM'
+  # tlp_level: 'amber'

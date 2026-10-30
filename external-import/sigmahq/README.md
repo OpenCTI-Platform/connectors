@@ -18,13 +18,26 @@ This connector imports more than 3000 detection rules across five distinct categ
 
 By importing these rules as indicators in OpenCTI, organizations can enrich their threat intelligence platform with community-maintained detection logic, enhance their detection capabilities, and correlate Sigma rules with other threat intelligence entities such as TTPs, malware, and threat actors.
 
+## Behavior
+
+Each Sigma rule becomes an `Indicator` (`pattern_type: sigma`, the rule YAML as pattern) with:
+
+- the rule metadata used by the Threat-Informed Defense Matrix, set only when the rule defines it:
+  - `x_opencti_rule_status`: the Sigma `status` (`stable`, `test`, `experimental`, `deprecated`, `unsupported`),
+  - `x_opencti_rule_level`: the Sigma `level` (`informational`, `low`, `medium`, `high`, `critical`),
+  - `x_opencti_rule_logsource`: the Sigma `logsource` keys present in the rule (`category`, `product`, `service`), lowercased;
+- one `indicates` relationship per ATT&CK technique or sub-technique tag (`attack.t1059`, `attack.t1059.001`), targeting the Attack Pattern whose id is derived from the MITRE id. Tactic tags (`attack.execution`) create no relationship;
+- one `indicates` relationship per CVE tag (`cve.2024-1234`), targeting the Vulnerability.
+
+Techniques are resolved against the platform once per rule package: a technique OpenCTI already holds (for example from the MITRE ATT&CK connector) is referenced under its current name and keeps its own author and markings, so the import never renames it. A technique OpenCTI does not hold yet is created under its MITRE id, with the SigmaHQ author and the configured TLP marking.
+
 ## Installation
 
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.9.5
-- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
+- OpenCTI Platform >= 6.9.5 (the rule metadata properties are stored from the OpenCTI release shipping the Threat-Informed Defense Matrix; older platforms ignore them)
+- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version (the connector pins `pycti==7.261008.0`)
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 
 ### Configuration variables
