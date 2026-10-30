@@ -24,6 +24,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SPLUNK_SOAR_DELETE_ON_REMOVAL | `boolean` |  | boolean | `false` | Close SOAR entities when removed from stream. |
 | SPLUNK_SOAR_DEFAULT_SEVERITY | `string` |  | Length: `string >= 1` | `"medium"` | Default severity for SOAR entities. |
 | SPLUNK_SOAR_DEFAULT_STATUS | `string` |  | Length: `string >= 1` | `"new"` | Default status for SOAR entities. |
+| SPLUNK_SOAR_LOW_SCORE_SEVERITY | `string` |  | Length: `string >= 1` | `"low"` | SOAR severity of artifacts whose OpenCTI score is below 20. Must exist in SOAR, which only ships with high, medium and low (set to a custom severity such as informational if you created one). |
 | SPLUNK_SOAR_MAX_ARTIFACTS_PER_CONTAINER | `integer` |  | integer | `1000` | Maximum artifacts per container. |
 | SPLUNK_SOAR_BATCH_SIZE | `integer` |  | integer | `100` | Batch size for bulk operations. |
 | PROXY_HTTP | `string` |  | Length: `string >= 1` | `null` | HTTP proxy URL. |

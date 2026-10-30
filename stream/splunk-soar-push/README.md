@@ -74,6 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 | SOAR URL         | splunk_soar.url      | `SPLUNK_SOAR_URL`           |         | Yes       | Splunk SOAR instance URL.                                  |
 | SOAR API Token   | splunk_soar.api_token| `SPLUNK_SOAR_API_TOKEN`     |         | Yes       | Splunk SOAR API automation token.                          |
 | SSL Verify       | splunk_soar.ssl_verify| `SPLUNK_SOAR_SSL_VERIFY`   | true    | No        | Verify SSL certificates.                                   |
+| Low Score Severity | splunk_soar.low_score_severity | `SPLUNK_SOAR_LOW_SCORE_SEVERITY` | low | No | SOAR severity of artifacts with an OpenCTI score below 20. See [Artifact Severity](#artifact-severity). |
 
 ## Deployment
 
@@ -195,6 +196,20 @@ graph LR
 | Attack Pattern    | Attack Pattern    | attackPatternName, mitreAttackId |
 | Vulnerability     | Vulnerability     | cve                           |
 | Indicator         | Indicator         | indicatorPattern              |
+
+### Artifact Severity
+
+An artifact's severity comes from the OpenCTI score of its observable or indicator. Observables extracted from an indicator's STIX pattern take the indicator's score.
+
+| OpenCTI Score | SOAR Severity                                   |
+|---------------|-------------------------------------------------|
+| 80 to 100     | high                                            |
+| 50 to 79      | medium                                          |
+| 20 to 49      | low                                             |
+| 0 to 19       | `SPLUNK_SOAR_LOW_SCORE_SEVERITY` (default: low) |
+| No score      | Severity of the SOAR event or case              |
+
+Splunk SOAR only ships with the high, medium and low severities, and it rejects an artifact whose severity does not exist. Set `SPLUNK_SOAR_LOW_SCORE_SEVERITY` to a custom severity, such as `informational`, only after an administrator has created it in **Administration > Event Settings > Severity**.
 
 ## Debugging
 
