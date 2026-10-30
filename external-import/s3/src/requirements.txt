@@ -1,4 +1,4 @@
-pycti==7.261030.0
+pycti==7.261030.1
 boto3
 stix2==3.0.2
 pydantic==2.14.0
