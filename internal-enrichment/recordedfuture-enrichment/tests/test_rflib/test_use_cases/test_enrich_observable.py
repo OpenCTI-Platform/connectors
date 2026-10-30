@@ -14,7 +14,8 @@ from connectors_sdk.models import (
     Relationship,
 )
 from connectors_sdk.models.enums import TLPLevel
-from rf_client.models import ObservableEnrichment
+from pycti import Indicator as PyctiIndicator
+from rf_client.models import Link, ObservableEnrichment
 from rflib.use_cases.enrich_observable import ObservableEnricher
 
 
@@ -230,3 +231,60 @@ def test_enrichment_without_indicator_ignores_invalid_indicator_pattern(risk_sco
     assert not any(
         isinstance(obj, Indicator) and "reilly" in obj.name for obj in octi_objects
     )
+
+
+FILE_HASH_PATTERNS = [
+    (
+        "e1d9c90de2568f34ad689c71dac09c62",
+        "[file:hashes.MD5 = 'e1d9c90de2568f34ad689c71dac09c62']",
+    ),
+    (
+        "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+        "[file:hashes.'SHA-1' = 'da39a3ee5e6b4b0d3255bfef95601890afd80709']",
+    ),
+    (
+        "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+        "[file:hashes.'SHA-256' = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08']",
+    ),
+]
+
+
+def assert_file_hash_indicator(octi_objects, file_hash, expected_pattern):
+    indicator = next(
+        obj
+        for obj in octi_objects
+        if isinstance(obj, Indicator) and obj.name == file_hash
+    )
+    stix_indicator = indicator.to_stix2_object()
+    # the pattern matches the form OpenCTI normalizes patterns to
+    assert stix_indicator.pattern == expected_pattern
+    # and the indicator id is derived from that pattern
+    assert stix_indicator.id == PyctiIndicator.generate_id(expected_pattern)
+
+
+@pytest.mark.parametrize("file_hash,expected_pattern", FILE_HASH_PATTERNS)
+def test_enriched_file_hash_pattern_quotes_hash_key_only_when_required(
+    file_hash, expected_pattern
+):
+    """Regression test for https://github.com/OpenCTI-Platform/connectors/issues/8130."""
+    enricher = make_enricher(threshold=0)
+
+    octi_objects = enricher.process_observable_enrichment(
+        make_enrichment(value=file_hash, entity_type="Hash")
+    )
+
+    assert_file_hash_indicator(octi_objects, file_hash, expected_pattern)
+
+
+@pytest.mark.parametrize("file_hash,expected_pattern", FILE_HASH_PATTERNS)
+def test_linked_file_hash_pattern_quotes_hash_key_only_when_required(
+    file_hash, expected_pattern
+):
+    """Regression test for https://github.com/OpenCTI-Platform/connectors/issues/8130."""
+    enricher = make_enricher(threshold=0)
+    enrichment = make_enrichment()
+    enrichment.links.append(Link(type="type:Hash", name=file_hash, attributes=[]))
+
+    octi_objects = enricher.process_observable_enrichment(enrichment)
+
+    assert_file_hash_indicator(octi_objects, file_hash, expected_pattern)
