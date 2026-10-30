@@ -2,4 +2,4 @@ urllib3==2.8.0
 pycti==7.261030.1
 greynoise>=3.0.3,<3.1.0
 pydantic==2.14.0
-pydantic-settings~=2.15.0
+pydantic-settings~=2.16.2
