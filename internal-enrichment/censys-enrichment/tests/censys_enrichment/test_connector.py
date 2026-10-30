@@ -105,6 +105,55 @@ def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
 
 
 @pytest.mark.usefixtures("mock_config")
+def test__get_converter_wires_client(
+    mocked_helper: Mock,
+) -> None:
+    """The converter receives the Censys client."""
+    client = Mock()
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+    )
+
+    converter = connector._get_converter(entity_type="IPv4-Addr")
+
+    assert converter.client is client
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__generate_octi_objects_ipv4_builds_vulnerabilities_from_censys(
+    mocked_helper: Mock,
+) -> None:
+    """Vulnerabilities are built from Censys data alone, without third-party lookups."""
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock(spec=Client)
+    client.fetch_ip.return_value = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+    )
+
+    objects = list(
+        connector._generate_octi_objects(
+            {
+                "type": "ipv4-addr",
+                "value": "1.2.3.4",
+                "id": "ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc",
+            }
+        )
+    )
+
+    vulnerabilities = [o for o in objects if type(o).__name__ == "Vulnerability"]
+    assert [v.name for v in vulnerabilities] == ["CVE-2024-1234"]
+
+
+@pytest.mark.usefixtures("mock_config")
 def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
     connector = Connector(
         config=ConfigLoader(),
