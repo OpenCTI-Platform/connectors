@@ -135,7 +135,9 @@ class ConnectorURLhaus:
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
-            self.state.threat_cache = {}
+            # Clear in place: the converter holds a reference to this dict,
+            # so rebinding it would keep the previous run's cache
+            self.state.threat_cache.clear()
             stix_objects_generator = self._collect_intelligence()
             for stix_objects in stix_objects_generator:
                 if len(stix_objects) == 0:

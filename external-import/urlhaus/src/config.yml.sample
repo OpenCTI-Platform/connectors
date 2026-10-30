@@ -7,8 +7,6 @@ connector:
   id: 'ChangeMe'
   name: 'Abuse.ch URLhaus'
   scope: 'urlhaus'
-  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
-  update_existing_data: false
   log_level: 'info'
 
 urlhaus:
