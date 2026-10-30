@@ -12,7 +12,7 @@ dependencies = [
     "pydantic~=2.13.5",
     "requests~=2.33.0",
     "stix2~=3.0.1",
-    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.261030.0#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
