@@ -2,7 +2,7 @@ import re
 
 import pytest
 from pydantic import ValidationError
-from settings import Definition, Rule
+from settings import ConfigLoader, Definition, Rule
 
 
 def make_rule(**overrides):
@@ -96,3 +96,15 @@ class TestDefinitionValidation:
         definition = Definition(scopes=["Report"], rules=[make_rule()])
 
         assert isinstance(definition.rules[0].pattern, re.Pattern)
+
+
+def test_config_json_schema_should_not_expose_connector_max_tlp():
+    """
+    Test that `CONNECTOR_MAX_TLP` is hidden from the config schema: the connector sends no data outside OpenCTI.
+    """
+
+    # Given/When: The config JSON schema is generated
+    schema = ConfigLoader.config_json_schema(connector_name="tagger")
+
+    # Then: The max TLP setting is not offered
+    assert "CONNECTOR_MAX_TLP" not in schema["properties"]

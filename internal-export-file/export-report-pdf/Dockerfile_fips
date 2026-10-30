@@ -1,0 +1,23 @@
+FROM filigran/alpine-python-fips:python3.12
+ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+
+COPY src /opt/opencti-connector-export-report-pdf
+WORKDIR /opt/opencti-connector-export-report-pdf
+
+# The Pillow wheels bundle Brotli 1.2.0 (CVE-2026-111497) for FreeType: in the
+# same layer, replace the bundled libbrotlidec with a link to the system one
+# (brotli-libs, fixed) and remove the bundled libbrotlicommon, which only it
+# loads (#8091).
+# The link keeps the bundled name (libbrotlidec-<hash>.so.1.2.0), the one
+# FreeType loads, but resolves to the system version.
+RUN apk --no-cache add git pango harfbuzz-subset brotli-libs && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    cd /usr/lib/python3*/site-packages/pillow.libs && \
+    rm libbrotlicommon-* && \
+    ln -sf /usr/lib/libbrotlidec.so.1 libbrotlidec-* && \
+    apk del git
+
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

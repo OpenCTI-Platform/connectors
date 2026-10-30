@@ -6,6 +6,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, SecretStr, field_validator
 
 
@@ -25,6 +26,13 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     scope: ListFromString = Field(
         description="The scope of the connector, i.e., the types of entities the connector can enrich.",
         default=["Artifact", "Url"],
+    )
+    max_tlp: TLPLevel = Field(
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+        default=TLPLevel.RED,
     )
 
 

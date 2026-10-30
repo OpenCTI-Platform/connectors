@@ -129,6 +129,15 @@ def _make_config_with_event_types(
     return config
 
 
+def _make_config_with_overrides(
+    base_config: dict[str, dict[str, Any]],
+    **overrides: Any,
+) -> dict[str, dict[str, Any]]:
+    config = deepcopy(base_config)
+    config["microsoft_sentinel_intel"].update(overrides)
+    return config
+
+
 def _mock_config_environ(
     mocker: MockerFixture,
     config_dict: dict[str, dict[str, Any]],
@@ -233,3 +242,46 @@ def fixture_mock_microsoft_sentinel_intel_batch_create_only_config(
     microsoft_sentinel_intel_batch_create_only_config_dict: dict[str, dict[str, Any]],
 ) -> None:
     _mock_config_environ(mocker, microsoft_sentinel_intel_batch_create_only_config_dict)
+
+
+@pytest.fixture(name="mock_microsoft_sentinel_intel_score_as_confidence_config")
+def fixture_mock_microsoft_sentinel_intel_score_as_confidence_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
+) -> None:
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_config_dict, use_score_as_confidence=True
+        ),
+    )
+
+
+@pytest.fixture(
+    name="mock_microsoft_sentinel_intel_score_as_confidence_keep_extensions_config"
+)
+def fixture_mock_microsoft_sentinel_intel_score_as_confidence_keep_extensions_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
+) -> None:
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_config_dict,
+            use_score_as_confidence=True,
+            delete_extensions=False,
+        ),
+    )
+
+
+@pytest.fixture(name="mock_microsoft_sentinel_intel_batch_score_as_confidence_config")
+def fixture_mock_microsoft_sentinel_intel_batch_score_as_confidence_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_batch_config_dict: dict[str, dict[str, Any]],
+) -> None:
+    _mock_config_environ(
+        mocker,
+        _make_config_with_overrides(
+            microsoft_sentinel_intel_batch_config_dict, use_score_as_confidence=True
+        ),
+    )

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from connector.connector import MacadressConnector
+from connectors_sdk.models.enums import TLPLevel
 from pycti import STIX_EXT_OCTI_SCO
 from pydantic import SecretStr
 
@@ -42,17 +43,16 @@ RANDOM = {
 }
 
 
-def _connector(max_tlp="TLP:AMBER", create_vendor_identity=True):
+def _connector(max_tlp=TLPLevel.AMBER, create_vendor_identity=True):
     config = SimpleNamespace(
         macadress=SimpleNamespace(
             api_base_url="http://x",
             api_key=SecretStr("mk_k"),
-            max_tlp=max_tlp,
             default_score=30,
             create_note=True,
             create_vendor_identity=create_vendor_identity,
         ),
-        connector=SimpleNamespace(scope=["Mac-Addr"]),
+        connector=SimpleNamespace(scope=["Mac-Addr"], max_tlp=max_tlp),
     )
     helper = MagicMock()
     helper.stix2_create_bundle.return_value = "{}"
@@ -137,7 +137,7 @@ def test_vendor_identity_can_be_disabled():
 
 
 def test_tlp_above_max_raises_and_writes_nothing():
-    conn, _ = _connector(max_tlp="TLP:GREEN")
+    conn, _ = _connector(max_tlp=TLPLevel.GREEN)
     msg = _message("F0:18:98:11:22:33", marking="TLP:RED")
 
     try:

@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY src /opt/connector-sentinelone-incidents
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/connector-sentinelone-incidents && \

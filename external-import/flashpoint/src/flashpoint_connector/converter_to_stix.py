@@ -4,6 +4,7 @@ from datetime import datetime
 import stix2
 from dateparser import parse
 from flashpoint_client.models import CompromisedCredentialSighting
+from flashpoint_connector.utils import is_domain, is_ipv4, is_ipv6
 from pycti import (
     AttackPattern,
     Channel,
@@ -22,8 +23,6 @@ from pycti import (
     ThreatActorIndividual,
     Tool,
 )
-
-from .utils import is_domain, is_ipv4, is_ipv6
 
 
 class ConverterToStix:

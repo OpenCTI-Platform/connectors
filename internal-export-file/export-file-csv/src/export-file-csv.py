@@ -4,7 +4,7 @@ import json
 import sys
 import time
 
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2
 from settings import ConnectorSettings
 
 
@@ -149,6 +149,10 @@ class ExportFileCsv:
         output = io.StringIO()
         if getattr(self, "export_file_csv_add_bom", False):
             output.write("\ufeff")
+        # Each custom field value is exported in its own column, named after its
+        # technical name (x_opencti_cf_*), instead of a raw customFieldValues column.
+        for entity in data:
+            OpenCTIStix2.flatten_custom_field_values(entity)
         data_headers = sorted(set().union(*(d.keys() for d in data)))
         column_specs = self._select_export_columns(data_headers, columns)
         # Expand a "hashes" field into one column per algorithm. The expanded

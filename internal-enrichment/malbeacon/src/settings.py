@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -38,17 +39,11 @@ class MalbeaconConfig(BaseConfigModel):
         description="The score assigned to indicators created by the connector.",
         default=50,
     )
-    max_tlp: str = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="The maximum TLP marking the connector is allowed to enrich.",
-        default="TLP:AMBER",
-        enum=[
-            "TLP:CLEAR",
-            "TLP:WHITE",
-            "TLP:GREEN",
-            "TLP:AMBER",
-            "TLP:AMBER+STRICT",
-            "TLP:RED",
-        ],
     )
 
 
