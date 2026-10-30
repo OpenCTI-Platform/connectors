@@ -33,6 +33,10 @@ class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
         Field(description="The platform to execute the sample on", default="windows10")
     )
     cloud_analysis: bool = Field(description="Enable cloud analysis", default=True)
+    ssl_verify: bool = Field(
+        description="Whether to verify the SSL certificate of the Spectra Analyze appliance.",
+        default=True,
+    )
 
 
 class ConfigLoader(BaseConnectorSettings):
