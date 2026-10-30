@@ -3,15 +3,23 @@ import time
 
 import stix2
 from connector.settings import ConnectorSettings
-from pycti import Indicator, Malware, OpenCTIConnectorHelper, StixCoreRelationship
+from pycti import (
+    Indicator,
+    Malware,
+    Note,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 
 ENRICHED_DESCRIPTION = "coucou from enrichment"
 ENRICHED_LABEL = "enriched"
 LINKED_MALWARE_NAME = "supra coucou"
+NOTE_CONTENT = "coucou super note"
+NOTE_ABSTRACT = "coucou note on {value}"
 # Delay before sending the bundle, to observe the work while it is in progress
-SEND_BUNDLE_DELAY_SECONDS = 15
+SEND_BUNDLE_DELAY_SECONDS = 8
 # Chance that the enrichment bundle is replaced by one the backend rejects at ingestion
-INGESTION_ERROR_PROBABILITY = 0.5
+INGESTION_ERROR_PROBABILITY = 0.2
 # Invalid STIX pattern: the backend refuses the indicator, so the work gets an ingestion error
 BROKEN_INDICATOR_PATTERN = "[ipv4-addr:value = "
 
@@ -22,7 +30,8 @@ class CoucouEnrichmentConnector:
 
     When triggered on an IPv4 observable, it sends back the received bundle with the observable
     description set to `coucou from enrichment` and the label `enriched` added, plus the malware
-    `supra coucou` and a `communicates-with` relationship from that malware to the observable.
+    `supra coucou` and a `communicates-with` relationship from that malware to the observable,
+    and a note `coucou super note` containing the observable (one note per observable).
     No external API is called.
     To be compatible with the "playbook automation" feature, it always sends back a STIX bundle
     containing the entity to enrich.
@@ -75,6 +84,22 @@ class CoucouEnrichmentConnector:
             target_ref=entity_id,
         )
         return [malware, relationship]
+
+    @staticmethod
+    def _add_note(entity_id: str, observable_value: str) -> list:
+        """
+        Create a note containing the entity (`object_refs`, shown as "contains" in OpenCTI).
+        The abstract names the observable, so each observable gets its own note. The id is
+        deterministic, so re-runs upsert the same note instead of creating new ones.
+        """
+        abstract = NOTE_ABSTRACT.format(value=observable_value)
+        note = stix2.Note(
+            id=Note.generate_id(None, NOTE_CONTENT, abstract),
+            abstract=abstract,
+            content=NOTE_CONTENT,
+            object_refs=[entity_id],
+        )
+        return [note]
 
     @staticmethod
     def _broken_indicator() -> dict:
@@ -151,6 +176,7 @@ class CoucouEnrichmentConnector:
                     self._maybe_replace_with_ingestion_error(
                         self._enrich(stix_objects, entity_id)
                         + self._link_to_malware(entity_id)
+                        + self._add_note(entity_id, opencti_entity["observable_value"])
                     )
                 )
             if not data.get("event_type"):

@@ -13,6 +13,8 @@ OCTI_SCO_EXT = "extension-definition--f93e2c80-4231-4f9a-af8b-95c9bd566a82"
 # Deterministic ids as computed by OpenCTI, so re-runs upsert the same objects
 MALWARE_ID = "malware--40936d01-ea50-5e6d-b845-28ea0df425bb"
 RELATIONSHIP_ID = "relationship--9a4950dc-4af5-5a83-b54c-779efd843b43"
+# One note per IP: its id depends on the IP, through the abstract
+NOTE_ID = "note--def22427-6c5b-5f4c-883c-ecc0242873e8"
 
 
 @pytest.fixture
@@ -160,7 +162,7 @@ def test_enrichment_sends_back_all_received_objects(connector):
     )
 
     sent_ids = [o["id"] for o in connector.helper.sent_bundles[0]["objects"]]
-    assert sent_ids == [IPV4_ID, TLP_RED_ID, MALWARE_ID, RELATIONSHIP_ID]
+    assert sent_ids == [IPV4_ID, TLP_RED_ID, MALWARE_ID, RELATIONSHIP_ID, NOTE_ID]
 
 
 def test_enrichment_links_ip_to_supra_coucou_malware(connector):
@@ -175,6 +177,34 @@ def test_enrichment_links_ip_to_supra_coucou_malware(connector):
     assert relationship["relationship_type"] == "communicates-with"
     assert relationship["source_ref"] == MALWARE_ID
     assert relationship["target_ref"] == IPV4_ID
+
+
+def test_enrichment_adds_note_containing_ip(connector):
+    connector.process_message(_message(_ipv4_from_manual_trigger([])))
+
+    objects = {o["id"]: o for o in connector.helper.sent_bundles[0]["objects"]}
+    note = objects[NOTE_ID]
+    assert note["type"] == "note"
+    assert note["content"] == "coucou super note"
+    assert note["abstract"] == "coucou note on 8.8.8.8"
+    assert note["object_refs"] == [IPV4_ID]
+
+
+def test_enrichment_adds_a_different_note_for_each_ip(connector):
+    other_ip_message = _message(_ipv4_from_manual_trigger([]))
+    other_ip_message["enrichment_entity"]["observable_value"] = "1.1.1.1"
+
+    connector.process_message(_message(_ipv4_from_manual_trigger([])))
+    connector.process_message(other_ip_message)
+
+    note_ids = [
+        o["id"]
+        for bundle in connector.helper.sent_bundles
+        for o in bundle["objects"]
+        if o["type"] == "note"
+    ]
+    assert len(note_ids) == 2
+    assert note_ids[0] != note_ids[1]
 
 
 def test_enrichment_enriches_entity_within_max_tlp(connector):
