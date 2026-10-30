@@ -545,3 +545,44 @@ def test_dwi_screenshot_external_references_are_removed(connector):
     ]
     assert "external_references" not in by_id["marking-definition--3"]
     assert len(bundle["objects"][0]["external_references"]) == 3
+
+
+def test_reinserted_dwi_author_has_no_screenshot_references(connector, helper):
+    connector.sources = ["feed"]
+    helper.get_state.return_value = {"cursors": {"feed": "2026-02-01T00:00:00+00:00"}}
+    connector.client.get_stix_bundle.return_value = {
+        "type": "bundle",
+        "id": "bundle--1",
+        "objects": [
+            {
+                "type": "identity",
+                "id": "identity--dwi-own",
+                "name": "DarkWebInformer",
+                "identity_class": "organization",
+                "created": "2025-01-01T00:00:00Z",
+                "external_references": [
+                    {"source_name": "dwi-screenshot", "url": "https://dwi.test/1.png"},
+                    {"source_name": "dwi-site", "url": "https://dwi.test"},
+                ],
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--old",
+                "modified": "2026-01-01T00:00:00Z",
+                "created_by_ref": "identity--dwi-own",
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--new",
+                "modified": "2026-03-01T00:00:00Z",
+            },
+        ],
+    }
+
+    connector.process_message()
+
+    sent = json.loads(helper.send_stix2_bundle.call_args.args[0])["objects"]
+    author = next(o for o in sent if o["id"] == "identity--dwi-own")
+    assert author["external_references"] == [
+        {"source_name": "dwi-site", "url": "https://dwi.test"}
+    ]

@@ -254,7 +254,7 @@ class DarkWebInformerConnector:
         elif not any(
             isinstance(obj, dict) and obj.get("id") == author_id for obj in objects
         ):
-            attributed.insert(0, dwi_author)
+            attributed.insert(0, self._without_excluded_references(dwi_author))
 
         for obj in objects:
             if not isinstance(obj, dict):
