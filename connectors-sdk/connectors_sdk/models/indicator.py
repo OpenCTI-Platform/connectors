@@ -5,6 +5,7 @@ from typing import Literal
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
+from pycti import STIX_EXT_OCTI
 from pycti import Indicator as PyctiIndicator
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Indicator as Stix2Indicator
@@ -144,12 +145,18 @@ class Indicator(BaseIdentifiedEntity):
                 for kill_chain_phase in self.kill_chain_phases or []
             ],
             allow_custom=True,
-            x_opencti_score=self.score,
             x_mitre_platforms=self.platforms,
-            x_opencti_main_observable_type=self.main_observable_type,
+            # Top level only: the platform never exports it, it is an import option.
             x_opencti_create_observables=self.create_observables,
+            # Not duplicated in the extension: pycti reads files from both places
+            # and joins them, so each file would be uploaded twice.
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
-            **self._common_stix2_properties()
+            **self._common_stix2_properties(),
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI,
+                score=self.score,
+                main_observable_type=self.main_observable_type,
+            ),
         )

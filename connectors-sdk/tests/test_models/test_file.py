@@ -1,5 +1,6 @@
 import pytest
 from connectors_sdk.models.file import File
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 from stix2.v21 import File as Stix2File
 
@@ -37,3 +38,17 @@ def test_file_to_stix2_object_returns_valid_stix_object():
     stix2_obj = file.to_stix2_object()
     # Then: A valid STIX2.1 File is returned
     assert isinstance(stix2_obj, Stix2File)
+
+
+def test_file_writes_additional_names_in_sco_extension():
+    """Test that File writes its additional names in the SCO extension."""
+    # Given a File with additional names
+    file = File(name="test.txt", additional_names=["other.txt"])
+    # When converting it to a STIX object
+    stix2_obj = file.to_stix2_object()
+    # Then the additional names are in the SCO extension and at the top level
+    assert stix2_obj.extensions[STIX_EXT_OCTI_SCO] == {
+        "extension_type": "property-extension",
+        "additional_names": ["other.txt"],
+    }
+    assert stix2_obj.x_opencti_additional_names == ["other.txt"]

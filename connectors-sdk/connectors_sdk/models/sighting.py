@@ -11,6 +11,7 @@ from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
 from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.region import Region
+from pycti import STIX_EXT_OCTI
 from pycti import StixSightingRelationship as PyctiStixSightingRelationship
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Sighting as Stix2Sighting
@@ -90,7 +91,10 @@ class Sighting(BaseIdentifiedEntity):
             last_seen=self.last_seen,
             count=self.count,
             description=self.description,
-            x_opencti_negative=self.qualification,
             **self._common_stix2_properties(),
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI,
+                negative=self.qualification,
+            ),
             allow_custom=True,
         )

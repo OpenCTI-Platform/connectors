@@ -2,6 +2,7 @@ import pycti
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.country import Country
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 from stix2.v21 import Location as Stix2Location
 
@@ -79,6 +80,12 @@ def test_country_to_stix2_object(
         ],
         created=country.created,
         modified=country.modified,
+        extensions={
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "location_type": "Country",
+            }
+        },
         custom_properties=dict(
             x_opencti_location_type="Country",
         ),

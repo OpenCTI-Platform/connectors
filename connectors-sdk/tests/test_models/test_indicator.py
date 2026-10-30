@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.indicator import Indicator
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 from stix2.v21 import Indicator as Stix2Indicator
 
@@ -94,3 +95,27 @@ def test_indicator_to_stix2_object_returns_valid_stix_object(
 
     # Then: A valid STIX Indicator is returned
     assert isinstance(stix2_obj, Stix2Indicator)
+
+
+def test_indicator_writes_opencti_properties_in_extension():
+    """Test that Indicator writes score and main observable type in the OpenCTI extension."""
+    # Given an Indicator with OpenCTI attributes
+    indicator = Indicator(
+        name="Test Indicator",
+        pattern="[ipv4-addr:value = '0.0.0.0']",
+        pattern_type="stix",
+        score=80,
+        main_observable_type="IPv4-Addr",
+        create_observables=True,
+    )
+    # When converting it to a STIX object
+    stix2_obj = indicator.to_stix2_object()
+    # Then the extension holds score and main observable type
+    assert stix2_obj.extensions[STIX_EXT_OCTI] == {
+        "extension_type": "property-extension",
+        "score": 80,
+        "main_observable_type": "IPv4-Addr",
+    }
+    # And create_observables stays only at the top level
+    assert stix2_obj.x_opencti_create_observables is True
+    assert stix2_obj.x_opencti_score == 80

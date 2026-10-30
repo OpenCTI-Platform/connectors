@@ -5,6 +5,7 @@ from connectors_sdk.models.enums import (
     IndustrySector,
     Reliability,
 )
+from pycti import STIX_EXT_OCTI
 from pycti import Identity as PyctiIdentity
 from pydantic import Field
 from stix2.v21 import Identity as Stix2Identity
@@ -50,7 +51,10 @@ class Sector(BaseIdentifiedEntity):
             description=self.description,
             sectors=self.sectors,
             allow_custom=True,
-            x_opencti_reliability=self.reliability,
-            x_opencti_aliases=self.aliases,
-            **self._common_stix2_properties()
+            **self._common_stix2_properties(),
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI,
+                reliability=self.reliability,
+                aliases=self.aliases,
+            ),
         )

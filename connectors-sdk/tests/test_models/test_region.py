@@ -4,6 +4,7 @@ from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMark
 from connectors_sdk.models._location import Location as Stix2Location
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.region import Region
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 
 
@@ -60,6 +61,13 @@ def test_region_to_stix2_object(
         ],
         created=region.created,
         modified=region.modified,
+        extensions={
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "location_type": "Region",
+                "aliases": ["Test alias"],
+            }
+        },
         custom_properties=dict(
             x_opencti_location_type="Region",
             x_opencti_aliases=["Test alias"],

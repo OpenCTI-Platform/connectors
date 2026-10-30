@@ -112,6 +112,25 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
         }
 
     @staticmethod
+    def _merge_stix2_properties(*properties: dict[str, Any]) -> dict[str, Any]:
+        """Merge STIX2 properties, and merge their extensions instead of replacing them."""
+        merged: dict[str, Any] = {}
+        extensions: dict[str, dict[str, Any]] = {}
+        for stix2_properties in properties:
+            for key, value in stix2_properties.items():
+                if key == "extensions":
+                    for extension_id, extension in value.items():
+                        extensions[extension_id] = {
+                            **extensions.get(extension_id, {}),
+                            **extension,
+                        }
+                else:
+                    merged[key] = value
+        if extensions:
+            merged["extensions"] = extensions
+        return merged
+
+    @staticmethod
     def _without_empty_values(properties: dict[str, Any]) -> dict[str, Any]:
         """Drop the None and [] values.
 

@@ -5,6 +5,7 @@ from connectors_sdk.models.enums import (
     OrganizationType,
     Reliability,
 )
+from pycti import STIX_EXT_OCTI
 from pycti import Identity as PyctiIdentity
 from pydantic import Field
 from stix2.v21 import Identity as Stix2Identity
@@ -62,8 +63,11 @@ class Organization(BaseIdentifiedEntity):
             description=self.description,
             contact_information=self.contact_information,
             allow_custom=True,
-            x_opencti_organization_type=self.organization_type,
-            x_opencti_reliability=self.reliability,
-            x_opencti_aliases=self.aliases,
-            **self._common_stix2_properties()
+            **self._common_stix2_properties(),
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI,
+                organization_type=self.organization_type,
+                reliability=self.reliability,
+                aliases=self.aliases,
+            ),
         )

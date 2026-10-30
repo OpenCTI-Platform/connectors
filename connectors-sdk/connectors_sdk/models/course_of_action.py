@@ -1,6 +1,7 @@
 """CourseOfAction."""
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
+from pycti import STIX_EXT_OCTI
 from pycti import CourseOfAction as PyctiCourseOfAction
 from pydantic import Field
 from stix2.v21 import CourseOfAction as Stix2CourseOfAction
@@ -39,7 +40,10 @@ class CourseOfAction(BaseIdentifiedEntity):
             name=self.name,
             description=self.description,
             allow_custom=True,
-            x_opencti_aliases=self.aliases,
             x_mitre_id=self.mitre_id,
             **self._common_stix2_properties(),
+            **self._custom_stix2_properties(
+                STIX_EXT_OCTI,
+                aliases=self.aliases,
+            ),
         )

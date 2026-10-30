@@ -4,6 +4,7 @@ from typing import Any
 
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.enums import HashAlgorithm
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import AwareDatetime, Field, PositiveInt, model_validator
 from stix2.v21 import File as Stix2File
 
@@ -96,6 +97,10 @@ class File(BaseObservableEntity):
             ctime=self.ctime,
             mtime=self.mtime,
             atime=self.atime,
-            x_opencti_additional_names=self.additional_names,
-            **self._common_stix2_properties()
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_properties(
+                    STIX_EXT_OCTI_SCO, additional_names=self.additional_names
+                ),
+            )
         )

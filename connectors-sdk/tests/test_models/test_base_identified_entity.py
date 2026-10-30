@@ -244,3 +244,47 @@ def test_custom_stix2_properties_new_sco_puts_attributes_at_top_level(
         "score": 10,
         "x_opencti_score": 10,
     }
+
+
+def test_merge_stix2_properties_merges_extensions(implemented_base_identified_entity):
+    """Test that the merge combines the extensions instead of replacing them."""
+    # Given properties with extensions, some with the same extension id
+    first = {
+        "name": "name",
+        "extensions": {
+            STIX_EXT_OCTI: {"extension_type": "property-extension", "score": 1}
+        },
+    }
+    second = {
+        "extensions": {
+            STIX_EXT_OCTI: {"extension_type": "property-extension", "aliases": ["a"]},
+            "extension-definition--other": {"extension_type": "property-extension"},
+        },
+        "x_opencti_score": 1,
+    }
+    # When merging them
+    merged = implemented_base_identified_entity._merge_stix2_properties(first, second)
+    # Then the extensions are merged
+    assert merged == {
+        "name": "name",
+        "x_opencti_score": 1,
+        "extensions": {
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "score": 1,
+                "aliases": ["a"],
+            },
+            "extension-definition--other": {"extension_type": "property-extension"},
+        },
+    }
+
+
+def test_merge_stix2_properties_without_extension(implemented_base_identified_entity):
+    """Test that the merge adds no extension when there is none."""
+    # Given properties without extension
+    # When merging them
+    merged = implemented_base_identified_entity._merge_stix2_properties(
+        {"name": "name"}, {"labels": ["label"]}
+    )
+    # Then there is no extension
+    assert merged == {"name": "name", "labels": ["label"]}

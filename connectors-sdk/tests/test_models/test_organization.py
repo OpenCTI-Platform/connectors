@@ -1,7 +1,9 @@
 import pytest
+import stix2
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import Reliability
 from connectors_sdk.models.organization import Organization
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 from stix2.v21 import Identity as Stix2Identity
 
@@ -52,3 +54,28 @@ def test_organization_to_stix2_object_returns_valid_stix_object(
     stix2_obj = organization.to_stix2_object()
     # Then: A valid STIX2.1 Identity is returned
     assert isinstance(stix2_obj, Stix2Identity)
+
+
+def test_organization_writes_opencti_properties_in_extension():
+    """Test that Organization writes its OpenCTI attributes in the OpenCTI extension."""
+    # Given an Organization with OpenCTI attributes
+    organization = Organization(
+        name="Test organization",
+        organization_type="vendor",
+        reliability=Reliability.A,
+        aliases=["Test alias"],
+    )
+    # When converting it to a STIX object
+    stix2_obj = organization.to_stix2_object()
+    # Then the extension holds the attributes
+    assert stix2_obj.extensions[STIX_EXT_OCTI] == {
+        "extension_type": "property-extension",
+        "organization_type": "vendor",
+        "reliability": Reliability.A,
+        "aliases": ["Test alias"],
+    }
+    # And the deprecated x_opencti_* properties are still there
+    assert stix2_obj.x_opencti_reliability == Reliability.A
+    # And the serialized object is still valid STIX with the same id
+    parsed = stix2.parse(stix2_obj.serialize(), allow_custom=True)
+    assert parsed.id == Organization(name="Test organization").to_stix2_object().id
