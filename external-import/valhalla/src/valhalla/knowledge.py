@@ -47,8 +47,7 @@ class KnowledgeImporter:
 
     def run(self, work_id: int) -> Mapping[str, Any]:
         """Run importer."""
-
-        self.bundle_objects.append(self.organization)
+        self.bundle_objects = [self.organization]
 
         self._build_attack_group_mapping()
         self.process_yara_rules()
@@ -95,12 +94,13 @@ class KnowledgeImporter:
                     self.helper.log_error(f"error parsing ref url: {yr.reference}")
                     continue
 
+            pattern = yr.cti_pattern
             indicator = Indicator(
-                id=pycti.Indicator.generate_id(yr.content),
+                id=pycti.Indicator.generate_id(pattern),
                 name=yr.name,
                 description=yr.cti_description,
                 pattern_type="yara",
-                pattern=yr.content,
+                pattern=pattern,
                 labels=yr.tags,
                 valid_from=yr.cti_date,
                 object_marking_refs=[self.default_marking],
