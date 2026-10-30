@@ -1,6 +1,6 @@
 pycti==7.261030.1
 requests~=2.33.0          # HTTP requests
-pydantic==2.14.0
+pydantic==2.14.2
 stix2~=3.0.1              # STIX 2.1 object creation
 tenacity==9.2.1           # Retry logic (used in older implementation, optional now)
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
