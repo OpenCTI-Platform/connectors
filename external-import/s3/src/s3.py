@@ -254,12 +254,15 @@ class S3Connector:
         return self.config.connector.duration_period.total_seconds()
 
     @staticmethod
-    def generate_note_ids(obj, note_type):
+    def generate_note_ids(obj, note_type, platform_created=None):
         """
         Return the STIX ID of a Title, Analysis or History note of `obj`, and its aliases.
 
         Notes are matched on this ID while their content changes from one version to
         the next, so it only depends on the vulnerability, never on the platform state:
+        - it derives from the `created` of the file, never from the one the platform
+          holds, which other sources set too (the CVE connector sets the NVD
+          publication date)
         - CVE notes are keyed on the ACTI UUID
         - other notes are also keyed on the vulnerability name, so that entries sharing
           an ACTI UUID keep their own notes
@@ -271,20 +274,31 @@ class S3Connector:
         entries sharing an ACTI UUID would collapse their notes into one. A name
         identifies a single vulnerability, so at most one entry claims that alias.
 
+        Versions 7.261016.0 to 7.261026.0 derived the ID from the older of the two
+        `created` dates (the platform string when they are equal). The ID they gave is
+        sent as an alias too, so the notes they created are updated in place.
+
         :param obj: The vulnerability the note belongs to
         :param note_type: "Title", "Analysis" or "History"
+        :param platform_created: The `created` the platform holds for `obj`, if any
         :return: The note STIX ID and the list of its alias STIX IDs
         """
         acti_uuid = obj["x_acti_uuid"]
         obj_name = obj.get("name", "")
-        uuid_note_id = Note.generate_id(obj["created"], f"{acti_uuid} - {note_type}")
+        note_aliases = []
         if obj_name.startswith("CVE-"):
-            return uuid_note_id, []
-        name_note_id = Note.generate_id(
-            obj["created"], f"{acti_uuid} - {obj_name} - {note_type}"
-        )
-        note_aliases = [uuid_note_id] if obj_name == acti_uuid else []
-        return name_note_id, note_aliases
+            note_key = f"{acti_uuid} - {note_type}"
+        else:
+            note_key = f"{acti_uuid} - {obj_name} - {note_type}"
+            if obj_name == acti_uuid:
+                note_aliases.append(
+                    Note.generate_id(obj["created"], f"{acti_uuid} - {note_type}")
+                )
+        if platform_created:
+            superseded_created = oldest_timestamp(platform_created, obj["created"])
+            if superseded_created != obj["created"]:
+                note_aliases.append(Note.generate_id(superseded_created, note_key))
+        return Note.generate_id(obj["created"], note_key), note_aliases
 
     @staticmethod
     def generate_standard_id(obj):
@@ -438,12 +452,12 @@ class S3Connector:
         are not generated: their IDs do not change between versions, so they would
         overwrite the newer notes.
 
-        A newer vulnerability takes the `created` the platform holds when it is older
-        than its own: the platform keeps the oldest creation date anyway, and the IDs
-        of the notes derive from it, so the notes of every run are the same notes.
-
         Args:
             bundles: Parsed STIX bundles of the run. Objects are updated in place.
+
+        Returns:
+            dict: standard ID -> `created` held by the platform, for the vulnerabilities
+                found in the platform with one (see `generate_note_ids`)
         """
         received = {}
         for data in bundles:
@@ -456,21 +470,21 @@ class S3Connector:
                     standard_id = Vulnerability.generate_id(obj["name"])
                     received.setdefault(standard_id, []).append(obj)
         if not received:
-            return
+            return {}
 
         platform_versions = self.fetch_platform_versions(list(received))
+        platform_created = {}
         outdated = 0
         for standard_id, objs in received.items():
             platform_version = platform_versions.get(standard_id)
             if not platform_version:
                 continue
+            if platform_version.get("created"):
+                platform_created[standard_id] = platform_version["created"]
             platform_modified = platform_version.get("x_opencti_modified_at")
-            platform_created = platform_version.get("created")
+            if not platform_modified:
+                continue
             for obj in objs:
-                if platform_created and obj.get("created"):
-                    obj["created"] = oldest_timestamp(platform_created, obj["created"])
-                if not platform_modified:
-                    continue
                 try:
                     is_outdated = parse_stix_timestamp(
                         platform_modified
@@ -496,6 +510,7 @@ class S3Connector:
             "Vulnerabilities checked against the platform",
             {"checked": len(received), "outdated_copies": outdated},
         )
+        return platform_created
 
     @staticmethod
     def rewrite_stix_ids(objects):
@@ -562,7 +577,9 @@ class S3Connector:
             )
             return None
 
-    def fix_bundle(self, bundle, file_name=None, original_content=None):
+    def fix_bundle(
+        self, bundle, file_name=None, original_content=None, platform_created=None
+    ):
         """
         Process and fix a STIX bundle.
 
@@ -570,6 +587,8 @@ class S3Connector:
             bundle: The STIX bundle, parsed (dict) or as content (bytes or string)
             file_name: Original S3 file name (used for x_opencti_files attachment)
             original_content: Original file content as bytes (used for x_opencti_files attachment)
+            platform_created: Vulnerability standard ID -> `created` held by the
+                platform, as returned by `supersede_outdated_vulnerabilities`
 
         Returns:
             str: JSON string of the STIX bundle, or None if nothing to process
@@ -706,9 +725,19 @@ class S3Connector:
             if "x_description" in obj:
                 obj["x_opencti_description"] = obj["x_description"]
 
+            obj_platform_created = (
+                platform_created.get(Vulnerability.generate_id(obj["name"]))
+                if platform_created
+                and obj.get("type") == "vulnerability"
+                and obj.get("name")
+                else None
+            )
+
             # Title Note
             if obj.get("x_title", None) and obj.get("x_acti_uuid", None):
-                note_id, note_aliases = self.generate_note_ids(obj, "Title")
+                note_id, note_aliases = self.generate_note_ids(
+                    obj, "Title", obj_platform_created
+                )
                 note = stix2.Note(
                     id=note_id,
                     created=obj["created"],
@@ -728,7 +757,9 @@ class S3Connector:
 
             # Analysis Note
             if obj.get("x_analysis", None) and obj.get("x_acti_uuid", None):
-                note_id, note_aliases = self.generate_note_ids(obj, "Analysis")
+                note_id, note_aliases = self.generate_note_ids(
+                    obj, "Analysis", obj_platform_created
+                )
                 note = stix2.Note(
                     id=note_id,
                     created=obj["created"],
@@ -760,7 +791,9 @@ class S3Connector:
                     timestamp = (history.get("timestamp") or "").strip()
                     note_content += f"| {timestamp} | {comment} |\n"
 
-                note_id, note_aliases = self.generate_note_ids(obj, "History")
+                note_id, note_aliases = self.generate_note_ids(
+                    obj, "History", obj_platform_created
+                )
                 note = stix2.Note(
                     id=note_id,
                     created=obj["created"],
@@ -1158,7 +1191,7 @@ class S3Connector:
             if isinstance(s3_file["data"], dict)
         ]
         self.resolve_versions(bundles)
-        self.supersede_outdated_vulnerabilities(bundles)
+        platform_created = self.supersede_outdated_vulnerabilities(bundles)
 
         # Every bundle of the run is built before the first one is sent: a file that
         # cannot be processed stops the run before anything is sent or deleted
@@ -1168,6 +1201,7 @@ class S3Connector:
                     s3_file["data"],
                     file_name=s3_file["key"],
                     original_content=s3_file["content"],
+                    platform_created=platform_created,
                 )
                 if isinstance(s3_file["data"], dict)
                 else None
