@@ -28,10 +28,8 @@ class GreyNoiseFeedConnector:
             name="GreyNoise Feed",
             description="GreyNoise collects and analyzes untargeted, widespread, "
             "and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
-            custom_properties={
-                "x_opencti_reliability": "B - Usually reliable",
-                "x_opencti_organization_type": "vendor",
-            },
+            x_opencti_reliability="B - Usually reliable",
+            x_opencti_organization_type="vendor",
         )
 
         # Cache for label
