@@ -190,9 +190,9 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC311 | WARNING | Common | `tlp-markings-on-entities` | STIX entities should include TLP markings |
 | VC312 | ERROR | Common | `cleanup-inconsistent-bundle` | `send_stix2_bundle()` must use `cleanup_inconsistent_bundle=True` |
 | VC313 | ERROR | Common | `pycti-generate-id` | STIX SDO/SRO objects must use `pycti.XXX.generate_id()` for deterministic IDs |
-| VC314 | ERROR | External Import | `auto-backpressure` | Must use `schedule_process()` or `schedule_iso()` for scheduling |
-| VC315 | ERROR | External Import | `work-initiated` | Must call `initiate_work()` before processing |
-| VC316 | ERROR | External Import | `work-closed` | Must close work with `to_processed()` after processing |
+| VC314 | ERROR | External Import | `auto-backpressure` | Must use `schedule_process()` or `schedule_iso()` for scheduling (passes with connectors-sdk `ExternalImportConnector`) |
+| VC315 | ERROR | External Import | `work-initiated` | Must call `initiate_work()` before processing (passes with connectors-sdk `ExternalImportConnector`) |
+| VC316 | ERROR | External Import | `work-closed` | Must close work with `to_processed()` after processing (passes with connectors-sdk `ExternalImportConnector`) |
 | VC317 | WARNING | External Import | `initiate-work-conditional` | `initiate_work` should only be called when data is available |
 | VC318 | ERROR | Enrichment | `helper-listen` | Must use `self.helper.listen()` for message callback |
 | VC319 | WARNING | Enrichment | `scope-fallback-bundle` | Must return original bundle when entity is not in scope |
@@ -201,6 +201,9 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC322 | ERROR | Enrichment | `former-bundle-read` | Must read `data['stix_objects']` for playbook compatibility |
 | VC323 | ERROR | Stream | `helper-listen-stream` | Must use `self.helper.listen_stream()` |
 | VC324 | WARNING | Common | `relationship-start-stop-time` | Relationship should not set both `start_time` and `stop_time` (overloads Redis with time-bucketed duplicates) |
+| VC325 | ERROR | Common | `minimal-settings-tests` | Connector must have minimal settings tests covering valid and invalid inputs |
+| VC326 | ERROR | Common | `list-from-string-default` | `ListFromString` settings must define a default value (even an empty list) |
+| VC327 | WARNING | Common | `log-meta` | connectors-sdk log messages must be static, with variable data passed in `meta` (no f-string, `%`, `.format()` or `str(err)` message). pycti and stdlib loggers are not checked |
 
 ### VC4xx — Docker
 

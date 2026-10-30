@@ -118,6 +118,24 @@ def find_imports(
     return results
 
 
+def find_sdk_external_import_connector(
+    trees: dict[Path, ast.Module],
+) -> ImportInfo | None:
+    """Return the import of connectors-sdk's ``ExternalImportConnector``, if any.
+
+    ``ExternalImportConnector`` owns the run loop: it schedules runs with
+    ``schedule_process`` and opens and closes each work with ``initiate_work``
+    and ``to_processed`` (``in_error=True`` on failure). A connector built on
+    it delegates all of this to the SDK, so its own code has none of these calls.
+    """
+    imports = find_imports(
+        trees,
+        module_pattern=r"^connectors_sdk(\.|$)",
+        name_pattern=r"^ExternalImportConnector$",
+    )
+    return imports[0] if imports else None
+
+
 @dataclass
 class ClassInfo:
     """Represents a class definition found in source."""
