@@ -14,6 +14,7 @@ services:
       # - CONNECTOR_XTM_ONE_INTENT=cti.stix_harvester # XTM One intent for agent-based extraction
       # - IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS=true # Include relationships extracted from the document
       # - IMPORT_DOCUMENT_AI_CREATE_INDICATOR=false # Flag extracted observables for indicator creation
+      # - IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES=true # Bind extracted entities to the existing OpenCTI ones (curationResolve)
       # - IMPORT_DOCUMENT_AI_API_BASE_URL=ChangeMe # Base URL of the Import Document AI web service (legacy direct mode)
       # - IMPORT_DOCUMENT_AI_API_KEY=ChangeMe # PEM licence/certificate key for the web service (legacy direct mode)
     restart: always

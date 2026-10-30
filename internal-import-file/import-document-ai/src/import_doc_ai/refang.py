@@ -14,7 +14,11 @@ import urllib.parse
 from dataclasses import dataclass, field
 
 import stix2
-from import_doc_ai.util import merge_duplicate_objects, remap_references_in_bundle
+from import_doc_ai.util import (
+    merge_duplicate_objects,
+    merge_rewritten_relationships,
+    remap_references_in_bundle,
+)
 
 REFANGABLE_OBSERVABLE_TYPES = frozenset(
     {"domain-name", "email-addr", "hostname", "ipv4-addr", "ipv6-addr", "url"}
@@ -310,55 +314,6 @@ def _with_refanged_value(
     return stix2.parse(observable_dict, allow_custom=True)
 
 
-def _with_id(
-    stix_object: stix2.v21._STIXBase21, object_id: str
-) -> stix2.v21._STIXBase21:
-    object_dict = json.loads(stix_object.serialize())
-    object_dict["id"] = object_id
-    return stix2.parse(object_dict, allow_custom=True)
-
-
-def _merge_rewritten_relationships(
-    bundle: stix2.Bundle, rewritten_ids: set[str]
-) -> stix2.Bundle:
-    """Give the relationships a rewrite made identical their first one's id.
-
-    OpenCTI identifies a relationship by its type, endpoints and time frame:
-    once two spellings of an observable are merged, their relationships to the
-    same object are one relationship. Every relationship sharing that identity
-    with a rewritten one is merged, whatever their order in the bundle; a group
-    the rewrite did not touch is left as it is.
-    """
-    ids_by_key: dict[tuple, list[str]] = {}
-    for obj in bundle.get("objects", []):
-        if obj.get("type") != "relationship":
-            continue
-        key = (
-            obj.get("relationship_type"),
-            obj.get("source_ref"),
-            obj.get("target_ref"),
-            obj.get("start_time"),
-            obj.get("stop_time"),
-        )
-        ids_by_key.setdefault(key, []).append(obj["id"])
-    duplicate_ids = {
-        duplicate_id: ids[0]
-        for ids in ids_by_key.values()
-        if len(ids) > 1 and rewritten_ids.intersection(ids)
-        for duplicate_id in ids[1:]
-    }
-    if not duplicate_ids:
-        return bundle
-    objects = [
-        _with_id(obj, duplicate_ids[obj["id"]]) if obj["id"] in duplicate_ids else obj
-        for obj in bundle.get("objects", [])
-    ]
-    return remap_references_in_bundle(
-        stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
-        duplicate_ids,
-    )
-
-
 def refang_bundle_observables(
     bundle: stix2.Bundle,
 ) -> tuple[stix2.Bundle, RefangSummary]:
@@ -442,7 +397,7 @@ def refang_bundle_observables(
         stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
         id_mapping,
     )
-    refanged_bundle = _merge_rewritten_relationships(
+    refanged_bundle = merge_rewritten_relationships(
         refanged_bundle, rewritten_relationship_ids
     )
     merged_bundle = merge_duplicate_objects(refanged_bundle)
