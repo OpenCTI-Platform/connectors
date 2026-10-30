@@ -1,0 +1,5 @@
+pycti==7.261021.1
+stix2==3.0.2
+PyYAML==6.0.3
+requests~=2.33.0
+python-dateutil==2.9.0.post0
