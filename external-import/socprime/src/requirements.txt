@@ -1,5 +1,5 @@
 pycti==7.261030.1
-pydantic==2.13.5
+pydantic==2.14.2
 pydantic-settings==2.15.0
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3

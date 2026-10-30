@@ -3,5 +3,5 @@ markdownify==1.2.3
 pdfminer.six==20251107
 playwright==1.64.1
 cachetools
-pydantic==2.14.0
+pydantic==2.14.2
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

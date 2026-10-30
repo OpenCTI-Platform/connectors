@@ -1,5 +1,5 @@
 pycti==7.261030.1
-pydantic~=2.13.5
+pydantic~=2.14.2
 requests~=2.33.0
 stix2~=3.0.1
 # Same version OpenCTI uses to validate YARA indicators
