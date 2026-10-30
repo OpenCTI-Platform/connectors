@@ -74,6 +74,7 @@ INDICATOR = Indicator(
                 aliases=["alias"],
                 cvss_v3_vector_string="CVSS:3.1/AV:N",
                 cvss_v2_vector_string="AV:N/AC:L",
+                cvss_v2_base_score=7.5,
                 cvss_v4_vector_string="CVSS:4.0/AV:N",
                 cvss_v3_base_severity=CvssSeverity.HIGH,
                 **COMMON,
