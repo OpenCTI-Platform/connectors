@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -47,7 +48,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "tlp": "White",
                     "create_observables": True,
                     "create_indicators": True,
-                    "pulse_start_timestamp": "2020-05-01T00:00:00",
+                    "pulse_start_timestamp": "2020-05-01T00:00:00Z",
                     "report_type": "threat-report",
                     "report_status": "New",
                     "guess_malware": False,
@@ -118,3 +119,24 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_connector_uses_default_pulse_start_timestamp_with_empty_state(
+    mock_opencti_connector_helper,
+):
+    """
+    Test that the default `pulse_start_timestamp` (with a "Z" suffix) is parsed
+    when the connector has no state yet.
+
+    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+    connector = AlienVault(config=settings, helper=helper)
+
+    latest_pulse_datetime = (
+        connector.pulse_importer._get_latest_pulse_datetime_from_state({})
+    )
+
+    assert latest_pulse_datetime == datetime(2020, 5, 1)
