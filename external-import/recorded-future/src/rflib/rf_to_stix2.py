@@ -415,15 +415,19 @@ class FileHash(Indicator):
 
     def _determine_algorithm(self):
         """Determine file hash algorithm from length"""
-        if len(self.name) == 64:
+        if len(self.name) == 128:
+            return "SHA-512"
+        elif len(self.name) == 64:
             return "SHA-256"
         elif len(self.name) == 40:
             return "SHA-1"
         elif len(self.name) == 32:
             return "MD5"
+        # FileHash is shared by analyst notes, threat maps and risk lists, so the
+        # message names no feed: the caller's log gives the context
         msg = (
-            f"[ANALYST NOTES] Could not determine hash type for {self.name}. Only MD5, SHA1"
-            " and SHA256 hashes are supported"
+            f"Could not determine hash type for {self.name}. Only MD5, SHA-1, SHA-256"
+            " and SHA-512 hashes are supported"
         )
         raise ConversionError(msg)
 
@@ -1342,7 +1346,20 @@ class StixNote:
                 self.helper.connector_logger.warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                try:
+                    rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                except ConversionError as err:
+                    # Skip this entity only, the rest of the note is still imported
+                    self.helper.connector_logger.warning(
+                        "[ANALYST NOTES] Skipping entity that could not be converted",
+                        meta={
+                            "note_id": note["id"],
+                            "entity": name,
+                            "type": type_,
+                            "error": str(err),
+                        },
+                    )
+                    continue
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",
