@@ -174,10 +174,7 @@ class IvreConnector:
             name=name,
             type="Country",
             country=name,
-            custom_properties={
-                "x_opencti_location_type": "Country",
-                "x_opencti_aliases": [name, code],
-            },
+            x_opencti_aliases=[name, code],
         )["id"]
 
     def add_city(self, city_name, country_name, country_code):
@@ -186,7 +183,6 @@ class IvreConnector:
             name=city_name,
             type="City",
             country=country_name,
-            custom_properties={"x_opencti_location_type": "City"},
         )["id"]
         self.link_core(city_id, country_id, rel_type="located-at")
         return city_id

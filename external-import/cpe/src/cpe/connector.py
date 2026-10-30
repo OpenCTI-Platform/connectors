@@ -107,15 +107,20 @@ class CPEConnector:
 
     def _get_date_iso(self, timestamp: int) -> str:
         """
-        Converts a timestamp to a date in ISO format
+        Converts a timestamp to a UTC date in ISO 8601 format
+
+        The "Z" suffix is used instead of "+00:00": the date is put unencoded in the
+        query string, where a "+" is decoded as a space and rejected by the NIST API.
 
         Args:
             timestamp (int): The timestamp to convert
 
         Returns:
-            str: The date formatted as "AAAA-MM-JJTHH:MM:SS.ss"
+            str: The date formatted as "YYYY-MM-DDTHH:MM:SSZ"
         """
-        return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
+        return datetime.fromtimestamp(timestamp, tz=timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
 
     def _get_api_url(self, start_index, start_date, end_date) -> str:
         """

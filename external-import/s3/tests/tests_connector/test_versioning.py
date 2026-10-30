@@ -568,13 +568,14 @@ def test_vulnerability_newer_than_the_platform_is_sent_in_full(connector):
     assert len(objects_of_type(bundle, "note")) == 2
 
 
-def test_a_newer_version_takes_the_creation_date_held_by_the_platform(connector):
+def test_note_ids_do_not_depend_on_the_creation_date_held_by_the_platform(connector):
     """
-    Across runs: the note IDs derive from `created`, and the platform keeps the oldest
-    creation date. A newer publication with a later `created` must generate the same
-    notes as the version the platform already holds, not new ones.
+    #8126: the CVE connector creates CVEs with the NVD publication date, older than
+    the `created` of the ACTI file. The notes keep the IDs derived from the `created`
+    of the file, the ID derived from the date the platform holds is an alias.
     """
-    platform_created = "2026-09-30T08:00:00.000Z"
+    file_created = "2026-10-01T19:55:00.000Z"
+    platform_created = "2021-05-24T00:00:00.000Z"
     connector.helper.api.vulnerability.list.return_value = [
         {
             "standard_id": CVE_ID,
@@ -583,16 +584,13 @@ def test_a_newer_version_takes_the_creation_date_held_by_the_platform(connector)
             "created": platform_created,
         }
     ]
-    republished = aci_vulnerability_bundle(
-        NEWER, "H", 9.4, [FIRST_ENTRY, SECOND_ENTRY], True, 2, created=NEWER
-    )
     put_files(
         connector,
         [
             (
                 "ACI_Vuln/a.json",
                 datetime.datetime(2026, 10, 2, 2, 0, tzinfo=UTC),
-                republished,
+                NEWER_BUNDLE,
             )
         ],
     )
@@ -601,13 +599,21 @@ def test_a_newer_version_takes_the_creation_date_held_by_the_platform(connector)
 
     [bundle] = sent_bundles(connector)
     [vulnerability] = objects_of_type(bundle, "vulnerability")
-    assert vulnerability["created"] == platform_created
+    # Sent as published: the platform keeps the oldest creation date anyway
+    assert vulnerability["created"] == file_created
     assert vulnerability["x_opencti_modified_at"] == NEWER
     acti_uuid = "5f0e2a7c-58b1-4d8e-9a43-6f7b1c2d3e4f"
-    assert sorted(note["id"] for note in objects_of_type(bundle, "note")) == sorted(
-        Note.generate_id(platform_created, f"{acti_uuid} - {note_type}")
-        for note_type in ("Title", "History")
-    )
+    notes = {note["abstract"]: note for note in objects_of_type(bundle, "note")}
+    assert set(notes) == {f"{CVE} - Title", f"{CVE} - History"}
+    for note_type in ("Title", "History"):
+        note = notes[f"{CVE} - {note_type}"]
+        assert note["created"] == file_created
+        assert note["id"] == Note.generate_id(
+            file_created, f"{acti_uuid} - {note_type}"
+        )
+        assert note["x_opencti_stix_ids"] == [
+            Note.generate_id(platform_created, f"{acti_uuid} - {note_type}")
+        ]
 
 
 def test_platform_versions_are_read_in_batches(connector):

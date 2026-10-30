@@ -23,6 +23,7 @@
   - [Indicator Creation](#indicator-creation)
   - [Generated STIX Objects](#generated-stix-objects)
   - [IP Resolutions](#ip-resolutions)
+  - [API Quota](#api-quota)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
 
@@ -245,7 +246,7 @@ Paging stops at the first of:
 2. `VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES` resolutions fetched (sent to VirusTotal as the page size when below 40, so `3` is one lookup returning the three most recent resolutions);
 3. `VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES` pages fetched;
 4. the end of the list;
-5. a failed page, including HTTP 429 after the client retries. What was already sent stays.
+5. a failed page, including an exhausted quota (see [API Quota](#api-quota)). What was already sent stays.
 
 `VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX` filters which resolutions are imported; it does not reduce the lookups spent.
 Each page is sent as its own bundle, so the first results appear before paging ends. In a playbook, all
@@ -263,6 +264,23 @@ lookups when it is set.
 | Free (4 lookups/min, 500/day) | `MAX_PAGES=25`, `API_REQUESTS_PER_MINUTE=4` | 25 of 500 daily lookups, about 6 minutes; usually far less once the date floor stops paging |
 | Free | `MAX_ENTRIES=3` | 1 lookup |
 | Premium | `MAX_PAGES=50`, `API_REQUESTS_PER_MINUTE=0` | 50 lookups of the group's daily quota, seconds |
+
+### API Quota
+
+When VirusTotal answers HTTP 429 (`QuotaExceededError` or `TooManyRequestsError`), the connector reads the
+`Retry-After` header:
+
+- **60 seconds or less** (per-minute quota): it waits that long and sends the request once more.
+- **More than 60 seconds** (daily or monthly quota), or a second HTTP 429: it does not wait for the reset.
+
+When the quota stays exhausted on the main lookup of the observable (or of an indicator's observable), the
+enrichment fails and its work shows `VirusTotal quota exceeded (...)`. The request is not retried and the
+connector moves on to the next one, so the queue does not stall until the quota resets. Optional lookups
+(GTI relationships, IP resolutions, the last serving IP of a URL, YARA rulesets) are skipped instead, and the
+rest of the enrichment is still sent.
+
+To stay within the quota, reduce the enrichment volume (disable auto enrichment, or use trigger filters or
+playbooks with filters) or upgrade the VirusTotal API quota.
 
 ---
 

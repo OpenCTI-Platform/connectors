@@ -72,6 +72,8 @@ _SCO_TYPES = frozenset(
 # STIX types that carry neither an author nor markings.
 _UNATTRIBUTABLE_TYPES = frozenset({"marking-definition", "language-content"})
 
+_EXCLUDED_EXTERNAL_REFERENCES = frozenset({"dwi-screenshot", "dwi-screenshot-2"})
+
 
 def _parse_timestamp(value: object) -> datetime | None:
     """Parse a STIX timestamp, tolerating any sub-second precision."""
@@ -208,6 +210,28 @@ class DarkWebInformerConnector:
             return None
         return identities[refs.most_common(1)[0][0]]
 
+    @staticmethod
+    def _without_excluded_references(obj: dict) -> dict:
+        """Return the object without DWI's screenshot external references."""
+        references = obj.get("external_references")
+        if not isinstance(references, list):
+            return obj
+        kept = [
+            ref
+            for ref in references
+            if not (
+                isinstance(ref, dict)
+                and ref.get("source_name") in _EXCLUDED_EXTERNAL_REFERENCES
+            )
+        ]
+        if len(kept) == len(references):
+            return obj
+        if kept:
+            return dict(obj, external_references=kept)
+        return {
+            key: value for key, value in obj.items() if key != "external_references"
+        }
+
     def _with_provenance(
         self, bundle: dict, objects: list, dwi_author: dict | None = None
     ) -> dict:
@@ -230,12 +254,13 @@ class DarkWebInformerConnector:
         elif not any(
             isinstance(obj, dict) and obj.get("id") == author_id for obj in objects
         ):
-            attributed.insert(0, dwi_author)
+            attributed.insert(0, self._without_excluded_references(dwi_author))
 
         for obj in objects:
             if not isinstance(obj, dict):
                 attributed.append(obj)
                 continue
+            obj = self._without_excluded_references(obj)
             obj_type = obj.get("type")
             if obj_type in _UNATTRIBUTABLE_TYPES or obj.get("id") == author_id:
                 attributed.append(obj)
