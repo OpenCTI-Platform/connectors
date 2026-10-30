@@ -629,6 +629,56 @@ class VirusTotalBuilderTest(unittest.TestCase):
         ext_data = stix_entity.get("extensions", {}).get(STIX_EXT_OCTI, {})
         self.assertIn("score", ext_data)
 
+    def test_create_indicator_respects_minimum_score(self):
+        data = self.load_file("vt_test_ipv4.json")["data"]
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [],
+            {"id": "ipv4-addr--357c4d50-72a2-40f8-8b7e-3bb59d1fa5db"},
+            {"entity_type": "IPv4-Addr", "observable_value": "1.2.3.4"},
+            data,
+        )
+        initial_bundle_len = len(builder.bundle)
+        config = IndicatorConfig(
+            threshold=1,
+            valid_minutes=30,
+            detect=True,
+            min_score=builder.score + 1,
+        )
+
+        builder.create_indicator_based_on(config, "[ipv4-addr:value = '1.2.3.4']")
+
+        self.assertEqual(len(builder.bundle), initial_bundle_len)
+
+    def test_create_indicator_validity_uses_minutes(self):
+        data = self.load_file("vt_test_ipv4.json")["data"]
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [],
+            {"id": "ipv4-addr--357c4d50-72a2-40f8-8b7e-3bb59d1fa5db"},
+            {"entity_type": "IPv4-Addr", "observable_value": "1.2.3.4"},
+            data,
+        )
+        config = IndicatorConfig(threshold=1, valid_minutes=30, detect=True)
+        with patch.object(
+            self.helper.api.stix2, "format_date", side_effect=lambda dt: dt
+        ):
+            builder.create_indicator_based_on(config, "[ipv4-addr:value = '1.2.3.4']")
+
+        indicator = builder.bundle[-2]
+        self.assertEqual(
+            indicator.valid_until - indicator.valid_from,
+            datetime.timedelta(minutes=30),
+        )
+
+    def test_indicator_validity_must_be_positive(self):
+        with self.assertRaises(ValueError):
+            IndicatorConfig(threshold=1, valid_minutes=0, detect=True)
+
     def test_create_indicator_gti_verdict_malicious_overrides_low_legacy_count(self):
         """A GTI-malicious verdict must trigger indicator creation even when
         the legacy multi-engine count is well below the configured
