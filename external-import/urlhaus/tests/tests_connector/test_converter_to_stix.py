@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+from external_import_connector.connector import ConnectorURLhaus
 from external_import_connector.converter_to_stix import ConverterToStix
 
 INDICATOR_ID = "indicator--4f1e2bb6-4f0f-5a3f-9d6e-1c6c3c0d6a01"
@@ -46,6 +47,19 @@ def test_label_without_entity_is_queried_once_per_run():
 
     assert helper.api.stix_domain_object.list.call_count == 2
     assert threat_cache == {"zip": None, "Mozi": MALWARE}
+
+
+def test_threat_cache_is_cleared_at_each_run():
+    helper = MagicMock()
+    helper.get_state.return_value = None
+    connector = ConnectorURLhaus(config=MagicMock(), helper=helper)
+    connector.converter_to_stix.threat_cache.update({"zip": None, "Mozi": MALWARE})
+    connector._collect_intelligence = MagicMock(return_value=iter([]))
+
+    connector.process_message()
+
+    assert connector.converter_to_stix.threat_cache == {}
+    assert connector.converter_to_stix.threat_cache is connector.state.threat_cache
 
 
 def test_search_threat_by_name_returns_none_when_not_found():
