@@ -43,12 +43,17 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             "url": self._convert_url,
         }
 
-        self._relation_mappings = {
+        relation_mappings = {
             "malware_families": self._create_relation_malware_family,
             # "campaigns": self._create_relation_campaign,
             "threat_actors": self._create_relation_threat_actor,
             "software_toolkits": self._create_relation_software_toolkit,
             "attack_techniques": self._create_relation_attack_technique,
+        }
+        self._relation_mappings = {
+            subentity: create_relation
+            for subentity, create_relation in relation_mappings.items()
+            if subentity in config.indicator_subentities
         }
 
     def _is_below_min_score(self, entry: IOCDeltaEntry) -> bool:
