@@ -2,7 +2,11 @@
 
 from datetime import timedelta
 
-from connector.src.custom.configs.gti_config_common import GTIBaseConfig
+from connector.src.custom.configs.gti_config_common import (
+    ALLOWED_INDICATOR_SUBENTITIES,
+    GTIBaseConfig,
+    validate_subentities_list,
+)
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
@@ -53,6 +57,25 @@ class GTIIndicatorConfig(GTIBaseConfig):
         "using OR logic, and with indicator_min_score using AND logic.",
     )
 
+    indicator_subentities: ListFromString = Field(
+        default=[
+            "malware_families",
+            "threat_actors",
+            "software_toolkits",
+        ],
+        description="Comma-separated list of sub-entity types to link to each indicator. "
+        "The IOC delta packages already embed these relationships, so this setting "
+        "does not change API quota usage: it only controls which related entities and "
+        "relationships are sent to OpenCTI. attack_techniques is excluded by default "
+        "because it accounts for most of the relationships of the IOC feed. "
+        "An empty list imports the indicators without any relationship. "
+        f"Allowed values: {', '.join(ALLOWED_INDICATOR_SUBENTITIES)}",
+        examples=[
+            "malware_families,threat_actors,software_toolkits,attack_techniques",
+            "",
+        ],
+    )
+
     @field_validator("indicator_import_start_date", mode="after")
     @classmethod
     def validate_indicator_import_start_date(cls, v: timedelta) -> timedelta:
@@ -79,3 +102,11 @@ class GTIIndicatorConfig(GTIBaseConfig):
                 f"Allowed values: {', '.join(ALLOWED_IOC_TYPES)}."
             )
         return v
+
+    @field_validator("indicator_subentities", mode="after")
+    @classmethod
+    def validate_indicator_subentities(cls, v: list[str]) -> list[str]:
+        """Validate indicator sub-entities against allowed values."""
+        return validate_subentities_list(
+            v, "indicator subentity", ALLOWED_INDICATOR_SUBENTITIES
+        )

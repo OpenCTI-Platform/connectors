@@ -44,6 +44,12 @@ class DummyConfig:
         self.indicator_min_score = 0
         self.indicator_require_malware_family = False
         self.indicator_require_threat_actor = False
+        self.indicator_subentities = [
+            "malware_families",
+            "threat_actors",
+            "software_toolkits",
+            "attack_techniques",
+        ]
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)
@@ -1290,3 +1296,75 @@ class TestConvertAssociationFilter:
         result = _when_convert(converter, data)
         # Then – AND logic: score filter rejects even with valid association
         _then_returns_empty(result)
+
+
+# =====================
+# indicator_subentities – relation mappings follow the configuration
+# =====================
+
+
+def _given_converter_with_subentities(
+    logger: logging.Logger, subentities: list[str]
+) -> ConvertToSTIXIndicator:
+    config = DummyConfig()
+    config.indicator_subentities = subentities
+    return ConvertToSTIXIndicator(
+        config=config,  # type: ignore[arg-type]
+        logger=logger,
+        tlp_level="white",
+    )
+
+
+def _given_entry_with_malware_and_technique() -> dict:
+    return _given_file_entry(
+        relationships=_given_relationships(
+            malware_name="emotet", attack_technique_id="T1027"
+        )
+    )
+
+
+def _then_stix_type_absent(result: list, stix_type: str) -> None:
+    types = [obj.get("type") if isinstance(obj, dict) else obj.type for obj in result]
+    assert stix_type not in types  # noqa: S101
+
+
+class TestIndicatorSubentities:
+    """Test that convert() only builds the relationships listed in indicator_subentities."""
+
+    def test_attack_techniques_excluded_skips_attack_patterns(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – the default sub-entities, without attack_techniques
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "threat_actors", "software_toolkits"]
+        )
+        # When
+        result = _when_convert(converter, _given_entry_with_malware_and_technique())
+        # Then – indicator + malware + relationship, no attack pattern
+        _then_returns_n_objects(result, 3)
+        _then_stix_type_present(result, "malware")
+        _then_stix_type_absent(result, "attack-pattern")
+
+    def test_attack_techniques_included_creates_attack_patterns(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – attack_techniques added back
+        converter = _given_converter_with_subentities(
+            logger, ["malware_families", "attack_techniques"]
+        )
+        # When
+        result = _when_convert(converter, _given_entry_with_malware_and_technique())
+        # Then – indicator + (malware + rel) + (attack pattern + rel)
+        _then_returns_n_objects(result, 5)
+        _then_stix_type_present(result, "attack-pattern")
+
+    def test_empty_subentities_keeps_indicator_only(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – no sub-entity at all
+        converter = _given_converter_with_subentities(logger, [])
+        # When
+        result = _when_convert(converter, _given_entry_with_malware_and_technique())
+        # Then – the indicator alone
+        _then_returns_n_objects(result, 1)
+        _then_stix_type_present(result, "indicator")
