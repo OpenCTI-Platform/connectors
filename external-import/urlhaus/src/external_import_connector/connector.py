@@ -113,6 +113,7 @@ class ConnectorURLhaus:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+        work_id = None
         try:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
@@ -177,6 +178,12 @@ class ConnectorURLhaus:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            # Report the failure on the work: the state is not updated, so the
+            # next run retries from the same point.
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, f"Connector run failed: {err}", in_error=True
+                )
 
     def run(self) -> None:
         """
