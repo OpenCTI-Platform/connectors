@@ -236,11 +236,7 @@ class S3Connector:
         self.s3_bucket_prefixes = self.config.s3.bucket_prefixes
 
         # Create the identity
-        self.identity = None
-        if self.s3_author is not None:
-            self.identity = self.helper.api.identity.create(
-                type="Organization", name=self.s3_author
-            )
+        self.identity = self._create_author_identity()
 
         self.s3_client = boto3.client(
             "s3",
@@ -1292,6 +1288,36 @@ class S3Connector:
                 self.helper.connector_logger.info(
                     "No valid STIX content found in S3 prefix", {"prefix": prefix}
                 )
+
+    def _create_author_identity(self) -> dict | None:
+        """Create (or get) the author Organization set by S3_AUTHOR.
+
+        The author is required for the objects this connector sends. When the
+        platform refuses to create it (typically a token without the
+        permission to create entities), log an explicit error and stop,
+        instead of terminating without any message.
+        """
+        if self.s3_author is None:
+            return None
+        error = None
+        try:
+            identity = self.helper.api.identity.create(
+                type="Organization", name=self.s3_author
+            )
+        except Exception as err:  # pycti raises on GraphQL errors
+            identity = None
+            error = str(err)
+        if not identity:
+            message = (
+                "Unable to create the author identity in OpenCTI. Check that the "
+                "connector token belongs to a user allowed to create entities "
+                "(for example a service account with knowledge creation rights)."
+            )
+            self.helper.connector_logger.error(
+                message, {"author": self.s3_author, "error": error}
+            )
+            raise RuntimeError(message)
+        return identity
 
     def run(self):
         self.helper.connector_logger.info(
