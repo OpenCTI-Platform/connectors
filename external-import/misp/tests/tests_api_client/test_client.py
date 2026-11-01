@@ -6,6 +6,7 @@ import time
 from contextlib import contextmanager
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 import requests
@@ -125,3 +126,50 @@ def test_search_events_timeout_behavior(
             # No exception: server answered before timeout
             with expected_exception:
                 list(gen)
+
+
+def _search_kwargs(client: MISPClient, date_field_filter: str, date_value) -> dict:
+    """Run search_events against a mocked PyMISP and return the search() kwargs."""
+    list(
+        client.search_events(
+            date_field_filter=date_field_filter,
+            date_value_filter=date_value,
+            datetime_attribute="date",
+            keyword="",
+            included_tags=[],
+            excluded_tags=[],
+            included_org_creators=[],
+            excluded_org_creators=[],
+            enforce_warning_list=False,
+            with_attachments=False,
+            limit=10,
+            page=1,
+        )
+    )
+    return client._client.search.call_args.kwargs
+
+
+@patch("api_client.client.PyMISP")
+def test_search_events_sends_date_from_as_a_date_string(mock_pymisp) -> None:
+    """date_from must reach MISP as YYYY-MM-DD, not as a Unix timestamp."""
+    mock_pymisp.return_value.search.return_value = []
+    client = MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1)
+
+    kwargs = _search_kwargs(
+        client, "date_from", datetime(2026, 1, 1, 13, 45, tzinfo=timezone.utc)
+    )
+
+    assert kwargs["date_from"] == "2026-01-01"
+    assert kwargs["order"] == "Event.id ASC"
+
+
+@patch("api_client.client.PyMISP")
+def test_search_events_keeps_datetime_for_timestamp_filter(mock_pymisp) -> None:
+    """Other filters (timestamp, publish_timestamp) keep the datetime value."""
+    mock_pymisp.return_value.search.return_value = []
+    client = MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1)
+    value = datetime(2026, 1, 1, 13, 45, tzinfo=timezone.utc)
+
+    kwargs = _search_kwargs(client, "timestamp", value)
+
+    assert kwargs["timestamp"] == value

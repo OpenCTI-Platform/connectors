@@ -83,6 +83,17 @@ class MISPClient:
         """
         current_page = page
 
+        # MISP documents the `from` filter (PyMISP `date_from`) as a date
+        # (YYYY-MM-DD). PyMISP turns a datetime into a Unix timestamp, which
+        # MISP silently matches against nothing. The event `date` has a day
+        # granularity, so sending the date string loses nothing.
+        date_value = (
+            date_value_filter.strftime("%Y-%m-%d")
+            if date_field_filter == "date_from"
+            and isinstance(date_value_filter, datetime)
+            else date_value_filter
+        )
+
         while True:
             try:
                 tags_query = self._client.build_complex_query(
@@ -113,7 +124,7 @@ class MISPClient:
                         if date_field_filter == "date_from"
                         else f"Event.{datetime_attribute} ASC"
                     ),
-                    **{date_field_filter: date_value_filter},
+                    **{date_field_filter: date_value},
                 )
                 if isinstance(results, dict) and results.get("errors"):
                     status_code, error_message = results.get("errors")
