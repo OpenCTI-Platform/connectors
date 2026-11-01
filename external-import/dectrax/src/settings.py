@@ -50,9 +50,11 @@ class DectraxConfig(BaseConfigModel):
         description="Path to the threat telemetry endpoint.",
         default="/api/v1/telemetry/threats",
     )
-    tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
-        description="Default TLP marking level for ingested indicators.",
-        default="clear",
+    tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
+        Field(
+            description="Default TLP marking level for ingested indicators.",
+            default="clear",
+        )
     )
     create_indicators: bool = Field(
         description="Whether to generate STIX 2.1 Indicators.",

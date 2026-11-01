@@ -9,17 +9,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 import stix2
 from pycti import (
-
     Identity,
     Indicator,
     MarkingDefinition,
     StixCoreRelationship,
 )
-
 from src.main import (
     DectraxConnector,
     resolve_tlp_marking,
-
     validate_ipv4_address,
 )
 
@@ -94,6 +91,7 @@ def _base_config(**overrides: Any) -> Dict[str, Any]:
 # Issue 1: TLP Mapping & Fail-Open Prevention
 # ==============================================================================
 
+
 class TestTLPHandling:
     """Verify strict TLP validation and custom statement markings."""
 
@@ -109,10 +107,14 @@ class TestTLPHandling:
         assert getattr(clear, "x_opencti_definition", None) == "TLP:CLEAR"
 
         amber_strict = resolve_tlp_marking("amber+strict")
-        assert amber_strict.id == MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT")
+        assert amber_strict.id == MarkingDefinition.generate_id(
+            "TLP", "TLP:AMBER+STRICT"
+        )
         assert getattr(amber_strict, "x_opencti_definition", None) == "TLP:AMBER+STRICT"
 
-    @pytest.mark.parametrize("invalid_tlp", ["invalid", "blue", "confidential", "", "none"])
+    @pytest.mark.parametrize(
+        "invalid_tlp", ["invalid", "blue", "confidential", "", "none"]
+    )
     def test_rejects_unsupported_tlp(self, invalid_tlp: str) -> None:
         with pytest.raises(ValueError, match="Unsupported TLP marking"):
             resolve_tlp_marking(invalid_tlp)
@@ -128,6 +130,7 @@ class TestTLPHandling:
 # Issue 2: Empty Feed Stays Empty (No Synthetic Fallbacks)
 # ==============================================================================
 
+
 class TestEmptyFeed:
     """Verify that empty telemetry returns empty list and no synthetic records."""
 
@@ -139,13 +142,17 @@ class TestEmptyFeed:
         mock_resp.text = ""
         mock_get.return_value = mock_resp
 
-        connector = DectraxConnector(config=_base_config(), helper=MockConnectorHelper())
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
         records = connector.collect()
         assert records == []
         assert len(records) == 0
 
     def test_transform_empty_feed_returns_empty_list(self) -> None:
-        connector = DectraxConnector(config=_base_config(), helper=MockConnectorHelper())
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
         objects = connector.transform([])
         assert objects == []
 
@@ -154,23 +161,33 @@ class TestEmptyFeed:
 # Issue 3: Strict IPv4 Validation
 # ==============================================================================
 
+
 class TestIPv4Validation:
     """Verify strict IPv4 validation and rejection of IPv6/malformed IPs."""
 
-    @pytest.mark.parametrize("valid_ip", ["198.51.100.45", "10.0.0.1", "203.0.113.88", "1.1.1.1"])
+    @pytest.mark.parametrize(
+        "valid_ip", ["198.51.100.45", "10.0.0.1", "203.0.113.88", "1.1.1.1"]
+    )
     def test_accepts_valid_ipv4(self, valid_ip: str) -> None:
         assert validate_ipv4_address(valid_ip) is True
 
-    @pytest.mark.parametrize("ipv6", ["2001:db8::1", "::1", "fe80::1", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"])
+    @pytest.mark.parametrize(
+        "ipv6",
+        ["2001:db8::1", "::1", "fe80::1", "2001:0db8:85a3:0000:0000:8a2e:0370:7334"],
+    )
     def test_rejects_ipv6(self, ipv6: str) -> None:
         assert validate_ipv4_address(ipv6) is False
 
-    @pytest.mark.parametrize("malformed", ["256.0.0.1", "1.2.3", "not-an-ip", "10.0.0.1/24", "", None, 12345])
+    @pytest.mark.parametrize(
+        "malformed", ["256.0.0.1", "1.2.3", "not-an-ip", "10.0.0.1/24", "", None, 12345]
+    )
     def test_rejects_malformed(self, malformed: Any) -> None:
         assert validate_ipv4_address(malformed) is False
 
     def test_transform_skips_ipv6_and_malformed(self) -> None:
-        connector = DectraxConnector(config=_base_config(), helper=MockConnectorHelper())
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
         telemetry = [
             {"attacker_ip": "2001:db8::1", "decoy_service": "RDP"},
             {"attacker_ip": "invalid-ip", "decoy_service": "SSH"},
@@ -186,6 +203,7 @@ class TestIPv4Validation:
 # Issue 7: Protocol Flag Filtering
 # ==============================================================================
 
+
 class TestProtocolFlags:
     """Verify sync_rdp, sync_ldap, sync_modbus config flags are enforced."""
 
@@ -196,7 +214,11 @@ class TestProtocolFlags:
         telemetry = [
             {"attacker_ip": "198.51.100.1", "decoy_service": "RDP", "dest_port": 3389},
             {"attacker_ip": "198.51.100.2", "decoy_service": "LDAP", "dest_port": 389},
-            {"attacker_ip": "198.51.100.3", "decoy_service": "MODBUS", "dest_port": 502},
+            {
+                "attacker_ip": "198.51.100.3",
+                "decoy_service": "MODBUS",
+                "dest_port": 502,
+            },
             {"attacker_ip": "198.51.100.4", "decoy_service": "SSH", "dest_port": 22},
         ]
 
@@ -213,7 +235,11 @@ class TestProtocolFlags:
         telemetry = [
             {"attacker_ip": "198.51.100.1", "decoy_service": "RDP", "dest_port": 3389},
             {"attacker_ip": "198.51.100.2", "decoy_service": "LDAP", "dest_port": 389},
-            {"attacker_ip": "198.51.100.3", "decoy_service": "MODBUS", "dest_port": 502},
+            {
+                "attacker_ip": "198.51.100.3",
+                "decoy_service": "MODBUS",
+                "dest_port": 502,
+            },
         ]
 
         objects = connector.transform(telemetry)
@@ -224,6 +250,7 @@ class TestProtocolFlags:
 # ==============================================================================
 # Issue 8: Deterministic STIX IDs
 # ==============================================================================
+
 
 class TestDeterministicSTIXIDs:
     """Verify STIX objects use deterministic pycti helper IDs."""
@@ -260,9 +287,21 @@ class TestDeterministicSTIXIDs:
         assert ind1.id == expected_ind_id
         assert ind1.id == ind2.id
 
-        rel1 = next(obj for obj in objects1 if isinstance(obj, stix2.Relationship) and obj.relationship_type == "related-to")
-        rel2 = next(obj for obj in objects2 if isinstance(obj, stix2.Relationship) and obj.relationship_type == "related-to")
-        expected_rel_id = StixCoreRelationship.generate_id("related-to", ind1.id, connector1.identity.id)
+        rel1 = next(
+            obj
+            for obj in objects1
+            if isinstance(obj, stix2.Relationship)
+            and obj.relationship_type == "related-to"
+        )
+        rel2 = next(
+            obj
+            for obj in objects2
+            if isinstance(obj, stix2.Relationship)
+            and obj.relationship_type == "related-to"
+        )
+        expected_rel_id = StixCoreRelationship.generate_id(
+            "related-to", ind1.id, connector1.identity.id
+        )
         assert rel1.id == expected_rel_id
         assert rel1.id == rel2.id
 
@@ -270,6 +309,7 @@ class TestDeterministicSTIXIDs:
 # ==============================================================================
 # Issue 9 & 10: Lifecycle & State Persistence Merge
 # ==============================================================================
+
 
 class TestLifecycleAndStatePersistence:
     """Verify lifecycle execution and state merging without key overwriting."""

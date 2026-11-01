@@ -154,7 +154,9 @@ class DectraxConnector:
     ) -> None:
         """Initialize the DECTRAX connector."""
         if config is None:
-            config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+            config_file_path = (
+                os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+            )
             config = (
                 yaml.load(open(config_file_path), Loader=yaml.FullLoader)
                 if os.path.isfile(config_file_path)
@@ -341,14 +343,18 @@ class DectraxConnector:
                     parts = line.split()
                     ip_candidate = parts[0]
                     if validate_ipv4_address(ip_candidate):
-                        telemetry_records.append({
-                            "attacker_ip": ip_candidate,
-                            "decoy_service": "EDL_INTERDICTION",
-                            "dest_port": 0,
-                            "threat_level": "CRITICAL",
-                            "first_seen": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                            "techniques": ["T1046", "T1110"],
-                        })
+                        telemetry_records.append(
+                            {
+                                "attacker_ip": ip_candidate,
+                                "decoy_service": "EDL_INTERDICTION",
+                                "dest_port": 0,
+                                "threat_level": "CRITICAL",
+                                "first_seen": datetime.datetime.now(
+                                    datetime.timezone.utc
+                                ).isoformat(),
+                                "techniques": ["T1046", "T1110"],
+                            }
+                        )
         except Exception as e:
             self.helper.connector_logger.warning(
                 f"Could not reach EDL endpoint {edl_url}: {e}",
@@ -399,7 +405,12 @@ class DectraxConnector:
                     {"decoy": decoy, "ip": ip_str},
                 )
                 continue
-            if not self.sync_modbus and decoy_upper in ["MODBUS", "SCADA", "ICS", "502"]:
+            if not self.sync_modbus and decoy_upper in [
+                "MODBUS",
+                "SCADA",
+                "ICS",
+                "502",
+            ]:
                 self.helper.connector_logger.info(
                     f"Skipping Modbus telemetry due to sync_modbus=False: {ip_str}",
                     {"decoy": decoy, "ip": ip_str},
@@ -410,7 +421,9 @@ class DectraxConnector:
             threat_level = threat.get("threat_level", "HIGH")
             first_seen_str = threat.get("first_seen")
             try:
-                first_seen = datetime.datetime.fromisoformat(first_seen_str.replace("Z", "+00:00"))
+                first_seen = datetime.datetime.fromisoformat(
+                    first_seen_str.replace("Z", "+00:00")
+                )
             except Exception:
                 first_seen = datetime.datetime.now(datetime.timezone.utc)
 
@@ -504,7 +517,9 @@ class DectraxConnector:
 
         return stix_objects
 
-    def send_bundle(self, stix_objects: List[Any], work_id: Optional[str] = None) -> List[Any]:
+    def send_bundle(
+        self, stix_objects: List[Any], work_id: Optional[str] = None
+    ) -> List[Any]:
         """Bundle STIX objects and transmit to OpenCTI platform."""
         if not stix_objects:
             return []
@@ -578,15 +593,27 @@ class DectraxConnector:
                 f"{self.helper.connect_name} connector successfully run, "
                 f"storing last_run={timestamp}, records_imported={len(telemetry)}"
             )
-            if work_id and hasattr(self.helper, "api") and hasattr(self.helper.api, "work"):
+            if (
+                work_id
+                and hasattr(self.helper, "api")
+                and hasattr(self.helper.api, "work")
+            ):
                 self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info("Connector stopping upon user/system request")
-            if work_id and hasattr(self.helper, "api") and hasattr(self.helper.api, "work"):
+            self.helper.connector_logger.info(
+                "Connector stopping upon user/system request"
+            )
+            if (
+                work_id
+                and hasattr(self.helper, "api")
+                and hasattr(self.helper.api, "work")
+            ):
                 try:
-                    self.helper.api.work.to_processed(work_id, "Interrupted", in_error=True)
+                    self.helper.api.work.to_processed(
+                        work_id, "Interrupted", in_error=True
+                    )
                 except Exception:
                     pass
             sys.exit(0)
@@ -595,9 +622,15 @@ class DectraxConnector:
                 f"Unexpected error during connector execution: {err}",
                 {"error": str(err)},
             )
-            if work_id and hasattr(self.helper, "api") and hasattr(self.helper.api, "work"):
+            if (
+                work_id
+                and hasattr(self.helper, "api")
+                and hasattr(self.helper.api, "work")
+            ):
                 try:
-                    self.helper.api.work.to_processed(work_id, f"Error: {err}", in_error=True)
+                    self.helper.api.work.to_processed(
+                        work_id, f"Error: {err}", in_error=True
+                    )
                 except Exception:
                     pass
 
