@@ -40,6 +40,9 @@ from flashpoint_connector.extracted_config import (
 from flashpoint_connector.utils import is_domain
 from pycti import OpenCTIConnectorHelper
 
+# Placeholders Flashpoint uses instead of a real malware description.
+MISSING_DESCRIPTION_VALUES = frozenset({"N/A", "NA", "NONE", "NULL"})
+
 
 class IndicatorConverterToStix:
     """Convert Flashpoint indicators into STIX/OpenCTI objects.
@@ -625,11 +628,20 @@ class IndicatorConverterToStix:
 
     @classmethod
     def _resolve_malware_description(cls, indicator: dict) -> str | None:
-        """Return the malware description without HTML, if any."""
+        """Return the malware description without HTML, if any.
+
+        Flashpoint sends the literal placeholder "N/A" when it has no
+        description. It is treated as no description, so that it never
+        overwrites the description of a Malware that already exists in the
+        platform (the Malware id only depends on its name).
+        """
         raw_description = indicator.get("malware_description")
-        if raw_description and raw_description.strip():
-            return cls._strip_html(raw_description) or None
-        return None
+        if not raw_description or not raw_description.strip():
+            return None
+        description = cls._strip_html(raw_description)
+        if not description or description.upper() in MISSING_DESCRIPTION_VALUES:
+            return None
+        return description
 
     def _build_tag_entities_objects(
         self,
