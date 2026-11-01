@@ -356,6 +356,7 @@ class Vulnerability(BaseEntity):
             "N",
             "Network",
             "ADJACENT",
+            "ADJACENT_NETWORK",
             "A",
             "Adjacent",
             "LOCAL",
@@ -375,6 +376,21 @@ class Vulnerability(BaseEntity):
     cvss3_confidentiality_impact: Optional[
         Literal["NONE", "N", "None", "LOW", "L", "Low", "HIGH", "H", "High"]
     ] = Field(None, description="CVSS3 Confidentiality impact (C)")
+
+    @field_validator("cvss3_attack_vector", mode="before")
+    @classmethod
+    def _normalize_adjacent_network(cls, value: Any) -> Any:
+        """Accept the CVSS v3 name "Adjacent Network" sent by Tenable.
+
+        Tenable (like NVD) spells the AV:A value "Adjacent Network"; it is
+        mapped to "ADJACENT_NETWORK" (the NVD JSON spelling) instead of
+        failing the validation of the whole finding.
+        """
+        if isinstance(value, str):
+            normalized = value.strip().upper().replace(" ", "_")
+            if normalized == "ADJACENT_NETWORK":
+                return "ADJACENT_NETWORK"
+        return value
 
     def to_stix2_object(self) -> Any:
         return stix2.Vulnerability(
