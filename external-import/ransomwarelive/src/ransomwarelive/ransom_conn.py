@@ -286,11 +286,14 @@ class RansomwareAPIConnector:
         victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
-        attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date)
-
         discovered = item.get("discovered")
         discovered_iso = safe_datetime(discovered)
+
+        # Ransomware.live sometimes sends an empty ``attackdate``: fall back to
+        # the disclosure date so the record is still imported (Report
+        # ``published`` is mandatory) instead of aborting the whole run.
+        attack_date = item.get("attackdate")
+        attack_date_iso = safe_datetime(attack_date) or discovered_iso
 
         # Build the canonical external-reference list ONCE up-front so
         # every emitted SDO (Threat Actor, Campaign, Report, …) sees the
@@ -820,6 +823,12 @@ class RansomwareAPIConnector:
         for item in response_json:
             discovered_raw = item.get("discovered")
             created = safe_datetime(discovered_raw)
+            if created is None:
+                self.helper.connector_logger.warning(
+                    "Skipping victim with a missing or invalid discovered date",
+                    {"victim": item.get("victim"), "discovered": discovered_raw},
+                )
+                continue
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 
