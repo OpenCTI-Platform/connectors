@@ -6,6 +6,7 @@ from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
+from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
@@ -76,6 +77,10 @@ class Sighting(BaseIdentifiedEntity):
             else None
         )
 
+        custom_properties = {
+            "negative": self.qualification,
+        }
+
         return Stix2Sighting(
             id=PyctiStixSightingRelationship.generate_id(
                 sighting_of_ref=self.sighting_of.id,
@@ -90,7 +95,14 @@ class Sighting(BaseIdentifiedEntity):
             last_seen=self.last_seen,
             count=self.count,
             description=self.description,
-            x_opencti_negative=self.qualification,
-            **self._common_stix2_properties(),
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
+            ),
             allow_custom=True,
         )
