@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
 
-from connector.stairwell import StairwellClient
+from connector.lookups import optional_lookup
+from connector.stairwell import StairwellAPIError, StairwellClient
 from connector.stairwell.score import monotonic_score, score_for_bucket
 from connector.stix_builder import (
     bundle,
@@ -23,14 +23,6 @@ from connector.stix_builder import (
     tlp_marking,
     valid_hash,
 )
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-DEFAULT_VARIANT_LIMIT = 25
-# Sightings carry customer asset names, environment ids, and file paths
-# (which often contain usernames) into OpenCTI, so they are opt-in.
-DEFAULT_SIGHTINGS_LIMIT = 0
-
-logger = logging.getLogger(__name__)
 
 # Display names for the algorithm `_choose_hash` looked the file up by.
 _HASH_LABELS = {"SHA256": "SHA-256", "SHA1": "SHA-1", "MD5": "MD5"}
@@ -50,6 +42,10 @@ def _to_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _failure(err: StairwellAPIError) -> str:
+    return f"status {err.status}" if err.status is not None else "no response"
 
 
 def _to_count(value: Any) -> int | None:
@@ -74,15 +70,16 @@ class FileEnricher:
         helper,
         client: StairwellClient,
         default_tlp: str,
-        variant_limit: int = DEFAULT_VARIANT_LIMIT,
-        sightings_limit: int = DEFAULT_SIGHTINGS_LIMIT,
-        opencti_base_url: str = "http://localhost:8080",
+        *,
+        variant_limit: int,
+        sightings_limit: int,
+        opencti_base_url: str,
     ) -> None:
         self.helper = helper
         self.client = client
         self.tlp = default_tlp
-        self.variant_limit = max(0, int(variant_limit))
-        self.sightings_limit = max(0, int(sightings_limit))
+        self.variant_limit = variant_limit
+        self.sightings_limit = sightings_limit
         self.opencti_base_url = opencti_base_url.rstrip("/")
 
     # ------------------------------------------------------------------
@@ -119,29 +116,21 @@ class FileEnricher:
         if not primary_hash:
             return "No usable hash on file observable; skipping Stairwell enrichment"
 
-        status, metadata = self.client.get_object_metadata(primary_hash)
-        if status == 404:
+        # The metadata is the enrichment, so a failure to fetch it propagates.
+        metadata = self.client.get_object_metadata(primary_hash)
+        if metadata is None:
             self._mark_not_found(observable, primary_hash)
             return f"Stairwell: {primary_hash} not in corpus"
-        if metadata is None:
-            raise DataRetrievalError(
-                f"Stairwell metadata fetch failed for {primary_hash} (status {status})"
-            )
 
-        _, summary = self.client.summarize_file(primary_hash)
+        summary = optional_lookup(
+            self.helper, "summary", self.client.summarize_file, primary_hash
+        )
 
         variants_payload: dict[str, Any] | None = None
         if self.variant_limit > 0:
-            v_status, v_body = self.client.get_variants(primary_hash)
-            top_keys = list(v_body.keys())[:8] if isinstance(v_body, dict) else None
-            logger.info(
-                "Stairwell variants for %s: status=%s top_keys=%s",
-                primary_hash,
-                v_status,
-                top_keys,
+            variants_payload = optional_lookup(
+                self.helper, "variants", self.client.get_variants, primary_hash
             )
-            if isinstance(v_body, dict):
-                variants_payload = v_body
 
         sightings_records: list[dict[str, Any]] = []
         sightings_truncated = False
@@ -224,7 +213,9 @@ class FileEnricher:
     ) -> str:
         objects: list[dict[str, Any]] = [stairwell_identity()]
 
-        mal_eval = metadata.get("mal_eval") or metadata.get("malEval") or {}
+        mal_eval = metadata.get("mal_eval") or metadata.get("malEval")
+        if not isinstance(mal_eval, dict):
+            mal_eval = {}
         prob_bucket = mal_eval.get("probability_bucket") or mal_eval.get(
             "probabilityBucket"
         )
@@ -874,17 +865,28 @@ class FileEnricher:
         max_pages = 50  # hard safety stop
 
         for page_number in range(1, max_pages + 1):
-            status, body = self.client.list_object_sightings(
-                primary_hash, page_size=page_size, page_token=page_token
-            )
-            page = (
-                body.get("objectSightings") or body.get("object_sightings") or []
-                if isinstance(body, dict)
-                else None
-            )
-            if status >= 400 or not isinstance(page, list):
+            try:
+                body = self.client.list_object_sightings(
+                    primary_hash, page_size=page_size, page_token=page_token
+                )
+            except StairwellAPIError as err:
+                self.helper.connector_logger.warning(
+                    (
+                        "Stairwell sightings page failed; keeping earlier pages"
+                        if page_number > 1
+                        else "Stairwell sightings lookup failed; no sightings"
+                    ),
+                    meta={"page": page_number, "status": err.status, "error": str(err)},
+                )
                 if page_number > 1:
-                    incomplete = f"page {page_number} failed with status {status}"
+                    incomplete = f"page {page_number} failed ({_failure(err)})"
+                break
+            if body is None:
+                break
+            page = body.get("objectSightings") or body.get("object_sightings") or []
+            if not isinstance(page, list):
+                if page_number > 1:
+                    incomplete = f"page {page_number} had no sightings list"
                 break
 
             for record in page:

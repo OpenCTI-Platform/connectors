@@ -4,7 +4,10 @@ from unittest.mock import MagicMock
 import pytest
 from connector.connector import StairwellConnector
 from connector.settings import ConnectorSettings
+from connector.stairwell import StairwellAPIError
+from connectors_sdk import ConfigValidationError
 from pycti import OpenCTIConnectorHelper
+from stairwell_fakes import lookup
 
 
 @pytest.fixture
@@ -86,10 +89,12 @@ def test_every_configurable_max_tlp_works_with_pycti(env, configured):
 def test_observable_above_max_tlp_is_never_sent_to_stairwell(env):
     connector, helper = _connector()
     data, _ = _message("TLP:GREEN", "TLP:RED")
-    with pytest.raises(ValueError, match="max TLP"):
-        connector.process_message(data)
+    assert "max TLP" in connector.process_message(data)
     connector.client._session.get.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
+    # An expected refusal: one warning, no error.
+    helper.connector_logger.warning.assert_called_once()
+    helper.connector_logger.error.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -110,8 +115,7 @@ def test_configured_max_tlp_reaches_the_gate(env, configured, observable_tlp, al
     if allowed:
         assert connector.process_message(data) == "enriched"
     else:
-        with pytest.raises(ValueError, match="max TLP"):
-            connector.process_message(data)
+        assert "max TLP" in connector.process_message(data)
         connector.dispatcher.file.enrich.assert_not_called()
 
 
@@ -151,11 +155,14 @@ def test_playbook_entity_out_of_scope_gets_its_bundle_back_unchanged(env):
     connector.client._session.get.assert_not_called()
 
 
-def test_manual_enrichment_out_of_scope_is_an_error(env):
+def test_manual_enrichment_out_of_scope_is_refused_with_a_warning(env):
     connector, helper = _connector()
-    with pytest.raises(ValueError, match="not a supported entity type"):
-        connector.process_message(_out_of_scope_message(playbook=False))
+    message = connector.process_message(_out_of_scope_message(playbook=False))
+    assert "not in the connector's scope" in message
     helper.send_stix2_bundle.assert_not_called()
+    connector.client._session.get.assert_not_called()
+    helper.connector_logger.warning.assert_called_once()
+    helper.connector_logger.error.assert_not_called()
 
 
 ORIGINAL = [
@@ -289,13 +296,42 @@ def test_playbook_gets_its_bundle_back_when_tlp_refuses(env):
     assert _sent_objects(helper) == ORIGINAL
 
 
-def test_manual_enrichment_errors_still_raise(env):
+@pytest.mark.parametrize(
+    "error", [RuntimeError("down"), StairwellAPIError("Stairwell down", 503)]
+)
+def test_manual_enrichment_errors_propagate_without_being_logged_twice(env, error):
     connector, helper = _connector()
-    connector.dispatcher.file.enrich = MagicMock(side_effect=RuntimeError("down"))
+    connector.dispatcher.file.enrich = MagicMock(side_effect=error)
     data, _ = _message("TLP:GREEN")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(type(error)) as info:
         connector.process_message(data)
+    assert info.value is error
     helper.send_stix2_bundle.assert_not_called()
+    # pycti logs the raised error; the connector must not log it as well.
+    helper.connector_logger.error.assert_not_called()
+    helper.connector_logger.warning.assert_not_called()
+
+
+def test_playbook_logs_a_stairwell_failure_as_a_warning(env):
+    connector, helper = _connector()
+    connector.dispatcher.file.enrich = MagicMock(
+        side_effect=StairwellAPIError("Stairwell down", 503)
+    )
+    message = connector.process_message(_playbook_message())
+    assert "Stairwell down" in message
+    assert _sent_objects(helper) == ORIGINAL
+    helper.connector_logger.warning.assert_called_once()
+    helper.connector_logger.error.assert_not_called()
+
+
+def test_playbook_logs_an_unexpected_failure_as_an_error_with_its_traceback(env):
+    connector, helper = _connector()
+    connector.dispatcher.file.enrich = MagicMock(side_effect=RuntimeError("bug"))
+    connector.process_message(_playbook_message())
+    assert _sent_objects(helper) == ORIGINAL
+    helper.connector_logger.error.assert_called_once()
+    meta = helper.connector_logger.error.call_args.kwargs["meta"]
+    assert "RuntimeError: bug" in meta["traceback"]
 
 
 def test_scope_defaults_to_every_supported_type(env):
@@ -318,8 +354,7 @@ def test_configured_scope_is_enforced(env):
     assert _sent_objects(helper) == ORIGINAL
     data, observable = _message("TLP:GREEN")
     observable["entity_type"] = "Domain-Name"
-    with pytest.raises(ValueError, match="not a supported entity type"):
-        connector.process_message(data)
+    assert "not in the connector's scope" in connector.process_message(data)
     connector.dispatcher.domain.enrich.assert_not_called()
 
 
@@ -351,7 +386,7 @@ def test_failed_enrichment_send_falls_back_to_the_incoming_bundle(env):
 
 def test_playbook_not_found_merges_the_label_into_the_incoming_bundle(env):
     connector, helper = _connector()
-    connector.client.get_object_metadata = MagicMock(return_value=(404, None))
+    connector.client.get_object_metadata = lookup((404, None))
     data = _playbook_message()
     data["stix_objects"][0].update(name="invoice.exe", labels=["from-earlier-step"])
     message = connector.process_message(data)
@@ -414,46 +449,54 @@ RED = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
             True,
         ),
         ([AMBER], [], False),
-        # A non-TLP marking OpenCTI knows is not a TLP restriction.
+        # A non-TLP marking on the stored entity is not a TLP restriction.
         (["marking-definition--pap"], [], False),
-        # Resolved through OpenCTI: a TLP stored under OpenCTI's own ID.
-        (["marking-definition--opencti-red"], [], True),
+        # Resolved through the stored entity's markings, by standard_id.
         (["marking-definition--opencti-green"], [], False),
-        # Neither standard, nor in the bundle, nor known to OpenCTI: refused.
+        # Neither standard, nor in the bundle, nor on the stored entity: refused.
         (["marking-definition--unknown"], [], True),
-        (["marking-definition--lookup-fails"], [], True),
     ],
 )
 def test_playbook_input_markings_are_gated_too(env, refs, extra_objects, refused):
     connector, helper = _connector()
-    known = {
-        "marking-definition--pap": {"definition_type": "PAP", "definition": "PAP:RED"},
-        "marking-definition--opencti-red": {
-            "definition_type": "TLP",
-            "definition": "TLP:RED",
+    data = _playbook_message(tlp="TLP:GREEN")
+    data["enrichment_entity"]["objectMarking"] += [
+        {
+            "standard_id": "marking-definition--pap",
+            "definition_type": "PAP",
+            "definition": "PAP:RED",
         },
-        "marking-definition--opencti-green": {
+        {
+            "standard_id": "marking-definition--opencti-green",
             "definition_type": "TLP",
             "definition": "TLP:GREEN",
         },
-    }
-
-    def read(id):
-        if id == "marking-definition--lookup-fails":
-            raise RuntimeError("OpenCTI unavailable")
-        return known.get(id)
-
-    helper.api.marking_definition.read.side_effect = read
-    data = _playbook_message(tlp="TLP:GREEN")
+    ]
     data["stix_entity"]["object_marking_refs"] = refs
     data["stix_objects"].extend(extra_objects)
     connector.dispatcher.file.enrich = MagicMock(return_value="enriched")
     connector.process_message(data)
+    helper.api.marking_definition.read.assert_not_called()
     if refused:
         connector.dispatcher.file.enrich.assert_not_called()
         assert _sent_objects(helper) == ORIGINAL + extra_objects
     else:
         connector.dispatcher.file.enrich.assert_called_once()
+
+
+def test_unresolvable_playbook_marking_is_logged(env):
+    connector, helper = _connector()
+    data = _playbook_message(tlp="TLP:GREEN")
+    data["stix_entity"]["object_marking_refs"] = ["marking-definition--unknown"]
+    connector.dispatcher.file.enrich = MagicMock(return_value="enriched")
+    connector.process_message(data)
+    warnings = [
+        c.kwargs["meta"] for c in helper.connector_logger.warning.call_args_list
+    ]
+    assert {
+        "entity_id": "file--1",
+        "marking_refs": ["marking-definition--unknown"],
+    } in (warnings)
 
 
 def test_playbook_merge_reads_a_score_held_in_the_opencti_extension(env):
@@ -490,8 +533,30 @@ def test_playbook_merge_never_lowers_the_score(env):
 
 def test_manual_not_found_is_sent_with_update(env):
     connector, helper = _connector()
-    connector.client.get_object_metadata = MagicMock(return_value=(404, None))
+    connector.client.get_object_metadata = lookup((404, None))
     data, _ = _message("TLP:GREEN")
     assert "not in corpus" in connector.process_message(data)
     helper.send_stix2_bundle.assert_called_once()
     assert helper.send_stix2_bundle.call_args.kwargs["update"] is True
+
+
+@pytest.mark.parametrize(
+    "variable",
+    [
+        "STAIRWELL_VARIANT_LIMIT",
+        "STAIRWELL_RESOLUTIONS_LIMIT",
+        "STAIRWELL_SIGHTINGS_LIMIT",
+    ],
+)
+def test_negative_limits_are_rejected_at_startup(env, variable):
+    env.setenv(variable, "-5")
+    with pytest.raises(ConfigValidationError) as info:
+        ConnectorSettings()
+    # The SDK keeps pydantic's error, which names the field, as the cause.
+    assert variable.split("_", 1)[1].lower() in str(info.value.__cause__)
+
+
+def test_unknown_default_tlp_is_rejected_at_startup(env):
+    env.setenv("STAIRWELL_DEFAULT_TLP", "purple")
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()

@@ -57,18 +57,22 @@ Environment variables override the file.
 | Resolutions limit | `stairwell.resolutions_limit` | `STAIRWELL_RESOLUTIONS_LIMIT` | no | `50` | Max DNS resolution rows per domain (`0` disables resolutions and the DNS history Note) |
 | Sightings limit | `stairwell.sightings_limit` | `STAIRWELL_SIGHTINGS_LIMIT` | no | `0` | Max unique assets per file; `0` (the default) disables sightings. See **Sightings** below before enabling |
 
+A negative limit or an unknown TLP stops the connector at startup with a
+configuration error.
+
 ## Behavior
 
 - **Max TLP is enforced before any Stairwell call.** An observable with any
   TLP marking above `CONNECTOR_MAX_TLP` (or a TLP marking pycti does not
-  recognise) is refused and the enrichment fails with an error; its value
-  never leaves OpenCTI. An observable with no TLP marking at all is treated
+  recognise) is refused: the connector logs a warning and completes the
+  work with the reason, and the value never leaves OpenCTI. An observable with no TLP marking at all is treated
   as unrestricted and is enriched whatever this setting is. In a playbook, the
   markings on the step's input are checked as well, since an earlier step may
   have raised its TLP; if either is above the maximum, the bundle is handed on
   unchanged. A marking on the input that cannot be identified (not a standard
-  TLP ID, not defined in the bundle, and not readable from OpenCTI) is treated
-  as above the maximum.
+  TLP ID, not defined in the bundle, and not among the stored entity's
+  markings) is treated as above the maximum, and logged as a warning. The
+  check makes no OpenCTI API calls.
 - **Untrusted text is escaped before it reaches markdown.** File names, YARA
   rule names, certificate fields, network indicators, WHOIS, DNS answers, and
   asset names come from sources an attacker can influence, and OpenCTI renders
@@ -85,12 +89,15 @@ Environment variables override the file.
 - **Empty results** (hash not in Stairwell corpus) attach a
   `stairwell:not-found` label and an `external_reference` to the Stairwell
   search UI; no Notes are created.
-- **Errors.** If every Stairwell request for an observable fails (5xx, 401,
-  network failure), or a file's metadata lookup fails, the enrichment fails
-  with an error and no STIX is written. Any other partial failure still
-  enriches with whatever was retrieved.
+- **Errors.** A Stairwell request fails on a network error, an error status
+  other than 404, or a response that is not a JSON object. If every request
+  for an observable fails, or a file's metadata lookup fails, the enrichment
+  fails with an error that keeps the original request error as its cause,
+  and no STIX is written. Any other failed request is logged as a warning and
+  the enrichment goes on with whatever was retrieved.
 - **Scope.** Only entity types listed in `CONNECTOR_SCOPE` (and supported by
-  the connector) are sent to Stairwell; anything else is refused.
+  the connector) are sent to Stairwell; anything else is refused with a
+  warning.
 - **Playbooks.** In a playbook, the bundle sent back always carries the
   objects the step received, with the enrichment added when there is one.
   The enriched observable is merged into the incoming one: properties the

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from connector.stairwell import StairwellClient
@@ -13,9 +12,6 @@ from connector.stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-logger = logging.getLogger(__name__)
 
 
 def _get_nested(data: Any, *keys: str) -> Any:
@@ -82,13 +78,9 @@ class AsnEnricher:
         except (TypeError, ValueError):
             return f"Autonomous-System number is not numeric: {number!r}"
 
-        status, whois = self.client.get_asn_whois(asn_int)
-        if status == 404:
+        whois = self.client.get_asn_whois(asn_int)
+        if whois is None:
             return f"Stairwell: ASN {asn_int} not found"
-        if not isinstance(whois, dict):
-            raise DataRetrievalError(
-                f"Stairwell ASN whois request failed for AS{asn_int} (status {status})"
-            )
 
         # V2 response shape: {asn, records: WhoisRecord[]}.
         # Older / flat shapes are also tolerated.

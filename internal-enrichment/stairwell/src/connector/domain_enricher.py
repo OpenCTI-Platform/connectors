@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
+from connector.lookups import lookup_all
 from connector.stairwell import StairwellClient
 from connector.stix_builder import (
     bundle,
@@ -16,11 +16,6 @@ from connector.stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-logger = logging.getLogger(__name__)
-
-DEFAULT_RESOLUTIONS_LIMIT = 50
 
 
 class DomainEnricher:
@@ -29,12 +24,13 @@ class DomainEnricher:
         helper,
         client: StairwellClient,
         default_tlp: str,
-        resolutions_limit: int = DEFAULT_RESOLUTIONS_LIMIT,
+        *,
+        resolutions_limit: int,
     ) -> None:
         self.helper = helper
         self.client = client
         self.tlp = default_tlp
-        self.resolutions_limit = max(0, int(resolutions_limit))
+        self.resolutions_limit = resolutions_limit
 
     def enrich(self, observable: dict[str, Any]) -> str:
         entity_id = observable.get("standard_id") or observable.get("id")
@@ -42,28 +38,26 @@ class DomainEnricher:
         if not hostname:
             return "Domain observable has no value"
 
-        v1_status, v1 = self.client.get_hostname_metadata_v1(hostname)
-        v2_status, v2 = self.client.get_hostname_v2(hostname)
-        wl_status, wl = self.client.get_hostname_whitelist_status(hostname)
-        res_status, res = self.client.get_hostname_resolutions(hostname)
-
-        statuses = [v1_status, v2_status, wl_status, res_status]
-        # A 2xx whose body did not parse as a JSON object carries no data.
-        answered = [
-            200 <= s < 300 and isinstance(body, dict)
-            for s, body in (
-                (v1_status, v1),
-                (v2_status, v2),
-                (wl_status, wl),
-                (res_status, res),
-            )
-        ]
-        if not any(answered):
-            if all(s == 404 for s in statuses):
-                return f"Stairwell: hostname {hostname} not found"
-            raise DataRetrievalError(
-                f"Every Stairwell hostname request failed (statuses {statuses})"
-            )
+        found = lookup_all(
+            self.helper,
+            f"hostname {hostname}",
+            {
+                "metadata": lambda: self.client.get_hostname_metadata_v1(hostname),
+                "hostname": lambda: self.client.get_hostname_v2(hostname),
+                "whitelist": lambda: self.client.get_hostname_whitelist_status(
+                    hostname
+                ),
+                "resolutions": lambda: self.client.get_hostname_resolutions(hostname),
+            },
+        )
+        if found is None:
+            return f"Stairwell: hostname {hostname} not found"
+        v1, v2, wl, res = (
+            found["metadata"],
+            found["hostname"],
+            found["whitelist"],
+            found["resolutions"],
+        )
 
         objects: list[dict[str, Any]] = [stairwell_identity()]
 

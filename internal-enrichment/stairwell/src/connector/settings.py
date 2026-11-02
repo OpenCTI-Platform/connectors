@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import Literal
-
-from connector.file_enricher import DEFAULT_SIGHTINGS_LIMIT
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -52,27 +50,30 @@ class StairwellConfig(BaseConfigModel):
         description="Optional Stairwell user id (rate-limit header).",
         default="",
     )
-    default_tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
-        Field(
-            description="TLP marking applied to entities created by enrichment.",
-            default="amber",
-        )
+    default_tlp: TLPLevel = Field(
+        description="TLP marking applied to entities created by enrichment.",
+        default=TLPLevel.AMBER,
     )
     variant_limit: int = Field(
         description="Max variant SCOs per file enrichment (0 disables).",
         default=25,
+        ge=0,
     )
     resolutions_limit: int = Field(
         description="Max DNS resolution rows per domain (0 disables).",
         default=50,
+        ge=0,
     )
+    # Sightings carry customer asset names, environment ids, and file paths
+    # (which often contain usernames) into OpenCTI, so they are opt-in.
     sightings_limit: int = Field(
         description=(
             "Max unique assets per file; 0 (the default) disables sightings. "
             "Enabling writes asset names, environment ids, and file paths "
             "into OpenCTI."
         ),
-        default=DEFAULT_SIGHTINGS_LIMIT,
+        default=0,
+        ge=0,
     )
 
 

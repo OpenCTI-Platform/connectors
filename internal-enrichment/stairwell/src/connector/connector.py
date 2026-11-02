@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import traceback
 from typing import Any
 
 from connector.enricher import Dispatcher, stix_marking_tlps
 from connector.settings import ConnectorSettings
 from connector.stairwell import StairwellClient
+from connectors_sdk.exceptions.error import DataRetrievalError, UseCaseError
 from pycti import OpenCTIConnectorHelper
 
 
@@ -132,12 +134,12 @@ class StairwellConnector:
         self.dispatcher = Dispatcher(
             self.bundles,
             self.client,
-            s.default_tlp,
+            s.default_tlp.value,
             variant_limit=s.variant_limit,
             resolutions_limit=s.resolutions_limit,
             sightings_limit=s.sightings_limit,
             opencti_base_url=str(config.opencti.url).rstrip("/"),
-            max_tlp=config.connector.max_tlp.value,
+            max_tlp=f"TLP:{config.connector.max_tlp.value.upper()}",
         )
 
     def _in_scope(self, observable: dict[str, Any]) -> bool:
@@ -162,37 +164,67 @@ class StairwellConnector:
             return "No resolvable entity in enrichment message"
 
         if not self._in_scope(observable):
+            message = (
+                f"{observable.get('entity_type')} is not in the connector's "
+                "scope; not sent to Stairwell"
+            )
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Entity type not in scope",
+                meta={
+                    "entity_id": entity_id,
+                    "entity_type": observable.get("entity_type"),
+                },
+            )
             if playbook:
                 self.bundles.send_incoming()
-                return "Entity type not in scope; playbook bundle returned unchanged"
-            raise ValueError(
-                f"Failed to process observable, {observable.get('entity_type')} "
-                "is not a supported entity type."
-            )
+            return message
 
-        # In a playbook the step's input may carry markings the stored entity
-        # does not (an earlier step can raise its TLP); both are gated.
-        input_tlps = (
-            stix_marking_tlps(
+        input_tlps: list[str] = []
+        if playbook:
+            # The step's input may carry markings the stored entity does not
+            # (an earlier step can raise its TLP); both are gated.
+            input_tlps, unresolved = stix_marking_tlps(
                 stix_entity,
                 data["stix_objects"],
-                lookup=lambda ref: self.helper.api.marking_definition.read(id=ref),
+                known_markings=observable.get("objectMarking"),
             )
-            if playbook
-            else []
-        )
+            if unresolved:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Playbook input carries markings that are not "
+                    "in the bundle or on the stored entity; refusing them",
+                    meta={"entity_id": entity_id, "marking_refs": unresolved},
+                )
         try:
             message = self.dispatcher.dispatch(observable, extra_tlps=input_tlps)
-        except Exception as err:  # noqa: BLE001
-            self.helper.connector_logger.error(
-                "[CONNECTOR] Stairwell enrichment failed",
-                {"entity_id": entity_id, "error": str(err)},
+        except UseCaseError as err:
+            # A refusal, such as a TLP above the maximum: nothing went wrong.
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Observable not sent to Stairwell",
+                meta={"entity_id": entity_id, "reason": str(err)},
             )
+            message = str(err)
+        except DataRetrievalError as err:
+            # Outside a playbook pycti logs the error and fails the work.
             if not playbook:
                 raise
-            if not self.bundles.sent:
-                self.bundles.send_incoming()
-            return f"Stairwell enrichment failed: {err}"
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Stairwell enrichment failed; playbook continues",
+                meta={"entity_id": entity_id, "error": str(err)},
+            )
+            message = f"Stairwell enrichment failed: {err}"
+        except Exception as err:
+            if not playbook:
+                raise
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unexpected error in Stairwell enrichment; "
+                "playbook continues",
+                meta={
+                    "entity_id": entity_id,
+                    "error": str(err),
+                    "traceback": traceback.format_exc(),
+                },
+            )
+            message = f"Stairwell enrichment failed: {err}"
 
         if playbook and not self.bundles.sent:
             self.bundles.send_incoming()

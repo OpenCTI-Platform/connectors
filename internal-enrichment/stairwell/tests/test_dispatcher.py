@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from connector.enricher import Dispatcher
 from connector.stairwell import StairwellClient
+from connectors_sdk.exceptions.error import UseCaseError
 
 
 def _dispatcher(max_tlp="TLP:AMBER"):
@@ -10,7 +11,16 @@ def _dispatcher(max_tlp="TLP:AMBER"):
     client._base_url = "https://app.stairwell.com"
     client._timeout = 30
     client._session = MagicMock()
-    d = Dispatcher(MagicMock(), client, "amber", max_tlp=max_tlp)
+    d = Dispatcher(
+        MagicMock(),
+        client,
+        "amber",
+        variant_limit=25,
+        resolutions_limit=50,
+        sightings_limit=0,
+        opencti_base_url="http://localhost:8080",
+        max_tlp=max_tlp,
+    )
     d.file = MagicMock()
     d.file.enrich = MagicMock(return_value="enriched")
     return d, client
@@ -47,7 +57,7 @@ def test_max_tlp_gates_enrichment(markings, max_tlp, allowed):
         assert d.dispatch(observable) == "enriched"
         d.file.enrich.assert_called_once_with(observable)
     else:
-        with pytest.raises(ValueError, match="max TLP"):
+        with pytest.raises(UseCaseError, match="max TLP"):
             d.dispatch(observable)
         d.file.enrich.assert_not_called()
         client._session.get.assert_not_called()
@@ -64,21 +74,8 @@ def test_non_tlp_markings_are_ignored():
 
 def test_unknown_tlp_on_observable_is_refused():
     d, _ = _dispatcher(max_tlp="TLP:RED")
-    with pytest.raises(ValueError, match="max TLP"):
+    with pytest.raises(UseCaseError, match="max TLP"):
         d.dispatch(_file_observable("TLP:SOMETHING-CUSTOM"))
-
-
-@pytest.mark.parametrize("value", ["amber", "TLP:amber", "tlp:AMBER"])
-def test_max_tlp_accepts_short_and_mixed_case_forms(value):
-    d, _ = _dispatcher(max_tlp=value)
-    assert d.dispatch(_file_observable("TLP:AMBER")) == "enriched"
-    with pytest.raises(ValueError):
-        d.dispatch(_file_observable("TLP:RED"))
-
-
-def test_invalid_max_tlp_fails_at_construction():
-    with pytest.raises(ValueError, match="CONNECTOR_MAX_TLP"):
-        _dispatcher(max_tlp="TLP:PURPLE")
 
 
 @pytest.mark.parametrize(

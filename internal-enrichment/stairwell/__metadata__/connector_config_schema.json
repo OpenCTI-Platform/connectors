@@ -95,7 +95,6 @@
       "type": "string"
     },
     "STAIRWELL_DEFAULT_TLP": {
-      "default": "amber",
       "description": "TLP marking applied to entities created by enrichment.",
       "enum": [
         "clear",
@@ -105,21 +104,25 @@
         "amber+strict",
         "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "amber"
     },
     "STAIRWELL_VARIANT_LIMIT": {
       "default": 25,
       "description": "Max variant SCOs per file enrichment (0 disables).",
+      "minimum": 0,
       "type": "integer"
     },
     "STAIRWELL_RESOLUTIONS_LIMIT": {
       "default": 50,
       "description": "Max DNS resolution rows per domain (0 disables).",
+      "minimum": 0,
       "type": "integer"
     },
     "STAIRWELL_SIGHTINGS_LIMIT": {
       "default": 0,
       "description": "Max unique assets per file; 0 (the default) disables sightings. Enabling writes asset names, environment ids, and file paths into OpenCTI.",
+      "minimum": 0,
       "type": "integer"
     }
   },

@@ -19,6 +19,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | STAIRWELL_ORGANIZATION_ID | `string` |  | string | `""` | Optional Stairwell organization id (rate-limit header). |
 | STAIRWELL_USER_ID | `string` |  | string | `""` | Optional Stairwell user id (rate-limit header). |
 | STAIRWELL_DEFAULT_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to entities created by enrichment. |
-| STAIRWELL_VARIANT_LIMIT | `integer` |  | integer | `25` | Max variant SCOs per file enrichment (0 disables). |
-| STAIRWELL_RESOLUTIONS_LIMIT | `integer` |  | integer | `50` | Max DNS resolution rows per domain (0 disables). |
-| STAIRWELL_SIGHTINGS_LIMIT | `integer` |  | integer | `0` | Max unique assets per file; 0 (the default) disables sightings. Enabling writes asset names, environment ids, and file paths into OpenCTI. |
+| STAIRWELL_VARIANT_LIMIT | `integer` |  | `0 <= x ` | `25` | Max variant SCOs per file enrichment (0 disables). |
+| STAIRWELL_RESOLUTIONS_LIMIT | `integer` |  | `0 <= x ` | `50` | Max DNS resolution rows per domain (0 disables). |
+| STAIRWELL_SIGHTINGS_LIMIT | `integer` |  | `0 <= x ` | `0` | Max unique assets per file; 0 (the default) disables sightings. Enabling writes asset names, environment ids, and file paths into OpenCTI. |

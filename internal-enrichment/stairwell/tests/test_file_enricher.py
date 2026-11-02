@@ -4,8 +4,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.file_enricher import FileEnricher
+from connector.settings import StairwellConfig
 from connector.stairwell import StairwellClient
 from connectors_sdk.exceptions.error import DataRetrievalError
+from stairwell_fakes import lookup
 
 SHA256 = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"  # WannaCry
 
@@ -21,8 +23,20 @@ def _client(monkeypatch_responses):
         "list_object_sightings", (200, {"objectSightings": [], "nextPageToken": ""})
     )
     for name, value in monkeypatch_responses.items():
-        setattr(c, name, MagicMock(return_value=value))
+        setattr(c, name, lookup(value))
     return c
+
+
+def _file_enricher(helper, client, **overrides):
+    """A FileEnricher built from the settings defaults, as the connector does."""
+    defaults = StairwellConfig.model_fields
+    kwargs = {
+        "variant_limit": defaults["variant_limit"].default,
+        "sightings_limit": defaults["sightings_limit"].default,
+        "opencti_base_url": "http://localhost:8080",
+        **overrides,
+    }
+    return FileEnricher(helper, client, "amber", **kwargs)
 
 
 def _observable_with_sha256(sha256: str = SHA256, score=None):
@@ -73,7 +87,7 @@ def test_happy_path_produces_bundle_with_expected_shape():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
 
     msg = enricher.enrich(_observable_with_sha256(score=20))
     assert "Enriched file" in msg
@@ -114,7 +128,7 @@ def test_score_does_not_lower_existing_higher_score():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
 
     enricher.enrich(_observable_with_sha256(score=80))
 
@@ -136,7 +150,7 @@ def test_404_path_marks_not_found_via_bundle_without_api_writes():
     helper.api.external_reference.create = MagicMock(return_value={"id": "ext-1"})
     helper.api.stix_cyber_observable.add_external_reference = MagicMock()
 
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     msg = enricher.enrich(_observable_with_sha256())
 
     assert "not in corpus" in msg
@@ -165,7 +179,7 @@ def test_md5_fallback_attaches_transparency_label():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
 
     md5_observable = {
         "id": "stix-cyber-observable--md5only",
@@ -204,7 +218,7 @@ def test_variants_capped_sorted_and_family_label():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", variant_limit=2)
+    enricher = _file_enricher(helper, client, variant_limit=2)
 
     msg = enricher.enrich(_observable_with_sha256())
     assert "variants 2" in msg
@@ -264,7 +278,7 @@ def test_variants_accepts_confidence_synonym():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", variant_limit=5)
+    enricher = _file_enricher(helper, client, variant_limit=5)
     enricher.enrich(_observable_with_sha256())
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     var_note = next(
@@ -283,7 +297,7 @@ def test_variant_limit_zero_skips_variant_calls():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", variant_limit=0)
+    enricher = _file_enricher(helper, client, variant_limit=0)
     enricher.enrich(_observable_with_sha256())
 
     client.get_variants.assert_not_called()
@@ -338,7 +352,7 @@ def test_sightings_aggregated_per_asset_with_count_first_last():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=100)
+    enricher = _file_enricher(helper, client, sightings_limit=100)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -399,7 +413,7 @@ def test_sightings_truncation_emits_note_and_stops_at_limit():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=2)
+    enricher = _file_enricher(helper, client, sightings_limit=2)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -424,7 +438,7 @@ def test_sightings_limit_zero_skips_call():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=0)
+    enricher = _file_enricher(helper, client, sightings_limit=0)
     enricher.enrich(_observable_with_sha256())
     client.list_object_sightings.assert_not_called()
 
@@ -440,7 +454,7 @@ def test_sightings_empty_payload_emits_no_sighting_objects():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber", sightings_limit=100)
+    enricher = _file_enricher(helper, client, sightings_limit=100)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -478,7 +492,7 @@ def test_metadata_properties_landed_on_file_sco():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -544,7 +558,7 @@ def test_summary_note_consolidates_all_user_specified_fields():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -623,7 +637,7 @@ def test_lineage_emits_parents_and_children_with_derived_from():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     enricher.enrich(_observable_with_sha256())
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -681,7 +695,7 @@ def test_signing_certificates_are_listed_in_the_note_not_as_observables():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     assert not [o for o in objects if o["type"] == "x509-certificate"]
     note = next(
@@ -715,7 +729,7 @@ def test_detonation_data_is_not_in_bundle():
         }
     )
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     enricher.enrich(_observable_with_sha256())
     bundle_json = helper.send_stix2_bundle.call_args[0][0]
     # Hard guarantee: nothing detonation-flavored ever leaks into the bundle.
@@ -735,7 +749,7 @@ def test_detonation_data_is_not_in_bundle():
 def test_no_hashes_returns_skip_message():
     client = _client({})
     helper = _helper()
-    enricher = FileEnricher(helper, client, default_tlp="amber")
+    enricher = _file_enricher(helper, client)
     msg = enricher.enrich(
         {
             "id": "stix-cyber-observable--empty",
@@ -796,7 +810,7 @@ def test_untrusted_strings_are_markdown_escaped_in_notes_and_description():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber", sightings_limit=100).enrich(
+    _file_enricher(helper, client, sightings_limit=100).enrich(
         _observable_with_sha256()
     )
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -849,7 +863,7 @@ def _enrich_with_variant_counts(payload_count, metadata_total):
         }
     )
     helper = _helper()
-    msg = FileEnricher(helper, client, default_tlp="amber", variant_limit=2).enrich(
+    msg = _file_enricher(helper, client, variant_limit=2).enrich(
         _observable_with_sha256()
     )
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
@@ -889,11 +903,7 @@ def test_variant_counts_tolerate_non_numeric_api_values(
 
 
 def test_sightings_are_off_unless_configured():
-    from connector.enricher import Dispatcher
-    from connector.file_enricher import DEFAULT_SIGHTINGS_LIMIT
-
-    # main.py reads this constant as the STAIRWELL_SIGHTINGS_LIMIT default.
-    assert DEFAULT_SIGHTINGS_LIMIT == 0
+    assert StairwellConfig.model_fields["sightings_limit"].default == 0
     client = _client(
         {
             "get_object_metadata": (
@@ -905,8 +915,7 @@ def test_sightings_are_off_unless_configured():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
-    Dispatcher(helper, client, "amber").file.enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     client.list_object_sightings.assert_not_called()
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     assert not [o for o in payload["objects"] if o["type"] == "sighting"]
@@ -936,7 +945,7 @@ def test_malformed_variant_and_lineage_hashes_are_skipped():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     file_hashes = sorted(
         o["hashes"]["SHA-256"]
@@ -990,11 +999,9 @@ def test_sightings_keep_paging_for_assets_already_kept():
             "get_variants": (200, {}),
         }
     )
-    client.list_object_sightings = MagicMock(side_effect=pages)
+    client.list_object_sightings = lookup(*pages)
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber", sightings_limit=2).enrich(
-        _observable_with_sha256()
-    )
+    _file_enricher(helper, client, sightings_limit=2).enrich(_observable_with_sha256())
     assert client.list_object_sightings.call_count == 3
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     sightings = {
@@ -1023,7 +1030,7 @@ def test_metadata_hash_backfill_skips_malformed_values():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     sco = next(
         o for o in objects if o["id"] == _observable_with_sha256()["standard_id"]
@@ -1031,14 +1038,15 @@ def test_metadata_hash_backfill_skips_malformed_values():
     assert sco["hashes"] == {"SHA-256": SHA256, "MD5": "d" * 32}
 
 
-@pytest.mark.parametrize("status", [401, 500, 0])
-def test_failed_metadata_fetch_raises_instead_of_completing(status):
-    client = _client({"get_object_metadata": (status, None)})
+@pytest.mark.parametrize(
+    "response",
+    [(401, None), (500, None), (0, None), (200, ["a", "list"]), (200, "a string")],
+)
+def test_failed_metadata_fetch_raises_instead_of_completing(response):
+    client = _client({"get_object_metadata": response})
     helper = _helper()
-    with pytest.raises(DataRetrievalError, match=str(status)):
-        FileEnricher(helper, client, default_tlp="amber").enrich(
-            _observable_with_sha256()
-        )
+    with pytest.raises(DataRetrievalError):
+        _file_enricher(helper, client).enrich(_observable_with_sha256())
     helper.send_stix2_bundle.assert_not_called()
 
 
@@ -1056,7 +1064,7 @@ def test_flat_yara_matches_become_labels_as_well_as_note_lines():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     file_sco = next(o for o in objects if o["type"] == "file")
     assert "stairwell:yara:Flat_Rule" in file_sco["labels"]
@@ -1079,11 +1087,9 @@ def _sightings_run(pages):
             "get_variants": (200, {}),
         }
     )
-    client.list_object_sightings = MagicMock(side_effect=pages)
+    client.list_object_sightings = lookup(*pages)
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber", sightings_limit=1).enrich(
-        _observable_with_sha256()
-    )
+    _file_enricher(helper, client, sightings_limit=1).enrich(_observable_with_sha256())
     return client, json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
 
 
@@ -1140,7 +1146,7 @@ def test_note_lists_exactly_the_network_values_that_became_observables():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     observed = {
         o["value"]
@@ -1196,7 +1202,7 @@ def _fallback_run():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(dict(_MD5_OBS))
+    _file_enricher(helper, client).enrich(dict(_MD5_OBS))
     return json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
 
 
@@ -1237,7 +1243,7 @@ def test_summary_note_carries_the_values_opencti_drops_from_the_observable():
         }
     )
     helper = _helper()
-    FileEnricher(helper, client, default_tlp="amber").enrich(_observable_with_sha256())
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     note = next(
         o for o in objects if o.get("abstract") == "Stairwell Enrichment Summary"
@@ -1246,3 +1252,58 @@ def test_summary_note_carries_the_values_opencti_drops_from_the_observable():
     assert "**Prevalence:** 0.0123" in content
     assert "**Variants:** 7" in content
     assert "**Environments:** `env-1`, `env-2`" in content
+
+
+@pytest.mark.parametrize("mal_eval", [["a", "list"], "a string", 7])
+def test_non_object_mal_eval_does_not_crash(mal_eval):
+    client = _client(
+        {
+            "get_object_metadata": (200, {"mal_eval": mal_eval}),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+        }
+    )
+    helper = _helper()
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
+    helper.send_stix2_bundle.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "summary, variants", [((503, None), (200, {})), ((200, {}), (200, ["x"]))]
+)
+def test_failed_optional_lookups_are_logged_and_skipped(summary, variants):
+    client = _client(
+        {
+            "get_object_metadata": (
+                200,
+                {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}},
+            ),
+            "summarize_file": summary,
+            "get_variants": variants,
+        }
+    )
+    helper = _helper()
+    _file_enricher(helper, client).enrich(_observable_with_sha256())
+    helper.send_stix2_bundle.assert_called_once()
+    helper.connector_logger.warning.assert_called_once()
+    helper.connector_logger.error.assert_not_called()
+
+
+def test_first_sightings_page_failure_is_logged_and_no_sightings_sent():
+    client = _client(
+        {
+            "get_object_metadata": (
+                200,
+                {"mal_eval": {"probability_bucket": "PROBABILITY_HIGH"}},
+            ),
+            "summarize_file": (200, {}),
+            "get_variants": (200, {}),
+            "list_object_sightings": (500, None),
+        }
+    )
+    helper = _helper()
+    _file_enricher(helper, client, sightings_limit=10).enrich(_observable_with_sha256())
+    objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
+    assert not [o for o in objects if o["type"] == "sighting"]
+    meta = helper.connector_logger.warning.call_args.kwargs["meta"]
+    assert meta["page"] == 1 and meta["status"] == 500

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
+from connector.lookups import lookup_all, optional_lookup
 from connector.stairwell import StairwellClient
 from connector.stix_builder import (
     bundle,
@@ -16,9 +16,6 @@ from connector.stix_builder import (
     stairwell_identity,
     tlp_marking,
 )
-from connectors_sdk.exceptions.error import DataRetrievalError
-
-logger = logging.getLogger(__name__)
 
 _CLOUD_LABEL_MAP = {
     "AWS": "stairwell:cloud-aws",
@@ -72,25 +69,21 @@ class IpEnricher:
         if not ip_value:
             return "IP observable has no value"
 
-        ip_status, ip_data = self.client.get_ip(ip_value)
-        whois_status, whois_resp = self.client.get_ip_whois(ip_value)
-        # hostnames endpoint is best-effort; ignore failures.
-        _, hosts = self.client.get_ip_hostnames(ip_value)
-
-        # A 2xx whose body did not parse as a JSON object carries no data.
-        answered = [
-            200 <= s < 300 and isinstance(body, dict)
-            for s, body in ((ip_status, ip_data), (whois_status, whois_resp))
-        ]
-        if not any(answered):
-            if ip_status == 404 and whois_status == 404:
-                return f"Stairwell: IP {ip_value} not found"
-            raise DataRetrievalError(
-                "Every Stairwell IP request failed "
-                f"(ip {ip_status}, whois {whois_status})"
-            )
-        if not isinstance(ip_data, dict):
-            ip_data = {}
+        found = lookup_all(
+            self.helper,
+            f"IP {ip_value}",
+            {
+                "ip": lambda: self.client.get_ip(ip_value),
+                "whois": lambda: self.client.get_ip_whois(ip_value),
+            },
+        )
+        if found is None:
+            return f"Stairwell: IP {ip_value} not found"
+        ip_data = found["ip"] or {}
+        whois_resp = found["whois"]
+        hosts = optional_lookup(
+            self.helper, "ip hostnames", self.client.get_ip_hostnames, ip_value
+        )
 
         # Pull the structured WHOIS record (the V2 response is `{ipAddress, record}`).
         whois_record: dict[str, Any] | None = None

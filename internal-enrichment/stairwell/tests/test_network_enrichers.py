@@ -6,8 +6,10 @@ import pytest
 from connector.asn_enricher import AsnEnricher
 from connector.domain_enricher import DomainEnricher
 from connector.ip_enricher import IpEnricher
-from connector.stairwell import StairwellClient
+from connector.settings import StairwellConfig
+from connector.stairwell import StairwellAPIError, StairwellClient
 from connectors_sdk.exceptions.error import DataRetrievalError
+from stairwell_fakes import lookup
 
 
 def _client(responses):
@@ -16,8 +18,17 @@ def _client(responses):
     c._timeout = 30
     c._session = None
     for name, value in responses.items():
-        setattr(c, name, MagicMock(return_value=value))
+        setattr(c, name, lookup(value))
     return c
+
+
+def _domain_enricher(helper, client, **overrides):
+    """A DomainEnricher built from the settings defaults, as the connector does."""
+    kwargs = {
+        "resolutions_limit": StairwellConfig.model_fields["resolutions_limit"].default,
+        **overrides,
+    }
+    return DomainEnricher(helper, client, "amber", **kwargs)
 
 
 def _helper():
@@ -83,7 +94,7 @@ def test_domain_enricher_uses_resolutions_endpoint():
         }
     )
     helper = _helper()
-    enricher = DomainEnricher(helper, client, default_tlp="amber")
+    enricher = _domain_enricher(helper, client)
     enricher.enrich(
         {
             "id": "stix-cyber-observable--d1",
@@ -135,7 +146,7 @@ def test_domain_whitelist_label_from_v2_dedicated():
         }
     )
     helper = _helper()
-    enricher = DomainEnricher(helper, client, default_tlp="amber")
+    enricher = _domain_enricher(helper, client)
     enricher.enrich(
         {
             "id": "stix-cyber-observable--d2",
@@ -174,7 +185,7 @@ def test_domain_resolutions_capped():
         }
     )
     helper = _helper()
-    enricher = DomainEnricher(helper, client, default_tlp="amber", resolutions_limit=3)
+    enricher = _domain_enricher(helper, client, resolutions_limit=3)
     msg = enricher.enrich(
         {
             "id": "stix-cyber-observable--d3",
@@ -476,7 +487,7 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
         }
     )
     helper = _helper()
-    DomainEnricher(helper, dns_client, default_tlp="amber").enrich(
+    _domain_enricher(helper, dns_client).enrich(
         {
             "id": "x",
             "standard_id": "domain-name--1",
@@ -532,22 +543,66 @@ def _domain_client(statuses, res=None):
 )
 def test_domain_fails_when_no_stairwell_request_succeeds(statuses):
     helper = _helper()
-    with pytest.raises(DataRetrievalError):
-        DomainEnricher(helper, _domain_client(statuses), "amber").enrich(_DOMAIN_OBS)
+    with pytest.raises(DataRetrievalError) as info:
+        _domain_enricher(helper, _domain_client(statuses)).enrich(_DOMAIN_OBS)
     helper.send_stix2_bundle.assert_not_called()
+    # The first request's failure is kept, with its status, and the message
+    # names every failed lookup's status.
+    assert isinstance(info.value.__cause__, StairwellAPIError)
+    for status in statuses:
+        if status != 404:
+            assert (str(status) if status else "no response") in str(info.value)
 
 
 def test_domain_not_found_and_partial_failure_still_handled():
     helper = _helper()
-    msg = DomainEnricher(helper, _domain_client((404,) * 4), "amber").enrich(
-        _DOMAIN_OBS
-    )
+    msg = _domain_enricher(helper, _domain_client((404,) * 4)).enrich(_DOMAIN_OBS)
     assert "not found" in msg
     helper.send_stix2_bundle.assert_not_called()
-    DomainEnricher(helper, _domain_client((500, 200, 500, 500)), "amber").enrich(
-        _DOMAIN_OBS
-    )
+    helper.connector_logger.warning.assert_not_called()
+    _domain_enricher(helper, _domain_client((500, 200, 500, 500))).enrich(_DOMAIN_OBS)
     helper.send_stix2_bundle.assert_called_once()
+    # Each failed lookup is logged once, at WARNING.
+    failed = [
+        c.kwargs["meta"]["lookup"]
+        for c in helper.connector_logger.warning.call_args_list
+    ]
+    assert failed == ["metadata", "whitelist", "resolutions"]
+    helper.connector_logger.error.assert_not_called()
+
+
+@pytest.mark.parametrize("body", [["a", "list"], "a string"])
+def test_domain_non_object_bodies_count_as_failures(body):
+    helper = _helper()
+    client = _client(
+        {
+            "get_hostname_metadata_v1": (200, body),
+            "get_hostname_v2": (200, body),
+            "get_hostname_whitelist_status": (200, body),
+            "get_hostname_resolutions": (200, body),
+        }
+    )
+    with pytest.raises(DataRetrievalError):
+        _domain_enricher(helper, client).enrich(_DOMAIN_OBS)
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_ip_enriches_from_whois_when_the_ip_lookup_fails():
+    helper = _helper()
+    client = _client(
+        {
+            "get_ip": (503, None),
+            "get_ip_whois": (200, {"record": {"arinOrg": {"name": "Example"}}}),
+            "get_ip_hostnames": (0, None),
+        }
+    )
+    IpEnricher(helper, client, "amber").enrich(_IP_OBS)
+    helper.send_stix2_bundle.assert_called_once()
+    failed = [
+        c.kwargs["meta"]["lookup"]
+        for c in helper.connector_logger.warning.call_args_list
+    ]
+    assert failed == ["ip", "ip hostnames"]
 
 
 def test_domain_resolutions_limit_zero_emits_no_resolutions():
@@ -558,8 +613,8 @@ def test_domain_resolutions_limit_zero_emits_no_resolutions():
         ]
     }
     helper = _helper()
-    DomainEnricher(
-        helper, _domain_client((200,) * 4, res), "amber", resolutions_limit=0
+    _domain_enricher(
+        helper, _domain_client((200,) * 4, res), resolutions_limit=0
     ).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     assert not [o for o in objects if o["type"] in ("ipv4-addr", "ipv6-addr")]
@@ -576,7 +631,7 @@ def test_domain_resolution_answers_must_be_valid_addresses():
         ]
     }
     helper = _helper()
-    DomainEnricher(helper, _domain_client((200,) * 4, res), "amber").enrich(_DOMAIN_OBS)
+    _domain_enricher(helper, _domain_client((200,) * 4, res)).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     ips = [(o["type"], o["value"]) for o in objects if o["type"].startswith("ipv")]
     assert ips == [("ipv4-addr", "198.51.100.7")]
@@ -655,7 +710,7 @@ def test_domain_ok_status_without_a_parsed_body_is_not_success(bodies):
     helper = _helper()
     client = _client(dict(zip(names, bodies)))
     with pytest.raises(DataRetrievalError):
-        DomainEnricher(helper, client, "amber").enrich(_DOMAIN_OBS)
+        _domain_enricher(helper, client).enrich(_DOMAIN_OBS)
     helper.send_stix2_bundle.assert_not_called()
 
 
@@ -693,7 +748,7 @@ def test_dedicated_whitelist_answer_takes_precedence(wl, v2, labelled):
         }
     )
     helper = _helper()
-    DomainEnricher(helper, client, "amber").enrich(_DOMAIN_OBS)
+    _domain_enricher(helper, client).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     domain = next(o for o in objects if o["type"] == "domain-name")
     assert ("stairwell:whitelisted" in domain.get("labels", [])) is labelled
@@ -714,7 +769,7 @@ def test_dns_answers_become_valid_hostnames_and_never_the_domain_itself():
         ]
     }
     helper = _helper()
-    DomainEnricher(helper, _domain_client((200,) * 4, res), "amber").enrich(_DOMAIN_OBS)
+    _domain_enricher(helper, _domain_client((200,) * 4, res)).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     domains = [o for o in objects if o["type"] == "domain-name"]
     entity_id = _DOMAIN_OBS["standard_id"]
