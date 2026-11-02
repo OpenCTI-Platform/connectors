@@ -45,8 +45,7 @@ class BitdefenderConfig(BaseConfigModel):
     )
 
     feeds: ListFromString = Field(
-        description="Comma-separated list of feeds to download and import.",
-        default=[],
+        description="Comma-separated list of feeds to download and import."
     )
 
     min_confidence: int = Field(
@@ -70,13 +69,34 @@ class BitdefenderConfig(BaseConfigModel):
     )
 
     include_suspicious: Literal["true", "false", "only"] = Field(
-        description="Whether to import suspicous entries from a file feed (true - yes, false - no, only - only suspicious).",
+        description="Whether to import suspicious entries from a file feed (true - yes, false - no, only - only suspicious).",
         default="false",
     )
 
     include_revoked: Literal["true", "false", "only"] = Field(
         description="Whether to import revoked indicators (true - import, false - do not import, only - import only revoked).",
         default="false",
+    )
+
+    detection: bool = Field(
+        description="Value to pass for x_opencti_detection value.", default=False
+    )
+
+    create_malware_objects: bool = Field(
+        description="Create Malware object for each malware indicator (True) or only for malware families (False).",
+        default=True,
+    )
+
+    tlp_level: Literal[
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red",
+    ] = Field(
+        description="Default TLP level of the imported entities.",
+        default="clear",
     )
 
     @field_validator("api_key")
@@ -90,6 +110,9 @@ class BitdefenderConfig(BaseConfigModel):
     @field_validator("feeds")
     @classmethod
     def validate_feeds(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("At least one feed must be configured.")
+
         ValidFeeds = ("file", "ip", "web")
         unknown = [feeds for feeds in value if feeds not in ValidFeeds]
         if unknown:

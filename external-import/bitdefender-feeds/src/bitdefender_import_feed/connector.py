@@ -32,7 +32,15 @@ class BitdefenderFeedConnector:
                 seconds = 86400
 
                 if self.state["last_update"][feedtype] != 0:
-                    seconds = min(86400, current - self.state["last_update"][feedtype])
+                    # Provider API accepts at most 24 hours of history. Warn about
+                    # any unrecoverable gap rather than silently truncating it.
+                    elapsed = current - self.state["last_update"][feedtype]
+                    if elapsed > 86400:
+                        self.helper.connector_logger.warning(
+                            f"Feed {feedtype}: {elapsed - 86400} seconds outside "
+                            "the provider's 24-hour look-back window"
+                        )
+                    seconds = min(86400, elapsed)
 
                 # Download the feed using Bitdefender TI API
                 headers = {
@@ -82,10 +90,10 @@ class BitdefenderFeedConnector:
                     f"{self.helper.connect_name} Feed {feedtype} downloaded successfully"
                 )
 
-                # Add it into the queue
-                self.state["last_update"][feedtype] = current
+                # Do not advance the watermark until the downloaded file has been
+                # imported; container recreation can otherwise permanently lose it.
                 self.state["queue"].append(
-                    {"feed": feedtype, "file": feedfile, "line": 0}
+                    {"feed": feedtype, "file": feedfile, "line": 0, "until": current}
                 )
                 self._save_state()
 
@@ -104,47 +112,59 @@ class BitdefenderFeedConnector:
             )
 
             processor = StixMaker(
+                config=self.config,
                 helper=self.helper,
                 feedtype=entry["feed"],
             )
 
             already_processed_lines = entry["line"]
-            processed_lines = 1
             processed_started = time.time()
 
             try:
                 with open(entry["file"], "r", encoding="utf-8") as f:
-                    for raw_line in f:
-                        line = raw_line.strip()
-                        processed_lines += 1
-
-                        if processed_lines < already_processed_lines:
+                    for line_number, raw_line in enumerate(f, 1):
+                        if line_number <= entry["line"]:
                             continue
 
+                        line = raw_line.strip()
                         if not line:
                             continue
 
                         try:
-                            processor.fromEntry(line)
+                            bundle_sent = processor.fromEntry(line)
                         except Exception as e:
-                            self.helper.connector_logger.error(str(e))
+                            self.helper.connector_logger.error(
+                                f"Feed {entry['feed']}, line {line_number}: {e}"
+                            )
                             continue
 
-                        if processed_lines % 500 == 0:
-                            entry["line"] = processed_lines - 100  # 100 are in queue
-                            self._save_state()
-                            dura = time.time() - processed_started
+                        if line_number % 500 == 0:
+                            dura = max(time.time() - processed_started, 0.001)
                             self.helper.connector_logger.debug(
-                                f"Lines: {processed_lines}, lps: {(processed_lines-already_processed_lines)/dura:.1f}"
+                                f"Lines: {line_number}, lps: {(line_number-already_processed_lines)/dura:.1f}"
                             )
+
+                        if bundle_sent:
+                            entry["line"] = line_number
+                            self._save_state()
 
                 processor.sendFinal()
                 os.remove(entry["file"])
+                # Support persisted queue entries created before the `until` field.
+                self.state["last_update"][entry["feed"]] = entry.get(
+                    "until", self.state["last_update"][entry["feed"]]
+                )
 
             except FileNotFoundError:
-                self.helper.connector_logger.debug(
-                    "Feed file not found (container recreated?) aborting import"
+                self.helper.connector_logger.error(
+                    "Feed file should exist but not found - container recreated? aborting import"
                 )
+                processor.sendError("Downloaded feed file is missing")
+
+            except Exception as e:
+                processor.sendError(str(e))
+                # Keep the current queue entry for the next run.
+                raise
 
             # Remove the first entry since we're done
             del self.state["queue"][0]

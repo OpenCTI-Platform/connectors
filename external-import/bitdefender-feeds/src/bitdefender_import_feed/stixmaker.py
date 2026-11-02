@@ -1,28 +1,50 @@
 import json
 import time
+from ipaddress import ip_address
 
 import iso3166
 import stix2
 
-CONFIG_OPENCTI_LABELS = ["popularity"]
+import pycti
 
 
 class StixMaker:
-    def __init__(
-        self, helper, feedtype, max_bundle_entries=10000
-    ) -> None:
+    def __init__(self, config, helper, feedtype, max_bundle_entries=10000) -> None:
+        self.config = config.bitdefender
         self.helper = helper
         self.max_bundle_entries = max_bundle_entries
         self.feedtype = feedtype
 
         # This allows us to not re-create the STIX objects which we had created before
         self.cached_object_ids = {}
-
-        # Every object we create goes here as it need to be prepend to each final bundle
-        self.bundles_created_objects = []
+        self.cached_objects = {}
+        self.bundles_created_objects = {}
 
         # Output STIX bundle storage - everything but created objects
         self.bundles_output = []
+
+        # Marking definitions are stable OpenCTI IDs. Do not print configuration,
+        # which may contain credentials or other sensitive values.
+        match self.config.tlp_level:
+            case "white" | "clear":
+                self.tlp = stix2.TLP_WHITE
+            case "green":
+                self.tlp = stix2.TLP_GREEN
+            case "amber":
+                self.tlp = stix2.TLP_AMBER
+            case "amber+strict":
+                self.tlp = stix2.MarkingDefinition(
+                    id=pycti.MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                    definition_type="statement",
+                    definition={"statement": "custom"},
+                    allow_custom=True,
+                    x_opencti_definition_type="TLP",
+                    x_opencti_definition="TLP:AMBER+STRICT",
+                )
+            case "red":
+                self.tlp = stix2.TLP_RED
+            case _:  # should not happen due to value control in settings.py
+                raise ValueError("Invalid TLP level")
 
         self.creator_identity = self.findOrCreateCacheableObject(
             "identity",
@@ -46,7 +68,7 @@ class StixMaker:
         )
 
         self.work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, f"importing {feedtype} feed"
+            self.helper.connect_id, f"importing {feedtype} feed", is_multipart=True
         )
 
     def fromEntry(self, entry: str) -> bool:
@@ -65,6 +87,9 @@ class StixMaker:
 
         if len(self.bundles_output) > self.max_bundle_entries:
             self._sendStixBundle()
+            return True
+
+        return False
 
     def _sendStixBundle(self):
 
@@ -75,8 +100,14 @@ class StixMaker:
             f"{self.helper.connect_name} sending stix bundle of {len(self.bundles_output)} entries"
         )
 
+        # Add the identity into a bundle
+        self.bundles_created_objects[self.creator_identity] = self.cached_objects[
+            self.creator_identity
+        ]
+
         outbundle = stix2.Bundle(
-            self.bundles_created_objects + self.bundles_output, allow_custom=True
+            list(self.bundles_created_objects.values()) + self.bundles_output,
+            allow_custom=True,
         ).serialize()
 
         self.helper.send_stix2_bundle(
@@ -92,82 +123,66 @@ class StixMaker:
         self._sendStixBundle()
         self.helper.api.work.to_processed(self.work_id, "done")
 
+    def sendError(self, message):
+        self.helper.api.work.to_processed(self.work_id, message, in_error=True)
+
     def findOrCreateCacheableObject(self, objtype: str, values: dict) -> str:
-        """
-        This method creates the STIX object in the database if first time called,
-        and stores its ID. The subsequent calls it just returns the stored ID.
+        """Cache deterministic STIX IDs and object definitions for this import.
+
+        Shared entities are emitted once per bundle, not once per entry.
+        They are included again when later bundles refer to them; no API lookup
+        or reliance on earlier bundles being processed is necessary.
         """
         if objtype == "attack_pattern":
-            api = self.helper.api.attack_pattern
             cache_entry = f'p{values["name"]}'
-            filters = [{"key": "name", "values": [values["name"]]}]
             creator_class = stix2.AttackPattern
+            obj_id = pycti.AttackPattern.generate_id(values["name"], values["name"])
 
-        elif objtype == "location":
-            api = self.helper.api.location
+        elif objtype == "country":
             cache_entry = f'l{values["name"]}'
-            filters = [{"key": "name", "values": [values["name"]]}]
             creator_class = stix2.Location
+            obj_id = pycti.Location.generate_id(values["name"], "Country")
 
         elif objtype == "identity":
-            api = self.helper.api.identity
             cache_entry = f'i{values["identity_class"]}-{values["name"]}'
-            filters = [
-                {"key": "name", "values": [values["name"]]},
-                {"key": "identity_class", "values": [values["identity_class"]]},
-            ]
             creator_class = stix2.Identity
+            obj_id = pycti.Identity.generate_id(
+                name=values["name"], identity_class=values["identity_class"]
+            )
 
         elif objtype == "threat_actor":
-            api = self.helper.api.threat_actor
             cache_entry = f't{values["name"]}'
-            filters = [{"key": "name", "values": [values["name"]]}]
             creator_class = stix2.ThreatActor
+            obj_id = pycti.ThreatActor.generate_id(
+                name=values["name"], opencti_type="Threat-Actor-Group"
+            )  # feeds only store groups
 
         elif objtype == "vulnerability":
-            api = self.helper.api.vulnerability
             cache_entry = f'v{values["name"]}'
-            filters = [{"key": "name", "values": [values["name"]]}]
             creator_class = stix2.Vulnerability
+            obj_id = pycti.Vulnerability.generate_id(name=values["name"])
 
         elif objtype == "malware_family":
-            api = self.helper.api.malware
             cache_entry = f'f{values["name"]}'
-            filters = [
-                {"key": "name", "values": [values["name"]]},
-                {"key": "is_family", "values": [True]},
-            ]
             creator_class = stix2.Malware
+            obj_id = pycti.Malware.generate_id(name=values["name"])
 
         else:
             raise Exception(f"Unknown lookup type {objtype}")
 
-        # If we created or found it before just return the ID (to be linked as ref)
-        if cache_entry in self.cached_object_ids:
-            return self.cached_object_ids[cache_entry]
+        # Create the object if it is not cached
+        if cache_entry not in self.cached_object_ids:
+            values["id"] = obj_id
+            values["allow_custom"] = True
+            obj = creator_class(**values)
+            self.cached_object_ids[cache_entry] = obj.id
+            self.cached_objects[obj.id] = obj
+            obj_id = self.cached_object_ids[cache_entry]
 
-        # The object may have been created by others who do not necessarily follow standard ID struct,
-        # thus we look it up by what is relevant so we can just use its ID for references
-        found = api.read(
-            filters={
-                "mode": "and",
-                "filters": filters,
-                "filterGroups": [],
-            }
-        )
+        if obj_id not in self.bundles_created_objects:
+            self.bundles_created_objects[obj_id] = self.cached_objects[obj_id]
 
-        if found is not None:
-            self.cached_object_ids[cache_entry] = found["standard_id"]
-            return found["standard_id"]
-
-        # Create a Stix object
-        values["id"] = api.generate_id_from_data(values)
-        self.cached_object_ids[cache_entry] = values["id"]
-
-        # We add it into created objects so we would then prepend this to each bundle
-        # (this adds some overhead but allows to process bundles independently, which is what OpenCTI does)
-        self.bundles_created_objects.append(creator_class(**values))
-        return values["id"]
+        return obj_id
 
 
 # Private class
@@ -194,7 +209,7 @@ class StixMakerPrivate:
 
         timestamp = self._getValue("timestamp")
         labels = []
-        customprops = {"x_opencti_detection": True}
+        customprops = {"x_opencti_detection": self.maker.config.detection}
 
         self.timestamp = self._unix_to_rfc3339(timestamp)
         self.first_seen = self._unix_to_rfc3339(self._getValue("first_seen"))
@@ -214,11 +229,8 @@ class StixMakerPrivate:
             else:
                 labels.append("severity:low")
 
-        # Create as custom labels
-        for l in CONFIG_OPENCTI_LABELS:
-            val = self._getValue(l)
-            if val is not None:
-                customprops[f"x_opencti_{l}"] = val
+        # OpenCTI has no corresponding popularity field; retain it as text.
+        popularity = self._getValue("popularity")
 
         self.indicator_params = {
             "pattern_type": "stix",
@@ -230,11 +242,12 @@ class StixMakerPrivate:
             "indicator_types": ["malicious-activity"],
             "custom_properties": customprops,
             "created_by_ref": self.maker.creator_identity,
+            "object_marking_refs": [self.maker.tlp.id],
         }
 
-        if "revoked" in self.data:
-            self.indicator_params["revoked"] = True
-            self._getValue("revoked")
+        revoked = self._getValue("revoked")
+        if revoked is not None:
+            self.indicator_params["revoked"] = bool(revoked)
 
         if "tags" in self.data:
             self.tags = self._getValue("tags")
@@ -242,6 +255,16 @@ class StixMakerPrivate:
             self.indicator_params["labels"].extend(self.tags)
         else:
             self.tags = None
+
+        if popularity is not None:
+            self.indicator_params["description"] = ", ".join(
+                part
+                for part in [
+                    self.indicator_params.get("description"),
+                    f"popularity: {popularity}",
+                ]
+                if part
+            )
 
         if "TTL" in self.data:
             self.indicator_params["valid_until"] = self._unix_to_rfc3339(
@@ -252,10 +275,16 @@ class StixMakerPrivate:
         if "suspicious_entry" in self.data:
             self._getValue("suspicious_entry")
 
-    def _createRelationship( **args ):
+    def _createRelationship(self, **args):
+        args["created_by_ref"] = self.maker.creator_identity
+        args["object_marking_refs"] = [self.maker.tlp.id]
+
         return stix2.Relationship(
-            id=pycti.StixCoreRelationship.generate_id( args["relationship_type"], args["source_ref"], args["target_ref"] ),
-            **args )
+            id=pycti.StixCoreRelationship.generate_id(
+                args["relationship_type"], args["source_ref"], args["target_ref"]
+            ),
+            **args,
+        )
 
     def _parseRelatedIndicator(self, indicator, source_id):
 
@@ -275,7 +304,7 @@ class StixMakerPrivate:
             "file_connects_to_url": ("communicates-with", True),
             "ip_is_resolved_from_domain": ("resolves-to", False),
             "ip_is_contained_by_url": ("related-to", False),
-            "url_resolves_to_ip": ("resolves-to", True),
+            "url_resolves_to_ip": ("related-to", True),
             "domain_resolves_to_ip": ("resolves-to", True),
             "url_host_resolves_to_ip": ("related-to", True),
             "domain_relates_to_domain": ("related-to", True),
@@ -305,20 +334,17 @@ class StixMakerPrivate:
 
             if "sha256" in indicator:
                 filedata["hashes"]["SHA-256"] = indicator["sha256"]
-                filedata["name"] = indicator["sha256"]
 
             if "sha1" in indicator:
                 filedata["hashes"]["SHA-1"] = indicator["sha1"]
-                filedata["name"] = indicator["sha1"]
 
             if "md5" in indicator:
                 filedata["hashes"]["MD5"] = indicator["md5"]
-                filedata["name"] = indicator["md5"]
 
             if "name" in indicator:
                 filedata["name"] = indicator["name"]
 
-            stix_obj = stix2.File(**filedata)
+            stix_obj = stix2.File(**filedata, object_marking_refs=[self.maker.tlp.id])
 
         elif indicator_type == "domain":
             if "domain" not in indicator:
@@ -327,7 +353,9 @@ class StixMakerPrivate:
                 )
                 return []
 
-            stix_obj = stix2.DomainName(value=indicator["domain"])
+            stix_obj = stix2.DomainName(
+                value=indicator["domain"], object_marking_refs=[self.maker.tlp.id]
+            )
 
         elif indicator_type == "ipv4":
             if "ipv4" not in indicator:
@@ -336,7 +364,9 @@ class StixMakerPrivate:
                 )
                 return []
 
-            stix_obj = stix2.IPv4Address(value=indicator["ipv4"])
+            stix_obj = stix2.IPv4Address(
+                value=indicator["ipv4"], object_marking_refs=[self.maker.tlp.id]
+            )
 
         elif indicator_type == "ipv6":
 
@@ -352,10 +382,14 @@ class StixMakerPrivate:
             ):  # Bitdefender feed has IPv6 as [2534:11:22:33]
                 addr = addr[1 : len(addr) - 1]
 
-            stix_obj = stix2.IPv6Address(value=addr)
+            stix_obj = stix2.IPv6Address(
+                value=addr, object_marking_refs=[self.maker.tlp.id]
+            )
 
         elif indicator_type == "url":
-            stix_obj = stix2.URL(value=indicator["url"])
+            stix_obj = stix2.URL(
+                value=indicator["url"], object_marking_refs=[self.maker.tlp.id]
+            )
 
         else:
             self.maker.helper.connector_logger.warning(
@@ -371,7 +405,6 @@ class StixMakerPrivate:
                 source_ref=source_id,
                 target_ref=stix_obj.id,
                 description=indicator["relationship"],
-                created_by_ref=self.maker.creator_identity,
             )
         else:
             stix_rel = self._createRelationship(
@@ -379,19 +412,29 @@ class StixMakerPrivate:
                 source_ref=stix_obj.id,
                 target_ref=source_id,
                 description=indicator["relationship"],
-                created_by_ref=self.maker.creator_identity,
             )
 
         return [stix_obj, stix_rel]
 
     def _validateRemaining(self) -> None:
         if self.data:
-            self.maker.helper.connector_logger.warning( f"Entry left data unconsumed: {self.data}" )
+            self.maker.helper.connector_logger.warning(
+                f"Entry left data unconsumed: {self.data}"
+            )
 
     # Parse additional data which is present in all feeds
     def _parseAdditional(self, source_id, source_type):
 
         additional_bundle = []
+
+        # The feed may contain either top-level affected_* lists or a nested
+        # victims structure. Normalize only the two fields this parser uses.
+        victims = self._getValue("victims")
+        if isinstance(victims, dict):
+            if "affected_countries" not in self.data and "countries" in victims:
+                self.data["affected_countries"] = victims["countries"]
+            if "affected_industries" not in self.data and "industries" in victims:
+                self.data["affected_industries"] = victims["industries"]
 
         # Collect country and industry refs to also link to threat actor if present
         country_refs = []
@@ -408,15 +451,25 @@ class StixMakerPrivate:
                 if iso2.upper() == "OTHERS":
                     continue
 
-                country = iso3166.countries.get(iso2.upper())
+                try:
+                    country = iso3166.countries.get(iso2.upper())
+                except (KeyError, ValueError):
+                    country = None
+                if country is None:
+                    self.maker.helper.connector_logger.warning(
+                        f"Unknown country code {iso2!r}; skipping country relationship"
+                    )
+                    continue
 
                 ref_id = self.maker.findOrCreateCacheableObject(
-                    "location",
+                    "country",
                     {
                         "name": country.name,
                         "country": iso2,
-                        "created_by_ref": self.maker.creator_identity,
-                        "custom_properties": {"x_opencti_location_type": "Country"},
+                        "custom_properties": {
+                            "x_opencti_location_type": "Country",
+                            "x_opencti_aliases": [country.alpha2, country.alpha3],
+                        },
                     },
                 )
 
@@ -428,10 +481,10 @@ class StixMakerPrivate:
                         ),
                         source_ref=source_id,
                         target_ref=ref_id,
-                        created_by_ref=self.maker.creator_identity,
-                        custom_properties={"x_opencti_impact_percentage": percent},
-                        allow_custom=True
-                    ) )
+                        description=f"Impact percentage: {percent}",
+                        allow_custom=True,
+                    )
+                )
 
         #
         # Affected industries
@@ -447,7 +500,6 @@ class StixMakerPrivate:
                     {
                         "name": sector_name.strip(),
                         "identity_class": "class",
-                        "created_by_ref": self.maker.creator_identity,
                         "custom_properties": {"x_opencti_type": "Sector"},
                     },
                 )
@@ -460,9 +512,8 @@ class StixMakerPrivate:
                         ),
                         source_ref=source_id,
                         target_ref=ref_id,
-                        created_by_ref=self.maker.creator_identity,
-                        custom_properties={"x_opencti_impact_percentage": percent},
-                        allow_custom=True
+                        description=f"Impact percentage: {percent}",
+                        allow_custom=True,
                     )
                 )
 
@@ -483,7 +534,6 @@ class StixMakerPrivate:
                     ),
                     source_ref=ref_id,
                     target_ref=source_id,
-                    created_by_ref=self.maker.creator_identity,
                 )
             )
 
@@ -494,9 +544,8 @@ class StixMakerPrivate:
                         relationship_type="targets",
                         source_ref=ref_id,
                         target_ref=country_id,
-                        created_by_ref=self.maker.creator_identity,
-                        custom_properties={"x_opencti_impact_percentage": percent},
-                        allow_custom=True
+                        description=f"Impact percentage: {percent}",
+                        allow_custom=True,
                     )
                 )
 
@@ -507,9 +556,8 @@ class StixMakerPrivate:
                         relationship_type="targets",
                         source_ref=ref_id,
                         target_ref=industry_id,
-                        created_by_ref=self.maker.creator_identity,
-                        custom_properties={"x_opencti_impact_percentage": percent},
-                        allow_custom=True
+                        description=f"Impact percentage: {percent}",
+                        allow_custom=True,
                     )
                 )
 
@@ -521,20 +569,20 @@ class StixMakerPrivate:
 
                 vulndata = {
                     "name": v["cve_id"],
-                    "created_by_ref": self.maker.creator_identity,
                     "custom_properties": {},
                 }
 
                 if "cvss_score" in v:
-                    if "v2" in v["cvss_score"]:
+                    scores = v["cvss_score"]
+                    if "v3" in scores or "v2" in scores:
                         vulndata["custom_properties"]["x_opencti_cvss_base_score"] = (
-                            vulndata["custom_properties"]["x_opencti_cvss_v2"]
-                        ) = v["cvss_score"]["v2"]
-
-                    if "v3" in v["cvss_score"]:
-                        vulndata["custom_properties"]["x_opencti_cvss_base_score"] = (
-                            vulndata["custom_properties"]["x_opencti_cvss_v3"]
-                        ) = v["cvss_score"]["v3"]
+                            scores.get("v3", scores.get("v2"))
+                        )
+                        vulndata["description"] = ", ".join(
+                            f"CVSS {version}: {scores[version]}"
+                            for version in ("v2", "v3")
+                            if version in scores
+                        )
 
                 ref_id = self.maker.findOrCreateCacheableObject(
                     "vulnerability", vulndata
@@ -546,7 +594,6 @@ class StixMakerPrivate:
                         ),
                         source_ref=source_id,
                         target_ref=ref_id,
-                        created_by_ref=self.maker.creator_identity,
                     )
                 )
 
@@ -558,7 +605,7 @@ class StixMakerPrivate:
 
                 attackpatterndata = {
                     "name": tid,
-                    "created_by_ref": self.maker.creator_identity,
+                    "x_mitre_id": tid,
                     "external_references": [
                         {
                             "source_name": "mitre-attack",
@@ -578,7 +625,6 @@ class StixMakerPrivate:
                         ),
                         source_ref=source_id,
                         target_ref=ref_id,
-                        created_by_ref=self.maker.creator_identity,
                     )
                 )
 
@@ -617,7 +663,7 @@ class StixMakerPrivate:
         # May or may not be there
         file_names = self._getValue("file_names")
 
-        if file_names is not None:
+        if file_names:
             filedata["name"] = file_names[0]
 
         file_size = self._getValue("file_size")
@@ -631,9 +677,10 @@ class StixMakerPrivate:
         if "file_format" in self.data:
             filedata["custom_properties"] = {"format": self._getValue("file_format")}
 
-        # FIXME: currently ignored
+        # Currently ignored as relationship to those is unclear
         self._getValue("similar_files")
 
+        filedata["object_marking_refs"] = [self.maker.tlp.id]
         stix_file = stix2.File(**filedata)
         stix_bundle.append(stix_file)
 
@@ -650,7 +697,9 @@ class StixMakerPrivate:
         indicatordata = self.indicator_params
         indicatordata["name"] = firsthash
         indicatordata["pattern"] = "[" + " OR ".join(indicator_pattern_array) + "]"
-        indicatordata["custom_properties"]["x_opencti_main_observable_type"] = "File"
+        indicatordata["custom_properties"][
+            "x_opencti_main_observable_type"
+        ] = "StixFile"
 
         if "threat_type" in self.data:
             ttype = self._getValue("threat_type")
@@ -658,6 +707,14 @@ class StixMakerPrivate:
                 indicatordata["labels"].append(ttype)
         else:
             ttype = None
+
+        if not self.maker.config.create_malware_objects and threat_label:
+            indicatordata["description"] = ", ".join(
+                part
+                for part in [indicatordata.get("description"), threat_label]
+                if part
+            )
+            indicatordata["labels"].append(threat_label)
 
         indicatordata["id"] = self.maker.helper.api.indicator.generate_id_from_data(
             indicatordata
@@ -671,14 +728,17 @@ class StixMakerPrivate:
                 relationship_type="based-on",
                 source_ref=stix_indicator.id,
                 target_ref=stix_file.id,
-                created_by_ref=self.maker.creator_identity,
             )
         )
 
         #
         # Malware object data - malware itself
         #
-        if not is_revoked and threat_label:
+        if (
+            not is_revoked
+            and threat_label
+            and self.maker.config.create_malware_objects == True
+        ):
             malwaredata = {
                 "name": threat_label,
                 "is_family": False,
@@ -686,6 +746,7 @@ class StixMakerPrivate:
                 "created": self.timestamp,
                 "confidence": self.confidence,
                 "created_by_ref": self.maker.creator_identity,
+                "object_marking_refs": [self.maker.tlp.id],
             }
 
             if ttype is not None:
@@ -706,14 +767,13 @@ class StixMakerPrivate:
                     relationship_type="indicates",
                     source_ref=stix_indicator.id,
                     target_ref=stix_malware.id,
-                    created_by_ref=self.maker.creator_identity,
                 )
             )
         else:
             stix_malware = None
 
-        # If we have malware family, link it to the malware
-        if stix_malware is not None and "threat_family" in self.data:
+        # Create the family independently of detection-level Malware objects.
+        if not is_revoked and self.data.get("threat_family"):
             family = self._getValue("threat_family")
             family = (
                 family[:1].upper() + family[1:]
@@ -726,19 +786,28 @@ class StixMakerPrivate:
                 "created": self.timestamp,
                 "confidence": self.confidence,
                 "created_by_ref": self.maker.creator_identity,
+                "object_marking_refs": [self.maker.tlp.id],
             }
 
             ref_id = self.maker.findOrCreateCacheableObject(
                 "malware_family", malware_family_data
             )
-            stix_bundle.append(
-                self._createRelationship(
-                    relationship_type="variant-of",
-                    source_ref=stix_malware.id,
-                    target_ref=ref_id,
-                    created_by_ref=self.maker.creator_identity,
+            if stix_malware is not None:
+                stix_bundle.append(
+                    self._createRelationship(
+                        relationship_type="variant-of",
+                        source_ref=stix_malware.id,
+                        target_ref=ref_id,
+                    )
                 )
-            )
+            else:
+                stix_bundle.append(
+                    self._createRelationship(
+                        relationship_type="indicates",
+                        source_ref=stix_indicator.id,
+                        target_ref=ref_id,
+                    )
+                )
 
         # Parse additional objects
         if stix_malware is not None:
@@ -749,10 +818,9 @@ class StixMakerPrivate:
         #
         # Related indicators
         #
-        if "related_indicators" in self.data and stix_malware is not None:
-
+        if "related_indicators" in self.data:
             for i in self._getValue("related_indicators"):
-                stix_bundle.extend(self._parseRelatedIndicator(i, stix_malware.id))
+                stix_bundle.extend(self._parseRelatedIndicator(i, stix_file.id))
 
         self._validateRemaining()
         return stix_bundle
@@ -790,7 +858,16 @@ class StixMakerPrivate:
         # Create an indicator
         indicatordata = self.indicator_params
         indicatordata["name"] = ipaddress
-        indicatordata["description"] = (",").join(self.indicator_params["labels"])
+        indicatordata["description"] = ", ".join(
+            part
+            for part in [
+                indicatordata.get("description"),
+                *self.indicator_params["labels"],
+            ]
+            if part
+        )
+        indicatordata["created_by_ref"] = self.maker.creator_identity
+        indicatordata["object_marking_refs"] = [self.maker.tlp.id]
 
         # ASN info
         if "asn" in self.data:
@@ -802,46 +879,58 @@ class StixMakerPrivate:
                     asn_data["name"] = self._getValue(v)
                     break
 
-            stix_asn = stix2.AutonomousSystem(**asn_data)
+            stix_asn = stix2.AutonomousSystem(
+                **asn_data, object_marking_refs=[self.maker.tlp.id]
+            )
             stix_bundle.append(stix_asn)
             ip_params["belongs_to_refs"] = [stix_asn.id]
 
         # Create IP CRO
-        if self._getValue("format") == "IPv4":
+        self._getValue("format")  # Use the address, not optional feed metadata.
+        if ip_address(ipaddress).version == 4:
             indicator_pattern = "ipv4-addr:value"
             indicatordata["custom_properties"][
                 "x_opencti_main_observable_type"
             ] = "IPv4-Addr"
-            stix_ip = stix2.IPv4Address(**ip_params)
+            stix_ip = stix2.IPv4Address(
+                **ip_params, object_marking_refs=[self.maker.tlp.id]
+            )
 
         else:
             indicator_pattern = "ipv6-addr:value"
             indicatordata["custom_properties"][
                 "x_opencti_main_observable_type"
             ] = "IPv6-Addr"
-            stix_ip = stix2.IPv6Address(**ip_params)
+            stix_ip = stix2.IPv6Address(
+                **ip_params, object_marking_refs=[self.maker.tlp.id]
+            )
 
         stix_bundle.append(stix_ip)
 
         indicatordata["pattern"] = f"[{indicator_pattern} = '{ipaddress}']"
 
-        # FIXME: indicator_types
-
-        # Add more data into custom properties
+        # Extract other fields into description
+        descriptions = []
         for p in indicator_custom_properties:
             if p in self.data:
-                indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
+                descriptions.append(f"{p}: {self._getValue(p)}")
 
-        indicatordata["id"] = pycti.Indicator.generate_id( indicatordata["pattern"] )
+        if descriptions:
+            indicatordata["description"] = ", ".join(
+                part
+                for part in [indicatordata.get("description"), *descriptions]
+                if part
+            )
+
+        indicatordata["id"] = pycti.Indicator.generate_id(indicatordata["pattern"])
         stix_indicator = stix2.Indicator(**indicatordata, allow_custom=True)
         stix_bundle.append(stix_indicator)
 
         stix_bundle.append(
             self._createRelationship(
-                relationship_type="related-to",
+                relationship_type="based-on",
                 source_ref=stix_indicator.id,
                 target_ref=stix_ip.id,
-                created_by_ref=self.maker.creator_identity,
                 start_time=indicatordata["valid_from"],
             )
         )
@@ -867,16 +956,22 @@ class StixMakerPrivate:
         domainurl = self._getValue("url")
 
         if self._getValue("type") == "domain":
-            stix_obj = stix2.DomainName(value=domainurl)
+            stix_obj = stix2.DomainName(
+                value=domainurl, object_marking_refs=[self.maker.tlp.id]
+            )
             indicator_pattern = f"[domain-name:value = '{domainurl}']"
 
         else:  # url
-            stix_obj = stix2.URL(value=domainurl)
+            stix_obj = stix2.URL(
+                value=domainurl, object_marking_refs=[self.maker.tlp.id]
+            )
             indicator_pattern = f"[url:value = '{domainurl}']"
 
         indicatordata = self.indicator_params
         indicatordata["name"] = domainurl
         indicatordata["pattern"] = indicator_pattern
+        indicatordata["created_by_ref"] = self.maker.creator_identity
+        indicatordata["object_marking_refs"] = [self.maker.tlp.id]
 
         if "threat_types" in self.data:
             for t in self._getValue("threat_types"):
@@ -885,13 +980,21 @@ class StixMakerPrivate:
 
         indicator_custom_properties = ["flags"]
 
-        # Add more data into custom properties
-        for p in indicator_custom_properties:
-            if p in self.data:
-                indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
+        # Unsupported OpenCTI properties would be discarded on import.
+        extra_descriptions = [
+            f"{p}: {self._getValue(p)}"
+            for p in indicator_custom_properties
+            if p in self.data
+        ]
+        if extra_descriptions:
+            indicatordata["description"] = ", ".join(
+                part
+                for part in [indicatordata.get("description"), *extra_descriptions]
+                if part
+            )
 
         indicatordata["allow_custom"] = True
-        indicatordata["id"] = pycti.Indicator.generate_id( indicatordata["pattern"] )
+        indicatordata["id"] = pycti.Indicator.generate_id(indicatordata["pattern"])
         stix_indicator = stix2.Indicator(**indicatordata)
 
         stix_bundle.append(stix_obj)
@@ -901,7 +1004,6 @@ class StixMakerPrivate:
                 relationship_type="based-on",
                 source_ref=stix_indicator.id,
                 target_ref=stix_obj.id,
-                created_by_ref=self.maker.creator_identity,
                 start_time=indicatordata["valid_from"],
             )
         )
