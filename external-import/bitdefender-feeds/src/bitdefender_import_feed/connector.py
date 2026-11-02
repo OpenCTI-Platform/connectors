@@ -23,7 +23,7 @@ class BitdefenderFeedConnector:
 
         for feedtype in self.config.bitdefender.feeds:
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name} downloading feed {feedtype}"
             )
 
@@ -78,7 +78,7 @@ class BitdefenderFeedConnector:
                         if chunk:
                             f.write(chunk)
 
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"{self.helper.connect_name} Feed {feedtype} downloaded successfully"
                 )
 
@@ -90,7 +90,7 @@ class BitdefenderFeedConnector:
                 self._save_state()
 
             except Exception as e:
-                self.helper.log_error(str(e))
+                self.helper.connector_logger.error(str(e))
                 raise Exception(e) from e
 
     def import_downloaded_feeds(self):
@@ -99,7 +99,7 @@ class BitdefenderFeedConnector:
 
             entry = self.state["queue"][0]
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"{self.helper.connect_name} importing {entry['feed']} feed"
             )
 
@@ -121,14 +121,20 @@ class BitdefenderFeedConnector:
                         if processed_lines < already_processed_lines:
                             continue
 
-                        if line:
+                        if not line:
+                            continue
+
+                        try:
                             processor.fromEntry(line)
+                        except Exception as e:
+                            self.helper.connector_logger.error(str(e))
+                            continue
 
                         if processed_lines % 500 == 0:
                             entry["line"] = processed_lines - 100  # 100 are in queue
                             self._save_state()
                             dura = time.time() - processed_started
-                            self.helper.log_debug(
+                            self.helper.connector_logger.debug(
                                 f"Lines: {processed_lines}, lps: {(processed_lines-already_processed_lines)/dura:.1f}"
                             )
 
@@ -136,7 +142,7 @@ class BitdefenderFeedConnector:
                 os.remove(entry["file"])
 
             except FileNotFoundError:
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     "Feed file not found (container recreated?) aborting import"
                 )
 
@@ -150,11 +156,11 @@ class BitdefenderFeedConnector:
         if len(self.state["queue"]) > 0:
             self.state["status"] = "importing"
             self._save_state()
-            self.helper.log_debug("Resuming feed import")
+            self.helper.connector_logger.debug("Resuming feed import")
             self.import_downloaded_feeds()
 
         # Download the new feed(s) and save them as local files
-        self.helper.log_debug("Downloading feeds")
+        self.helper.connector_logger.debug("Downloading feeds")
         self.state["status"] = "downloading"
         self._save_state()
 
@@ -173,7 +179,7 @@ class BitdefenderFeedConnector:
         if len(self.state["queue"]) > 0:
             self.state["status"] = "importing"
             self._save_state()
-            self.helper.log_debug("Importing downloaded feeds")
+            self.helper.connector_logger.debug("Importing downloaded feeds")
             self.import_downloaded_feeds()
 
         self.state["status"] = "waiting"
@@ -185,7 +191,7 @@ class BitdefenderFeedConnector:
 
         except Exception as e:
             traceback.print_exc()
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
 
         self.state["last_run"] = int(time.time())
         self._save_state()

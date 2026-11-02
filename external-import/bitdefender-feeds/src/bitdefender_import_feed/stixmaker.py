@@ -71,7 +71,7 @@ class StixMaker:
         if len(self.bundles_output) == 0:
             return
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"{self.helper.connect_name} sending stix bundle of {len(self.bundles_output)} entries"
         )
 
@@ -287,7 +287,7 @@ class StixMakerPrivate:
 
         # Skip unknown indicators as new may be added
         if indicator["relationship"] not in RELATIONSHIP_MAP:
-            self.maker.helper.log_warning(
+            self.maker.helper.connector_logger.warning(
                 f'Unknown relationship type {indicator["relationship"]}'
             )
             return []
@@ -322,7 +322,7 @@ class StixMakerPrivate:
 
         elif indicator_type == "domain":
             if "domain" not in indicator:
-                self.maker.helper.log_warning(
+                self.maker.helper.connector_logger.warning(
                     f"Domain related indicator missing domain value: {indicator}"
                 )
                 return []
@@ -331,7 +331,7 @@ class StixMakerPrivate:
 
         elif indicator_type == "ipv4":
             if "ipv4" not in indicator:
-                self.maker.helper.log_warning(
+                self.maker.helper.connector_logger.warning(
                     f"IPv4 related indicator missing ipv4 value: {indicator}"
                 )
                 return []
@@ -341,7 +341,7 @@ class StixMakerPrivate:
         elif indicator_type == "ipv6":
 
             if "ipv6" not in indicator:
-                self.maker.helper.log_warning(
+                self.maker.helper.connector_logger.warning(
                     f"IPv6 related indicator missing ipv4 value: {indicator}"
                 )
                 return []
@@ -358,7 +358,7 @@ class StixMakerPrivate:
             stix_obj = stix2.URL(value=indicator["url"])
 
         else:
-            self.maker.helper.log_warning(
+            self.maker.helper.connector_logger.warning(
                 f"Unknown indicator type {indicator_type}: {indicator}"
             )
             return []
@@ -386,7 +386,7 @@ class StixMakerPrivate:
 
     def _validateRemaining(self) -> None:
         if self.data:
-            self.maker.helper.log_warning( f"Entry left data unconsumed: {self.data}" )
+            self.maker.helper.connector_logger.warning( f"Entry left data unconsumed: {self.data}" )
 
     # Parse additional data which is present in all feeds
     def _parseAdditional(self, source_id, source_type):
