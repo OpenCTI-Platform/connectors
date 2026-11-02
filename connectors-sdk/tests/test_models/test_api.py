@@ -14,6 +14,7 @@ def test_public_models_are_present():
         "AttackPattern",
         "AutonomousSystem",
         "BaseAuthorEntity",
+        "BaseCustomObservableEntity",
         "BaseObject",
         "BaseIdentifiedEntity",
         "BaseIdentifiedObject",
