@@ -16,12 +16,6 @@
       "type": "string",
       "writeOnly": true
     },
-    "CONNECTOR_ID": {
-      "default": "9aae46c5-9e5a-4379-9f1b-49202674de3f",
-      "description": "UUID v4 identifying this connector in OpenCTI. Use a distinct value for each connector instance.",
-      "format": "uuid",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "Bitdefender",
       "description": "The name of the connector.",
@@ -60,7 +54,6 @@
     "BITDEFENDER_FEEDS": {
       "description": "Bitdefender reputation feeds to import. When supplied as an environment variable, use a comma-separated list such as file,web,ip.",
       "items": {
-        "enum": ["file", "ip", "web"],
         "type": "string"
       },
       "minItems": 1,
