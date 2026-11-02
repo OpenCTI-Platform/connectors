@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/bitdefender_feeds_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_ID": {
+      "default": "9aae46c5-9e5a-4379-9f1b-49202674de3f",
+      "description": "UUID v4 identifying this connector in OpenCTI. Use a distinct value for each connector instance.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Bitdefender",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": ["Bitdefender"],
+      "description": "The scope of the connector.",
+      "items": {"type": "string"},
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": ["debug", "info", "warn", "warning", "error"],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period between connector runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "BITDEFENDER_API_KEY": {
+      "description": "Bitdefender Threat Intelligence API key.",
+      "format": "password",
+      "minLength": 1,
+      "type": "string",
+      "writeOnly": true
+    },
+    "BITDEFENDER_FEEDS": {
+      "description": "Bitdefender reputation feeds to import. When supplied as an environment variable, use a comma-separated list such as file,web,ip.",
+      "items": {
+        "enum": ["file", "ip", "web"],
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "BITDEFENDER_HTTP_TIMEOUT_SECONDS": {
+      "default": 600,
+      "description": "HTTP timeout in seconds for downloading feeds.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "BITDEFENDER_VERIFY_TLS": {
+      "default": true,
+      "description": "Verify the server TLS certificate when downloading feeds.",
+      "type": "boolean"
+    },
+    "BITDEFENDER_MIN_CONFIDENCE": {
+      "default": 75,
+      "description": "Minimum confidence level of imported feed entries (1–99). Entries must also meet the minimum severity.",
+      "minimum": 1,
+      "maximum": 99,
+      "type": "integer"
+    },
+    "BITDEFENDER_MIN_SEVERITY": {
+      "default": 1,
+      "description": "Minimum severity level of imported feed entries (1–99). Entries must also meet the minimum confidence.",
+      "minimum": 1,
+      "maximum": 99,
+      "type": "integer"
+    },
+    "BITDEFENDER_EXCLUDE_RELATED_INDICATORS": {
+      "default": false,
+      "description": "Exclude related indicators from the imported feeds.",
+      "type": "boolean"
+    },
+    "BITDEFENDER_EXCLUDE_SIMILAR_FILES": {
+      "default": false,
+      "description": "Exclude similar-file indicators from the file reputation feed.",
+      "type": "boolean"
+    },
+    "BITDEFENDER_INCLUDE_SUSPICIOUS": {
+      "default": "false",
+      "description": "Whether to import suspicious file-feed entries: true (include), false (exclude), or only (import only suspicious entries).",
+      "enum": ["true", "false", "only"],
+      "type": "string"
+    },
+    "BITDEFENDER_INCLUDE_REVOKED": {
+      "default": "false",
+      "description": "Whether to import revoked entries: true (include), false (exclude), or only (import only revoked entries).",
+      "enum": ["true", "false", "only"],
+      "type": "string"
+    },
+    "BITDEFENDER_DETECTION": {
+      "default": false,
+      "description": "Set x_opencti_detection on imported indicators.",
+      "type": "boolean"
+    },
+    "BITDEFENDER_CREATE_MALWARE_OBJECTS": {
+      "default": true,
+      "description": "Create Malware entities for individual file detections (true), or only for malware families (false).",
+      "type": "boolean"
+    },
+    "BITDEFENDER_TLP_LEVEL": {
+      "default": "clear",
+      "description": "Default TLP marking applied to imported intelligence objects and relationships.",
+      "enum": ["clear", "white", "green", "amber", "amber+strict", "red"],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "BITDEFENDER_API_KEY",
+    "BITDEFENDER_FEEDS"
+  ],
+  "additionalProperties": true
+}
