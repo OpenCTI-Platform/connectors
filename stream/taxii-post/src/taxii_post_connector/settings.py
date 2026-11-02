@@ -1,12 +1,83 @@
-from typing import Literal
+from typing import Annotated, Literal
 
+import stix2.properties
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    HttpUrl,
+    SecretStr,
+    WithJsonSchema,
+    model_validator,
+)
+
+
+def parse_identity_id_mapping(value: str | dict[str, str]) -> dict[str, str]:
+    """
+    Converts a comma separated list of original_id:replacement_id into a dictionary
+    """
+    # if parsed from config.yml it is already a dictionary of pairs
+    if isinstance(value, dict):
+        pairs = list(value.items())
+
+    else:
+        pairs = []
+
+        for pair in value.split(","):
+
+            # skip if empty
+            if not pair.strip():
+                continue
+
+            # format is original_id:replacement_id and thus there should exist exactly one colon
+            if pair.count(":") != 1:
+                raise ValueError(
+                    f"Invalid identity ID mapping pair '{pair}', expected original_id:replacement_id"
+                )
+
+            original_id, replacement_id = pair.split(":")
+            pairs.append((original_id.strip(), replacement_id.strip()))
+
+    mapping = {}
+    for original_id, replacement_id in pairs:
+        # Ensures both are valid Identity IDs
+        try:
+            stix2.properties.IDProperty("identity", spec_version="2.1").clean(
+                original_id
+            )
+            stix2.properties.IDProperty("identity", spec_version="2.1").clean(
+                replacement_id
+            )
+        except ValueError as err:
+            raise ValueError(
+                f"Invalid identity ID mapping pair '{original_id}:{replacement_id}': {err}"
+            ) from err
+
+        if original_id in mapping:
+            raise ValueError(
+                f"Duplicate original identity ID '{original_id}' in identity ID mapping"
+            )
+
+        mapping[original_id] = replacement_id
+    return mapping
+
+
+# A type for the identity_id_mapping config variable, which is a string of the form original_id:replacement_id,original_id:replacement_id
+# which this will parse into a dictionary
+IdentityIdMapping = Annotated[
+    # the final value for identity_id_mapping becomes a dictionary: {original_id: replacement_id}
+    dict[str, str],
+    # converts the env string into said dictionary
+    BeforeValidator(parse_identity_id_mapping),
+    # enforces the generated schema to describe identity_id_mapping as a string instead of a dictionary
+    # because what is entered is indeed a string, it is just converted afterwards
+    WithJsonSchema({"type": "string"}),
+]
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -77,6 +148,13 @@ class TaxiiConfig(BaseConfigModel):
     delete_marking_definition: bool = Field(
         description="Strip object_marking_refs from objects before posting.",
         default=True,
+    )
+    identity_id_mapping: IdentityIdMapping = Field(
+        description=(
+            "The IDs of Identity objects to be replaced before posting, including the identity's own id and every reference to it. Written as comma separated original_id:replacement_id pairs (e.g. identity--<uuid>:identity--<uuid>). This change does not propagate back to the OpenCTI instance, it only alters the bundles being delivered to the TAXII server. created_by_ref is only remapped when TAXII_DELETE_CREATED_BY_REF is false, since it is removed by default."
+        ),
+        default_factory=dict,
+        json_schema_extra={"default": ""},
     )
 
     @model_validator(mode="after")

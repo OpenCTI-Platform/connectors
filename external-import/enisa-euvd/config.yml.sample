@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'ENISA EUVD' # optional (default: 'ENISA EUVD')
+  scope: 'vulnerability'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'P1D' # optional, interval in ISO-8601 format between two runs of the connector (default: 'P1D')
+
+enisa_euvd:
+  api_base_url: 'https://euvdservices.enisa.europa.eu/api' # optional (default value)
+  import_start_date: 'P90D' # optional, first run only: oldest last-update date to import, relative ('P90D') or absolute ('2026-01-01T00:00:00Z') (default: 'P90D')
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  # min_score: 7.0 # optional, only import vulnerabilities with a base score >= this value, 0 to 10 (default: no minimum)
+  exploited_only: false # optional, only import exploited vulnerabilities (default: false)
+  critical_only: false # optional, only import critical vulnerabilities, base score >= 9.0 (default: false)
+  ingest_software: false # optional, enable/disable the import of Software observables and "has" relationships (default: false)

@@ -75,6 +75,10 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="Delete the extensions in the stix bundle sent to the SIEM",
         default=True,
     )
+    use_score_as_confidence: bool = Field(
+        description="Send the OpenCTI score in the STIX confidence property instead of the OpenCTI confidence. Objects without a score are sent without confidence. Microsoft Sentinel has no score field and does not index STIX extensions.",
+        default=False,
+    )
     extra_labels: ListFromString = Field(
         description="Extra labels added to the bundle sent. String separated by comma",
         default=[],
