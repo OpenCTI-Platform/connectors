@@ -44,7 +44,7 @@ Key features:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261026.0
+- OpenCTI Platform >= 7.261030.1
 - Kaspersky TIP API key
 - Network access to Kaspersky TIP API
 
