@@ -16,7 +16,6 @@ pytest.importorskip("iso3166")
 
 from src.bitdefender_import_feed.stixmaker import StixMaker, StixMakerPrivate
 
-
 BASE = {
     "timestamp": 1700000000,
     "first_seen": 1699999900,

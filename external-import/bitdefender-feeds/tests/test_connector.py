@@ -11,7 +11,6 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import SecretStr
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

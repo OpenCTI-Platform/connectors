@@ -11,13 +11,11 @@ import json
 import sys
 import types
 import uuid
-from collections import Counter
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 
 SOURCE = (
     Path(__file__).resolve().parents[1] / "src/bitdefender_import_feed/stixmaker.py"

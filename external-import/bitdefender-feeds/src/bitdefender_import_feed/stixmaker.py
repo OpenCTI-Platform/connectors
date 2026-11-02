@@ -3,9 +3,8 @@ import time
 from ipaddress import ip_address
 
 import iso3166
-import stix2
-
 import pycti
+import stix2
 
 
 class StixMaker:
