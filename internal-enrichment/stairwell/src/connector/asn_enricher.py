@@ -4,13 +4,13 @@ from typing import Any
 
 from connector.stairwell import StairwellClient
 from connector.stix_builder import (
-    bundle,
+    bundle_objects,
+    enriched_observable,
     make_external_reference,
     make_note,
     md_fence,
     md_text,
     stairwell_identity,
-    tlp_marking,
 )
 
 
@@ -113,22 +113,14 @@ class AsnEnricher:
             f"Stairwell ASN WHOIS for AS{asn_int}",
         )
 
-        asn_sco: dict[str, Any] = {
-            "type": "autonomous-system",
-            "spec_version": "2.1",
-            "id": entity_id,
-            "number": asn_int,
-            "object_marking_refs": [tlp_marking(self.tlp)],
-            "external_references": [ext_ref],
-        }
-        if org:
-            asn_sco["name"] = org
-        if country:
-            asn_sco["x_stairwell_country"] = country
-        if registration_date:
-            asn_sco["x_stairwell_registration_date"] = registration_date
-        if last_modified:
-            asn_sco["x_stairwell_last_modified"] = last_modified
+        asn_sco = enriched_observable(
+            "autonomous-system",
+            entity_id,
+            self.tlp,
+            number=asn_int,
+            name=org,
+            external_references=[ext_ref],
+        )
 
         note_lines: list[str] = []
         if org:
@@ -154,7 +146,10 @@ class AsnEnricher:
                 )
             )
 
-        self.helper.send_stix2_bundle(bundle(objects), cleanup_inconsistent_bundle=True)
+        self.helper.send_stix2_bundle(
+            self.helper.stix2_create_bundle(bundle_objects(objects)),
+            cleanup_inconsistent_bundle=True,
+        )
         return (
             f"Enriched AS{asn_int} ({org or 'unknown org'}, {country or 'no country'})"
         )

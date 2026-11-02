@@ -102,7 +102,11 @@ configuration error.
   objects the step received, with the enrichment added when there is one.
   The enriched observable is merged into the incoming one: properties the
   enrichment does not set are kept, hashes are merged, labels, external
-  references, and markings are combined, and the higher score is kept. An out-of-scope entity, a refused
+  references, and markings are combined, and the higher score is kept.
+  Observables carry labels and references as `x_opencti_labels` and
+  `x_opencti_external_references` (the SDK's form and OpenCTI's export), and
+  incoming root `labels`/`external_references` are folded into them, since
+  pycti ignores the `x_opencti_*` list when the root one is present. An out-of-scope entity, a refused
   TLP, no Stairwell data, or an error hands the incoming bundle on unchanged
   so the playbook continues.
 - **Sightings are off by default.** With `STAIRWELL_SIGHTINGS_LIMIT` above
@@ -123,15 +127,19 @@ configuration error.
   Stairwell analyst tags become labels prefixed `stairwell:tag:`. Other values
   (magic, imphash, TLSH, entropy, first seen, prevalence, variant count,
   environments, and the network and WHOIS details of domains, IPs, and ASNs)
-  are also sent as `x_stairwell_*` properties, but OpenCTI stores only its
-  standard observable fields, so they are shown in each observable's Notes
-  (the Enrichment Summary, DNS History, IP Intelligence, and ASN WHOIS).
+  have no standard observable field, and OpenCTI drops custom observable
+  properties, so they are shown in each observable's Notes (the Enrichment
+  Summary, DNS History, IP Intelligence, and ASN WHOIS).
   Bundles are sent with `update=True`, so an enrichment refreshes an existing
   observable's score and description. **Detonation data is intentionally
   excluded.**
-- **IDs are OpenCTI's canonical ones.** SDOs and relationships use pycti's
-  `generate_id()`, and observables use spec-standard IDs, so entities from
-  other connectors merge with ours. Notes are keyed by their content, which
+- **Objects are built with the `connectors_sdk.models`**, which validate
+  them and compute OpenCTI's canonical IDs, so entities from other
+  connectors merge with ours. The enriched observable keeps the ID OpenCTI
+  resolved it by, and a File's ID is the SDK's for its SHA-256 alone, so it
+  does not change when an MD5 or SHA-1 appears. Sightings stay hand-built
+  STIX (the SDK's stix2 validation accepts only an SDO as `sighting_of_ref`,
+  and these sight a File), with pycti's sighting ID. Notes are keyed by their content, which
   always names the observable. Signing certificates are listed in the
   enrichment summary Note (subject, issuer, validity, signature), not created
   as `x509-certificate` observables: Stairwell provides no fingerprint or

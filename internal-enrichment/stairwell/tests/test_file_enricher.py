@@ -7,6 +7,7 @@ from connector.file_enricher import FileEnricher
 from connector.settings import StairwellConfig
 from connector.stairwell import StairwellClient
 from connectors_sdk.exceptions.error import DataRetrievalError
+from pycti import OpenCTIConnectorHelper
 from stairwell_fakes import lookup
 
 SHA256 = "ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa"  # WannaCry
@@ -42,7 +43,7 @@ def _file_enricher(helper, client, **overrides):
 def _observable_with_sha256(sha256: str = SHA256, score=None):
     obs = {
         "id": "stix-cyber-observable--1234",
-        "standard_id": f"file--{sha256[:8]}-aaaa-bbbb-cccc-dddddddddddd",
+        "standard_id": f"file--{sha256[:8]}-aaaa-4bbb-8ccc-dddddddddddd",
         "entity_type": "StixFile",
         "hashes": [{"algorithm": "SHA-256", "hash": sha256}],
     }
@@ -54,6 +55,7 @@ def _observable_with_sha256(sha256: str = SHA256, score=None):
 def _helper():
     helper = MagicMock()
     helper.send_stix2_bundle = MagicMock()
+    helper.stix2_create_bundle = OpenCTIConnectorHelper.stix2_create_bundle
     return helper
 
 
@@ -109,12 +111,14 @@ def test_happy_path_produces_bundle_with_expected_shape():
 
     file_sco = next(o for o in payload["objects"] if o["type"] == "file")
     assert file_sco["x_opencti_score"] == 75  # PROBABILITY_HIGH
-    assert file_sco["x_stairwell_maleval_probability"] == "PROBABILITY_HIGH"
-    assert file_sco["x_stairwell_variant_count"] == 7
-    assert "stairwell:severity-high" in file_sco["labels"]
-    assert "stairwell:yara:Win_Trojan_WannaCry" in file_sco["labels"]
+    # OpenCTI drops custom observable properties, so none are sent; the
+    # summary Note carries those values.
+    assert not [k for k in file_sco if k.startswith("x_stairwell_")]
+    assert "stairwell:severity-high" in file_sco["x_opencti_labels"]
+    assert "stairwell:yara:Win_Trojan_WannaCry" in file_sco["x_opencti_labels"]
     assert any(
-        ref["source_name"] == "Stairwell" for ref in file_sco["external_references"]
+        ref["source_name"] == "Stairwell"
+        for ref in file_sco["x_opencti_external_references"]
     )
 
 
@@ -162,10 +166,11 @@ def test_404_path_marks_not_found_via_bundle_without_api_writes():
     helper.send_stix2_bundle.assert_called_once()
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     file_sco = next(o for o in payload["objects"] if o["type"] == "file")
-    assert "stairwell:not-found" in file_sco["labels"]
+    assert "stairwell:not-found" in file_sco["x_opencti_labels"]
     assert file_sco["hashes"]["SHA-256"] == SHA256
     assert any(
-        ref["source_name"] == "Stairwell" for ref in file_sco["external_references"]
+        ref["source_name"] == "Stairwell"
+        for ref in file_sco["x_opencti_external_references"]
     )
 
 
@@ -183,14 +188,14 @@ def test_md5_fallback_attaches_transparency_label():
 
     md5_observable = {
         "id": "stix-cyber-observable--md5only",
-        "standard_id": "file--md5only-aaaa-bbbb-cccc-dddddddddddd",
+        "standard_id": "file--91973c4a-5d1f-5e8e-9e84-6cf6d1019f4d",
         "entity_type": "StixFile",
         "hashes": [{"algorithm": "MD5", "hash": "44d88612fea8a8f36de82e1278abb02f"}],
     }
     enricher.enrich(md5_observable)
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     file_sco = next(o for o in payload["objects"] if o["type"] == "file")
-    assert "stairwell:hash-fallback-md5" in file_sco["labels"]
+    assert "stairwell:hash-fallback-md5" in file_sco["x_opencti_labels"]
     # Ensure the API was called with the MD5 hash, not SHA256
     client.get_object_metadata.assert_called_once_with(
         "44d88612fea8a8f36de82e1278abb02f"
@@ -245,7 +250,7 @@ def test_variants_capped_sorted_and_family_label():
 
     # All three hashes propagated to variant SCOs
     top_variant = variant_files[0]
-    assert [r["description"] for r in top_variant["external_references"]] == [
+    assert [r["description"] for r in top_variant["x_opencti_external_references"]] == [
         f"Stairwell file detail for {'b' * 64}"
     ]
     assert top_variant["hashes"]["SHA-256"] == "b" * 64
@@ -254,7 +259,7 @@ def test_variants_capped_sorted_and_family_label():
 
     # Family label landed on source file
     source = next(f for f in files if f.get("hashes", {}).get("SHA-256") == SHA256)
-    assert "stairwell:family-wannacry" in source["labels"]
+    assert "stairwell:family-wannacry" in source["x_opencti_labels"]
 
     # Stairwell Variants Note exists alongside the consolidated summary
     notes = [o for o in payload["objects"] if o["type"] == "note"]
@@ -500,15 +505,26 @@ def test_metadata_properties_landed_on_file_sco():
     assert file_sco["name"] == "evil.exe"
     assert file_sco["size"] == 12345
     assert file_sco["mime_type"] == "application/x-msdownload"
-    assert file_sco["x_stairwell_magic"] == "PE32 executable"
-    assert file_sco["x_stairwell_imphash"] == "abc123"
-    assert file_sco["x_stairwell_imphash_sorted"] == "sortedabc"
-    assert file_sco["x_stairwell_tlsh"] == "T1ABC"
-    assert file_sco["x_stairwell_shannon_entropy"] == 7.42
-    assert file_sco["x_stairwell_first_seen"] == "2025-04-29T19:00:00Z"
-    assert file_sco["x_stairwell_environments"] == ["ENV-A", "ENV-B"]
-    assert "stairwell:tag:campaign=WannaCry" in file_sco["labels"]
-    assert "stairwell:tag:yolo" in file_sco["labels"]
+    # Values with no File property are in the summary Note instead.
+    assert not [k for k in file_sco if k.startswith("x_stairwell_")]
+    note = next(
+        o["content"]
+        for o in payload["objects"]
+        if o.get("abstract") == "Stairwell Enrichment Summary"
+    )
+    for value in (
+        "PE32 executable",
+        "abc123",
+        "sortedabc",
+        "T1ABC",
+        "7.42",
+        "2025-04-29T19:00:00Z",
+        "ENV-A",
+        "ENV-B",
+    ):
+        assert value in note
+    assert "stairwell:tag:campaign=WannaCry" in file_sco["x_opencti_labels"]
+    assert "stairwell:tag:yolo" in file_sco["x_opencti_labels"]
 
 
 def test_summary_note_consolidates_all_user_specified_fields():
@@ -753,7 +769,7 @@ def test_no_hashes_returns_skip_message():
     msg = enricher.enrich(
         {
             "id": "stix-cyber-observable--empty",
-            "standard_id": "file--empty",
+            "standard_id": "file--9a53c9fc-6b0e-5f71-ac25-b6b4bbc6f888",
             "entity_type": "StixFile",
             "hashes": [],
         }
@@ -881,25 +897,25 @@ def _enrich_with_variant_counts(payload_count, metadata_total):
 
 
 @pytest.mark.parametrize(
-    "payload_count, metadata_total, want_total, want_sco_count",
+    "payload_count, metadata_total, want_total",
     [
-        (42, 42, 42, 42),
-        ("42", "42", 42, 42),  # proto3 JSON encodes int64 as a string
-        ("lots", "n/a", 3, None),  # unparseable: fall back to the list length
-        (None, None, 3, None),
-        (True, True, 3, None),
-        (-1, -1, 3, None),
-        ("\u00b2", "\u00b3", 3, None),  # isdigit() is True for superscripts
+        (42, 42, 42),
+        ("42", "42", 42),  # proto3 JSON encodes int64 as a string
+        ("lots", "n/a", 3),  # unparseable: fall back to the list length
+        (None, None, 3),
+        (True, True, 3),
+        (-1, -1, 3),
+        ("\u00b2", "\u00b3", 3),  # isdigit() is True for superscripts
     ],
 )
 def test_variant_counts_tolerate_non_numeric_api_values(
-    payload_count, metadata_total, want_total, want_sco_count
+    payload_count, metadata_total, want_total
 ):
     msg, note, file_sco = _enrich_with_variant_counts(payload_count, metadata_total)
     assert msg.startswith("Enriched file")
     assert f"**Total variants:** {want_total}\n" in note
     assert "(capped at STAIRWELL_VARIANT_LIMIT=2)" in note
-    assert file_sco.get("x_stairwell_variant_count") == want_sco_count
+    assert "x_stairwell_variant_count" not in file_sco
 
 
 def test_sightings_are_off_unless_configured():
@@ -1067,8 +1083,8 @@ def test_flat_yara_matches_become_labels_as_well_as_note_lines():
     _file_enricher(helper, client).enrich(_observable_with_sha256())
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     file_sco = next(o for o in objects if o["type"] == "file")
-    assert "stairwell:yara:Flat_Rule" in file_sco["labels"]
-    assert file_sco["labels"].count("stairwell:yara:Nested_Rule") == 1
+    assert "stairwell:yara:Flat_Rule" in file_sco["x_opencti_labels"]
+    assert file_sco["x_opencti_labels"].count("stairwell:yara:Nested_Rule") == 1
     note = next(
         o for o in objects if o.get("abstract") == "Stairwell Enrichment Summary"
     )
@@ -1170,7 +1186,7 @@ def test_note_lists_exactly_the_network_values_that_became_observables():
 _MD5 = "44d88612fea8a8f36de82e1278abb02f"
 _MD5_OBS = {
     "id": "stix-cyber-observable--md5only",
-    "standard_id": "file--md5only-aaaa-bbbb-cccc-dddddddddddd",
+    "standard_id": "file--91973c4a-5d1f-5e8e-9e84-6cf6d1019f4d",
     "entity_type": "StixFile",
     "hashes": [{"algorithm": "MD5", "hash": _MD5}],
 }

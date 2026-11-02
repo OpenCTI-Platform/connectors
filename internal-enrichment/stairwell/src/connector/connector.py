@@ -12,7 +12,22 @@ from pycti import OpenCTIConnectorHelper
 
 
 def _is_union_list(key: str) -> bool:
-    return key in ("labels", "external_references") or key.endswith("_refs")
+    return key in (
+        "labels",
+        "external_references",
+        "x_opencti_labels",
+        "x_opencti_external_references",
+    ) or key.endswith("_refs")
+
+
+# Observables carry labels and external references as `x_opencti_*` (the
+# SDK's form, and OpenCTI's export). pycti reads the root key when it is
+# present and ignores the `x_opencti_*` one, so a merged object must hold
+# each list under one key only.
+_OBSERVABLE_ALIASES = {
+    "x_opencti_labels": "labels",
+    "x_opencti_external_references": "external_references",
+}
 
 
 def _merge_object(incoming: dict[str, Any], ours: dict[str, Any]) -> dict[str, Any]:
@@ -22,9 +37,14 @@ def _merge_object(incoming: dict[str, Any], ours: dict[str, Any]) -> dict[str, A
     value. Dicts present in both (hashes) merge key by key, and labels,
     external references, and `*_refs` lists (markings) are unioned in order,
     and the higher `x_opencti_score` is kept; for any other field the
-    enricher's value wins.
+    enricher's value wins. Incoming root `labels`/`external_references` on an
+    observable are folded into its `x_opencti_*` list whenever one will be
+    present, from the enrichment or the incoming object.
     """
     merged = dict(incoming)
+    for key, alias in _OBSERVABLE_ALIASES.items():
+        if isinstance(merged.get(alias), list) and (key in ours or key in merged):
+            merged[key] = [*merged.pop(alias), *(merged.get(key) or [])]
     for key, value in ours.items():
         previous = merged.get(key)
         if key == "x_opencti_score" and previous is None:

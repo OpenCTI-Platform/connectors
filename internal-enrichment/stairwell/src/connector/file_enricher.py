@@ -8,7 +8,8 @@ from connector.lookups import optional_lookup
 from connector.stairwell import StairwellAPIError, StairwellClient
 from connector.stairwell.score import monotonic_score, score_for_bucket
 from connector.stix_builder import (
-    bundle,
+    bundle_objects,
+    enriched_observable,
     make_external_reference,
     make_file_by_sha256,
     make_identity_system,
@@ -20,7 +21,6 @@ from connector.stix_builder import (
     md_text,
     network_observable_for,
     stairwell_identity,
-    tlp_marking,
     valid_hash,
 )
 
@@ -167,33 +167,26 @@ class FileEnricher:
         if not entity_id:
             return
 
-        file_sco: dict[str, Any] = {
-            "type": "file",
-            "spec_version": "2.1",
-            "id": entity_id,
-            "labels": ["stairwell:not-found"],
-            "object_marking_refs": [tlp_marking(self.tlp)],
-            "external_references": [
+        hashes = self._stix_hashes(observable)
+        file_sco = enriched_observable(
+            "file",
+            entity_id,
+            self.tlp,
+            hashes=hashes or None,
+            labels=["stairwell:not-found"],
+            external_references=[
                 make_external_reference(
                     "Stairwell",
                     self.client.object_ui_url(primary_hash),
                     f"Stairwell search for {primary_hash}",
                 )
             ],
-        }
-        stix_hashes: dict[str, str] = {}
-        for algo, hashed in self._hash_dict(observable).items():
-            if algo == "SHA256":
-                stix_hashes["SHA-256"] = hashed
-            elif algo == "SHA1":
-                stix_hashes["SHA-1"] = hashed
-            elif algo == "MD5":
-                stix_hashes["MD5"] = hashed
-        if stix_hashes:
-            file_sco["hashes"] = stix_hashes
+        )
 
         self.helper.send_stix2_bundle(
-            bundle([stairwell_identity(), file_sco]),
+            self.helper.stix2_create_bundle(
+                bundle_objects([stairwell_identity(), file_sco])
+            ),
             cleanup_inconsistent_bundle=True,
         )
 
@@ -285,9 +278,6 @@ class FileEnricher:
             final_score=final_score,
             labels=labels,
             ext_ref=ext_ref,
-            prob_bucket=prob_bucket,
-            prevalence=max_prevalence,
-            variant_count=variant_count,
             metadata=metadata,
         )
         objects.append(file_sco)
@@ -358,7 +348,10 @@ class FileEnricher:
                 )
             )
 
-        self.helper.send_stix2_bundle(bundle(objects), cleanup_inconsistent_bundle=True)
+        self.helper.send_stix2_bundle(
+            self.helper.stix2_create_bundle(bundle_objects(objects)),
+            cleanup_inconsistent_bundle=True,
+        )
         return (
             f"Enriched file {primary_hash} "
             f"(score {final_score}, verdict {prob_bucket or 'none'}, "
@@ -419,21 +412,18 @@ class FileEnricher:
     ) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         for v in capped:
-            extra: dict[str, Any] = {
-                "external_references": [
+            sco = make_file_by_sha256(
+                v["sha256"],
+                tlp=self.tlp,
+                sha1=v.get("sha1"),
+                md5=v.get("md5"),
+                external_references=[
                     make_external_reference(
                         "Stairwell",
                         self.client.object_ui_url(v["sha256"]),
                         f"Stairwell file detail for {v['sha256']}",
                     )
-                ]
-            }
-            sco = make_file_by_sha256(
-                v["sha256"],
-                tlp=self.tlp,
-                extra=extra,
-                sha1=v.get("sha1"),
-                md5=v.get("md5"),
+                ],
             )
             out.append(sco)
             # `derived-from`: source is derived from target. Variants are
@@ -516,8 +506,9 @@ class FileEnricher:
         """Build the single consolidated `Stairwell Enrichment Summary` Note.
 
         OpenCTI's observable import keeps only a fixed set of File fields, so
-        the `x_stairwell_*` properties set on the file are not stored; every
-        one of them is also shown here.
+        the Stairwell values that have no File field (MalEval verdict,
+        prevalence, variant count, imphash, TLSH, entropy, environments) are
+        shown here.
 
         Sections (in order): Hashes, File properties, Stairwell observation,
         YARA matches, Network indicators, Object signature.
@@ -722,21 +713,10 @@ class FileEnricher:
         final_score: int | None,
         labels: list[str],
         ext_ref: dict[str, Any],
-        prob_bucket: str | None,
-        prevalence: float | None,
-        variant_count: int | None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         metadata = metadata or {}
-        hashes = self._hash_dict(observable)
-        stix_hashes: dict[str, str] = {}
-        for algo, hashed in hashes.items():
-            if algo == "SHA256":
-                stix_hashes["SHA-256"] = hashed
-            elif algo == "SHA1":
-                stix_hashes["SHA-1"] = hashed
-            elif algo == "MD5":
-                stix_hashes["MD5"] = hashed
+        stix_hashes = self._stix_hashes(observable)
         # Backfill hashes from the metadata response when the input observable
         # didn't carry them.
         for algo, key in (("SHA-256", "sha256"), ("SHA-1", "sha1"), ("MD5", "md5")):
@@ -744,64 +724,41 @@ class FileEnricher:
             if algo not in stix_hashes and valid_hash(algo, value):
                 stix_hashes[algo] = value.lower()
 
-        sco: dict[str, Any] = {
-            "type": "file",
-            "spec_version": "2.1",
-            "id": entity_id,
-            "object_marking_refs": [tlp_marking(self.tlp)],
-            "external_references": [ext_ref],
-        }
-        if stix_hashes:
-            sco["hashes"] = stix_hashes
-        if tldr:
-            sco["x_opencti_description"] = md_prose(tldr)
-        # Sent even when unchanged: a playbook merge keeps the higher of this and
-        # the incoming object's score, which may be lower than the stored one.
-        if final_score is not None:
-            sco["x_opencti_score"] = final_score
-        if labels:
-            sco["labels"] = labels
-        if prob_bucket:
-            sco["x_stairwell_maleval_probability"] = prob_bucket
-        if prevalence is not None:
-            sco["x_stairwell_prevalence"] = prevalence
-        if variant_count is not None:
-            sco["x_stairwell_variant_count"] = variant_count
-
-        # Stairwell metadata → standard + custom STIX file properties.
         # Some Stairwell responses echo back the API path (e.g.
         # "objects/{hash}/metadata") as `name` when the file was ingested
         # without an original filename — skip those.
         meta_name = metadata.get("name") or ""
-        if meta_name and not sco.get("name") and not meta_name.startswith("objects/"):
-            sco["name"] = meta_name
-        size = metadata.get("size")
-        if size is not None:
-            try:
-                sco["size"] = int(size)
-            except (TypeError, ValueError):
-                pass
-        if metadata.get("mimeType"):
-            sco["mime_type"] = metadata["mimeType"]
-        if metadata.get("magic"):
-            sco["x_stairwell_magic"] = metadata["magic"]
-        if metadata.get("imphash"):
-            sco["x_stairwell_imphash"] = metadata["imphash"]
-        if metadata.get("imphashSorted"):
-            sco["x_stairwell_imphash_sorted"] = metadata["imphashSorted"]
-        if metadata.get("tlsh"):
-            sco["x_stairwell_tlsh"] = metadata["tlsh"]
-        if metadata.get("shannonEntropy") is not None:
-            try:
-                sco["x_stairwell_shannon_entropy"] = float(metadata["shannonEntropy"])
-            except (TypeError, ValueError):
-                pass
-        if metadata.get("stairwellFirstSeenTime"):
-            sco["x_stairwell_first_seen"] = metadata["stairwellFirstSeenTime"]
-        environments = metadata.get("environments")
-        if isinstance(environments, list) and environments:
-            sco["x_stairwell_environments"] = list(environments)
-        return sco
+        name = meta_name if not meta_name.startswith("objects/") else None
+        try:
+            size = int(metadata["size"]) if metadata.get("size") is not None else None
+        except (TypeError, ValueError):
+            size = None
+        return enriched_observable(
+            "file",
+            entity_id,
+            self.tlp,
+            hashes=stix_hashes or None,
+            name=name or None,
+            # The File model requires a positive size.
+            size=size if size and size > 0 else None,
+            mime_type=metadata.get("mimeType") or None,
+            description=md_prose(tldr) if tldr else None,
+            # Sent even when unchanged: a playbook merge keeps the higher of
+            # this and the incoming object's score, which may be lower than
+            # the stored one.
+            score=final_score,
+            labels=labels,
+            external_references=[ext_ref],
+        )
+
+    def _stix_hashes(self, observable: dict[str, Any]) -> dict[str, str]:
+        """The observable's well-formed hashes, keyed by STIX algorithm name."""
+        names = {"SHA256": "SHA-256", "SHA1": "SHA-1", "MD5": "MD5"}
+        return {
+            names[algo]: hashed.lower()
+            for algo, hashed in self._hash_dict(observable).items()
+            if algo in names and valid_hash(names[algo], hashed)
+        }
 
     @staticmethod
     def _yara_rule_names(metadata: dict[str, Any]) -> list[str]:
@@ -1116,15 +1073,13 @@ class FileEnricher:
                 related = make_file_by_sha256(
                     sha,
                     tlp=self.tlp,
-                    extra={
-                        "external_references": [
-                            make_external_reference(
-                                "Stairwell",
-                                self.client.object_ui_url(sha),
-                                f"Stairwell file detail for {sha}",
-                            )
-                        ]
-                    },
+                    external_references=[
+                        make_external_reference(
+                            "Stairwell",
+                            self.client.object_ui_url(sha),
+                            f"Stairwell file detail for {sha}",
+                        )
+                    ],
                 )
                 out.append(related)
                 # `derived-from`: source is derived from target. Children are

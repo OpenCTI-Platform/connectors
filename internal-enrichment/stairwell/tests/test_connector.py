@@ -38,7 +38,7 @@ def _connector():
 def _message(*tlps):
     observable = {
         "id": "x",
-        "standard_id": "file--1",
+        "standard_id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
         "entity_type": "StixFile",
         "hashes": [{"algorithm": "SHA-256", "hash": "a" * 64}],
         "objectMarking": [
@@ -50,7 +50,7 @@ def _message(*tlps):
     data = {
         "entity_id": "x",
         "event_type": "INTERNAL_ENRICHMENT",
-        "stix_entity": {"id": "file--1"},
+        "stix_entity": {"id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c"},
         "enrichment_entity": observable,
     }
     return data, observable
@@ -166,7 +166,11 @@ def test_manual_enrichment_out_of_scope_is_refused_with_a_warning(env):
 
 
 ORIGINAL = [
-    {"id": "file--1", "type": "file", "hashes": {"SHA-256": "a" * 64}},
+    {
+        "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+        "type": "file",
+        "hashes": {"SHA-256": "a" * 64},
+    },
     {"id": "report--9", "type": "report", "name": "from an earlier step"},
 ]
 
@@ -193,7 +197,11 @@ def _send_from_enricher(connector, objects):
 
 def test_playbook_result_keeps_the_objects_of_earlier_steps(env):
     connector, helper = _connector()
-    enriched = {"id": "file--1", "type": "file", "x_opencti_score": 75}
+    enriched = {
+        "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+        "type": "file",
+        "x_opencti_score": 75,
+    }
     note = {"id": "note--2", "type": "note", "content": "c"}
 
     def enrich(_):
@@ -204,8 +212,12 @@ def test_playbook_result_keeps_the_objects_of_earlier_steps(env):
     assert connector.process_message(_playbook_message()) == "enriched"
     helper.send_stix2_bundle.assert_called_once()
     sent = {o["id"]: o for o in _sent_objects(helper)}
-    assert set(sent) == {"file--1", "note--2", "report--9"}
-    assert sent["file--1"]["x_opencti_score"] == 75
+    assert set(sent) == {
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+        "note--2",
+        "report--9",
+    }
+    assert sent["file--01254d6f-5192-5a5e-9135-a41333a2c47c"]["x_opencti_score"] == 75
     # update=True, or OpenCTI keeps an observable's existing score and
     # description instead of the enrichment's.
     assert helper.send_stix2_bundle.call_args.kwargs == {
@@ -219,7 +231,10 @@ def test_manual_enrichment_sends_with_update(env):
     data, _ = _message("TLP:GREEN")
 
     def enrich(_):
-        _send_from_enricher(connector, [{"id": "file--1", "type": "file"}])
+        _send_from_enricher(
+            connector,
+            [{"id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c", "type": "file"}],
+        )
         return "enriched"
 
     connector.dispatcher.file.enrich = enrich
@@ -235,7 +250,7 @@ def test_playbook_merge_keeps_what_the_partial_update_leaves_out(env):
     connector, helper = _connector()
     data = _playbook_message()
     data["stix_objects"][0] = {
-        "id": "file--1",
+        "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
         "type": "file",
         "name": "invoice.exe",
         "hashes": {"SHA-256": "a" * 64},
@@ -245,12 +260,12 @@ def test_playbook_merge_keeps_what_the_partial_update_leaves_out(env):
         "x_opencti_score": 40,
     }
     enriched = {
-        "id": "file--1",
+        "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
         "type": "file",
         "hashes": {"SHA-256": "a" * 64, "MD5": "b" * 32},
-        "labels": ["stairwell:yara:rule"],
+        "x_opencti_labels": ["stairwell:yara:rule"],
         "object_marking_refs": [AMBER],
-        "external_references": [{"source_name": "Stairwell"}],
+        "x_opencti_external_references": [{"source_name": "Stairwell"}],
         "x_opencti_score": 75,
     }
 
@@ -260,12 +275,17 @@ def test_playbook_merge_keeps_what_the_partial_update_leaves_out(env):
 
     connector.dispatcher.file.enrich = enrich
     connector.process_message(data)
-    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    merged = {o["id"]: o for o in _sent_objects(helper)}[
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c"
+    ]
     assert merged["name"] == "invoice.exe"
     assert merged["hashes"] == {"SHA-256": "a" * 64, "MD5": "b" * 32}
-    assert merged["labels"] == ["from-earlier-step", "stairwell:yara:rule"]
+    # The incoming root lists are folded into the `x_opencti_*` ones the
+    # enrichment sends: pycti reads only the root key when both exist.
+    assert "labels" not in merged and "external_references" not in merged
+    assert merged["x_opencti_labels"] == ["from-earlier-step", "stairwell:yara:rule"]
     assert merged["object_marking_refs"] == [GREEN, AMBER]
-    assert merged["external_references"] == [
+    assert merged["x_opencti_external_references"] == [
         {"source_name": "earlier"},
         {"source_name": "Stairwell"},
     ]
@@ -393,10 +413,14 @@ def test_playbook_not_found_merges_the_label_into_the_incoming_bundle(env):
     assert "not in corpus" in message
     helper.send_stix2_bundle.assert_called_once()
     sent = {o["id"]: o for o in _sent_objects(helper)}
-    assert set(sent) >= {"file--1", "report--9"}
-    assert sent["file--1"]["name"] == "invoice.exe"
-    assert sent["file--1"]["hashes"] == {"SHA-256": "a" * 64}
-    assert sent["file--1"]["labels"] == ["from-earlier-step", "stairwell:not-found"]
+    assert set(sent) >= {"file--01254d6f-5192-5a5e-9135-a41333a2c47c", "report--9"}
+    assert sent["file--01254d6f-5192-5a5e-9135-a41333a2c47c"]["name"] == "invoice.exe"
+    assert sent["file--01254d6f-5192-5a5e-9135-a41333a2c47c"]["hashes"] == {
+        "SHA-256": "a" * 64
+    }
+    merged = sent["file--01254d6f-5192-5a5e-9135-a41333a2c47c"]
+    assert "labels" not in merged
+    assert merged["x_opencti_labels"] == ["from-earlier-step", "stairwell:not-found"]
     assert sent["report--9"] == ORIGINAL[1]
 
 
@@ -494,9 +518,67 @@ def test_unresolvable_playbook_marking_is_logged(env):
         c.kwargs["meta"] for c in helper.connector_logger.warning.call_args_list
     ]
     assert {
-        "entity_id": "file--1",
+        "entity_id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
         "marking_refs": ["marking-definition--unknown"],
     } in (warnings)
+
+
+def test_playbook_merge_unions_labels_in_opencti_export_shape(env):
+    # OpenCTI exports an observable's labels and references as x_opencti_*.
+    connector, helper = _connector()
+    data = _playbook_message()
+    data["stix_objects"][0]["x_opencti_labels"] = ["from-earlier-step"]
+    data["stix_objects"][0]["x_opencti_external_references"] = [
+        {"source_name": "earlier"}
+    ]
+
+    def enrich(_):
+        _send_from_enricher(
+            connector,
+            [
+                {
+                    "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+                    "type": "file",
+                    "x_opencti_labels": ["stairwell:yara:rule", "from-earlier-step"],
+                    "x_opencti_external_references": [{"source_name": "Stairwell"}],
+                }
+            ],
+        )
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    merged = {o["id"]: o for o in _sent_objects(helper)}[
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c"
+    ]
+    assert merged["x_opencti_labels"] == ["from-earlier-step", "stairwell:yara:rule"]
+    assert merged["x_opencti_external_references"] == [
+        {"source_name": "earlier"},
+        {"source_name": "Stairwell"},
+    ]
+
+
+def test_playbook_merge_folds_both_incoming_forms_when_we_send_none(env):
+    connector, helper = _connector()
+    data = _playbook_message()
+    data["stix_objects"][0]["labels"] = ["root-form"]
+    data["stix_objects"][0]["x_opencti_labels"] = ["export-form"]
+
+    def enrich(_):
+        # No labels from the enrichment (an ASN, or no matching signal).
+        _send_from_enricher(
+            connector,
+            [{"id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c", "type": "file"}],
+        )
+        return "enriched"
+
+    connector.dispatcher.file.enrich = enrich
+    connector.process_message(data)
+    merged = {o["id"]: o for o in _sent_objects(helper)}[
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c"
+    ]
+    assert "labels" not in merged
+    assert merged["x_opencti_labels"] == ["root-form", "export-form"]
 
 
 def test_playbook_merge_reads_a_score_held_in_the_opencti_extension(env):
@@ -507,12 +589,22 @@ def test_playbook_merge_reads_a_score_held_in_the_opencti_extension(env):
     }
 
     def enrich(_):
-        _send_from_enricher(connector, [{"id": "file--1", "x_opencti_score": 75}])
+        _send_from_enricher(
+            connector,
+            [
+                {
+                    "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+                    "x_opencti_score": 75,
+                }
+            ],
+        )
         return "enriched"
 
     connector.dispatcher.file.enrich = enrich
     connector.process_message(data)
-    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    merged = {o["id"]: o for o in _sent_objects(helper)}[
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c"
+    ]
     assert merged["x_opencti_score"] == 95
 
 
@@ -522,12 +614,22 @@ def test_playbook_merge_never_lowers_the_score(env):
     data["stix_objects"][0]["x_opencti_score"] = 95
 
     def enrich(_):
-        _send_from_enricher(connector, [{"id": "file--1", "x_opencti_score": 75}])
+        _send_from_enricher(
+            connector,
+            [
+                {
+                    "id": "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+                    "x_opencti_score": 75,
+                }
+            ],
+        )
         return "enriched"
 
     connector.dispatcher.file.enrich = enrich
     connector.process_message(data)
-    merged = {o["id"]: o for o in _sent_objects(helper)}["file--1"]
+    merged = {o["id"]: o for o in _sent_objects(helper)}[
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c"
+    ]
     assert merged["x_opencti_score"] == 95
 
 

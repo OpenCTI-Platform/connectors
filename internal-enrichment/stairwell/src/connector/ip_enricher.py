@@ -5,7 +5,8 @@ from typing import Any
 from connector.lookups import lookup_all, optional_lookup
 from connector.stairwell import StairwellClient
 from connector.stix_builder import (
-    bundle,
+    bundle_objects,
+    enriched_observable,
     make_autonomous_system,
     make_external_reference,
     make_note,
@@ -14,7 +15,6 @@ from connector.stix_builder import (
     md_fence,
     md_text,
     stairwell_identity,
-    tlp_marking,
 )
 
 _CLOUD_LABEL_MAP = {
@@ -97,7 +97,6 @@ class IpEnricher:
                     whois_string = ws
 
         labels: list[str] = []
-        custom_props: dict[str, Any] = {}
 
         cloud_provider = (
             ip_data.get("cloudProvider") or ip_data.get("cloud_provider") or ""
@@ -109,7 +108,6 @@ class IpEnricher:
                 labels.append(label)
             else:
                 labels.append(f"stairwell:cloud-{cloud_key.lower()}")
-            custom_props["x_stairwell_cloud_provider"] = cloud_provider
         if ip_data.get("isDatacenter") or ip_data.get("is_datacenter"):
             labels.append("stairwell:datacenter")
         if ip_data.get("isVpn") or ip_data.get("is_vpn"):
@@ -122,17 +120,9 @@ class IpEnricher:
             or ip_data.get("country")
             or ip_data.get("country_code")
         )
-        if country:
-            custom_props["x_stairwell_country"] = country
         country_name = geo.get("countryName") if isinstance(geo, dict) else None
-        if country_name:
-            custom_props["x_stairwell_country_name"] = country_name
         city = geo.get("city") if isinstance(geo, dict) else None
-        if city:
-            custom_props["x_stairwell_city"] = city
         region = geo.get("region") if isinstance(geo, dict) else None
-        if region:
-            custom_props["x_stairwell_region"] = region
 
         # asns is an array per V2; pick the first.
         asn_int: int | None = None
@@ -149,18 +139,17 @@ class IpEnricher:
                     asn_int = int(str(legacy).lstrip("AS").lstrip("as"))
                 except ValueError:
                     asn_int = None
-        if asn_int is not None:
-            custom_props["x_stairwell_asn"] = asn_int
 
         # subnetInfo: {cidr, prefixLength}
-        subnet = ip_data.get("subnetInfo") or ip_data.get("subnet_info") or {}
-        if isinstance(subnet, dict):
-            cidr = subnet.get("cidr")
-            prefix = subnet.get("prefixLength") or subnet.get("prefix_length")
+        subnet: str | None = None
+        subnet_info = ip_data.get("subnetInfo") or ip_data.get("subnet_info") or {}
+        if isinstance(subnet_info, dict):
+            cidr = subnet_info.get("cidr")
+            prefix = subnet_info.get("prefixLength") or subnet_info.get("prefix_length")
             if cidr and prefix is not None:
-                custom_props["x_stairwell_subnet"] = f"{cidr}/{prefix}"
+                subnet = f"{cidr}/{prefix}"
             elif cidr:
-                custom_props["x_stairwell_subnet"] = str(cidr)
+                subnet = str(cidr)
 
         # The IP's WHOIS names the holder of the address prefix, which need not
         # be the operator of the origin AS, so it goes in the Note and never
@@ -173,18 +162,14 @@ class IpEnricher:
             f"Stairwell IP intelligence for {ip_value}",
         )
 
-        ip_type = "ipv6-addr" if ":" in ip_value else "ipv4-addr"
-        ip_sco: dict[str, Any] = {
-            "type": ip_type,
-            "spec_version": "2.1",
-            "id": entity_id,
-            "value": ip_value,
-            "object_marking_refs": [tlp_marking(self.tlp)],
-            "external_references": [ext_ref],
-        }
-        if labels:
-            ip_sco["labels"] = labels
-        ip_sco.update(custom_props)
+        ip_sco = enriched_observable(
+            "ipv6-addr" if ":" in ip_value else "ipv4-addr",
+            entity_id,
+            self.tlp,
+            value=ip_value,
+            labels=labels,
+            external_references=[ext_ref],
+        )
 
         objects: list[dict[str, Any]] = [stairwell_identity(), ip_sco]
 
@@ -219,10 +204,8 @@ class IpEnricher:
             note_lines.append(f"**ASN:** AS{asn_int}")
         if prefix_holder:
             note_lines.append(f"**Prefix holder:** {md_text(prefix_holder)}")
-        if "x_stairwell_subnet" in custom_props:
-            note_lines.append(
-                f"**Subnet:** {md_text(custom_props['x_stairwell_subnet'])}"
-            )
+        if subnet:
+            note_lines.append(f"**Subnet:** {md_text(subnet)}")
 
         if whois_string:
             note_lines.append("\n**WHOIS:**")
@@ -253,7 +236,10 @@ class IpEnricher:
                 )
             )
 
-        self.helper.send_stix2_bundle(bundle(objects), cleanup_inconsistent_bundle=True)
+        self.helper.send_stix2_bundle(
+            self.helper.stix2_create_bundle(bundle_objects(objects)),
+            cleanup_inconsistent_bundle=True,
+        )
         return (
             f"Enriched IP {ip_value} (asn={asn_int or 'n/a'}, "
             f"cloud={cloud_provider or 'n/a'}, country={country or 'n/a'})"

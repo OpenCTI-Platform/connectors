@@ -5,7 +5,8 @@ from typing import Any
 from connector.lookups import lookup_all
 from connector.stairwell import StairwellClient
 from connector.stix_builder import (
-    bundle,
+    bundle_objects,
+    enriched_observable,
     make_domain,
     make_external_reference,
     make_ip,
@@ -14,7 +15,6 @@ from connector.stix_builder import (
     md_code,
     md_text,
     stairwell_identity,
-    tlp_marking,
 )
 
 
@@ -62,7 +62,6 @@ class DomainEnricher:
         objects: list[dict[str, Any]] = [stairwell_identity()]
 
         labels: list[str] = []
-        custom_props: dict[str, Any] = {}
 
         # Whitelist — prefer the dedicated endpoint, fall back to the value
         # embedded in /v2/hostnames/{hostname}.
@@ -75,8 +74,6 @@ class DomainEnricher:
         for blob in (v2, res):
             if isinstance(blob, dict):
                 etld = etld or blob.get("etldPlusOne") or blob.get("etld_plus_one")
-        if etld:
-            custom_props["x_stairwell_etld_plus_one"] = etld
 
         ext_ref = make_external_reference(
             "Stairwell",
@@ -84,18 +81,16 @@ class DomainEnricher:
             f"Stairwell hostname intelligence for {hostname}",
         )
 
-        domain_sco: dict[str, Any] = {
-            "type": "domain-name",
-            "spec_version": "2.1",
-            "id": entity_id,
-            "value": hostname,
-            "object_marking_refs": [tlp_marking(self.tlp)],
-            "external_references": [ext_ref],
-        }
-        if labels:
-            domain_sco["labels"] = labels
-        domain_sco.update(custom_props)
-        objects.append(domain_sco)
+        objects.append(
+            enriched_observable(
+                "domain-name",
+                entity_id,
+                self.tlp,
+                value=hostname,
+                labels=labels,
+                external_references=[ext_ref],
+            )
+        )
 
         # Aggregate resolutions across all sources, dedupe, cap.
         all_resolutions = self._collect_resolutions(v1, v2, res)
@@ -131,7 +126,10 @@ class DomainEnricher:
                 )
             )
 
-        self.helper.send_stix2_bundle(bundle(objects), cleanup_inconsistent_bundle=True)
+        self.helper.send_stix2_bundle(
+            self.helper.stix2_create_bundle(bundle_objects(objects)),
+            cleanup_inconsistent_bundle=True,
+        )
         return (
             f"Enriched hostname {hostname} "
             f"(resolutions={len(capped)}/{len(all_resolutions)}, "

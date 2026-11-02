@@ -5,7 +5,7 @@ import pytest
 import stix2
 from connector.stix_builder import (
     STAIRWELL_IDENTITY_ID,
-    bundle,
+    bundle_objects,
     make_autonomous_system,
     make_domain,
     make_external_reference,
@@ -37,7 +37,6 @@ from pycti import (
     Identity,
     Indicator,
     Note,
-    Report,
     StixCoreRelationship,
     StixSightingRelationship,
 )
@@ -45,11 +44,19 @@ from pycti import (
 
 def test_sdo_and_sro_ids_are_opencti_canonical():
     """Every SDO/SRO ID is the one pycti generates for that object."""
-    rel = make_relationship("file--x", "ipv4-addr--y", "related-to")
-    assert rel["id"] == StixCoreRelationship.generate_id(
-        "related-to", "file--x", "ipv4-addr--y"
+    rel = make_relationship(
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
+        "ipv4-addr--68c179b6-d6cc-50dd-935b-1cd97ad84288",
+        "related-to",
     )
-    note = make_note("Abstract", "body", ["file--x"], "green")
+    assert rel["id"] == StixCoreRelationship.generate_id(
+        "related-to",
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
+        "ipv4-addr--68c179b6-d6cc-50dd-935b-1cd97ad84288",
+    )
+    note = make_note(
+        "Abstract", "body", ["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"], "green"
+    )
     assert note["id"] == Note.generate_id(None, "body", "Abstract")
     pattern = "[file:hashes.'SHA-256' = '" + "a" * 64 + "']"
     assert make_indicator(pattern, "n", "2026-01-01T00:00:00.000Z")["id"] == (
@@ -62,20 +69,30 @@ def test_sdo_and_sro_ids_are_opencti_canonical():
     asset = make_identity_system("assets/X1", name="RISER")
     assert asset["id"] == Identity.generate_id("assets/X1", "system")
     sighting = make_sighting(
-        "file--x",
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
         [asset["id"]],
         "2026-01-01T00:00:00.000Z",
         "2026-01-02T00:00:00.000Z",
         2,
     )
     assert sighting["id"] == StixSightingRelationship.generate_id(
-        "file--x", [asset["id"]]
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b", [asset["id"]]
     )
     created = "2026-05-06T01:02:03.456789+00:00"
-    grouping = make_grouping("G", ["file--x"], created, context="malware-analysis")
+    grouping = make_grouping(
+        "G",
+        ["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"],
+        created,
+        context="malware-analysis",
+    )
     assert grouping["id"] == Grouping.generate_id("G", "malware-analysis", created)
-    report = make_report("R", ["file--x"], "2026-05-06T00:00:00.000Z")
-    assert report["id"] == Report.generate_id("R", "2026-05-06T00:00:00.000Z")
+    # The SDK's report ID derives from the name and publication date.
+    report = make_report(
+        "R", ["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"], "2026-05-06T00:00:00.000Z"
+    )
+    again = make_report("R", [], "2026-05-06T00:00:00.000Z")
+    later = make_report("R", [], "2026-05-07T00:00:00.000Z")
+    assert report["id"] == again["id"] != later["id"]
 
 
 def test_sco_ids_follow_the_stix_spec():
@@ -95,14 +112,14 @@ def test_sco_ids_follow_the_stix_spec():
 
 def test_sighting_id_ignores_moving_first_and_last_seen():
     a = make_sighting(
-        "file--x",
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
         ["identity--y"],
         "2026-01-01T00:00:00.000Z",
         "2026-01-02T00:00:00.000Z",
         1,
     )
     b = make_sighting(
-        "file--x",
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
         ["identity--y"],
         "2026-01-01T00:00:00.000Z",
         "2026-03-09T00:00:00.000Z",
@@ -133,12 +150,10 @@ def test_tlp_clear_uses_the_standard_stix_marking_id():
 
 
 def test_bundle_carries_the_marking_definitions_its_objects_reference():
-    payload = json.loads(
-        bundle([make_ipv4("8.8.8.8", tlp="green"), make_domain("a.example", tlp="red")])
+    objects = bundle_objects(
+        [make_ipv4("8.8.8.8", tlp="green"), make_domain("a.example", tlp="red")]
     )
-    markings = {
-        o["id"] for o in payload["objects"] if o["type"] == "marking-definition"
-    }
+    markings = {o["id"] for o in objects if o["type"] == "marking-definition"}
     assert markings == {tlp_marking("green"), tlp_marking("red")}
 
 
@@ -180,8 +195,14 @@ def test_make_domain_and_asn_basic_shape():
 
 
 def test_make_relationship_deterministic_id():
-    a = make_relationship("file--x", "ipv4-addr--y")
-    b = make_relationship("file--x", "ipv4-addr--y")
+    a = make_relationship(
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
+        "ipv4-addr--68c179b6-d6cc-50dd-935b-1cd97ad84288",
+    )
+    b = make_relationship(
+        "file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b",
+        "ipv4-addr--68c179b6-d6cc-50dd-935b-1cd97ad84288",
+    )
     assert a["id"] == b["id"]
     assert a["relationship_type"] == "related-to"
 
@@ -190,31 +211,47 @@ def test_make_note_includes_object_refs_and_tlp():
     note = make_note(
         abstract="Test",
         content="body",
-        object_refs=["file--x"],
+        object_refs=["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"],
         tlp="green",
     )
     assert note["type"] == "note"
-    assert note["object_refs"] == ["file--x"]
+    assert note["object_refs"] == ["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"]
     assert note["object_marking_refs"] == [tlp_marking("green")]
 
 
-def test_bundle_dedupes_by_id_and_serializes():
+def test_bundle_objects_dedupes_by_id():
     objs = [
         make_ipv4("8.8.8.8"),
         make_ipv4("8.8.8.8"),  # duplicate
         make_domain("evil.com"),
     ]
-    payload = json.loads(bundle(objs))
-    assert payload["type"] == "bundle"
-    ids = {o["id"] for o in payload["objects"] if o["type"] != "marking-definition"}
-    assert len(ids) == 2  # ipv4 dedup'd
+    ids = [o["id"] for o in bundle_objects(objs) if o["type"] != "marking-definition"]
+    assert len(ids) == len(set(ids)) == 2  # ipv4 dedup'd
 
 
 def test_make_external_reference():
     ref = make_external_reference("Stairwell", "https://app.stairwell.com/x", "desc")
-    assert ref["source_name"] == "Stairwell"
-    assert ref["url"] == "https://app.stairwell.com/x"
-    assert ref["description"] == "desc"
+    assert ref == {
+        "source_name": "Stairwell",
+        "url": "https://app.stairwell.com/x",
+        "description": "desc",
+    }
+    assert make_external_reference("Stairwell", "https://x.example") == {
+        "source_name": "Stairwell",
+        "url": "https://x.example",
+    }
+
+
+def test_indicator_accepts_nanosecond_api_timestamps():
+    pattern = "[file:hashes.'SHA-256' = '" + "a" * 64 + "']"
+    indicator = make_indicator(
+        pattern,
+        "n",
+        "2025-04-29T19:42:30.534916301Z",
+        valid_until="2025-07-28T19:42:30.534916301+00:00",
+    )
+    assert indicator["valid_from"] == "2025-04-29T19:42:30.534916Z"
+    assert indicator["valid_until"] == "2025-07-28T19:42:30.534916Z"
 
 
 @pytest.mark.parametrize(
@@ -393,7 +430,12 @@ def test_file_id_is_anchored_to_sha256_whatever_other_hashes_are_known():
 
 def test_grouping_created_matches_the_id_inputs():
     created = "2026-05-06T01:02:03.456789+00:00"
-    grouping = make_grouping("G", ["file--x"], created, context="malware-analysis")
+    grouping = make_grouping(
+        "G",
+        ["file--cda9dbca-d6ff-5c9f-b701-a9f1c371022b"],
+        created,
+        context="malware-analysis",
+    )
     assert grouping["created"] == created
     assert grouping["id"] == Grouping.generate_id(
         "G", "malware-analysis", grouping["created"]
@@ -447,7 +489,14 @@ def test_make_domain_validates_and_normalises(value, want):
 
 def test_make_sighting_accepts_any_iterable_of_refs():
     kwargs = dict(first_seen="2026-01-01T00:00:00Z", last_seen="2026-01-01T00:00:00Z")
-    from_list = make_sighting("file--1", ["identity--a"], count=1, **kwargs)
-    from_iter = make_sighting("file--1", iter(["identity--a"]), count=1, **kwargs)
+    from_list = make_sighting(
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c", ["identity--a"], count=1, **kwargs
+    )
+    from_iter = make_sighting(
+        "file--01254d6f-5192-5a5e-9135-a41333a2c47c",
+        iter(["identity--a"]),
+        count=1,
+        **kwargs
+    )
     assert from_iter["where_sighted_refs"] == ["identity--a"]
     assert from_iter["id"] == from_list["id"]

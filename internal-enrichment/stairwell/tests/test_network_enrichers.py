@@ -3,12 +3,14 @@ import re
 from unittest.mock import MagicMock
 
 import pytest
+import stix2
 from connector.asn_enricher import AsnEnricher
 from connector.domain_enricher import DomainEnricher
 from connector.ip_enricher import IpEnricher
 from connector.settings import StairwellConfig
 from connector.stairwell import StairwellAPIError, StairwellClient
 from connectors_sdk.exceptions.error import DataRetrievalError
+from pycti import OpenCTIConnectorHelper
 from stairwell_fakes import lookup
 
 
@@ -34,6 +36,7 @@ def _domain_enricher(helper, client, **overrides):
 def _helper():
     helper = MagicMock()
     helper.send_stix2_bundle = MagicMock()
+    helper.stix2_create_bundle = OpenCTIConnectorHelper.stix2_create_bundle
     return helper
 
 
@@ -98,7 +101,7 @@ def test_domain_enricher_uses_resolutions_endpoint():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--d1",
-            "standard_id": "domain-name--d1",
+            "standard_id": "domain-name--7da511b7-291a-5a31-989b-500e29f16b24",
             "entity_type": "Domain-Name",
             "value": "evil.example.com",
         }
@@ -116,7 +119,9 @@ def test_domain_enricher_uses_resolutions_endpoint():
         for o in payload["objects"]
         if o["type"] == "domain-name" and o["value"] == "evil.example.com"
     )
-    assert domain["x_stairwell_etld_plus_one"] == "example.com"
+    assert not [k for k in domain if k.startswith("x_stairwell_")]
+    note = next(o for o in payload["objects"] if o["type"] == "note")
+    assert "**eTLD+1:** example.com" in note["content"]
 
     # Resolution times describe this domain's history, not the shared targets,
     # so they stay in the Note.
@@ -150,7 +155,7 @@ def test_domain_whitelist_label_from_v2_dedicated():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--d2",
-            "standard_id": "domain-name--d2",
+            "standard_id": "domain-name--00175a17-367f-5d20-9a6f-8c756bfe1cfb",
             "entity_type": "Domain-Name",
             "value": "google.com",
         }
@@ -161,7 +166,7 @@ def test_domain_whitelist_label_from_v2_dedicated():
         for o in payload["objects"]
         if o["type"] == "domain-name" and o["value"] == "google.com"
     )
-    assert "stairwell:whitelisted" in domain["labels"]
+    assert "stairwell:whitelisted" in domain["x_opencti_labels"]
 
 
 def test_domain_resolutions_capped():
@@ -189,7 +194,7 @@ def test_domain_resolutions_capped():
     msg = enricher.enrich(
         {
             "id": "stix-cyber-observable--d3",
-            "standard_id": "domain-name--d3",
+            "standard_id": "domain-name--880dffac-b7a7-5cc0-8f0a-4ffcbc39e56a",
             "entity_type": "Domain-Name",
             "value": "many.example.com",
         }
@@ -246,7 +251,7 @@ def test_ip_enricher_parses_v2_geo_and_asns_array():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--ip1",
-            "standard_id": "ipv4-addr--ip1",
+            "standard_id": "ipv4-addr--d7f784d7-4555-5f34-9f74-5af1310b30de",
             "entity_type": "IPv4-Addr",
             "value": "52.0.0.1",
         }
@@ -254,21 +259,18 @@ def test_ip_enricher_parses_v2_geo_and_asns_array():
 
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     ip_sco = next(o for o in payload["objects"] if o["type"] == "ipv4-addr")
-    assert "stairwell:cloud-aws" in ip_sco["labels"]
-    assert "stairwell:datacenter" in ip_sco["labels"]
-    assert "stairwell:vpn" not in ip_sco.get("labels", [])
+    assert "stairwell:cloud-aws" in ip_sco["x_opencti_labels"]
+    assert "stairwell:datacenter" in ip_sco["x_opencti_labels"]
+    assert "stairwell:vpn" not in ip_sco.get("x_opencti_labels", [])
 
-    # Geo data correctly nested
-    assert ip_sco["x_stairwell_country"] == "US"
-    assert ip_sco["x_stairwell_country_name"] == "United States"
-    assert ip_sco["x_stairwell_city"] == "Ashburn"
-    assert ip_sco["x_stairwell_region"] == "Virginia"
-
-    # ASN as int from array
-    assert ip_sco["x_stairwell_asn"] == 16509
-
-    # Subnet
-    assert ip_sco["x_stairwell_subnet"] == "52.0.0.0/14"
+    # Geo, ASN (from the array) and subnet go in the Note: OpenCTI drops
+    # custom observable properties.
+    assert not [k for k in ip_sco if k.startswith("x_stairwell_")]
+    ip_note = next(o for o in payload["objects"] if o["type"] == "note")["content"]
+    assert "**Country:** United States (US)" in ip_note
+    assert "**Location:** Ashburn, Virginia" in ip_note
+    assert "**ASN:** AS16509" in ip_note
+    assert "**Subnet:** 52.0.0.0/14" in ip_note
 
     # The related ASN is shared across IPs, so it carries no name: the IP's
     # WHOIS names the prefix holder, not the AS. The holder goes in the Note.
@@ -304,7 +306,7 @@ def test_ip_enricher_handles_unspecified_cloud_provider():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--ip2",
-            "standard_id": "ipv4-addr--ip2",
+            "standard_id": "ipv4-addr--f0de8c3d-61c6-571a-96cf-fd2ff68ecab6",
             "entity_type": "IPv4-Addr",
             "value": "8.8.8.8",
         }
@@ -317,7 +319,7 @@ def test_ip_enricher_handles_unspecified_cloud_provider():
         not l.startswith("stairwell:datacenter")
         and not l.startswith("stairwell:vpn")
         and not l.startswith("stairwell:cloud-")
-        for l in ip_sco.get("labels", [])
+        for l in ip_sco.get("x_opencti_labels", [])
     )
 
 
@@ -348,7 +350,7 @@ def test_asn_enricher_parses_arin_records_array():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--asn1",
-            "standard_id": "autonomous-system--asn1",
+            "standard_id": "autonomous-system--6364017e-c30f-5ab4-973a-9c945e07e374",
             "entity_type": "Autonomous-System",
             "number": 15169,
         }
@@ -356,10 +358,11 @@ def test_asn_enricher_parses_arin_records_array():
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     asn_sco = next(o for o in payload["objects"] if o["type"] == "autonomous-system")
     assert asn_sco["name"] == "GOOGLE"
-    assert asn_sco["x_stairwell_registration_date"] == "2000-03-30"
+    assert not [k for k in asn_sco if k.startswith("x_stairwell_")]
 
     note = next(o for o in payload["objects"] if o["type"] == "note")
     assert "GOOGLE" in note["content"]
+    assert "**Registration:** 2000-03-30" in note["content"]
     assert "ASNumber: 15169" in note["content"]
 
 
@@ -384,7 +387,7 @@ def test_asn_enricher_parses_rpsl_records():
     enricher.enrich(
         {
             "id": "stix-cyber-observable--asn2",
-            "standard_id": "autonomous-system--asn2",
+            "standard_id": "autonomous-system--001616d0-0781-519b-9c0c-1f688e188988",
             "entity_type": "Autonomous-System",
             "number": 8075,
         }
@@ -392,12 +395,10 @@ def test_asn_enricher_parses_rpsl_records():
     payload = json.loads(helper.send_stix2_bundle.call_args[0][0])
     asn = next(o for o in payload["objects"] if o["type"] == "autonomous-system")
     assert asn["name"] == "MICROSOFT-CORP-MSN-AS-BLOCK"
-    assert asn["x_stairwell_country"] == "US"
+    note = next(o for o in payload["objects"] if o["type"] == "note")
+    assert "**Country:** US" in note["content"]
     # RPSL lastModified is when the record changed, not when the ASN was
     # registered.
-    assert "x_stairwell_registration_date" not in asn
-    assert asn["x_stairwell_last_modified"] == "2010-01-15"
-    note = next(o for o in payload["objects"] if o["type"] == "note")
     assert "**Last modified:** 2010-01-15" in note["content"]
     assert "Registration" not in note["content"]
 
@@ -428,7 +429,7 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
     IpEnricher(helper, ip_client, default_tlp="amber").enrich(
         {
             "id": "x",
-            "standard_id": "ipv4-addr--1",
+            "standard_id": "ipv4-addr--b83c1c74-5f6e-5a1f-900e-6a327f1a70dd",
             "entity_type": "IPv4-Addr",
             "value": "203.0.113.5",
         }
@@ -458,7 +459,7 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
     AsnEnricher(helper, asn_client, default_tlp="amber").enrich(
         {
             "id": "x",
-            "standard_id": "autonomous-system--1",
+            "standard_id": "autonomous-system--367b0088-ee07-5bbc-9aeb-cf8fe9376fc8",
             "entity_type": "Autonomous-System",
             "number": 64500,
         }
@@ -490,7 +491,7 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
     _domain_enricher(helper, dns_client).enrich(
         {
             "id": "x",
-            "standard_id": "domain-name--1",
+            "standard_id": "domain-name--c724206b-e305-5693-bff9-f4703d32380a",
             "entity_type": "Domain-Name",
             "value": "evil.example",
         }
@@ -509,13 +510,13 @@ def test_untrusted_whois_and_dns_values_are_markdown_escaped():
 
 _DOMAIN_OBS = {
     "id": "x",
-    "standard_id": "domain-name--1",
+    "standard_id": "domain-name--c724206b-e305-5693-bff9-f4703d32380a",
     "entity_type": "Domain-Name",
     "value": "evil.example",
 }
 _IP_OBS = {
     "id": "x",
-    "standard_id": "ipv4-addr--1",
+    "standard_id": "ipv4-addr--b83c1c74-5f6e-5a1f-900e-6a327f1a70dd",
     "entity_type": "IPv4-Addr",
     "value": "203.0.113.5",
 }
@@ -660,7 +661,7 @@ def test_asn_fails_when_the_whois_request_fails(status):
         AsnEnricher(helper, client, "amber").enrich(
             {
                 "id": "x",
-                "standard_id": "autonomous-system--1",
+                "standard_id": "autonomous-system--367b0088-ee07-5bbc-9aeb-cf8fe9376fc8",
                 "entity_type": "Autonomous-System",
                 "number": 64500,
             }
@@ -682,7 +683,7 @@ def test_identical_intelligence_on_two_ips_gives_two_notes():
         IpEnricher(helper, client, "amber").enrich(
             {
                 "id": ip,
-                "standard_id": f"ipv4-addr--{ip}",
+                "standard_id": stix2.IPv4Address(value=ip).id,
                 "entity_type": "IPv4-Addr",
                 "value": ip,
             }
@@ -751,7 +752,7 @@ def test_dedicated_whitelist_answer_takes_precedence(wl, v2, labelled):
     _domain_enricher(helper, client).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     domain = next(o for o in objects if o["type"] == "domain-name")
-    assert ("stairwell:whitelisted" in domain.get("labels", [])) is labelled
+    assert ("stairwell:whitelisted" in domain.get("x_opencti_labels", [])) is labelled
 
 
 def test_dns_answers_become_valid_hostnames_and_never_the_domain_itself():
@@ -776,7 +777,7 @@ def test_dns_answers_become_valid_hostnames_and_never_the_domain_itself():
     # The enriched domain appears once, as the enrichment's own object.
     assert [d["id"] for d in domains].count(entity_id) == 1
     own_sco = next(d for d in domains if d["id"] == entity_id)
-    assert own_sco["external_references"]
+    assert own_sco["x_opencti_external_references"]
     assert sorted(d["value"] for d in domains if d["id"] != entity_id) == [
         "mx.example.net",
         "ns1.example.net",
