@@ -65,7 +65,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                          | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                     | Yes       | Listen to delete events for the entity.                                        |
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true                     | Yes       | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            | 100                      | No        | The default confidence level (0-100).                                          |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info                     | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
 
 ### Connector extra parameters environment variables

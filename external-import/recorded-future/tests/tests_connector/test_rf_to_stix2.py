@@ -2,7 +2,9 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from pycti import Identity as PyctiIdentity
+from pycti import Indicator as PyctiIndicator
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
 from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
@@ -499,6 +501,340 @@ def test_create_event_relations_skips_adversary_resolved_as_identity():
     assert len(relationships) == 0
 
 
+# Scenario: Context entities are ignored unless explicitly enabled
+def test_analyst_note_ignores_context_entities_by_default():
+    # Given an analyst note whose note_entities holds a Malware, and whose
+    # context_entities holds a Threat Actor referenced only in context
+    note = _given_stix_note()
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_context_entities()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then only the primary entity is referenced, the context-only one is left out
+    assert len(report.object_refs) == 1
+    _then_contains_threat_actor(stix_objects, expected_count=0)
+
+
+# Scenario: An entity present only in context_entities is not dropped (issue #6943)
+def test_analyst_note_includes_context_entities_when_enabled():
+    # Given context entities ingestion is enabled, and an analyst note whose
+    # note_entities holds a Malware and whose context_entities holds a
+    # Threat Actor referenced only in context
+    note = _given_stix_note(include_context_entities=True)
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_context_entities()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the context-only entity is present among the report's referenced objects
+    assert len(report.object_refs) == 2
+    _then_contains_threat_actor(stix_objects)
+
+
+# Scenario: An entity present in both note_entities and context_entities is not duplicated
+def test_analyst_note_deduplicates_entities_shared_between_both_arrays():
+    # Given context entities ingestion is enabled, and an analyst note where
+    # the same entity id appears in both note_entities and context_entities
+    note = _given_stix_note(include_context_entities=True)
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_duplicate_entity()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the entity is only referenced once by the report
+    assert len(report.object_refs) == 1
+
+
+# Scenario: An entity unknown to the risk API is skipped, not the whole note (issue #7344)
+def test_analyst_note_skips_entity_without_risk_score_when_threshold_is_set():
+    # Given a risk threshold, and a risk API that does not know one of the two
+    # domains of the note
+    note = _given_stix_note(risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then the note is still built, with the known domain and the malware,
+    # but without the unknown domain
+    _then_single_report(stix_objects)
+    assert _indicator_names(stix_objects) == ["known.example.com"]
+    assert any(obj["type"] == "malware" for obj in stix_objects)
+
+
+# Scenario: An entity unknown to the risk API is kept without score when no threshold is set (issue #7344)
+def test_analyst_note_keeps_entity_without_risk_score_when_no_threshold():
+    # Given risk scores are imported without threshold, and a risk API that does
+    # not know one of the two domains of the note
+    note = _given_stix_note(risk_as_score=True, risk_threshold=None)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then both domains are present, only the known one carries a score
+    scores = {
+        obj["name"]: obj.get("x_opencti_score")
+        for obj in stix_objects
+        if obj["type"] == "indicator"
+    }
+    assert scores == {"known.example.com": 80, "unknown.example.com": None}
+
+
+# Scenario: The risk score is fetched once per entity when threshold and score are both enabled
+def test_analyst_note_fetches_risk_score_once_per_entity():
+    # Given a risk threshold and risk scores imported as score
+    note = _given_stix_note(risk_as_score=True, risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(
+        {"known.example.com": 80, "unknown.example.com": 90}
+    )
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+
+    # Then the risk API is called once per domain
+    assert note.rfapi.get_risk_score.call_count == 2
+
+
+# Scenario: A risk API failure other than 404 is not hidden
+def test_analyst_note_raises_on_risk_api_error_other_than_not_found():
+    # Given a risk API that fails with a server error
+    note = _given_stix_note(risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_http_error(500)
+
+    # When the note is converted to STIX objects
+    # Then the error is raised
+    with pytest.raises(requests.exceptions.HTTPError):
+        _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+
+
+@pytest.mark.parametrize(
+    "file_hash, expected_pattern",
+    [
+        (
+            "e1d9c90de2568f34ad689c71dac09c62",
+            "[file:hashes.MD5 = 'e1d9c90de2568f34ad689c71dac09c62']",
+        ),
+        (
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "[file:hashes.'SHA-1' = 'da39a3ee5e6b4b0d3255bfef95601890afd80709']",
+        ),
+        (
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "[file:hashes.'SHA-256' = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08']",
+        ),
+    ],
+)
+# Scenario: File hash patterns only quote the hash key when it requires it (issue #7671)
+def test_file_hash_pattern_quotes_hash_key_only_when_required(
+    file_hash, expected_pattern
+):
+    # Given a file hash indicator
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_rf_entity("Hash", file_hash, author, tlp)
+
+    # When the indicator is created
+    stix_indicator = indicator._create_indicator()
+
+    # Then the pattern matches the form OpenCTI normalizes patterns to
+    assert stix_indicator.pattern == expected_pattern
+    # And the indicator id is derived from that pattern
+    assert stix_indicator.id == PyctiIndicator.generate_id(expected_pattern)
+
+
+# Scenario: An indicator with a risk score of 0 keeps its score
+def test_indicator_keeps_a_risk_score_of_zero():
+    # Given an IP address indicator whose risk score is 0
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+    indicator.risk_score = 0
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator carries a score of 0, not a missing score
+    assert _then_single_indicator(stix_objects)["x_opencti_score"] == 0
+
+
+# Scenario: An indicator without risk score has no score
+# Regression guard: also passes at base, it protects the unset case of the score fix
+def test_indicator_without_risk_score_has_no_score():
+    # Given an IP address indicator without risk score
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator has no score
+    assert _then_single_indicator(stix_objects).get("x_opencti_score") is None
+
+
+# Scenario: A vulnerability with a risk of 0 keeps its score
+def test_vulnerability_keeps_a_risk_score_of_zero():
+    # Given a vulnerability processing a risk list row whose risk is "0"
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+    rf_row = _given_vuln_risk_row(risk=0, threat_actor_name="APT29")
+    _when_vuln_map_data(vuln, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability carries a score of 0, not a missing score
+    assert stix_objects[0]["x_opencti_score"] == 0
+
+
+# Scenario: A vulnerability without risk score has no score
+# Regression guard: also passes at base, it protects the unset case of the score fix
+def test_vulnerability_without_risk_score_has_no_score():
+    # Given a vulnerability whose risk score was never set
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability has no score
+    assert stix_objects[0].get("x_opencti_score") is None
+
+
+# Scenario: An indicator risk list row with an empty or non-numeric risk has no score
+# Regression guard: also passes at base, it protects the non-numeric `Risk` case of the score fix
+@pytest.mark.parametrize("risk", ["", "not-a-number"])
+def test_indicator_with_non_numeric_risk_has_no_score(risk):
+    # Given an IP address indicator processing a risk list row whose risk is empty or non-numeric
+    indicator = _given_ip_indicator("1.1.1.1", _given_author(), _given_tlp())
+    rf_row = _given_indicator_risk_row(risk=risk, threat_actor_name="APT28")
+    _when_indicator_map_data(indicator, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the indicator is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the STIX indicator has no score, not a score of 0
+    assert _then_single_indicator(stix_objects).get("x_opencti_score") is None
+
+
+# Scenario: A vulnerability risk list row with an empty or non-numeric risk has no score
+# Regression guard: also passes at base, it protects the non-numeric `Risk` case of the score fix
+@pytest.mark.parametrize("risk", ["", "not-a-number"])
+def test_vulnerability_with_non_numeric_risk_has_no_score(risk):
+    # Given a vulnerability processing a risk list row whose risk is empty or non-numeric
+    vuln = _given_vulnerability("CVE-2024-9999", _given_author(), _given_tlp())
+    rf_row = _given_vuln_risk_row(risk=risk, threat_actor_name="APT29")
+    _when_vuln_map_data(vuln, rf_row, _given_tlp(), related_entity_types=[])
+
+    # When the vulnerability is converted to STIX objects
+    stix_objects = _when_to_stix_objects(vuln)
+
+    # Then the STIX vulnerability has no score, not a score of 0
+    assert stix_objects[0].get("x_opencti_score") is None
+
+
+# Scenario: A risk threshold of 0 disables the filtering, including score 0 and unscored indicators
+def test_analyst_note_keeps_every_indicator_when_threshold_is_zero():
+    # Given a risk threshold of 0 and risk scores imported as score, and a risk API
+    # scoring three of the four domains of the note (0, 40 and 80)
+    note = _given_stix_note(risk_as_score=True, risk_threshold=0)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(_given_domain_scores())
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_scored_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then the four domains are present, with their own score and no score for the unknown one
+    scores = {
+        obj["name"]: obj.get("x_opencti_score")
+        for obj in stix_objects
+        if obj["type"] == "indicator"
+    }
+    assert scores == {
+        "zero.example.com": 0,
+        "low.example.com": 40,
+        "high.example.com": 80,
+        "unknown.example.com": None,
+    }
+    # And no skip is logged for any of the four domains
+    for entity in scores:
+        assert _skip_log_calls(note, entity) == []
+
+
+# Scenario: A risk threshold of 0 without risk scores import makes no risk API call
+# Regression guard: also passes at base. It pins the decision to keep the truthiness
+# check on the threshold, not to switch to `is not None`, which would call the risk
+# API at threshold 0 for nothing.
+def test_analyst_note_does_not_call_risk_api_when_threshold_is_zero_and_no_risk_as_score():
+    # Given a risk threshold of 0 and risk scores not imported as score
+    note = _given_stix_note(risk_as_score=False, risk_threshold=0)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(_given_domain_scores())
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_scored_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then the four domains are present and the risk API was never called
+    assert sorted(_indicator_names(stix_objects)) == sorted(
+        [
+            "zero.example.com",
+            "low.example.com",
+            "high.example.com",
+            "unknown.example.com",
+        ]
+    )
+    note.rfapi.get_risk_score.assert_not_called()
+
+
+# Scenario: Indicators below the threshold are skipped and the skip is logged with its context
+def test_analyst_note_logs_indicator_skipped_below_risk_threshold():
+    # Given a risk threshold of 60 and a risk API scoring three of the four domains
+    # of the note (0, 40 and 80)
+    note = _given_stix_note(risk_threshold=60)
+    note.rfapi.get_risk_score.side_effect = _given_risk_scores(_given_domain_scores())
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_scored_domains())
+    stix_objects = note.to_stix_objects()
+
+    # Then only the domain scored 80 is kept
+    assert _indicator_names(stix_objects) == ["high.example.com"]
+    # And the skip of the domain scored 40 is logged with a static message and its context
+    skip_calls = _skip_log_calls(note, "low.example.com")
+    assert len(skip_calls) == 1
+    assert skip_calls[0].args == (
+        "[ANALYST NOTES] Ignoring indicator below risk threshold or without risk score",
+    )
+    assert skip_calls[0].kwargs["meta"] == {
+        "note_id": "note-id",
+        "entity": "low.example.com",
+        "type": "InternetDomainName",
+        "risk_score": 40,
+        "risk_threshold": 60,
+    }
+    # And the skip of the domain unknown to the risk API is logged without risk score
+    unknown_skip_calls = _skip_log_calls(note, "unknown.example.com")
+    assert len(unknown_skip_calls) == 1
+    assert unknown_skip_calls[0].kwargs["meta"] == {
+        "note_id": "note-id",
+        "entity": "unknown.example.com",
+        "type": "InternetDomainName",
+        "risk_score": None,
+        "risk_threshold": 60,
+    }
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -526,8 +862,60 @@ def _given_ip_indicator(ip, author, tlp):
     return RFIPAddress(ip, "IpAddress", author, tlp)
 
 
-def _given_stix_note():
-    return StixNote(opencti_helper=MagicMock(), tas=[], rfapi=MagicMock())
+def _given_stix_note(
+    include_context_entities=False, risk_as_score=False, risk_threshold=None
+):
+    return StixNote(
+        opencti_helper=MagicMock(),
+        tas=[],
+        rfapi=MagicMock(),
+        risk_as_score=risk_as_score,
+        risk_threshold=risk_threshold,
+        analyst_notes_include_context_entities=include_context_entities,
+    )
+
+
+def _given_http_error(status_code):
+    response = MagicMock()
+    response.status_code = status_code
+    return requests.exceptions.HTTPError(f"{status_code} Error", response=response)
+
+
+def _given_risk_scores(scores_by_value):
+    """Risk API returning the given scores, and a 404 for any other value"""
+
+    def get_risk_score(_type, value):
+        if value not in scores_by_value:
+            raise _given_http_error(404)
+        return scores_by_value[value]
+
+    return get_risk_score
+
+
+def _given_analyst_note_json_with_domains():
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+        {"id": "entity-2", "type": "InternetDomainName", "name": "unknown.example.com"},
+        {"id": "entity-3", "type": "InternetDomainName", "name": "known.example.com"},
+    ]
+    return note_json
+
+
+def _given_domain_scores():
+    """Scores of the domains of the note, `unknown.example.com` is not known by the risk API"""
+    return {"zero.example.com": 0, "low.example.com": 40, "high.example.com": 80}
+
+
+def _given_analyst_note_json_with_scored_domains():
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "entity-1", "type": "InternetDomainName", "name": "zero.example.com"},
+        {"id": "entity-2", "type": "InternetDomainName", "name": "low.example.com"},
+        {"id": "entity-3", "type": "InternetDomainName", "name": "high.example.com"},
+        {"id": "entity-4", "type": "InternetDomainName", "name": "unknown.example.com"},
+    ]
+    return note_json
 
 
 def _given_analyst_note_json():
@@ -552,6 +940,44 @@ def _given_analyst_note_json_with_attachments(attachments):
     note_json["attributes"]["attachments"] = attachments
     note_json["attributes"]["note_entities"] = []
     return note_json
+
+
+def _given_analyst_note_json_with_context_entities():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-2", "type": "Threat Actor", "name": "APT99"},
+            ],
+        },
+    }
+
+
+def _given_analyst_note_json_with_duplicate_entity():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+        },
+    }
 
 
 def _given_vuln_risk_row(risk, threat_actor_name):
@@ -654,6 +1080,25 @@ def _then_stix_types_match(stix_objects, expected_types):
 def _then_objects_exclude(stix_objects, excluded_object):
     found = [obj for obj in stix_objects if obj.id == excluded_object.id]
     assert len(found) == 0, f"Expected {excluded_object.id} to be absent, got {found}"
+
+
+def _indicator_names(stix_objects):
+    return [obj["name"] for obj in stix_objects if obj["type"] == "indicator"]
+
+
+def _skip_log_calls(note, entity):
+    """INFO log calls of the note carrying the given entity in their meta"""
+    return [
+        call
+        for call in note.helper.connector_logger.info.call_args_list
+        if call.kwargs.get("meta", {}).get("entity") == entity
+    ]
+
+
+def _then_single_indicator(stix_objects):
+    indicators = [obj for obj in stix_objects if obj["type"] == "indicator"]
+    assert len(indicators) == 1, f"Expected exactly 1 indicator, got {len(indicators)}"
+    return indicators[0]
 
 
 def _then_single_report(stix_objects):

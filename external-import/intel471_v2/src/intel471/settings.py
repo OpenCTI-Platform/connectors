@@ -103,6 +103,34 @@ class Intel471_V2Config(BaseConfigModel):
         "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
         default=0,
     )
+    interval_credentials: int = Field(
+        description="How often leaked credentials should be fetched in minutes (Verity471 only). "
+        "Defaults to `0`, which leaves the stream disabled; set a non-zero interval to enable it.",
+        default=0,
+    )
+    initial_history_credentials: EpochMillis = Field(
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the leaked credentials should be fetched from on the connector's first run (Verity471 only). "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates. "
+        "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+        default=0,
+    )
+    enable_credentials_plain_password: bool = Field(
+        description="Whether to store the cleartext password in the UserAccount `credential` field "
+        "for leaked credentials (Verity471 only; affects both the credentials stream and watcher "
+        "alerts). Defaults to `false`.",
+        default=False,
+    )
+    affiliation_group: ListFromString = Field(
+        description="Optional comma-separated list of affiliation groups used to narrow "
+        "the leaked-credentials stream (Verity471 only). Allowed values: `my_employees`, "
+        "`my_customers`, `third_parties`, `vip_emails`. If not set, credentials from all "
+        "affiliation groups are fetched. A Verity471 cursor is only valid for the filter "
+        "set it was issued against, so changing this makes the connector discard the "
+        "stored cursor and re-anchor to the last processed credential minus a small "
+        "margin.",
+        default=[],
+    )
     interval_reports: int = Field(
         description="How often reports should be fetched in minutes. If not set, the stream will not be enabled.",
         default=120,

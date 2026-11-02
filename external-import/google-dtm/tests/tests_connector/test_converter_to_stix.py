@@ -6,6 +6,7 @@ that an incomplete document still produces its `alert.md` attachment and, for
 """
 
 import base64
+import copy
 from unittest.mock import MagicMock
 
 import pytest
@@ -27,9 +28,53 @@ _ACCOUNT_DISCOVERY_ALERT = {
         },
         "service_account": {
             "login": "jdoe@acme.com",
-            "email_domain": "acme.com",
+            "profile": {"contact": {"email_domain": "acme.com"}},
             "service": {"inet_location": {"domain": "acme.com"}},
         },
+    },
+}
+
+_PLAINTEXT_PASSWORD = "hunter2"
+
+_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD = {
+    **_ACCOUNT_DISCOVERY_ALERT,
+    "doc": {
+        **_ACCOUNT_DISCOVERY_ALERT["doc"],
+        "service_account": {
+            **_ACCOUNT_DISCOVERY_ALERT["doc"]["service_account"],
+            "password": {"plain_text": _PLAINTEXT_PASSWORD},
+        },
+    },
+}
+
+_ACCOUNT_DISCOVERY_ALERT_WITH_SERVICE_URL = {
+    **_ACCOUNT_DISCOVERY_ALERT,
+    "doc": {
+        **_ACCOUNT_DISCOVERY_ALERT["doc"],
+        "service_account": {
+            **_ACCOUNT_DISCOVERY_ALERT["doc"]["service_account"],
+            "service": {
+                "inet_location": {
+                    "domain": "acme.com",
+                    "url": "https://acme.com/login",
+                }
+            },
+        },
+    },
+}
+
+_DOCUMENT_ANALYSIS_ALERT = {
+    "id": "da1pueokorjs73af1j92",
+    "title": "Document mentioning acme.com",
+    "created_at": "2026-08-22T01:00:00.000Z",
+    "updated_at": "2026-08-22T01:30:00.000Z",
+    "severity": "low",
+    "alert_type": "Document",
+    "doc": {
+        "__type": "document_analysis",
+        "source_url": "https://files.invalid/dump.pdf",
+        "filename": "dump.pdf",
+        "raw_text": "acme.com credentials inside",
     },
 }
 
@@ -63,6 +108,123 @@ def _alert_markdown(stix_objects):
     (attachment,) = _attachments(stix_objects)
     assert attachment["name"] == "alert.md"
     return base64.b64decode(attachment["data"]).decode("utf-8")
+
+
+def _user_account(stix_objects):
+    return next(obj for obj in stix_objects if obj["type"] == "user-account")
+
+
+# --------------------------------------------------------------------------
+# import_passwords: plaintext passwords are opt-out
+# --------------------------------------------------------------------------
+
+
+def test_passwords_are_imported_by_default(converter):
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD)
+
+    assert _user_account(stix_objects)["credential"] == _PLAINTEXT_PASSWORD
+    assert f"- **Password**: {_PLAINTEXT_PASSWORD}\n" in _alert_markdown(stix_objects)
+
+
+def test_passwords_are_dropped_when_import_is_disabled():
+    converter = ConverterToStix(MagicMock(), tlp="clear", import_passwords=False)
+
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD)
+
+    # stix2 drops a None property instead of storing it.
+    user_account = _user_account(stix_objects)
+    assert "credential" not in user_account
+    assert user_account["account_login"] == "jdoe@acme.com"
+
+    markdown = _alert_markdown(stix_objects)
+    assert "- **Password**: [redacted]\n" in markdown
+    assert _PLAINTEXT_PASSWORD not in markdown
+    # The rest of the credential exposure context is kept.
+    assert "- **Login**: jdoe@acme.com\n" in markdown
+    observable_types = {obj["type"] for obj in stix_objects}
+    assert {"user-account", "domain-name", "file"} <= observable_types
+    converter.helper.connector_logger.error.assert_not_called()
+
+
+def test_password_is_redacted_even_when_the_source_has_none():
+    """The redaction is unconditional so analysts can't infer absence."""
+    converter = ConverterToStix(MagicMock(), tlp="clear", import_passwords=False)
+
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT)
+
+    assert "- **Password**: [redacted]\n" in _alert_markdown(stix_objects)
+    assert "credential" not in _user_account(stix_objects)
+
+
+@pytest.mark.parametrize("import_passwords", [True, False])
+def test_a_masked_password_is_never_stored_as_a_credential(import_passwords):
+    converter = ConverterToStix(
+        MagicMock(), tlp="clear", import_passwords=import_passwords
+    )
+    alert = {
+        **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD,
+        "doc": {
+            **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD["doc"],
+            "service_account": {
+                **_ACCOUNT_DISCOVERY_ALERT_WITH_PASSWORD["doc"]["service_account"],
+                "password": {"plain_text": "********"},
+            },
+        },
+    }
+
+    assert "credential" not in _user_account(converter.create_incident(alert))
+
+
+# --------------------------------------------------------------------------
+# Field mappings in account discovery and document alerts
+# --------------------------------------------------------------------------
+
+
+def test_service_url_and_domain_are_not_swapped(converter):
+    """Service URL rendered the domain and Service Domain rendered the URL."""
+    markdown = _alert_markdown(
+        converter.create_incident(_ACCOUNT_DISCOVERY_ALERT_WITH_SERVICE_URL)
+    )
+
+    assert "- **Service URL**: https://acme.com/login\n" in markdown
+    assert "- **Service Domain**: acme.com\n" in markdown
+
+
+def test_source_file_observable_carries_the_filename(converter):
+    """The guard checked `filename` but the value was read from `name`."""
+    stix_objects = converter.create_incident(_ACCOUNT_DISCOVERY_ALERT)
+
+    stix_file = next(obj for obj in stix_objects if obj["type"] == "file")
+    assert stix_file["name"] == "combo.txt"
+    assert stix_file["hashes"]["MD5"] == "d41d8cd98f00b204e9800998ecf8427e"
+
+
+def test_source_file_without_hashes_does_not_raise(converter):
+    """An empty hashes dict made stix2 raise and aborted the whole run."""
+    alert = copy.deepcopy(_ACCOUNT_DISCOVERY_ALERT)
+    del alert["doc"]["source_file"]["hashes"]
+
+    stix_objects = converter.create_incident(alert)
+
+    stix_file = next(obj for obj in stix_objects if obj["type"] == "file")
+    assert stix_file["name"] == "combo.txt"
+    assert "hashes" not in stix_file
+
+
+def test_email_domain_is_read_from_the_profile_contact(converter):
+    """DTM nests email_domain under profile.contact; the line was always empty."""
+    markdown = _alert_markdown(converter.create_incident(_ACCOUNT_DISCOVERY_ALERT))
+
+    assert "- **Email Domain**: acme.com\n" in markdown
+
+
+def test_document_alert_does_not_label_the_source_url_as_author(converter):
+    """`Author` duplicated `source_url`; DTM exposes no author for documents."""
+    markdown = _alert_markdown(converter.create_incident(_DOCUMENT_ANALYSIS_ALERT))
+
+    assert "**Author**" not in markdown
+    assert "- **Source URL**: https://files.invalid/dump.pdf\n" in markdown
+    assert "- **Source File**: dump.pdf\n" in markdown
 
 
 # --------------------------------------------------------------------------

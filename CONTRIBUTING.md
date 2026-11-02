@@ -184,6 +184,10 @@ mise run build        # or: mise run b
 mise run gs
 ```
 
+`gs` installs `connectors-sdk` from GitHub `master`. When your change also modifies
+`connectors-sdk/`, run `SDK_SOURCE=local mise run gs` to generate the schema against
+your local SDK instead.
+
 > **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
 > with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for

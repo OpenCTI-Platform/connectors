@@ -14,5 +14,5 @@ services:
       - SILOBREAKER_API_KEY=ChangeMe
       - SILOBREAKER_API_SHARED=ChangeMe
       - SILOBREAKER_LISTS=138809,96910,36592,55112,50774 # Optional (default: 138809(Infostealers and Keyloggers), 96910(RAT Malware), 36592(Ransomware), 55112(APTs), 50774(Threat Publications))
-      - SILOBREAKER_IMPORT_START_DATE=2024-09-01 # Optional (default: 2024-09-01)
+      - SILOBREAKER_IMPORT_START_DATE=P30D # Optional (default: P30D)
     restart: always

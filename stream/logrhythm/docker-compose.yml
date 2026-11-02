@@ -11,7 +11,6 @@ services:
       CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES: true
       CONNECTOR_NAME: OpenCTI Logrhythm Connector
       CONNECTOR_SCOPE: logrhythm
-      CONNECTOR_CONFIDENCE_LEVEL: 80 # From 0 (Unknown) to 100 (Fully trusted)
       CONNECTOR_LOG_LEVEL: info
       LR_URL: https://logrhythm_host.com
       LR_TOKEN: Token1

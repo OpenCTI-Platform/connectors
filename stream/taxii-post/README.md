@@ -80,6 +80,7 @@ There are a number of configuration options, which are set either in `docker-com
 | STIX Version     | taxii.stix_version  | `TAXII_STIX_VERSION`        | 2.1     | No        | STIX output version (2.0 or 2.1).                          |
 | Delete Created By Ref  | taxii.delete_created_by_ref  | `TAXII_DELETE_CREATED_BY_REF` | true | No | Strip `created_by_ref` from objects before posting. |
 | Delete Marking Definition | taxii.delete_marking_definition | `TAXII_DELETE_MARKING_DEFINITION` | true | No | Strip `object_marking_refs` from objects before posting. |
+| Identity ID Mapping | taxii.identity_id_mapping | `TAXII_IDENTITY_ID_MAPPING` | | No | Comma separated `original_id:replacement_id` identity ID pairs (e.g. `identity--<uuid>:identity--<uuid>`). Replaces each original ID with its replacement in the STIX fields `id`, `created_by_ref`, `source_ref`, `target_ref`, `sighting_of_ref`, `where_sighted_refs` and `object_refs` before posting. Note that these changes do not propagate back to the OpenCTI instance and are altered only for the bundles sent to the TAXII server. `created_by_ref` is only remapped when `TAXII_DELETE_CREATED_BY_REF` is `false`, since it is removed by default.|
 
 ## Deployment
 

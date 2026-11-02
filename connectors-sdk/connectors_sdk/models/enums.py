@@ -31,6 +31,9 @@ __all__ = [
     "RelationshipType",
     "Reliability",
     "ReportType",
+    "SsvcAutomatable",
+    "SsvcExploitation",
+    "SsvcTechnicalImpact",
     "ThreatActorRole",
     "ThreatActorSophistication",
     "ThreatActorTypes",
@@ -559,6 +562,37 @@ class ReportType(_PermissiveEnum):
     MALWARE = "malware"
     SPOTREP = "spotrep"
     THREAT_REPORT = "threat-report"
+
+
+class SsvcExploitation(StrEnum):
+    """SSVC Exploitation Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    NONE = "none"
+    PROOF_OF_CONCEPT = "proof_of_concept"
+    ACTIVE = "active"
+
+
+class SsvcAutomatable(StrEnum):
+    """SSVC Automatable Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    NO = "no"
+    YES = "yes"
+
+
+class SsvcTechnicalImpact(StrEnum):
+    """SSVC Technical Impact Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    PARTIAL = "partial"
+    TOTAL = "total"
 
 
 class ThreatActorRole(_PermissiveEnum):

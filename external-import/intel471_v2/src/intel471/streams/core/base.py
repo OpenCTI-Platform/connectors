@@ -137,13 +137,29 @@ class Intel471Stream(ABC):
                     if not api_payload_objects:
                         break
                     cursor = self._get_cursor_value(api_response)
+                    settings_kwargs = {
+                        "ioc_opencti_score": self.ioc_score,
+                        "report_full_content": True,
+                    }
+                    # Verity471's STIXMapperSettings gates the cleartext credential
+                    # password; Titan's has no such field. The one connector setting
+                    # governs both the credentials stream and the watcher-alerts stream
+                    # (the alerts mapper re-dispatches credential targets through these
+                    # same settings).
+                    if self.client_wrapper.backend_name == "verity471":
+                        settings_kwargs["credentials_include_plain_password"] = bool(
+                            getattr(
+                                self.connector_config,
+                                "enable_credentials_plain_password",
+                                False,
+                            )
+                        )
                     try:
                         bundle = api_response.to_stix(
                             self.client_wrapper.stix_mapper_settings_class(
                                 self.client_wrapper.module,
                                 api_client,
-                                ioc_opencti_score=self.ioc_score,
-                                report_full_content=True,
+                                **settings_kwargs,
                             )
                         )
                     except self.client_wrapper.empty_bundle_exception:

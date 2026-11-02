@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN addgroup -S connector && adduser -S connector -G connector
 
-RUN apk update && \
+RUN apk --no-cache upgrade && \
     apk add --no-cache --virtual .build-deps git build-base libffi-dev && \
     apk add --no-cache libmagic && \
     rm -rf /var/cache/apk/*

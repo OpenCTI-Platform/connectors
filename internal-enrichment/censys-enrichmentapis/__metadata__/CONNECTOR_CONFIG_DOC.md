@@ -4,15 +4,16 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
-| CENSYS_ENRICHMENTAPIS_ORGANISATION_ID | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Censys organisation ID. |
-| CENSYS_ENRICHMENTAPIS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Censys API token. |
-| CONNECTOR_NAME | `string` |  | string | `"Censys EnrichmentAPIs"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "X509-Certificate", "Domain-Name"]` | The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate']. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| CENSYS_ENRICHMENTAPIS_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | The maximum TLP level allowed for enrichment. |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| CENSYS_ENRICHMENTAPIS_ORGANISATION_ID | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Censys organisation ID. |
+| CENSYS_ENRICHMENTAPIS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Censys API token. |
+| CONNECTOR_NAME | `string` |  | string |  | `"Censys EnrichmentAPIs"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["IPv4-Addr", "IPv6-Addr", "X509-Certificate", "Domain-Name"]` | The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate']. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
+| CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
+| CENSYS_ENRICHMENTAPIS_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

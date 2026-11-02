@@ -4,15 +4,16 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
-| VISIONHEIGHT_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | VisionHeight API key used to authenticate requests (sent as the x-api-key header). |
-| CONNECTOR_NAME | `string` |  | string | `"VisionHeight"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "Domain-Name"]` | Comma-separated list of OpenCTI entity types this connector enriches. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| VISIONHEIGHT_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.visionheight.com"` | VisionHeight API base URL. Override for white-label or staging endpoints. |
-| VISIONHEIGHT_MAX_TLP_LEVEL | `string` |  | `clear` `green` `amber` `amber+strict` `red` | `"amber+strict"` | Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged. |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| VISIONHEIGHT_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | VisionHeight API key used to authenticate requests (sent as the x-api-key header). |
+| CONNECTOR_NAME | `string` |  | string |  | `"VisionHeight"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["IPv4-Addr", "Domain-Name"]` | Comma-separated list of OpenCTI entity types this connector enriches. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
+| CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber+strict"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
+| VISIONHEIGHT_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.visionheight.com"` | VisionHeight API base URL. Override for white-label or staging endpoints. |
+| VISIONHEIGHT_MAX_TLP_LEVEL | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

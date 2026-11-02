@@ -1,0 +1,10 @@
+__metadata__
+**/__pycache__
+**/__docs__
+**/.venv*
+**/venv
+**/logs
+**/config.yml
+**/*.egg-info
+**/*.gql
+tests/

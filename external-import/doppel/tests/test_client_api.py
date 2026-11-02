@@ -2,7 +2,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from doppel.client_api import ConnectorClient
+import requests
+from doppel.client_api import ConnectorClient, ResultWindowExceededError
 from pydantic import SecretStr
 
 
@@ -26,63 +27,146 @@ def test_client_sets_attribution_headers(client):
     assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
 
 
-@pytest.mark.parametrize(
-    ("total_pages", "expected_pages"),
-    [
-        (0, [0]),
-        (1, [0]),
-        (3, [0, 1, 2]),
-    ],
-)
-def test_get_alerts_fetches_each_zero_indexed_page_once(
-    client, total_pages, expected_pages
+@pytest.mark.parametrize("total_pages", [0, 1, 3])
+def test_get_alerts_requests_one_page(client, total_pages):
+    def request_data(_url, params):
+        assert params == {
+            "last_activity_timestamp": "2026-08-03T00:00:00Z",
+            "last_activity_before": "2026-08-03T02:00:00Z",
+            "sort_type": "last_activity",
+            "sort_order": "asc",
+            "page": 0,
+            "page_size": 100,
+        }
+        return _response(
+            {
+                "alerts": [{"id": "alert-0"}] if total_pages else [],
+                "metadata": {
+                    "total_pages": total_pages,
+                    "count": total_pages * 100,
+                },
+            }
+        )
+
+    client._request_data = MagicMock(side_effect=request_data)
+    client._request_data.retry = MagicMock()
+
+    alerts, returned_pages, returned_count = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+    )
+
+    assert client._request_data.call_count == 1
+    assert client._request_data.call_args.args[0] == "https://api.doppel.test/v1/alerts"
+    assert returned_pages == total_pages
+    assert returned_count == total_pages * 100
+    assert alerts == ([{"id": "alert-0"}] if total_pages else [])
+
+
+def test_get_alerts_defaults_missing_metadata_to_zero(client):
+    client._request_data = MagicMock(return_value=_response({"alerts": []}))
+    client._request_data.retry = MagicMock()
+
+    assert client.get_alerts("2026-08-03T00:00:00Z", "2026-08-03T02:00:00Z") == (
+        [],
+        0,
+        0,
+    )
+
+
+def test_get_alerts_v1_sends_bounded_ascending_params_to_prevent_backlog_skips(
+    client,
 ):
-    def request_data(_url, params):
-        page = params["page"]
-        return _response(
-            {
-                "alerts": [{"id": f"alert-{page}"}] if total_pages else [],
-                "metadata": {"total_pages": total_pages},
-            }
-        )
-
-    client._request_data = MagicMock(side_effect=request_data)
+    client._request_data = MagicMock(return_value=_response())
     client._request_data.retry = MagicMock()
 
-    alerts = client.get_alerts("2026-08-03T00:00:00Z")
-
-    requested_pages = sorted(
-        call.kwargs["params"]["page"] for call in client._request_data.call_args_list
+    client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
     )
-    assert requested_pages == expected_pages
-    assert {call.args[0] for call in client._request_data.call_args_list} == {
-        "https://api.doppel.test/v1/alerts"
+
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
+        "page": 2,
+        "page_size": 50,
     }
-    assert sorted(alert["id"] for alert in alerts) == [
-        f"alert-{page}" for page in expected_pages if total_pages
-    ]
 
 
-def test_get_alerts_continues_from_requested_start_page(client):
-    def request_data(_url, params):
-        page = params["page"]
-        return _response(
+def test_get_alerts_v2_sends_window_and_sort_params():
+    client = ConnectorClient(helper=MagicMock(), config=_config(api_version="v2"))
+    client._request_data = MagicMock(
+        return_value=_response(
             {
-                "alerts": [{"id": f"alert-{page}"}],
-                "metadata": {"total_pages": 4},
+                "alerts": [{"id": "alert-2"}],
+                "metadata": {"total_pages": 4, "count": 151},
             }
         )
-
-    client._request_data = MagicMock(side_effect=request_data)
+    )
     client._request_data.retry = MagicMock()
 
-    alerts = client.get_alerts("2026-08-03T00:00:00Z", page=2)
-
-    requested_pages = sorted(
-        call.kwargs["params"]["page"] for call in client._request_data.call_args_list
+    alerts, total_pages, total_count = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
     )
-    assert requested_pages == [2, 3]
-    assert sorted(alert["id"] for alert in alerts) == ["alert-2", "alert-3"]
+
+    assert client._request_data.call_count == 1
+    assert alerts == [{"id": "alert-2"}]
+    assert total_pages == 4
+    assert total_count == 151
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
+        "page": 2,
+        "page_size": 50,
+    }
+
+
+def test_request_data_maps_result_window_response_without_retry(client):
+    response = _response(
+        {
+            "code": "result_window_exceeded",
+            "message": "Narrow the activity time range",
+            "maximum_results": 50_000,
+        },
+        status_code=422,
+    )
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(ResultWindowExceededError) as error:
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    assert error.value.response is response
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.warning.assert_called_once_with(
+        "[API] Alert result window exceeded; narrowing activity range",
+        {
+            "url": "https://api.doppel.test/v1/alerts",
+            "maximum_results": 50_000,
+            "params": {"page": 0},
+        },
+    )
+
+
+def test_request_data_does_not_map_unrelated_422(client):
+    response = _response({"message": "Invalid search filters"}, status_code=422)
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(requests.HTTPError):
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.error.assert_called_once()
 
 
 def _config(*, api_version: str) -> SimpleNamespace:
@@ -117,7 +201,11 @@ def test_v1_uses_static_headers_and_normalized_v1_url():
 
     client.session = MagicMock()
     client.session.get.return_value = _response()
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     assert client.session.get.call_args.args[0] == "https://api.doppel.test/v1/alerts"
 
@@ -148,7 +236,11 @@ def test_v2_mints_token_and_uses_only_bearer_auth():
 
     client.session = MagicMock()
     client.session.get.return_value = _response()
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     call = client.session.get.call_args
     assert call.args[0] == "https://api.doppel.test/v2/alerts"
@@ -183,7 +275,11 @@ def test_v2_refreshes_once_after_unauthorized():
     client.session = MagicMock()
     client.session.get.side_effect = [unauthorized, _response()]
 
-    client.get_alerts("2026-08-01T00:00:00", page_size=100)
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
 
     assert token_session.post.call_count == 2
     assert client.session.get.call_count == 2

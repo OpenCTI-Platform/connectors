@@ -2,7 +2,8 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 ENV CONNECTOR_DURATION_PERIOD=PT1H
 
-RUN apk --no-cache add libmagic libffi libxml2 libxslt
+RUN apk --no-cache upgrade && \
+    apk --no-cache add libmagic libffi libxml2 libxslt
 
 # Copy the connector
 COPY src /opt/flowtriq

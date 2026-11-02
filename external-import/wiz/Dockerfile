@@ -5,7 +5,7 @@ COPY src /opt/opencti-connector-wiz
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-wiz && \

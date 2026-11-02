@@ -7,7 +7,8 @@ WORKDIR /opt/opencti-connector-checkfirst-import-connector
 # - ca-certificates: HTTPS/TLS trust store for OpenCTI/API calls
 # - libmagic: required by python-magic (pulled by pycti on Linux)
 # - libffi: common runtime dep for wheels using libffi
-RUN apk add --no-cache \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
     ca-certificates \
     libffi \
     libmagic

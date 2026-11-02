@@ -96,12 +96,16 @@ class ExternalImportConnectorState(BaseConnectorState):
 #### Simple usage (no subclassing needed):
 
 ```python
+from connectors_sdk.logger import get_logger
+
+logger = get_logger(__name__)
+
 state = ExternalImportConnectorState()
-state.attach_opencti_connector_helper(helper) # establish the connection with OpenCTI
+state.inject_dependencies(helper)  # establish the connection with OpenCTI
 state.load()
 
 if state.last_run:
-    self.helper.connector_logger.info("Last run:", {"last_run": state.last_run})
+    logger.info("Last run found", meta={"last_run": state.last_run.isoformat()})
 
 state.last_run = datetime.now(tz=timezone.utc)
 state.save()
@@ -115,7 +119,7 @@ class CustomConnectorState(ExternalImportConnectorState):
     last_page: int = Field(default=0)
 
 state = CustomConnectorState()
-state.attach_opencti_connector_helper(helper) # establish the connection with OpenCTI
+state.inject_dependencies(helper)  # establish the connection with OpenCTI
 state.load()
 state.last_run = datetime.now(tz=timezone.utc)
 state.last_cursor = "abc123"
@@ -203,3 +207,8 @@ The `states` module has no dependency on other SDK modules (`settings`, `models`
 - Related TDR: [Typing and validation of configurations with Pydantic Settings](https://github.com/OpenCTI-Platform/connectors/blob/master/connectors-sdk/TDRs/2025-10-01-Typing_and_validation_of_configurations_with_Pydantic_Settings.md)
 - [Pydantic BaseModel documentation](https://docs.pydantic.dev/latest/concepts/models/)
 - [Pydantic serialization (JSON mode)](https://docs.pydantic.dev/latest/concepts/serialization/#json-mode)
+
+## Update (2026-10-07)
+
+Update logging in code examples (`connectors_sdk.logger`), and call `inject_dependencies()`
+(formerly `attach_opencti_connector_helper()`) to connect the state. No technical changes.

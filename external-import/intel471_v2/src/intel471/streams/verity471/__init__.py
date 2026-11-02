@@ -1,5 +1,6 @@
 from .alerts import Verity471AlertsStream
 from .breach_alerts import Verity471BreachAlertsStream
+from .credentials import Verity471CredentialsStream
 from .cves import Verity471CVEsStream
 from .fintel import Verity471FintelStream
 from .geopol_reports import Verity471GeopolReportsStream
@@ -11,6 +12,7 @@ from .spot_reports import Verity471SpotReportsStream
 __all__ = [
     "Verity471IndicatorsStream",
     "Verity471CVEsStream",
+    "Verity471CredentialsStream",
     "Verity471BreachAlertsStream",
     "Verity471FintelStream",
     "Verity471GeopolReportsStream",

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/wiz-cloud_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Wiz Cloud",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "wiz-cloud"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "format": "duration",
+      "type": "string"
+    },
+    "WIZ_CLOUD_API_URL": {
+      "description": "Tenant GraphQL endpoint, e.g. https://api.us17.app.wiz.io/graphql",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WIZ_CLOUD_AUTH_URL": {
+      "default": "https://auth.app.wiz.io/oauth/token",
+      "description": "OAuth2 token endpoint (different host than api_url)",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WIZ_CLOUD_CLIENT_ID": {
+      "description": "Wiz service account client id",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WIZ_CLOUD_CLIENT_SECRET": {
+      "description": "Wiz service account client secret",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WIZ_CLOUD_ISSUE_SEVERITY": {
+      "default": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "description": "Issue severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_ISSUE_STATUS": {
+      "default": [
+        "OPEN",
+        "IN_PROGRESS"
+      ],
+      "description": "Issue statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_IMPORT_TTPS": {
+      "default": true,
+      "description": "Whether to import the MITRE ATT&CK techniques mapped to the source rules of the imported issues. They are returned by the issues query itself, so importing them costs no extra API call.",
+      "type": "boolean"
+    },
+    "WIZ_CLOUD_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to import vulnerability findings for the cloud assets referenced by the imported issues.",
+      "type": "boolean"
+    },
+    "WIZ_CLOUD_VULNERABILITY_SEVERITY": {
+      "default": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "description": "Vulnerability severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_VULNERABILITY_STATUS": {
+      "default": [
+        "OPEN",
+        "IN_PROGRESS"
+      ],
+      "description": "Vulnerability statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT": {
+      "default": false,
+      "description": "Import only vulnerabilities with a known exploit. Severity alone barely reduces the volume, so this is the effective filter when an asset carries hundreds of findings.",
+      "type": "boolean"
+    },
+    "WIZ_CLOUD_SINCE": {
+      "description": "Relative import start on first run (ISO 8601 duration)",
+      "pattern": "^(?:(?!0000|0001|9999)(?:\\d{4}-(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|\\d{4}-(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|\\d{4}-02-(?:0[1-9]|1\\d|2[0-8])|(?:\\d\\d(?:0[48]|[2468][048]|[13579][26])|(?:[02468][048]|[13579][26])00)-02-29)(?:[T ](?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|[+-](?:[01]\\d|2[0-3])(?::?[0-5]\\d)?)?)?|P(?!$)(?:\\d{1,3}Y)?(?:\\d{1,3}M)?(?:\\d{1,3}W)?(?:\\d{1,4}D)?(?:T(?=\\d)(?:\\d{1,4}H)?(?:\\d{1,4}M)?(?:\\d{1,4}(?:\\.\\d+)?S)?)?)$",
+      "type": "string"
+    },
+    "WIZ_CLOUD_PAGE_SIZE": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WIZ_CLOUD_MARKING": {
+      "description": "TLP Level Enum.\n\nSee https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "WIZ_CLOUD_API_URL",
+    "WIZ_CLOUD_CLIENT_ID",
+    "WIZ_CLOUD_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

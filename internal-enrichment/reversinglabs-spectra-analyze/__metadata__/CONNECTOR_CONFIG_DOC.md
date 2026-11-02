@@ -15,11 +15,12 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` |  | `"TLP:AMBER"` | Maximum TLP for entity that connector can enrich |
+| CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
 | REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS | `string` |  | `windows11` `windows10` `windows7` `macos11` `linux` |  | `"windows10"` | The platform to execute the sample on |
 | REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS | `boolean` |  | boolean |  | `true` | Enable cloud analysis |
+| REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |
 | REVERSINGLABS_URL | `string` |  | string | ⛔️ |  | Use REVERSINGLABS_SPECTRA_ANALYZE_URL instead. |
 | REVERSINGLABS_TOKEN | `string` |  | string | ⛔️ |  | Use REVERSINGLABS_SPECTRA_ANALYZE_TOKEN instead. |
-| REVERSINGLABS_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | ⛔️ | `"TLP:AMBER"` | Use REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP instead. |
+| REVERSINGLABS_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |
 | REVERSINGLABS_SANDBOX_OS | `string` |  | `windows11` `windows10` `windows7` `macos11` `linux` | ⛔️ | `"windows10"` | Use REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS instead. |
 | REVERSINGLABS_CLOUD_ANALYSIS | `boolean` |  | boolean | ⛔️ | `true` | Use REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS instead. |

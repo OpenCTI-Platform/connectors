@@ -1,10 +1,11 @@
 import os
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Literal
 
 import __main__
+from connectors_sdk import DatetimeFromIsoString
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -13,7 +14,6 @@ from pydantic import (
     HttpUrl,
     PlainSerializer,
     SecretStr,
-    TypeAdapter,
     model_validator,
 )
 from pydantic_core.core_schema import SerializationInfo
@@ -67,30 +67,6 @@ def comma_separated_list_validator(value: str | list[str]) -> list[str]:
     return value
 
 
-def iso_string_validator(value: str) -> datetime:
-    """
-    Convert ISO string into a datetime object.
-
-    Example:
-        > value = iso_string_validator("2023-10-01T00:00:00Z")
-        > print(value) # 2023-10-01 00:00:00+00:00
-
-        # If today is 2023-10-01:
-        > value = iso_string_validator("P30D")
-        > print(value) # 2023-09-01 00:00:00+00:00
-    """
-    if isinstance(value, str):
-        try:
-            # Convert presumed ISO string to datetime object
-            return datetime.fromisoformat(value).astimezone(tz=timezone.utc)
-        except ValueError:
-            # If not a datetime ISO string, try to parse it as timedelta with pydantic first
-            duration = TypeAdapter(timedelta).validate_python(value)
-            # Then return a datetime minus the value
-            return datetime.now(timezone.utc) - duration
-    return value
-
-
 def pycti_list_serializer(value: list[str], info: SerializationInfo) -> str | list[str]:
     """
     Serialize list of values as comma-separated string.
@@ -108,13 +84,6 @@ ListFromString = Annotated[
     list[str],
     BeforeValidator(comma_separated_list_validator),
     PlainSerializer(pycti_list_serializer, when_used="json"),
-]
-
-DatetimeFromIsoString = Annotated[
-    datetime,
-    BeforeValidator(iso_string_validator),
-    # Replace the default serializer as it uses Z prefix instead of +00:00 offset
-    PlainSerializer(datetime.isoformat, when_used="json"),
 ]
 
 
@@ -170,11 +139,9 @@ class ConnectorConfig(ConfigBaseModel):
 class FlashpointConfig(ConfigBaseModel):
     api_key: SecretStr = Field(description="The API key to connect to Flashpoint.")
     import_start_date: DatetimeFromIsoString = Field(
-        description="The date from which to start importing data.",
-        # `default_factory` is used to set a dynamic default value (datetime) at runtime
-        default_factory=lambda: iso_string_validator("P30D"),  # 30 days ago
-        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
-        json_schema_extra={"default": "P30D"},
+        description="The date from which to start importing data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago).",
+        default="P30D",  # 30 days ago, resolved at runtime
+        validate_default=True,
     )
     import_reports: bool = Field(
         description="Whether to import reports from Flashpoint or not.",
@@ -187,6 +154,15 @@ class FlashpointConfig(ConfigBaseModel):
     import_indicators: bool = Field(
         description="Whether to import indicators of compromise (IoCs) or not.",
         default=True,
+    )
+    import_extracted_config_domains_urls: bool = Field(
+        description=(
+            "Whether to create Domain-Name and URL observables from the network "
+            "endpoints of extracted malware configurations. Disabled by default: "
+            "these lists can mix real C2 servers with legitimate domains "
+            "(false positives)."
+        ),
+        default=False,
     )
     import_alerts: bool = Field(
         description="Whether to import alert data from Flashpoint or not.",

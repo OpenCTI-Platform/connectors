@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 
 # Install dependencies
-RUN apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
 
 # Copy the connector
 COPY src /opt/opencti-connector-valhalla

@@ -4,7 +4,7 @@ opencti:
 
 #connector:
   #id: 'ChangeMe'
-  #name: 'Wiz Cloud Threat Landscape'
+  #name: 'Wiz Public Threat Landscape'
   #log_level: 'error'
   #duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
   #============================================#

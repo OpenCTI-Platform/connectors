@@ -5,7 +5,8 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 COPY src /opt/opencti-connector-noisecontrol
 
 # Install dependencies
-RUN apk --no-cache add git build-base libmagic && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic && \
     cd /opt/opencti-connector-noisecontrol && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base

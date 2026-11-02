@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
 # Copy the connector
 COPY src /opt/opencti-connector-mitre-atlas
 WORKDIR /opt/opencti-connector-mitre-atlas

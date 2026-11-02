@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 COPY requirements.txt /opt/opencti-connector-cluster25/
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-cluster25 && \
     pip install --no-cache-dir -r requirements.txt && \
