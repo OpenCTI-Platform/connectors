@@ -103,7 +103,7 @@ class BitdefenderConfig(BaseConfigModel):
     @classmethod
     def validate_api_key(cls, value: SecretStr) -> SecretStr:
         secret = value.get_secret_value()
-        if secret == "" or secret == "InsertMe":
+        if secret in {"", "ChangeMe"}:
             raise ValueError("You must configure valid API key value.")
         return value
 
