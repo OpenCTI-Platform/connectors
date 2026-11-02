@@ -677,13 +677,15 @@ class StixMakerPrivate:
         self._getValue("type")
 
         if "file_format" in self.data:
-            filedata["custom_properties"] = {"format": self._getValue("file_format")}
+            filedata["custom_properties"] = {
+                "x_opencti_file_format": self._getValue("file_format")
+            }
 
         # Currently ignored as relationship to those is unclear
         self._getValue("similar_files")
 
         filedata["object_marking_refs"] = [self.maker.tlp.id]
-        stix_file = stix2.File(**filedata)
+        stix_file = stix2.File(**filedata, allow_custom=True)
         stix_bundle.append(stix_file)
 
         #
