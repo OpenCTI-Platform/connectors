@@ -1,12 +1,12 @@
 # OpenCTI connector for Bitdefender Intelligence Feeds
 
-This connector imports configured itdefender Threat Intelligence feeds (file hashes, URLs, IP addresses) into OpenCTI.
+This connector imports configured Bitdefender Threat Intelligence feeds (file hashes, URLs, IP addresses) into OpenCTI.
 
 ## Installation
 
 ### Threat Intelligence License
 
-In order to use this connector you must first obtain the Threat Intelligence license from Bitdefender. This license is different from the license to a Bitdefender Endponint Security product you might have.
+In order to use this connector you must first obtain the Threat Intelligence license from Bitdefender. This license is different from the license to a Bitdefender Endpoint Security product you might have.
 
 Bitdefender Threat Intelligence feeds are Bitdefender's own product based on the data seen by Bitdefender protected endpoints and servers, by honeypots and the data coming from in-labs malware analysis, Sandbox detonations and other sources. All feeds contain both the information about the actual threat. Some entries also contain the related indicators information (such as other files, IPs or domain names associated with the threat). Some entries also contain the location, victim and actor attribution information.
 
@@ -41,7 +41,7 @@ The following configuration variables are optional.
 | BITDEFENDER_EXCLUDE_RELATED_INDICATORS | exclude_related_indicators | Boolean, defines whether to exclude the related indicators (which provide relationship data). By default those are included |
 | BITDEFENDER_INCLUDE_SUSPICIOUS | include_suspicious | String, defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
 
-The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal) to 99 (maximum). Please note that if you're importing all feeds, setting the minimum confidence and severity to 1 would result in large amount of data - make sure your OpenCTI instance is scalled appropriately to handle it.
+The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal) to 99 (maximum). Please note that if you're importing all feeds, setting the minimum confidence and severity to 1 would result in large amount of data - make sure your OpenCTI instance is scaled appropriately to handle it.
 
 ## Manual Docker deployment 
 
@@ -68,7 +68,7 @@ Until the source is merged into OpenCTI connectors, you can run the connector fr
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
       - BITDEFENDER_API_KEY=<REPLACE ME>
-      - BITDEFENDER_LIST=file web ip
+      - BITDEFENDER_LIST=file,web,ip
 ````
 
 and build and start the container:
