@@ -104,6 +104,9 @@ class StixMaker:
             self.creator_identity
         ]
 
+        if self.config.tlp_level == "amber+strict":
+            self.bundles_created_objects[self.tlp.id] = self.tlp
+
         outbundle = stix2.Bundle(
             list(self.bundles_created_objects.values()) + self.bundles_output,
             allow_custom=True,
