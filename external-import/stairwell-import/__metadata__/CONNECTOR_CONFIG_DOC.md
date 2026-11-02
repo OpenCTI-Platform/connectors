@@ -19,9 +19,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | STAIRWELL_IMPORT_USER_ID | `string` |  | string | `""` | Optional Stairwell user id (rate-limit header). |
 | STAIRWELL_IMPORT_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"green"` | TLP marking applied to imported entities. |
 | STAIRWELL_IMPORT_FIRST_RUN_WINDOW | `string` |  | string | `"P1D"` | ISO-8601 duration to backfill on the first run. |
-| STAIRWELL_IMPORT_MAX_INDICATORS | `integer` |  | integer | `1000` | Maximum indicators emitted per run. |
-| STAIRWELL_IMPORT_PAGE_SIZE | `integer` |  | integer | `100` | Stairwell API page size. |
-| STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS | `integer` |  | integer | `90` | Days added to valid_from to compute valid_until. |
+| STAIRWELL_IMPORT_MAX_INDICATORS | `integer` |  | `1 <= x ` | `1000` | Maximum indicators emitted per run. |
+| STAIRWELL_IMPORT_PAGE_SIZE | `integer` |  | `1 <= x ` | `100` | Stairwell API page size. |
+| STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS | `integer` |  | `1 <= x ` | `90` | Days added to valid_from to compute valid_until. |
 | STAIRWELL_IMPORT_MIN_BUCKET | `string` |  | string | `"HIGH"` | Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH. |
 | STAIRWELL_IMPORT_SCOPE | `string` |  | string | `"environment"` | Reserved (forward-compat): accepted but not yet effective; every run currently queries the full corpus regardless of this value. |
 | STAIRWELL_IMPORT_WRAPPER | `string` |  | `grouping` `report` | `"grouping"` | Per-run wrapper SDO: 'grouping' or 'report'. |

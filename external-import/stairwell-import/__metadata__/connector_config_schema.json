@@ -79,7 +79,6 @@
       "type": "string"
     },
     "STAIRWELL_IMPORT_TLP": {
-      "default": "green",
       "description": "TLP marking applied to imported entities.",
       "enum": [
         "clear",
@@ -89,7 +88,8 @@
         "amber+strict",
         "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "green"
     },
     "STAIRWELL_IMPORT_FIRST_RUN_WINDOW": {
       "default": "P1D",
@@ -99,16 +99,19 @@
     "STAIRWELL_IMPORT_MAX_INDICATORS": {
       "default": 1000,
       "description": "Maximum indicators emitted per run.",
+      "minimum": 1,
       "type": "integer"
     },
     "STAIRWELL_IMPORT_PAGE_SIZE": {
       "default": 100,
       "description": "Stairwell API page size.",
+      "minimum": 1,
       "type": "integer"
     },
     "STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS": {
       "default": 90,
       "description": "Days added to valid_from to compute valid_until.",
+      "minimum": 1,
       "type": "integer"
     },
     "STAIRWELL_IMPORT_MIN_BUCKET": {

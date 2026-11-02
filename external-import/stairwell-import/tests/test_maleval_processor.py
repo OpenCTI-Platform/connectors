@@ -6,6 +6,7 @@ from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import MalEvalFilesProcessor
 from connectors_sdk import ConfigValidationError
 from connectors_sdk.exceptions.error import DataRetrievalError
+from stairwell_fakes import lookup
 from stix2patterns.v21.pattern import Pattern
 from stix2patterns.validator import run_validator
 
@@ -52,7 +53,7 @@ def _processor(pages, state=None):
     processor.state = state or ConnectorState()
     processor.logger = FakeLogger()
     processor.post_init()
-    processor.client.list_objects_metadata = MagicMock(side_effect=list(pages))
+    processor.client.list_objects_metadata = lookup(*pages, not_found_ok=False)
     return processor
 
 
@@ -140,6 +141,31 @@ def test_wrapper_setting_rejects_unknown_values(env):
     assert "wrapper" in str(err.value.__cause__)
 
 
+@pytest.mark.parametrize(
+    "variable, value",
+    [
+        ("STAIRWELL_IMPORT_MAX_INDICATORS", "0"),
+        ("STAIRWELL_IMPORT_PAGE_SIZE", "-1"),
+        ("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "0"),
+        ("STAIRWELL_IMPORT_TLP", "purple"),
+    ],
+)
+def test_out_of_range_settings_are_rejected_at_startup(env, variable, value):
+    env.setenv(variable, value)
+    with pytest.raises(ConfigValidationError) as err:
+        ConnectorSettings()
+    assert variable.removeprefix("STAIRWELL_IMPORT_").lower() in str(
+        err.value.__cause__
+    )
+
+
+def test_fetch_failure_keeps_the_request_error_as_cause(env):
+    processor = _processor([(503, None)])
+    with pytest.raises(DataRetrievalError) as err:
+        processor.collect()
+    assert err.value.__cause__.status == 503
+
+
 def test_each_run_gets_its_own_wrapper(env):
     state = ConnectorState()
     first = _run(_processor(_one_page(_file_obj("c" * 64)), state))
@@ -214,6 +240,9 @@ def test_capped_window_drains_across_runs_without_losing_objects(env):
     [
         [_page("a", 2, "p2"), (503, None)],
         [(500, None)],
+        [(0, None)],
+        [(404, None)],
+        [(200, ["not", "an", "object"])],
         [(200, {"objectMetadatas": "nope", "nextPageToken": ""})],
         # Falsy but not a list: must not read as an empty page.
         [(200, {"objectMetadatas": {}, "nextPageToken": ""})],

@@ -52,6 +52,10 @@ Environment variables override the file.
 | Import scope | `stairwell_import.scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | Reserved for forward-compat — accepted but **not yet effective**; every run currently queries the full corpus |
 | Wrapper | `stairwell_import.wrapper` | `STAIRWELL_IMPORT_WRAPPER` | no | `grouping` | `grouping` or `report` |
 
+Max indicators, page size, and indicator validity must be at least 1; a
+smaller value, or an unknown TLP or wrapper, stops the connector at startup
+with a configuration error.
+
 ## Behavior
 
 - **Periodic poll.** Built on `connectors_sdk.ExternalImportConnector` with

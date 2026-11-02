@@ -12,6 +12,7 @@ import pytest
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import MalEvalFilesProcessor
 from connectors_sdk import ExternalImportConnector
+from stairwell_fakes import lookup
 
 
 @pytest.fixture
@@ -46,7 +47,7 @@ def _connector(pages, saved_state=None):
         settings=connector.settings, helper=helper, state=state
     )
     processor.post_init()
-    processor.client.list_objects_metadata = MagicMock(side_effect=list(pages))
+    processor.client.list_objects_metadata = lookup(*pages, not_found_ok=False)
     return connector, helper
 
 

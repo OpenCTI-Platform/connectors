@@ -9,6 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -49,9 +50,9 @@ class StairwellImportConfig(BaseConfigModel):
         description="Optional Stairwell user id (rate-limit header).",
         default="",
     )
-    tlp: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = Field(
+    tlp: TLPLevel = Field(
         description="TLP marking applied to imported entities.",
-        default="green",
+        default=TLPLevel.GREEN,
     )
     first_run_window: str = Field(
         description="ISO-8601 duration to backfill on the first run.",
@@ -60,14 +61,17 @@ class StairwellImportConfig(BaseConfigModel):
     max_indicators: int = Field(
         description="Maximum indicators emitted per run.",
         default=1000,
+        ge=1,
     )
     page_size: int = Field(
         description="Stairwell API page size.",
         default=100,
+        ge=1,
     )
     indicator_validity_days: int = Field(
         description="Days added to valid_from to compute valid_until.",
         default=90,
+        ge=1,
     )
     min_bucket: str = Field(
         description="Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH.",

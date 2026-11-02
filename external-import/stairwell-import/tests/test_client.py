@@ -2,8 +2,10 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from connector.stairwell import StairwellClient
+from connector.stairwell import StairwellAPIError, StairwellClient
 from connector.stairwell.client import DEFAULT_TIMEOUT, SUMMARIZE_TIMEOUT
+from connectors_sdk import ConfigValidationError
+from connectors_sdk.exceptions.error import DataRetrievalError
 
 BASE = "https://api.example"
 
@@ -30,31 +32,34 @@ def _requested_url(client):
 
 
 def test_empty_token_is_rejected():
-    with pytest.raises(ValueError, match="Stairwell API token"):
-        StairwellClient(api_token="")
+    with pytest.raises(ConfigValidationError, match="Stairwell API token"):
+        StairwellClient(api_token="", base_url=BASE)
 
 
 def test_session_sends_auth_and_optional_rate_limit_headers():
-    headers = StairwellClient(api_token="tok")._session.headers
+    headers = StairwellClient(api_token="tok", base_url=BASE)._session.headers
     assert headers["Authorization"] == "Bearer tok"
     assert headers["X-Apikey"] == "tok"
     assert "Organization-Id" not in headers and "User-Id" not in headers
     headers = StairwellClient(
-        api_token="tok", organization_id="org", user_id="usr"
+        api_token="tok", base_url=BASE, organization_id="org", user_id="usr"
     )._session.headers
     assert headers["Organization-Id"] == "org"
     assert headers["User-Id"] == "usr"
 
 
 def test_session_retries_only_idempotent_gets_on_transient_statuses():
-    retry = StairwellClient(api_token="tok")._session.get_adapter(BASE).max_retries
+    retry = (
+        StairwellClient(api_token="tok", base_url=BASE)
+        ._session.get_adapter(BASE)
+        .max_retries
+    )
     assert retry.total == 3
     assert set(retry.allowed_methods) == {"GET"}
     assert set(retry.status_forcelist) == {429, 500, 502, 503, 504}
 
 
-def test_default_base_url_and_trailing_slash():
-    assert StairwellClient(api_token="tok")._base_url == "https://app.stairwell.com"
+def test_trailing_slash_is_dropped_from_the_base_url():
     assert _client()._base_url == BASE
 
 
@@ -113,7 +118,7 @@ def test_default_base_url_and_trailing_slash():
 )
 def test_endpoints_build_encoded_urls(call, path):
     client = _client()
-    assert call(client) == (200, {})
+    assert call(client) == {}
     assert _requested_url(client) == BASE + path
 
 
@@ -133,24 +138,63 @@ def test_summarize_gets_the_long_timeout_and_others_the_default():
     assert client._session.get.call_args.kwargs["timeout"] == DEFAULT_TIMEOUT
 
 
+def test_json_object_is_returned():
+    assert _client(_response(200, {"ok": True})).get_ip("1.2.3.4") == {"ok": True}
+
+
+def test_not_found_lookup_returns_none():
+    assert _client(_response(404, text="missing")).get_ip("1.2.3.4") is None
+
+
+def test_not_found_listing_raises():
+    client = _client(_response(404, text="missing"))
+    with pytest.raises(StairwellAPIError) as info:
+        client.list_objects_metadata("x")
+    assert info.value.status == 404
+
+
 @pytest.mark.parametrize(
-    "response, want",
+    "response, status",
     [
-        (_response(200, {"ok": True}), (200, {"ok": True})),
-        (_response(404, text="missing"), (404, None)),
-        (_response(401, text="denied"), (401, None)),
-        (_response(503, text="down"), (503, None)),
-        (_response(200, ValueError("not json"), text="<html>"), (200, None)),
+        (_response(401, text="denied"), 401),
+        (_response(503, text="down"), 503),
+        (_response(200, ValueError("not json"), text="<html>"), 200),
+        (_response(200, ["not", "an", "object"]), 200),
+        (_response(200, "a string"), 200),
+        (_response(200, None), 200),
     ],
 )
-def test_response_handling_never_raises(response, want):
-    assert _client(response).get_ip("1.2.3.4") == want
+def test_error_status_or_non_object_body_raises(response, status):
+    with pytest.raises(StairwellAPIError) as info:
+        _client(response).get_ip("1.2.3.4")
+    assert info.value.status == status
+    assert isinstance(info.value, DataRetrievalError)
 
 
-def test_transport_error_returns_status_zero():
+def test_error_message_names_the_path_and_status_but_not_the_token():
+    client = _client(_response(401, text="denied"))
+    with pytest.raises(StairwellAPIError) as info:
+        client.get_ip("1.2.3.4")
+    assert "/v2/ips/1.2.3.4" in str(info.value)
+    assert "401" in str(info.value)
+    assert "tok" not in str(info.value)
+
+
+def test_non_json_body_keeps_the_decode_error_as_cause():
+    client = _client(_response(200, ValueError("not json"), text="<html>"))
+    with pytest.raises(StairwellAPIError) as info:
+        client.get_ip("1.2.3.4")
+    assert isinstance(info.value.__cause__, ValueError)
+
+
+def test_transport_error_raises_with_the_original_as_cause():
     client = _client()
-    client._session.get.side_effect = requests.ConnectionError("refused")
-    assert client.get_ip("1.2.3.4") == (0, None)
+    refused = requests.ConnectionError("refused")
+    client._session.get.side_effect = refused
+    with pytest.raises(StairwellAPIError) as info:
+        client.get_ip("1.2.3.4")
+    assert info.value.status is None
+    assert info.value.__cause__ is refused
 
 
 @pytest.mark.parametrize(

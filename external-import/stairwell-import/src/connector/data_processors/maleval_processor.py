@@ -10,7 +10,7 @@ from connector.import_filter import (
     parse_iso_duration,
     window_start,
 )
-from connector.stairwell import StairwellClient
+from connector.stairwell import StairwellAPIError, StairwellClient
 from connector.stairwell.score import score_for_bucket
 from connector.stix_builder import (
     make_based_on_relationship,
@@ -110,14 +110,14 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             organization_id=s.organization_id or None,
             user_id=s.user_id or None,
         )
-        self.tlp = s.tlp
+        self.tlp = s.tlp.value
         self.wrapper = s.wrapper
         self.min_bucket = s.min_bucket
         self.allowed_buckets = set(normalize_min_bucket(s.min_bucket))
-        self.max_indicators = max(1, int(s.max_indicators))
-        self.page_size = max(1, int(s.page_size))
+        self.max_indicators = s.max_indicators
+        self.page_size = s.page_size
         self.first_run_window = parse_iso_duration(s.first_run_window)
-        self.indicator_validity = timedelta(days=max(1, int(s.indicator_validity_days)))
+        self.indicator_validity = timedelta(days=s.indicator_validity_days)
 
     def process(self) -> None:
         """Run collect → transform → send, keeping checkpoints if any step fails.
@@ -191,11 +191,19 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         # of that page. A run may overshoot the cap by less than one page.
         while True:
             page_num += 1
-            status, data = self.client.list_objects_metadata(
-                cel_filter=cel, page_size=self.page_size, page_token=page_token
-            )
-            if status >= 400 or not isinstance(data, dict):
-                if resumed and page_num == 1 and 400 <= status < 500 and status != 429:
+            try:
+                data = self.client.list_objects_metadata(
+                    cel_filter=cel, page_size=self.page_size, page_token=page_token
+                )
+            except StairwellAPIError as err:
+                status = err.status
+                if (
+                    resumed
+                    and page_num == 1
+                    and status is not None
+                    and 400 <= status < 500
+                    and status != 429
+                ):
                     # The saved token is no longer accepted. Re-read the first
                     # half of the window from its first page: the watermark
                     # then commits at the midpoint, and the next window starts
@@ -224,9 +232,9 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                     page_token, resumed, page_num = None, False, 0
                     continue
                 raise DataRetrievalError(
-                    f"Stairwell list_objects_metadata returned status {status} "
-                    f"on page {page_num}; the watermark was not advanced."
-                )
+                    f"Stairwell list_objects_metadata failed on page {page_num}; "
+                    "the watermark was not advanced."
+                ) from err
             # The first field present is the page; a falsy non-list (`{}`)
             # must fail the type check, not read as an empty page.
             page = next(
