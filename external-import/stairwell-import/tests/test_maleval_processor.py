@@ -177,8 +177,8 @@ def test_indicator_validity_window_and_score(env):
     env.setenv("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "30")
     objects = _run(_processor(_one_page(_file_obj("d" * 64))))
     indicator = _of_type(objects, "indicator")[0]
-    assert indicator["valid_from"] == "2026-05-06T00:00:00.000Z"
-    assert indicator["valid_until"] == "2026-06-05T00:00:00.000Z"
+    assert indicator["valid_from"] == "2026-05-06T00:00:00Z"
+    assert indicator["valid_until"] == "2026-06-05T00:00:00Z"
     assert indicator["x_opencti_score"] == 75  # PROBABILITY_HIGH
     assert "confidence" not in indicator
 
@@ -186,7 +186,7 @@ def test_indicator_validity_window_and_score(env):
 def test_source_timestamps_are_normalised_to_utc(env):
     obj = _file_obj("e" * 64, stairwellFirstSeenTime="2026-05-06T01:00:00+01:00")
     objects = _run(_processor(_one_page(obj)))
-    assert _of_type(objects, "indicator")[0]["valid_from"] == "2026-05-06T00:00:00.000Z"
+    assert _of_type(objects, "indicator")[0]["valid_from"] == "2026-05-06T00:00:00Z"
 
 
 def test_truncation_stops_at_page_boundary_and_saves_cursor(env):
@@ -384,10 +384,16 @@ def test_network_values_are_related_observables_not_indicators(env):
     # Invalid IPs are dropped; IPv6 is normalised.
     assert set(related) == {"1.2.3.4", "2001:db8::1", "c2.example.com", url}
     assert related["2001:db8::1"]["type"] == "ipv6-addr"
-    assert related[url]["external_references"][0]["url"] == (
+    # Observables carry references in the SDK's form, never at the root.
+    assert not [o for o in related.values() if "external_references" in o]
+    assert related[url]["x_opencti_external_references"][0]["url"] == (
         "https://app.stairwell.com/search?search-query="
         "http%3A%2F%2Fc2.example.com%2Fa%27b%3Fq%3D1%26r%3D2"
     )
+    # The reference names the normalised value.
+    assert related["c2.example.com"]["x_opencti_external_references"][0][
+        "description"
+    ] == ("Stairwell intel for c2.example.com")
 
 
 def test_network_value_shared_by_two_files_is_one_observable_two_links(env):

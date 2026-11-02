@@ -3,33 +3,51 @@ from __future__ import annotations
 import ipaddress
 import json
 import re
-import uuid
 from datetime import datetime, timezone
 from typing import Any, Iterable
 from urllib.parse import urlsplit
 
-import stix2
-from connectors_sdk.models import OrganizationAuthor, TLPMarking
-from pycti import (
-    Grouping,
-    Identity,
+from connectors_sdk.models import (
+    URL,
+    AutonomousSystem,
+    BaseIdentifiedObject,
+    DomainName,
+    ExternalReference,
+    File,
     Indicator,
+    IPV4Address,
+    IPV6Address,
     Note,
+    OrganizationAuthor,
+    Reference,
+    Relationship,
     Report,
-    StixCoreRelationship,
-    StixSightingRelationship,
+    System,
+    TLPMarking,
 )
+from pycti import Grouping, StixSightingRelationship
 
-# IDs are OpenCTI's canonical ones: pycti's type-specific generate_id() for
-# SDOs and SROs, and the STIX 2.1 spec's deterministic IDs (computed by the
-# stix2 library from each type's ID-contributing properties) for SCOs. The
-# same entity imported by another connector therefore gets the same ID.
+# Objects are built with the connectors-sdk models, which validate them and
+# compute OpenCTI's canonical IDs, and are serialized to STIX dicts so a
+# playbook step can merge them with its incoming bundle. Two kinds stay
+# hand-built: sightings (the stix2 library behind the SDK accepts only an SDO
+# as `sighting_of_ref`, and these sight a File) and groupings (no SDK model).
+
+_TLP_LEVELS = ("clear", "white", "green", "amber", "amber+strict", "red")
+_TLP_MODELS: dict[str, TLPMarking] = {
+    level: TLPMarking(level=level) for level in _TLP_LEVELS
+}
+
+
+def _stix(model: BaseIdentifiedObject) -> dict[str, Any]:
+    """The STIX 2.1 dict for an SDK model."""
+    return json.loads(model.to_stix2_object().serialize())
+
 
 # TLP marking definitions as the SDK builds them, keyed by level. Every bundle
 # carries the definitions its objects reference.
 _TLP_OBJECTS: dict[str, dict[str, Any]] = {
-    level: json.loads(TLPMarking(level=level).to_stix2_object().serialize())
-    for level in ("clear", "white", "green", "amber", "amber+strict", "red")
+    level: _stix(model) for level, model in _TLP_MODELS.items()
 }
 TLP_IDS: dict[str, str] = {level: obj["id"] for level, obj in _TLP_OBJECTS.items()}
 # TLP:CLEAR and TLP:WHITE share one ID; a bundle that references it carries
@@ -38,28 +56,22 @@ _TLP_BY_ID: dict[str, dict[str, Any]] = {
     obj["id"]: obj for level, obj in _TLP_OBJECTS.items() if level != "white"
 }
 
-# The author of every object these connectors create. Its ID is OpenCTI's
-# for an organization named "Stairwell", so it is the same object everywhere.
-# The SDK stamps `created`/`modified` with the build time; fixed values keep
+# The author of every SDO and relationship these connectors create. Its ID is
+# OpenCTI's for an organization named "Stairwell", so it is the same object
+# everywhere. The SDK stamps `modified` with the build time; fixed values keep
 # a restart from re-dating the stored identity.
+_AUTHOR_DATE = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_AUTHOR_MODEL = OrganizationAuthor(
+    name="Stairwell",
+    description="Stairwell, Inc. — global file corpus and threat intelligence.",
+    created=_AUTHOR_DATE,
+)
 _AUTHOR: dict[str, Any] = {
-    **json.loads(
-        OrganizationAuthor(
-            name="Stairwell",
-            description="Stairwell, Inc. — global file corpus and threat intelligence.",
-        )
-        .to_stix2_object()
-        .serialize()
-    ),
+    **_stix(_AUTHOR_MODEL),
     "created": "2026-01-01T00:00:00.000Z",
     "modified": "2026-01-01T00:00:00.000Z",
 }
 STAIRWELL_IDENTITY_ID: str = _AUTHOR["id"]
-
-
-def _sco_id(sco_class: type, **properties: Any) -> str:
-    """Spec-deterministic SCO ID (UUIDv5 over the ID-contributing properties)."""
-    return sco_class(**properties).id
 
 
 # Markdown helpers. OpenCTI renders Note content and descriptions as GitHub
@@ -139,6 +151,15 @@ def now_iso() -> str:
     return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
+def _parse_time(value: str) -> datetime:
+    """An RFC 3339 timestamp as an aware datetime.
+
+    Python 3.11+ parses the API's nanosecond fractions, truncating them to
+    microseconds.
+    """
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 def tlp_marking(tlp: str) -> str:
     return TLP_IDS.get(tlp.lower(), TLP_IDS["amber"])
 
@@ -148,6 +169,10 @@ def tlp_marking_object(tlp: str) -> dict[str, Any]:
     return _TLP_OBJECTS.get(tlp.lower(), _TLP_OBJECTS["amber"])
 
 
+def _markings(tlp: str) -> list[TLPMarking]:
+    return [_TLP_MODELS.get(tlp.lower(), _TLP_MODELS["amber"])]
+
+
 def stairwell_identity() -> dict[str, Any]:
     return dict(_AUTHOR)
 
@@ -155,7 +180,7 @@ def stairwell_identity() -> dict[str, Any]:
 def _sdo(
     sdo_type: str, sdo_id: str, created: str, tlp: str, *, created_by_ref: str
 ) -> dict[str, Any]:
-    """The properties every SDO and SRO here starts with."""
+    """The properties the hand-built SDOs and SROs start with."""
     return {
         "type": sdo_type,
         "spec_version": "2.1",
@@ -170,10 +195,14 @@ def _sdo(
 def make_external_reference(
     source_name: str, url: str, description: str | None = None
 ) -> dict[str, Any]:
-    ref = {"source_name": source_name, "url": url}
-    if description:
-        ref["description"] = description
-    return ref
+    ref = ExternalReference(source_name=source_name, url=url, description=description)
+    return ref.model_dump(exclude_none=True)
+
+
+def _external_references(
+    refs: Iterable[dict[str, Any]] | None,
+) -> list[ExternalReference] | None:
+    return [ExternalReference(**ref) for ref in refs] if refs else None
 
 
 def make_note(
@@ -187,14 +216,15 @@ def make_note(
     Content must name its subject (the hash, host, IP, or ASN), or identical
     notes about different observables would share one ID.
     """
-    note_id = Note.generate_id(None, content, abstract)
-    ts = now_iso()
-    return {
-        **_sdo("note", note_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
-        "abstract": abstract,
-        "content": content,
-        "object_refs": list(object_refs),
-    }
+    return _stix(
+        Note(
+            abstract=abstract,
+            content=content,
+            objects=[Reference(id=ref) for ref in object_refs],
+            author=_AUTHOR_MODEL,
+            markings=_markings(tlp),
+        )
+    )
 
 
 def make_relationship(
@@ -203,34 +233,73 @@ def make_relationship(
     relationship_type: str = "related-to",
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    rel_id = StixCoreRelationship.generate_id(relationship_type, source_id, target_id)
-    ts = now_iso()
-    return {
-        **_sdo("relationship", rel_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
-        "relationship_type": relationship_type,
-        "source_ref": source_id,
-        "target_ref": target_id,
-    }
+    return _stix(
+        Relationship(
+            type=relationship_type,
+            source=Reference(id=source_id),
+            target=Reference(id=target_id),
+            author=_AUTHOR_MODEL,
+            markings=_markings(tlp),
+        )
+    )
 
 
-def make_ipv4(value: str, tlp: str = "amber") -> dict[str, Any]:
-    return {
-        "type": "ipv4-addr",
-        "spec_version": "2.1",
-        "id": _sco_id(stix2.IPv4Address, value=value),
-        "value": value,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
+def _observable(
+    model: type[BaseIdentifiedObject],
+    tlp: str,
+    stix_id: str | None = None,
+    labels: Iterable[str] | None = None,
+    external_references: Iterable[dict[str, Any]] | None = None,
+    **properties: Any,
+) -> dict[str, Any]:
+    """An observable's STIX dict, built and validated by its SDK model.
+
+    `stix_id` replaces the computed ID when the observable is one OpenCTI
+    already holds: an enrichment updates the entity under the ID OpenCTI
+    resolved it by, which a playbook also matches its incoming copy on.
+    Unset properties are left out, so an update never clears a stored value.
+    """
+    obj = _stix(
+        model(
+            markings=_markings(tlp),
+            labels=list(labels) if labels else None,
+            external_references=_external_references(external_references),
+            **{k: v for k, v in properties.items() if v is not None},
+        )
+    )
+    if stix_id:
+        obj["id"] = stix_id
+    return obj
 
 
-def make_ipv6(value: str, tlp: str = "amber") -> dict[str, Any]:
-    return {
-        "type": "ipv6-addr",
-        "spec_version": "2.1",
-        "id": _sco_id(stix2.IPv6Address, value=value),
-        "value": value,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
+_OBSERVABLE_MODELS: dict[str, type[BaseIdentifiedObject]] = {
+    "file": File,
+    "domain-name": DomainName,
+    "ipv4-addr": IPV4Address,
+    "ipv6-addr": IPV6Address,
+    "autonomous-system": AutonomousSystem,
+}
+
+
+def enriched_observable(
+    stix_type: str, stix_id: str, tlp: str, **properties: Any
+) -> dict[str, Any]:
+    """The update an enrichment sends for an observable OpenCTI holds.
+
+    Built and validated by the type's SDK model, under the ID OpenCTI
+    resolved the entity by (a playbook matches its incoming copy on it).
+    """
+    return _observable(
+        _OBSERVABLE_MODELS[stix_type], tlp, stix_id=stix_id, **properties
+    )
+
+
+def make_ipv4(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any]:
+    return _observable(IPV4Address, tlp, value=value, **kwargs)
+
+
+def make_ipv6(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any]:
+    return _observable(IPV6Address, tlp, value=value, **kwargs)
 
 
 # One DNS label: letters, digits, hyphens and underscores (SRV/DKIM names),
@@ -238,8 +307,8 @@ def make_ipv6(value: str, tlp: str = "amber") -> dict[str, Any]:
 _DNS_LABEL = re.compile(r"(?!-)[a-z0-9_-]{1,63}(?<!-)")
 
 
-def make_domain(value: str, tlp: str = "amber") -> dict[str, Any] | None:
-    """Domain-Name SCO for a well-formed DNS name of two or more labels, or None.
+def normalize_domain(value: Any) -> str | None:
+    """`value` as a well-formed DNS name of two or more labels, or None.
 
     Values come from file strings and DNS answers; one malformed
     `domain-name.value` makes OpenCTI reject the bundle it is in. A trailing
@@ -264,14 +333,15 @@ def make_domain(value: str, tlp: str = "amber") -> dict[str, Any] | None:
         or not all(_DNS_LABEL.fullmatch(label) for label in labels)
     ):
         return None
-    value = name
-    return {
-        "type": "domain-name",
-        "spec_version": "2.1",
-        "id": _sco_id(stix2.DomainName, value=value),
-        "value": value,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
+    return name
+
+
+def make_domain(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
+    """Domain-Name SCO for a well-formed DNS name (see `normalize_domain`)."""
+    name = normalize_domain(value)
+    if name is None:
+        return None
+    return _observable(DomainName, tlp, value=name, **kwargs)
 
 
 _HASH_LENGTHS = {"SHA-256": 64, "SHA-1": 40, "MD5": 32}
@@ -293,42 +363,46 @@ def valid_hash(algo: str, value: Any) -> bool:
     )
 
 
+def make_file(
+    hashes: dict[str, str],
+    tlp: str = "amber",
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """File SCO; hashes that are not well-formed digests are left out.
+
+    With a SHA-256, the ID is the SDK's for that hash alone: the spec's File
+    ID uses the first of MD5, SHA-1, SHA-256 present, so it would change
+    whenever an optional hash appears or disappears.
+    """
+    valid = {algo: h.lower() for algo, h in hashes.items() if valid_hash(algo, h)}
+    stix_id = (
+        File(hashes={"SHA-256": valid["SHA-256"]}).id if "SHA-256" in valid else None
+    )
+    return _observable(File, tlp, stix_id=stix_id, hashes=valid or None, **kwargs)
+
+
 def make_file_by_sha256(
     sha256: str,
     tlp: str = "amber",
-    extra: dict[str, Any] | None = None,
     sha1: str | None = None,
     md5: str | None = None,
+    **kwargs: Any,
 ) -> dict[str, Any]:
-    """File SCO keyed by SHA-256; invalid optional hashes are left out."""
+    """File SCO for a SHA-256; invalid optional hashes are left out."""
     if not valid_hash("SHA-256", sha256):
         raise ValueError(f"not a SHA-256 digest: {sha256!r}")
-    sha256 = sha256.lower()
-    hashes: dict[str, str] = {"SHA-256": sha256}
-    if valid_hash("SHA-1", sha1):
-        hashes["SHA-1"] = sha1.lower()
-    if valid_hash("MD5", md5):
-        hashes["MD5"] = md5.lower()
-    sco: dict[str, Any] = {
-        "type": "file",
-        "spec_version": "2.1",
-        # Anchored to SHA-256 alone: the spec's File ID uses the first of MD5,
-        # SHA-1, SHA-256 present, so the ID would change whenever an optional
-        # hash appears or disappears.
-        "id": _sco_id(stix2.File, hashes={"SHA-256": sha256}),
-        "hashes": hashes,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
-    if extra:
-        sco.update(extra)
-    return sco
+    hashes = {"SHA-256": sha256}
+    for algo, value in (("SHA-1", sha1), ("MD5", md5)):
+        if value is not None:
+            hashes[algo] = value
+    return make_file(hashes, tlp, **kwargs)
 
 
 _URL_SCHEMES = {"http", "https", "ftp", "ftps"}
 _URL_MAX_LENGTH = 2048
 
 
-def make_url(value: str, tlp: str = "amber") -> dict[str, Any] | None:
+def make_url(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
     """URL SCO for a well-formed http(s)/ftp(s) URL, or None.
 
     Values come from strings extracted from files; one malformed `url.value`
@@ -350,33 +424,19 @@ def make_url(value: str, tlp: str = "amber") -> dict[str, Any] | None:
         return None
     if parts.scheme.lower() not in _URL_SCHEMES or not parts.hostname:
         return None
-    return {
-        "type": "url",
-        "spec_version": "2.1",
-        "id": _sco_id(stix2.URL, value=value),
-        "value": value,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
+    return _observable(URL, tlp, value=value, **kwargs)
 
 
 def make_autonomous_system(
     number: int | str,
     name: str | None = None,
     tlp: str = "amber",
+    **kwargs: Any,
 ) -> dict[str, Any]:
-    obj = {
-        "type": "autonomous-system",
-        "spec_version": "2.1",
-        "id": _sco_id(stix2.AutonomousSystem, number=int(number)),
-        "number": int(number),
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
-    if name:
-        obj["name"] = name
-    return obj
+    return _observable(AutonomousSystem, tlp, number=int(number), name=name, **kwargs)
 
 
-def make_ip(value: str, tlp: str = "amber") -> dict[str, Any] | None:
+def make_ip(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
     """IPv4/IPv6 SCO for a valid address (normalised), or None.
 
     Values come from strings extracted from files, so `1.2.3.4:80` or free
@@ -387,8 +447,8 @@ def make_ip(value: str, tlp: str = "amber") -> dict[str, Any] | None:
     except ValueError:
         return None
     if addr.version == 6:
-        return make_ipv6(str(addr), tlp=tlp)
-    return make_ipv4(str(addr), tlp=tlp)
+        return make_ipv6(str(addr), tlp=tlp, **kwargs)
+    return make_ipv4(str(addr), tlp=tlp, **kwargs)
 
 
 def network_observable_for(value: str, kind: str, tlp: str) -> dict[str, Any] | None:
@@ -418,30 +478,22 @@ def make_indicator(
     external_references: list[dict[str, Any]] | None = None,
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    indicator_id = Indicator.generate_id(pattern)
-    obj: dict[str, Any] = {
-        **_sdo(
-            "indicator",
-            indicator_id,
-            valid_from,
-            tlp,
-            created_by_ref=STAIRWELL_IDENTITY_ID,
-        ),
-        "name": name,
-        "pattern": pattern,
-        "pattern_type": "stix",
-        "valid_from": valid_from,
-        "indicator_types": list(indicator_types),
-    }
-    if valid_until:
-        obj["valid_until"] = valid_until
-    if description:
-        obj["description"] = description
-    if score is not None:
-        obj["x_opencti_score"] = int(score)
-    if external_references:
-        obj["external_references"] = list(external_references)
-    return obj
+    return _stix(
+        Indicator(
+            name=name,
+            pattern=pattern,
+            pattern_type="stix",
+            valid_from=_parse_time(valid_from),
+            valid_until=_parse_time(valid_until) if valid_until else None,
+            indicator_types=list(indicator_types),
+            description=description,
+            score=int(score) if score is not None else None,
+            external_references=_external_references(external_references),
+            created=_parse_time(valid_from),
+            author=_AUTHOR_MODEL,
+            markings=_markings(tlp),
+        )
+    )
 
 
 def make_based_on_relationship(
@@ -470,24 +522,17 @@ def make_identity_system(
     OpenCTI also deduplicates identities by alias, which would merge hosts
     that share a name.
     """
-    ts = now_iso()
     display_name = name if name and name != asset_id else None
-    obj: dict[str, Any] = {
-        **_sdo(
-            "identity",
-            Identity.generate_id(asset_id, "system"),
-            ts,
-            tlp,
-            created_by_ref=STAIRWELL_IDENTITY_ID,
-        ),
-        "name": asset_id,
-        "identity_class": "system",
-    }
     if description is None and display_name:
         description = f"Stairwell-managed asset {md_text(display_name)}"
-    if description:
-        obj["description"] = description
-    return obj
+    return _stix(
+        System(
+            name=asset_id,
+            description=description or None,
+            author=_AUTHOR_MODEL,
+            markings=_markings(tlp),
+        )
+    )
 
 
 def make_sighting(
@@ -572,17 +617,16 @@ def make_report(
     report_types: Iterable[str] = ("threat-report",),
     tlp: str = "amber",
 ) -> dict[str, Any]:
-    return _container_sdo(
-        sdo_type="report",
-        container_id=Report.generate_id(name, published),
-        name=name,
-        object_refs=object_refs,
-        description=description,
-        tlp=tlp,
-        extra={
-            "published": published,
-            "report_types": list(report_types),
-        },
+    return _stix(
+        Report(
+            name=name,
+            publication_date=_parse_time(published),
+            objects=[Reference(id=ref) for ref in object_refs],
+            description=description,
+            report_types=list(report_types),
+            author=_AUTHOR_MODEL,
+            markings=_markings(tlp),
+        )
     )
 
 
@@ -602,14 +646,10 @@ def with_markings(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def bundle(objects: Iterable[dict[str, Any]]) -> str:
-    """Serialize a STIX 2.1 bundle to JSON, with its TLP marking definitions."""
+def bundle_objects(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """`objects` deduplicated by ID (the last wins), with the TLP marking
+    definitions they reference, ready for `helper.stix2_create_bundle`."""
     deduped: dict[str, dict[str, Any]] = {}
     for obj in with_markings(objects):
         deduped[obj["id"]] = obj
-    payload = {
-        "type": "bundle",
-        "id": f"bundle--{uuid.uuid4()}",
-        "objects": list(deduped.values()),
-    }
-    return json.dumps(payload)
+    return list(deduped.values())

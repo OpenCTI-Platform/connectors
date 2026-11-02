@@ -483,28 +483,29 @@ class MalEvalFilesProcessor(BaseDataProcessor):
     def _network_observable(
         self, value: str, kind: str, file_id: str
     ) -> list[dict[str, Any]]:
-        if kind == "ip":
-            sco = make_ip(value, tlp=self.tlp)
-            if sco is None:
-                return []
-            ui_url = self.client.ip_ui_url(sco["value"])
-        elif kind == "hostname":
-            sco = make_domain(value, tlp=self.tlp)
-            if sco is None:
-                return []
-            ui_url = self.client.hostname_ui_url(sco["value"])
-        elif kind == "url":
-            sco = make_url(value, tlp=self.tlp)
-            if sco is None:
-                return []
-            ui_url = self.client.url_ui_url(value)
-        else:
+        builders = {
+            "ip": (make_ip, self.client.ip_ui_url),
+            "hostname": (make_domain, self.client.hostname_ui_url),
+            "url": (make_url, self.client.url_ui_url),
+        }
+        if kind not in builders:
             return []
-        sco["external_references"] = [
-            make_external_reference(
-                "Stairwell", ui_url, f"Stairwell intel for {sco['value']}"
-            )
-        ]
+        build, ui_url = builders[kind]
+        sco = build(value, tlp=self.tlp)
+        if sco is None:
+            return []
+        # Rebuilt from the normalised value, so the reference names it too.
+        sco = build(
+            sco["value"],
+            tlp=self.tlp,
+            external_references=[
+                make_external_reference(
+                    "Stairwell",
+                    ui_url(sco["value"]),
+                    f"Stairwell intel for {sco['value']}",
+                )
+            ],
+        )
         return [
             sco,
             make_relationship(file_id, sco["id"], "related-to", tlp=self.tlp),

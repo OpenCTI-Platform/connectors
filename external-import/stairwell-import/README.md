@@ -82,9 +82,10 @@ with a configuration error.
   the cap, and a cursor is saved if even that is not enough, so memory stays
   bounded. If one second holds more than that and every saved token expires
   before the next run, the runs re-read that second without finishing it;
-  each logs a "rejected the saved page token" warning naming the window. Re-sent objects are deduplicated by their IDs, which are OpenCTI's canonical ones (pycti's
-  `generate_id()` for SDOs and relationships, spec-standard IDs for
-  observables), so the same entity from another connector merges with ours.
+  each logs a "rejected the saved page token" warning naming the window. Re-sent objects are deduplicated by their IDs, which are OpenCTI's canonical ones (objects
+  are built with the `connectors_sdk.models`, which compute them; the
+  per-run Grouping, which has no SDK model, uses pycti's `generate_id()`), so
+  the same entity from another connector merges with ours.
   Each bundle carries the Stairwell author identity and the TLP marking
   definition it references.
   Each window is bounded on both ends (`cutoff <= first seen < window end`,
