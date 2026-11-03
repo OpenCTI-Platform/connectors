@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'SoChain' # optional (default: 'SoChain')
+  scope: 'Cryptocurrency-Wallet' # optional (default: 'Cryptocurrency-Wallet')
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  max_tlp: 'TLP:AMBER' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
+
+sochain:
+  api_base_url: 'https://sochain.com/api/v3' # optional (default: 'https://sochain.com/api/v3')
+  api_key: '' # optional, empty for keyless lookups (2,500 a day per IP); get a key at https://sochain.com/dashboard
+  check_poisoning: true # optional (default: true)

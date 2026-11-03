@@ -237,7 +237,7 @@ Format (isort first, then black):
 
 ```bash
 uvx isort==7.0.0 --profile black --line-length 88 external-import/myconnector
-uvx black==26.5.1 external-import/myconnector
+uvx black==26.10.1 external-import/myconnector
 ```
 
 Lint:
@@ -317,6 +317,11 @@ connector directories changed.
 - `ci-connector-verified-linter.yml`: connector-linter on changed connectors,
   results posted as a PR comment.
 - `ci-unused-deps.yml`: deptry on changed connectors.
+- `ci-config-schema.yml`: config schema generation on changed
+  manager-supported connectors (all of them when the generation tooling or
+  `connectors-sdk/` changes), against the checked-out SDK. The generated files
+  are not compared with the committed ones.
+  `build-manifest.yml` calls it to regenerate every schema.
 - `ci-check-connector-identity-uniqueness.yml`: no two manifests share an
   identity.
 - `gh-pr-check-conventions.yml`: signed commits, linked issue, PR title format.

@@ -39,7 +39,7 @@ inputs:
     required: false
     default: ""
   variant:
-    description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
+    description: "Build variant (e.g. 'ubi9'). Affects OCI labels and auto-generates build-args for shared Dockerfiles."
     required: false
     default: ""
   sdk_ref:
@@ -228,13 +228,6 @@ runs:
         fi
         echo "dockerfile=$DOCKERFILE" >> "$GITHUB_OUTPUT"
 
-        # Cache suffix: append variant to avoid key collisions
-        CACHE_SUFFIX=""
-        if [ -n "$VARIANT" ]; then
-          CACHE_SUFFIX="-${VARIANT}"
-        fi
-        echo "cache_suffix=$CACHE_SUFFIX" >> "$GITHUB_OUTPUT"
-
         # Build args: auto-generate for shared Dockerfiles (e.g. UBI9)
         BUILD_ARGS=""
         if [ -n "$VARIANT" ]; then
@@ -260,7 +253,7 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
-        echo "📦 Dockerfile: $DOCKERFILE | variant: ${VARIANT:-alpine} | cache_suffix: ${CACHE_SUFFIX:-(none)}"
+        echo "📦 Dockerfile: $DOCKERFILE | variant: ${VARIANT:-alpine}"
 
     - name: Compute Docker tags
       id: docker-tags
@@ -315,8 +308,6 @@ runs:
         PULL: "true"
         TAGS: ${{ steps.docker-tags.outputs.tags }}
         LABELS: ${{ steps.oci-labels.outputs.labels }}
-        CACHE_FROM: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
-        CACHE_TO: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
         DIGEST_OUT: ${{ runner.temp }}/digest-${{ inputs.connector_name }}
       run: |
         bash "${{ github.action_path }}/../../scripts/buildx_with_retry.sh"
@@ -388,8 +379,6 @@ runs:
         PULL: "true"
         TAGS: ${{ steps.fips-tags.outputs.tags }}
         LABELS: ${{ steps.fips-oci-labels.outputs.labels }}
-        CACHE_FROM: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
-        CACHE_TO: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
         DIGEST_OUT: ${{ runner.temp }}/digest-${{ inputs.connector_name }}-fips
       run: |
         bash "${{ github.action_path }}/../../scripts/buildx_with_retry.sh"

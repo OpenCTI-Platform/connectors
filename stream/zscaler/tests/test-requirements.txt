@@ -1,5 +1,4 @@
 -r ../src/requirements.txt
 pytest>=7.0
-pytest-bdd>=6.0
 pytest-mock>=3.0
 

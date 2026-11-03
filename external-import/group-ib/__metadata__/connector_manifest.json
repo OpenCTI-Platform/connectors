@@ -1,8 +1,8 @@
 {
-  "title": "Group-IB",
+  "title": "Group-IB (Deprecated)",
   "slug": "group-ib",
-  "description": "The Group-IB connector imports threat intelligence from the Group-IB Threat Intelligence platform into OpenCTI via its API. It collects data on threat actors, intrusion sets, campaigns, malware, domains, IPs, and infrastructure built from 22+ years of cybercrime investigation and incident response. The connector pushes structured STIX objects into OpenCTI, enabling attribution, threat hunting, and network protection workflows.",
-  "short_description": "Imports threat actor profiles, campaigns, malware, and infrastructure intelligence from Group-IB Threat Intelligence into OpenCTI via API.",
+  "description": "⚠️ DEPRECATED: this connector is deprecated and will be removed in a future release. Migrate to group-ib-ti (Group-IB Threat Intelligence).\n\nThe Group-IB connector imports threat intelligence from the Group-IB Threat Intelligence platform into OpenCTI via its API. It collects data on threat actors, intrusion sets, campaigns, malware, domains, IPs, and infrastructure built from 22+ years of cybercrime investigation and incident response. The connector pushes structured STIX objects into OpenCTI, enabling attribution, threat hunting, and network protection workflows.",
+  "short_description": "⚠️ DEPRECATED, use group-ib-ti. Imports threat actor profiles, campaigns, malware, and infrastructure intelligence from Group-IB Threat Intelligence into OpenCTI.",
   "logo": "external-import/group-ib/__metadata__/logo.png",
   "use_cases": [
     "Adversary & Campaign Insights"

@@ -1,8 +1,13 @@
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from pydantic import Field, PositiveInt, SecretStr, field_validator
+from pydantic import (
+    Field,
+    PositiveInt,
+    SecretStr,
+    field_validator,
+)
 
 
 class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
@@ -93,9 +98,14 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         default=True,
         description="Whether to import risk scores as confidence scores in OpenCTI.",
     )
-    risk_threshold: Optional[PositiveInt] = Field(
+    risk_threshold: Optional[Annotated[int, Field(ge=0, le=100)]] = Field(
         default=60,
-        description="Minimum risk score threshold (0-100) for importing entities.",
+        description=(
+            "Minimum risk score (0-100) for the indicators (IP address, domain, URL, hash) "
+            "found in analyst notes. Indicators with a lower risk score, or without any risk score, "
+            "are not imported. Set to 0 to disable this filtering and import all indicators. "
+            "Only applies to analyst notes: risk lists use `risk_list_threshold`."
+        ),
     )
     analyst_notes_guess_relationships: bool = Field(
         default=False,

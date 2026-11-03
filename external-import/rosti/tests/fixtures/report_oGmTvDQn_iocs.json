@@ -1,0 +1,49 @@
+{
+  "data": [
+    {
+      "category": "artifacts_dropped",
+      "value": "f8b924fc4f4e72d9849ba73b37f9b228c189c21f3bd98142e9b094054c00d7c9",
+      "date": "2026-10-06",
+      "entity_ref": null,
+      "type": "sha256",
+      "ids": true,
+      "report": "oGmTvDQn",
+      "timestamp": "2026-10-07T09:17:14.510519698Z",
+      "tags": [],
+      "id": "an5PrgvWWJQBBWqZPyPP9q"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "91bb4f5fcc0481f57d72231ccc7d5e8fb676401d",
+      "date": "2026-10-06",
+      "comment": "md5: 0025f279b51b9cc083160b60dbd0fe7b",
+      "entity_ref": "rx7SAFIjtIiHz3CAlvsph",
+      "type": "sha1",
+      "ids": true,
+      "report": "oGmTvDQn",
+      "timestamp": "2026-10-07T09:17:14.504014023Z",
+      "tags": [],
+      "id": "WBzU2hwsq5c5bd4Ge8TcG3"
+    },
+    {
+      "category": "artifacts_dropped",
+      "value": "0025f279b51b9cc083160b60dbd0fe7b",
+      "date": "2026-10-06",
+      "comment": "sha1: 91bb4f5fcc0481f57d72231ccc7d5e8fb676401d",
+      "entity_ref": "rx7SAFIjtIiHz3CAlvsph",
+      "type": "md5",
+      "ids": true,
+      "report": "oGmTvDQn",
+      "timestamp": "2026-10-07T09:17:14.494879193Z",
+      "tags": [],
+      "id": "NL2oEmM2KxGE7AqjurBhC7"
+    }
+  ],
+  "meta": {
+    "count": 3,
+    "limit": 100,
+    "total": 3,
+    "has_more": false,
+    "paginated": true
+  }
+}

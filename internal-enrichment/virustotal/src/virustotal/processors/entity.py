@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from virustotal.builder import VirusTotalBuilder
+from virustotal.client import VirusTotalQuotaExceededError
 
 if TYPE_CHECKING:
     from virustotal import VirusTotalConnector
@@ -110,12 +111,19 @@ class EntityProcessor(ABC):
                 continue
             if identifier is None:
                 identifier = self._gti_identifier()
-            response = self.client.get_gti_relationship(
-                self._GTI_ENDPOINT_TYPE,
-                identifier,
-                relationship,
-                self.connector.gti_relationship_limit,
-            )
+            try:
+                response = self.client.get_gti_relationship(
+                    self._GTI_ENDPOINT_TYPE,
+                    identifier,
+                    relationship,
+                    self.connector.gti_relationship_limit,
+                )
+            except VirusTotalQuotaExceededError:
+                self.helper.connector_logger.warning(
+                    "[VirusTotal] Quota exceeded, skipping GTI relationship",
+                    {"entity_identifier": identifier, "relationship": relationship},
+                )
+                continue
             if not response or "data" not in response or not response["data"]:
                 continue
             for item in response["data"]:

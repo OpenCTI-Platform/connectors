@@ -24,12 +24,14 @@ from flashpoint_connector.indicator_converter_to_stix import IndicatorConverterT
 
 def _build_converter(
     import_extracted_config_domains_urls: bool = False,
+    import_attack_patterns: bool = True,
 ) -> IndicatorConverterToStix:
     helper = Mock()
     helper.connector_logger = Mock()
     return IndicatorConverterToStix(
         helper=helper,
         import_extracted_config_domains_urls=import_extracted_config_domains_urls,
+        import_attack_patterns=import_attack_patterns,
     )
 
 
@@ -288,30 +290,145 @@ def test_convert_indicator_to_stix_should_build_email_observable_and_relationshi
     )
 
 
-def test_convert_indicator_to_stix_should_create_attack_pattern_and_uses():
-    converter = _build_converter()
-    indicator = {
-        "id": "ind-mitre-001",
-        "type": "domain",
-        "value": "example.org",
+def _build_mitre_indicator(
+    value: str = "198.51.100.10", tags: list[str] | None = None
+) -> dict:
+    return {
+        "id": f"ind-mitre-{value}",
+        "type": "ipv4",
+        "value": value,
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
+        "latest_sighting": {
+            "id": f"sight-{value}",
+            "source": "flashpoint_detection",
+            "sighted_at": "2026-03-06T11:30:00Z",
+            "tags": tags if tags is not None else [],
+        },
         "mitre_attack_ids": [
             {
                 "id": "T1059",
                 "name": "Command and Scripting Interpreter",
                 "tactic": "Execution",
-            }
+            },
+            {"id": "T1125", "name": "Video Capture", "tactic": "Collection"},
         ],
     }
 
+
+def _relationships(octi_objects: list, rel_type: RelationshipType) -> list:
+    return [
+        obj
+        for obj in octi_objects
+        if isinstance(obj, Relationship) and obj.type == rel_type
+    ]
+
+
+def test_convert_indicator_to_stix_should_not_link_indicator_to_attack_patterns():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:darkcomet", "actor:apt41"])
+
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
-    assert any(isinstance(obj, AttackPattern) for obj in octi_objects)
-    assert any(
-        isinstance(obj, Relationship) and obj.type == RelationshipType.INDICATES
-        for obj in octi_objects
+    assert not any(
+        isinstance(rel.target, AttackPattern)
+        for rel in _relationships(octi_objects, RelationshipType.INDICATES)
     )
+
+
+def test_convert_indicator_to_stix_should_attach_attack_patterns_to_malware():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:darkcomet", "infrastructure:c2"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    uses = _relationships(octi_objects, RelationshipType.USES)
+    assert len(uses) == 2
+    assert all(isinstance(rel.source, Malware) for rel in uses)
+    assert {rel.source.name for rel in uses} == {"darkcomet"}
+    assert {rel.target.mitre_id for rel in uses} == {"T1059", "T1125"}
+
+
+def test_convert_indicator_to_stix_should_attach_attack_patterns_to_actor_without_malware():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["actor:sandworm"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    uses = _relationships(octi_objects, RelationshipType.USES)
+    assert len(uses) == 2
+    assert all(isinstance(rel.source, IntrusionSet) for rel in uses)
+    assert {rel.source.name for rel in uses} == {"sandworm"}
+
+
+def test_convert_indicator_to_stix_should_prefer_malware_over_actor_for_attack_patterns():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:cobaltstrike", "actor:apt41"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    uses = _relationships(octi_objects, RelationshipType.USES)
+    assert len(uses) == 2
+    assert all(isinstance(rel.source, Malware) for rel in uses)
+
+
+def test_convert_indicator_to_stix_should_drop_attack_patterns_with_several_families():
+    """The techniques are the profile of only one family, which is not identified."""
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:cobaltstrike", "malware:dcrat"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    assert not any(isinstance(obj, AttackPattern) for obj in octi_objects)
+    assert not _relationships(octi_objects, RelationshipType.USES)
+    assert len(_relationships(octi_objects, RelationshipType.INDICATES)) == 2
+
+
+def test_convert_indicator_to_stix_should_skip_attack_patterns_when_disabled():
+    converter = _build_converter(import_attack_patterns=False)
+    indicator = _build_mitre_indicator(tags=["malware:darkcomet"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    assert not any(isinstance(obj, AttackPattern) for obj in octi_objects)
+    assert not _relationships(octi_objects, RelationshipType.USES)
+    assert any(isinstance(obj, Malware) for obj in octi_objects)
+
+
+def test_convert_indicator_to_stix_should_drop_attack_patterns_without_owner():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["infrastructure:c2"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    assert not any(isinstance(obj, AttackPattern) for obj in octi_objects)
+    assert not _relationships(octi_objects, RelationshipType.USES)
+
+
+def test_convert_indicator_to_stix_should_not_copy_indicator_labels_on_attack_patterns():
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:darkcomet", "infrastructure:c2"])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    attack_patterns = [obj for obj in octi_objects if isinstance(obj, AttackPattern)]
+    assert len(attack_patterns) == 2
+    assert all(not attack_pattern.labels for attack_pattern in attack_patterns)
+
+
+def test_convert_indicator_to_stix_should_produce_same_uses_for_same_family():
+    converter = _build_converter()
+    first = converter.convert_indicator_to_stix(
+        _build_mitre_indicator("198.51.100.10", ["malware:cobaltstrike"])
+    )
+    second = converter.convert_indicator_to_stix(
+        _build_mitre_indicator("198.51.100.11", ["malware:cobaltstrike"])
+    )
+
+    first_ids = {rel.id for rel in _relationships(first, RelationshipType.USES)}
+    second_ids = {rel.id for rel in _relationships(second, RelationshipType.USES)}
+    assert len(first_ids) == 2
+    assert first_ids == second_ids
 
 
 def test_convert_indicator_to_stix_should_not_create_sighting():
@@ -550,6 +667,12 @@ def test_convert_indicator_to_stix_should_handle_tactics_plural():
         "value": "example.org",
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
+        "latest_sighting": {
+            "id": "sight-tactics-001",
+            "source": "flashpoint_detection",
+            "sighted_at": "2026-03-06T11:30:00Z",
+            "tags": ["malware:emotet"],
+        },
         "mitre_attack_ids": [
             {
                 "id": "T1071",
@@ -1277,6 +1400,7 @@ def test_build_attack_pattern_with_single_tactic_fallback():
         "value": "198.51.100.42",
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
+        "latest_sighting": {"tags": ["malware:emotet"]},
         "mitre_attack_ids": [
             {
                 "id": "T1071",
@@ -1303,6 +1427,7 @@ def test_build_attack_pattern_tactics_all_invalid():
         "value": "198.51.100.42",
         "created_at": "2026-03-06T12:00:00Z",
         "modified_at": "2026-03-06T12:00:00Z",
+        "latest_sighting": {"tags": ["malware:emotet"]},
         "mitre_attack_ids": [
             {
                 "id": "T1071",

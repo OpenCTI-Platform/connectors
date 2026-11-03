@@ -22,7 +22,7 @@ rf:
   person_to_ta: False # optional
   ta_to_intrusion_set: false # optional. Set to true to map Threat Actor entities to Intrusion Set.
   risk_as_score: True # optional
-  risk_threshold: 60 # optional
+  risk_threshold: 60 # optional. Analyst notes indicators (IP, domain, URL, hash) below this risk score, or without a score, are not imported. 0 disables the filtering.
   analyst_notes_guess_relationships: False # optional
   analyst_notes_include_context_entities: False # optional. Set to true to also import analyst notes context entities (can be noisy).
   pull_risk_list: False
