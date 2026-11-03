@@ -12,6 +12,8 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
+from connectors_sdk.settings.base_settings import BaseExternalImportConnectorSettings
+from connectors_sdk.states.states import ExternalImportConnectorState
 
 PATCH_HELPER = "connectors_sdk.connectors.external_import.external_import_connector.OpenCTIConnectorHelper"
 
@@ -66,6 +68,44 @@ class TestExternalImportConnector:
             "connectors_sdk.connectors.external_import.external_import_connector"
         )
         assert MyConnector.logger.name == __name__
+
+    def test_parameterized_connector_logger_is_named_after_its_module(self):
+        class MyConnector(
+            ExternalImportConnector[
+                BaseExternalImportConnectorSettings, ExternalImportConnectorState
+            ]
+        ):
+            pass
+
+        assert issubclass(MyConnector, ExternalImportConnector)
+        assert MyConnector.logger.name == __name__
+
+    def test_init_parameterized(self, mock_settings: MagicMock):
+        proc = DummyProcessor()
+        connector = ExternalImportConnector[
+            BaseExternalImportConnectorSettings, ExternalImportConnectorState
+        ](settings=mock_settings, data_processors=[proc])
+        assert connector.settings is mock_settings
+        assert connector.data_processors == [proc]
+
+    def test_init_without_state_uses_the_default_state(self, mock_settings: MagicMock):
+        proc = DummyProcessor()
+        unparameterized = ExternalImportConnector(
+            settings=mock_settings, data_processors=[proc]
+        )
+        parameterized = ExternalImportConnector[
+            BaseExternalImportConnectorSettings, ExternalImportConnectorState
+        ](settings=mock_settings, data_processors=[proc])
+
+        assert type(unparameterized.state) is ExternalImportConnectorState
+        assert type(parameterized.state) is ExternalImportConnectorState
+
+    def test_init_parameterized_with_state(self, mock_settings: MagicMock):
+        state = _make_state_mock()
+        connector = ExternalImportConnector[
+            BaseExternalImportConnectorSettings, ExternalImportConnectorState
+        ](settings=mock_settings, data_processors=[DummyProcessor()], state=state)
+        assert connector.state is state
 
     def test_init(self, mock_settings: MagicMock):
         proc = DummyProcessor()
