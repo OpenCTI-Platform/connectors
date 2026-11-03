@@ -508,18 +508,17 @@ class HatchingTriageSandboxConnector:
     def _get_task_file(self, sample_id, task_id, filename):
         """Download a task file, retrying while unavailable. Return None if all attempts fail."""
         for attempt in range(1, self.max_attempts + 1):
-            response = self.triage_client.sample_task_file(
+            file_contents = self.triage_client.sample_task_file(
                 sample_id, task_id, filename
             )
-            if response.ok and b"NOT_AVAILABLE" not in response.content[:30]:
-                return response.content
+            if b"NOT_AVAILABLE" not in file_contents[:30]:
+                return file_contents
             self.helper.connector_logger.warning(
                 "Extracted file not available, retrying...",
                 meta={
                     "sample_id": sample_id,
                     "task_id": task_id,
                     "filename": filename,
-                    "status": response.status_code,
                     "attempt": attempt,
                     "max_attempts": self.max_attempts,
                 },
