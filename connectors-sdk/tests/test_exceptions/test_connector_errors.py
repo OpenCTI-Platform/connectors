@@ -8,10 +8,13 @@ from connectors_sdk.exceptions import connector_errors
 from connectors_sdk.exceptions.connector_errors import (
     ConnectorError,
     Criticity,
+    DataConversionError,
     DataInvalidValueError,
+    ProviderApiServerError,
     ProviderApiTimeoutError,
     TargetRejectedError,
 )
+from pycti.connector.opencti_connector_helper import _ConnectorRunError
 
 
 def test_criticity_values_match_logging_levels():
@@ -330,3 +333,51 @@ def test_category_catches_only_its_family(name, code, criticity, category):
         raise error
     except ConnectorError as caught:
         assert caught is error
+
+
+@pytest.mark.parametrize(
+    "name,code,criticity,category",
+    [pytest.param(*error, id=error[1]) for error in STANDARD_ERRORS],
+)
+def test_convert_to_pycti_format(name, code, criticity, category):
+    """Test that each standard error converts to the pycti error dict."""
+    # Given a standard error with a message
+    error = getattr(connector_errors, name)("something went wrong")
+    # When converting it
+    converted = error.convert_to_pycti_format()
+    # Then it should hold exactly its code, message and criticity as a plain int
+    assert converted == {
+        "code": code,
+        "message": "something went wrong",
+        "criticity": int(criticity),
+    }
+    assert type(converted["criticity"]) is int
+
+
+def test_convert_to_pycti_format_without_message():
+    """Test that an error raised without arguments converts with an empty message."""
+    # Given an error without a message
+    error = DataConversionError()
+    # When converting it
+    # Then the message should be an empty string
+    assert error.convert_to_pycti_format()["message"] == ""
+
+
+def test_convert_to_pycti_format_ignores_instance_code():
+    """Test that an instance `code` attribute does not change the reported code."""
+    # Given an error whose instance stores the source's own code
+    error = ProviderApiServerError("gateway timeout")
+    error.code = "HTTP-504"
+    # When converting it
+    # Then the standardized code should be reported
+    assert error.convert_to_pycti_format()["code"] == "api.server"
+
+
+def test_convert_to_pycti_format_is_accepted_by_pycti():
+    """Test that pycti's strict run-error model accepts every converted error."""
+    # Given pycti's model for the errors a run returns
+    for name, *_ in STANDARD_ERRORS:
+        converted = getattr(connector_errors, name)("message").convert_to_pycti_format()
+        # When validating the converted error
+        # Then it should be accepted unchanged
+        assert _ConnectorRunError.model_validate(converted).model_dump() == converted

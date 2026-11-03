@@ -123,6 +123,21 @@ class ConnectorError(Exception):
             )
         return super().__new__(cls, *args, **kwargs)
 
+    def convert_to_pycti_format(self) -> dict[str, Any]:
+        """Return the error as pycti expects it, to report it to OpenCTI.
+
+        The code and criticity are read from the class: an instance attribute with
+        the same name (e.g. the source's own error code) never changes them.
+
+        Returns:
+            A new dict with the ``code``, ``message`` and ``criticity`` (plain ``int``).
+        """
+        return {
+            "code": type(self).code,
+            "message": str(self),
+            "criticity": int(type(self).criticity),
+        }
+
 
 class UnknownError(ConnectorError):
     """Any unexpected error, which cannot be categorized."""
