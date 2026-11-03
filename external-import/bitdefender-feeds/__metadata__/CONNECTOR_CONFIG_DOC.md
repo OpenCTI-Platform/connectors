@@ -17,4 +17,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | BITDEFENDER_INCLUDE_SUSPICIOUS | `string` | | true/false/only | false | Defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
 | BITDEFENDER_DETECTION | `boolean`| | true/false | false | Set `x_opencti_detection` on created indicators. Default: `false`. |
 | BITDEFENDER_CREATE_MALWARE_OBJECTS | `boolean` | | true/false | true | Create a Malware entity for each file detection (`true`, default), or only Malware family entities (`false`). |
-| BITDEFENDER_TLP_LEVEL | `string` | | `clear` `white`, `green`, `amber`, `amber+strict`, or `red` | clear | Default marking for imported indicators, observables, Malware entities and relationships. |
+| BITDEFENDER_TLP_LEVEL | `string` | | `clear` `white`, `green`, `amber`, `amber+strict`, or `red` | red | Default marking for imported indicators, observables, Malware entities and relationships. |

@@ -42,7 +42,7 @@ The following configuration variables are optional.
 | BITDEFENDER_INCLUDE_SUSPICIOUS | include_suspicious | String, defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
 | BITDEFENDER_DETECTION | detection | Boolean, set `x_opencti_detection` on created indicators. Default: `false`. |
 | BITDEFENDER_CREATE_MALWARE_OBJECTS | create_malware_objects | Boolean, create a Malware entity for each file detection (`true`, default), or only Malware family entities (`false`). |
-| BITDEFENDER_TLP_LEVEL | tlp_level | Default marking for imported indicators, observables, Malware entities and relationships: `clear` (default), `white`, `green`, `amber`, `amber+strict`, or `red`. |
+| BITDEFENDER_TLP_LEVEL | tlp_level | Default marking for imported indicators, observables, Malware entities and relationships: `clear`, `white`, `green`, `amber`, `amber+strict`, or `red` (default). |
 
 
 The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal) to 99 (maximum). Please note that if you're importing all feeds, setting the minimum confidence and severity to 1 would result in large amount of data - make sure your OpenCTI instance is scaled appropriately to handle it.

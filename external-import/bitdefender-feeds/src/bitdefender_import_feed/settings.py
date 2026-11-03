@@ -100,7 +100,7 @@ class BitdefenderConfig(BaseConfigModel):
         "red",
     ] = Field(
         description="Default TLP level of the imported entities.",
-        default="clear",
+        default="red",
     )
 
     @field_validator("api_key")
