@@ -27,7 +27,8 @@ def build_auth(
             "when Zscaler removes it. Migrate to Zscaler OneAPI (see the connector README).",
             {"fields": legacy_fields},
         )
-        values = zscaler.__dict__  # avoid pydantic's deprecated-field access warnings
+        # model_dump avoids pydantic's deprecated-field access warnings
+        values = zscaler.model_dump(include=LEGACY_FIELDS)
         return LegacyAuth(
             api_base_url=str(values["api_base_url"] or DEFAULT_LEGACY_API_BASE_URL),
             username=values["username"],

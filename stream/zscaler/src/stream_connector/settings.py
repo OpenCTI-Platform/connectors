@@ -113,11 +113,11 @@ class ZscalerConfig(BaseConfigModel):
     @property
     def use_legacy_api(self) -> bool:
         """Whether the deprecated legacy API credentials are used instead of OneAPI."""
-        return not any(self._raw(field) for field in ONEAPI_CREDENTIAL_FIELDS)
+        return not any(getattr(self, field) for field in ONEAPI_CREDENTIAL_FIELDS)
 
     def _raw(self, field: str) -> object:
         # Read deprecated fields without triggering pydantic's deprecation warning
-        return self.__dict__.get(field)
+        return self.model_dump(include={field}).get(field)
 
     @model_validator(mode="after")
     def _check_credentials(self) -> Self:
@@ -137,7 +137,7 @@ class ZscalerConfig(BaseConfigModel):
                 "credentials 'client_id', 'client_secret' and 'vanity_domain'."
             )
 
-        missing = [f for f in ONEAPI_CREDENTIAL_FIELDS if not self._raw(f)]
+        missing = [f for f in ONEAPI_CREDENTIAL_FIELDS if not getattr(self, f)]
         if missing:
             raise ValueError(
                 "Incomplete Zscaler OneAPI credentials "
