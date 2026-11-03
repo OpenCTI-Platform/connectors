@@ -11,6 +11,14 @@ class TestConnectorTypeDetection:
         ctx = ConnectorContext.load(minimal_connector)
         assert ctx.connector_type == "EXTERNAL_IMPORT"
 
+    def test_detects_internal_hunt_type(self, tmp_path):
+        connector_dir = tmp_path / "internal-hunt" / "splunk-hunt"
+        connector_dir.mkdir(parents=True)
+
+        ctx = ConnectorContext.load(connector_dir)
+        assert ctx.connector_type == "INTERNAL_HUNT"
+        assert ctx.connector_type.label == "Internal Hunt"
+
     def test_detects_type_in_templates_layout(self, tmp_path):
         connector_dir = tmp_path / "templates" / "external-import"
         connector_dir.mkdir(parents=True)

@@ -17,6 +17,7 @@ REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
@@ -87,6 +88,7 @@ class ConnectorManifest:
         "EXTERNAL_IMPORT",
         "INTERNAL_ENRICHMENT",
         "INTERNAL_EXPORT_FILE",
+        "INTERNAL_HUNT",
         "INTERNAL_IMPORT_FILE",
         "STREAM",
     ]
@@ -467,6 +469,8 @@ if __name__ == "__main__":
     try:
         connectors_directories_paths = []
         for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
+            if not os.path.isdir(repository_subdirectory):
+                continue
             with os.scandir(repository_subdirectory) as entries:
                 for entry in entries:
                     if entry.is_dir() and not entry.name.startswith("."):

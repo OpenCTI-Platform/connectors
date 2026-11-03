@@ -1,0 +1,26 @@
+{
+  "title": "Template Hunt Connector",
+  "slug": "template",
+  "description": "Template description of the hunt connector",
+  "short_description": "Template short description (summary) of the hunt connector",
+  "logo": null,
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Free",
+  "contact": "support@example.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/template",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-template",
+  "container_type": "INTERNAL_HUNT"
+}

@@ -24,6 +24,7 @@ changes_outside_of_connectors_scope=$(git diff --name-only "$base_commit" HEAD -
   ':!external-import/**' \
   ':!internal-enrichment/**' \
   ':!internal-export-file/**' \
+  ':!internal-hunt/**' \
   ':!internal-import-file/**' \
   ':!stream/**'
 )

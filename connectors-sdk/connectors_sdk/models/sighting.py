@@ -2,6 +2,7 @@
 
 from typing import TypeAlias
 
+from connectors_sdk.models._hunt_run import scope_to_hunt_run
 from connectors_sdk.models.administrative_area import AdministrativeArea
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.city import City
@@ -66,6 +67,13 @@ class Sighting(BaseIdentifiedEntity):
         default=None,
         description="Qualification of the sighting (false positive).",
     )
+    hunt_run_id: str | None = Field(
+        default=None,
+        description=(
+            "OpenCTI id of the hunt run that found the sighting. "
+            "The identifier of the sighting is then scoped to the run."
+        ),
+    )
 
     def to_stix2_object(self) -> Stix2Sighting:
         """Make stix object."""
@@ -75,14 +83,18 @@ class Sighting(BaseIdentifiedEntity):
             if self.observed_data is not None
             else None
         )
+        # Within a hunt run, late telemetry moves the bounds between attempts: the
+        # run, the sighted object and where it was sighted identify the sighting
+        scoped = self.hunt_run_id is not None
+        standard_id = PyctiStixSightingRelationship.generate_id(
+            sighting_of_ref=self.sighting_of.id,
+            where_sighted_refs=where_sighted_ids,
+            first_seen=None if scoped else self.first_seen,
+            last_seen=None if scoped else self.last_seen,
+        )
 
         return Stix2Sighting(
-            id=PyctiStixSightingRelationship.generate_id(
-                sighting_of_ref=self.sighting_of.id,
-                where_sighted_refs=where_sighted_ids,
-                first_seen=self.first_seen,
-                last_seen=self.last_seen,
-            ),
+            id=scope_to_hunt_run(standard_id, self.hunt_run_id),
             sighting_of_ref=self.sighting_of.id,
             where_sighted_refs=where_sighted_ids,
             observed_data_refs=observed_data_ids,
@@ -91,6 +103,7 @@ class Sighting(BaseIdentifiedEntity):
             count=self.count,
             description=self.description,
             x_opencti_negative=self.qualification,
+            x_opencti_hunt_run_id=self.hunt_run_id,
             **self._common_stix2_properties(),
             allow_custom=True,
         )

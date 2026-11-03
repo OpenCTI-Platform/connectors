@@ -10,6 +10,13 @@ class ConnectorConfig(BaseExternalImportConnectorConfig):
     pass
 """
 
+_SDK_HUNT_BASED = """\
+from connectors_sdk import BaseInternalHuntConnectorConfig
+
+class HuntConnectorConfig(BaseInternalHuntConnectorConfig):
+    pass
+"""
+
 _PYCTI_HARDCODED = """\
 config = {
     "connector": {
@@ -46,6 +53,13 @@ class TestVC303ConnectorType:
 
     def test_passes_sdk_base_config(self, connector_src):
         path = connector_src(("src/main.py", _SDK_BASED))
+        results = run_checks(path, select=["VC303"])
+        assert all(r.severity == Severity.INFO for r in results)
+
+    def test_passes_sdk_hunt_base_config(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _SDK_HUNT_BASED), connector_type="INTERNAL_HUNT"
+        )
         results = run_checks(path, select=["VC303"])
         assert all(r.severity == Severity.INFO for r in results)
 

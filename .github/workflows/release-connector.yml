@@ -171,6 +171,7 @@ jobs:
             external-import
             internal-enrichment
             internal-export-file
+            internal-hunt
             internal-import-file
             stream
           sparse-checkout-cone-mode: false
@@ -179,7 +180,7 @@ jobs:
         id: find
         run: |
           CONNECTOR_NAME="${{ steps.parse.outputs.connector_name }}"
-          TYPE_DIRS="external-import internal-enrichment internal-export-file internal-import-file stream"
+          TYPE_DIRS="external-import internal-enrichment internal-export-file internal-hunt internal-import-file stream"
 
           MATCHES=()
           for type_dir in $TYPE_DIRS; do

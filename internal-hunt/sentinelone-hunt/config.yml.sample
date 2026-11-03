@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'SentinelOne Hunt' # optional (default: 'SentinelOne Hunt')
+  # scope: 'sentinelone' # optional, hunt platform slug (default: 'sentinelone')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'SentinelOne Singularity' # optional (default: 'SentinelOne Singularity')
+  # security_platform_type: 'EDR' # optional (default: 'EDR')
+  # max_concurrent_runs: 3 # optional (default: 3)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+sentinelone_hunt:
+  api_url: 'ChangeMe' # URL of the management console, e.g. https://your-tenant.sentinelone.net
+  api_token: 'ChangeMe' # API token of a read-only service user
+  # account_ids: '' # optional, comma-separated account IDs (default: every account the token can reach)
+  # edr_only: true # optional, restrict translated rules and lookups to the EDR telemetry (default: true)
+  # verify_ssl: true # optional (default: true)
+  # sigma_pipeline: 'sentinelone_pq' # optional, 'sentinelone_pq' or 'none'
+  # poll_interval: 1 # optional, seconds between two query status checks

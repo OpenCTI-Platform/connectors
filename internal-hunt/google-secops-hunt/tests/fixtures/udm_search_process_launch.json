@@ -1,0 +1,87 @@
+{
+  "events": [
+    {
+      "name": "projects/hunt-project/locations/europe/instances/instance-1/events/AAAAAJ8xY2QxAAAAAAAAAA",
+      "udm": {
+        "metadata": {
+          "id": "AAAAAJ8xY2QxAAAAAAAAAA==",
+          "productLogId": "4688-1",
+          "eventTimestamp": "2026-10-03T10:00:00Z",
+          "collectedTimestamp": "2026-10-03T10:00:02Z",
+          "ingestedTimestamp": "2026-10-03T10:00:05Z",
+          "eventType": "PROCESS_LAUNCH",
+          "vendorName": "Microsoft",
+          "productName": "Microsoft-Windows-Sysmon",
+          "logType": "WINDOWS_SYSMON",
+          "baseLabels": {
+            "logTypes": ["WINDOWS_SYSMON"],
+            "allowScopedAccess": true
+          },
+          "enrichmentState": "ENRICHED"
+        },
+        "principal": {
+          "hostname": "ws1.corp.example",
+          "ip": ["10.0.0.5"],
+          "user": {"userid": "alice"},
+          "process": {
+            "pid": "4321",
+            "file": {"fullPath": "C:\\Windows\\explorer.exe"}
+          }
+        },
+        "target": {
+          "process": {
+            "pid": "8765",
+            "commandLine": "powershell.exe -nop -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA",
+            "file": {
+              "fullPath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+            }
+          }
+        },
+        "about": [{"labels": [{"key": "Category", "value": "Process Create"}]}],
+        "additional": {"Category": "Process Create (rule: ProcessCreate)"}
+      }
+    },
+    {
+      "name": "projects/hunt-project/locations/europe/instances/instance-1/events/AAAAAJ8xY2QyAAAAAAAAAA",
+      "udm": {
+        "metadata": {
+          "id": "AAAAAJ8xY2QyAAAAAAAAAA==",
+          "productLogId": "4688-2",
+          "eventTimestamp": "2026-10-03T11:30:00Z",
+          "collectedTimestamp": "2026-10-03T11:30:01Z",
+          "ingestedTimestamp": "2026-10-03T11:30:04Z",
+          "eventType": "PROCESS_LAUNCH",
+          "vendorName": "Microsoft",
+          "productName": "Microsoft-Windows-Sysmon",
+          "logType": "WINDOWS_SYSMON",
+          "baseLabels": {
+            "logTypes": ["WINDOWS_SYSMON"],
+            "allowScopedAccess": true
+          },
+          "enrichmentState": "ENRICHED"
+        },
+        "principal": {
+          "hostname": "ws2.corp.example",
+          "ip": ["10.0.0.6"],
+          "user": {"userid": "bob"},
+          "process": {
+            "pid": "1111",
+            "file": {"fullPath": "C:\\Windows\\System32\\cmd.exe"}
+          }
+        },
+        "target": {
+          "process": {
+            "pid": "2222",
+            "commandLine": "powershell.exe -w hidden -enc JABzAD0ATgBlAHcALQBPAGIAagBlAGMAdAA=",
+            "file": {
+              "fullPath": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+            }
+          }
+        },
+        "about": [{"labels": [{"key": "Category", "value": "Process Create"}]}],
+        "additional": {"Category": "Process Create (rule: ProcessCreate)"}
+      }
+    }
+  ],
+  "moreDataAvailable": false
+}

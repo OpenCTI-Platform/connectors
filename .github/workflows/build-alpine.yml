@@ -35,6 +35,7 @@ jobs:
       matrix_external_import: ${{ steps.set-matrix.outputs.matrix_external_import }}
       matrix_internal_enrichment: ${{ steps.set-matrix.outputs.matrix_internal_enrichment }}
       matrix_internal_export_file: ${{ steps.set-matrix.outputs.matrix_internal_export_file }}
+      matrix_internal_hunt: ${{ steps.set-matrix.outputs.matrix_internal_hunt }}
       matrix_internal_import_file: ${{ steps.set-matrix.outputs.matrix_internal_import_file }}
       matrix_stream: ${{ steps.set-matrix.outputs.matrix_stream }}
       active_types: ${{ steps.set-matrix.outputs.active_types }}
@@ -128,6 +129,21 @@ jobs:
     with:
       type_name: internal-export-file
       matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_export_file }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
+  build-internal-hunt:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_hunt')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: internal-hunt
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_hunt }}
       image_tags: ${{ needs.build-matrix.outputs.image_tags }}
       build_mode: ${{ inputs.build_mode }}
       push: ${{ inputs.push }}

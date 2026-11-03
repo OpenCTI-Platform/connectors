@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-sentinelone-hunt:
+    image: opencti/connector-sentinelone-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=SentinelOne Hunt # optional (default: 'SentinelOne Hunt')
+      # - CONNECTOR_SCOPE=sentinelone # optional, hunt platform slug (default: 'sentinelone')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=SentinelOne Singularity # optional, Security Platform the hunts run against (default: 'SentinelOne Singularity')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=EDR # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'EDR')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=3 # optional, connector-side limit of concurrent hunt runs (default: 3)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # SentinelOne Singularity Data Lake
+      - SENTINELONE_HUNT_API_URL=ChangeMe # URL of the management console, e.g. https://your-tenant.sentinelone.net
+      - SENTINELONE_HUNT_API_TOKEN=ChangeMe # API token of a read-only service user
+      # - SENTINELONE_HUNT_ACCOUNT_IDS= # optional, comma-separated account IDs (default: every account the token can reach)
+      # - SENTINELONE_HUNT_EDR_ONLY=true # optional, restrict translated rules and lookups to the EDR telemetry (default: true)
+      # - SENTINELONE_HUNT_VERIFY_SSL=true # optional (default: true)
+      # - SENTINELONE_HUNT_SIGMA_PIPELINE=sentinelone_pq # optional, 'sentinelone_pq' or 'none'
+      # - SENTINELONE_HUNT_POLL_INTERVAL=1 # optional, seconds between two query status checks
+    restart: always
