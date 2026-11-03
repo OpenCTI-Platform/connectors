@@ -552,8 +552,10 @@ class IndicatorConverterToStix:
                 if not kill_chain_phases:
                     kill_chain_phases = None
 
-            # No indicator labels: the attack pattern ID only depends on the
-            # MITRE ID, so it is the ATT&CK object shared by the whole platform.
+            # No labels on purpose: the ID only depends on the MITRE ID, so this
+            # technique is merged with the one created by other sources.
+            # OpenCTI never removes labels, so any label set here would stay
+            # on that shared object for every source.
             attack_pattern = AttackPattern(
                 name=attack_pattern_data["name"],
                 description=attack_pattern_data.get("description"),
