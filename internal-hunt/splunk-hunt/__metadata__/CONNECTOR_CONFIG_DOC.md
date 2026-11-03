@@ -27,4 +27,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SPLUNK_HUNT_SEARCH_PREFIX | `string` |  | string | `""` | SPL constraint added to every search, e.g. 'index=wineventlog OR index=sysmon', or the '`opencti_hunt_scope`' macro of the OpenCTI for Splunk Enterprise add-on. |
 | SPLUNK_HUNT_SIGMA_PIPELINE | `string` |  | string | `"splunk_windows"` | pySigma pipeline(s) translating Sigma rules, chained with '+': 'splunk_windows', 'splunk_sysmon_acceleration', 'splunk_cim' or 'none'. |
 | SPLUNK_HUNT_OUTPUT_FORMAT | `string` |  | `default` `data_model` | `"default"` | pySigma Splunk output format: plain searches ('default') or CIM data model searches ('data_model', requires the 'splunk_cim' pipeline). |
+| SPLUNK_HUNT_HOST_ATTRIBUTION | `string` |  | `cim` `raw` | `"cim"` | How hits are attributed to a host: 'cim' resolves the endpoint from the sourcetype and CIM fields (src/dest for network appliances, ComputerName for forwarded endpoint logs); 'raw' uses the Splunk 'host' field (the device that logged the event). |
 | SPLUNK_HUNT_POLL_INTERVAL | `number` |  | `0 < x ` | `2.0` | Seconds between two status checks of a search job. |

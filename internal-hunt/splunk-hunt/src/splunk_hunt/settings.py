@@ -85,6 +85,12 @@ class SplunkHuntConfig(BaseConfigModel):
         "searches ('data_model', requires the 'splunk_cim' pipeline).",
         default="default",
     )
+    host_attribution: Literal["cim", "raw"] = Field(
+        description="How hits are attributed to a host: 'cim' resolves the endpoint from the "
+        "sourcetype and CIM fields (src/dest for network appliances, ComputerName for "
+        "forwarded endpoint logs); 'raw' uses the Splunk 'host' field (the device that logged the event).",
+        default="cim",
+    )
     poll_interval: float = Field(
         description="Seconds between two status checks of a search job.",
         default=2.0,
