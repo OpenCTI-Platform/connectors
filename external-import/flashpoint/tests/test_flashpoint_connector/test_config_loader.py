@@ -44,6 +44,7 @@ def fake_config_dict() -> dict[str, dict[str, Any]]:
             "alert_create_related_entities": True,
             "import_indicators": True,
             "import_extracted_config_domains_urls": False,
+            "import_indicator_attack_patterns": True,
             "import_communities": True,
             "communities_queries": "cybersecurity,cyberattack",
             "import_ccm_alerts": True,
