@@ -241,6 +241,8 @@ def _make_base_client() -> BaseCrowdstrikeClient:
     client = BaseCrowdstrikeClient.__new__(BaseCrowdstrikeClient)
     client.helper = MagicMock()
     client.helper.connector_logger = MagicMock()
+    client.is_secondary = True
+
     return client
 
 
