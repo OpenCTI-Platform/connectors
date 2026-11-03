@@ -17,6 +17,7 @@ def connector(mock_opencti_connector_helper):
     config.hatching_triage_sandbox.botnet_color = "#f79e00"
     config.hatching_triage_sandbox.campaign_color = "#7a01e5"
     config.hatching_triage_sandbox.tag_color = "#54483b"
+    config.hatching_triage_sandbox.max_attempts = 3
     config.connector.max_tlp = TLPLevel.AMBER
 
     helper = MagicMock()
@@ -238,3 +239,73 @@ def _raise_server_error(http_error):
     """Generator that raises a ServerError when iterated."""
     raise ServerError(http_error)
     yield  # noqa: unreachable - makes this a generator
+
+
+def _server_error(status_code):
+    http_error = MagicMock()
+    http_error.response.status_code = status_code
+    http_error.response.json.return_value = {}
+    return ServerError(http_error)
+
+
+def _file_response(status_code, content):
+    response = MagicMock()
+    response.status_code = status_code
+    response.ok = status_code < 400
+    response.content = content
+    return response
+
+
+@patch("connector.connector.time.sleep")
+class TestRetries:
+    def test_overview_report_retries_on_server_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = [
+            _server_error(502),
+            {"analysis": {}},
+        ]
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        assert connector.triage_client.overview_report.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_overview_report_raises_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(502)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 3
+
+    def test_overview_report_does_not_retry_client_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(404)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_task_file_retries_until_available(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            _file_response(502, b"Bad Gateway"),
+            _file_response(200, b'{"error":"NOT_AVAILABLE"}'),
+            _file_response(200, b"file-content"),
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 3
+
+    def test_task_file_returns_none_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.return_value = _file_response(
+            502, b"Bad Gateway"
+        )
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 3
+        assert mock_sleep.call_count == 2
