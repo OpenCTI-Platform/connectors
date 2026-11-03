@@ -164,6 +164,16 @@ class FlashpointConfig(ConfigBaseModel):
         ),
         default=False,
     )
+    import_indicator_attack_patterns: bool = Field(
+        description=(
+            "Whether to import the MITRE ATT&CK techniques Flashpoint attaches "
+            "to indicators. They are the technique profile of the malware family "
+            "(or actor) of the indicator, so they are imported as Malware / "
+            "Intrusion-Set uses Attack-Pattern, never linked to the indicator "
+            "itself."
+        ),
+        default=True,
+    )
     import_alerts: bool = Field(
         description="Whether to import alert data from Flashpoint or not.",
         default=True,
