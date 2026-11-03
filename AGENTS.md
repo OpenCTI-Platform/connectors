@@ -299,13 +299,13 @@ The schema targets always install `connectors-sdk` from GitHub (`master`, or
 `RELEASE_REF` for `connectors_config_schemas`), so use `gs` when the change
 also touches `connectors-sdk/`.
 
-Outside CI, the generator installs this checkout's `connectors-sdk/`
-(`SDK_SOURCE=local`), so schemas pick up SDK changes that are not merged yet
-(for example the JSON schema of a settings type). The Config Schema check of
-pull requests and the merge queue does the same, so an SDK change is checked
-before merge. Only the full regeneration of `build-manifest.yml` installs
-`connectors-sdk` from GitHub `master` or the release branch (`SDK_SOURCE=git`,
-the default when `CI` is set); force that mode locally with
+`gs` installs this checkout's `connectors-sdk/` (`SDK_SOURCE=local`,
+the default), so schemas pick up SDK changes that are not merged yet
+(for example the JSON schema of a settings type). CI does the same everywhere:
+the Config Schema check of pull requests and the merge queue, and the full
+regeneration of `build-manifest.yml`, which uses the SDK of the branch or tag
+commit it builds. To generate against the SDK published on GitHub instead
+(`master`, or the branch or tag set in `RELEASE_REF`), run
 `SDK_SOURCE=git mise run gs external-import/myconnector`.
 
 The SDK pins an exact pycti version. If the connector's `requirements.txt`

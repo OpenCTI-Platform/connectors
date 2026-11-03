@@ -5,12 +5,15 @@ name: Config Schema
 # On pull requests and in the merge queue it covers the connectors changed
 # since the merge base (all of them when the generation tooling or the
 # connectors-sdk changes), so a connector whose schema cannot be generated is
-# caught before merge. The schemas are generated against the checked-out
-# connectors-sdk, so an SDK change is exercised before it reaches master. The
-# generated files are not compared with the committed ones.
+# caught before merge. The generated files are not compared with the committed
+# ones.
 #
 # build-manifest.yml calls it with all_connectors and upload_schemas to
 # regenerate every schema and hand them over to its build_manifest job.
+#
+# In every case the schemas are generated against the checked-out
+# connectors-sdk: an SDK change is exercised before it reaches master, and a
+# branch or tag build uses the SDK of the very commit it builds.
 
 on:
   # No paths filter, so Config Schema Summary always reports and can be a
@@ -32,10 +35,6 @@ on:
         description: Upload the generated schemas as manifest-schema-* artifacts.
         type: boolean
         default: false
-      release_ref:
-        description: Branch the connectors-sdk is installed from. Empty means master.
-        type: string
-        default: ""
 
 permissions:
   contents: read
@@ -105,15 +104,8 @@ jobs:
           # action's own install), including a uv that shadows setup-uv's.
           MISE_TASK_RUN_AUTO_INSTALL: "false"
           CONNECTOR_PATHS: ${{ matrix.connector_paths }}
-          RELEASE_REF: ${{ inputs.release_ref }}
-          # Pull requests and the merge queue install the checked-out SDK. The
-          # regeneration of build-manifest.yml keeps the SDK of its release ref.
-          USE_LOCAL_SDK: ${{ !inputs.all_connectors }}
         run: |
           set -euo pipefail
-          if [ "$USE_LOCAL_SDK" = "true" ]; then
-            export SDK_SOURCE=local
-          fi
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
             echo "::group::Generating schema for ${connector_path}"

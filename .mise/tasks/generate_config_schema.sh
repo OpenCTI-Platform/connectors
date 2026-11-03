@@ -23,18 +23,12 @@ VENV_NAME=".temp_venv"
 # Without this, uv picks whatever interpreter it happens to discover, which
 # varies between the CI runner image and each developer's machine.
 PYTHON_VERSION="3.12"
-# Ref the connectors-sdk is installed from. Release/LTS builds set RELEASE_REF
-# so their schemas are generated against the matching SDK instead of master.
+# Ref the connectors-sdk is fetched from in "git" mode (branch, tag or commit).
 SDK_REF="${RELEASE_REF:-master}"
-# Where the connectors-sdk is installed from: "git" (GitHub at SDK_REF) or "local"
-# (this checkout's connectors-sdk/, so SDK changes that are not merged yet are
-# picked up). Defaults to "git" in CI (CI is set, as on GitHub Actions) and to
-# "local" elsewhere; force one with e.g. `SDK_SOURCE=git mise run gs <connector_directory>`.
-if [[ -n "${CI:-}" ]]; then
-    SDK_SOURCE="${SDK_SOURCE:-git}"
-else
-    SDK_SOURCE="${SDK_SOURCE:-local}"
-fi
+# Where the connectors-sdk is installed from: "local" (default, this checkout's
+# connectors-sdk/, so SDK changes that are not merged yet are picked up) or
+# "git" (GitHub at SDK_REF), e.g. `SDK_SOURCE=git mise run gs <connector_directory>`.
+SDK_SOURCE="${SDK_SOURCE:-local}"
 SDK_REPO_URL="https://github.com/OpenCTI-Platform/connectors.git"
 # Shallow, sparse checkouts of connectors-sdk, one per commit, reused across
 # connectors so a full run fetches the SDK once instead of once per connector.

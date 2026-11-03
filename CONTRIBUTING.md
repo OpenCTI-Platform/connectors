@@ -185,10 +185,10 @@ mise run gs
 ```
 
 On your machine, `gs` installs the `connectors-sdk/` of your checkout, so schemas
-include SDK changes that are not merged yet. The Config Schema check of your pull
-request does the same. Only the manifest build installs `connectors-sdk` from GitHub
-`master` (or the release branch). Run `SDK_SOURCE=git mise run gs` to generate the
-schema against GitHub `master` locally.
+include SDK changes that are not merged yet. CI does the same: the Config Schema
+check of your pull request and the manifest build both use the `connectors-sdk/` of
+the commit they run on. Run `SDK_SOURCE=git mise run gs` to generate the schema
+against the SDK of GitHub `master` instead.
 
 > **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
