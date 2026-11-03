@@ -17,9 +17,9 @@ LINKED_MALWARE_NAME = "supra coucou"
 NOTE_CONTENT = "coucou super note"
 NOTE_ABSTRACT = "coucou note on {value}"
 # Delay before sending the bundle, to observe the work while it is in progress
-SEND_BUNDLE_DELAY_SECONDS = 8
+SEND_BUNDLE_DELAY_SECONDS = 2
 # Chance that the enrichment bundle is replaced by one the backend rejects at ingestion
-INGESTION_ERROR_PROBABILITY = 0.2
+INGESTION_ERROR_PROBABILITY = 0.1
 # Invalid STIX pattern: the backend refuses the indicator, so the work gets an ingestion error
 BROKEN_INDICATOR_PATTERN = "[ipv4-addr:value = "
 
