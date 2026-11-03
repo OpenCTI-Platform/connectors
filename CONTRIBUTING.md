@@ -399,8 +399,8 @@ All connectors use **Pydantic models** for configuration validation:
 ```python
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
 )
 from pydantic import Field, HttpUrl
 
@@ -409,6 +409,9 @@ class MyConnectorConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(description="API base URL.")
     api_key: str = Field(description="API key for authentication.")
 ```
+
+The example inherits the external import settings base. For another connector type, use the
+`Base<Type>ConnectorSettings` matching it (for example `BaseInternalEnrichmentConnectorSettings`).
 
 #### Using the Connectors SDK
 
