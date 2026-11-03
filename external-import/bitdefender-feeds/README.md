@@ -93,3 +93,10 @@ Run from the connector root with Python 3.12 and the dependencies from `src/requ
 ```sh
 python -m pytest -q tests
 ```
+
+If you have the valid TI license you can also run the live tests:
+
+```sh
+export BITDEFENDER_TEST_API_KEY='ChangeMe'
+python -m pytest -s -v tests/test_live_feeds.py
+```
