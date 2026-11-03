@@ -106,13 +106,15 @@ jobs:
     needs:
       - detect_connectors
       - generate_config_schema
-    # Runs even if there were no manager-supported connectors (generate_config_schema
-    # skipped) or if some individual schema jobs failed — the global manifest
-    # still needs to be rebuilt from whatever schemas are available.
+    # Runs when there were no manager-supported connectors (generate_config_schema
+    # skipped), but not when any schema job failed: a failed job uploads no
+    # schema, so the manifest would silently ship that connector's stale
+    # committed schema instead of its current settings.
     if: |
       always() &&
       needs.detect_connectors.result == 'success' &&
-      needs.generate_config_schema.result != 'cancelled'
+      (needs.generate_config_schema.result == 'success' ||
+        needs.generate_config_schema.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
