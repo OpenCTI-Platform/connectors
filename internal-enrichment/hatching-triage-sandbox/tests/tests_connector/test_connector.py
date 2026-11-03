@@ -1,8 +1,10 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from connector.connector import HatchingTriageSandboxConnector
 from connectors_sdk.models.enums import TLPLevel
+from requests import RequestException
 from triage.client import ServerError
 
 
@@ -334,3 +336,56 @@ class TestRetries:
         assert result is None
         assert connector.triage_client.sample_task_file.call_count == 3
         assert mock_sleep.call_count == 2
+
+    def test_wait_for_analysis_retries_on_invalid_json(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            _raise_json_error(),
+            iter([{"status": "pending"}, {"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_retries_on_connection_error(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = [
+            RequestException("connection reset"),
+            iter([{"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+
+    def test_wait_for_analysis_raises_when_stream_never_reports(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = lambda _: iter(
+            [{"status": "pending"}]
+        )
+
+        with pytest.raises(ValueError, match="did not finish after 3 attempts"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 3
+
+    def test_wait_for_analysis_does_not_retry_failed_analysis(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.return_value = iter(
+            [{"status": "failed"}]
+        )
+
+        with pytest.raises(ValueError, match="Analysis sample-123 failed"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 1
+        mock_sleep.assert_not_called()
+
+
+def _raise_json_error():
+    raise json.JSONDecodeError("Expecting value", "<html>", 0)
+    yield  # noqa: unreachable - makes this a generator
