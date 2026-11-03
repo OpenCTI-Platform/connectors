@@ -164,6 +164,34 @@ def process_message(self):
 - pycti keeps **one error per code** (the last one recorded wins) and **20 errors at most**, the most critical first.
 - The store is shared by the threads of a process, not across processes.
 
+### Skipping a failed item with `swallow_connector_errors`
+
+`@swallow_connector_errors(default=...)` replaces the `try / except ConnectorError / record_error / return a fallback` block. When the decorated function raises a `ConnectorError`, the decorator records it in `ErrorStore` and returns `default` instead. Decorate the function called for **one item**, with `default=[]`, and iterate over its result with `yield from`: a failed item yields nothing and the loop goes on with the next one.
+
+```python
+from collections.abc import Iterator
+
+from connectors_sdk import DataConversionError, swallow_connector_errors
+
+
+class Converter:
+    @swallow_connector_errors(default=[])
+    def convert(self, item: dict) -> list[Stix]:
+        if "id" not in item:
+            raise DataConversionError("Missing id")
+        return [...]
+
+    def convert_all(self, items: list[dict]) -> Iterator[Stix]:
+        for item in items:
+            yield from self.convert(item)  # a failed item yields nothing
+```
+
+- **Use it with parentheses**: `@swallow_connector_errors()` returns `None` on error, `@swallow_connector_errors(default=[])` returns an empty list. `@swallow_connector_errors` alone raises a `TypeError`. Type checkers see the fallback: with `default=None`, a function returning `list[Stix]` becomes `list[Stix] | None`.
+- **Never decorate a generator**: the code of a generator, an async generator or a coroutine runs after the decorator returns, so the decorator could not catch its errors, and a generator can't be resumed once an exception has left it. Decorating one of these functions raises a `TypeError` on import, and a decorated function that returns an iterator (a generator expression, `map`, `filter`, `iter(...)`) raises a `TypeError` on call. Return a list, or decorate the per-item function as above.
+- **Each swallowed call returns a shallow copy of `default`**: a `[]` or `{}` default is never shared between calls. A default holding mutable objects shares them.
+- **Every `ConnectorError` is swallowed, whatever its criticity**: a `ProviderApiAuthenticationError` (bad API key) is swallowed too, and then repeats for every item. Decorate only the functions whose failures concern one item, and let the errors that stop the run be raised elsewhere. Exceptions that aren't `ConnectorError`s (`ValueError`, `KeyboardInterrupt`, the older `ApiClientError`s…) propagate unchanged.
+- **Swallowed errors aren't logged yet**: they are only recorded in `ErrorStore` and reach OpenCTI with the ping. Log them yourself if you need them in the connector's logs.
+
 ## Example
 
 Non working example of error handling in a connector:

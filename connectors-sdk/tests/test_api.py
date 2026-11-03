@@ -70,6 +70,7 @@ def test_root_public_api_is_valid():
         "DataTlpExceededError",
         "DataMissingDataError",
         "ErrorStore",
+        "swallow_connector_errors",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports
