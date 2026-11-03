@@ -31,6 +31,7 @@ from connectors_sdk.exceptions.connector_errors import (
     DataOutOfScopeError,
     DataTlpExceededError,
     DataUnsupportedTypeError,
+    LegacyError,
     OctiAuthenticationError,
     OctiError,
     OctiUnreachableError,
@@ -143,6 +144,7 @@ __all__ = [
     "DataOutOfScopeError",
     "DataTlpExceededError",
     "DataMissingDataError",
+    "LegacyError",
     "ErrorStore",
     "swallow_connector_errors",
     # Annotated types

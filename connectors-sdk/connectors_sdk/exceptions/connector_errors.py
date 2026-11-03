@@ -31,13 +31,14 @@ Hierarchy::
     |   +-- TargetUnreachableError              target.unreachable          ERROR
     |   +-- TargetRejectedError                 target.rejected             WARNING
     +-- DataError                               (abstract, one item fails)
-        +-- DataNotFoundError                   data.not_found              WARNING
-        +-- DataConversionError                 data.conversion             WARNING
-        +-- DataInvalidValueError               data.invalid_value          WARNING
-        +-- DataUnsupportedTypeError            data.unsupported_type       WARNING
-        +-- DataOutOfScopeError                 data.out_of_scope           WARNING
-        +-- DataTlpExceededError                data.tlp_exceeded           WARNING
-        +-- DataMissingDataError                data.missing_data           WARNING
+    |   +-- DataNotFoundError                   data.not_found              WARNING
+    |   +-- DataConversionError                 data.conversion             WARNING
+    |   +-- DataInvalidValueError               data.invalid_value          WARNING
+    |   +-- DataUnsupportedTypeError            data.unsupported_type       WARNING
+    |   +-- DataOutOfScopeError                 data.out_of_scope           WARNING
+    |   +-- DataTlpExceededError                data.tlp_exceeded           WARNING
+    |   +-- DataMissingDataError                data.missing_data           WARNING
+    +-- LegacyError                             (abstract, the older SDK errors)
 
 The older SDK errors (``ConfigError``, ``DataRetrievalError``, ``UseCaseError``, and
 ``ApiClientError`` and its subclasses raised by ``BaseClientApi``) are not part of
@@ -380,3 +381,18 @@ class DataMissingDataError(DataError):
 
     code = "data.missing_data"
     criticity = Criticity.WARNING
+
+
+# ---------------------------------------------------------------------------
+# Older SDK errors
+# ---------------------------------------------------------------------------
+
+
+class LegacyError(ConnectorError):
+    """Abstract base of the older SDK errors (codes ending in ``.legacy``).
+
+    The older errors keep their own modules and constructors. Migrating a connector
+    to the standard errors gives its failures the right code and criticity.
+    """
+
+    __abstract__ = True
