@@ -1,8 +1,8 @@
 {
   "title": "Coucou Enrichment",
   "slug": "coucou-enrichment",
-  "description": "Reference enrichment connector: sets the description of an IPv4 observable to \"coucou from enrichment\" and adds the label \"enriched\". Calls no external API.",
-  "short_description": "Reference enrichment connector for IPv4 observables",
+  "description": "Reference enrichment connector: sets the description of an IPv4 observable to \"coucou from enrichment\" and adds the label \"enriched\"; links a domain name to 3 random IPv4 with \"resolves-to\". Calls no external API.",
+  "short_description": "Reference enrichment connector for IPv4 and domain name observables",
   "logo": null,
   "use_cases": [
     "Cloud, SaaS & Platform Security"

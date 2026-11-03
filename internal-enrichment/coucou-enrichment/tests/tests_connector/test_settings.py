@@ -25,7 +25,7 @@ def test_settings_should_apply_defaults_on_minimal_input():
     )
 
     assert settings.connector.name == "Coucou Enrichment"
-    assert settings.connector.scope == ["IPv4-Addr"]
+    assert settings.connector.scope == ["IPv4-Addr", "Domain-Name"]
     assert settings.connector.auto is False
     assert settings.coucou_enrichment.max_tlp_level == "amber+strict"
 

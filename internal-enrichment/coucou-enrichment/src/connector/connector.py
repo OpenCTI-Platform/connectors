@@ -16,6 +16,7 @@ ENRICHED_LABEL = "enriched"
 LINKED_MALWARE_NAME = "supra coucou"
 NOTE_CONTENT = "coucou super note"
 NOTE_ABSTRACT = "coucou note on {value}"
+RESOLVED_IPS_COUNT = 3
 # Delay before sending the bundle, to observe the work while it is in progress
 SEND_BUNDLE_DELAY_SECONDS = 2
 # Chance that the enrichment bundle is replaced by one the backend rejects at ingestion
@@ -32,6 +33,8 @@ class CoucouEnrichmentConnector:
     description set to `coucou from enrichment` and the label `enriched` added, plus the malware
     `supra coucou` and a `communicates-with` relationship from that malware to the observable,
     and a note `coucou super note` containing the observable (one note per observable).
+    When triggered on a domain name, it sends back the received bundle with 3 new IPv4 observables
+    of random values, each with a `resolves-to` relationship from the domain name.
     No external API is called.
     To be compatible with the "playbook automation" feature, it always sends back a STIX bundle
     containing the entity to enrich.
@@ -100,6 +103,46 @@ class CoucouEnrichmentConnector:
             object_refs=[entity_id],
         )
         return [note]
+
+    @staticmethod
+    def _random_ip() -> str:
+        """
+        Draw a random IPv4 value.
+        """
+        return ".".join(str(random.randint(1, 254)) for _ in range(4))
+
+    def _resolve_to_random_ips(self, entity_id: str) -> list:
+        """
+        Create RESOLVED_IPS_COUNT IPv4 of distinct random values and a `resolves-to` relationship
+        from the entity to each. The values are random, so each run links new IPs.
+        """
+        values = set()
+        while len(values) < RESOLVED_IPS_COUNT:
+            values.add(self._random_ip())
+        objects = []
+        for value in sorted(values):
+            ip = stix2.IPv4Address(value=value)
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id("resolves-to", entity_id, ip.id),
+                relationship_type="resolves-to",
+                source_ref=entity_id,
+                target_ref=ip.id,
+            )
+            objects += [ip, relationship]
+        return objects
+
+    def _enrich_ip(
+        self, stix_objects: list, opencti_entity: dict, entity_id: str
+    ) -> list:
+        """
+        Objects to send back for an IPv4: the received ones with the entity enriched, the malware
+        linked to it and its note.
+        """
+        return (
+            self._enrich(stix_objects, entity_id)
+            + self._link_to_malware(entity_id)
+            + self._add_note(entity_id, opencti_entity["observable_value"])
+        )
 
     @staticmethod
     def _broken_indicator() -> dict:
@@ -172,12 +215,12 @@ class CoucouEnrichmentConnector:
             stix_objects = data["stix_objects"]
             if self.entity_in_scope(data):
                 entity_id = data["stix_entity"]["id"]
+                if entity_id.startswith("domain-name--"):
+                    objects = stix_objects + self._resolve_to_random_ips(entity_id)
+                else:
+                    objects = self._enrich_ip(stix_objects, opencti_entity, entity_id)
                 return self._send_bundle(
-                    self._maybe_replace_with_ingestion_error(
-                        self._enrich(stix_objects, entity_id)
-                        + self._link_to_malware(entity_id)
-                        + self._add_note(entity_id, opencti_entity["observable_value"])
-                    )
+                    self._maybe_replace_with_ingestion_error(objects)
                 )
             if not data.get("event_type"):
                 # Not in scope AND bundle passed through playbook: return the original bundle unchanged

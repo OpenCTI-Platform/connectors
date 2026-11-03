@@ -21,7 +21,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The entity types the connector enriches.",
-        default=["IPv4-Addr"],
+        default=["IPv4-Addr", "Domain-Name"],
     )
 
 

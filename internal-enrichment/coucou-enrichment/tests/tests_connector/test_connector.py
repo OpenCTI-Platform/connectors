@@ -1,3 +1,4 @@
+import ipaddress
 import json
 from typing import Any
 from unittest.mock import MagicMock
@@ -7,6 +8,7 @@ from connector import ConnectorSettings, CoucouEnrichmentConnector
 from pycti import OpenCTIConnectorHelper
 
 IPV4_ID = "ipv4-addr--5853f6a4-638f-5b4e-9b0f-ded361ae3812"
+DOMAIN_ID = "domain-name--b026fb10-a7f8-520d-9439-9528225f5ae0"
 TLP_RED_ID = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
 OCTI_EXT = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 OCTI_SCO_EXT = "extension-definition--f93e2c80-4231-4f9a-af8b-95c9bd566a82"
@@ -118,6 +120,37 @@ def _message(ipv4: dict, extra_objects=None, object_marking=None) -> dict:
     }
 
 
+def _domain_from_manual_trigger() -> dict:
+    """Domain name as exported by pycti `prepare_export` when the enrichment is triggered by hand."""
+    return {
+        "id": DOMAIN_ID,
+        "type": "domain-name",
+        "spec_version": "2.1",
+        "value": "coucou.io",
+        "x_opencti_id": "7d1c4a2e-3b5f-4c6d-8e9f-0a1b2c3d4e5f",
+        "x_opencti_type": "Domain-Name",
+    }
+
+
+def _domain_message() -> dict:
+    """Enrichment message for the domain name, as sent by OpenCTI."""
+    domain = _domain_from_manual_trigger()
+    return {
+        "entity_id": DOMAIN_ID,
+        "entity_type": "Domain-Name",
+        "event_type": "INTERNAL_ENRICHMENT",
+        "enrichment_entity": {
+            "id": "7d1c4a2e-3b5f-4c6d-8e9f-0a1b2c3d4e5f",
+            "standard_id": DOMAIN_ID,
+            "entity_type": "Domain-Name",
+            "observable_value": "coucou.io",
+            "objectMarking": [],
+        },
+        "stix_entity": domain,
+        "stix_objects": [domain],
+    }
+
+
 def _sent_ipv4(connector) -> dict:
     assert len(connector.helper.sent_bundles) == 1
     return next(
@@ -207,6 +240,46 @@ def test_enrichment_adds_a_different_note_for_each_ip(connector):
     assert note_ids[0] != note_ids[1]
 
 
+def test_enrichment_resolves_domain_to_three_random_ips(connector):
+    connector.process_message(_domain_message())
+
+    objects = connector.helper.sent_bundles[0]["objects"]
+    ips = [o for o in objects if o["type"] == "ipv4-addr"]
+    relationships = [o for o in objects if o["type"] == "relationship"]
+    assert len({ip["value"] for ip in ips}) == 3
+    for ip in ips:
+        ipaddress.IPv4Address(ip["value"])
+    assert sorted(r["target_ref"] for r in relationships) == sorted(
+        ip["id"] for ip in ips
+    )
+    for relationship in relationships:
+        assert relationship["relationship_type"] == "resolves-to"
+        assert relationship["source_ref"] == DOMAIN_ID
+
+
+def test_enrichment_draws_again_an_ip_already_drawn(connector, monkeypatch):
+    # Octets of 1.1.1.1 twice, then 2.2.2.2 and 3.3.3.3
+    octets = iter([1] * 8 + [2] * 4 + [3] * 4)
+    monkeypatch.setattr("connector.connector.random.randint", lambda *_: next(octets))
+
+    connector.process_message(_domain_message())
+
+    values = [
+        o["value"]
+        for o in connector.helper.sent_bundles[0]["objects"]
+        if o["type"] == "ipv4-addr"
+    ]
+    assert sorted(values) == ["1.1.1.1", "2.2.2.2", "3.3.3.3"]
+
+
+def test_enrichment_sends_back_the_domain_unchanged(connector):
+    connector.process_message(_domain_message())
+
+    objects = connector.helper.sent_bundles[0]["objects"]
+    assert objects[0] == _domain_from_manual_trigger()
+    assert {o["type"] for o in objects} == {"domain-name", "ipv4-addr", "relationship"}
+
+
 def test_enrichment_enriches_entity_within_max_tlp(connector):
     tlp_green = {"definition_type": "TLP", "definition": "TLP:GREEN"}
 
@@ -238,7 +311,8 @@ def test_enrichment_sends_no_broken_indicator_on_success_draw(connector):
 
 
 def test_enrichment_sends_only_broken_indicator_on_error_draw(connector, monkeypatch):
-    monkeypatch.setattr("connector.connector.random.random", lambda: 0.1)
+    # Below any positive error probability
+    monkeypatch.setattr("connector.connector.random.random", lambda: 0.0)
 
     connector.process_message(_message(_ipv4_from_manual_trigger([])))
 
