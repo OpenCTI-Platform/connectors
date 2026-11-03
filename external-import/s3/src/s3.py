@@ -1308,10 +1308,12 @@ class S3Connector:
             identity = None
             error = str(err)
         if not identity:
+            cause = error or "the platform returned no identity"
             message = (
-                "Unable to create the author identity in OpenCTI. Check that the "
-                "connector token belongs to a user allowed to create entities "
-                "(for example a service account with knowledge creation rights)."
+                f"Unable to create the author identity in OpenCTI: {cause}. "
+                "If this is a permission error, check that the connector token "
+                "belongs to a user allowed to create entities (for example a "
+                "service account with knowledge creation rights)."
             )
             self.helper.connector_logger.error(
                 message, {"author": self.s3_author, "error": error}

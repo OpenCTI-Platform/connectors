@@ -47,3 +47,13 @@ def test_identity_creation_failure_is_logged_and_stops(create_kwargs):
     connector.helper.connector_logger.error.assert_called_once()
     _, context = connector.helper.connector_logger.error.call_args.args
     assert context["author"] == "ACME"
+    message = connector.helper.connector_logger.error.call_args.args[0]
+    assert "If this is a permission error" in message
+
+
+def test_failure_message_names_the_underlying_error():
+    connector = _connector()
+    connector.helper.api.identity.create.side_effect = ConnectionError("timeout")
+
+    with pytest.raises(RuntimeError, match="identity in OpenCTI: timeout"):
+        connector._create_author_identity()
