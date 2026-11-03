@@ -52,6 +52,8 @@ def maker(
         bitdefender=SimpleNamespace(
             detection=detection,
             tlp_level=tlp_level,
+            min_confidence=1,
+            min_severity=1,
             create_malware_objects=create_malware_objects,
         )
     )

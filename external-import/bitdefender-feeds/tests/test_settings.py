@@ -13,7 +13,7 @@ def test_required_default_fields():
     )
     assert settings.feeds == ["ip"]
     assert settings.detection is False
-    assert settings.tlp_level == "clear"
+    assert settings.tlp_level == "red"
 
 
 @pytest.mark.parametrize("feeds", [[], ["not-a-feed"]])

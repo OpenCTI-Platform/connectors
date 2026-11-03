@@ -45,6 +45,7 @@ def connector_factory(connector_module, monkeypatch):
                 api_key=SecretStr("test-key"),
                 min_confidence=75,
                 min_severity=1,
+                max_lookback_interval=86400,
                 include_revoked="false",
                 include_suspicious="false",
                 exclude_related_indicators=False,

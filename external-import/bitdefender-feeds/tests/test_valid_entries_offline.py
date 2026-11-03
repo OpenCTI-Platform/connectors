@@ -191,6 +191,8 @@ def runtime(monkeypatch):
             "detection": False,
             "tlp_level": "green",
             "create_malware_objects": True,
+            "min_severity" : 1,
+            "min_confidence" : 75,
         }
         defaults.update(settings)
         config = SimpleNamespace(bitdefender=SimpleNamespace(**defaults))
