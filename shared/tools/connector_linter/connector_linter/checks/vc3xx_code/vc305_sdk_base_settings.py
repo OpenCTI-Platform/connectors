@@ -26,6 +26,19 @@ _LEGACY_CONFIG_PATTERNS = [
     re.compile(r"""get_config_variable\s*\(""", re.MULTILINE),
 ]
 
+# ---------------------------------------------------------------------------
+# Accepted connectors-sdk settings base classes: the generic one and the
+# per-connector-type ones (all subclasses of BaseConnectorSettings).
+# ---------------------------------------------------------------------------
+_SDK_SETTINGS_BASE_NAMES = (
+    "BaseConnectorSettings",
+    "BaseExternalImportConnectorSettings",
+    "BaseInternalEnrichmentConnectorSettings",
+    "BaseStreamConnectorSettings",
+    "BaseInternalExportFileConnectorSettings",
+    "BaseInternalImportFileConnectorSettings",
+)
+
 
 @CheckRegistry.register(
     code="VC305",
@@ -34,7 +47,10 @@ _LEGACY_CONFIG_PATTERNS = [
     severity=Severity.ERROR,
 )
 def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
-    """Check that the connector uses BaseConnectorSettings from connectors-sdk."""
+    """Check that the connector uses a connectors-sdk base settings class.
+
+    Accepts BaseConnectorSettings or any Base<Type>ConnectorSettings subclass.
+    """
     sources = ctx.python_sources
 
     if not sources:
@@ -45,7 +61,8 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
     # ---------------------------------------------------------------------------
     # 4-tier detection (best → worst):
     #
-    #   1. SDK import + class inheriting BaseConnectorSettings → PASS (best)
+    #   1. SDK import + class inheriting BaseConnectorSettings (or a
+    #      Base<Type>ConnectorSettings subclass) → PASS (best)
     #   2. Legacy get_config_variable() calls → FAIL (worst, must migrate)
     #   3. Custom pydantic_settings.BaseSettings → PASS with WARNING
     #   4. Nothing found → FAIL
@@ -54,20 +71,27 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
     # defining a subclass means the migration is incomplete.
     # ---------------------------------------------------------------------------
 
-    # Tier 1: check for connectors-sdk BaseConnectorSettings (import + class)
+    # Tier 1: check for connectors-sdk BaseConnectorSettings or one of its
+    # per-connector-type subclasses (import + class)
     sdk_imports = find_imports(
         trees,
         module_pattern=r"^connectors_sdk",
-        name_pattern=r"^BaseConnectorSettings$",
+        name_pattern=r"^(" + "|".join(_SDK_SETTINGS_BASE_NAMES) + r")$",
     )
-    sdk_classes = find_classes(trees, base_name="BaseConnectorSettings")
+    sdk_base_name = ""
+    sdk_classes = []
+    for base_name in _SDK_SETTINGS_BASE_NAMES:
+        sdk_classes = find_classes(trees, base_name=base_name)
+        if sdk_classes:
+            sdk_base_name = base_name
+            break
 
     # Both import AND class must exist — import alone = incomplete migration
     if sdk_imports and sdk_classes:
         cls = sdk_classes[0]
         return [
             CheckFinding(
-                message="BaseConnectorSettings implemented",
+                message=f"{sdk_base_name} implemented",
                 severity=Severity.INFO,
                 file_path=cls.file_path,
                 line=cls.line,
@@ -89,8 +113,9 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
                 line=line,
                 suggestion=(
                     "Replace get_config_variable() calls with connectors-sdk "
-                    "BaseConnectorSettings. Create a settings.py with a class "
-                    "inheriting BaseConnectorSettings and use typed Pydantic fields "
+                    "BaseConnectorSettings (or the matching "
+                    "Base<Type>ConnectorSettings). Create a settings.py with a class "
+                    "inheriting it and use typed Pydantic fields "
                     "for configuration (see connectors-sdk documentation)"
                 ),
             ),
@@ -118,6 +143,7 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
                     line=cls.line,
                     suggestion=(
                         "Consider migrating to connectors-sdk BaseConnectorSettings "
+                        "(or the matching Base<Type>ConnectorSettings) "
                         "which provides built-in config loading (env, YAML, .env), "
                         "deprecation management, and JSON schema generation"
                     ),
@@ -135,6 +161,7 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
                 line=imp.line,
                 suggestion=(
                     "Consider migrating to connectors-sdk BaseConnectorSettings "
+                    "(or the matching Base<Type>ConnectorSettings) "
                     "which provides built-in config loading (env, YAML, .env), "
                     "deprecation management, and JSON schema generation"
                 ),
@@ -148,8 +175,9 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
             severity=Severity.ERROR,
             suggestion=(
                 "Create a settings.py file with a class inheriting from "
-                "connectors_sdk.BaseConnectorSettings. Use the appropriate "
-                "typed connector config (e.g. BaseExternalImportConnectorConfig) "
+                "connectors_sdk.BaseConnectorSettings (or the matching "
+                "Base<Type>ConnectorSettings, e.g. "
+                "BaseExternalImportConnectorSettings) "
                 "and define connector-specific settings with BaseConfigModel"
             ),
         ),

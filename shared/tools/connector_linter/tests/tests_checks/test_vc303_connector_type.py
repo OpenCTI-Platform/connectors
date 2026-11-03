@@ -1,5 +1,6 @@
 """Unit tests for VC303 — CONNECTOR_TYPE must be hardcoded, not read from env."""
 
+import pytest
 from connector_linter.models import Severity
 from connector_linter.runner import run_checks
 
@@ -8,6 +9,13 @@ from connectors_sdk.config import BaseExternalImportConnectorConfig
 
 class ConnectorConfig(BaseExternalImportConnectorConfig):
     pass
+"""
+
+_SDK_TYPED_SETTINGS = """\
+from connectors_sdk import {base}
+
+class ConnectorSettings({base}):
+    my_api_key: str
 """
 
 _PYCTI_HARDCODED = """\
@@ -46,6 +54,23 @@ class TestVC303ConnectorType:
 
     def test_passes_sdk_base_config(self, connector_src):
         path = connector_src(("src/main.py", _SDK_BASED))
+        results = run_checks(path, select=["VC303"])
+        assert all(r.severity == Severity.INFO for r in results)
+
+    @pytest.mark.parametrize(
+        "base_name",
+        [
+            "BaseExternalImportConnectorSettings",
+            "BaseInternalEnrichmentConnectorSettings",
+            "BaseStreamConnectorSettings",
+            "BaseInternalExportFileConnectorSettings",
+            "BaseInternalImportFileConnectorSettings",
+        ],
+    )
+    def test_passes_sdk_typed_base_settings(self, connector_src, base_name):
+        """Per-type SDK settings bases set the type through their default config."""
+        source = _SDK_TYPED_SETTINGS.format(base=base_name)
+        path = connector_src(("src/main.py", source))
         results = run_checks(path, select=["VC303"])
         assert all(r.severity == Severity.INFO for r in results)
 
