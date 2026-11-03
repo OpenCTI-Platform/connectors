@@ -291,20 +291,26 @@ mise run gs external-import/myconnector
 ```
 
 `gs` is the `generate_config_schema` mise task (`.mise/tasks/`); it takes the
-connector path and does not prompt. The equivalent `make` targets
+connector path and does not prompt. The `make` targets
 (`connector_config_schema`, `connectors_config_schemas`, `connector_manifest`,
 `connectors_manifests`, `global_manifest`) prompt for the connector folder
 name, so they need piped answers: `printf 'myconnector\ny\n' | make connector_config_schema`.
+The schema targets always install `connectors-sdk` from GitHub (`master`, or
+`RELEASE_REF` for `connectors_config_schemas`), so use `gs` when the change
+also touches `connectors-sdk/`.
 
-The generator installs `connectors-sdk` from GitHub `master`, which pins an
-exact pycti version. If the connector's `requirements.txt` pins an older
-pycti, dependency resolution fails and generation stops. Rebase on the latest
-`master` before regenerating.
+Outside CI, the generator installs this checkout's `connectors-sdk/`
+(`SDK_SOURCE=local`), so schemas pick up SDK changes that are not merged yet
+(for example the JSON schema of a settings type). The Config Schema check of
+pull requests and the merge queue does the same, so an SDK change is checked
+before merge. Only the full regeneration of `build-manifest.yml` installs
+`connectors-sdk` from GitHub `master` or the release branch (`SDK_SOURCE=git`,
+the default when `CI` is set); force that mode locally with
+`SDK_SOURCE=git mise run gs external-import/myconnector`.
 
-When the change also touches `connectors-sdk/` (for example the JSON schema of a
-settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
-SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
-`SDK_SOURCE=local mise run gs external-import/myconnector`.
+The SDK pins an exact pycti version. If the connector's `requirements.txt`
+pins an older pycti, dependency resolution fails and generation stops. Rebase
+on the latest `master` before regenerating.
 
 ## CI overview
 

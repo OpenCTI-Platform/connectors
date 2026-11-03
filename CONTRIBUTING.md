@@ -184,9 +184,11 @@ mise run build        # or: mise run b
 mise run gs
 ```
 
-`gs` installs `connectors-sdk` from GitHub `master`. When your change also modifies
-`connectors-sdk/`, run `SDK_SOURCE=local mise run gs` to generate the schema against
-your local SDK instead.
+On your machine, `gs` installs the `connectors-sdk/` of your checkout, so schemas
+include SDK changes that are not merged yet. The Config Schema check of your pull
+request does the same. Only the manifest build installs `connectors-sdk` from GitHub
+`master` (or the release branch). Run `SDK_SOURCE=git mise run gs` to generate the
+schema against GitHub `master` locally.
 
 > **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
@@ -572,7 +574,7 @@ flake8 --ignore=E,W .
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
 - **Configuration parameters with examples**
   - By using the template, settings is defined with Pydantic models, which allows you to include descriptions and examples for each configuration parameter. This information will be used to automatically generate documentation and provide clear guidance to users when configuring the connector.
-  - To generate documentation, simply run `make connector_config_schema` in the root of the repository if you have `make` installed, or run the following command: `sh ./shared/tools/composer/generate_connectors_config_schemas/generate_connector_config_json_schema.sh`
+  - To generate documentation, simply run `make connector_config_schema` in the root of the repository if you have `make` installed, or run the following command: `sh ./shared/tools/composer/generate_connectors_config_schemas/generate_connector_config_json_schema.sh`. These install `connectors-sdk` from GitHub `master`: if your change also touches `connectors-sdk/`, run `mise run gs` from the connector directory instead, which uses the SDK of your checkout.
 
    This will create a JSON schema file for your connector's configuration, which will be used to generate documentation and provide clear guidance to users when configuring the connector.
 - **Inline code documentation** for complex logic
