@@ -137,11 +137,26 @@ class RelationshipSchema:
         try:
             result = api_client.query(SCHEMA_QUERY)
             entries = result["data"]["schemaRelationsTypesMapping"]
-            mapping = {
-                entry["key"]: set(entry["values"])
-                for entry in entries
-                if isinstance(entry, dict) and entry.get("key")
-            }
+
+            mapping: Dict[str, Set[str]] = {}
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+
+                key = entry.get("key")
+                if not isinstance(key, str) or not key:
+                    continue
+
+                values = entry.get("values")
+                if not isinstance(values, list):
+                    continue
+
+                rel_types = {v for v in values if isinstance(v, str) and v}
+                if not rel_types:
+                    continue
+
+                mapping[key] = rel_types
+
             logger.info(
                 "[CONNECTOR] Loaded OpenCTI relationship schema",
                 {"pairs": len(mapping)},

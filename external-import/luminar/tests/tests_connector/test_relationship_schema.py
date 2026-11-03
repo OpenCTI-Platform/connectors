@@ -58,6 +58,9 @@ def test_from_platform_loads_mapping():
                 "schemaRelationsTypesMapping": [
                     {"key": "Indicator_Malware", "values": ["indicates"]},
                     {"key": "", "values": ["ignored"]},
+                    {"key": "Malware_Incident"},
+                    {"key": "Malware_Tool", "values": "uses"},
+                    {"key": "Tool_Incident", "values": [1, ""]},
                     "not-a-dict",
                 ]
             }

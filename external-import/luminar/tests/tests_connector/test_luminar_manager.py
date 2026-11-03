@@ -260,12 +260,17 @@ def test_get_objects_by_match_id(make_manager):
     assert len(manager.get_objects_by_match_id("c", [stix_id("malware", 1)])) == 1
     assert manager.last_hydration_failed is False
 
+    server.match_responses = [FakeResponse(200, {"objects": None})]
+    assert manager.get_objects_by_match_id("c", [stix_id("malware", 1)]) == []
+    assert manager.last_hydration_failed is False
+
 
 @pytest.mark.parametrize(
     "responses",
     [
         [FakeResponse(404)],
         [FakeResponse(200, ["not-a-dict"])],
+        [FakeResponse(200, {"objects": {"not": "a list"}})],
         [FakeResponse(200, raw=b"not json")],
         [requests.ConnectionError("down")] * 3,
     ],

@@ -519,9 +519,22 @@ class LuminarManager:
                         {"chunk": chunk_number, "type": type(data).__name__},
                     )
                     continue
-                objs = data.get("objects", []) or []
+                # "objects" is expected to be a list when present. If the API returns
+                # a dict payload but "objects" is a different type, don't silently
+                # treat it as empty; mark hydration as failed for this chunk so
+                # upstream does not incorrectly report hydration_complete=True.
+                objs = data.get("objects", [])
+                if objs is None:
+                    objs = []
+
                 if isinstance(objs, list):
                     all_objects.extend(o for o in objs if isinstance(o, dict))
+                elif "objects" in data:
+                    self.last_hydration_failed = True
+                    self.logger.warning(
+                        "[LUMINAR] Unexpected match[id] 'objects' field type",
+                        {"chunk": chunk_number, "type": type(objs).__name__},
+                    )
             except (requests.RequestException, ValueError, KeyError) as err:
                 # Continue with other chunks rather than failing the whole pipeline.
                 self.last_hydration_failed = True
@@ -787,12 +800,14 @@ class LuminarManager:
 
     # ----- helpers -----
 
-    def _sanitize_params_for_log(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _sanitize_params_for_log(self, params: Any) -> Any:
         """Return a copy of request params safe/compact for logging.
 
         The TAXII `next` cursor is an opaque ~250+ char token that bloats log
         lines and carries no diagnostic value in full. Truncate it to a tail
         preview; leave `limit` / `added_after` intact.
+
+        Note: If `params` is not a dict, it is returned unchanged.
         """
         if not isinstance(params, dict):
             return params
