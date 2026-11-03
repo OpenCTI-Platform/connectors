@@ -38,7 +38,7 @@ the time window of the run, sends the resulting knowledge and reports the run ou
 
 - Python >= 3.11
 - OpenCTI Platform providing hunts (the `INTERNAL_HUNT` connector type)
-- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version (pinned to `7.261014.0`; the
+- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version (pinned to `7.261030.1`; the
   connector checks at startup that the installed pycti supports hunt connectors and stops with an explicit message
   otherwise)
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library
