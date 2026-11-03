@@ -71,14 +71,13 @@ infrastructure. They extend OpenCTI's capabilities by:
 
 ### Connector Types Covered
 
-This documentation covers four primary connector types:
+This documentation covers three primary connector types:
 
 | Type                    | Purpose                                                  | Use Cases                                                       |
 |-------------------------|----------------------------------------------------------|-----------------------------------------------------------------|
 | **External Import**     | Fetch data from external sources and import into OpenCTI | Threat feeds, OSINT sources, vendor APIs                        |
 | **Internal Enrichment** | Enrich entities within OpenCTI with additional data      | IP/domain reputation, vulnerability enrichment, entity analysis |
 | **Stream**              | Listen to OpenCTI events and sync to external platforms  | SIEM integration, ticketing systems, real-time synchronization  |
-| **Internal Hunt**       | Execute OpenCTI hunts on security telemetry              | Sigma and indicator hunts on SIEM/EDR/XDR and data lakes        |
 
 ### What is a verified connector?
 
@@ -185,6 +184,10 @@ mise run build        # or: mise run b
 mise run gs
 ```
 
+`gs` installs `connectors-sdk` from GitHub `master`. When your change also modifies
+`connectors-sdk/`, run `SDK_SOURCE=local mise run gs` to generate the schema against
+your local SDK instead.
+
 > **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
 > with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for
@@ -256,7 +259,7 @@ sh create_connector_dir.sh -t <TYPE> -n <NAME>
 
 Where:
 
-- `<TYPE>` is one of: external-import, internal-enrichment, stream, internal-import-file, internal-export-file, internal-hunt
+- `<TYPE>` is one of: external-import, internal-enrichment, stream
 - `<NAME>` is your connector's name (e.g., my-threat-feed)
 
 This creates a complete connector structure with:
@@ -283,9 +286,6 @@ cp -r templates/internal-enrichment internal-enrichment/my-connector
 
 # For Stream connector
 cp -r templates/stream stream/my-connector
-
-# For Internal Hunt connector
-cp -r templates/internal-hunt internal-hunt/my-connector
 ```
 
 
@@ -375,12 +375,6 @@ This guide is organized into multiple documents:
 - Real-time synchronization patterns
 - Error recovery and reconnection
 - Backpressure handling
-
-**[Internal Hunt Connector Specifications](./docs/06-internal-hunt-specifications.md)**
-- Hunt run lifecycle (native query override, Sigma translation, preview mode)
-- Run limits (timeout, max results) and benign suppression
-- Sightings and observed-data mapping
-- Evidence redaction and privacy guarantees
 
 **[Code Quality & Standards](./docs/05-code-quality-standards.md)**
 - Code style requirements
@@ -650,7 +644,6 @@ Connectors that meet quality standards will be:
 | Schedule periodic imports      | [External Import](./docs/02-external-import-specifications.md)         | Scheduling           |
 | Handle enrichment events       | [Internal Enrichment](./docs/03-internal-enrichment-specifications.md) | Event Processing     |
 | Listen to platform streams     | [Stream](./docs/04-stream-specifications.md)                           | Stream Listening     |
-| Execute hunts                  | [Internal Hunt](./docs/06-internal-hunt-specifications.md)             | Hunt run lifecycle   |
 | Fix linting errors             | [Code Quality](./docs/05-code-quality-standards.md)                    | Linting              |
 | Write tests                    | [Code Quality](./docs/05-code-quality-standards.md)                    | Testing              |
 | Deploy with Docker             | [Code Quality](./docs/05-code-quality-standards.md)                    | Docker Standards     |
