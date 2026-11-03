@@ -53,6 +53,7 @@ from connectors_sdk.exceptions.connector_errors import (
     TargetUnreachableError,
     UnknownError,
 )
+from connectors_sdk.exceptions.error_store import ErrorStore
 from connectors_sdk.logger import (
     ConnectorLoggerAdapter,
     configure_logging,
@@ -141,6 +142,7 @@ __all__ = [
     "DataOutOfScopeError",
     "DataTlpExceededError",
     "DataMissingDataError",
+    "ErrorStore",
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",

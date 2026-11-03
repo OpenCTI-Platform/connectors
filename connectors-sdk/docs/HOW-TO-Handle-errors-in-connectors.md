@@ -139,6 +139,31 @@ All errors derive from `ConnectorError`, grouped into categories:
 
     → `BaseClientApi` raises `ApiClientError` and its subclasses (`ApiNotFoundError`, …), which are not `ConnectorError`s yet. The same goes for `ConfigError`, `DataRetrievalError` and `UseCaseError`. Catch them and re-raise the matching standardized error when needed.
 
+### Reporting errors to OpenCTI
+
+`ErrorStore()` always returns the same store, so any part of the connector can record a handled error without passing an object around. At the end of a scheduled run, return the recorded errors from the callback given to `helper.schedule_process`: pycti sends them to OpenCTI with the connector's ping.
+
+```python
+from connectors_sdk import DataConversionError, ErrorStore
+
+
+def process_message(self):
+    store = ErrorStore()
+    store.clear()  # a run starts with an empty store
+    for item in items:
+        try:
+            ...
+        except DataConversionError as err:
+            store.record_error(err)  # handled: the run skips the item and continues
+    return [error.convert_to_pycti_format() for error in store.get_errors()]
+```
+
+- `record_error` accepts `ConnectorError` instances only: convert an older SDK error into its standardized counterpart before recording it.
+- `get_errors` returns the recorded error objects, in order. `convert_to_pycti_format()` turns each one into the `{"code", "message", "criticity"}` dict pycti expects.
+- **Clear the store at the start of each run**: otherwise the errors of previous runs are reported again. The SDK base classes (`ExternalImportConnector`) don't do it for you yet.
+- pycti keeps **one error per code** (the last one recorded wins) and **20 errors at most**, the most critical first.
+- The store is shared by the threads of a process, not across processes.
+
 ## Example
 
 Non working example of error handling in a connector:
