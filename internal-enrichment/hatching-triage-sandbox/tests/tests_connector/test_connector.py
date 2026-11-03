@@ -248,14 +248,6 @@ def _server_error(status_code):
     return ServerError(http_error)
 
 
-def _file_response(status_code, content):
-    response = MagicMock()
-    response.status_code = status_code
-    response.ok = status_code < 400
-    response.content = content
-    return response
-
-
 @patch("connector.connector.time.sleep")
 class TestRetries:
     def test_overview_report_retries_on_server_error(self, mock_sleep, connector):
@@ -289,9 +281,9 @@ class TestRetries:
 
     def test_task_file_retries_until_available(self, mock_sleep, connector):
         connector.triage_client.sample_task_file.side_effect = [
-            _file_response(502, b"Bad Gateway"),
-            _file_response(200, b'{"error":"NOT_AVAILABLE"}'),
-            _file_response(200, b"file-content"),
+            b'{"error":"NOT_AVAILABLE"}',
+            b'{"error":"NOT_AVAILABLE"}',
+            b"file-content",
         ]
 
         result = connector._get_task_file("sample-123", "task-1", "file.bin")
@@ -300,8 +292,8 @@ class TestRetries:
         assert connector.triage_client.sample_task_file.call_count == 3
 
     def test_task_file_returns_none_after_max_attempts(self, mock_sleep, connector):
-        connector.triage_client.sample_task_file.return_value = _file_response(
-            502, b"Bad Gateway"
+        connector.triage_client.sample_task_file.return_value = (
+            b'{"error":"NOT_AVAILABLE"}'
         )
 
         result = connector._get_task_file("sample-123", "task-1", "file.bin")
