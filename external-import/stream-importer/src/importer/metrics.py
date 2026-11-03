@@ -27,7 +27,7 @@ class Metrics:
 
         self._read_files_total = Counter(
             "read_files_total",
-            "Number of files read from minio",
+            "Number of files read from S3",
             ["name"],
             namespace=namespace,
             subsystem=subsystem,

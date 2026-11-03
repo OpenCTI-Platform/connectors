@@ -12,11 +12,11 @@ connector:
   scope: 'stream-exporter' # Reserved
   log_level: 'debug'
 
-minio:
-  endpoint: 'localhost'
-  port: 443
-  bucket: 'opencti-export'
-  folder: 'opencti-stream'
-  access_key: 'ChangeMe'
-  secret_key: 'ChangeMe'
-  secure: true
+stream_exporter:
+  s3_endpoint: 'localhost'
+  s3_port: 443
+  s3_bucket: 'opencti-export'
+  s3_folder: 'opencti-stream'
+  s3_access_key: 'ChangeMe'
+  s3_secret_key: 'ChangeMe'
+  s3_secure: true
