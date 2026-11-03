@@ -22,7 +22,9 @@ _CONNECTOR_TYPES = frozenset(t.value for t in ConnectorType)
 
 # ---------------------------------------------------------------------------
 # connectors-sdk base config classes — each one hardcodes a connector type,
-# so inheriting from one is the preferred way to set the type.
+# so inheriting from one is the preferred way to set the type. The per-type
+# Base<Type>ConnectorSettings classes embed the matching config as their
+# default ``connector`` field, so inheriting from them sets the type as well.
 # ---------------------------------------------------------------------------
 _SDK_BASE_CONFIG_CLASSES = {
     "BaseExternalImportConnectorConfig",
@@ -30,6 +32,11 @@ _SDK_BASE_CONFIG_CLASSES = {
     "BaseStreamConnectorConfig",
     "BaseInternalExportFileConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
+    "BaseExternalImportConnectorSettings",
+    "BaseInternalEnrichmentConnectorSettings",
+    "BaseStreamConnectorSettings",
+    "BaseInternalExportFileConnectorSettings",
+    "BaseInternalImportFileConnectorSettings",
 }
 
 
@@ -66,7 +73,7 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
     # 4-way detection: scan AST for each pattern in priority order.
     #
     #   env_hit      — ANTI-PATTERN: reading CONNECTOR_TYPE from env/config
-    #   sdk_hit      — PREFERRED: inheriting from SDK Base*ConnectorConfig
+    #   sdk_hit      — PREFERRED: inheriting from SDK Base*ConnectorConfig/Settings
     #   hardcoded_hit — LEGACY OK: config["connector"]["type"] = "EXTERNAL_IMPORT"
     #   pydantic_hit — CUSTOM OK: type: Literal["EXTERNAL_IMPORT"] or Field(...)
     # ---------------------------------------------------------------------------

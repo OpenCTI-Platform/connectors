@@ -1,5 +1,6 @@
 """Unit tests for VC305 — connector must use connectors-sdk BaseConnectorSettings."""
 
+import pytest
 from connector_linter.models import Severity
 from connector_linter.runner import run_checks
 
@@ -7,6 +8,13 @@ _SDK_SETTINGS = """\
 from connectors_sdk.models.octi import BaseConnectorSettings
 
 class ConnectorSettings(BaseConnectorSettings):
+    my_api_key: str
+"""
+
+_SDK_TYPED_SETTINGS = """\
+from connectors_sdk import {base}
+
+class ConnectorSettings({base}):
     my_api_key: str
 """
 
@@ -46,6 +54,24 @@ class TestVC305SdkBaseSettings:
         path = connector_src(("src/main.py", _SDK_SETTINGS))
         results = run_checks(path, select=["VC305"])
         assert all(r.severity == Severity.INFO for r in results)
+
+    @pytest.mark.parametrize(
+        "base_name",
+        [
+            "BaseExternalImportConnectorSettings",
+            "BaseInternalEnrichmentConnectorSettings",
+            "BaseStreamConnectorSettings",
+            "BaseInternalExportFileConnectorSettings",
+            "BaseInternalImportFileConnectorSettings",
+        ],
+    )
+    def test_passes_sdk_typed_base_settings(self, connector_src, base_name):
+        """Per-connector-type SDK settings bases are accepted."""
+        source = _SDK_TYPED_SETTINGS.format(base=base_name)
+        path = connector_src(("src/main.py", source))
+        results = run_checks(path, select=["VC305"])
+        assert all(r.severity == Severity.INFO for r in results)
+        assert any(base_name in r.message for r in results)
 
     def test_passes_custom_pydantic(self, connector_src):
         """Custom BaseSettings subclass is acceptable (with WARNING)."""
