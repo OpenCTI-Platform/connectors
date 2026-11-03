@@ -8,6 +8,22 @@ from unittest.mock import MagicMock
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
+from connectors_sdk.settings.base_settings import BaseExternalImportConnectorSettings
+from connectors_sdk.states.states import ExternalImportConnectorState
+
+
+class ParameterizedProcessor(
+    BaseDataProcessor[BaseExternalImportConnectorSettings, ExternalImportConnectorState]
+):
+    """Processor parameterized with the settings and the state types."""
+
+    work_name = "Parameterized Import"
+
+    def collect(self) -> list[str]:
+        return ["raw"]
+
+    def transform(self, data: Any) -> list[Any]:
+        return [f"stix-{d}" for d in data]
 
 
 class ListProcessor(BaseDataProcessor):
@@ -139,6 +155,41 @@ class TestBaseDataProcessor:
         assert sending == {"work_name": "Mixed Import", "objects_count": 1}
         # The empty chunk is not sent, so it is not logged either
         assert completed == {"data_processor": "EmptyChunkGeneratorProcessor"}
+
+    def test_parameterized_subclass_logger_is_named_after_its_module(self):
+        assert ParameterizedProcessor.logger.name == __name__
+        # The base class and the generic alias keep the SDK module logger
+        sdk_logger_name = (
+            "connectors_sdk.connectors.external_import.base_data_processor"
+        )
+        assert BaseDataProcessor.logger.name == sdk_logger_name
+        alias = BaseDataProcessor[
+            BaseExternalImportConnectorSettings, ExternalImportConnectorState
+        ]
+        assert alias.logger.name == sdk_logger_name
+
+    def test_parameterized_subclass_is_a_data_processor(self):
+        assert issubclass(ParameterizedProcessor, BaseDataProcessor)
+        assert isinstance(ParameterizedProcessor(), BaseDataProcessor)
+        assert BaseDataProcessor in ParameterizedProcessor.__mro__
+
+    def test_inject_dependencies_stores_the_objects(self, mock_helper: MagicMock):
+        settings = MagicMock()
+        state = MagicMock()
+        proc = ParameterizedProcessor()
+
+        proc.inject_dependencies(settings=settings, helper=mock_helper, state=state)
+
+        assert proc.settings is settings
+        assert proc.state is state
+        assert proc.work_manager is not None
+
+    def test_parameterized_subclass_runs_the_pipeline(self, mock_helper: MagicMock):
+        proc = ParameterizedProcessor()
+        self._attach_deps(proc, mock_helper)
+        proc.process()
+        mock_helper.api.work.initiate_work.assert_called_once()
+        mock_helper.send_stix2_bundle.assert_called_once()
 
     def test_post_init_called(self, mock_helper: MagicMock):
         """post_init is called by _init_infrastructure after inject_dependencies."""
