@@ -79,9 +79,8 @@ def test_successful_call_is_unchanged():
     [
         ValueError("not a connector error"),
         KeyboardInterrupt(),
-        ApiNotFoundError("missing", status_code=404),
     ],
-    ids=["ValueError", "KeyboardInterrupt", "ApiNotFoundError"],
+    ids=["ValueError", "KeyboardInterrupt"],
 )
 def test_other_exceptions_propagate(error):
     """Test that non-ConnectorError exceptions propagate and nothing is recorded."""
@@ -98,6 +97,23 @@ def test_other_exceptions_propagate(error):
     assert exc_info.value is error
     # And the store is unchanged
     assert ErrorStore().get_errors() == []
+
+
+def test_older_sdk_error_is_swallowed():
+    """Test that an older SDK error is swallowed like any other ConnectorError."""
+    # Given a decorated function raising the error BaseClientApi raises on a 404
+    error = ApiNotFoundError("missing", status_code=404)
+
+    @swallow_connector_errors(default=[])
+    def fetch():
+        raise error
+
+    # When calling it
+    result = fetch()
+    # Then the default is returned and the error is recorded with its legacy code
+    assert result == []
+    assert ErrorStore().get_errors() == [error]
+    assert error.convert_to_pycti_format()["code"] == "api.not_found.legacy"
 
 
 # Fallback value

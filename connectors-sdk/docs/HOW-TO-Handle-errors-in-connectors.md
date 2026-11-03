@@ -109,6 +109,7 @@ All errors derive from `ConnectorError`, grouped into categories:
 | | `DataTlpExceededError` | `data.tlp_exceeded` | WARNING |
 | | `DataMissingDataError` | `data.missing_data` | WARNING |
 | none | `UnknownError` | `other.unknown` | CRITICAL |
+| `LegacyError` (the older SDK errors) | see below | `*.legacy` | ERROR |
 
 - **Raise the concrete errors, catch the categories**
 
@@ -135,9 +136,23 @@ All errors derive from `ConnectorError`, grouped into categories:
 
     → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
 
-- **`BaseClientApi` still raises the older errors for now**
+- **The older SDK errors are `LegacyError`s**
 
-    → `BaseClientApi` raises `ApiClientError` and its subclasses (`ApiNotFoundError`, …), which are not `ConnectorError`s yet. The same goes for `ConfigError`, `DataRetrievalError` and `UseCaseError`. Catch them and re-raise the matching standardized error when needed.
+    → `BaseClientApi` still raises `ApiClientError` and its subclasses, and connectors still raise `ConfigError`, `DataRetrievalError` and `UseCaseError`. These older errors are concrete subclasses of the abstract `LegacyError` category, so they are `ConnectorError`s that can be recorded and reported. Their names, modules, constructors and parent classes don't change, so existing `except` clauses keep working. `except LegacyError` catches all of them, and none of the standard categories does.
+
+    | Older error | Code | Criticity |
+    |---|---|---|
+    | `ApiClientError` | `api.unknown.legacy` | ERROR |
+    | `ApiUnauthorizedError` | `api.authentication.legacy` | ERROR |
+    | `ApiForbiddenError` | `api.authorization.legacy` | ERROR |
+    | `ApiNotFoundError` | `api.not_found.legacy` | ERROR |
+    | `ApiRateLimitError` | `api.rate_limit.legacy` | ERROR |
+    | `ApiServerError` | `api.server.legacy` | ERROR |
+    | `ConfigError`, `ConfigValidationError` | `config.invalid.legacy` | ERROR |
+    | `DataRetrievalError` | `api.retrieval.legacy` | ERROR |
+    | `UseCaseError` | `data.conversion.legacy` | ERROR |
+
+    A connector's own subclass of an older error inherits its code and criticity. Every older error reports ERROR, even when the matching standard error is CRITICAL (`config.invalid`, `api.authentication`…) or WARNING. Migrate to the standard errors to give your failures the right criticity.
 
 ### Reporting errors to OpenCTI
 
@@ -158,7 +173,7 @@ def process_message(self):
     return [error.convert_to_pycti_format() for error in store.get_errors()]
 ```
 
-- `record_error` accepts `ConnectorError` instances only: convert an older SDK error into its standardized counterpart before recording it.
+- `record_error` accepts `ConnectorError` instances only, older SDK errors included. Anything else raises a `TypeError`.
 - `get_errors` returns the recorded error objects, in order. `convert_to_pycti_format()` turns each one into the `{"code", "message", "criticity"}` dict pycti expects.
 - **Clear the store at the start of each run**: otherwise the errors of previous runs are reported again. The SDK base classes (`ExternalImportConnector`) don't do it for you yet.
 - pycti keeps **one error per code** (the last one recorded wins) and **20 errors at most**, the most critical first.
@@ -189,7 +204,7 @@ class Converter:
 - **Use it with parentheses**: `@swallow_connector_errors()` returns `None` on error, `@swallow_connector_errors(default=[])` returns an empty list. `@swallow_connector_errors` alone raises a `TypeError`. Type checkers see the fallback: with `default=None`, a function returning `list[Stix]` becomes `list[Stix] | None`.
 - **Never decorate a generator**: the code of a generator, an async generator or a coroutine runs after the decorator returns, so the decorator could not catch its errors, and a generator can't be resumed once an exception has left it. Decorating one of these functions raises a `TypeError` on import, and a decorated function that returns an iterator (a generator expression, `map`, `filter`, `iter(...)`) raises a `TypeError` on call. Return a list, or decorate the per-item function as above.
 - **Each swallowed call returns a shallow copy of `default`**: a `[]` or `{}` default is never shared between calls. A default holding mutable objects shares them.
-- **Every `ConnectorError` is swallowed, whatever its criticity**: a `ProviderApiAuthenticationError` (bad API key) is swallowed too, and then repeats for every item. Decorate only the functions whose failures concern one item, and let the errors that stop the run be raised elsewhere. Exceptions that aren't `ConnectorError`s (`ValueError`, `KeyboardInterrupt`, the older `ApiClientError`s…) propagate unchanged.
+- **Every `ConnectorError` is swallowed, whatever its criticity**: a `ProviderApiAuthenticationError` (bad API key) is swallowed too, and then repeats for every item. Decorate only the functions whose failures concern one item, and let the errors that stop the run be raised elsewhere. The older SDK errors are `ConnectorError`s and are swallowed too: replace them with the standard errors before adding the decorator. Every other exception (`ValueError`, `KeyboardInterrupt`…) propagates unchanged.
 - **Swallowed errors aren't logged yet**: they are only recorded in `ErrorStore` and reach OpenCTI with the ping. Log them yourself if you need them in the connector's logs.
 
 ## Example

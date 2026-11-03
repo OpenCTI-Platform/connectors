@@ -39,10 +39,20 @@ Hierarchy::
     |   +-- DataTlpExceededError                data.tlp_exceeded           WARNING
     |   +-- DataMissingDataError                data.missing_data           WARNING
     +-- LegacyError                             (abstract, the older SDK errors)
+        +-- ApiClientError                      api.unknown.legacy          ERROR
+        |   +-- ApiUnauthorizedError            api.authentication.legacy   ERROR
+        |   +-- ApiForbiddenError               api.authorization.legacy    ERROR
+        |   +-- ApiNotFoundError                api.not_found.legacy        ERROR
+        |   +-- ApiRateLimitError               api.rate_limit.legacy       ERROR
+        |   +-- ApiServerError                  api.server.legacy           ERROR
+        +-- ConfigError                         config.invalid.legacy       ERROR
+        |   +-- ConfigValidationError           config.invalid.legacy       ERROR
+        +-- DataRetrievalError                  api.retrieval.legacy        ERROR
+        +-- UseCaseError                        data.conversion.legacy      ERROR
 
-The older SDK errors (``ConfigError``, ``DataRetrievalError``, ``UseCaseError``, and
-``ApiClientError`` and its subclasses raised by ``BaseClientApi``) are not part of
-this hierarchy yet.
+The older SDK errors stay in their own modules (``connectors_sdk.client.exceptions``,
+``connectors_sdk.settings.exceptions`` and ``connectors_sdk.exceptions.error``),
+with their constructors unchanged. Prefer the standard errors in new code.
 """
 
 import logging
