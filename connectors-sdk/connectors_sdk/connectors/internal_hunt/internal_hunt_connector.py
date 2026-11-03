@@ -35,7 +35,7 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.connectors.internal_hunt._logger import ConnectorLogger
 from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_ENTITY_FIELDS,
     DEFAULT_HIT_FIELDS,
