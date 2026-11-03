@@ -69,6 +69,7 @@ def test_root_public_api_is_valid():
         "DataOutOfScopeError",
         "DataTlpExceededError",
         "DataMissingDataError",
+        "ErrorStore",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports
