@@ -50,7 +50,7 @@ class HuntAccessDeniedError(HuntExecutionError):
     """The platform refused the credentials of the connector or a permission it needs.
 
     Its message names, in plain words, what the account lacks: OpenCTI shows it
-    as is on the failed run.
+    as is on the failed run and on the connection test of the connector.
     It stays retryable: a permission granted just before the run can take
     minutes to apply on the platform.
     """

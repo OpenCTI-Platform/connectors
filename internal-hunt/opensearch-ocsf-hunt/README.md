@@ -42,7 +42,7 @@ OPENSEARCH_OCSF_HUNT_PASSWORD=ChangeMe
 OPENSEARCH_OCSF_HUNT_INDICES=ocsf-*
 ```
 
-A hunt run refused by the platform names the missing permission in plain words, with what to grant.
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one search on the hunted indices. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
 
 Table of Contents
 

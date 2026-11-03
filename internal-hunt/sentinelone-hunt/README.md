@@ -41,7 +41,7 @@ SENTINELONE_HUNT_API_URL=https://your-tenant.sentinelone.net
 SENTINELONE_HUNT_API_TOKEN=ChangeMe
 ```
 
-A hunt run refused by the platform names the missing permission in plain words, with what to grant.
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one PowerQuery over the last 15 minutes (on the EDR telemetry, with the EDR schema check, unless `SENTINELONE_HUNT_EDR_ONLY=false`). A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
 
 Table of Contents
 

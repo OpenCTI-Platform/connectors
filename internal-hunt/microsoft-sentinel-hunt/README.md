@@ -39,7 +39,7 @@ MICROSOFT_SENTINEL_HUNT_CLIENT_SECRET=ChangeMe
 MICROSOFT_SENTINEL_HUNT_WORKSPACE_ID=ChangeMe
 ```
 
-A hunt run refused by the platform names the missing permission in plain words, with what to grant.
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It requests a token and runs one query on the workspace. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
 
 Table of Contents
 

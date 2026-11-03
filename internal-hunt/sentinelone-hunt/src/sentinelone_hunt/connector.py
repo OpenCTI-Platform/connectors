@@ -147,6 +147,11 @@ class SentinelOneHuntConnector(InternalHuntConnector):
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
 
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one event of the hunted data."""
+        query = EDR_FILTER if self.s1_config.edr_only else "dataSource.name = *"
+        return NativeQuery(language="powerquery", query=query)
+
     def sigma_backend(self, pipeline: str | None) -> PowerQueryBackend:
         """Create the pySigma SentinelOne PowerQuery backend.
 

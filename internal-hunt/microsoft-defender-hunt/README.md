@@ -37,8 +37,10 @@ MICROSOFT_DEFENDER_HUNT_CLIENT_ID=ChangeMe
 MICROSOFT_DEFENDER_HUNT_CLIENT_SECRET=ChangeMe
 ```
 
-A hunt run refused by the platform names the refused credential or the missing permission in plain words, with what
-to grant.
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its
+**Hunted platform** card. It requests a token from Microsoft Entra ID, then runs `DeviceInfo | take 1` over the last 7
+days. A refused credential or a missing permission is named in plain words, with what to grant; a hunt run refused by
+the platform reports the same sentence. A tenant without device telemetry passes with a warning.
 
 Table of Contents
 

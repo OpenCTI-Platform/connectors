@@ -165,6 +165,10 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
         )
         self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
 
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: a query on the workspace."""
+        return NativeQuery(language="kql", query="print connection_test = 1")
+
     def sigma_backend(self, pipeline: str | None) -> KustoBackend:
         """Create the pySigma Kusto backend.
 
