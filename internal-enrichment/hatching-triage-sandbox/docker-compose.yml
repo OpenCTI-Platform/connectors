@@ -17,4 +17,5 @@ services:
       #- HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR=#f79e00 # Label color for botnet
       #- HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR=#7a01e5 # Label color for campaign
       #- HATCHING_TRIAGE_SANDBOX_TAG_COLOR=#54483b # Label color for all other labels
+      #- HATCHING_TRIAGE_SANDBOX_MAX_ATTEMPTS=5 # Max attempts to fetch a report or extracted file on API errors
     restart: always
