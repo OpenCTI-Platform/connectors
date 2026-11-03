@@ -150,6 +150,14 @@ class StixMaker:
             creator_class = stix2.AttackPattern
             obj_id = pycti.AttackPattern.generate_id(values["name"], values["name"])
 
+        elif objtype == "autonomous_system":
+            cache_entry = f'a{values["number"]}'
+            creator_class = stix2.AutonomousSystem
+            # STIX 2.1 SCO IDs depend on the ASN number, not its owner name.
+            obj_id = self.cached_object_ids.get(cache_entry)
+            if obj_id is None:
+                obj_id = stix2.AutonomousSystem(number=values["number"]).id
+
         elif objtype == "country":
             cache_entry = f'l{values["name"]}'
             creator_class = stix2.Location
@@ -899,11 +907,10 @@ class StixMakerPrivate:
                     asn_data["name"] = self._getValue(v)
                     break
 
-            stix_asn = stix2.AutonomousSystem(
-                **asn_data, object_marking_refs=[self.maker.tlp.id]
+            asn_id = self.maker.findOrCreateCacheableObject(
+                "autonomous_system", {**asn_data, "object_marking_refs": [self.maker.tlp.id]}
             )
-            stix_bundle.append(stix_asn)
-            ip_params["belongs_to_refs"] = [stix_asn.id]
+            ip_params["belongs_to_refs"] = [asn_id]
 
         # Create IP CRO
         self._getValue("format")  # Use the address, not optional feed metadata.

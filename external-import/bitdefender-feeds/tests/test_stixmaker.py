@@ -491,3 +491,18 @@ def test_ip_nested_affected_and_popularity(helper):
     assert_edge(objs, "related-to", indicator, country)
     assert_edge(objs, "related-to", indicator, sector)
     check_relationship_references_in_bundle(objs)
+
+
+def test_repeated_asn_is_cached_and_uses_number_based_id(helper):
+    m = maker(helper, "ip")
+    for address, owner in (("192.0.2.60", "Original Provider"), ("192.0.2.61", "Updated Provider")):
+        m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
+                                "asn": 64512, "asn_owner": owner}))
+    m.sendFinal()
+    objects = sent_objects(helper)
+    systems = objects_of_type(objects, "autonomous-system")
+    assert len(systems) == 1
+    assert systems[0]["id"] == stix2.AutonomousSystem(number=64512).id
+    for ip in objects_of_type(objects, "ipv4-addr"):
+        assert ip["belongs_to_refs"] == [systems[0]["id"]]
+    check_relationship_references_in_bundle(objects)

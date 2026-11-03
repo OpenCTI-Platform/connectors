@@ -570,3 +570,37 @@ def test_amber_strict_custom_marking_has_opencti_fields(runtime):
     assert m.tlp["x_opencti_definition"] == "TLP:AMBER+STRICT"
     objects = get_objects(runtime, m, {**BASE, "type": "domain", "url": "example.test"})
     check_graph(objects, m.tlp.id)
+
+
+def test_autonomous_system_cached_once_for_multiple_ips_in_bundle(runtime):
+    m = runtime.create("ip")
+    for address, owner in (("192.0.2.60", "Original Provider"), ("192.0.2.61", "Updated Provider")):
+        assert m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
+                                       "asn": 64512, "asn_owner": owner})) is False
+    m.sendFinal()
+    objects = json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])["objects"]
+    asn = exactly_one(objects, "autonomous-system", number=64512)
+    for address in ("192.0.2.60", "192.0.2.61"):
+        ip = exactly_one(objects, "ipv4-addr", value=address)
+        assert ip["belongs_to_refs"] == [asn["id"]]
+    assert asn["name"] == "Original Provider"  # first occurrence is cached
+    check_graph(objects, m.tlp.id)
+
+
+def test_autonomous_system_reincluded_across_bundles(runtime):
+    m = runtime.create("ip")
+    m.max_bundle_entries = 1
+    snapshots = []
+    for address, owner in (("192.0.2.62", "Original Provider"), ("192.0.2.63", "Updated Provider")):
+        assert m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
+                                       "asn": 64512, "asn_owner": owner})) is True
+        snapshots.append(json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])["objects"])
+    ids = []
+    for objects, address in zip(snapshots, ("192.0.2.62", "192.0.2.63")):
+        asn = exactly_one(objects, "autonomous-system", number=64512)
+        ip = exactly_one(objects, "ipv4-addr", value=address)
+        assert ip["belongs_to_refs"] == [asn["id"]]
+        ids.append(asn["id"])
+        check_graph(objects, m.tlp.id)
+    assert ids[0] == ids[1]
+    assert runtime.helper.send_stix2_bundle.call_count == 2
