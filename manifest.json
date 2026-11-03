@@ -3477,6 +3477,11 @@
             "description": "Whether to create Domain-Name and URL observables from the network endpoints of extracted malware configurations. Disabled by default: these lists can mix real C2 servers with legitimate domains (false positives).",
             "type": "boolean"
           },
+          "FLASHPOINT_IMPORT_INDICATOR_ATTACK_PATTERNS": {
+            "default": true,
+            "description": "Whether to import the MITRE ATT&CK techniques Flashpoint attaches to indicators. They are the technique profile of the malware family (or actor) of the indicator, so they are imported as Malware / Intrusion-Set uses Attack-Pattern, never linked to the indicator itself.",
+            "type": "boolean"
+          },
           "FLASHPOINT_IMPORT_ALERTS": {
             "default": true,
             "description": "Whether to import alert data from Flashpoint or not.",
