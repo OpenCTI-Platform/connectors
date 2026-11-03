@@ -20,6 +20,8 @@ from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
 from triage.client import ServerError
 
+RETRY_DELAY_SECONDS = 10
+
 
 class HatchingTriageSandboxConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -47,6 +49,7 @@ class HatchingTriageSandboxConnector:
         self.botnet_color = self.config.hatching_triage_sandbox.botnet_color
         self.campaign_color = self.config.hatching_triage_sandbox.campaign_color
         self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
+        self.max_attempts = self.config.hatching_triage_sandbox.max_attempts
         self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
     def _process_overview_report(
@@ -221,20 +224,16 @@ class HatchingTriageSandboxConnector:
                 # Download task file, wait for it to become available
                 task_id = extracted_dict["tasks"][0]
                 filename = extracted_dict["dumped_file"]
-                file_contents = self.triage_client.sample_task_file(
-                    sample_id, task_id, filename
-                )
-                for x in range(5):
-                    if b"NOT_AVAILABLE" in file_contents[:30]:
-                        time.sleep(10)
-                        continue
-                    file_contents = self.triage_client.sample_task_file(
-                        sample_id, task_id, filename
-                    )
-
-                if b"NOT_AVAILABLE" in file_contents[:30]:
-                    self.helper.connector_logger.info(
-                        "Maximum attempts tried to obtain extracted file, skipping..."
+                file_contents = self._get_task_file(sample_id, task_id, filename)
+                if file_contents is None:
+                    self.helper.connector_logger.warning(
+                        "Maximum attempts tried to obtain extracted file, skipping...",
+                        meta={
+                            "sample_id": sample_id,
+                            "task_id": task_id,
+                            "filename": filename,
+                            "max_attempts": self.max_attempts,
+                        },
                     )
                     continue
                 # Upload task file to OpenCTI
@@ -468,11 +467,53 @@ class HatchingTriageSandboxConnector:
                 sample_id = self._submit_sample(url=observable_value)
 
         # Get the Overview report
-        overview_dict = self.triage_client.overview_report(sample_id)
+        overview_dict = self._get_overview_report(sample_id)
 
         return self._process_overview_report(
             observable, overview_dict, sample_id, entity_type
         )
+
+    def _get_overview_report(self, sample_id):
+        """Get the overview report, retrying on server errors (5xx)."""
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return self.triage_client.overview_report(sample_id)
+            except ServerError as err:
+                if err.status < 500 or attempt == self.max_attempts:
+                    raise
+                self.helper.connector_logger.warning(
+                    "Overview report request failed, retrying...",
+                    meta={
+                        "sample_id": sample_id,
+                        "status": err.status,
+                        "attempt": attempt,
+                        "max_attempts": self.max_attempts,
+                    },
+                )
+                time.sleep(RETRY_DELAY_SECONDS)
+
+    def _get_task_file(self, sample_id, task_id, filename):
+        """Download a task file, retrying while unavailable. Return None if all attempts fail."""
+        for attempt in range(1, self.max_attempts + 1):
+            response = self.triage_client.sample_task_file(
+                sample_id, task_id, filename
+            )
+            if response.ok and b"NOT_AVAILABLE" not in response.content[:30]:
+                return response.content
+            self.helper.connector_logger.warning(
+                "Extracted file not available, retrying...",
+                meta={
+                    "sample_id": sample_id,
+                    "task_id": task_id,
+                    "filename": filename,
+                    "status": response.status_code,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+        return None
 
     def _search_for_analysis(self, search_query):
         sample_id = None
