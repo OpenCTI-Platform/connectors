@@ -16,6 +16,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
+from requests import RequestException
 from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
 from triage.client import ServerError
@@ -594,17 +595,39 @@ class HatchingTriageSandboxConnector:
                 )
 
     def _wait_for_analysis(self, sample_id):
-        """Wait for an analysis to finish."""
-        for events in self.triage_client.sample_events(sample_id):
-            if events["status"] == "pending":
-                self.helper.connector_logger.info(
-                    f"Analysis {sample_id} has status \"{events['status']}\"."
-                )
-            elif events["status"] == "reported":
-                self.helper.connector_logger.info(f"Analysis {sample_id} has finished.")
-                break
-            elif events["status"] == "failed":
-                raise ValueError(f"Analysis {sample_id} failed.")
+        """Wait for an analysis to finish, restarting the event stream if it breaks."""
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                for events in self.triage_client.sample_events(sample_id):
+                    if events["status"] == "pending":
+                        self.helper.connector_logger.info(
+                            f"Analysis {sample_id} has status \"{events['status']}\"."
+                        )
+                    elif events["status"] == "reported":
+                        self.helper.connector_logger.info(
+                            f"Analysis {sample_id} has finished."
+                        )
+                        return
+                    elif events["status"] == "failed":
+                        raise ValueError(f"Analysis {sample_id} failed.")
+                reason = "Event stream ended before the analysis was reported"
+            # A proxy error page (e.g. 502) is not JSON
+            except (json.JSONDecodeError, RequestException) as err:
+                reason = str(err)
+            self.helper.connector_logger.warning(
+                "Analysis event stream interrupted, retrying...",
+                meta={
+                    "sample_id": sample_id,
+                    "reason": reason,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+        raise ValueError(
+            f"Analysis {sample_id} did not finish after {self.max_attempts} attempts."
+        )
 
     def _get_sha256(self, contents):
         """Return sha256 of bytes."""
