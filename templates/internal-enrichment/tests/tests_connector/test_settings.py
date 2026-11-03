@@ -2,7 +2,21 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseInternalEnrichmentConnectorSettings,
+    ConfigValidationError,
+)
+
+
+def test_settings_should_be_internal_enrichment_connector_settings():
+    """
+    Test that `ConnectorSettings` is an implementation of `BaseInternalEnrichmentConnectorSettings`
+    (from `connectors-sdk`), the settings base class dedicated to `INTERNAL_ENRICHMENT` connectors.
+    """
+    assert (
+        issubclass(ConnectorSettings, BaseInternalEnrichmentConnectorSettings) is True
+    )
 
 
 @pytest.mark.parametrize(
