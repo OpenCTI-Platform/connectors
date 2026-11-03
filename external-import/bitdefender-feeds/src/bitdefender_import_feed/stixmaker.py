@@ -22,8 +22,7 @@ class StixMaker:
         # Output STIX bundle storage - everything but created objects
         self.bundles_output = []
 
-        # Marking definitions are stable OpenCTI IDs. Do not print configuration,
-        # which may contain credentials or other sensitive values.
+        # Marking definitions are stable OpenCTI IDs.
         match self.config.tlp_level:
             case "white" | "clear":
                 self.tlp = stix2.TLP_WHITE
@@ -72,6 +71,14 @@ class StixMaker:
 
     def fromEntry(self, entry: str) -> bool:
         data = json.loads(entry)
+
+        # Verify confidence and severity - relevant in case we're processing
+        # a previously downloaded feed while connector configuration has changed.
+        if ( ("confidence" in data and data["confidence"] < self.config.min_confidence)
+           or
+             ("severity" in data and data["severity"] < self.config.min_severity)
+        ):
+            return False
 
         maker = StixMakerPrivate(self)
 
@@ -134,6 +141,9 @@ class StixMaker:
         Shared entities are emitted once per bundle, not once per entry.
         They are included again when later bundles refer to them; no API lookup
         or reliance on earlier bundles being processed is necessary.
+
+        Most of those entries are shared and thus TLP or creator does not apply
+        to them. Exceptions are threat actor and malware family entities.
         """
         if objtype == "attack_pattern":
             cache_entry = f'p{values["name"]}'
@@ -153,6 +163,9 @@ class StixMaker:
             )
 
         elif objtype == "threat_actor":
+            # add creator and TLP
+            values["created_by_ref"] = self.creator_identity
+            values["object_marking_refs"] = [self.tlp.id]
             cache_entry = f't{values["name"]}'
             creator_class = stix2.ThreatActor
             obj_id = pycti.ThreatActor.generate_id(
@@ -165,6 +178,9 @@ class StixMaker:
             obj_id = pycti.Vulnerability.generate_id(name=values["name"])
 
         elif objtype == "malware_family":
+            # add creator and TLP
+            values["created_by_ref"] = self.creator_identity
+            values["object_marking_refs"] = [self.tlp.id]
             cache_entry = f'f{values["name"]}'
             creator_class = stix2.Malware
             obj_id = pycti.Malware.generate_id(name=values["name"])

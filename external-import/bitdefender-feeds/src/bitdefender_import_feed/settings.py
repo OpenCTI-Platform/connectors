@@ -62,6 +62,13 @@ class BitdefenderConfig(BaseConfigModel):
         le=99,
     )
 
+    max_lookback_interval: int = Field(
+        description="Maximum lookback interval in seconds for feed retrieval (60-86400).",
+        default=86400,
+        ge=60,
+        le=86400,
+    )
+
     exclude_related_indicators: bool = Field(
         description="Whether to exclude related indicators from import.",
         default=False,

@@ -77,6 +77,13 @@
       "maximum": 99,
       "type": "integer"
     },
+    "BITDEFENDER_MAX_LOOKBACK_INTERVAL": {
+      "default": 3600,
+      "description": "Maximum lookback interval in seconds for feed retrieval (60-86400)",
+      "minimum": 60,
+      "maximum": 86400,
+      "type": "integer"
+    },
     "BITDEFENDER_MIN_SEVERITY": {
       "default": 1,
       "description": "Minimum severity level of imported feed entries (1–99). Entries must also meet the minimum confidence.",

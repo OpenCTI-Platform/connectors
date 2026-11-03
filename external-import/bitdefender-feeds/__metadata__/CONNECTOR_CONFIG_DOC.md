@@ -18,3 +18,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | BITDEFENDER_DETECTION | `boolean`| | true/false | false | Set `x_opencti_detection` on created indicators. Default: `false`. |
 | BITDEFENDER_CREATE_MALWARE_OBJECTS | `boolean` | | true/false | true | Create a Malware entity for each file detection (`true`, default), or only Malware family entities (`false`). |
 | BITDEFENDER_TLP_LEVEL | `string` | | `clear` `white`, `green`, `amber`, `amber+strict`, or `red` | red | Default marking for imported indicators, observables, Malware entities and relationships. |
+| BITDEFENDER_MAX_LOOKBACK_INTERVAL | `number` | | 60-86400 | 3600 | Number; defines the maximum lookback interval in seconds for downloaded feeds |

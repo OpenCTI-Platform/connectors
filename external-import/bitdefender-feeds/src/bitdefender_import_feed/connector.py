@@ -29,18 +29,20 @@ class BitdefenderFeedConnector:
 
             try:
                 current = int(time.time())
-                seconds = 86400
+                seconds = self.config.bitdefender.max_lookback_interval
 
                 if self.state["last_update"][feedtype] != 0:
                     # Provider API accepts at most 24 hours of history. Warn about
                     # any unrecoverable gap rather than silently truncating it.
                     elapsed = current - self.state["last_update"][feedtype]
-                    if elapsed > 86400:
+                    if elapsed > self.config.bitdefender.max_lookback_interval:
                         self.helper.connector_logger.warning(
-                            f"Feed {feedtype}: {elapsed - 86400} seconds outside "
-                            "the provider's 24-hour look-back window"
+                            f"Feed {feedtype}: {elapsed - self.config.bitdefender.max_lookback_interval} seconds outside "
+                            "the look-back window"
                         )
-                    seconds = min(86400, elapsed)
+                    seconds = min(
+                        self.config.bitdefender.max_lookback_interval, elapsed
+                    )
 
                 # Download the feed using Bitdefender TI API
                 headers = {
