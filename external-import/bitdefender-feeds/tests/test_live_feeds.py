@@ -119,10 +119,14 @@ class NoImportHelper:
         self.api = SimpleNamespace(
             work=self.work,
             indicator=SimpleNamespace(
-                generate_id_from_data=lambda data: pycti.Indicator.generate_id(data["pattern"])
+                generate_id_from_data=lambda data: pycti.Indicator.generate_id(
+                    data["pattern"]
+                )
             ),
             malware=SimpleNamespace(
-                generate_id_from_data=lambda data: pycti.Malware.generate_id(data["name"])
+                generate_id_from_data=lambda data: pycti.Malware.generate_id(
+                    data["name"]
+                )
             ),
         )
 
@@ -235,9 +239,9 @@ def _run_live_feed(feed, api_key, tmp_path, monkeypatch):
         assert not helper.work.finished[0][1].get("in_error")
 
         assert stats.total_lines > 0, "Downloaded feed has no lines"
-        assert stats.converted_entries > 0, (
-            "No entries converted; try a longer test window or check feed access"
-        )
+        assert (
+            stats.converted_entries > 0
+        ), "No entries converted; try a longer test window or check feed access"
         assert stats.failed_entries == 0, (
             f"{feed} feed: {stats.failed_entries:,} entry conversions failed; "
             f"first failures: {stats.failure_samples}"

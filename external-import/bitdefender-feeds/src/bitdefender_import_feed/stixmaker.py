@@ -74,10 +74,9 @@ class StixMaker:
 
         # Verify confidence and severity - relevant in case we're processing
         # a previously downloaded feed while connector configuration has changed.
-        if ( ("confidence" in data and data["confidence"] < self.config.min_confidence)
-           or
-             ("severity" in data and data["severity"] < self.config.min_severity)
-        ):
+        if (
+            "confidence" in data and data["confidence"] < self.config.min_confidence
+        ) or ("severity" in data and data["severity"] < self.config.min_severity):
             return False
 
         maker = StixMakerPrivate(self)
@@ -908,7 +907,8 @@ class StixMakerPrivate:
                     break
 
             asn_id = self.maker.findOrCreateCacheableObject(
-                "autonomous_system", {**asn_data, "object_marking_refs": [self.maker.tlp.id]}
+                "autonomous_system",
+                {**asn_data, "object_marking_refs": [self.maker.tlp.id]},
             )
             ip_params["belongs_to_refs"] = [asn_id]
 

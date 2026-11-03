@@ -191,8 +191,8 @@ def runtime(monkeypatch):
             "detection": False,
             "tlp_level": "green",
             "create_malware_objects": True,
-            "min_severity" : 1,
-            "min_confidence" : 75,
+            "min_severity": 1,
+            "min_confidence": 75,
         }
         defaults.update(settings)
         config = SimpleNamespace(bitdefender=SimpleNamespace(**defaults))
@@ -574,11 +574,28 @@ def test_amber_strict_custom_marking_has_opencti_fields(runtime):
 
 def test_autonomous_system_cached_once_for_multiple_ips_in_bundle(runtime):
     m = runtime.create("ip")
-    for address, owner in (("192.0.2.60", "Original Provider"), ("192.0.2.61", "Updated Provider")):
-        assert m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
-                                       "asn": 64512, "asn_owner": owner})) is False
+    for address, owner in (
+        ("192.0.2.60", "Original Provider"),
+        ("192.0.2.61", "Updated Provider"),
+    ):
+        assert (
+            m.fromEntry(
+                json.dumps(
+                    {
+                        **BASE,
+                        "type": "IP",
+                        "ip": address,
+                        "asn": 64512,
+                        "asn_owner": owner,
+                    }
+                )
+            )
+            is False
+        )
     m.sendFinal()
-    objects = json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])["objects"]
+    objects = json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])[
+        "objects"
+    ]
     asn = exactly_one(objects, "autonomous-system", number=64512)
     for address in ("192.0.2.60", "192.0.2.61"):
         ip = exactly_one(objects, "ipv4-addr", value=address)
@@ -591,10 +608,29 @@ def test_autonomous_system_reincluded_across_bundles(runtime):
     m = runtime.create("ip")
     m.max_bundle_entries = 1
     snapshots = []
-    for address, owner in (("192.0.2.62", "Original Provider"), ("192.0.2.63", "Updated Provider")):
-        assert m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
-                                       "asn": 64512, "asn_owner": owner})) is True
-        snapshots.append(json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])["objects"])
+    for address, owner in (
+        ("192.0.2.62", "Original Provider"),
+        ("192.0.2.63", "Updated Provider"),
+    ):
+        assert (
+            m.fromEntry(
+                json.dumps(
+                    {
+                        **BASE,
+                        "type": "IP",
+                        "ip": address,
+                        "asn": 64512,
+                        "asn_owner": owner,
+                    }
+                )
+            )
+            is True
+        )
+        snapshots.append(
+            json.loads(runtime.helper.send_stix2_bundle.call_args.kwargs["bundle"])[
+                "objects"
+            ]
+        )
     ids = []
     for objects, address in zip(snapshots, ("192.0.2.62", "192.0.2.63")):
         asn = exactly_one(objects, "autonomous-system", number=64512)

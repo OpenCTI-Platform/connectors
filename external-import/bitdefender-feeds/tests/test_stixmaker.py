@@ -495,9 +495,15 @@ def test_ip_nested_affected_and_popularity(helper):
 
 def test_repeated_asn_is_cached_and_uses_number_based_id(helper):
     m = maker(helper, "ip")
-    for address, owner in (("192.0.2.60", "Original Provider"), ("192.0.2.61", "Updated Provider")):
-        m.fromEntry(json.dumps({**BASE, "type": "IP", "ip": address,
-                                "asn": 64512, "asn_owner": owner}))
+    for address, owner in (
+        ("192.0.2.60", "Original Provider"),
+        ("192.0.2.61", "Updated Provider"),
+    ):
+        m.fromEntry(
+            json.dumps(
+                {**BASE, "type": "IP", "ip": address, "asn": 64512, "asn_owner": owner}
+            )
+        )
     m.sendFinal()
     objects = sent_objects(helper)
     systems = objects_of_type(objects, "autonomous-system")
