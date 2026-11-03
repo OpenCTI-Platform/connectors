@@ -92,6 +92,7 @@ def get_client(
             (
                 verity471_streams.Verity471IndicatorsStream,
                 verity471_streams.Verity471CVEsStream,
+                verity471_streams.Verity471CredentialsStream,
                 verity471_streams.Verity471FintelStream,
                 verity471_streams.Verity471BreachAlertsStream,
                 verity471_streams.Verity471GeopolReportsStream,

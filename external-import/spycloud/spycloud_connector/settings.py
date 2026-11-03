@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Annotated, Any, Literal
 
 from connectors_sdk import (
@@ -97,7 +97,7 @@ class SpyCloudConfig(BaseConfigModel):
             "e.g. '2024-01-01T00:00:00Z') or relative (ISO 8601 duration, "
             "e.g. 'P30D' for 30 days ago)."
         ),
-        default_factory=lambda: datetime.now(UTC) - timedelta(days=30),
+        default="P30D",
     )
 
 

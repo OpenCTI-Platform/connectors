@@ -1,0 +1,36 @@
+# version: '3'
+services:
+  connector-whoisfreaks:
+    image: opencti/connector-whoisfreaks:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - WHOISFREAKS_API_KEY=ChangeMe
+      # - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=WhoisFreaks
+      # - CONNECTOR_SCOPE=indicator,domain-name
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT24H
+      # Stream + status base URLs (defaults are production endpoints)
+      # - WHOISFREAKS_API_BASE_URL=https://files.whoisfreaks.com/v3.4/stream
+      # - WHOISFREAKS_STATUS_API_BASE_URL=https://files.whoisfreaks.com
+      # Toggle feeds by subscription level (comma-separated).
+      # Threat: malware, phishing, spam
+      # NRD: nrd_gtld_with_whois, nrd_cctld_with_whois,
+      #      nrd_gtld_without_whois, nrd_cctld_without_whois
+      # Only list feeds your plan includes.
+      # - WHOISFREAKS_FEED_TYPES=malware,phishing,spam
+      # - WHOISFREAKS_NRD_FEED_TYPES=nrd_gtld_with_whois,nrd_cctld_with_whois,nrd_gtld_without_whois,nrd_cctld_without_whois
+      # Scale knobs for multi-million-row daily files
+      # - WHOISFREAKS_PAGE_LIMIT=5000
+      # - WHOISFREAKS_THREAT_TIMEOUT=180
+      # - WHOISFREAKS_NRD_TIMEOUT=180
+      # - WHOISFREAKS_MAX_RETRIES=5
+      # - WHOISFREAKS_RETRY_BACKOFF_SECONDS=2.0
+      # - WHOISFREAKS_CHECKPOINT_EVERY_PAGES=10
+      # Floor for accepting status last_update (ISO datetime or relative duration)
+      # - WHOISFREAKS_IMPORT_SINCE=P1D
+      # - WHOISFREAKS_TLP_LEVEL=clear
+      # NRD: false = Domain-Name only (recommended at scale); true = also Indicators
+      # - WHOISFREAKS_CREATE_INDICATORS_FOR_NRD=false
+    restart: always

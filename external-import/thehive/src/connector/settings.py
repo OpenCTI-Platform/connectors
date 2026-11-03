@@ -55,7 +55,7 @@ class TheHiveConfig(BaseConfigModel):
         description="The name of the organization in TheHive, used to create the identity in OpenCTI.",
     )
     import_from_date: DatetimeFromIsoString | None = Field(
-        description="The date from which to start importing data (ISO format, e.g. 2021-01-01T00:00:00). Defaults to current time.",
+        description="The date from which to start importing data, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago). Defaults to current time.",
         default=None,
     )
     import_only_tlp: ListFromString = Field(

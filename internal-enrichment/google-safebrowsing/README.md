@@ -46,7 +46,7 @@ This connector integrates Google Safe Browsing with OpenCTI to:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or as environment variables.
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker), in `config.yml` (for manual deployment) or as environment variables.
 
 ### OpenCTI environment variables
 
@@ -57,25 +57,22 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Base connector environment variables
 
-| Parameter            | config.yml           | Docker environment variable      | Default                    | Mandatory | Description                                                                 |
-|----------------------|----------------------|----------------------------------|----------------------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID         | id                   | `CONNECTOR_ID`                   |                            | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name       | name                 | `CONNECTOR_NAME`                 | Google Safe Browsing       | No        | Name of the connector.                                                      |
-| Connector Scope      | scope                | `CONNECTOR_SCOPE`                | Url,Domain-Name,Hostname   | No        | The scope of observables the connector will enrich.                         |
-| Connector Type       | type                 | `CONNECTOR_TYPE`                 | INTERNAL_ENRICHMENT        | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                  |
-| Log Level            | log_level            | `CONNECTOR_LOG_LEVEL`            | info                       | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Confidence Level     | confidence_level     | `CONNECTOR_CONFIDENCE_LEVEL`     | 100                        | No        | The default confidence level for created data.                              |
-| Auto Mode            | auto                 | `CONNECTOR_AUTO`                 | true                       | No        | Enables or disables automatic enrichment of observables.                    |
-| Update Existing Data | update_existing_data | `CONNECTOR_UPDATE_EXISTING_DATA` | true                       | No        | Update existing data in database during enrichment.                         |
+| Parameter        | config.yml | Docker environment variable | Default                    | Mandatory | Description                                                                 |
+|------------------|------------|-----------------------------|----------------------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID     | id         | `CONNECTOR_ID`              |                            | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name   | name       | `CONNECTOR_NAME`            | Google Safe Browsing       | No        | Name of the connector.                                                      |
+| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | Url,Domain-Name,Hostname   | No        | The scope of observables the connector will enrich.                         |
+| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | error                      | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Auto Mode        | auto       | `CONNECTOR_AUTO`            | false                      | No        | Enables or disables automatic enrichment of observables.                    |
+| Max TLP          | max_tlp    | `CONNECTOR_MAX_TLP`         | amber                      | No        | Observables with a higher TLP are not sent to the Safe Browsing API: `clear`, `white`, `green`, `amber`, `amber+strict` or `red`. |
 
 ### Connector extra parameters environment variables
 
-| Parameter | config.yml | Docker environment variable    | Mandatory | Description                                                                                                  |
-|-----------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
-| API Key   |            | `SAFE_BROWSING_API_KEY`        | Yes*      | Safe Browsing API key (Google or Yandex). *Required unless the legacy `GOOGLE_SAFE_BROWSING_API_KEY` is set. |
-| API URL   |            | `SAFE_BROWSING_API_URL`        | No        | Safe Browsing API base URL (Google or Yandex). Default: `https://safebrowsing.googleapis.com`.               |
-| API Key   |            | `GOOGLE_SAFE_BROWSING_API_KEY` | No        | Legacy Google Safe Browsing API key, used only if `SAFE_BROWSING_API_KEY` is unset (backward compatibility). |
-
+| Parameter | config.yml (`safe_browsing`) | Docker environment variable    | Default                               | Mandatory | Description                                                                                          |
+|-----------|------------------------------|--------------------------------|---------------------------------------|-----------|------------------------------------------------------------------------------------------------------|
+| API Key   | api_key                      | `SAFE_BROWSING_API_KEY`        |                                       | Yes*      | Safe Browsing API key (Google or Yandex). *Unless the deprecated `GOOGLE_SAFE_BROWSING_API_KEY` is set. |
+| API URL   | api_url                      | `SAFE_BROWSING_API_URL`        | `https://safebrowsing.googleapis.com` | No        | Safe Browsing API base URL. Use `https://sba.yandex.net` for Yandex.                                 |
+| API Key   |                              | `GOOGLE_SAFE_BROWSING_API_KEY` |                                       | No        | **Deprecated**, use `SAFE_BROWSING_API_KEY`. Used only if `SAFE_BROWSING_API_KEY` is unset.          |
 
 ## Deployment
 
@@ -95,15 +92,14 @@ Configure the connector in `docker-compose.yml`:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe_UUID4
-      - CONNECTOR_NAME=Google Safe Browsing
-      - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Google Safe Browsing
+      # - CONNECTOR_SCOPE=Url,Domain-Name,Hostname
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=amber
       - SAFE_BROWSING_API_KEY=ChangeMe
-      # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Optional (default). Use https://sba.yandex.net for Yandex
-      # - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe # Legacy, used only if SAFE_BROWSING_API_KEY is unset
+      # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Use https://sba.yandex.net for Yandex
     restart: always
 ```
 
@@ -115,9 +111,9 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Set environment variables for configuration.
+1. Copy `config.yml.sample` to `config.yml` and fill in the values, or set the environment variables.
 
-2. Install dependencies:
+2. Install dependencies from the `src` directory:
 
 ```bash
 pip3 install -r requirements.txt
@@ -203,13 +199,14 @@ graph LR
 
 ### Processing Details
 
-1. **Observable Type Check**: Verifies entity is Domain-Name, URL, or Hostname
-2. **API Query**: Sends threat match request to Safe Browsing API
-3. **Result Processing**: If match found:
+1. **Observable Type Check**: Verifies entity is Domain-Name, URL, or Hostname and is in the connector scope
+2. **TLP Check**: Skips observables whose TLP is higher than `CONNECTOR_MAX_TLP`
+3. **API Query**: Sends threat match request to Safe Browsing API
+4. **Result Processing**: If match found:
    - Sets observable score to 100 (malicious)
    - Adds threat type label
    - Updates description with threat details
-4. **Bundle Creation**: Creates and sends STIX bundle with updated observable
+5. **Bundle Creation**: Creates and sends STIX bundle with updated observable
 
 ### Generated STIX Objects
 

@@ -12,7 +12,6 @@ Provides a reusable foundation that handles:
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Generator
 from typing import Any, Callable
 from urllib.parse import urljoin
@@ -27,17 +26,15 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit, _RateLimitAdapter
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from requests.adapters import Retry
-
-logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Base client
 # ---------------------------------------------------------------------------
 
 
-class BaseClientApi:
+class BaseClientApi(_ClassLoggerMixin):
     """Base HTTP client providing common API interaction patterns.
 
     Subclass this to create a connector-specific client. Override

@@ -15,7 +15,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["misp"]` | The scope or type of data the connector is processing. |
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
-| CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `80` | The default confidence level for created entities (0-100). |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Listen to delete events in the stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `false` | Do not auto-resolve dependencies. |
 | CONNECTOR_CONTAINER_TYPES | `array` |  | Length: `string >= 1` | `["report", "grouping", "case-incident", "case-rfi", "case-rft"]` | List of container types to process. |

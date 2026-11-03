@@ -15,5 +15,6 @@ zscaler:
   username: 'ChangeMe'
   password: 'ChangeMe'
   api_key: 'ChangeMe'
+  # api_base_url: 'https://zsapi.zscalertwo.net/' # optional (default: 'https://zsapi.zscalertwo.net/')
   # blacklist_name: 'BLACK_LIST_DYNDNS' # optional (default: 'BLACK_LIST_DYNDNS')
   # ssl_verify: false # optional (default: false)

@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-redpanda
 WORKDIR /opt/opencti-connector-redpanda
 
 # Install Python modules
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base

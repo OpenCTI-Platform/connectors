@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from virustotal.client import VirusTotalQuotaExceededError
 from virustotal.processors.entity import EntityProcessor
 
 if TYPE_CHECKING:
@@ -27,9 +28,16 @@ class URLProcessor(EntityProcessor):
 
     def _make_builder(self, json_data: dict, **kwargs) -> "VirusTotalBuilder":
         url = self.opencti_entity["observable_value"]
-        related = self.client.get_url_related_objects(
-            url=url, relationship="last_serving_ip_address"
-        )
+        try:
+            related = self.client.get_url_related_objects(
+                url=url, relationship="last_serving_ip_address"
+            )
+        except VirusTotalQuotaExceededError:
+            self.helper.connector_logger.warning(
+                "[VirusTotal] Quota exceeded, skipping the last serving IP address",
+                {"url": url},
+            )
+            related = None
         # VirusTotal returns {"data": null, "meta": {"count": 0}} when the
         # relationship holds no object, so the key is present and the `get`
         # default never applies: normalise with `or` rather than a default.
@@ -64,11 +72,15 @@ class URLProcessor(EntityProcessor):
 
         try:
             analysis_id = self.client.upload_url(url)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError("[VirusTotal] Error uploading URL to VirusTotal.") from err
 
         try:
             self.client.check_upload_status("URL", url, analysis_id)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError(
                 "[VirusTotal] Error waiting for VirusTotal to analyse URL."

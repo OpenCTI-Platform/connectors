@@ -21,7 +21,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="Wiz Cloud Threat Landscape",
+        default="Wiz Public Threat Landscape",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",

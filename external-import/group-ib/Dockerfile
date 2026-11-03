@@ -3,7 +3,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/connector/src

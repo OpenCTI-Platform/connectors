@@ -7,7 +7,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 WORKDIR /app
 
-RUN apk add --no-cache libmagic
+RUN apk --no-cache upgrade && \
+    apk add --no-cache libmagic
 
 COPY src/requirements.txt requirements.txt
 

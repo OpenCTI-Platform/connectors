@@ -111,6 +111,21 @@ def process(connector, indicator):
 
     for attribution in indicator.get("attributed_associations", []):
         # attributed_associations > 'threat-actor' | 'malware'
+        if not attribution.get("id"):
+            # An association with a type but no id cannot be turned into a
+            # STIX object. Skip it with a warning so the rest of the window's
+            # indicators are still imported: a KeyError here fails the whole
+            # collection window, the state never advances, and the schedule
+            # retries the same window on every run.
+            connector.helper.connector_logger.warning(
+                "Skipping attributed association without an id",
+                {
+                    "indicator_id": indicator_id,
+                    "indicator_value": indicator.get("value"),
+                    "association_type": attribution.get("type"),
+                },
+            )
+            continue
         if attribution["type"] == "malware":
             # Add the malware
             stix_malware = stix2.Malware(

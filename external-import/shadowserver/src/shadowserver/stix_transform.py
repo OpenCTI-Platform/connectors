@@ -5,7 +5,7 @@ from datetime import datetime
 import magic
 import pycti
 import stix2
-from connectors_sdk import ConnectorLogger
+from connectors_sdk import ConnectorLoggerAdapter
 from shadowserver.utils import (
     calculate_hashes,
     check_ip_address,
@@ -27,7 +27,7 @@ class ShadowserverStixTransformation:
         report: dict,
         incident: dict = {},
         labels: list = ["Shadowserver"],
-        logger: ConnectorLogger | None = None,
+        logger: ConnectorLoggerAdapter | None = None,
     ):
         """
         Initializes a ShadowserverStixTransformation object with the provided parameters.
@@ -37,7 +37,7 @@ class ShadowserverStixTransformation:
             report_list (list): The list of reports for transformation.
             report (dict): The report details for transformation.
             labels (list): The labels associated with the transformation (default is ['Shadowserver']).
-            logger (ConnectorLogger): The processor's logger. It must accept a `meta` dict:
+            logger (ConnectorLoggerAdapter): The processor's logger. It must accept a `meta` dict:
                 a standard library logger does not.
 
         Returns:
@@ -175,7 +175,7 @@ class ShadowserverStixTransformation:
                     string_to_datetime(report_list[0].get("timestamp"))
                 )
         except Exception as e:
-            self._logger.error(f"Error parsing published date: {e}")
+            self._logger.exception(f"Error parsing published date: {e}")
         return datetime_to_string(datetime.now())
 
     def get_stix_objects(self):
@@ -674,7 +674,7 @@ class ShadowserverStixTransformation:
                 )
                 self.stix_objects.append(stix_object)
         except Exception as e:
-            self._logger.error(f"Error creating observed data: {e}")
+            self._logger.exception(f"Error creating observed data: {e}")
 
     def create_stix_note_from_data(self, labels: list = []):
         """

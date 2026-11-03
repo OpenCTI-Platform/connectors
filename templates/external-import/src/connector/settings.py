@@ -22,7 +22,7 @@ References:
     and exposed to `pycti`'s `OpenCTIConnectorHelper`.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -96,7 +96,7 @@ class TemplateConfig(BaseConfigModel):
         "Can be either absolute e.g., a given date like '2023-01-01T00:00:00Z' or "
         "relative e.g., a given period of time like 'P30D' (meaning '30 days ago'). "
         "Used as the initial checkpoint on connector first run; subsequent runs resume from connector state.",
-        default_factory=lambda: (datetime.now(timezone.utc) - timedelta(days=30)),
+        default="P30D",
     )
     import_vulnerabilities: bool = Field(
         description="Enable/disable the import of vulnerabilities.",

@@ -6,6 +6,7 @@ from pathlib import Path
 from types import UnionType
 from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
 
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from pydantic import BaseModel, create_model
 from pydantic_settings import (
     BaseSettings,
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
 
 
-class _SettingsLoader(BaseSettings):
+class _SettingsLoader(_ClassLoggerMixin, BaseSettings):
     model_config = SettingsConfigDict(
         frozen=True,
         extra="allow",
@@ -93,6 +94,10 @@ class _SettingsLoader(BaseSettings):
         """
         config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from config.yml file",
+                meta={"config_yml_file_path": str(config_yml_file_path)},
+            )
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
@@ -100,10 +105,16 @@ class _SettingsLoader(BaseSettings):
 
         dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from .env file",
+                meta={"dot_env_file_path": str(dot_env_file_path)},
+            )
             return (
                 env_settings,
                 DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
             )
+
+        cls.logger.debug("Parsing connector's settings from environment variables")
 
         return (env_settings,)
 

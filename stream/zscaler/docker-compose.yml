@@ -17,6 +17,7 @@ services:
       - ZSCALER_USERNAME=ChangeMe
       - ZSCALER_PASSWORD=ChangeMe
       - ZSCALER_API_KEY=ChangeMe
+      # - ZSCALER_API_BASE_URL=https://zsapi.zscalertwo.net/ # optional (default: https://zsapi.zscalertwo.net/)
       # - ZSCALER_BLACKLIST_NAME=BLACK_LIST_DYNDNS # optional (default: BLACK_LIST_DYNDNS)
       # - ZSCALER_SSL_VERIFY=false # optional (default: false)
     restart: always

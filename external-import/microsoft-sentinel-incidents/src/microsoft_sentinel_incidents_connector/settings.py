@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -55,8 +55,8 @@ class MicrosoftSentinelIncidentsConfig(BaseConfigModel):
         description="Your Microsoft Sentinel workspace ID.",
     )
     import_start_date: DatetimeFromIsoString = Field(
-        description="Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set.",
-        default=datetime.fromisoformat("2020-01-01T00:00:00Z"),
+        description="Import starting date, as an ISO-8601 datetime (e.g. '2025-01-01T00:00:00Z') or duration relative to now (e.g. 'P30D' for 30 days ago) - used only if connector's state is not set.",
+        default="P30D",
     )
     filter_labels: ListFromString = Field(
         description="Only incidents containing these specified labels will be retrieved and ingested (comma separated values).",

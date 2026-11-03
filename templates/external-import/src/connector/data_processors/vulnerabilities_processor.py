@@ -170,7 +170,7 @@ class VulnerabilitiesProcessor(BaseDataProcessor):
         except Exception as e:
             # Checkpoint: keep the last completed page so the next run resumes here
             # instead of re-importing everything from scratch.
-            self.logger.error(
+            self.logger.exception(
                 "An error occurred while processing CVE pages. Saving the current page to resume on next run.",
                 meta={"error": str(e)},
             )

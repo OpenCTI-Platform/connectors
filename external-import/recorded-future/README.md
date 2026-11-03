@@ -73,7 +73,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Person to Threat Actor                  | recorded_future.person_to_ta                   | `RECORDED_FUTURE_PERSON_TO_TA`                            | false               | No        | Convert person entities to threat actors.                                   |
 | Threat Actor to Intrusion Set           | recorded_future.ta_to_intrusion_set            | `RECORDED_FUTURE_TA_TO_INTRUSION_SET`                     | false               | No        | When true, maps all Threat Actor entities to Intrusion Sets.               |
 | Risk as Score                           | recorded_future.risk_as_score                  | `RECORDED_FUTURE_RISK_AS_SCORE`                           | true                | No        | Use RF risk score as OpenCTI score.                                         |
-| Risk Threshold                          | recorded_future.risk_threshold                 | `RECORDED_FUTURE_RISK_THRESHOLD`                          | 60                  | No        | Minimum risk score for import.                                              |
+| Risk Threshold                          | recorded_future.risk_threshold                 | `RECORDED_FUTURE_RISK_THRESHOLD`                          | 60                  | No        | Minimum risk score (0-100) of the Analyst Notes indicators (IP, domain, URL, hash). Lower or unscored indicators are skipped. `0` disables the filtering. |
 | Analyst Notes Guess Relationships       | recorded_future.analyst_notes_guess_relationships | `RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS`    | false               | No        | Infer relationships from notes.                                             |
 | Analyst Notes Include Context Entities  | recorded_future.analyst_notes_include_context_entities | `RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES` | false     | No        | Also import entities referenced only in a note's context (can be noisy).    |
 | Pull Risk List                          | recorded_future.pull_risk_list                 | `RECORDED_FUTURE_PULL_RISK_LIST`                          | false               | No        | Import risk list data.                                                      |
@@ -249,6 +249,40 @@ For Note entities, the following Recorded Future Entity types are supported:
 >
 > As a result, a Report created in OpenCTI may contain fewer entities than the same note shows
 > in the Recorded Future portal — this is expected behavior, not a bug.
+
+> **Note — Risk threshold filtering.**
+>
+> The `risk_threshold` parameter (`RECORDED_FUTURE_RISK_THRESHOLD`) applies to the indicators
+> of Analyst Notes only (IP address, domain, URL and hash). Risk lists use `risk_list_threshold`.
+>
+> - It is active by default, with a value of `60`: when the parameter is not set, indicators are filtered.
+> - An indicator whose risk score is below the threshold, or which has no risk score in Recorded
+>   Future (unknown to the risk API), is not imported. As a result, a Report created in OpenCTI
+>   may contain fewer indicators than the same note shows in the Recorded Future portal.
+> - The risk score is read each time the note is processed, that is on every run while the note
+>   is within the `last_published_notes` hours window (the first run uses the initial lookback).
+>   After that the note is not processed again, so a later change of the score is not picked up:
+>   an indicator skipped at that time is not imported afterwards from that note (see the
+>   Recorded Future
+>   [Risk History API](https://support.recordedfuture.com/hc/en-us/articles/37383892573459-Risk-History-API)
+>   for the history of a risk score).
+> - Each skipped indicator is logged at `info` level, with the note id, the indicator, its type,
+>   its risk score and the threshold. Set `CONNECTOR_LOG_LEVEL` to `info` or `debug` to see these logs.
+> - Set the threshold to `0` to disable the filtering and import all indicators, including those
+>   with a risk score of 0 or without any risk score. In that case, the risk score is only
+>   requested from Recorded Future when `risk_as_score` is `true`.
+> - An empty `RECORDED_FUTURE_RISK_THRESHOLD` environment variable is ignored and keeps the default
+>   `60`, whereas a `risk_threshold:` key left without a value, or set to `null`, in `config.yml`
+>   disables the filtering, like `0` (a quoted empty string `''` is not `null` and fails validation).
+>
+> **Warning — risk score of 0.** A Recorded Future risk score of 0 is sent as an OpenCTI score of 0
+> (previously no score was sent and the platform defaulted to 50). With indicator decay enabled,
+> such indicators are revoked at creation, since 0 is at or below the decay revoke score. This
+> applies to Analyst Notes indicators with `risk_as_score` enabled and a threshold of `0` or `null`,
+> and to risk lists with a `null` `risk_list_threshold`. An empty or non-numeric `Risk` value in a
+> risk list sends no score. A later import of the same indicator without a score (`risk_as_score`
+> turned off, or a score the risk API no longer returns) resets its score to the platform default
+> of 50 and un-revokes it.
 
 The connector creates the following relationships between imported entities:
 

@@ -3,6 +3,7 @@
 # type: ignore
 """Provide unit tests for the connector wiring on the Pydantic settings."""
 
+import json
 import os
 import sys
 from typing import Any
@@ -122,6 +123,38 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector.config.tsc.api_access_key.get_secret_value() == "test-access-key"
     assert connector.config.tsc.api_secret_key.get_secret_value() == "test-secret-key"
     assert connector.config.tsc.number_threads == 1
+
+
+def test_connector_process_sends_a_bundle_built_from_a_list(
+    mock_opencti_connector_helper,
+):
+    """Test that `_process` builds the bundle from the values of the converter's results.
+
+    - `process_assets_chunk` returns a dict keyed by STIX id: passing it as is to
+      `stix2_create_bundle` raised `KeyError: 0`
+    - the sent bundle MUST contain every STIX object returned by the converter
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.stix2_create_bundle = MagicMock(wraps=helper.stix2_create_bundle)
+    helper.send_stix2_bundle = MagicMock(return_value=[])
+    connector = Connector(config=settings, assets=MagicMock(), helper=helper)
+
+    author = connector.converter_to_stix._author.to_stix2_object()
+    tlp_marking = settings.tsc.tlp_marking
+    connector.converter_to_stix.process_assets_chunk = MagicMock(
+        return_value={author.id: author, tlp_marking.id: tlp_marking}
+    )
+
+    assert connector._process(MagicMock()) is True
+
+    helper.stix2_create_bundle.assert_called_once()
+    assert isinstance(helper.stix2_create_bundle.call_args.args[0], list)
+    sent_bundle = json.loads(helper.send_stix2_bundle.call_args.kwargs["bundle"])
+    assert {obj["id"] for obj in sent_bundle["objects"]} == {
+        author.id,
+        tlp_marking.id,
+    }
 
 
 def test_connector_settings_expose_stix_tlp_marking():

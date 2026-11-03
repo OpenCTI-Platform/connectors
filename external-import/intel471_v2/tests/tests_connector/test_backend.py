@@ -5,7 +5,10 @@ import pytest
 import titan_client
 import verity471
 from intel471.backend import BackendName, ClientWrapper, get_client
-from intel471.streams.verity471 import Verity471AlertsStream
+from intel471.streams.verity471 import (
+    Verity471AlertsStream,
+    Verity471CredentialsStream,
+)
 from pydantic import HttpUrl
 
 BACKENDS = [
@@ -173,3 +176,16 @@ def test_alerts_stream_is_registered_for_verity471_only():
 
     assert Verity471AlertsStream in verity.streams
     assert Verity471AlertsStream not in titan.streams
+
+
+def test_credentials_stream_is_registered_for_verity471_only():
+    """
+    The credentials stream is Verity471-only: the titan_stix SDK has no credential
+    mapper, so it must appear in the verity471 backend's stream tuple and not the titan
+    one.
+    """
+    verity = get_client(backend_name="verity471", api_username="u", api_key="k")
+    titan = get_client(backend_name="titan", api_username="u", api_key="k")
+
+    assert Verity471CredentialsStream in verity.streams
+    assert Verity471CredentialsStream not in titan.streams
