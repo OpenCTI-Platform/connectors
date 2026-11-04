@@ -1,6 +1,5 @@
 # pragma: no cover
 # type: ignore
-import logging
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -10,9 +9,6 @@ from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor imp
 )
 from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
-)
-from connectors_sdk.connectors.internal_enrichment.exceptions import (
-    UnsupportedEntityError,
 )
 
 
@@ -41,7 +37,7 @@ def _make_message(
 
 def _make_processor() -> DummyProcessor:
     processor = DummyProcessor()
-    processor.inject_dependencies(settings=MagicMock(), message_manager=MagicMock())
+    processor.inject_dependencies(settings=MagicMock())
     return processor
 
 
@@ -52,15 +48,11 @@ class TestBaseEnrichmentProcessor:
 
     def test_inject_dependencies(self):
         settings = MagicMock()
-        message_manager = MagicMock()
         processor = DummyProcessor()
 
-        processor.inject_dependencies(
-            settings=settings, message_manager=message_manager
-        )
+        processor.inject_dependencies(settings=settings)
 
         assert processor.settings is settings
-        assert processor.message_manager is message_manager
 
     def test_logger_is_named_after_the_processor_module(self):
         assert DummyProcessor.logger.name == DummyProcessor.__module__
@@ -79,38 +71,27 @@ class TestBaseEnrichmentProcessor:
 
 
 class TestProcess:
-    def test_sends_the_transformed_data(self):
+    def test_returns_the_transformed_data(self):
         processor = _make_processor()
 
-        processor.process(_make_message())
+        objects = processor.process(_make_message())
 
-        processor.message_manager.send.assert_called_once_with(["v"])
+        assert objects == ["v"]
 
-    def test_sends_nothing_without_data(self, caplog):
-        caplog.set_level(logging.INFO)
+    def test_returns_nothing_without_data(self):
         processor = _make_processor()
 
-        processor.process(_make_message(value=""))
+        objects = processor.process(_make_message(value=""))
 
-        processor.message_manager.send.assert_not_called()
-        assert "No enrichment data found" in [r.getMessage() for r in caplog.records]
+        assert objects == []
 
-    def test_raises_when_the_entity_cannot_be_processed(self):
+    def test_returns_a_list_from_any_iterable(self):
         processor = _make_processor()
-        processor.collect = MagicMock()
+        processor.transform = MagicMock(return_value=(obj for obj in ["a", "b"]))
 
-        with pytest.raises(UnsupportedEntityError, match="DummyProcessor"):
-            processor.process(_make_message("Url"))
+        objects = processor.process(_make_message())
 
-        processor.collect.assert_not_called()
-        processor.message_manager.send.assert_not_called()
-
-    def test_send_accepts_any_iterable(self):
-        processor = _make_processor()
-
-        processor.send(_make_message(), (obj for obj in ["a", "b"]))
-
-        processor.message_manager.send.assert_called_once_with(["a", "b"])
+        assert objects == ["a", "b"]
 
 
 class TestHandledEntityTypes:

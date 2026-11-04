@@ -15,7 +15,7 @@ from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
 )
 from connectors_sdk.connectors.internal_enrichment.exceptions import (
-    EntityOutOfScopeError,
+    InvalidEnrichmentMessageError,
 )
 from connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector import (
     InternalEnrichmentConnector,
@@ -32,6 +32,7 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.enums import HashAlgorithm, TLPLevel
 from connectors_sdk.settings.base_settings import BaseInternalEnrichmentConnectorConfig
+from connectors_sdk.settings.exceptions import ConfigValidationError
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 
@@ -367,7 +368,7 @@ class TestInit:
 
     def test_raises_when_a_scope_type_is_declared_by_no_processor(self):
         with pytest.raises(
-            ValueError,
+            ConfigValidationError,
             match="No processor declares the entity type Url of connector.scope",
         ):
             InternalEnrichmentConnector(
@@ -406,10 +407,9 @@ class TestInitDependencies:
         settings = _make_settings(scope=["IPv4-Addr"])
         processor = IPv4Processor(client=_ip_client())
 
-        connector = _make_connector(_make_helper(), [processor], settings=settings)
+        _make_connector(_make_helper(), [processor], settings=settings)
 
         assert processor.settings is settings
-        assert processor.message_manager is connector._message_manager
         assert processor.logger is not None
         assert processor.author.name == "Example Source"
 
@@ -611,6 +611,24 @@ class TestCallbackEnrichment:
         assert expected_note in sent
         assert other_note not in sent
 
+    def test_asks_each_processor_once_whether_it_can_process_the_entity(self):
+        helper = _make_helper()
+        shodan, generic = ShodanIndicatorProcessor(), GenericIndicatorProcessor()
+        connector = _make_connector(helper, [shodan, generic])
+        # can_process() is connector code, which may call the source
+        shodan.can_process = MagicMock(wraps=shodan.can_process)
+        generic.can_process = MagicMock(wraps=generic.can_process)
+        indicator = {"type": "indicator", "id": INDICATOR_ID, "pattern": "p"}
+
+        connector.callback(
+            _make_data(
+                entity_type="Indicator", stix_entity=indicator, pattern_type="shodan"
+            )
+        )
+
+        shodan.can_process.assert_called_once()
+        generic.can_process.assert_called_once()
+
     @pytest.mark.parametrize("tlp", [None, "TLP:CLEAR", "TLP:AMBER"])
     def test_enriches_entities_up_to_max_tlp(self, tlp):
         helper = _make_helper()
@@ -656,6 +674,9 @@ class TestCallbackEnrichment:
 
 SKIP_CASES = [
     pytest.param(
+        {"entity_type": "Url"}, "Entity type Url is out of scope", id="out_of_scope"
+    ),
+    pytest.param(
         {"entity_type": "Indicator", "pattern_type": "stix"},
         "No processor can process this entity",
         id="no_processor",
@@ -664,13 +685,6 @@ SKIP_CASES = [
         {"tlp": "TLP:RED"}, "Entity TLP is not allowed (max TLP: amber)", id="tlp"
     ),
     pytest.param({}, "No enrichment data found", id="no_data"),
-]
-# Outside playbooks, an entity out of scope is an error (see TestCallbackErrors)
-PLAYBOOK_SKIP_CASES = [
-    pytest.param(
-        {"entity_type": "Url"}, "Entity type Url is out of scope", id="out_of_scope"
-    ),
-    *SKIP_CASES,
 ]
 
 
@@ -689,7 +703,7 @@ class TestCallbackSkips:
         assert result == expected_result
         helper.send_stix2_bundle.assert_not_called()
 
-    @pytest.mark.parametrize("data_kwargs, expected_result", PLAYBOOK_SKIP_CASES)
+    @pytest.mark.parametrize("data_kwargs, expected_result", SKIP_CASES)
     def test_playbook_skip_sends_the_original_bundle_once(
         self, data_kwargs, expected_result
     ):
@@ -740,9 +754,32 @@ class TestCallbackSkips:
         assert result == "Entity type Url is out of scope"
         assert _logs(caplog, logging.WARNING) == []
         assert (
-            "Entity type is out of the connector scope",
+            "Entity type is out of the connector scope, skipping",
             {"octi_id": OCTI_ID, "octi_entity_type": "Url", "from_playbook": True},
         ) in _logs(caplog, logging.INFO)
+
+    def test_manual_out_of_scope_is_a_warning_and_never_reaches_the_source(
+        self, caplog
+    ):
+        caplog.set_level(logging.WARNING)
+        helper = _make_helper()
+        client = _ip_client({"score": 80, "asn": 13335})
+        connector = _make_connector(helper, [IPv4Processor(client=client)])
+
+        result = connector.callback(_make_data(entity_type="Url", tlp="TLP:RED"))
+
+        assert result == "Entity type Url is out of scope"
+        client.get_ip.assert_not_called()
+        assert _logs(caplog, logging.WARNING) == [
+            (
+                "Entity type is out of the connector scope, skipping",
+                {
+                    "octi_id": OCTI_ID,
+                    "octi_entity_type": "Url",
+                    "from_playbook": False,
+                },
+            )
+        ]
 
     def test_tlp_is_checked_before_any_processor_sees_the_entity(self, caplog):
         caplog.set_level(logging.WARNING)
@@ -782,44 +819,60 @@ class TestCallbackSkips:
 
 
 class TestCallbackErrors:
-    @pytest.mark.parametrize("playbook", [False, True])
-    def test_invalid_message_is_logged_and_reraised_without_sending(
-        self, playbook, caplog
+    def test_manual_invalid_message_is_logged_and_reraised_without_sending(
+        self, caplog
     ):
-        helper = _make_helper(playbook=playbook)
+        helper = _make_helper()
         connector = _make_connector(helper, [DomainProcessor()])
-        data = _make_data(playbook=playbook)
+        data = _make_data()
         del data["enrichment_entity"]
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(InvalidEnrichmentMessageError) as error:
             connector.callback(data)
 
+        assert isinstance(error.value.__cause__, ValidationError)
         helper.send_stix2_bundle.assert_not_called()
         assert _logs(caplog, logging.ERROR) == [
             ("Invalid enrichment message", {"entity_id": IP_ID})
         ]
 
-    def test_manual_out_of_scope_entity_is_an_error(self, caplog):
-        helper = _make_helper()
-        client = _ip_client({"score": 80, "asn": 13335})
-        connector = _make_connector(helper, [IPv4Processor(client=client)])
+    def test_playbook_invalid_message_sends_the_objects_received_back(self):
+        helper = _make_helper(playbook=True)
+        connector = _make_connector(helper, [DomainProcessor()])
+        data = _make_data(playbook=True)
+        del data["enrichment_entity"]
+        original = copy.deepcopy(data["stix_objects"])
 
-        with pytest.raises(
-            EntityOutOfScopeError, match="Entity type Url is out of scope"
-        ):
-            connector.callback(_make_data(entity_type="Url", tlp="TLP:RED"))
+        with pytest.raises(InvalidEnrichmentMessageError):
+            connector.callback(data)
 
-        client.get_ip.assert_not_called()
+        helper.send_stix2_bundle.assert_called_once()
+        assert _sent_objects(helper) == original
+
+    def test_playbook_invalid_message_without_objects_sends_nothing(self):
+        helper = _make_helper(playbook=True)
+        connector = _make_connector(helper, [DomainProcessor()])
+        data = _make_data(playbook=True)
+        data["stix_objects"] = None
+
+        with pytest.raises(InvalidEnrichmentMessageError):
+            connector.callback(data)
+
         helper.send_stix2_bundle.assert_not_called()
+
+    def test_playbook_invalid_message_logs_a_failure_to_send_back(self, caplog):
+        helper = _make_helper(playbook=True)
+        helper.send_stix2_bundle.side_effect = ConnectionError("API down")
+        connector = _make_connector(helper, [DomainProcessor()])
+        data = _make_data(playbook=True)
+        del data["enrichment_entity"]
+
+        with pytest.raises(InvalidEnrichmentMessageError):
+            connector.callback(data)
+
         assert _logs(caplog, logging.ERROR) == [
-            (
-                "Enrichment failed",
-                {
-                    "octi_id": OCTI_ID,
-                    "octi_entity_type": "Url",
-                    "from_playbook": False,
-                },
-            )
+            ("Invalid enrichment message", {"entity_id": IP_ID}),
+            ("Failed to send the original bundle back", {"entity_id": IP_ID}),
         ]
 
     def test_manual_error_is_logged_and_reraised_without_sending(self, caplog):
@@ -875,28 +928,30 @@ class TestCallbackErrors:
         # Only the original bundle, in a playbook
         assert helper.send_stix2_bundle.call_count == (1 if playbook else 0)
 
-    def test_playbook_send_failure_is_logged_then_the_original_bundle_is_sent(
+    def test_playbook_send_failure_is_raised_without_sending_the_original_bundle(
         self, caplog
     ):
         helper = _make_helper(playbook=True)
-        helper.send_stix2_bundle.side_effect = RuntimeError("queue down")
+        helper.send_stix2_bundle.side_effect = RuntimeError("request timed out")
         connector = _make_connector(
             helper, [IPv4Processor(client=_ip_client({"score": 80, "asn": 13335}))]
         )
 
-        with pytest.raises(RuntimeError, match="queue down"):
+        with pytest.raises(RuntimeError, match="request timed out"):
             connector.callback(_make_data(playbook=True))
 
-        # A failed send does not count as sent: the original bundle is tried next
-        assert helper.send_stix2_bundle.call_count == 2
-        metadata = {
-            "octi_id": OCTI_ID,
-            "octi_entity_type": "IPv4-Addr",
-            "from_playbook": True,
-        }
+        # The platform may have the bundle: sending the original one too could run
+        # the next step twice
+        helper.send_stix2_bundle.assert_called_once()
         assert _logs(caplog, logging.ERROR) == [
-            ("Enrichment failed", metadata),
-            ("Failed to send the original bundle back", metadata),
+            (
+                "Enrichment failed",
+                {
+                    "octi_id": OCTI_ID,
+                    "octi_entity_type": "IPv4-Addr",
+                    "from_playbook": True,
+                },
+            )
         ]
 
     def test_manual_unserializable_objects_raise_without_sending(self):

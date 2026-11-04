@@ -5,27 +5,21 @@ the contract for enriching one or more entity types from an external source.
 
 Pipeline (run by ``InternalEnrichmentConnector`` for each message)::
 
-    processor.process(message)  # send(message, transform(message, collect(message)))
+    objects = processor.process(message)  # transform(message, collect(message))
 
 A connector's processor only fetches and converts: the connector checks the scope and
-the TLP, and the injected ``_MessageManager`` builds and sends the bundle.
+the TLP, then gives the objects to the ``BundleManager`` that builds and sends the bundle.
 """
 
 from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Iterable
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from connectors_sdk.connectors.internal_enrichment.exceptions import (
-    UnsupportedEntityError,
-)
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 
 if TYPE_CHECKING:
-    from connectors_sdk.connectors.internal_enrichment._message_manager import (
-        MessageManager,
-    )
     from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
         EnrichmentMessage,
     )
@@ -43,7 +37,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
 
     Its ``collect()`` and ``transform()`` must **not** send bundles, check the scope or
     the TLP, or handle playbooks: ``InternalEnrichmentConnector`` checks the entity, and
-    ``process()`` gives the objects to the injected ``message_manager``.
+    sends the objects returned by ``process()``.
 
     A processor is created once and handles many messages: keep everything that is
     specific to a message in local variables, never in instance attributes.
@@ -52,8 +46,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
 
     Lifecycle:
         1. ``__init__()`` — called by connector code (custom args allowed)
-        2. ``inject_dependencies()`` — called by the base connector (injects the settings
-           and the bundle sender)
+        2. ``inject_dependencies()`` — called by the base connector (injects the settings)
         3. ``post_init()`` — called by the base connector after ``inject_dependencies()``
            (override to build the API client, the author and the markings)
         4. ``can_process()`` and ``process()`` (``collect()`` then ``transform()``) — called by
@@ -66,8 +59,6 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
             with the type of the entity to enrich. Required and not empty: otherwise
             defining the processor class raises ``TypeError``.
         settings: The connector settings, injected via ``inject_dependencies()``.
-        message_manager: The sender of the bundles, shared with the connector and
-            injected via ``inject_dependencies()``.
 
     Example:
         >>> class IPv4Processor(BaseEnrichmentProcessor):
@@ -90,7 +81,6 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
 
     handled_entity_types: ClassVar[frozenset[str]]
     settings: BaseConnectorSettings
-    message_manager: MessageManager
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Check that a processor declares the entity types it supports.
@@ -111,19 +101,15 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
                 'e.g. `handled_entity_types = frozenset({"IPv4-Addr"})`.'
             )
 
-    def inject_dependencies(
-        self, settings: BaseConnectorSettings, message_manager: MessageManager
-    ) -> None:
+    def inject_dependencies(self, settings: BaseConnectorSettings) -> None:
         """Inject dependencies from the base connector.
 
         Called by ``InternalEnrichmentConnector`` after helper initialization.
 
         Args:
             settings: The connector configuration settings.
-            message_manager: The sender of the bundles, shared with the connector.
         """
         self.settings = settings
-        self.message_manager = message_manager
 
         self.logger.debug("Dependencies injected into enrichment processor")
 
@@ -160,21 +146,18 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
             for supported_entity_type in self.handled_entity_types
         )
 
-    def process(self, message: EnrichmentMessage) -> None:
-        """Run the processing pipeline for one message: collect → transform → send.
+    def process(self, message: EnrichmentMessage) -> list[Any]:
+        """Run the processing pipeline for one message: collect → transform.
 
         Args:
             message: The enrichment message.
 
-        Raises:
-            UnsupportedEntityError: If this processor does not support the entity.
-        """
-        if not self.can_process(message):
-            raise UnsupportedEntityError(
-                f"{type(self).__name__} does not support this entity"
-            )
+        The connector only calls it when ``can_process()`` returned ``True``.
 
-        self.send(message, self.transform(message, self.collect(message)))
+        Returns:
+            The objects to add to the bundle, or ``[]`` when there is nothing to add.
+        """
+        return list(self.transform(message, self.collect(message)))
 
     @abstractmethod
     def collect(self, message: EnrichmentMessage) -> Any:
@@ -224,31 +207,3 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
             The STIX objects to add to the bundle, or ``[]`` when there is nothing to add.
         """
         ...
-
-    def send(self, message: EnrichmentMessage, bundle_objects: Iterable[Any]) -> None:
-        """Send the original objects of the message with the processor's objects.
-
-        Nothing is sent when ``bundle_objects`` is empty: the outcome stays
-        "No enrichment data found".
-
-        Args:
-            message: The enrichment message.
-            bundle_objects: The objects returned by the processor's ``transform()``.
-
-        Raises:
-            RuntimeError: If a bundle was already sent for this message.
-        """
-        log_metadata = message.to_log_metadata()
-
-        bundle_objects = list(bundle_objects)
-
-        if not bundle_objects:
-            self.logger.info("No enrichment data found", meta=log_metadata)
-            return
-
-        self.message_manager.send(bundle_objects)
-
-        self.logger.info(
-            "Entity enriched",
-            meta={**log_metadata, "objects_count": len(bundle_objects)},
-        )
