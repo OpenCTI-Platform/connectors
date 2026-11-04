@@ -1,11 +1,14 @@
-from datetime import datetime, timedelta
-from typing import Generator
+import logging
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Generator
 from warnings import warn
 
 from api_client.models import EventRestSearchListItem
 from pydantic import HttpUrl, ValidationError
 from pymisp import PyMISP, PyMISPError
 from requests.adapters import HTTPAdapter, Retry
+
+_default_logger = logging.getLogger(__name__)
 
 
 class MISPClientError(Exception):
@@ -24,8 +27,17 @@ class MISPClient:
         certificate: str | None = None,
         retry: int = 3,
         backoff: timedelta = timedelta(seconds=1),
+        logger: Any = None,
     ):
         """Initialize and wrap a PyMISP instance."""
+
+        # Any logger with debug(message) and warning(message), e.g. the
+        # connector helper's connector_logger.
+        self._logger = logger or _default_logger
+        # Which `date_from` value MISP answered last: False for the datetime
+        # (PyMISP sends a Unix timestamp), True for the YYYY-MM-DD string.
+        # Remembered for the next runs, so the format that works is tried first.
+        self._date_from_as_date_string = False
 
         retry_strategy = Retry(
             total=retry,
@@ -63,6 +75,13 @@ class MISPClient:
             for it in obj:
                 self._sanitize_user_id_in_tags(it)
 
+    @staticmethod
+    def _to_utc_date_string(value: date) -> str:
+        """Format a date or a datetime (converted to UTC first) as YYYY-MM-DD."""
+        if isinstance(value, datetime):
+            value = value.astimezone(timezone.utc)
+        return value.strftime("%Y-%m-%d")
+
     def search_events(
         self,
         date_field_filter: str,
@@ -82,17 +101,21 @@ class MISPClient:
         Search for events in MISP with the given parameters.
         """
         current_page = page
+        is_date_from = date_field_filter == "date_from"
 
-        # MISP documents the `from` filter (PyMISP `date_from`) as a date
-        # (YYYY-MM-DD). PyMISP turns a datetime into a Unix timestamp, which
-        # MISP silently matches against nothing. The event `date` has a day
-        # granularity, so sending the date string loses nothing.
-        date_value = (
-            date_value_filter.strftime("%Y-%m-%d")
-            if date_field_filter == "date_from"
-            and isinstance(date_value_filter, datetime)
-            else date_value_filter
-        )
+        # `date_from` (MISP `from`): PyMISP turns a datetime into a Unix
+        # timestamp. Whether MISP accepts it depends on the MISP version: some
+        # versions return events for it, others return [] without error and
+        # only match a YYYY-MM-DD date. So the first page is tried with each
+        # format until one returns events, and the following pages keep that
+        # format, so the format never changes in the middle of a pagination.
+        candidates = [date_value_filter]
+        if is_date_from:
+            candidates.append(self._to_utc_date_string(date_value_filter))
+            if self._date_from_as_date_string:
+                candidates.reverse()
+        order = "Event.id ASC" if is_date_from else f"Event.{datetime_attribute} ASC"
+        date_value = None
 
         while True:
             try:
@@ -106,31 +129,60 @@ class MISPClient:
                     not_parameters=excluded_org_creators,
                 )
 
-                results = self._client.search(
-                    controller="events",
-                    return_format="json",
-                    value=keyword,
-                    searchall=True if keyword else None,
-                    tags=tags_query or None,
-                    org=org_creators_query or None,
-                    enforce_warninglist=enforce_warning_list,
-                    with_attachments=with_attachments,
-                    limit=limit,
-                    page=current_page,
-                    # Undocumented parameter to sort the results by the given attribute
-                    # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
-                    order=(
-                        "Event.id ASC"
-                        if date_field_filter == "date_from"
-                        else f"Event.{datetime_attribute} ASC"
-                    ),
-                    **{date_field_filter: date_value},
-                )
-                if isinstance(results, dict) and results.get("errors"):
-                    status_code, error_message = results.get("errors")
-                    raise MISPClientError(
-                        error_message, {"status_code": status_code, "response": results}
+                def search_page(value):
+                    self._logger.debug(
+                        f"MISP restSearch page {current_page}: "
+                        f"{date_field_filter}={value!r} ({type(value).__name__})"
                     )
+                    results = self._client.search(
+                        controller="events",
+                        return_format="json",
+                        value=keyword,
+                        searchall=True if keyword else None,
+                        tags=tags_query or None,
+                        org=org_creators_query or None,
+                        enforce_warninglist=enforce_warning_list,
+                        with_attachments=with_attachments,
+                        limit=limit,
+                        page=current_page,
+                        # Undocumented parameter to sort the results by the given attribute
+                        # https://www.circl.lu/doc/misp/automation/#:~:text=Example-,Search,-Events%20management
+                        order=order,
+                        **{date_field_filter: value},
+                    )
+                    if isinstance(results, dict) and results.get("errors"):
+                        status_code, error_message = results.get("errors")
+                        raise MISPClientError(
+                            error_message,
+                            {"status_code": status_code, "response": results},
+                        )
+                    return results
+
+                if date_value is None:
+                    # First page: try each candidate until one returns events.
+                    results = []
+                    for candidate in candidates:
+                        results = search_page(candidate)
+                        if len(results) > 0:
+                            date_value = candidate
+                            if is_date_from:
+                                self._date_from_as_date_string = isinstance(
+                                    candidate, str
+                                )
+                            break
+                    if len(results) == 0:
+                        if is_date_from:
+                            self._logger.warning(
+                                f"MISP returned no event for date_from "
+                                f"{date_value_filter!r}, sent both as a Unix "
+                                f"timestamp and as "
+                                f"{self._to_utc_date_string(date_value_filter)!r}. "
+                                f"Either nothing is new, or this MISP instance "
+                                f"accepts neither format."
+                            )
+                        break
+                else:
+                    results = search_page(date_value)
 
                 # Break if no more result
                 if len(results) == 0:

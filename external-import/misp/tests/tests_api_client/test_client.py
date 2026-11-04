@@ -1,12 +1,13 @@
 """Tests for the MISP API client."""
 
+import json
 import socket
 import threading
 import time
 from contextlib import contextmanager
 from contextlib import nullcontext as does_not_raise
-from datetime import datetime, timezone
-from unittest.mock import patch
+from datetime import date, datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -128,8 +129,8 @@ def test_search_events_timeout_behavior(
                 list(gen)
 
 
-def _search_kwargs(client: MISPClient, date_field_filter: str, date_value) -> dict:
-    """Run search_events against a mocked PyMISP and return the search() kwargs."""
+def _run_search(client: MISPClient, date_field_filter: str, date_value) -> None:
+    """Consume search_events with the given date filter."""
     list(
         client.search_events(
             date_field_filter=date_field_filter,
@@ -146,30 +147,142 @@ def _search_kwargs(client: MISPClient, date_field_filter: str, date_value) -> di
             page=1,
         )
     )
-    return client._client.search.call_args.kwargs
 
 
-@patch("api_client.client.PyMISP")
-def test_search_events_sends_date_from_as_a_date_string(mock_pymisp) -> None:
-    """date_from must reach MISP as YYYY-MM-DD, not as a Unix timestamp."""
-    mock_pymisp.return_value.search.return_value = []
-    client = MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1)
-
-    kwargs = _search_kwargs(
-        client, "date_from", datetime(2026, 1, 1, 13, 45, tzinfo=timezone.utc)
+def _mocked_client(mock_pymisp, pages: list) -> MISPClient:
+    """A client whose PyMISP.search() answers the given pages in order."""
+    mock_pymisp.return_value.search.side_effect = pages
+    return MISPClient(
+        url=HttpUrl("https://misp.local"), key="k", timeout=1, logger=MagicMock()
     )
 
-    assert kwargs["date_from"] == "2026-01-01"
-    assert kwargs["order"] == "Event.id ASC"
+
+def _sent(client: MISPClient, field: str) -> list:
+    """(page, value of the date filter) of every search() call, in order."""
+    return [
+        (call.kwargs["page"], call.kwargs[field])
+        for call in client._client.search.call_args_list
+    ]
+
+
+# Not a valid event for the model: skipped with a warning, still a non-empty page.
+_PAGE = [{"Event": {"id": "1"}}]
+_START = datetime(2026, 1, 1, 13, 45, tzinfo=timezone.utc)
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@patch("api_client.client.PyMISP")
+def test_date_from_keeps_the_datetime_when_misp_answers_it(mock_pymisp) -> None:
+    """Recent MISP versions answer the timestamp: no fallback request."""
+    client = _mocked_client(mock_pymisp, [_PAGE, _PAGE, []])
+
+    _run_search(client, "date_from", _START)
+
+    assert _sent(client, "date_from") == [(1, _START), (2, _START), (3, _START)]
+    assert client._client.search.call_args.kwargs["order"] == "Event.id ASC"
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@patch("api_client.client.PyMISP")
+def test_date_from_falls_back_to_the_date_string_and_keeps_it(mock_pymisp) -> None:
+    """Page 1 empty with the timestamp: retried as YYYY-MM-DD, kept for page 2+."""
+    client = _mocked_client(mock_pymisp, [[], _PAGE, _PAGE, []])
+
+    _run_search(client, "date_from", _START)
+
+    assert _sent(client, "date_from") == [
+        (1, _START),
+        (1, "2026-01-01"),
+        (2, "2026-01-01"),
+        (3, "2026-01-01"),
+    ]
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@patch("api_client.client.PyMISP")
+def test_date_from_tries_the_format_that_worked_first_on_the_next_run(
+    mock_pymisp,
+) -> None:
+    """The format that answered is remembered and tried first on the next run."""
+    client = _mocked_client(mock_pymisp, [[], _PAGE, [], _PAGE, []])
+    _run_search(client, "date_from", _START)
+    client._client.search.reset_mock()
+
+    _run_search(client, "date_from", _START)
+
+    assert _sent(client, "date_from") == [(1, "2026-01-01"), (2, "2026-01-01")]
 
 
 @patch("api_client.client.PyMISP")
-def test_search_events_keeps_datetime_for_timestamp_filter(mock_pymisp) -> None:
-    """Other filters (timestamp, publish_timestamp) keep the datetime value."""
-    mock_pymisp.return_value.search.return_value = []
-    client = MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1)
-    value = datetime(2026, 1, 1, 13, 45, tzinfo=timezone.utc)
+def test_date_from_logs_a_warning_when_both_formats_return_nothing(
+    mock_pymisp,
+) -> None:
+    """Nothing in either format: one warning naming both formats, no more calls."""
+    client = _mocked_client(mock_pymisp, [[], []])
 
-    kwargs = _search_kwargs(client, "timestamp", value)
+    _run_search(client, "date_from", _START)
 
-    assert kwargs["timestamp"] == value
+    assert _sent(client, "date_from") == [(1, _START), (1, "2026-01-01")]
+    client._logger.warning.assert_called_once()
+    assert "2026-01-01" in client._logger.warning.call_args.args[0]
+    assert client._logger.debug.call_count == 2
+
+
+@patch("api_client.client.PyMISP")
+def test_date_from_string_is_the_utc_date(mock_pymisp) -> None:
+    """2026-01-02T01:00+05:00 is 2026-01-01T20:00Z: the date sent is 2026-01-01."""
+    client = _mocked_client(mock_pymisp, [[], []])
+    start = datetime(2026, 1, 2, 1, 0, tzinfo=timezone(timedelta(hours=5)))
+
+    _run_search(client, "date_from", start)
+
+    assert _sent(client, "date_from")[1] == (1, "2026-01-01")
+
+
+@patch("api_client.client.PyMISP")
+def test_date_from_accepts_a_plain_date(mock_pymisp) -> None:
+    """A plain date also gets its YYYY-MM-DD fallback."""
+    client = _mocked_client(mock_pymisp, [[], []])
+
+    _run_search(client, "date_from", date(2026, 1, 1))
+
+    assert _sent(client, "date_from") == [(1, date(2026, 1, 1)), (1, "2026-01-01")]
+
+
+@patch("api_client.client.PyMISP")
+def test_timestamp_filter_has_no_fallback(mock_pymisp) -> None:
+    """Other filters (timestamp, publish_timestamp) send the datetime once."""
+    client = _mocked_client(mock_pymisp, [[]])
+
+    _run_search(client, "timestamp", _START)
+
+    assert _sent(client, "timestamp") == [(1, _START)]
+    client._logger.warning.assert_not_called()
+
+
+@pytest.mark.filterwarnings("ignore::UserWarning")
+def test_date_from_fallback_on_the_wire() -> None:
+    """What goes over HTTP: a Unix timestamp first, then "from": "2026-01-01"."""
+    base_url = "https://misp.local"
+    bodies = []
+
+    def rest_search(request):
+        bodies.append(json.loads(request.body))
+        # Answer the date string only, as the older MISP versions do.
+        matched = bodies[-1].get("from") == "2026-01-01" and bodies[-1]["page"] == 1
+        return 200, {}, json.dumps(_PAGE if matched else [])
+
+    with responses.RequestsMock(assert_all_requests_are_fired=False) as rsps:
+        _add_pymisp_init_mocks(rsps, base_url)
+        rsps.add_callback(
+            responses.POST, f"{base_url}/events/restSearch", callback=rest_search
+        )
+        client = MISPClient(url=HttpUrl(base_url), key="k", timeout=1)
+
+        _run_search(client, "date_from", _START)
+
+    assert [(b["page"], b["from"]) for b in bodies] == [
+        (1, _START.timestamp()),
+        (1, "2026-01-01"),
+        (2, "2026-01-01"),
+    ]

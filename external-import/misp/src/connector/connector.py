@@ -37,6 +37,7 @@ class Misp:
             verify_ssl=self.config.misp.ssl_verify,
             certificate=self.config.misp.client_cert,
             timeout=self.config.misp.request_timeout,
+            logger=self.logger,
         )
 
         self.converter = EventConverter(
