@@ -45,7 +45,7 @@ def test_observable_to_intelowl(stix_entity, expected):
         ("TLP:WHITE", "CLEAR"),
         ("TLP:GREEN", "GREEN"),
         ("TLP:AMBER", "AMBER"),
-        ("TLP:AMBER+STRICT", "AMBER"),
+        ("TLP:AMBER+STRICT", "RED"),
         ("TLP:RED", "RED"),
         (None, "CLEAR"),
     ],

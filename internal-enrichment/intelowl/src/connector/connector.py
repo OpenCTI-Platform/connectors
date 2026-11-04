@@ -1,6 +1,7 @@
 from typing import Any
 
 from connector.converter_to_stix import (
+    TLP_RANK,
     ConverterToStix,
     intelowl_tlp,
     observable_to_intelowl,
@@ -44,12 +45,39 @@ class IntelOwlConnector:
         return (opencti_entity.get("entity_type") or "").lower() in scopes
 
     @staticmethod
-    def _entity_tlp(opencti_entity: dict[str, Any]) -> str | None:
-        tlp = None
-        for marking in opencti_entity.get("objectMarking") or []:
-            if marking.get("definition_type") == "TLP":
-                tlp = marking["definition"]
-        return tlp
+    def _entity_tlp(
+        opencti_entity: dict[str, Any],
+        stix_entity: dict[str, Any] | None = None,
+        stix_objects: list[Any] | None = None,
+    ) -> str | None:
+        """The most restrictive TLP on the observable, whatever the marking order.
+
+        Both the OpenCTI entity's markings and the STIX observable's
+        `object_marking_refs` (resolved against marking definitions in the bundle,
+        as a playbook may send them) are considered.
+        """
+        tlps = [
+            marking["definition"]
+            for marking in opencti_entity.get("objectMarking") or []
+            if marking.get("definition_type") == "TLP" and marking.get("definition")
+        ]
+        refs = set((stix_entity or {}).get("object_marking_refs") or [])
+        for obj in stix_objects or []:
+            if not isinstance(obj, dict) or obj.get("id") not in refs:
+                continue
+            name = obj.get("name") or ""
+            definition = obj.get("definition") or {}
+            if name.upper().startswith("TLP:"):
+                tlps.append(name)
+            elif isinstance(definition, dict) and definition.get("tlp"):
+                tlps.append(f"TLP:{definition['tlp']}")
+        if not tlps:
+            return None
+        # An unknown TLP name is treated as RED rather than guessed at.
+        return max(
+            (tlp.upper() if tlp.upper() in TLP_RANK else "TLP:RED" for tlp in tlps),
+            key=TLP_RANK.__getitem__,
+        )
 
     def _send_bundle(self, stix_objects: list[Any]) -> str:
         bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -88,7 +116,7 @@ class IntelOwlConnector:
                 f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
             )
 
-        entity_tlp = self._entity_tlp(opencti_entity)
+        entity_tlp = self._entity_tlp(opencti_entity, stix_entity, stix_objects)
         max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         if not self.helper.check_max_tlp(entity_tlp, max_tlp):
             raise ValueError(

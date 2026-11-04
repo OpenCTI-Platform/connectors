@@ -23,14 +23,25 @@ _TLP_LEVELS = {
     "TLP:RED": "red",
 }
 
+# How restrictive each OpenCTI TLP marking is, to pick the strictest of several
+TLP_RANK = {
+    "TLP:CLEAR": 0,
+    "TLP:WHITE": 0,
+    "TLP:GREEN": 1,
+    "TLP:AMBER": 2,
+    "TLP:AMBER+STRICT": 3,
+    "TLP:RED": 4,
+}
+
 # OpenCTI TLP marking -> TLP sent to IntelOwl (CLEAR, GREEN, AMBER or RED). IntelOwl uses it
-# to decide which analyzers may send the observable to third parties.
+# to decide which analyzers may send the observable to third parties. IntelOwl has no
+# AMBER+STRICT, so it is sent as RED rather than relaxed to AMBER.
 _INTELOWL_TLP = {
     "TLP:CLEAR": "CLEAR",
     "TLP:WHITE": "CLEAR",
     "TLP:GREEN": "GREEN",
     "TLP:AMBER": "AMBER",
-    "TLP:AMBER+STRICT": "AMBER",
+    "TLP:AMBER+STRICT": "RED",
     "TLP:RED": "RED",
 }
 

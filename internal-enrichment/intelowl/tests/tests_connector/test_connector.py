@@ -117,6 +117,52 @@ def test_enriches_an_observable(intelowl_job, ipv4_stix_entity):
     }
 
 
+@pytest.mark.parametrize(
+    "markings", [["TLP:RED", "TLP:AMBER"], ["TLP:AMBER", "TLP:RED"]]
+)
+def test_uses_the_strictest_of_several_tlp_markings(
+    intelowl_job, ipv4_stix_entity, markings
+):
+    client = FakeIntelOwlClient(job=intelowl_job)
+    connector, _ = make_connector(client)
+    message = make_message(ipv4_stix_entity)
+    message["enrichment_entity"]["objectMarking"] = [
+        {"definition_type": "TLP", "definition": tlp} for tlp in markings
+    ]
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector.process_message(message)
+    assert client.analyzed == []
+
+
+def test_uses_tlp_from_the_bundle_marking_refs(intelowl_job, ipv4_stix_entity):
+    # A playbook bundle can carry a TLP on the observable that the OpenCTI entity lacks.
+    client = FakeIntelOwlClient(job=intelowl_job)
+    connector, _ = make_connector(client)
+    red = {
+        "type": "marking-definition",
+        "id": "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed",
+        "definition_type": "TLP",
+        "name": "TLP:RED",
+    }
+    entity = {**ipv4_stix_entity, "object_marking_refs": [red["id"]]}
+    message = make_message(entity, tlp=None)
+    message["stix_objects"] = [entity, red]
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector.process_message(message)
+    assert client.analyzed == []
+
+
+def test_sends_amber_strict_to_intelowl_as_red(intelowl_job, ipv4_stix_entity):
+    client = FakeIntelOwlClient(job=intelowl_job)
+    connector, _ = make_connector(client)
+
+    connector.process_message(make_message(ipv4_stix_entity, tlp="TLP:AMBER+STRICT"))
+
+    assert client.analyzed[0]["tlp"] == "RED"
+
+
 def test_rejects_an_observable_above_max_tlp(intelowl_job, ipv4_stix_entity):
     client = FakeIntelOwlClient(job=intelowl_job)
     connector, helper = make_connector(client)

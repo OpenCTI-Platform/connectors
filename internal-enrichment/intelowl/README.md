@@ -33,10 +33,13 @@ The created objects carry the observable's TLP and are authored by an `IntelOwl`
 
 ## TLP handling
 
-The connector refuses observables whose TLP is above `CONNECTOR_MAX_TLP`. Otherwise it sends
-the observable's TLP to IntelOwl (`TLP:CLEAR`/`TLP:WHITE` as `CLEAR`, `TLP:GREEN` as `GREEN`,
-`TLP:AMBER`/`TLP:AMBER+STRICT` as `AMBER`, `TLP:RED` as `RED`, unmarked as `CLEAR`). IntelOwl
-uses it to skip analyzers that are not allowed to share the observable with third parties.
+The connector uses the most restrictive TLP on the observable, from both the OpenCTI entity
+and the STIX observable's marking references. It refuses observables whose TLP is above
+`CONNECTOR_MAX_TLP`. Otherwise it sends that TLP to IntelOwl (`TLP:CLEAR`/`TLP:WHITE` as
+`CLEAR`, `TLP:GREEN` as `GREEN`, `TLP:AMBER` as `AMBER`, `TLP:AMBER+STRICT` and `TLP:RED` as
+`RED`, unmarked as `CLEAR`); IntelOwl has no AMBER+STRICT, so it is not relaxed to AMBER.
+IntelOwl uses it to skip analyzers that are not allowed to share the observable with third
+parties. Created objects carry the same TLP.
 
 ## Requirements
 
