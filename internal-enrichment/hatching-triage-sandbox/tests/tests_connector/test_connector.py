@@ -354,3 +354,55 @@ class TestRetries:
 def _raise_json_error():
     raise json.JSONDecodeError("Expecting value", "<html>", 0)
     yield  # noqa: unreachable - makes this a generator
+
+
+class TestExtractedFileDownload:
+    OBSERVABLE = {
+        "id": "observable-id",
+        "standard_id": "artifact--4cb2c4c1-7a3c-4e2b-9a8e-3c6f7f1b2d10",
+    }
+    OVERVIEW = {
+        "analysis": {},
+        "extracted": [
+            {
+                "config": {"rule": "Agenttesla", "c2": [], "credentials": []},
+                "tasks": ["behavioral1"],
+                "dumped_file": "memory/file.bin",
+            }
+        ],
+    }
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, connector):
+        connector.identity = "identity--7b0e9c3a-5d1f-4c8e-8f2a-1e6d3b9c4a70"
+        connector._send_bundle = MagicMock(return_value="sent")
+
+    def test_skips_extracted_file_when_not_available(self, connector):
+        connector._get_task_file = MagicMock(return_value=None)
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        connector._get_task_file.assert_called_once_with(
+            "sample-123", "behavioral1", "memory/file.bin"
+        )
+        connector.helper.api.stix_cyber_observable.upload_artifact.assert_not_called()
+        connector.helper.connector_logger.warning.assert_called_once()
+
+    @patch("connector.connector.magic.from_buffer", return_value="text/plain")
+    def test_uploads_extracted_file_when_available(self, _mock_magic, connector):
+        connector._get_task_file = MagicMock(return_value=b"file-content")
+        upload = connector.helper.api.stix_cyber_observable.upload_artifact
+        upload.return_value = {
+            "id": "artifact-id",
+            "standard_id": "artifact--9d1e2f3a-4b5c-4d6e-8f7a-0b1c2d3e4f50",
+        }
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        upload.assert_called_once()
+        assert upload.call_args.kwargs["data"] == b"file-content"
+        assert upload.call_args.kwargs["file_name"] == "sample-123_memory/file.bin"
