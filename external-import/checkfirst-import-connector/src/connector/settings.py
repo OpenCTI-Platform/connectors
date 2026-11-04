@@ -1,5 +1,5 @@
-from datetime import timedelta
-from typing import Any
+from datetime import date, datetime, time, timedelta, timezone
+from typing import Any, Self
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -9,7 +9,14 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, HttpUrl, SecretStr, ValidationInfo, field_validator
+from pydantic import (
+    Field,
+    HttpUrl,
+    SecretStr,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -59,6 +66,15 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
             "Defaults to 1 year ago."
         ),
         default="P1Y",
+    )
+    until: DatetimeFromIsoString | None = Field(
+        description=(
+            "Only ingest articles published on or before this date. "
+            "Accepts ISO 8601 absolute dates (e.g., 2025-12-31T23:59:59Z) "
+            "or durations relative to now (e.g., P30D). "
+            "Defaults to no upper bound."
+        ),
+        default=None,
     )
     force_reprocess: bool = Field(
         description=(
@@ -128,6 +144,31 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
         if isinstance(value, int):
             return value
         return int(str(value).strip())
+
+    @field_validator("since", "until", mode="after")
+    @classmethod
+    def _as_utc(cls, value: datetime | date | None) -> datetime | None:
+        """Read a date or naive datetime as UTC.
+
+        A YAML config hands over unquoted values as `date` or naive `datetime`
+        objects, which `DatetimeFromIsoString` passes through unchanged. Left
+        naive, they cannot be compared with an aware bound, nor sent to the API
+        with an explicit `Z`.
+        """
+        if value is None:
+            return None
+        if not isinstance(value, datetime):
+            value = datetime.combine(value, time.min)
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+    @model_validator(mode="after")
+    def _check_until_not_before_since(self) -> Self:
+        """Fail fast at startup on a window that ends before it starts."""
+        if self.until is not None and self.until < self.since:
+            raise ValueError(
+                "`CHECKFIRST_UNTIL` must not be earlier than `CHECKFIRST_SINCE`"
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

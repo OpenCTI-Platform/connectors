@@ -15,6 +15,7 @@ checkfirst:
   api_key: ChangeMe
   api_endpoint: /v1/articles
   since: P365D
+  # until: "2025-12-31T23:59:59Z"
   force_reprocess: false
   tlp_level: clear
   # Parallel Row → STIX (1 = sequential in main process)

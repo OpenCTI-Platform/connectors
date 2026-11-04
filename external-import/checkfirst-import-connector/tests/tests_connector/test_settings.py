@@ -1,3 +1,4 @@
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 import pytest
@@ -26,6 +27,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "api_key": "test-api-key",
                     "api_endpoint": "/v1/articles",
                     "since": "2025-01-01T00:00:00Z",
+                    "until": "2025-01-31T23:59:59Z",
                     "force_reprocess": True,
                     "tlp_level": "clear",
                     "max_row_bytes": 8192,
@@ -144,6 +146,111 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     assert str("Error validating configuration") in str(err)
 
 
+def _settings_from(checkfirst: dict[str, Any]) -> ConnectorSettings:
+    """Build `ConnectorSettings` from a minimal valid dict and the given `checkfirst` values."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "checkfirst": {
+                        "api_url": "https://api.checkfirst.example",
+                        "api_key": "test-api-key",
+                        **checkfirst,
+                    },
+                }
+            )
+
+    return FakeConnectorSettings()
+
+
+def test_settings_should_default_until_to_none():
+    """`until` is optional: without it the import window has no end."""
+    assert _settings_from({}).checkfirst.until is None
+
+
+@pytest.mark.parametrize(
+    "until, expected",
+    [
+        pytest.param(
+            "2025-01-31T23:59:59Z",
+            datetime(2025, 1, 31, 23, 59, 59, tzinfo=timezone.utc),
+            id="iso_string_utc",
+        ),
+        pytest.param(
+            "2025-01-31T23:59:59+02:00",
+            datetime(2025, 1, 31, 21, 59, 59, tzinfo=timezone.utc),
+            id="iso_string_with_offset",
+        ),
+        pytest.param(
+            date(2025, 1, 31),
+            datetime(2025, 1, 31, tzinfo=timezone.utc),
+            id="yaml_unquoted_date",
+        ),
+        pytest.param(
+            datetime(2025, 1, 31, 23, 59, 59),
+            datetime(2025, 1, 31, 23, 59, 59, tzinfo=timezone.utc),
+            id="yaml_unquoted_naive_datetime",
+        ),
+    ],
+)
+def test_settings_should_parse_absolute_until_as_utc(until, expected):
+    """An absolute `until` becomes a UTC-aware datetime, whatever form the config gives."""
+    settings = _settings_from({"since": "2025-01-01T00:00:00Z", "until": until})
+    assert settings.checkfirst.until == expected
+
+
+def test_settings_should_resolve_relative_until_against_now():
+    """A duration `until` is resolved against now, like `since`."""
+    before = datetime.now(tz=timezone.utc)
+    settings = _settings_from({"since": "P1Y", "until": "P30D"})
+    after = datetime.now(tz=timezone.utc)
+
+    assert before - timedelta(days=30) <= settings.checkfirst.until
+    assert settings.checkfirst.until <= after - timedelta(days=30)
+
+
+def test_settings_should_accept_until_equal_to_since():
+    """A window of a single instant is valid: the bounds are inclusive."""
+    settings = _settings_from(
+        {"since": "2025-01-01T00:00:00Z", "until": "2025-01-01T00:00:00Z"}
+    )
+    assert settings.checkfirst.until == settings.checkfirst.since
+
+
+def test_settings_should_raise_when_until_is_not_a_date():
+    """An unparsable `until` is reported against that field."""
+    with pytest.raises(ConfigValidationError) as err:
+        _settings_from({"until": "not-a-date"})
+
+    assert "checkfirst.until" in str(err.value.__cause__)
+
+
+@pytest.mark.parametrize(
+    "since, until",
+    [
+        pytest.param(
+            "2025-02-01T00:00:00Z", "2025-01-01T00:00:00Z", id="absolute_dates"
+        ),
+        pytest.param(
+            "2025-02-01T00:00:00Z", date(2025, 1, 1), id="aware_since_naive_until"
+        ),
+        pytest.param("P30D", "P1Y", id="relative_durations"),
+    ],
+)
+def test_settings_should_raise_when_until_is_before_since(since, until):
+    """A window that ends before it starts is refused at startup."""
+    with pytest.raises(ConfigValidationError) as err:
+        _settings_from({"since": since, "until": until})
+
+    assert "`CHECKFIRST_UNTIL` must not be earlier than `CHECKFIRST_SINCE`" in str(
+        err.value.__cause__
+    )
+
+
 @pytest.mark.parametrize(
     "tuning, expected",
     [
@@ -174,22 +281,7 @@ def test_settings_should_coerce_tuning_values(tuning, expected):
     Test that the tuning parameters accept the string values provided by env vars,
     and that an empty value falls back to the field default instead of failing.
     """
-    settings_dict = {
-        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-        "connector": {},
-        "checkfirst": {
-            "api_url": "https://api.checkfirst.example",
-            "api_key": "test-api-key",
-            **tuning,
-        },
-    }
-
-    class FakeConnectorSettings(ConnectorSettings):
-        @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-            return handler(settings_dict)
-
-    checkfirst = FakeConnectorSettings().checkfirst
+    checkfirst = _settings_from(tuning).checkfirst
     assert (
         checkfirst.convert_workers,
         checkfirst.convert_batch_size,

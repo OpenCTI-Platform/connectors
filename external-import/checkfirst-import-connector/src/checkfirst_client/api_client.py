@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from json import JSONDecodeError
 from typing import Any, Generator
 
@@ -18,6 +18,15 @@ MAX_RETRIES = 3
 
 class CheckfirstAPIError(Exception):
     """Raised when Checkfirst API requests fail."""
+
+
+def _to_iso_utc(value: datetime) -> str:
+    """Format an aware datetime in UTC as the API expects it, e.g. `2025-01-01T00:00:00Z`."""
+    return (
+        value.astimezone(timezone.utc)
+        .isoformat(timespec="seconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def get_skip_reason_from_validation_error(err: ValidationError) -> SkipReason | None:
@@ -65,6 +74,7 @@ class CheckfirstClient:
         api_endpoint: str,
         after: str | None = None,
         since: datetime | None = None,
+        until: datetime | None = None,
     ) -> Generator[dict[str, Any], None, None]:
         """Fetch keyset-paginated data from the API endpoint.
 
@@ -77,6 +87,7 @@ class CheckfirstClient:
             after: Exclusive `_id` cursor; only documents with `_id` greater
                 than this value are returned
             since: Only fetch articles published on or after this ISO 8601 date
+            until: Only fetch articles published on or before this ISO 8601 date
 
         Yields:
             Dictionary objects representing each row/article from the API
@@ -108,14 +119,21 @@ class CheckfirstClient:
             if cursor:
                 params["after"] = cursor
             if since:
-                params["since"] = since.isoformat(timespec="seconds").replace(
-                    "+00:00", "Z"
-                )
+                params["since"] = _to_iso_utc(since)
+            if until:
+                params["until"] = _to_iso_utc(until)
 
             try:
                 self.logger.debug(
-                    f"[API] Fetching {endpoint_url}",
-                    {"params": {"after": cursor, "since": since}},
+                    "[API] Fetching page",
+                    {
+                        "url": endpoint_url,
+                        "params": {
+                            "after": cursor,
+                            "since": since,
+                            "until": until,
+                        },
+                    },
                 )
 
                 response = session.get(
@@ -167,6 +185,7 @@ class CheckfirstClient:
         api_endpoint: str,
         after: str | None = None,
         since: datetime | None = None,
+        until: datetime | None = None,
         max_row_bytes: int | None = None,
     ) -> Generator[Article, None, None]:
         """Iterate over validated rows from the API endpoint.
@@ -175,6 +194,7 @@ class CheckfirstClient:
             api_endpoint: API endpoint path
             after: Exclusive `_id` cursor to resume from
             since: Only fetch articles published on or after this ISO 8601 date
+            until: Only fetch articles published on or before this ISO 8601 date
             max_row_bytes: Skip any API row larger than this approximate number of bytes
 
         Yields:
@@ -187,6 +207,7 @@ class CheckfirstClient:
             api_endpoint=api_endpoint,
             after=after,
             since=since,
+            until=until,
         ):
             row_number += 1
             item_id = item.get("_id")

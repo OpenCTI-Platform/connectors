@@ -385,6 +385,7 @@ class CheckfirstImportConnector:
                 api_endpoint=self.config.checkfirst.api_endpoint,
                 after=after,
                 since=self.config.checkfirst.since,
+                until=self.config.checkfirst.until,
                 max_row_bytes=self.config.checkfirst.max_row_bytes,
             ):
                 pending_rows.append(row)
