@@ -662,6 +662,7 @@ class Misp:
             )
 
             curr_event_date = None
+            max_event_datetime: datetime | None = None
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -673,7 +674,17 @@ class Misp:
                     if not self._validate_event(event):
                         continue
 
-                    curr_event_date = self._get_event_datetime(event).isoformat()
+                    # Keep the highest event datetime of the run: with
+                    # `date_from` the events come in `Event.id` order, so the
+                    # last event is not always the most recent one, and the
+                    # checkpoint written after the loop must never move back.
+                    event_datetime = self._get_event_datetime(event)
+                    if (
+                        max_event_datetime is None
+                        or event_datetime > max_event_datetime
+                    ):
+                        max_event_datetime = event_datetime
+                        curr_event_date = event_datetime.isoformat()
 
                     if self._current_bundle is None:
                         self.logger.info(
