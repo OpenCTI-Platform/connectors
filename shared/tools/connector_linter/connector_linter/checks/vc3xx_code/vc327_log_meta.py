@@ -18,8 +18,10 @@ still mix it with pycti's ``helper.connector_logger`` or stdlib loggers. A
 receiver is resolved as an SDK logger when it is:
 
 - ``self.logger`` / ``cls.logger`` in a class inheriting, directly or
-  through other connector classes, from ``BaseDataProcessor``,
-  ``ExternalImportConnector`` or ``BaseClientApi``;
+  through other connector classes, from an SDK class that carries a logger
+  (``BaseDataProcessor``, ``ExternalImportConnector``, ``BaseClientApi``,
+  ``BaseConnectorSettings``, ``BaseConnectorState``,
+  ``ExternalImportConnectorState``);
 - a name or ``self`` attribute bound to ``get_logger(...)``;
 - a parameter, variable or attribute annotated ``ConnectorLoggerAdapter``;
 - a name or ``self`` attribute assigned from one of the above, including a
@@ -57,8 +59,18 @@ from connector_linter.registry import CheckRegistry
 
 _LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical"}
 
-# SDK classes whose instances get a ``logger`` attribute (_ClassLoggerMixin)
-_SDK_LOGGER_CLASSES = {"BaseDataProcessor", "ExternalImportConnector", "BaseClientApi"}
+# Public SDK classes inheriting from _ClassLoggerMixin, which gives them and
+# their subclasses a ``logger`` attribute. The linter does not parse the SDK, so
+# subclasses within the SDK are listed too. Kept in sync with connectors-sdk by
+# test_sdk_logger_classes_match_connectors_sdk.
+_SDK_LOGGER_CLASSES = {
+    "BaseClientApi",
+    "BaseConnectorSettings",
+    "BaseConnectorState",
+    "BaseDataProcessor",
+    "ExternalImportConnector",
+    "ExternalImportConnectorState",
+}
 _GET_LOGGER = "get_logger"
 _ADAPTER = "ConnectorLoggerAdapter"
 _SDK_LOGGER_NAMES = _SDK_LOGGER_CLASSES | {_GET_LOGGER, _ADAPTER}

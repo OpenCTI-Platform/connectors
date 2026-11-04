@@ -1,8 +1,14 @@
 """Unit tests for VC327 — SDK log messages must be static, data passed in meta."""
 
+import ast
+from pathlib import Path
+
 import pytest
+from connector_linter.checks.vc3xx_code.vc327_log_meta import _SDK_LOGGER_CLASSES
 from connector_linter.models import Severity
 from connector_linter.runner import run_checks
+
+_SDK_PACKAGE = Path(__file__).resolve().parents[5] / "connectors-sdk" / "connectors_sdk"
 
 _PROCESSOR_HEADER = """\
 from connectors_sdk import BaseDataProcessor
@@ -51,6 +57,25 @@ class Client(BaseClient):
     def fetch(self, count):
         log = self.logger
         log.info(f"Fetched {count} items")
+"""
+
+_SETTINGS_VALIDATOR = """\
+from connectors_sdk import BaseConnectorSettings
+from pydantic import model_validator
+
+class ConnectorSettings(BaseConnectorSettings):
+    @model_validator(mode="after")
+    def check(self):
+        self.logger.warning(f"Deprecated option {self.connector.name}")
+        return self
+"""
+
+_STATE_SUBCLASS = """\
+from connectors_sdk import ExternalImportConnectorState
+
+class ConnectorState(ExternalImportConnectorState):
+    def describe(self):
+        self.logger.info(f"Last run {self.last_run}")
 """
 
 _PYCTI_CONNECTOR_LOGGER = """\
@@ -231,8 +256,16 @@ class TestVC327LogMeta:
             (_GET_LOGGER_MODULE, 6),
             (_ANNOTATED_CLIENT, 8),
             (_SUBCLASS_OF_LOCAL_SDK_CLASS, 9),
+            (_SETTINGS_VALIDATOR, 7),
+            (_STATE_SUBCLASS, 5),
         ],
-        ids=["get_logger", "annotated-param", "local-subclass"],
+        ids=[
+            "get_logger",
+            "annotated-param",
+            "local-subclass",
+            "settings-subclass",
+            "state-subclass",
+        ],
     )
     def test_resolves_sdk_loggers(self, connector_src, source, line):
         path = connector_src(("src/main.py", source))
@@ -289,6 +322,43 @@ class TestVC327LogMeta:
             ("main.py", 5),
             ("main.py", 6),
         ]
+
+    def test_sdk_logger_classes_match_connectors_sdk(self):
+        """Every public SDK class carrying a logger is listed, and only those.
+
+        Classes of private modules may be listed too (BaseConnectorState), as
+        long as they inherit from _ClassLoggerMixin.
+        """
+        if not _SDK_PACKAGE.is_dir():
+            pytest.skip("connectors-sdk sources not available")
+        bases: dict[str, set[str]] = {}
+        # Classes of private modules (_work_manager.py...) are not part of the API
+        private: set[str] = set()
+        for py_file in _SDK_PACKAGE.rglob("*.py"):
+            tree = ast.parse(py_file.read_text(encoding="utf-8"))
+            is_private_module = py_file.stem.startswith("_") and py_file.stem != (
+                "__init__"
+            )
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ClassDef):
+                    if is_private_module:
+                        private.add(node.name)
+                    bases.setdefault(node.name, set()).update(
+                        base.id if isinstance(base, ast.Name) else base.attr
+                        for base in node.bases
+                        if isinstance(base, ast.Name | ast.Attribute)
+                    )
+        with_logger = {"_ClassLoggerMixin"}
+        changed = True
+        while changed:
+            changed = False
+            for name, name_bases in bases.items():
+                if name not in with_logger and name_bases & with_logger:
+                    with_logger.add(name)
+                    changed = True
+        public = {name for name in with_logger - private if not name.startswith("_")}
+        assert public <= _SDK_LOGGER_CLASSES
+        assert _SDK_LOGGER_CLASSES <= with_logger
 
     def test_skipped_without_sdk_logger(self, connector_src):
         path = connector_src(("src/main.py", _NO_SDK))
