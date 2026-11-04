@@ -312,5 +312,5 @@ def test_settings_should_refuse_a_boolean_tuning_value():
 
 
 def test_settings_should_read_an_empty_until_as_unset():
-    """docker-compose forwards an unset `CHECKFIRST_UNTIL` as an empty string."""
+    """An empty `CHECKFIRST_UNTIL` means no upper bound, as when it is unset."""
     assert _settings_from({"until": ""}).checkfirst.until is None

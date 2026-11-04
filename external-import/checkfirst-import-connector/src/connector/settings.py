@@ -148,7 +148,7 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
     @field_validator("until", mode="before")
     @classmethod
     def _empty_until_is_unset(cls, value: Any) -> Any:
-        """docker-compose forwards an unset `CHECKFIRST_UNTIL` as an empty string."""
+        """An empty `CHECKFIRST_UNTIL` means no upper bound, as when it is unset."""
         if isinstance(value, str) and not value.strip():
             return None
         return value
