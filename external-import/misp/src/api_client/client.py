@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, Generator
 from warnings import warn
 
+import urllib3
 from api_client.models import EventRestSearchListItem
 from pydantic import HttpUrl, ValidationError
 from pymisp import PyMISP, PyMISPError
@@ -53,6 +54,12 @@ class MISPClient:
             raise_on_status=False,  # let PyMISP handle the response
         )
         http_adapter = HTTPAdapter(max_retries=retry_strategy)
+
+        if not verify_ssl:
+            # Certificate verification was turned off on purpose: urllib3 would
+            # otherwise emit an InsecureRequestWarning on every request, through
+            # warnings.warn() to stderr, bypassing CONNECTOR_LOG_LEVEL.
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         self._client = PyMISP(
             url=str(url),

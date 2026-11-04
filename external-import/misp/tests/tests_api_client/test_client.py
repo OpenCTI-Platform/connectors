@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 import responses
+import urllib3
 from api_client.client import MISPClient
 from pydantic import HttpUrl
 
@@ -302,3 +303,27 @@ def test_date_from_fallback_on_the_wire() -> None:
         (1, "2026-01-01"),
         (2, "2026-01-01"),
     ]
+
+
+@patch("api_client.client.urllib3.disable_warnings")
+@patch("api_client.client.PyMISP")
+def test_insecure_request_warning_is_silenced_when_ssl_verify_is_off(
+    mock_pymisp, mock_disable_warnings
+) -> None:
+    MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1, verify_ssl=False)
+
+    mock_disable_warnings.assert_called_once_with(
+        urllib3.exceptions.InsecureRequestWarning
+    )
+    assert mock_pymisp.call_args.kwargs["ssl"] is False
+
+
+@patch("api_client.client.urllib3.disable_warnings")
+@patch("api_client.client.PyMISP")
+def test_insecure_request_warning_is_kept_when_ssl_verify_is_on(
+    mock_pymisp, mock_disable_warnings
+) -> None:
+    MISPClient(url=HttpUrl("https://misp.local"), key="k", timeout=1, verify_ssl=True)
+
+    mock_disable_warnings.assert_not_called()
+    assert mock_pymisp.call_args.kwargs["ssl"] is True
