@@ -2,6 +2,7 @@
 
 import re
 
+from connector_linter.checks._sdk_bases import SDK_SETTINGS_BASE_NAMES
 from connector_linter.checks.vc3xx_code._helpers import (
     find_classes,
     find_imports,
@@ -25,19 +26,6 @@ from connector_linter.registry import CheckRegistry
 _LEGACY_CONFIG_PATTERNS = [
     re.compile(r"""get_config_variable\s*\(""", re.MULTILINE),
 ]
-
-# ---------------------------------------------------------------------------
-# Accepted connectors-sdk settings base classes: the generic one and the
-# per-connector-type ones (all subclasses of BaseConnectorSettings).
-# ---------------------------------------------------------------------------
-_SDK_SETTINGS_BASE_NAMES = (
-    "BaseConnectorSettings",
-    "BaseExternalImportConnectorSettings",
-    "BaseInternalEnrichmentConnectorSettings",
-    "BaseStreamConnectorSettings",
-    "BaseInternalExportFileConnectorSettings",
-    "BaseInternalImportFileConnectorSettings",
-)
 
 
 @CheckRegistry.register(
@@ -73,30 +61,26 @@ def check_sdk_base_settings(ctx: ConnectorContext) -> list[CheckFinding]:
 
     # Tier 1: check for connectors-sdk BaseConnectorSettings or one of its
     # per-connector-type subclasses (import + class)
-    sdk_imports = find_imports(
-        trees,
-        module_pattern=r"^connectors_sdk",
-        name_pattern=r"^(" + "|".join(_SDK_SETTINGS_BASE_NAMES) + r")$",
-    )
-    sdk_base_name = ""
-    sdk_classes = []
-    for base_name in _SDK_SETTINGS_BASE_NAMES:
+    for base_name in SDK_SETTINGS_BASE_NAMES:
+        # Both import AND class must exist for the SAME base — import alone =
+        # incomplete migration, and importing one base while subclassing
+        # another does not prove the subclassed one comes from connectors-sdk
+        sdk_imports = find_imports(
+            trees,
+            module_pattern=r"^connectors_sdk",
+            name_pattern=rf"^{re.escape(base_name)}$",
+        )
         sdk_classes = find_classes(trees, base_name=base_name)
-        if sdk_classes:
-            sdk_base_name = base_name
-            break
-
-    # Both import AND class must exist — import alone = incomplete migration
-    if sdk_imports and sdk_classes:
-        cls = sdk_classes[0]
-        return [
-            CheckFinding(
-                message=f"{sdk_base_name} implemented",
-                severity=Severity.INFO,
-                file_path=cls.file_path,
-                line=cls.line,
-            ),
-        ]
+        if sdk_imports and sdk_classes:
+            cls = sdk_classes[0]
+            return [
+                CheckFinding(
+                    message=f"{base_name} implemented",
+                    severity=Severity.INFO,
+                    file_path=cls.file_path,
+                    line=cls.line,
+                ),
+            ]
 
     # Tier 2: check for legacy get_config_variable (regex — AST not needed here)
     legacy_hits = find_pattern_locations(sources, _LEGACY_CONFIG_PATTERNS)
