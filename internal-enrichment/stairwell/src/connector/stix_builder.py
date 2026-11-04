@@ -305,6 +305,80 @@ def make_ipv6(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any]:
 # One DNS label: letters, digits, hyphens and underscores (SRV/DKIM names),
 # not starting or ending with a hyphen.
 _DNS_LABEL = re.compile(r"(?!-)[a-z0-9_-]{1,63}(?<!-)")
+# A top-level domain: letters only, or an internationalised one in punycode.
+_TLD = re.compile(r"[a-z]{2,63}|xn--[a-z0-9-]{1,59}")
+# File extensions found in strings extracted from files that are not
+# delegated top-level domains, so `kernel32.dll` is not a host name.
+_FILE_EXTENSIONS = frozenset(
+    {
+        "apk",
+        "asp",
+        "aspx",
+        "bak",
+        "bat",
+        "bin",
+        "cer",
+        "cfg",
+        "cmd",
+        "conf",
+        "cpl",
+        "crt",
+        "css",
+        "csv",
+        "dat",
+        "db",
+        "dll",
+        "dmg",
+        "dmp",
+        "doc",
+        "docx",
+        "drv",
+        "dylib",
+        "exe",
+        "gz",
+        "hta",
+        "htm",
+        "html",
+        "img",
+        "inf",
+        "ini",
+        "iso",
+        "jar",
+        "js",
+        "jse",
+        "json",
+        "jsp",
+        "lib",
+        "lnk",
+        "log",
+        "msi",
+        "ocx",
+        "pdb",
+        "pdf",
+        "pem",
+        "php",
+        "plist",
+        "ppt",
+        "pptx",
+        "rar",
+        "rtf",
+        "scr",
+        "sql",
+        "sys",
+        "tar",
+        "tmp",
+        "txt",
+        "vbe",
+        "vbs",
+        "wsf",
+        "xls",
+        "xlsm",
+        "xlsx",
+        "xml",
+        "yaml",
+        "yml",
+    }
+)
 
 
 def normalize_domain(value: Any) -> str | None:
@@ -313,7 +387,9 @@ def normalize_domain(value: Any) -> str | None:
     Values come from file strings and DNS answers; one malformed
     `domain-name.value` makes OpenCTI reject the bundle it is in. A trailing
     root dot is dropped, and internationalised names are stored in their
-    ASCII (punycode) form.
+    ASCII (punycode) form. A dotted string whose last label is not a
+    top-level domain (an address, a version number, a file name) is not a
+    host name.
     """
     if not isinstance(value, str):
         return None
@@ -331,6 +407,8 @@ def normalize_domain(value: Any) -> str | None:
         len(name) > 253
         or len(labels) < 2
         or not all(_DNS_LABEL.fullmatch(label) for label in labels)
+        or not _TLD.fullmatch(labels[-1])
+        or labels[-1] in _FILE_EXTENSIONS
     ):
         return None
     return name
@@ -436,15 +514,37 @@ def make_autonomous_system(
     return _observable(AutonomousSystem, tlp, number=int(number), name=name, **kwargs)
 
 
-def make_ip(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
-    """IPv4/IPv6 SCO for a valid address (normalised), or None.
+# The only IPv6 block IANA allocates as global unicast; `is_global` alone
+# also passes deprecated site-local (fec0::/10), reserved (4000::/3) and,
+# on some Python releases, IPv4-mapped forms of public IPv4 addresses
+# (::ffff:8.8.8.8).
+_IPV6_GLOBAL_UNICAST = ipaddress.ip_network("2000::/3")
+# The IPv6 documentation prefix, inside 2000::/3; older Python releases
+# count it as global.
+_IPV6_DOCUMENTATION = ipaddress.ip_network("3fff::/20")
 
-    Values come from strings extracted from files, so `1.2.3.4:80` or free
-    text must not become an address SCO.
+
+def make_ip(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
+    """IPv4/IPv6 SCO for a valid, publicly routable address (normalised), or None.
+
+    Values come from strings extracted from files and from DNS answers, so
+    `1.2.3.4:80` or free text must not become an address SCO. Loopback,
+    private, link-local, reserved, unspecified and multicast addresses are
+    left out: they are common in malware strings and sinkholed answers, and
+    say nothing about the file or domain they would be related to.
+    `ipaddress` counts multicast as global, so it is checked separately, and
+    an IPv6 address must also be global unicast (2000::/3) and outside the
+    documentation prefix (3fff::/20).
     """
     try:
         addr = ipaddress.ip_address(str(value).strip())
     except ValueError:
+        return None
+    if not addr.is_global or addr.is_multicast:
+        return None
+    if addr.version == 6 and (
+        addr not in _IPV6_GLOBAL_UNICAST or addr in _IPV6_DOCUMENTATION
+    ):
         return None
     if addr.version == 6:
         return make_ipv6(str(addr), tlp=tlp, **kwargs)
