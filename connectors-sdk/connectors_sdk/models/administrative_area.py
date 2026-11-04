@@ -2,7 +2,11 @@
 
 from connectors_sdk.models._location import Location
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.enums import LocationType
+from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
+    LocationType,
+)
 from pycti import Location as PyctiLocation
 from pydantic import Field
 from stix2.v21 import Location as Stix2Location
@@ -40,6 +44,11 @@ class AdministrativeArea(BaseIdentifiedEntity):
         """
         location_type = LocationType.ADMINISTRATIVE_AREA.value
 
+        custom_properties = {
+            "location_type": location_type,
+            "aliases": self.aliases,
+        }
+
         return Location(
             id=PyctiLocation.generate_id(
                 name=self.name,
@@ -53,7 +62,13 @@ class AdministrativeArea(BaseIdentifiedEntity):
             latitude=self.latitude,
             longitude=self.longitude,
             allow_custom=True,
-            x_opencti_location_type=location_type,
-            x_opencti_aliases=self.aliases,
-            **self._common_stix2_properties()
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
+            ),
         )

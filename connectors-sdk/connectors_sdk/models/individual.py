@@ -2,6 +2,8 @@
 
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
     Reliability,
 )
 from pycti import Identity as PyctiIdentity
@@ -47,6 +49,11 @@ class Individual(BaseIdentifiedEntity):
         """
         identity_class = "individual"
 
+        custom_properties = {
+            "reliability": self.reliability,
+            "aliases": self.aliases,
+        }
+
         return Stix2Identity(
             id=PyctiIdentity.generate_id(
                 identity_class=identity_class,
@@ -57,7 +64,13 @@ class Individual(BaseIdentifiedEntity):
             description=self.description,
             contact_information=self.contact_information,
             allow_custom=True,
-            x_opencti_reliability=self.reliability,
-            x_opencti_aliases=self.aliases,
-            **self._common_stix2_properties()
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
+            ),
         )
