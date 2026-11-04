@@ -18,6 +18,15 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
+from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
+    BaseEnrichmentProcessor,
+)
+from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
+    EnrichmentMessage,
+)
+from connectors_sdk.connectors.internal_enrichment.internal_enrichment_connector import (
+    InternalEnrichmentConnector,
+)
 from connectors_sdk.logger import (
     ConnectorLoggerAdapter,
     configure_logging,
@@ -83,4 +92,7 @@ __all__ = [
     # Connector base classes
     "ExternalImportConnector",
     "BaseDataProcessor",
+    "InternalEnrichmentConnector",
+    "BaseEnrichmentProcessor",
+    "EnrichmentMessage",
 ]
