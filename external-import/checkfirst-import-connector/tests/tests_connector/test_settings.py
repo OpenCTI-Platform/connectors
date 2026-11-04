@@ -142,3 +142,57 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         FakeConnectorSettings()
 
     assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "tuning, expected",
+    [
+        pytest.param(
+            {
+                "convert_workers": "4",
+                "convert_batch_size": "16",
+                "bundle_size": "5000",
+                "max_row_bytes": "8192",
+            },
+            (4, 16, 5000, 8192),
+            id="string_values_are_coerced_to_int",
+        ),
+        pytest.param(
+            {
+                "convert_workers": "",
+                "convert_batch_size": "",
+                "bundle_size": "",
+                "max_row_bytes": "",
+            },
+            (1, 32, 10_000, None),
+            id="empty_values_fall_back_to_defaults",
+        ),
+    ],
+)
+def test_settings_should_coerce_tuning_values(tuning, expected):
+    """
+    Test that the tuning parameters accept the string values provided by env vars,
+    and that an empty value falls back to the field default instead of failing.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "checkfirst": {
+            "api_url": "https://api.checkfirst.example",
+            "api_key": "test-api-key",
+            **tuning,
+        },
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    checkfirst = FakeConnectorSettings().checkfirst
+    assert (
+        checkfirst.convert_workers,
+        checkfirst.convert_batch_size,
+        checkfirst.bundle_size,
+        checkfirst.max_row_bytes,
+    ) == expected
