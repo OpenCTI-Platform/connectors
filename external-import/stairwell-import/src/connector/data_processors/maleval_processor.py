@@ -4,12 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
-from connector.import_filter import (
-    build_cel_filter,
-    normalize_min_bucket,
-    parse_iso_duration,
-    window_start,
-)
+from connector.import_filter import allowed_buckets, build_cel_filter, window_start
 from connector.stairwell import StairwellAPIError, StairwellClient
 from connector.stairwell.score import score_for_bucket
 from connector.stix_builder import (
@@ -113,10 +108,10 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         self.tlp = s.tlp.value
         self.wrapper = s.wrapper
         self.min_bucket = s.min_bucket
-        self.allowed_buckets = set(normalize_min_bucket(s.min_bucket))
+        self.allowed_buckets = set(allowed_buckets(s.min_bucket))
         self.max_indicators = s.max_indicators
         self.page_size = s.page_size
-        self.first_run_window = parse_iso_duration(s.first_run_window)
+        self.first_run_window = s.first_run_window
         self.indicator_validity = timedelta(days=s.indicator_validity_days)
 
     def process(self) -> None:
@@ -175,7 +170,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
 
         cel = build_cel_filter(cutoff=cutoff, window_end=window_end)
         self.logger.info(
-            "Stairwell import window", {"cutoff": _iso(cutoff), "filter": cel}
+            "Stairwell import window", meta={"cutoff": _iso(cutoff), "filter": cel}
         )
 
         entries: list[dict[str, Any]] = []
@@ -223,7 +218,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                         limit = self.max_indicators * _UNSPLITTABLE_LIMIT_FACTOR
                     self.logger.warning(
                         "Stairwell rejected the saved page token; restarting window",
-                        {
+                        meta={
                             "status": status,
                             "window_end": _iso(window_end),
                             "limit": limit,
@@ -296,11 +291,11 @@ class MalEvalFilesProcessor(BaseDataProcessor):
         seen: set[str] = set()
         emitted = 0
         for raw in batch.entries:
-            new_objects = self._build_for_object(raw, batch.run_started)
+            new_objects = self._build_for_object(raw, batch)
             if not new_objects:
                 self.logger.warning(
                     "Skipping Stairwell object with an invalid SHA-256",
-                    {"sha256": str(raw.get("sha256"))[:80]},
+                    meta={"sha256": str(raw.get("sha256"))[:80]},
                 )
                 continue
             for obj in new_objects:
@@ -322,7 +317,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
 
         self.logger.info(
             "Stairwell import run converted",
-            {
+            meta={
                 "fetched": batch.fetched,
                 "filtered": batch.filtered,
                 "indicators": emitted,
@@ -382,7 +377,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             wrapper = make_grouping(
                 name=name,
                 object_refs=refs,
-                created=batch.run_started.isoformat(),
+                created=_iso(batch.run_started),
                 description="\n".join(lines),
                 context="malware-analysis",
                 tlp=self.tlp,
@@ -410,13 +405,20 @@ class MalEvalFilesProcessor(BaseDataProcessor):
     # Per-object STIX construction
     # ------------------------------------------------------------------
     def _build_for_object(
-        self, raw: dict[str, Any], run_started: datetime
+        self, raw: dict[str, Any], batch: Batch
     ) -> list[dict[str, Any]]:
         """File SCO, Indicator, and related network observables; [] if invalid.
 
         The SHA-256 is the only value interpolated into a pattern, so an
         object whose hash is not 64 hex characters is skipped: an invalid
         pattern makes OpenCTI reject the whole bundle.
+
+        The Indicator is valid from the file's first sighting, or from the
+        window start when the object has no timestamp: the window start is
+        the same on every read of the window, so a resumed or restarted
+        window rebuilds the same Indicator. It stays valid for the validity
+        period after the run that imports it, so a backfill of old files
+        does not import Indicators that have already expired.
         """
         sha256 = raw.get("sha256") or raw.get("SHA256")
         if not valid_hash("SHA-256", sha256):
@@ -430,7 +432,7 @@ class MalEvalFilesProcessor(BaseDataProcessor):
                 or raw.get("globalFirstSeenTime")
                 or raw.get("uploadTime")
             )
-            or run_started
+            or batch.cutoff
         )
         file_sco = make_file_by_sha256(
             sha256,
@@ -442,7 +444,9 @@ class MalEvalFilesProcessor(BaseDataProcessor):
             pattern=f"[file:hashes.'SHA-256' = '{sha256}']",
             name=f"Stairwell MalEval file: {sha256[:12]}…",
             valid_from=_iso(valid_from),
-            valid_until=_iso(valid_from + self.indicator_validity),
+            valid_until=_iso(
+                max(valid_from, batch.run_started) + self.indicator_validity
+            ),
             description=f"MalEval bucket: {bucket}",
             score=score_for_bucket(bucket),
             external_references=[

@@ -2,61 +2,23 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from connector.import_filter import (
+    allowed_buckets,
     build_cel_filter,
-    normalize_min_bucket,
-    parse_iso_duration,
     window_start,
 )
 
 
-def test_parse_iso_duration_basic():
-    assert parse_iso_duration("P1D") == timedelta(days=1)
-    assert parse_iso_duration("PT6H") == timedelta(hours=6)
-    assert parse_iso_duration("PT5M") == timedelta(minutes=5)
-    assert parse_iso_duration("P1DT12H") == timedelta(days=1, hours=12)
-
-
-def test_parse_iso_duration_falls_back_on_garbage():
-    assert parse_iso_duration("") == timedelta(days=1)
-    assert parse_iso_duration("notaduration") == timedelta(days=1)
-    assert parse_iso_duration("P1Y") == timedelta(
-        days=1
-    )  # years not supported, fall back
-
-
-def test_normalize_min_bucket_default_is_high_or_higher():
-    assert normalize_min_bucket(None) == [
-        "PROBABILITY_HIGH",
-        "PROBABILITY_VERY_HIGH",
-    ]
-    assert normalize_min_bucket("") == [
-        "PROBABILITY_HIGH",
-        "PROBABILITY_VERY_HIGH",
-    ]
-
-
-def test_normalize_min_bucket_low_includes_all():
-    assert normalize_min_bucket("LOW") == [
-        "PROBABILITY_LOW",
-        "PROBABILITY_MEDIUM",
-        "PROBABILITY_HIGH",
-        "PROBABILITY_VERY_HIGH",
-    ]
-
-
-def test_normalize_min_bucket_accepts_prefixed():
-    assert normalize_min_bucket("PROBABILITY_MEDIUM") == [
-        "PROBABILITY_MEDIUM",
-        "PROBABILITY_HIGH",
-        "PROBABILITY_VERY_HIGH",
-    ]
-
-
-def test_normalize_min_bucket_unknown_falls_back_to_high():
-    assert normalize_min_bucket("ABSURD") == [
-        "PROBABILITY_HIGH",
-        "PROBABILITY_VERY_HIGH",
-    ]
+@pytest.mark.parametrize(
+    ("min_bucket", "want"),
+    [
+        ("LOW", ["LOW", "MEDIUM", "HIGH", "VERY_HIGH"]),
+        ("MEDIUM", ["MEDIUM", "HIGH", "VERY_HIGH"]),
+        ("HIGH", ["HIGH", "VERY_HIGH"]),
+        ("VERY_HIGH", ["VERY_HIGH"]),
+    ],
+)
+def test_allowed_buckets_are_the_minimum_and_above(min_bucket, want):
+    assert allowed_buckets(min_bucket) == [f"PROBABILITY_{b}" for b in want]
 
 
 def test_build_cel_filter_basic_shape():
@@ -105,13 +67,3 @@ def test_build_cel_filter_bounds_the_window_and_normalises_to_utc():
     assert '>= "2026-05-04T00:00:00.000Z"' in build_cel_filter(
         cutoff=datetime(2026, 5, 4), window_end=None
     )
-
-
-@pytest.mark.parametrize("value", ["P", "PT", "P2DT", " PT "])
-def test_parse_iso_duration_rejects_designators_without_components(value):
-    assert parse_iso_duration(value) == timedelta(days=1)
-
-
-def test_parse_iso_duration_keeps_an_explicit_zero():
-    assert parse_iso_duration("P0D") == timedelta(0)
-    assert parse_iso_duration("PT0S") == timedelta(0)

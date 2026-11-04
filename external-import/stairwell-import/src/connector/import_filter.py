@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import datetime, timedelta, timezone
 
 _BUCKET_ORDER = (
@@ -10,52 +9,10 @@ _BUCKET_ORDER = (
     "PROBABILITY_VERY_HIGH",
 )
 
-_ISO_DURATION_RE = re.compile(
-    r"^P"
-    r"(?:(?P<days>\d+)D)?"
-    r"(?:T(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?)?$"
-)
 
-
-def parse_iso_duration(value: str) -> timedelta:
-    """Parse a small subset of ISO 8601 duration strings (no months/years).
-
-    Supports forms like P1D, PT6H, PT5M, PT30S, P1DT12H. Defaults to 1 day on
-    parse failure rather than raising — the connector is safer with a default
-    period than crashing on a malformed env var.
-    """
-    if not value:
-        return timedelta(days=1)
-    text = value.strip()
-    match = _ISO_DURATION_RE.match(text)
-    # Every component is optional in the pattern, so "P", "PT", and "P2DT"
-    # match with nothing after a designator; ISO 8601 requires a component.
-    if not match or not any(match.groupdict().values()) or text.endswith("T"):
-        return timedelta(days=1)
-    parts = {k: int(v) for k, v in match.groupdict(default="0").items()}
-    return timedelta(
-        days=parts["days"],
-        hours=parts["hours"],
-        minutes=parts["minutes"],
-        seconds=parts["seconds"],
-    )
-
-
-def normalize_min_bucket(value: str | None) -> list[str]:
-    """Return the list of acceptable PROBABILITY_* values given a min threshold.
-
-    Inputs (case-insensitive): LOW, MEDIUM, HIGH, VERY_HIGH, or the prefixed
-    forms PROBABILITY_*. Default min is HIGH.
-    """
-    if not value:
-        return ["PROBABILITY_HIGH", "PROBABILITY_VERY_HIGH"]
-    normalized = value.strip().upper()
-    if not normalized.startswith("PROBABILITY_"):
-        normalized = f"PROBABILITY_{normalized}"
-    if normalized not in _BUCKET_ORDER:
-        return ["PROBABILITY_HIGH", "PROBABILITY_VERY_HIGH"]
-    idx = _BUCKET_ORDER.index(normalized)
-    return list(_BUCKET_ORDER[idx:])
+def allowed_buckets(min_bucket: str) -> list[str]:
+    """The PROBABILITY_* values at or above `min_bucket` (LOW … VERY_HIGH)."""
+    return list(_BUCKET_ORDER[_BUCKET_ORDER.index(f"PROBABILITY_{min_bucket}") :])
 
 
 def _cel_time(dt: datetime) -> str:
@@ -84,8 +41,6 @@ def build_cel_filter(
     - `mal_eval.probability_bucket` isn't queryable with the `in` operator (the
       API returns 500 "Unable to query objects"), so the minimum-bucket filter
       runs client-side after each page is fetched.
-    - There is no known per-environment CEL field, so `STAIRWELL_IMPORT_SCOPE` is
-      accepted in settings but not applied.
     """
     clauses: list[str] = ["mal_eval.malicious==true"]
     if cutoff is not None:

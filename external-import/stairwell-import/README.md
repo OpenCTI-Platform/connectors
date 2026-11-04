@@ -44,16 +44,16 @@ Environment variables override the file.
 | Organization ID | `stairwell_import.organization_id` | `STAIRWELL_IMPORT_ORGANIZATION_ID` | no | — | Adds rate-limit header |
 | User ID | `stairwell_import.user_id` | `STAIRWELL_IMPORT_USER_ID` | no | — | Adds rate-limit header |
 | Import TLP | `stairwell_import.tlp` | `STAIRWELL_IMPORT_TLP` | no | `green` | `clear`, `white`, `green`, `amber`, `amber+strict`, `red` |
-| First-run window | `stairwell_import.first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run (days, hours, minutes, seconds; an invalid value falls back to `P1D`) |
+| First-run window | `stairwell_import.first_run_window` | `STAIRWELL_IMPORT_FIRST_RUN_WINDOW` | no | `P1D` | ISO 8601 duration to backfill on first run (for example `P7D`, `PT12H`, `P1Y`); a value that is not a positive duration fails at startup |
 | Max indicators | `stairwell_import.max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Soft cap per run, checked between pages (a run can overshoot by less than one page); the rest of the window is imported by later runs |
 | Page size | `stairwell_import.page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
 | Indicator validity | `stairwell_import.indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
-| Min bucket | `stairwell_import.min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` |
-| Import scope | `stairwell_import.scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | Reserved for forward-compat — accepted but **not yet effective**; every run currently queries the full corpus |
+| Min bucket | `stairwell_import.min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH` or `VERY_HIGH`; any other value fails at startup |
 | Wrapper | `stairwell_import.wrapper` | `STAIRWELL_IMPORT_WRAPPER` | no | `grouping` | `grouping` or `report` |
 
 Max indicators, page size, and indicator validity must be at least 1; a
-smaller value, or an unknown TLP or wrapper, stops the connector at startup
+smaller value, an unknown TLP, wrapper or minimum bucket, or a first-run window
+that is not a positive ISO 8601 duration, stops the connector at startup
 with a configuration error.
 
 ## Behavior
@@ -110,16 +110,22 @@ with a configuration error.
 - **Input validation.** An object whose SHA-256 is not 64 hex characters is
   skipped (logged), since an invalid Indicator pattern would make OpenCTI
   reject the whole run's bundle; malformed SHA-1/MD5 values are left off the
-  file, extracted IPs that are not valid addresses and URLs without an
-  http(s)/ftp(s) scheme, a hostname, and a valid nonzero port are dropped, and
-  source timestamps are normalised to UTC. Objects without a MalEval bucket at or
+  file, and source timestamps are normalised to UTC. Extracted values that
+  would be noise in OpenCTI are dropped: IPs that are not valid, publicly
+  routable unicast addresses (loopback, private, link-local, reserved,
+  unspecified and multicast ones, and IPv6 outside `2000::/3` or in
+  `3fff::/20`, are common in malware strings), hostnames that are not host names (an address, a
+  version number like `6.1.7601`, a file name like `kernel32.dll`), and URLs without an http(s)/ftp(s) scheme, a hostname, and a valid nonzero
+  port. Objects without a MalEval bucket at or
   above `STAIRWELL_IMPORT_MIN_BUCKET` are filtered.
 - **Per-run wrapper.** Each run's objects are grouped under their own
   Grouping (default) or Report SDO, so reviewers can see exactly what landed
   in one batch; `STAIRWELL_IMPORT_WRAPPER` accepts only `grouping` or `report`.
-- **Indicator validity.** Each Indicator's `valid_from` is derived from the
-  Stairwell first-seen time (falling back to the run start time), and
-  `valid_until` = `valid_from` + `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` days.
+- **Indicator validity.** Each Indicator's `valid_from` is the Stairwell
+  first-seen time (or the import window's start, for an object without one),
+  and its `valid_until` is `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` days
+  after the later of `valid_from` and the run that imports it. A backfill
+  therefore imports old files as live Indicators, valid for the full period.
 
 ## Installation
 

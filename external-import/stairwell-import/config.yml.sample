@@ -21,5 +21,4 @@ stairwell_import:
   page_size: 100 # optional (default: 100)
   indicator_validity_days: 90 # optional (default: 90)
   min_bucket: 'HIGH' # optional, one of: LOW, MEDIUM, HIGH, VERY_HIGH (default: 'HIGH')
-  scope: 'environment' # optional, reserved/not yet effective (default: 'environment')
   wrapper: 'grouping' # optional, 'grouping' or 'report' (default: 'grouping')

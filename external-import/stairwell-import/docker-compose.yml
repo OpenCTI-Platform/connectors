@@ -22,6 +22,5 @@ services:
       #- STAIRWELL_IMPORT_PAGE_SIZE=100 # optional (default: 100)
       #- STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS=90 # optional (default: 90)
       #- STAIRWELL_IMPORT_MIN_BUCKET=HIGH # optional, one of: LOW, MEDIUM, HIGH, VERY_HIGH (default: 'HIGH')
-      #- STAIRWELL_IMPORT_SCOPE=environment # optional, reserved, not yet effective (default: 'environment')
       #- STAIRWELL_IMPORT_WRAPPER=grouping # optional, 'grouping' or 'report' (default: 'grouping')
     restart: always

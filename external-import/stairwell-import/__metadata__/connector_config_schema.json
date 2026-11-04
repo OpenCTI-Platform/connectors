@@ -94,6 +94,7 @@
     "STAIRWELL_IMPORT_FIRST_RUN_WINDOW": {
       "default": "P1D",
       "description": "ISO-8601 duration to backfill on the first run.",
+      "format": "duration",
       "type": "string"
     },
     "STAIRWELL_IMPORT_MAX_INDICATORS": {
@@ -116,12 +117,13 @@
     },
     "STAIRWELL_IMPORT_MIN_BUCKET": {
       "default": "HIGH",
-      "description": "Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH.",
-      "type": "string"
-    },
-    "STAIRWELL_IMPORT_SCOPE": {
-      "default": "environment",
-      "description": "Reserved (forward-compat): accepted but not yet effective; every run currently queries the full corpus regardless of this value.",
+      "description": "Minimum MalEval probability bucket to import.",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "VERY_HIGH"
+      ],
       "type": "string"
     },
     "STAIRWELL_IMPORT_WRAPPER": {

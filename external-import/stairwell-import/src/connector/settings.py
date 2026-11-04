@@ -54,9 +54,10 @@ class StairwellImportConfig(BaseConfigModel):
         description="TLP marking applied to imported entities.",
         default=TLPLevel.GREEN,
     )
-    first_run_window: str = Field(
+    first_run_window: timedelta = Field(
         description="ISO-8601 duration to backfill on the first run.",
-        default="P1D",
+        default=timedelta(days=1),
+        gt=timedelta(0),
     )
     max_indicators: int = Field(
         description="Maximum indicators emitted per run.",
@@ -73,16 +74,9 @@ class StairwellImportConfig(BaseConfigModel):
         default=90,
         ge=1,
     )
-    min_bucket: str = Field(
-        description="Minimum MalEval bucket: LOW, MEDIUM, HIGH, or VERY_HIGH.",
+    min_bucket: Literal["LOW", "MEDIUM", "HIGH", "VERY_HIGH"] = Field(
+        description="Minimum MalEval probability bucket to import.",
         default="HIGH",
-    )
-    scope: str = Field(
-        description=(
-            "Reserved (forward-compat): accepted but not yet effective; every "
-            "run currently queries the full corpus regardless of this value."
-        ),
-        default="environment",
     )
     wrapper: Literal["grouping", "report"] = Field(
         description="Per-run wrapper SDO: 'grouping' or 'report'.",

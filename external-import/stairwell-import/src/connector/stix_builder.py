@@ -9,7 +9,6 @@ from urllib.parse import urlsplit
 
 from connectors_sdk.models import (
     URL,
-    AutonomousSystem,
     BaseIdentifiedObject,
     DomainName,
     ExternalReference,
@@ -22,16 +21,13 @@ from connectors_sdk.models import (
     Reference,
     Relationship,
     Report,
-    System,
     TLPMarking,
 )
-from pycti import Grouping, StixSightingRelationship
+from pycti import Grouping
 
 # Objects are built with the connectors-sdk models, which validate them and
-# compute OpenCTI's canonical IDs, and are serialized to STIX dicts so a
-# playbook step can merge them with its incoming bundle. Two kinds stay
-# hand-built: sightings (the stix2 library behind the SDK accepts only an SDO
-# as `sighting_of_ref`, and these sight a File) and groupings (no SDK model).
+# compute OpenCTI's canonical IDs, and are serialized to STIX dicts. The
+# Grouping stays hand-built: the SDK has no model for it.
 
 _TLP_LEVELS = ("clear", "white", "green", "amber", "amber+strict", "red")
 _TLP_MODELS: dict[str, TLPMarking] = {
@@ -56,7 +52,7 @@ _TLP_BY_ID: dict[str, dict[str, Any]] = {
     obj["id"]: obj for level, obj in _TLP_OBJECTS.items() if level != "white"
 }
 
-# The author of every SDO and relationship these connectors create. Its ID is
+# The author of every SDO and relationship this connector creates. Its ID is
 # OpenCTI's for an organization named "Stairwell", so it is the same object
 # everywhere. The SDK stamps `modified` with the build time; fixed values keep
 # a restart from re-dating the stored identity.
@@ -74,83 +70,6 @@ _AUTHOR: dict[str, Any] = {
 STAIRWELL_IDENTITY_ID: str = _AUTHOR["id"]
 
 
-# Markdown helpers. OpenCTI renders Note content and descriptions as GitHub
-# Flavored Markdown, and most values written there come from file contents,
-# WHOIS, or DNS, all of which an attacker can choose. Every such value goes
-# through one of these so it cannot add links, images, or table cells, or
-# break out of the surrounding structure.
-_MD_LINE_BREAKS = re.compile(r"[\r\n\v\f\x85\u2028\u2029]+")
-_MD_INLINE_SPECIALS = re.compile(r"([\\`*_\[\]<>!|~])")
-# A backslash run right before `[`, `]`, or `<` is doubled before the character
-# itself is escaped, so the escape always ends with odd parity.
-_MD_PROSE_SPECIALS = re.compile(r"(\\*)([\[\]<])")
-# GFM turns bare URLs, `www.` hosts, and emails into links without any
-# brackets; escaping the character that completes each trigger stops that.
-_MD_AUTOLINK = re.compile(r"(?i)(?<=[a-z])(:)(?=//)|(?<=www)(\.)|(@)")
-_BACKTICK_RUN = re.compile(r"`+")
-
-
-def _one_line(value: object) -> str:
-    return _MD_LINE_BREAKS.sub(" ", str(value)).strip()
-
-
-def _defang_autolinks(text: str) -> str:
-    return _MD_AUTOLINK.sub(lambda m: "\\" + m.group(0), text)
-
-
-def _longest_backtick_run(text: str) -> int:
-    return max((len(m.group(0)) for m in _BACKTICK_RUN.finditer(text)), default=0)
-
-
-def md_code(value: object, in_table: bool = False) -> str:
-    """Render `value` as a single inline code span.
-
-    Nothing inside a code span is parsed, so this is the default for
-    identifiers (hashes, names, paths, rules). The fence is one backtick
-    longer than any run in the value; GFM still splits table cells on `|`
-    inside code, so pipes are escaped when the span sits in a table.
-    """
-    text = _one_line(value)
-    if not text:
-        return ""
-    if in_table:
-        text = text.replace("|", "\\|")
-    fence = "`" * (_longest_backtick_run(text) + 1)
-    pad = " " if text.startswith("`") or text.endswith("`") else ""
-    return f"{fence}{pad}{text}{pad}{fence}"
-
-
-def md_text(value: object) -> str:
-    """Render `value` as literal inline text (one line, no markup, no links)."""
-    text = _MD_INLINE_SPECIALS.sub(r"\\\1", _one_line(value))
-    return _defang_autolinks(text)
-
-
-def md_fence(value: str) -> str:
-    """Render multi-line `value` as a fenced code block it cannot close."""
-    fence = "`" * max(3, _longest_backtick_run(value) + 1)
-    return f"{fence}\n{value}\n{fence}"
-
-
-def md_prose(value: str) -> str:
-    """Keep markdown formatting in `value` but disable links and images.
-
-    For Stairwell AI triage text, which is markdown by design but can quote
-    attacker-chosen strings from the file. Brackets and `<` are escaped (and
-    every backslash in a run right before one, so it cannot cancel the
-    escape), which
-    removes inline links, images, reference definitions, autolinks, and raw
-    HTML; bare URLs, `www.` hosts, and emails are defanged. Inside code spans
-    the escapes show as literal backslashes.
-    """
-    text = _MD_PROSE_SPECIALS.sub(lambda m: m.group(1) * 2 + "\\" + m.group(2), value)
-    return _defang_autolinks(text)
-
-
-def now_iso() -> str:
-    return datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-
 def _parse_time(value: str) -> datetime:
     """An RFC 3339 timestamp as an aware datetime.
 
@@ -164,32 +83,12 @@ def tlp_marking(tlp: str) -> str:
     return TLP_IDS.get(tlp.lower(), TLP_IDS["amber"])
 
 
-def tlp_marking_object(tlp: str) -> dict[str, Any]:
-    """The SDK's marking-definition object for `tlp` (amber if unknown)."""
-    return _TLP_OBJECTS.get(tlp.lower(), _TLP_OBJECTS["amber"])
-
-
 def _markings(tlp: str) -> list[TLPMarking]:
     return [_TLP_MODELS.get(tlp.lower(), _TLP_MODELS["amber"])]
 
 
 def stairwell_identity() -> dict[str, Any]:
     return dict(_AUTHOR)
-
-
-def _sdo(
-    sdo_type: str, sdo_id: str, created: str, tlp: str, *, created_by_ref: str
-) -> dict[str, Any]:
-    """The properties the hand-built SDOs and SROs start with."""
-    return {
-        "type": sdo_type,
-        "spec_version": "2.1",
-        "id": sdo_id,
-        "created_by_ref": created_by_ref,
-        "created": created,
-        "modified": created,
-        "object_marking_refs": [tlp_marking(tlp)],
-    }
 
 
 def make_external_reference(
@@ -254,10 +153,8 @@ def _observable(
 ) -> dict[str, Any]:
     """An observable's STIX dict, built and validated by its SDK model.
 
-    `stix_id` replaces the computed ID when the observable is one OpenCTI
-    already holds: an enrichment updates the entity under the ID OpenCTI
-    resolved it by, which a playbook also matches its incoming copy on.
-    Unset properties are left out, so an update never clears a stored value.
+    `stix_id` replaces the computed ID (see `make_file`). Unset properties
+    are left out, so an update never clears a stored value.
     """
     obj = _stix(
         model(
@@ -272,28 +169,6 @@ def _observable(
     return obj
 
 
-_OBSERVABLE_MODELS: dict[str, type[BaseIdentifiedObject]] = {
-    "file": File,
-    "domain-name": DomainName,
-    "ipv4-addr": IPV4Address,
-    "ipv6-addr": IPV6Address,
-    "autonomous-system": AutonomousSystem,
-}
-
-
-def enriched_observable(
-    stix_type: str, stix_id: str, tlp: str, **properties: Any
-) -> dict[str, Any]:
-    """The update an enrichment sends for an observable OpenCTI holds.
-
-    Built and validated by the type's SDK model, under the ID OpenCTI
-    resolved the entity by (a playbook matches its incoming copy on it).
-    """
-    return _observable(
-        _OBSERVABLE_MODELS[stix_type], tlp, stix_id=stix_id, **properties
-    )
-
-
 def make_ipv4(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any]:
     return _observable(IPV4Address, tlp, value=value, **kwargs)
 
@@ -305,6 +180,80 @@ def make_ipv6(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any]:
 # One DNS label: letters, digits, hyphens and underscores (SRV/DKIM names),
 # not starting or ending with a hyphen.
 _DNS_LABEL = re.compile(r"(?!-)[a-z0-9_-]{1,63}(?<!-)")
+# A top-level domain: letters only, or an internationalised one in punycode.
+_TLD = re.compile(r"[a-z]{2,63}|xn--[a-z0-9-]{1,59}")
+# File extensions found in strings extracted from files that are not
+# delegated top-level domains, so `kernel32.dll` is not a host name.
+_FILE_EXTENSIONS = frozenset(
+    {
+        "apk",
+        "asp",
+        "aspx",
+        "bak",
+        "bat",
+        "bin",
+        "cer",
+        "cfg",
+        "cmd",
+        "conf",
+        "cpl",
+        "crt",
+        "css",
+        "csv",
+        "dat",
+        "db",
+        "dll",
+        "dmg",
+        "dmp",
+        "doc",
+        "docx",
+        "drv",
+        "dylib",
+        "exe",
+        "gz",
+        "hta",
+        "htm",
+        "html",
+        "img",
+        "inf",
+        "ini",
+        "iso",
+        "jar",
+        "js",
+        "jse",
+        "json",
+        "jsp",
+        "lib",
+        "lnk",
+        "log",
+        "msi",
+        "ocx",
+        "pdb",
+        "pdf",
+        "pem",
+        "php",
+        "plist",
+        "ppt",
+        "pptx",
+        "rar",
+        "rtf",
+        "scr",
+        "sql",
+        "sys",
+        "tar",
+        "tmp",
+        "txt",
+        "vbe",
+        "vbs",
+        "wsf",
+        "xls",
+        "xlsm",
+        "xlsx",
+        "xml",
+        "yaml",
+        "yml",
+    }
+)
 
 
 def normalize_domain(value: Any) -> str | None:
@@ -313,7 +262,9 @@ def normalize_domain(value: Any) -> str | None:
     Values come from file strings and DNS answers; one malformed
     `domain-name.value` makes OpenCTI reject the bundle it is in. A trailing
     root dot is dropped, and internationalised names are stored in their
-    ASCII (punycode) form.
+    ASCII (punycode) form. A dotted string whose last label is not a
+    top-level domain (an address, a version number, a file name) is not a
+    host name.
     """
     if not isinstance(value, str):
         return None
@@ -331,6 +282,8 @@ def normalize_domain(value: Any) -> str | None:
         len(name) > 253
         or len(labels) < 2
         or not all(_DNS_LABEL.fullmatch(label) for label in labels)
+        or not _TLD.fullmatch(labels[-1])
+        or labels[-1] in _FILE_EXTENSIONS
     ):
         return None
     return name
@@ -427,44 +380,41 @@ def make_url(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | 
     return _observable(URL, tlp, value=value, **kwargs)
 
 
-def make_autonomous_system(
-    number: int | str,
-    name: str | None = None,
-    tlp: str = "amber",
-    **kwargs: Any,
-) -> dict[str, Any]:
-    return _observable(AutonomousSystem, tlp, number=int(number), name=name, **kwargs)
+# The only IPv6 block IANA allocates as global unicast; `is_global` alone
+# also passes deprecated site-local (fec0::/10), reserved (4000::/3) and,
+# on some Python releases, IPv4-mapped forms of public IPv4 addresses
+# (::ffff:8.8.8.8).
+_IPV6_GLOBAL_UNICAST = ipaddress.ip_network("2000::/3")
+# The IPv6 documentation prefix, inside 2000::/3; older Python releases
+# count it as global.
+_IPV6_DOCUMENTATION = ipaddress.ip_network("3fff::/20")
 
 
 def make_ip(value: str, tlp: str = "amber", **kwargs: Any) -> dict[str, Any] | None:
-    """IPv4/IPv6 SCO for a valid address (normalised), or None.
+    """IPv4/IPv6 SCO for a valid, publicly routable address (normalised), or None.
 
-    Values come from strings extracted from files, so `1.2.3.4:80` or free
-    text must not become an address SCO.
+    Values come from strings extracted from files and from DNS answers, so
+    `1.2.3.4:80` or free text must not become an address SCO. Loopback,
+    private, link-local, reserved, unspecified and multicast addresses are
+    left out: they are common in malware strings and sinkholed answers, and
+    say nothing about the file or domain they would be related to.
+    `ipaddress` counts multicast as global, so it is checked separately, and
+    an IPv6 address must also be global unicast (2000::/3) and outside the
+    documentation prefix (3fff::/20).
     """
     try:
         addr = ipaddress.ip_address(str(value).strip())
     except ValueError:
         return None
+    if not addr.is_global or addr.is_multicast:
+        return None
+    if addr.version == 6 and (
+        addr not in _IPV6_GLOBAL_UNICAST or addr in _IPV6_DOCUMENTATION
+    ):
+        return None
     if addr.version == 6:
         return make_ipv6(str(addr), tlp=tlp, **kwargs)
     return make_ipv4(str(addr), tlp=tlp, **kwargs)
-
-
-def network_observable_for(value: str, kind: str, tlp: str) -> dict[str, Any] | None:
-    """Build a STIX SCO for a Stairwell network_indicators entry.
-
-    `kind` is one of: "ip", "hostname", "url".
-    """
-    if not value:
-        return None
-    if kind == "ip":
-        return make_ip(value, tlp=tlp)
-    if kind == "hostname":
-        return make_domain(value, tlp=tlp)
-    if kind == "url":
-        return make_url(value, tlp=tlp)
-    return None
 
 
 def make_indicator(
@@ -507,87 +457,6 @@ def make_based_on_relationship(
     )
 
 
-def make_identity_system(
-    asset_id: str,
-    name: str | None = None,
-    description: str | None = None,
-    tlp: str = "amber",
-) -> dict[str, Any]:
-    """Identity SDO for a host/asset (identity_class='system').
-
-    Named by the stable Stairwell asset token (e.g. `assets/EAGJSW-...`), so
-    the ID (OpenCTI's for that name and class) survives a rename or a response
-    without the display name, and two assets sharing a display name stay
-    distinct. The display name goes in the description, never in an alias:
-    OpenCTI also deduplicates identities by alias, which would merge hosts
-    that share a name.
-    """
-    display_name = name if name and name != asset_id else None
-    if description is None and display_name:
-        description = f"Stairwell-managed asset {md_text(display_name)}"
-    return _stix(
-        System(
-            name=asset_id,
-            description=description or None,
-            author=_AUTHOR_MODEL,
-            markings=_markings(tlp),
-        )
-    )
-
-
-def make_sighting(
-    sighting_of_ref: str,
-    where_sighted_refs: Iterable[str],
-    first_seen: str,
-    last_seen: str,
-    count: int,
-    description: str | None = None,
-    external_references: list[dict[str, Any]] | None = None,
-    tlp: str = "amber",
-) -> dict[str, Any]:
-    where_sighted = list(where_sighted_refs)
-    # No first/last seen in the ID: they move on every enrichment, and the
-    # sighting of one file on one asset must stay one object.
-    sighting_id = StixSightingRelationship.generate_id(sighting_of_ref, where_sighted)
-    ts = now_iso()
-    obj: dict[str, Any] = {
-        **_sdo("sighting", sighting_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
-        "first_seen": first_seen,
-        "last_seen": last_seen,
-        "count": int(count),
-        "sighting_of_ref": sighting_of_ref,
-        "where_sighted_refs": where_sighted,
-    }
-    if description:
-        obj["description"] = description
-    if external_references:
-        obj["external_references"] = list(external_references)
-    return obj
-
-
-def _container_sdo(
-    sdo_type: str,
-    container_id: str,
-    name: str,
-    object_refs: Iterable[str],
-    description: str | None,
-    tlp: str,
-    extra: dict[str, Any] | None = None,
-    created: str | None = None,
-) -> dict[str, Any]:
-    ts = created or now_iso()
-    obj: dict[str, Any] = {
-        **_sdo(sdo_type, container_id, ts, tlp, created_by_ref=STAIRWELL_IDENTITY_ID),
-        "name": name,
-        "object_refs": list(object_refs),
-    }
-    if description:
-        obj["description"] = description
-    if extra:
-        obj.update(extra)
-    return obj
-
-
 def make_grouping(
     name: str,
     object_refs: Iterable[str],
@@ -597,16 +466,21 @@ def make_grouping(
     tlp: str = "amber",
 ) -> dict[str, Any]:
     """Grouping whose ID derives from name, context, and `created`."""
-    return _container_sdo(
-        sdo_type="grouping",
-        container_id=Grouping.generate_id(name, context, created),
-        created=created,
-        name=name,
-        object_refs=object_refs,
-        description=description,
-        tlp=tlp,
-        extra={"context": context},
-    )
+    obj: dict[str, Any] = {
+        "type": "grouping",
+        "spec_version": "2.1",
+        "id": Grouping.generate_id(name, context, created),
+        "created_by_ref": STAIRWELL_IDENTITY_ID,
+        "created": created,
+        "modified": created,
+        "object_marking_refs": [tlp_marking(tlp)],
+        "name": name,
+        "context": context,
+        "object_refs": list(object_refs),
+    }
+    if description:
+        obj["description"] = description
+    return obj
 
 
 def make_report(
@@ -644,12 +518,3 @@ def with_markings(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 out.append(_TLP_BY_ID[ref])
                 present.add(ref)
     return out
-
-
-def bundle_objects(objects: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    """`objects` deduplicated by ID (the last wins), with the TLP marking
-    definitions they reference, ready for `helper.stix2_create_bundle`."""
-    deduped: dict[str, dict[str, Any]] = {}
-    for obj in with_markings(objects):
-        deduped[obj["id"]] = obj
-    return list(deduped.values())

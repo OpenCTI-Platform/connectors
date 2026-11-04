@@ -12,19 +12,26 @@ from stix2patterns.validator import run_validator
 
 
 class FakeLogger:
+    """The SDK logger's contract: a message, plus details only as `meta=`.
+
+    The SDK hands any other positional argument to the stdlib logger as a
+    format argument, where a message with no `%s` drops it.
+    """
+
     def __init__(self):
+        self.infos = []
         self.warnings = []
 
-    def info(self, *args, **kwargs):
+    def info(self, message, *, meta=None):
+        self.infos.append((message, meta))
+
+    def debug(self, message, *, meta=None):
         pass
 
-    def debug(self, *args, **kwargs):
-        pass
+    def warning(self, message, *, meta=None):
+        self.warnings.append((message, meta))
 
-    def warning(self, *args, **kwargs):
-        self.warnings.append(args)
-
-    def error(self, *args, **kwargs):
+    def error(self, message, *, meta=None):
         pass
 
 
@@ -62,9 +69,15 @@ def _run(processor):
     return processor.transform(processor.collect())
 
 
+def _at(processor, now):
+    """`processor` with its run clock fixed at `now`."""
+    processor._now = lambda: now
+    return processor
+
+
 def _file_obj(sha256, bucket="PROBABILITY_HIGH", net=None, **extra):
-    # Each file has its own SHA-1/MD5, as real files do: a File's STIX ID
-    # derives from one hash (MD5 first), so shared fake hashes would collide.
+    # Each file has its own SHA-1/MD5, as real files do. The File's STIX ID
+    # comes from its SHA-256 alone, so this is for realism, not to keep IDs apart.
     digest = (str(sha256) * 2)[:40] if sha256 else ""
     obj = {
         "sha256": sha256,
@@ -148,6 +161,11 @@ def test_wrapper_setting_rejects_unknown_values(env):
         ("STAIRWELL_IMPORT_PAGE_SIZE", "-1"),
         ("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "0"),
         ("STAIRWELL_IMPORT_TLP", "purple"),
+        ("STAIRWELL_IMPORT_FIRST_RUN_WINDOW", "a month"),
+        ("STAIRWELL_IMPORT_FIRST_RUN_WINDOW", "-P1D"),
+        ("STAIRWELL_IMPORT_FIRST_RUN_WINDOW", "P0D"),
+        ("STAIRWELL_IMPORT_MIN_BUCKET", "MED"),
+        ("STAIRWELL_IMPORT_MIN_BUCKET", "VERYHIGH"),
     ],
 )
 def test_out_of_range_settings_are_rejected_at_startup(env, variable, value):
@@ -159,6 +177,15 @@ def test_out_of_range_settings_are_rejected_at_startup(env, variable, value):
     )
 
 
+@pytest.mark.parametrize(
+    "value, days", [("P1D", 1), ("P1W", 7), ("P365D", 365), ("P1Y", 365)]
+)
+def test_first_run_window_takes_an_iso_duration(env, value, days):
+    env.setenv("STAIRWELL_IMPORT_FIRST_RUN_WINDOW", value)
+    window = ConnectorSettings().stairwell_import.first_run_window
+    assert window.days == days
+
+
 def test_fetch_failure_keeps_the_request_error_as_cause(env):
     processor = _processor([(503, None)])
     with pytest.raises(DataRetrievalError) as err:
@@ -168,19 +195,76 @@ def test_fetch_failure_keeps_the_request_error_as_cause(env):
 
 def test_each_run_gets_its_own_wrapper(env):
     state = ConnectorState()
-    first = _run(_processor(_one_page(_file_obj("c" * 64)), state))
-    second = _run(_processor(_one_page(_file_obj("d" * 64)), state))
+    first = _run(
+        _at(
+            _processor(_one_page(_file_obj("c" * 64)), state),
+            datetime(2026, 11, 3, 10, tzinfo=timezone.utc),
+        )
+    )
+    second = _run(
+        _at(
+            _processor(_one_page(_file_obj("d" * 64)), state),
+            datetime(2026, 11, 4, 10, tzinfo=timezone.utc),
+        )
+    )
     assert _of_type(first, "grouping")[0]["id"] != _of_type(second, "grouping")[0]["id"]
 
 
 def test_indicator_validity_window_and_score(env):
     env.setenv("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "30")
-    objects = _run(_processor(_one_page(_file_obj("d" * 64))))
-    indicator = _of_type(objects, "indicator")[0]
+    processor = _at(
+        _processor(_one_page(_file_obj("d" * 64))),
+        datetime(2026, 5, 6, tzinfo=timezone.utc),
+    )
+    indicator = _of_type(_run(processor), "indicator")[0]
     assert indicator["valid_from"] == "2026-05-06T00:00:00Z"
     assert indicator["valid_until"] == "2026-06-05T00:00:00Z"
     assert indicator["x_opencti_score"] == 75  # PROBABILITY_HIGH
     assert "confidence" not in indicator
+
+
+def test_a_file_first_seen_long_ago_is_valid_from_the_run(env):
+    # A backfill imports files first seen before the validity period; each
+    # one stays valid for that period after the run that imports it.
+    env.setenv("STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS", "30")
+    processor = _at(
+        _processor(_one_page(_file_obj("d" * 64))),
+        datetime(2026, 11, 3, 10, 0, tzinfo=timezone.utc),
+    )
+    indicator = _of_type(_run(processor), "indicator")[0]
+    assert indicator["valid_from"] == "2026-05-06T00:00:00Z"
+    assert indicator["valid_until"] == "2026-12-03T10:00:00Z"
+
+
+def test_a_file_without_timestamps_is_valid_from_the_window_start(env):
+    # The window start is the same on every read of the window, so a resumed
+    # or restarted window rebuilds the same indicator.
+    obj = _file_obj("d" * 64, stairwellFirstSeenTime=None)
+    state = ConnectorState(pending_cutoff=datetime(2026, 11, 1, tzinfo=timezone.utc))
+    for hour in (10, 14):
+        processor = _at(
+            _processor(_one_page(obj), state.model_copy()),
+            datetime(2026, 11, 3, hour, tzinfo=timezone.utc),
+        )
+        indicator = _of_type(_run(processor), "indicator")[0]
+        assert indicator["valid_from"] == "2026-11-01T00:00:00Z"
+
+
+def test_the_grouping_timestamp_uses_the_stix_format(env):
+    processor = _at(
+        _processor(_one_page(_file_obj("d" * 64))),
+        datetime(2026, 11, 3, 10, 0, 0, 123456, tzinfo=timezone.utc),
+    )
+    grouping = _of_type(_run(processor), "grouping")[0]
+    assert grouping["created"] == "2026-11-03T10:00:00.000Z"
+
+
+def test_run_details_reach_the_log_as_meta(env):
+    processor = _processor(_one_page(_file_obj("d" * 64)))
+    _run(processor)
+    window, summary = processor.logger.infos
+    assert set(window[1]) == {"cutoff", "filter"}
+    assert summary[1]["indicators"] == 1
 
 
 def test_source_timestamps_are_normalised_to_utc(env):
@@ -367,8 +451,21 @@ def test_transient_failure_on_resume_keeps_cursor(env, status):
 def test_network_values_are_related_observables_not_indicators(env):
     url = "http://c2.example.com/a'b?q=1&r=2"
     net = {
-        "ipAddresses": ["1.2.3.4", "2001:DB8::1", "1.2.3.4:80", "not-an-ip"],
-        "hostnames": ["C2.Example.com", "not a hostname", "localhost"],
+        "ipAddresses": [
+            "1.2.3.4",
+            "2620:FE::FE",
+            "1.2.3.4:80",
+            "not-an-ip",
+            "127.0.0.1",
+            "10.0.0.5",
+        ],
+        "hostnames": [
+            "C2.Example.com",
+            "not a hostname",
+            "localhost",
+            "8.8.8.8",
+            "kernel32.dll",
+        ],
         "urls": [url],
     }
     objects = _run(_processor(_one_page(_file_obj("f" * 64, net=net))))
@@ -381,9 +478,10 @@ def test_network_values_are_related_observables_not_indicators(env):
         for r in _of_type(objects, "relationship")
         if r["relationship_type"] == "related-to" and r["source_ref"] == file_id
     }
-    # Invalid IPs are dropped; IPv6 is normalised.
-    assert set(related) == {"1.2.3.4", "2001:db8::1", "c2.example.com", url}
-    assert related["2001:db8::1"]["type"] == "ipv6-addr"
+    # Invalid and non-public IPs and non-host names are dropped; IPv6 is
+    # normalised.
+    assert set(related) == {"1.2.3.4", "2620:fe::fe", "c2.example.com", url}
+    assert related["2620:fe::fe"]["type"] == "ipv6-addr"
     # Observables carry references in the SDK's form, never at the root.
     assert not [o for o in related.values() if "external_references" in o]
     assert related[url]["x_opencti_external_references"][0]["url"] == (
