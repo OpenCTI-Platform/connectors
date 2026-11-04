@@ -4,5 +4,6 @@ This module provides the foundational classes for building internal enrichment c
 - EnrichmentMessage: Read-only view of an enrichment message received from OpenCTI
 - BaseEnrichmentProcessor: Abstract base class to enrich one or more entity types
 - InternalEnrichmentConnector: Full orchestration for internal enrichment connectors
-- UnsupportedEntityError, EntityOutOfScopeError: Raised to skip an entity
+- UnsupportedEntityError: Raised to skip an entity
+- InvalidEnrichmentMessageError: Raised when the message data is invalid
 """

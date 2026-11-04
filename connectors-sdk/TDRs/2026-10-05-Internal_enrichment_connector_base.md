@@ -4,7 +4,7 @@
 
 This TDR introduces `InternalEnrichmentConnector`, `BaseEnrichmentProcessor` and `EnrichmentMessage` in the `connectors.internal_enrichment` package. They rely on the `max_tlp` setting of `BaseInternalEnrichmentConnectorConfig`, added separately (#7926).
 
-The connector class is a controller. It creates and validates the parts a connector needs, checks each message, then passes it to the right processor. A private `MessageManager` builds and sends the bundle of each message, and makes sure a playbook always gets exactly one bundle. A connector only implements processors that fetch data about an entity and convert it to STIX.
+The connector class is a controller. It creates and validates the parts a connector needs, checks each message, then passes it to the right processor. A private `BundleManager`, created for each message, builds and sends its bundle, and makes sure a playbook always gets exactly one bundle. A connector only implements processors that fetch data about an entity and convert it to STIX, and return the objects.
 
 ---
 
@@ -30,7 +30,7 @@ How `OpenCTIConnectorHelper` (pycti 7.261021.1) and the platform handle an enric
 | --- | --- | --- |
 | Work | Created by the platform, closed by pycti with the callback's return value, or put in error with the exception text | None: the return value and exceptions are invisible |
 | `data["event_type"]` | Set | Missing (`helper.playbook` is set instead, and reset for every message) |
-| Entities sent | Only entities in the connector scope (the platform filters on the scope) | Any entity: the playbook step does not filter on the scope |
+| Entities sent | Entities in the connector scope (the platform filters on the scope for automatic enrichment and in the UI), but a manual request through the API (`askElementEnrichmentForConnectors`) is not filtered | Any entity: the playbook step does not filter on the scope |
 | `send_stix2_bundle` | Sends the bundle to the workers | Calls the `playbookStepExecution` mutation: the platform runs the next step inside this request |
 
 - pycti acks a message before processing it, and runs the callback in a separate thread.
@@ -51,26 +51,26 @@ connectors_sdk/connectors/
 ├── _stix_conversion.py                 to_stix2_objects() (shared with WorkManager), to_stix_dict()
 └── internal_enrichment/
     ├── enrichment_message.py           EnrichmentMessage, OpenCTIEntity, StixEntity
-    ├── exceptions.py                   UnsupportedEntityError, EntityOutOfScopeError
-    ├── _message_manager.py             MessageManager (private)
+    ├── exceptions.py                   UnsupportedEntityError, InvalidEnrichmentMessageError
+    ├── _bundle_manager.py              BundleManager (private)
     ├── base_enrichment_processor.py    BaseEnrichmentProcessor
     └── internal_enrichment_connector.py InternalEnrichmentConnector
 ```
 
-- `EnrichmentMessage`: a frozen Pydantic model, built with `EnrichmentMessage.model_validate(data)` for each message. It gives the entity to enrich twice, never mixed: `enrichment_entity` (an `OpenCTIEntity`, as read from OpenCTI) and `stix_entity` (a `StixEntity`, as a STIX object). Both models only declare their `id` and their type (`entity_type`, `type`); any other field sent by pycti can be read as an attribute (e.g. `message.stix_entity.value`). It also holds `stix_objects` (the bundle containing the entity) and `from_playbook`. `OpenCTIEntity.tlp_levels` gives the TLP markings of the entity, and `EnrichmentMessage.to_log_metadata()` the context to log (`octi_id`, `octi_entity_type`, `from_playbook`).
-- `BaseEnrichmentProcessor`: same lifecycle as `BaseDataProcessor` (`inject_dependencies()`, `post_init()`). It declares `handled_entity_types`, may override `can_process(message)` to filter within a type (e.g. an indicator's `pattern_type`), and implements `collect(message)` (network, no STIX) and `transform(message, data)` (STIX, no network). `process(message)` runs `send(message, transform(message, collect(message)))`, and `send()` gives the objects to the injected `MessageManager`. The message is always passed as an argument: a processor keeps no state about the current message.
-- `MessageManager`: created once by the connector and injected into every processor. `handle(message)` is a context manager that wraps the handling of one message. `send(objects)` builds and sends the bundle. `outcome` is the message stored on the work.
-- `InternalEnrichmentConnector(settings, enrichment_processors)`: checks the configuration, creates the helper (with `playbook_compatible=True`) and the `MessageManager` in `start()`, injects the processors' dependencies, then listens. Its callback only checks the message and passes it on.
+- `EnrichmentMessage`: a frozen Pydantic model, built with `EnrichmentMessage.model_validate(data)` by the connector for each message. It gives the entity to enrich twice, never mixed: `enrichment_entity` (an `OpenCTIEntity`, as read from OpenCTI) and `stix_entity` (a `StixEntity`, as a STIX object). Both models only declare their `id` and their type (`entity_type`, `type`); any other field sent by pycti can be read as an attribute (e.g. `message.stix_entity.value`). It also holds `stix_objects` (the bundle containing the entity) and `from_playbook`. `OpenCTIEntity.tlp_levels` gives the TLP markings of the entity, and `EnrichmentMessage.to_log_metadata()` the context to log (`octi_id`, `octi_entity_type`, `from_playbook`).
+- `BaseEnrichmentProcessor`: same lifecycle as `BaseDataProcessor` (`inject_dependencies()`, `post_init()`). It declares `handled_entity_types`, may override `can_process(message)` to filter within a type (e.g. an indicator's `pattern_type`), and implements `collect(message)` (network, no STIX) and `transform(message, data)` (STIX, no network). `process(message)` runs `transform(message, collect(message))` and returns the objects: a processor never sends anything. The message is always passed as an argument: a processor keeps no state about the current message.
+- `BundleManager(helper, data)`: created by the connector for each message, from the raw message data, never seen by processors. It is a context manager that wraps the handling of the message (`with BundleManager(helper, data) as bundle_manager:`). The connector gives it the validated message in `message` (for the context of the logs) and the processor's objects in `objects`, and the manager builds and sends the bundle when the `with` block ends. `outcome` is the message stored on the work.
+- `InternalEnrichmentConnector(settings, enrichment_processors)`: checks the configuration, creates the helper (with `playbook_compatible=True`) in `start()`, injects the processors' dependencies, then listens. Its callback checks the message, passes it to the processor, and stores the objects returned in the message's `BundleManager`.
 
 ### Message handling
 
 ```plaintext
-invalid message?                       → ValidationError raised to pycti (nothing sent, even in a playbook)
-out of scope (connector.scope)?        → playbook: skip; manual/auto: error (EntityOutOfScopeError)
+invalid message?                       → error (InvalidEnrichmentMessageError, from the ValidationError)
+out of scope (connector.scope)?        → skip (UnsupportedEntityError)
 TLP above connector.max_tlp?           → skip (UnsupportedEntityError)
 no processor can process it?       → skip (UnsupportedEntityError)
 several processors can process it?       → error (ValueError)
-processor.process(message): collect → transform → send
+processor.process(message): collect → transform
 no objects?                            → nothing sent, outcome "No enrichment data found"
 otherwise                              → send stix_objects + objects, outcome "Entity enriched with N objects"
 
@@ -84,34 +84,38 @@ The TLP is checked before any processor sees the entity, because `can_process()`
 `callback()` reads as follows:
 
 ```python
-with self._message_manager.handle(message):
+with BundleManager(self._helper, data) as bundle_manager:
+    message = self._parse_message(data)
+    bundle_manager.message = message
     self._check_scope(message)
     self._check_tlp(message)
     processor = self._select_processor(message)
-    processor.process(message)
+    bundle_manager.objects = processor.process(message)
 
-# Success, no data or skip: the manager knows how the message ended
-return self._message_manager.outcome
+# The bundle is sent when the `with` block ends: the manager knows how the
+# message ended (success, no data or skip)
+return bundle_manager.outcome
 ```
 
 ### Decisions
 
 | Question | Decision | Reason |
 | --- | --- | --- |
-| Connector role | A controller: create and validate the parts, check the message, pass it on | Building and sending bundles is the `MessageManager`'s job; collecting and converting is the processor's. |
+| Connector role | A controller: create and validate the parts, check the message, pass it on | Building and sending bundles is the `BundleManager`'s job; collecting and converting is the processor's. |
 | Message model | Frozen Pydantic model, with an `OpenCTIEntity` and a `StixEntity` that only declare their id and type for now | Typed access without keys. Undeclared fields stay readable as attributes. The validation copies the objects, but not the values nested in them: processors must not modify the message in place. |
 | Playbook detection | `from_playbook = helper.playbook is not None`, given to the model when the message is validated | pycti resets `helper.playbook` for every message; it is the exact signal `send_stix2_bundle` uses to route the bundle. |
-| Invalid message | `ValidationError` raised to pycti; nothing sent, even in a playbook | pycti must always send a valid message: it builds `stix_entity` and `stix_objects` itself. A crash (`os._exit()`) would not replay the message, since it is already acked. The error text is logged, since pycti does not log it. |
-| Bundle sending | One `MessageManager` for the connector, injected into the processors | The unit is the message, not the processor: a message gets exactly one bundle in a playbook, even when no processor handles it. Unlike the external import `WorkManager`, it is not created per processor. |
-| Per-message state | Kept by the `MessageManager` (original objects, sent flag, outcome), reset by `handle()` | pycti handles one message at a time. Processors and the connector keep none. |
+| Invalid message | Validated by the connector inside the `with` block: its `ValidationError` becomes an `InvalidEnrichmentMessageError`, an error like the others (logged as "Invalid enrichment message", raised to pycti, and in a playbook the `stix_objects` received are sent back when they are a list) | pycti builds `stix_entity` and `stix_objects` itself, so this should not happen, but a playbook would stall on it, silently. Validating inside the block gives it the same ways out as every other error, with no special case in the connector. The dedicated exception tells it apart from a `ValidationError` raised later by a processor (e.g. an SDK model with an invalid value). The `BundleManager` is built from the raw data, and only builds bundles: validating is the connector's job. A crash (`os._exit()`) would not replay the message, since it is already acked. |
+| Bundle sending | One `BundleManager` per message, created by the connector; processors return their objects | The unit is the message, not the processor: a message gets exactly one bundle in a playbook, even when no processor handles it. As in external import, a processor only fetches and converts, and can be tested without any sender. |
+| Per-message state | Kept by the `BundleManager` of the message (original objects, processor's objects, outcome) | A new manager per message: no state to reset, and nothing shared between the connector and the processors. Processors and the connector keep none. |
 | Bundle content | The original `stix_objects`, then the processor's objects. An object with the id of an original object replaces it; a `Reference` is ignored | The original objects keep the references to the entity valid (`cleanup_inconsistent_bundle=True`). In a playbook, two objects with the same id would both go to the next steps: the platform does not deduplicate them. |
 | Original bundle in a playbook | Sent back whenever the handling of a message ends without a bundle sent (skip, no data, failure) | Sending none stalls the playbook, and pycti has already acked the message: it will not come back. |
-| When a bundle counts as sent | Only after `send_stix2_bundle` returns | Most failures happen before the platform uses the bundle (pycti preparing it, platform unreachable, request refused): the original bundle then keeps the playbook going. |
+| When the bundle is sent | Once, when the `with` block of the `BundleManager` ends (by its private `_send()`), never through a call from the connector | The only place that sends decides between the enriched bundle, the original one or none: exactly one bundle per playbook message holds by construction, with no second send to refuse. |
+| When a bundle counts as sent | As soon as `send_stix2_bundle` is called (a failure while building the bundle still sends the original one) | Once the request is sent, the connector cannot tell whether the platform ran the next step: after a timeout or a network drop while waiting for the response, sending the original bundle too could run the next step twice (e.g. an email sent twice). An error that stops the playbook is visible; a duplicated action is not. |
 | Skips | `UnsupportedEntityError`: the work completes with the reason | A TLP refusal or an unsupported entity is a configured policy, not a failure. Raising would put one work in error for every RED entity in automatic mode. |
-| Out of scope | `EntityOutOfScopeError`: a skip in a playbook, an error outside | The platform only sends entities in scope outside playbooks, so an out-of-scope entity there is a mistake (API call or configuration). In a playbook it is normal, and raising would only produce ERROR logs and pycti error metrics. |
-| Outcome | Always generic, owned by the `MessageManager` | The survey shows the same few cases with many wordings. |
+| Out of scope | A skip in every mode, logged at INFO in a playbook and at WARNING outside | In a playbook it is normal. Outside playbooks, only a request through the API can send it: a mistake of the caller, not a failure of the connector, so the work completes with the reason instead of ending in error. |
+| Outcome | Always generic, owned by the `BundleManager` | The survey shows the same few cases with many wordings. |
 | Several entity types | A list of processors; several may declare the same type, but exactly one `can_process()` must return `True` (`ValueError` otherwise) | The order of the processors does not matter, and overlaps are explicit in `can_process()`. |
-| Startup checks | A concrete processor without `handled_entity_types`: `TypeError` when its class is defined. A scope type declared by no processor: `ValueError` when the connector is created | Each part checks its own rule, before the connector connects to OpenCTI. |
+| Startup checks | A concrete processor without `handled_entity_types`: `TypeError` when its class is defined. A scope type declared by no processor: `ConfigValidationError` when the connector is created | Each part checks its own rule, before the connector connects to OpenCTI. A scope type without processor is a configuration error (`CONNECTOR_SCOPE`), reported with the SDK configuration exception. |
 | Check order | Scope, then TLP, then processor selection | No processor code runs on an entity above the max TLP. |
 | `max_tlp` | `connector.max_tlp` (`CONNECTOR_MAX_TLP`), a `TLPLevel` added by #7926 (default `amber`), compared with pycti's `check_max_tlp`. The SDK converts the max TLP to the `TLP:XXX` form `check_max_tlp` expects | The TLP order is a platform rule, maintained in pycti: the SDK does not copy it. The conversion happens once in the SDK, so connectors never convert and never hit `check_max_tlp`'s `KeyError` on a lowercase level. A custom TLP marking (e.g. `TLP:EX:CHEMICAL`) is refused. |
 | Scope and TLP helpers | `is_entity_in_scope()` and `is_entity_tlp_allowed()` are static methods that do not log | Connectors not built on the base can use them. `is_entity_tlp_allowed()` also accepts the max TLP as a string. |
@@ -169,12 +173,11 @@ Existing connectors keep working: the new classes are opt-in. Their own TLP sett
 
 ## Disadvantages
 
-- Behaviour change for migrated connectors: a TLP refusal or an unsupported entity now completes the work instead of failing, and an out-of-scope entity outside a playbook now fails the work.
+- Behaviour change for migrated connectors: a TLP refusal, an out-of-scope or an unsupported entity now completes the work instead of failing.
 - Success outcomes are generic: connectors lose their detailed messages (verdict, score, counts).
 - The TLP check reads the markings stored in OpenCTI (`enrichment_entity`). In a playbook, a marking added by an earlier step and not saved yet is not seen.
 - In a playbook, an entity sent back with another id (e.g. a file rebuilt with an MD5) is a second object in the bundle. The playbook's main entity keeps the old id, so the steps after the enrichment do not see the new data until ingestion merges the two by their hashes. Merging them is the job of pycti and the platform, not of the SDK or the connector.
-- The `MessageManager` keeps the state of the current message, which relies on pycti handling one message at a time.
-- In a playbook, if the bundle reaches the platform but the request still fails (a timeout after 300 s, a network drop while waiting for the response), the original bundle is sent too, and the next step can run twice. This case is rare; sending the original bundle after the common failures keeps the playbook going.
+- In a playbook, if sending the bundle fails (platform unreachable, request refused, timeout), the original bundle is not sent either, and the playbook stops at this step, with the error logged.
 - Connectors that need several sends per message or their own works cannot use the base as is; none of the analysed connectors needs them legitimately.
 - Processors do not receive the helper, so a connector that relies on the OpenCTI API (e.g. to pre-create labels with a color) has no supported way to reach it. This is consistent with the guideline to avoid `helper.api` in connector code, but may need a hook later.
 
@@ -184,12 +187,16 @@ Existing connectors keep working: the new classes are opt-in. Their own TLP sett
 
 - **Helpers only** (functions to check the scope, the TLP and to send a bundle, used by each connector's own class): rejected, since connectors could still forget to send a bundle on one path, which is the most frequent bug found. The scope and TLP checks are still offered as static helpers.
 - **Bundle building and sending in the connector** (a `try`/`except` in `callback()`): rejected, since the connector must stay a controller.
-- **A context manager class with `__enter__`/`__exit__`**: rejected for readability. With `@contextmanager`, the three ways out (success, skip, failure) are plain `except` clauses instead of `isinstance` checks and a boolean that decides whether the exception is swallowed.
+- **The handling logic written in `__exit__`**: rejected for readability. The `BundleManager` is a context manager, but its `__enter__` and `__exit__` delegate to a private `@contextmanager` generator: its ways out (success, skip, invalid message, failure) are plain `except` clauses instead of `isinstance` checks and a boolean that decides whether the exception is swallowed.
+- **A `handle()` method returning the context manager** (`with bundle_manager.handle():`): rejected, since the manager lives exactly as long as the message: `with BundleManager(...) as bundle_manager:` says it.
 - **A bundle sender per processor, like `WorkManager`**: rejected, since a message that no processor handles still needs a bundle in a playbook.
+- **One `BundleManager` for the connector, injected into the processors, which send their objects themselves**: rejected, since it shares mutable per-message state between every component, and makes processors depend on sending.
+- **An explicit `send(objects)` called by the connector in the `with` block**: rejected, since the sending was then split between the connector's call and the end of the block, and a second call had to be refused with a `RuntimeError`.
 - **The first processor whose `can_process()` returns `True` handles the message**: rejected, since the result depended on the order of the processors and on `can_process()` being overridden or not.
 - **Running every processor that can process the entity**: rejected, since it breaks the one-bundle-per-message guarantee. A processor can call several endpoints in `collect()` instead.
 - **Keeping `max_tlp` in each connector's section, read through a hook**: rejected, since it keeps three forms and four names for the same setting.
 - **Raising on every skip** (the majority in today's code): rejected, see the Skips decision.
+- **An out-of-scope entity as an error outside playbooks** (`EntityOutOfScopeError`): rejected, since the platform does not filter a request through the API, and the caller's mistake would put the work in error.
 - **Merging the enriched entity into the entity received in the SDK** (an earlier version of this design): rejected, since the platform already merges, and the SDK rules duplicated or contradicted them. The underlying playbook issue (SDK models write `x_opencti_labels` at the top level, which pycti ignores next to the extension's labels) is fixed at its source: the SDK models also write the OpenCTI extension, in a separate change.
 - **Recognizing an enriched entity under another id (shared hashes) and giving it the received entity's id**: rejected, since it brings the platform's deduplication logic into the SDK.
 - **Crashing the connector on an invalid message (`os._exit()`)**: rejected, since the message is already acked and would not be replayed.

@@ -9,13 +9,13 @@ Architecture::
     InternalEnrichmentConnector
     ├── OpenCTIConnectorHelper   → pycti bridge (created in _init_dependencies, listens to the queue)
     ├── ConnectorLoggerAdapter   → Logging (stdlib logging, pycti's format)
-    ├── _MessageManager            → Builds and sends the bundle of each message
+    ├── BundleManager            → Builds and sends the bundle of one message (one per message)
     └── BaseEnrichmentProcessor[] → can_process(), process() for one or more entity types
 
 Message handling::
 
-    invalid message?              → re-raised (pycti puts the work in error)
-    out of scope?                 → playbook: skip; manual/auto: error
+    invalid message?              → error
+    out of scope?                 → skip
     no processor supports it?     → skip
     TLP not allowed?              → skip
     objects = processor.process()
@@ -25,16 +25,16 @@ Message handling::
     skip: playbook → send the original bundle back; manual/auto → nothing sent, work completed
     error: playbook → send the original bundle back; then re-raise (manual/auto: work in error)
 
-The connector neither builds nor sends bundles: ``_MessageManager`` does, and sends
-exactly one bundle per playbook message.
+The connector neither builds nor sends bundles: the ``BundleManager`` of each message
+does, and sends exactly one bundle per playbook message.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-from connectors_sdk.connectors.internal_enrichment._message_manager import (
-    MessageManager,
+from connectors_sdk.connectors.internal_enrichment._bundle_manager import (
+    BundleManager,
 )
 from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
     BaseEnrichmentProcessor,
@@ -43,7 +43,7 @@ from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
 )
 from connectors_sdk.connectors.internal_enrichment.exceptions import (
-    EntityOutOfScopeError,
+    InvalidEnrichmentMessageError,
     UnsupportedEntityError,
 )
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
@@ -52,6 +52,7 @@ from connectors_sdk.settings.base_settings import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
+from connectors_sdk.settings.exceptions import ConfigValidationError
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 
@@ -64,7 +65,7 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
     - Scope check against ``connector.scope``, on the OpenCTI type of the entity
     - Processor selection: the only processor whose ``can_process()`` returns ``True``
     - TLP check against ``connector.max_tlp``, before any call to the external source
-    - Bundle sending, delegated to the ``_MessageManager`` given to the processors
+    - Bundle sending, delegated to a ``BundleManager`` created for each message
     - Playbook compatibility: exactly one bundle sent per playbook message, whatever happens
     - Error handling and logging
 
@@ -116,8 +117,9 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
 
         Raises:
             TypeError: If ``settings.connector`` is not a ``BaseInternalEnrichmentConnectorConfig``.
-            ValueError: If no processor is provided, or if an entity type of
-                ``connector.scope`` is declared by no processor.
+            ValueError: If no processor is provided.
+            ConfigValidationError: If an entity type of ``connector.scope`` is declared
+                by no processor.
         """
         if not isinstance(settings.connector, BaseInternalEnrichmentConnectorConfig):
             raise TypeError(
@@ -139,7 +141,7 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
         ]
         for entity_type in self._enabled_entity_types:
             if not self.is_entity_in_scope(entity_type, processor_entity_types):
-                raise ValueError(
+                raise ConfigValidationError(
                     f"No processor declares the entity type {entity_type} "
                     "of connector.scope."
                 )
@@ -149,20 +151,37 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
 
         This method:
         1. Creates the ``OpenCTIConnectorHelper`` from the config, as playbook compatible
-        2. Creates the ``_MessageManager`` shared by the connector and its processors
-        3. Calls ``inject_dependencies()`` and ``post_init()`` on each processor
+        2. Calls ``inject_dependencies()`` and ``post_init()`` on each processor
         """
         self._helper = OpenCTIConnectorHelper(
             config=self.settings.to_helper_config(),
             playbook_compatible=True,
         )
-        self._message_manager = MessageManager(self._helper)
 
         for processor in self.enrichment_processors:
-            processor.inject_dependencies(
-                settings=self.settings, message_manager=self._message_manager
-            )
+            processor.inject_dependencies(settings=self.settings)
             processor.post_init()
+
+    def _parse_message(self, data: dict[str, Any]) -> EnrichmentMessage:
+        """Validate the message data passed by pycti.
+
+        Args:
+            data: The message data passed by ``OpenCTIConnectorHelper.listen()``.
+
+        Returns:
+            The enrichment message.
+
+        Raises:
+            InvalidEnrichmentMessageError: If the message is invalid, from the
+                ``ValidationError``.
+        """
+        try:
+            return EnrichmentMessage.model_validate(
+                # pycti resets `helper.playbook` for each message
+                {**data, "from_playbook": self._helper.playbook is not None}
+            )
+        except ValidationError as err:
+            raise InvalidEnrichmentMessageError("Invalid enrichment message") from err
 
     def _select_processor(self, message: EnrichmentMessage) -> BaseEnrichmentProcessor:
         """Return the only processor that supports the message.
@@ -201,20 +220,26 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
     def _check_scope(self, message: EnrichmentMessage) -> None:
         """Check that the entity type is in the connector scope.
 
+        In a playbook, any entity reaches the connector: an entity out of scope is
+        normal there, and only logged at INFO. Outside playbooks, the platform only
+        sends entities in scope, except for a request through the API: it is logged
+        at WARNING.
+
         Args:
             message: The enrichment message.
 
         Raises:
-            EntityOutOfScopeError: If the entity type is out of the connector scope.
+            UnsupportedEntityError: If the entity type is out of the connector scope.
         """
         if not self.is_entity_in_scope(
             message.enrichment_entity.entity_type, self._enabled_entity_types
         ):
-            self.logger.info(
-                "Entity type is out of the connector scope",
+            log = self.logger.info if message.from_playbook else self.logger.warning
+            log(
+                "Entity type is out of the connector scope, skipping",
                 meta=message.to_log_metadata(),
             )
-            raise EntityOutOfScopeError(
+            raise UnsupportedEntityError(
                 f"Entity type {message.enrichment_entity.entity_type} is out of scope"
             )
 
@@ -256,26 +281,16 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
             A message describing the outcome, stored on the work.
 
         Raises:
-            ValidationError: If the message is invalid. pycti must always send a valid
-                message: nothing is sent back, even in a playbook.
-            EntityOutOfScopeError: If the entity type is out of the connector scope,
-                outside a playbook (in a playbook, the entity is skipped).
+            InvalidEnrichmentMessageError: If the message is invalid, after it is
+                logged and, in a playbook, after the ``stix_objects`` received are sent
+                back.
             Exception: Any exception raised while processing the message, after it is
                 logged and, in a playbook, after the original bundle is sent back.
         """
-        try:
-            message = EnrichmentMessage.model_validate(
-                # pycti resets `helper.playbook` for each message
-                {**data, "from_playbook": self._helper.playbook is not None}
-            )
-        except ValidationError:
-            # pycti logs a generic message without the exception text: log it here.
-            self.logger.exception(
-                "Invalid enrichment message", meta={"entity_id": data.get("entity_id")}
-            )
-            raise
+        with BundleManager(self._helper, data) as bundle_manager:
+            message = self._parse_message(data)
+            bundle_manager.message = message
 
-        with self._message_manager.handle(message):
             # Skip unsupported entity before they can reach the processor
             self._check_scope(message)
             self._check_tlp(message)
@@ -285,10 +300,11 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
             # OCTI entities with a TLP level above connector's threshold must never
             # reach any processor to avoid sensitive data leakage.
             processor = self._select_processor(message)
-            processor.process(message)
+            bundle_manager.objects = processor.process(message)
 
-        # Success, no data or skip: the manager knows how the message ended
-        return self._message_manager.outcome
+        # The bundle is sent when the `with` block ends: the manager knows how the
+        # message ended (success, no data or skip)
+        return bundle_manager.outcome
 
     def start(self) -> None:
         """Start the connector and listen to enrichment messages.
