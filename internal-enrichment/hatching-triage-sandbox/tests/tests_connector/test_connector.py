@@ -315,9 +315,7 @@ class TestRetries:
         assert connector.triage_client.sample_events.call_count == 2
         mock_sleep.assert_called_once()
 
-    def test_wait_for_analysis_retries_on_connection_error(
-        self, mock_sleep, connector
-    ):
+    def test_wait_for_analysis_retries_on_connection_error(self, mock_sleep, connector):
         connector.triage_client.sample_events.side_effect = [
             RequestException("connection reset"),
             iter([{"status": "reported"}]),
