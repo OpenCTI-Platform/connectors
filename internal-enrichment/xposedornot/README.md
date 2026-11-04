@@ -37,7 +37,7 @@ This internal-enrichment connector enriches `Email-Addr` observables with that e
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261030.1
+- OpenCTI Platform >= 7.261103.0
 - No XposedOrNot account or API key needed (optional key for higher volume)
 
 ## Configuration variables
