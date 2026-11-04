@@ -140,7 +140,7 @@ exclude = [
     '^docs',
     '^node_modules',
     '^site-packages',
-    '^tests/(?!$|type_checks/)',
+    '^tests',
     '^venv',
 ]
 plugins = ['pydantic.mypy']

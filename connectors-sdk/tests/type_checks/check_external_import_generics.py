@@ -1,13 +1,15 @@
 """Static type checks for the generic `BaseDataProcessor` and `ExternalImportConnector`.
 
-This module is checked by strict `mypy` (run by `tests/conftest.py` at the end of the
-pytest session, see the `exclude` option of `[tool.mypy]` in `pyproject.toml`). It is
-never imported nor collected by pytest: its name does not match `python_files`.
+This module is checked by strict `mypy` in `tests/test_type_checks.py`, which runs it
+as a subprocess and compares the reported errors with the `# E:` markers below. It is
+excluded from the main `mypy .` run (see the `exclude` option of `[tool.mypy]` in
+`pyproject.toml`), and is never imported nor collected by pytest: its name does not
+match `python_files`.
 
-Positive cases use `assert_type`: a wrong type makes `mypy` fail.
-Negative cases carry a `# type: ignore[<code>]` with the exact error code `mypy`
-reports. Under strict `warn_unused_ignores`, a rejection that is lost (the line
-type-checks again) makes `mypy` fail with `unused-ignore`.
+Positive cases use `assert_type` and must produce no error.
+Negative cases carry a `# E: <code>` marker, on the line `mypy` reports the error on,
+with the expected `mypy` error code. An error without a marker, or a marker without
+an error, makes the test fail.
 
 Pydantic classes are never instantiated here (the pydantic `mypy` plugin synthesizes
 a field-keyword `__init__`): instances are taken as function parameters.
@@ -133,7 +135,7 @@ class LegacyRedeclaringProcessor(BaseDataProcessor):
     """Redeclared settings that only inherit `BaseConnectorSettings`."""
 
     work_name = "legacy"
-    settings: LegacySettings  # type: ignore[assignment]
+    settings: LegacySettings  # E: assignment
 
     def collect(self) -> list[str]:
         """Do nothing."""
@@ -190,7 +192,7 @@ def check_negative_mismatching_settings(
     settings: MySettings, state: MyState, other: OtherProcessor
 ) -> None:
     """A processor parameterized with other settings is rejected."""
-    ExternalImportConnector(  # type: ignore[misc]
+    ExternalImportConnector(  # E: misc
         settings=settings,
         data_processors=[other],
         state=state,
@@ -206,7 +208,7 @@ def check_negative_mixed_processors(
     """A list mixing parameterized and unparameterized processors is rejected."""
     ExternalImportConnector(
         settings=settings,
-        data_processors=[typed, default],  # type: ignore[list-item]
+        data_processors=[typed, default],  # E: list-item
         state=state,
     )
 
@@ -235,13 +237,13 @@ def check_redeclaring_processor(
 
 def check_negative_legacy_settings(legacy: LegacySettings) -> None:
     """Settings that only inherit `BaseConnectorSettings` are rejected."""
-    ExternalImportConnector(  # type: ignore[type-var]
+    ExternalImportConnector(  # E: type-var
         settings=legacy,
         data_processors=[],
     )
 
 
-class LegacyParameterizedProcessor(BaseDataProcessor[LegacySettings, MyState]):  # type: ignore[type-var]
+class LegacyProcessor(BaseDataProcessor[LegacySettings, MyState]):  # E: type-var
     """Parameterizing with settings that lack `duration_period` is rejected."""
 
 
@@ -251,7 +253,7 @@ def check_negative_state_mismatch(
     plain_state: ExternalImportConnectorState,
 ) -> None:
     """A state that is not the processors' state type is rejected."""
-    ExternalImportConnector(  # type: ignore[misc]
+    ExternalImportConnector(  # E: misc
         settings=settings,
         data_processors=[processor],
         state=plain_state,
