@@ -174,6 +174,23 @@ def test_skipped_tail_still_advances_the_cursor():
     assert _saved_cursors(helper) == ["id-skipped"]
 
 
+def test_final_cursor_includes_rows_skipped_after_the_last_valid_row():
+    connector, helper = _make_connector([_article("id-1")])
+    iter_rows = connector.api_client.iter_api_rows.side_effect
+
+    def iter_rows_then_skip_tail(**kwargs):
+        yield from iter_rows(**kwargs)
+        # Rows fetched but dropped by the client (too large, invalid)
+        connector.api_client.last_seen_id = "id-3"
+
+    connector.api_client.iter_api_rows.side_effect = iter_rows_then_skip_tail
+
+    connector._send_rows_bundles(after=None)
+
+    assert helper.send_stix2_bundle.call_count == 1
+    assert _saved_cursors(helper) == ["id-3"]
+
+
 def test_convert_batch_uses_the_process_pool_in_row_order():
     rows = [_article(f"id-{i}", row_number=i) for i in range(1, 5)]
     connector, _helper = _make_connector(rows)

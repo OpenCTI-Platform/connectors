@@ -43,6 +43,7 @@ def convert_row_in_worker(
             None,
         )
     except ConversionError as err:
-        return article.id, article.row_number, None, str(err)
-    except Exception as err:  # noqa: BLE001 — surface any worker failure to the parent
+        # Expected, per-row failure: the parent skips the row.
+        # Any other exception propagates through the pool and ends the run
+        # before the cursor passes this row, as in sequential mode.
         return article.id, article.row_number, None, str(err)

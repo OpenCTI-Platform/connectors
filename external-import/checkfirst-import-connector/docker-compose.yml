@@ -14,8 +14,9 @@ services:
       - CHECKFIRST_API_ENDPOINT=${CHECKFIRST_API_ENDPOINT}
       - CHECKFIRST_SINCE=${CHECKFIRST_SINCE}
       - CHECKFIRST_TLP_LEVEL=${CHECKFIRST_TLP_LEVEL}
-      # Optional tuning (see README):
-      # - CHECKFIRST_CONVERT_WORKERS=1
-      # - CHECKFIRST_CONVERT_BATCH_SIZE=32
-      # - CHECKFIRST_BUNDLE_SIZE=10000
-      # - CHECKFIRST_LOG_FILE=/var/log/checkfirst-connector/connector.log
+      # Optional tuning (see README); left empty, each one keeps its default.
+      - CHECKFIRST_CONVERT_WORKERS=${CHECKFIRST_CONVERT_WORKERS:-}
+      - CHECKFIRST_CONVERT_BATCH_SIZE=${CHECKFIRST_CONVERT_BATCH_SIZE:-}
+      - CHECKFIRST_BUNDLE_SIZE=${CHECKFIRST_BUNDLE_SIZE:-}
+      # Mount the log file's parent directory as a volume to keep it on the host.
+      - CHECKFIRST_LOG_FILE=${CHECKFIRST_LOG_FILE:-}

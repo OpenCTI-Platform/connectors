@@ -82,14 +82,9 @@ def test_worker_reports_an_uninitialized_converter(monkeypatch):
     assert error == "convert worker not initialized"
 
 
-@pytest.mark.parametrize(
-    "exception",
-    [ConversionError("cannot convert"), RuntimeError("cannot convert")],
-    ids=["conversion_error", "unexpected_error"],
-)
-def test_worker_reports_conversion_failures(monkeypatch, exception):
+def test_worker_reports_conversion_errors(monkeypatch):
     converter = MagicMock()
-    converter.get_campaign_for_year.side_effect = exception
+    converter.get_campaign_for_year.side_effect = ConversionError("cannot convert")
     monkeypatch.setattr(parallel_convert, "_worker_converter", converter)
 
     _row_id, _row_number, entities, error = parallel_convert.convert_row_in_worker(
@@ -98,6 +93,16 @@ def test_worker_reports_conversion_failures(monkeypatch, exception):
 
     assert entities is None
     assert error == "cannot convert"
+
+
+def test_worker_propagates_unexpected_errors(monkeypatch):
+    """An unexpected failure must stop the run, not be skipped like a bad row."""
+    converter = MagicMock()
+    converter.get_campaign_for_year.side_effect = RuntimeError("bug")
+    monkeypatch.setattr(parallel_convert, "_worker_converter", converter)
+
+    with pytest.raises(RuntimeError, match="bug"):
+        parallel_convert.convert_row_in_worker(_article())
 
 
 # --- File logging -------------------------------------------------------------

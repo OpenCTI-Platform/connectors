@@ -356,7 +356,7 @@ class CheckfirstImportConnector:
                     run_reporter.rows_seen += 1
                     last_row_id = row.id
 
-                    if error is not None:
+                    if error is not None or row_octi_objects is None:
                         run_reporter.skip(SkipReason.ROW_MAPPING_ERROR)
                         self.logger.warning(
                             "Skipping row due to conversion error",
@@ -368,7 +368,6 @@ class CheckfirstImportConnector:
                         )
                         continue
 
-                    assert row_octi_objects is not None
                     # Rows share many same entities, so only original objects are added
                     # (OCTI models are hashable and comparable for this very purpose)
                     for row_octi_object in row_octi_objects:
@@ -395,7 +394,11 @@ class CheckfirstImportConnector:
             flush_convert_batch()
             await_in_flight_send()
 
-            watermark = last_row_id or self.api_client.last_seen_id
+            # Every fetched row has now been converted or skipped, and every
+            # bundle sent: the last `_id` seen by the client, skipped tail
+            # included, is a safe watermark. (Intermediate sends use
+            # `last_row_id` instead, so unsent rows are never checkpointed.)
+            watermark = self.api_client.last_seen_id or last_row_id
 
             if not rows_yielded and not self.api_client.last_seen_id:
                 # Log and let the connector end the run
