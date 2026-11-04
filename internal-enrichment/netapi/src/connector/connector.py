@@ -1,9 +1,9 @@
 """NetAPI internal-enrichment connector.
 
-Checks domain names, hostnames and URLs (by their host) against the NetAPI
-compromised feed, the hosts that public threat feeds report for
-malware or phishing, and adds the position of a listed domain in the NetAPI
-Top 1M. The lookups are free and need no account; CONNECTOR_MAX_TLP gates
+Checks domain names, hostnames, URLs (by their host) and IPv4 addresses against
+the NetAPI compromised feeds: the domains that public threat feeds report for
+malware or phishing, and the IPv4 addresses that attacked NetAPI's own honeypot
+network. It adds the position of a listed domain in the NetAPI Top 1M. The lookups are free and need no account; CONNECTOR_MAX_TLP gates
 what may leave the platform.
 """
 
@@ -152,6 +152,8 @@ class NetAPIConnector:
         """The host to look up: a URL is checked by its host, names in punycode."""
         value = str(stix_entity.get("value") or "").strip()
         stix_type = str(stix_entity.get("type") or "")
+        if stix_type == "ipv4-addr":
+            return NetAPIConnector.lookup_ipv4(value)
         if stix_type == "url":
             if AUTHORITY_SCHEME.match(value) or value.startswith("//"):
                 parsed = urlparse(value)
@@ -168,11 +170,15 @@ class NetAPIConnector:
             raise EnrichmentSkipped("The observable has no host to look up")
 
         try:
-            ipaddress.ip_address(host)
+            address = ipaddress.ip_address(host)
         except ValueError:
-            pass
-        else:
-            raise EnrichmentSkipped("IP address: the NetAPI feed holds domains only")
+            address = None
+        if address is not None:
+            if address.version != 4:
+                raise EnrichmentSkipped("IPv6 address: the NetAPI feed holds IPv4 only")
+            if not address.is_global:
+                raise EnrichmentSkipped("Private or reserved address: not looked up")
+            return str(address)
 
         try:
             # a Unicode name goes through IDNA2008 with UTS 46 mapping, so that it and
@@ -194,6 +200,24 @@ class NetAPIConnector:
         ):
             raise EnrichmentSkipped("The observable value is not a valid host name")
         return host
+
+    @staticmethod
+    def lookup_ipv4(value: str) -> str:
+        """An IPv4-Addr value: one public address, a /32 counts as one; ranges are not sent."""
+        try:
+            network = ipaddress.ip_network(value, strict=False)
+        except ValueError as err:
+            raise EnrichmentSkipped(
+                "The observable value is not a valid IPv4 address"
+            ) from err
+        if network.version != 4:
+            raise EnrichmentSkipped("The observable value is not a valid IPv4 address")
+        if network.num_addresses != 1:
+            raise EnrichmentSkipped("IPv4 range: only single addresses are looked up")
+        address = network.network_address
+        if not address.is_global:
+            raise EnrichmentSkipped("Private or reserved address: not looked up")
+        return str(address)
 
     def _forward(self, data: dict[str, Any], message: str) -> str:
         """Inside a playbook, hand the bundle back untouched; return the status."""

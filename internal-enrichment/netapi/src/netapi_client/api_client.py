@@ -59,11 +59,12 @@ class NetAPIClient:
             self._session.headers["Authorization"] = f"Bearer {api_token}"
 
     def compromised_check(self, value: str) -> dict[str, Any]:
-        """Whether `value` (a domain or hostname) is in the compromised feed.
+        """Whether `value` (a domain, hostname or IPv4 address) is in the compromised feed.
 
         A hostname is also matched through its registered domain; the answer says
         which entry matched (`matched_value`), when it was first and last seen, the
-        public feed that reported it and the registrar of a domain.
+        public feed that reported it (for an IP address, the attack type) and the
+        registrar of a domain.
         """
         return self._get("compromised-check", value=value)
 
