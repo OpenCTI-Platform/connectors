@@ -31,13 +31,18 @@ class MISPClient:
     ):
         """Initialize and wrap a PyMISP instance."""
 
-        # Any logger with debug(message) and warning(message), e.g. the
-        # connector helper's connector_logger.
+        # Any logger with debug(message), info(message) and warning(message),
+        # e.g. the connector helper's connector_logger.
         self._logger = logger or _default_logger
         # Which `date_from` value MISP answered last: False for the datetime
         # (PyMISP sends a Unix timestamp), True for the YYYY-MM-DD string.
         # Remembered for the next runs, so the format that works is tried first.
         self._date_from_as_date_string = False
+        # Whether either `date_from` format has ever returned events on this
+        # client. Until it has, an empty first page in both formats is a
+        # warning (the instance may accept neither); after that, it only means
+        # nothing is new and is logged at info level.
+        self._date_from_ever_answered = False
 
         retry_strategy = Retry(
             total=retry,
@@ -169,14 +174,21 @@ class MISPClient:
                                 self._date_from_as_date_string = isinstance(
                                     candidate, str
                                 )
+                                self._date_from_ever_answered = True
                             break
                     if len(results) == 0:
-                        if is_date_from:
+                        if is_date_from and self._date_from_ever_answered:
+                            self._logger.info(
+                                f"MISP returned no new event for date_from "
+                                f"{date_value_filter!r}."
+                            )
+                        elif is_date_from:
                             self._logger.warning(
                                 f"MISP returned no event for date_from "
                                 f"{date_value_filter!r}, sent both as a Unix "
                                 f"timestamp and as "
-                                f"{self._to_utc_date_string(date_value_filter)!r}. "
+                                f"{self._to_utc_date_string(date_value_filter)!r}, "
+                                f"and neither format has returned events yet. "
                                 f"Either nothing is new, or this MISP instance "
                                 f"accepts neither format."
                             )

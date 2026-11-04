@@ -228,6 +228,22 @@ def test_date_from_logs_a_warning_when_both_formats_return_nothing(
     assert client._logger.debug.call_count == 2
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
+@patch("api_client.client.PyMISP")
+def test_date_from_logs_info_when_nothing_is_new_after_a_format_answered(
+    mock_pymisp,
+) -> None:
+    """Once a format has returned events, an empty run is info, not a warning."""
+    client = _mocked_client(mock_pymisp, [_PAGE, [], [], []])
+    _run_search(client, "date_from", _START)
+
+    _run_search(client, "date_from", _START)
+
+    client._logger.warning.assert_not_called()
+    client._logger.info.assert_called_once()
+    assert "no new event" in client._logger.info.call_args.args[0]
+
+
 @patch("api_client.client.PyMISP")
 def test_date_from_string_is_the_utc_date(mock_pymisp) -> None:
     """2026-01-02T01:00+05:00 is 2026-01-01T20:00Z: the date sent is 2026-01-01."""
