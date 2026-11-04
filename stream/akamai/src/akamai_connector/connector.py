@@ -53,16 +53,21 @@ class AkamaiConnector:
         self.client_list_id = self.config.akamai.client_list_id.strip()
 
         # Akamai Client List for ASN.
-        self.asn_client_list_id = self.config.akamai.asn_client_list_id.strip()
+        # Optional to preserve existing IPv4-only deployments.
+        self.asn_client_list_id = (
+            self.config.akamai.asn_client_list_id.strip()
+            if self.config.akamai.asn_client_list_id
+            else None
+        )
 
         # Create HTTP session.
         self.session = requests.Session()
 
         # Configure Akamai EdgeGrid authentication.
         self.session.auth = EdgeGridAuth(
-            client_token=(self.config.akamai.client_token.get_secret_value()),
-            client_secret=(self.config.akamai.client_secret.get_secret_value()),
-            access_token=(self.config.akamai.access_token.get_secret_value()),
+            client_token=self.config.akamai.client_token.get_secret_value(),
+            client_secret=self.config.akamai.client_secret.get_secret_value(),
+            access_token=self.config.akamai.access_token.get_secret_value(),
         )
 
         # Enable SSL certificate verification.
@@ -77,14 +82,13 @@ class AkamaiConnector:
         )
 
         self.helper.connector_logger.info(
-            f"Akamai connector initialized " f"(base_url={self.base_url})"
+            f"Akamai connector initialized (base_url={self.base_url})"
         )
 
     def run(self):
         """
         Start listening to OpenCTI live stream.
         """
-
         self.helper.connector_logger.info("Listening for OpenCTI stream events...")
 
         self.helper.listen_stream(self._process_message)
@@ -99,7 +103,6 @@ class AkamaiConnector:
         Example:
         [ipv4-addr:value = '1.2.3.4']
         """
-
         match = re.search(
             r"value\s*=\s*'([^']+)'",
             pattern,
@@ -120,7 +123,7 @@ class AkamaiConnector:
         pattern: str,
     ):
         """
-        Extract ASN from STIX pattern.
+        Extract ASN from a complete simple STIX pattern.
 
         Supported examples:
 
@@ -133,9 +136,9 @@ class AkamaiConnector:
         The optional AS prefix is removed before
         sending the ASN to Akamai.
         """
-
-        match = re.search(
-            r"autonomous-system:number\s*=\s*'?(?:AS)?([0-9]+)'?",
+        match = re.fullmatch(
+            r"\s*\[\s*autonomous-system:number\s*=\s*"
+            r"(?P<quote>'?)(?:AS)?(?P<asn>[0-9]+)(?P=quote)\s*\]\s*",
             pattern,
             re.IGNORECASE,
         )
@@ -143,11 +146,7 @@ class AkamaiConnector:
         if not match:
             return None
 
-        # Only retrieve the numeric ASN.
-        #
-        # Example:
-        # AS200651 -> 200651
-        asn = match.group(1)
+        asn = match.group("asn")
 
         if not is_asn(asn):
             return None
@@ -161,14 +160,10 @@ class AkamaiConnector:
         """
         Handle OpenCTI stream message.
         """
-
         try:
             payload = msg.data
 
-            if isinstance(
-                payload,
-                str,
-            ):
+            if isinstance(payload, str):
                 payload = json.loads(payload)
 
             data = payload.get("data")
@@ -195,17 +190,13 @@ class AkamaiConnector:
             # -------------------------
             # IP
             # -------------------------
-
             if ip:
-
                 if msg.event == "create":
-
                     self.helper.connector_logger.info(f"[CREATE] Adding IP: {ip}")
 
                     self._add_ip(ip)
 
                 elif msg.event == "delete":
-
                     self.helper.connector_logger.info(f"[DELETE] Removing IP: {ip}")
 
                     self._remove_ip(ip)
@@ -213,23 +204,25 @@ class AkamaiConnector:
             # -------------------------
             # ASN
             # -------------------------
-
             elif asn:
+                if not self.asn_client_list_id:
+                    self.helper.connector_logger.warning(
+                        "Skipping ASN indicator because "
+                        "AKAMAI_ASN_CLIENT_LIST_ID is not configured"
+                    )
+                    return
 
                 if msg.event == "create":
-
                     self.helper.connector_logger.info(f"[CREATE] Adding ASN: {asn}")
 
                     self._add_asn(asn)
 
                 elif msg.event == "delete":
-
                     self.helper.connector_logger.info(f"[DELETE] Removing ASN: {asn}")
 
                     self._remove_asn(asn)
 
         except Exception as e:
-
             self.helper.connector_logger.error(f"Error processing message: {str(e)}")
 
     def _add_ip(
@@ -239,7 +232,6 @@ class AkamaiConnector:
         """
         Add IP to Akamai IP Client List.
         """
-
         url = (
             f"{self.base_url}"
             f"/client-list/v1/lists/"
@@ -267,7 +259,6 @@ class AkamaiConnector:
 
         Ignore HTTP 400 if the IP does not exist.
         """
-
         url = (
             f"{self.base_url}"
             f"/client-list/v1/lists/"
@@ -283,9 +274,8 @@ class AkamaiConnector:
         )
 
         if response.status_code == 400:
-
             self.helper.connector_logger.info(
-                f"IP {ip} not present " "in Akamai list. Ignoring."
+                f"IP {ip} not present in Akamai list. Ignoring."
             )
 
             return
@@ -301,7 +291,6 @@ class AkamaiConnector:
         """
         Add ASN to Akamai ASN Client List.
         """
-
         url = (
             f"{self.base_url}"
             f"/client-list/v1/lists/"
@@ -329,7 +318,6 @@ class AkamaiConnector:
 
         Ignore HTTP 400 if the ASN does not exist.
         """
-
         url = (
             f"{self.base_url}"
             f"/client-list/v1/lists/"
@@ -345,9 +333,8 @@ class AkamaiConnector:
         )
 
         if response.status_code == 400:
-
             self.helper.connector_logger.info(
-                f"ASN {asn} not present " "in Akamai list. Ignoring."
+                f"ASN {asn} not present in Akamai list. Ignoring."
             )
 
             return

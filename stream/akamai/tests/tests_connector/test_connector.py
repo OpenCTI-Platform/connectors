@@ -102,6 +102,44 @@ def test_connector_initialization():
     helper.connector_logger.info.assert_called_once()
 
 
+def test_connector_initialization_without_asn_list():
+    helper = MagicMock()
+
+    client_token = MagicMock()
+    client_token.get_secret_value.return_value = "client-token"
+
+    client_secret = MagicMock()
+    client_secret.get_secret_value.return_value = "client-secret"
+
+    access_token = MagicMock()
+    access_token.get_secret_value.return_value = "access-token"
+
+    config = SimpleNamespace(
+        akamai=SimpleNamespace(
+            base_url="https://example.akamaiapis.net/",
+            client_list_id="12345_IP_LIST",
+            asn_client_list_id=None,
+            client_token=client_token,
+            client_secret=client_secret,
+            access_token=access_token,
+        )
+    )
+
+    session = MagicMock()
+
+    with (
+        patch(
+            "akamai_connector.connector.requests.Session",
+            return_value=session,
+        ),
+        patch("akamai_connector.connector.EdgeGridAuth"),
+    ):
+        connector = AkamaiConnector(config, helper)
+
+    assert connector.client_list_id == "12345_IP_LIST"
+    assert connector.asn_client_list_id is None
+
+
 def test_run(connector):
     connector.run()
 
@@ -138,6 +176,9 @@ def test_extract_ip_from_pattern(connector, pattern, expected):
         ("[autonomous-system:number = 4294967296]", None),
         ("[autonomous-system:name = 'Example']", None),
         ("invalid-pattern", None),
+        ("[file:name = 'autonomous-system:number = 64512']", None),
+        ("[autonomous-system:number = 'AS200651bogus']", None),
+        ("[autonomous-system:number = 64512.5]", None),
     ],
 )
 def test_extract_asn_from_pattern(connector, pattern, expected):
@@ -208,6 +249,32 @@ def test_process_asn_message(connector, event, method_name):
 
     connector._add_ip.assert_not_called()
     connector._remove_ip.assert_not_called()
+
+
+def test_process_asn_without_asn_client_list(connector):
+    connector.asn_client_list_id = None
+    connector._add_asn = MagicMock()
+    connector._remove_asn = MagicMock()
+
+    msg = SimpleNamespace(
+        data={
+            "data": {
+                "type": "indicator",
+                "pattern_type": "stix",
+                "pattern": "[autonomous-system:number = 64512]",
+            }
+        },
+        event="create",
+    )
+
+    connector._process_message(msg)
+
+    connector._add_asn.assert_not_called()
+    connector._remove_asn.assert_not_called()
+
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "Skipping ASN indicator because " "AKAMAI_ASN_CLIENT_LIST_ID is not configured"
+    )
 
 
 def test_process_string_payload(connector):
