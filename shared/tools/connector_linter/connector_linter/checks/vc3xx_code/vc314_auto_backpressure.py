@@ -8,12 +8,18 @@ or ``self.helper.schedule_iso(message_callback=..., duration_period=...)``
 provide automatic scheduling with backpressure. Manual ``while True`` /
 ``time.sleep`` loops should be migrated.
 
+Connectors built on connectors-sdk's ``ExternalImportConnector`` pass: its
+``start()`` schedules runs with ``schedule_process``.
+
 Scope: EXTERNAL_IMPORT only — other connector types are event-driven.
 """
 
 import ast
 from pathlib import Path
 
+from connector_linter.checks.vc3xx_code._helpers import (
+    find_sdk_external_import_connector,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -70,7 +76,10 @@ def _find_while_true_loops(
 @CheckRegistry.register(
     code="VC314",
     name="auto-backpressure",
-    description="External-import connectors must use schedule_process or schedule_iso",
+    description=(
+        "External-import connectors must use schedule_process or schedule_iso "
+        "(or connectors-sdk ExternalImportConnector)"
+    ),
     severity=Severity.ERROR,
     applicable_types={ConnectorType.EXTERNAL_IMPORT},
 )
@@ -85,10 +94,22 @@ def check_auto_backpressure(ctx: ConnectorContext) -> list[CheckFinding]:
 
     # ---------------------------------------------------------------------------
     # Detection priority:
-    #   1. schedule_process/schedule_iso found → PASS (proper scheduling)
-    #   2. while True loop found → FAIL with specific detail
-    #   3. Nothing found → FAIL with generic message
+    #   1. connectors-sdk ExternalImportConnector used → PASS (SDK schedules)
+    #   2. schedule_process/schedule_iso found → PASS (proper scheduling)
+    #   3. while True loop found → FAIL with specific detail
+    #   4. Nothing found → FAIL with generic message
     # ---------------------------------------------------------------------------
+
+    sdk_import = find_sdk_external_import_connector(trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Scheduling delegated to connectors-sdk ExternalImportConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     # Check for either valid scheduling method (AST)
     schedule_hits = _find_schedule_calls(trees)
