@@ -25,10 +25,12 @@ from connectors_sdk.models import (
     Sighting,
     System,
     Text,
+    Vulnerability,
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.enums import (
+    CvssSeverity,
     ExtensionDefinitionId,
     ExtensionType,
     Reliability,
@@ -522,6 +524,19 @@ INDICATOR = Indicator(
             id="media_content",
         ),
         pytest.param(INDICATOR, id="indicator"),
+        pytest.param(
+            Vulnerability(
+                name="CVE-2025-0001",
+                score=50,
+                aliases=["alias"],
+                cvss_v3_vector_string="CVSS:3.1/AV:N",
+                cvss_v2_vector_string="AV:N/AC:L",
+                cvss_v4_vector_string="CVSS:4.0/AV:N",
+                cvss_v3_base_severity=CvssSeverity.HIGH,
+                **COMMON_FIELDS,
+            ),
+            id="vulnerability",
+        ),
         pytest.param(
             Organization(
                 name="Organization",
