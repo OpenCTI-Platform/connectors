@@ -1,9 +1,9 @@
 opencti:
   url: http://localhost
-  token: CHANGEME
+  token: ChangeMe
 
 connector:
-  id: CHANGEME
+  id: ChangeMe
   name: Checkfirst Import Connector
   scope: checkfirst
   # info also prints operational logs and [BENCH] timings; error = errors only.
