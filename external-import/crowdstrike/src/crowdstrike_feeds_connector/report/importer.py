@@ -175,6 +175,7 @@ class ReportImporter(BaseImporter):
             sort=sort or "",
             fql_filter=fql_filter or "",
             fields=fields or ["__full__"],
+            raise_on_error=True,
         )
 
         return reports
