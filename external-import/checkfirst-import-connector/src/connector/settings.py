@@ -145,6 +145,14 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
             return value
         return int(str(value).strip())
 
+    @field_validator("until", mode="before")
+    @classmethod
+    def _empty_until_is_unset(cls, value: Any) -> Any:
+        """docker-compose forwards an unset `CHECKFIRST_UNTIL` as an empty string."""
+        if isinstance(value, str) and not value.strip():
+            return None
+        return value
+
     @field_validator("since", "until", mode="after")
     @classmethod
     def _as_utc(cls, value: datetime | date | None) -> datetime | None:

@@ -93,3 +93,16 @@ def test_client_should_send_until_alongside_the_cursor(api_client, mock_session_
 
     params = mock_session_get.call_args.kwargs["params"]
     assert params == {"after": "66f0c0ffee", "until": "2025-01-31T23:59:59Z"}
+
+
+def test_client_should_keep_fractional_seconds_of_a_bound(api_client, mock_session_get):
+    """Truncating `23:59:59.5` to `23:59:59` would exclude articles inside the window."""
+    list(
+        api_client.fetch_paginated_data(
+            api_endpoint="/v1/articles",
+            until=datetime(2025, 1, 31, 23, 59, 59, 500000, tzinfo=timezone.utc),
+        )
+    )
+
+    params = mock_session_get.call_args.kwargs["params"]
+    assert params["until"] == "2025-01-31T23:59:59.500000Z"

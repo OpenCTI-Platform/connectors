@@ -309,3 +309,8 @@ def test_settings_should_refuse_a_boolean_tuning_value():
 
     with pytest.raises(ConfigValidationError):
         FakeConnectorSettings()
+
+
+def test_settings_should_read_an_empty_until_as_unset():
+    """docker-compose forwards an unset `CHECKFIRST_UNTIL` as an empty string."""
+    assert _settings_from({"until": ""}).checkfirst.until is None

@@ -21,12 +21,15 @@ class CheckfirstAPIError(Exception):
 
 
 def _to_iso_utc(value: datetime) -> str:
-    """Format an aware datetime in UTC as the API expects it, e.g. `2025-01-01T00:00:00Z`."""
-    return (
-        value.astimezone(timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z")
-    )
+    """Format an aware datetime in UTC as the API expects it, e.g. `2025-01-01T00:00:00Z`.
+
+    Whole seconds are sent as such; a fractional bound keeps its precision
+    (`2025-01-31T23:59:59.500000Z`) rather than being truncated, which would
+    shift an inclusive `until` earlier.
+    """
+    value = value.astimezone(timezone.utc)
+    timespec = "seconds" if value.microsecond == 0 else "microseconds"
+    return value.isoformat(timespec=timespec).replace("+00:00", "Z")
 
 
 def get_skip_reason_from_validation_error(err: ValidationError) -> SkipReason | None:
