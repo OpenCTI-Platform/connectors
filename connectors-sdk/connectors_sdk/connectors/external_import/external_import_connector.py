@@ -91,14 +91,19 @@ class ExternalImportConnector(_ClassLoggerMixin, Generic[SettingsT, StateT]):
         Args:
             settings: The connector configuration settings.
             data_processors: The list of ``BaseDataProcessor`` instances to run.
-            state: Optional custom state instance. If ``None``, a default
+            state: Optional custom state instance. If ``None``, a base
                 ``ExternalImportConnectorState`` is created here, in ``__init__()``.
+                This is only correct when ``StateT`` is that class. A connector
+                that uses its own state class must pass an instance with
+                ``state=``: the type checker does not catch the omission, and
+                reading a custom field then raises ``AttributeError``.
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
         self.settings = settings
         self.data_processors = data_processors
-        # No `state`: StateT is then its default, ExternalImportConnectorState.
+        # No `state`: assume StateT is ExternalImportConnectorState
+        # (see the `state` docstring).
         self.state = (
             state
             if state is not None
