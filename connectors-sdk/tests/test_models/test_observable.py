@@ -1,7 +1,12 @@
+import inspect
+
+import connectors_sdk.models as models
 import pytest
-from connectors_sdk.models import IPV4Address
+import stix2
+from connectors_sdk.models import AssociatedFile, IPV4Address
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from pycti import STIX_EXT_OCTI_SCO
 from stix2.v21 import IPv4Address as Stix2IPv4Address
 
 
@@ -47,3 +52,110 @@ def test_is_observable_subtype(observable_type):
     # When checking its type
     # Then it should be a subclass of Observable
     assert issubclass(observable_type, BaseObservableEntity)
+
+
+def test_observable_writes_opencti_properties_in_sco_extension(
+    fake_valid_organization_author,
+    fake_valid_external_references,
+):
+    """Test that the OpenCTI properties go in the SCO extension and stay top-level."""
+    # Given an observable with OpenCTI properties
+    observable = IPV4Address(
+        value="127.0.0.1",
+        score=0,
+        description="Test description",
+        labels=["test"],
+        author=fake_valid_organization_author,
+        external_references=fake_valid_external_references,
+        associated_files=[AssociatedFile(name="file.txt", content=b"content")],
+        create_indicator=True,
+    )
+    # When converting it to a STIX object
+    stix2_obj = observable.to_stix2_object()
+    # Then the extension holds the properties, like OpenCTI exports
+    assert stix2_obj.extensions[STIX_EXT_OCTI_SCO] == {
+        "extension_type": "property-extension",
+        "labels": ["test"],
+        "description": "Test description",
+        "score": 0,
+        "created_by_ref": fake_valid_organization_author.id,
+        "external_references": [
+            external_ref.to_stix2_object()
+            for external_ref in fake_valid_external_references
+        ],
+    }
+    # And the deprecated top-level properties are still there
+    assert stix2_obj.x_opencti_score == 0
+    assert stix2_obj.x_opencti_labels == ["test"]
+    # And files and create_indicator are only at the top level
+    assert len(stix2_obj.x_opencti_files) == 1
+    assert stix2_obj.x_opencti_create_indicator is True
+
+
+def test_observable_sco_extension_without_opencti_properties():
+    """Test that the SCO extension only has its type when no OpenCTI property is set."""
+    # Given an observable without OpenCTI properties
+    observable = IPV4Address(value="127.0.0.1")
+    # When converting it to a STIX object
+    stix2_obj = observable.to_stix2_object()
+    # Then the extension only has its type
+    assert stix2_obj.extensions == {
+        STIX_EXT_OCTI_SCO: {"extension_type": "property-extension"}
+    }
+
+
+# The fields needed to create each observable model, without OpenCTI properties.
+MINIMAL_FIELDS = {
+    "AutonomousSystem": {"number": 64512},
+    "DomainName": {"value": "example.com"},
+    "EmailAddress": {"value": "john.doe@example.com"},
+    "File": {"name": "a.txt", "hashes": {"SHA-256": "a" * 64}},
+    "Hostname": {"value": "example.com"},
+    "IPV4Address": {"value": "127.0.0.1"},
+    "IPV6Address": {"value": "::1"},
+    "MACAddress": {"value": "aa:bb:cc:dd:ee:ff"},
+    "MediaContent": {"url": "https://example.com/post"},
+    "Software": {"name": "Software"},
+    "Text": {"value": "text"},
+    "URL": {"value": "https://example.com"},
+    "UserAccount": {"user_id": "john.doe"},
+    "X509Certificate": {"hashes": {"SHA-256": "a" * 64}},
+}
+OBSERVABLE_MODELS = [
+    model
+    for model in vars(models).values()
+    if inspect.isclass(model)
+    and issubclass(model, BaseObservableEntity)
+    and not inspect.isabstract(model)
+]
+
+
+@pytest.mark.parametrize(
+    "observable_class", OBSERVABLE_MODELS, ids=lambda model: model.__name__
+)
+def test_observable_opencti_properties_do_not_change_id(
+    observable_class,
+    fake_valid_organization_author,
+    fake_valid_external_references,
+):
+    """Test that the OpenCTI properties never change the STIX id of an observable."""
+    # Given the minimal fields of the observable (a new model must be added there)
+    fields = MINIMAL_FIELDS[observable_class.__name__]
+    # When creating it without and with OpenCTI properties
+    observable = observable_class(**fields)
+    observable_with_properties = observable_class(
+        **fields,
+        score=50,
+        description="Test description",
+        labels=["test"],
+        author=fake_valid_organization_author,
+        external_references=fake_valid_external_references,
+        associated_files=[AssociatedFile(name="file.txt", content=b"content")],
+        create_indicator=True,
+    )
+    # Then both have the same id
+    assert observable.id == observable_with_properties.id
+    # And the serialized object is still valid STIX
+    stix2_obj = observable_with_properties.to_stix2_object()
+    parsed = stix2.parse(stix2_obj.serialize(), allow_custom=True)
+    assert parsed.id == observable.id
