@@ -48,9 +48,13 @@ The external-import template processors use this form, without any redeclared at
 
 When `state` is omitted, `ExternalImportConnector` creates a default `ExternalImportConnectorState`, typed with a `cast("StateT", ...)`.
 
-The typing behaviour is covered by `tests/type_checks/check_external_import_generics.py`. It is checked by the strict `mypy .` run of the SDK test session, and is never collected by pytest. Positive cases use `assert_type`. Rejections are proved with `# type: ignore[<code>]`: with `warn_unused_ignores`, a rejection that is lost makes `mypy` fail. Runtime tests cover parameterized subclasses.
+The typing behaviour is covered by `tests/type_checks/check_external_import_generics.py`. It is excluded from the main `mypy .` run of the SDK test session, and is never collected by pytest. The dedicated test `tests/test_type_checks.py` runs strict `mypy` on it and compares the reported errors with the `# E: <code>` markers of the module: positive cases (`assert_type`) must produce no error, and each rejection must be reported, on the marked line, with the marked code. A lost rejection, an unexpected error, or a `mypy` upgrade that renames a code makes that test fail with the missing and unexpected `(line, code)` pairs and the `mypy` output. Runtime tests cover parameterized subclasses.
 
-The VC305 check of `connector-linter` is relaxed to accept the per-type base classes in addition to `BaseConnectorSettings`, otherwise every connector built from the templates would fail it. VC303 and VC306 are taught the per-type settings names as well.
+The VC305 check of `connector-linter` is relaxed to accept the per-type base classes in addition to `BaseConnectorSettings`, otherwise every connector built from the templates would fail it. The linter shares the SDK base names in `shared/tools/connector_linter/connector_linter/checks/_sdk_bases.py`, used by VC104, VC303 and VC305:
+
+- VC305 requires the imported base and the subclassed base to be the same name.
+- VC303 counts a `Base<Type>ConnectorSettings` subclass as setting the connector type only when it does not redefine `connector`.
+- VC104 recognises the per-type names.
 
 ---
 

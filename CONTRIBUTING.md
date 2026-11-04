@@ -402,12 +402,27 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     BaseExternalImportConnectorSettings,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
+
+
+class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    id: str = Field(
+        description="The unique identifier of the connector.",
+        default="my-connector-uuid",  # replace with a valid UUIDv4
+    )
+    name: str = Field(default="My Connector")
 
 
 class MyConnectorConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
+
+
+class ConnectorSettings(BaseExternalImportConnectorSettings):
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    my_connector: MyConnectorConfig = Field(default_factory=MyConnectorConfig)
 ```
 
 The example inherits the external import settings base. For another connector type, use the
