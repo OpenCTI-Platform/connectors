@@ -174,10 +174,17 @@ class NetAPIConnector:
         except ValueError:
             address = None
         if address is not None:
+            if stix_type != "url":
+                # an address in a Domain-Name or Hostname is not a host name
+                raise EnrichmentSkipped(
+                    "IP address in a Domain-Name or Hostname: not looked up"
+                )
             if address.version != 4:
                 raise EnrichmentSkipped("IPv6 address: the NetAPI feed holds IPv4 only")
-            if not address.is_global:
-                raise EnrichmentSkipped("Private or reserved address: not looked up")
+            if not NetAPIConnector.is_public_ipv4(address):
+                raise EnrichmentSkipped(
+                    "Private, reserved or multicast address: not looked up"
+                )
             return str(address)
 
         try:
@@ -215,9 +222,16 @@ class NetAPIConnector:
         if network.num_addresses != 1:
             raise EnrichmentSkipped("IPv4 range: only single addresses are looked up")
         address = network.network_address
-        if not address.is_global:
-            raise EnrichmentSkipped("Private or reserved address: not looked up")
+        if not NetAPIConnector.is_public_ipv4(address):
+            raise EnrichmentSkipped(
+                "Private, reserved or multicast address: not looked up"
+            )
         return str(address)
+
+    @staticmethod
+    def is_public_ipv4(address: ipaddress.IPv4Address) -> bool:
+        """A public unicast address: is_global alone lets multicast through."""
+        return address.is_global and not address.is_multicast
 
     def _forward(self, data: dict[str, Any], message: str) -> str:
         """Inside a playbook, hand the bundle back untouched; return the status."""

@@ -98,7 +98,7 @@ Open a Domain-Name, Hostname, Url or IPv4-Addr observable in OpenCTI and run the
 For each observable the connector:
 
 1. checks the entity type against the scope and the TLP of the observable against `CONNECTOR_MAX_TLP` before anything leaves the platform.
-2. takes the value to look up: a domain name or hostname in lower case and punycode, the host of a URL, or a public IPv4 address. Private and reserved addresses, IPv6 addresses and URLs without a host are skipped.
+2. takes the value to look up: a domain name or hostname in lower case and punycode, the host of a URL, or a public IPv4 address. Private, reserved and multicast addresses, IPv6 addresses, IP addresses in a Domain-Name or Hostname and URLs without a host are skipped.
 3. calls `compromised-check`. A hostname is also matched through its registered domain, and the answer says which entry matched, when it was first and last seen, the feed that reported it (for an IP address, the attack type) and the registrar of the domain.
 4. calls `domain-rank` for a listed domain or hostname (`NETAPI_INCLUDE_RANK`).
 
