@@ -196,3 +196,24 @@ def test_settings_should_coerce_tuning_values(tuning, expected):
         checkfirst.bundle_size,
         checkfirst.max_row_bytes,
     ) == expected
+
+
+def test_settings_should_refuse_a_boolean_tuning_value():
+    """A boolean is an int subclass in Python; it must not be read as 0 or 1."""
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "checkfirst": {
+            "api_url": "https://api.checkfirst.example",
+            "api_key": "test-api-key",
+            "convert_workers": True,
+        },
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    with pytest.raises(ConfigValidationError):
+        FakeConnectorSettings()
