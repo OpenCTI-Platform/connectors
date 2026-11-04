@@ -4,6 +4,7 @@ import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import AccountType
 from connectors_sdk.models.user_account import UserAccount
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 from stix2.v21 import UserAccount as Stix2UserAccount
 
@@ -84,6 +85,19 @@ def test_user_account_to_stix2_object(
         account_last_login=account_last_login,
         allow_custom=True,
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        extensions={
+            STIX_EXT_OCTI_SCO: {
+                "extension_type": "property-extension",
+                "labels": ["credential-access", "active-directory"],
+                "description": "Compromised domain account",
+                "score": 90,
+                "created_by_ref": fake_valid_organization_author.id,
+                "external_references": [
+                    external_ref.to_stix2_object()
+                    for external_ref in fake_valid_external_references
+                ],
+            }
+        },
         x_opencti_score=90,
         x_opencti_description="Compromised domain account",
         x_opencti_labels=["credential-access", "active-directory"],
