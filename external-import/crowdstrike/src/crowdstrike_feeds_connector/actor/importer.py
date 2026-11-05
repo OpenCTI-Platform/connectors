@@ -21,6 +21,7 @@ from .builder import ActorBundleBuilder
 
 if TYPE_CHECKING:
     from crowdstrike_feeds_connector import ConnectorSettings
+    from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
     from pycti import OpenCTIConnectorHelper
 
 
@@ -38,11 +39,13 @@ class ActorImporter(BaseImporter):
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
+        attack_lookup: Optional["AttackTechniqueLookup"] = None,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
         super().__init__(config, helper, author, tlp_marking)
         self.actors_api_cs = ActorsAPI(config, helper)
         self.default_latest_timestamp = default_latest_timestamp
+        self.attack_lookup = attack_lookup
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -314,6 +317,7 @@ class ActorImporter(BaseImporter):
                     mitre_id=technique_id,
                     created_by=self.author,
                     object_markings=[self.tlp_marking],
+                    attack_lookup=self.attack_lookup,
                 )
                 for technique_id in technique_ids
             ]

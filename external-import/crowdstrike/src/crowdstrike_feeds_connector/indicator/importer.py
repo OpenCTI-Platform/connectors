@@ -593,10 +593,10 @@ class IndicatorImporter(BaseImporter):
             resolved_attack_patterns: List[Dict[str, str]] = []
             if self.attack_lookup:
                 for ap_name in parsed_labels.attack_patterns:
-                    mitre_id = self.attack_lookup.lookup_mitre_id(ap_name)
-                    if mitre_id:
+                    technique = self.attack_lookup.lookup_technique_by_name(ap_name)
+                    if technique:
                         resolved_attack_patterns.append(
-                            {"name": ap_name, "mitre_id": mitre_id}
+                            {"name": technique.name, "mitre_id": technique.mitre_id}
                         )
             indicator["attack_patterns_resolved"] = resolved_attack_patterns
 

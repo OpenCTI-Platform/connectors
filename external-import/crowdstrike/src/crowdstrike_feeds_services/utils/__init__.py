@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -37,6 +38,7 @@ from pycti import (
 from pycti.utils.constants import LocationTypes
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
+from .attack_lookup import normalize_mitre_id
 from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
@@ -88,6 +90,9 @@ from .observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
+
+if TYPE_CHECKING:
+    from .attack_lookup import AttackTechniqueLookup
 
 logger = logging.getLogger(__name__)
 
@@ -425,8 +430,23 @@ def create_attack_pattern(
     confidence: Optional[int] = None,
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    attack_lookup: Optional["AttackTechniqueLookup"] = None,
 ) -> stix2.AttackPattern:
-    """Create an attack pattern."""
+    """Create an attack pattern.
+
+    Every code path sends a technique with the same name and `x_mitre_id`: the name and
+    external ID of the MITRE ATT&CK dataset when the technique is found in it, and the
+    external ID in upper case otherwise. Each importer used to send its own spelling (the
+    technique ID as name, the CrowdStrike API name, the label name, a lower-case ID), and
+    every alternation renamed the technique on the platform.
+    """
+    mitre_id = normalize_mitre_id(mitre_id)
+    technique = (
+        attack_lookup.lookup_technique_by_mitre_id(mitre_id) if attack_lookup else None
+    )
+    if technique is not None:
+        name = technique.name
+        mitre_id = normalize_mitre_id(technique.mitre_id)
     attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
     custom_properties = {"x_mitre_id": mitre_id}
 

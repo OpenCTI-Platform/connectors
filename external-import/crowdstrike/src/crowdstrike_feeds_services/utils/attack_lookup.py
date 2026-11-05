@@ -23,6 +23,12 @@ DEFAULT_ATTACK_URL = (
 )
 
 
+def normalize_mitre_id(mitre_id: str | None) -> str:
+    """Return a MITRE ATT&CK external ID in its canonical form (e.g. "t1059.001" -> "T1059.001")."""
+
+    return str(mitre_id).strip().upper() if mitre_id else ""
+
+
 class AttackTechniqueLookupError(Exception):
     """Custom exception for ATT&CK lookup errors."""
 
@@ -53,16 +59,34 @@ class AttackTechniqueLookup:
         # Load attack_techniques on initialization
         # If it fails, the connector can choose to run in degraded mode without ATT&CK lookups.
         self.attack_techniques = self._load_enterprise_attack_techniques()
+        self.attack_techniques_by_mitre_id = {
+            normalize_mitre_id(technique.mitre_id): technique
+            for technique in self.attack_techniques.values()
+        }
 
     def lookup_mitre_id(self, technique_name: str) -> str | None:
         """Return the MITRE technique ID (external_id) for a given technique name."""
+
+        attack_technique = self.lookup_technique_by_name(technique_name)
+        return attack_technique.mitre_id if attack_technique else None
+
+    def lookup_technique_by_name(self, technique_name: str) -> AttackTechnique | None:
+        """Return the MITRE technique (canonical name and external ID) for a technique name."""
 
         key = self._normalize_technique_name(technique_name)
         if not key:
             return None
 
-        attack_technique = self.attack_techniques.get(key)
-        return attack_technique.mitre_id if attack_technique else None
+        return self.attack_techniques.get(key)
+
+    def lookup_technique_by_mitre_id(self, mitre_id: str) -> AttackTechnique | None:
+        """Return the MITRE technique (canonical name and external ID) for an external ID."""
+
+        key = normalize_mitre_id(mitre_id)
+        if not key:
+            return None
+
+        return self.attack_techniques_by_mitre_id.get(key)
 
     def _build_enterprise_attack_url(self) -> str:
         """Build the raw GitHub URL for the MITRE ATT&CK Enterprise STIX dataset for a given version.
