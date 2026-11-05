@@ -457,6 +457,25 @@ def test_base_connector_settings_should_validate_settings_from_os_environ(
     assert settings.connector.log_level == "error"
 
 
+@pytest.mark.parametrize("value", ['""', "''"])
+def test_base_connector_settings_should_parse_quoted_empty_env_var_as_empty_list(
+    mock_environment, monkeypatch, value
+):
+    """
+    Test that an empty pair of quotes kept literally in an env var (catalog form,
+    docker-compose list syntax) gives an empty list, as settings are not decoded.
+    """
+
+    # Given: A list env var set to an empty pair of quotes
+    monkeypatch.setenv("CONNECTOR_SCOPE", value)
+
+    # When: BaseConnectorSettings is instantiated
+    settings = BaseConnectorSettings()
+
+    # Then: The list is empty
+    assert settings.connector.scope == []
+
+
 def test_base_connector_settings_should_validate_settings_from_config_yaml_file(
     mock_config_yml_file_presence,
 ):
