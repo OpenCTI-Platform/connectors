@@ -58,11 +58,19 @@ class AttackTechniqueLookup:
 
         # Load attack_techniques on initialization
         # If it fails, the connector can choose to run in degraded mode without ATT&CK lookups.
-        self.attack_techniques = self._load_enterprise_attack_techniques()
-        self.attack_techniques_by_mitre_id = {
-            normalize_mitre_id(technique.mitre_id): technique
-            for technique in self.attack_techniques.values()
-        }
+        techniques = self._load_enterprise_attack_techniques()
+        # Several techniques can share a name (sub-techniques such as "Cloud Accounts"
+        # exist under several parents): the name lookup keeps the first one, the
+        # external ID lookup keeps them all.
+        self.attack_techniques: dict[str, AttackTechnique] = {}
+        self.attack_techniques_by_mitre_id: dict[str, AttackTechnique] = {}
+        for technique in techniques:
+            self.attack_techniques.setdefault(
+                self._normalize_technique_name(technique.name), technique
+            )
+            self.attack_techniques_by_mitre_id.setdefault(
+                normalize_mitre_id(technique.mitre_id), technique
+            )
 
     def lookup_mitre_id(self, technique_name: str) -> str | None:
         """Return the MITRE technique ID (external_id) for a given technique name."""
@@ -102,7 +110,7 @@ class AttackTechniqueLookup:
             f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
         )
 
-    def _load_from_url(self, url: str) -> dict[str, AttackTechnique]:
+    def _load_from_url(self, url: str) -> list[AttackTechnique]:
         """Download the enterprise dataset and build the lookup.
 
         Caller should handle exceptions and decide whether to run in degraded mode.
@@ -116,16 +124,22 @@ class AttackTechniqueLookup:
 
         return self._parse_attack_json(response.json())
 
-    def _parse_attack_json(self, data: dict) -> dict[str, AttackTechnique]:
-        """Parse techniques from STIX bundle."""
+    def _parse_attack_json(self, data: dict) -> list[AttackTechnique]:
+        """Parse the techniques of a STIX bundle, leaving out the revoked ones.
 
-        attack_techniques: dict[str, AttackTechnique] = {}
+        The MITRE ATT&CK connector does not import revoked objects either, so a revoked
+        technique must not give its name to an Attack Pattern.
+        """
+
+        attack_techniques: list[AttackTechnique] = []
 
         objects = data.get("objects") or []
         for obj in objects:
             if not isinstance(obj, dict):
                 continue
             if obj.get("type") != "attack-pattern":
+                continue
+            if obj.get("revoked") is True:
                 continue
 
             name = obj.get("name")
@@ -152,14 +166,11 @@ class AttackTechniqueLookup:
             if not mitre_id:
                 continue
 
-            # Prefer the first key encountered; duplicates should be rare.
-            key = self._normalize_technique_name(name)
-            if key and key not in attack_techniques:
-                attack_techniques[key] = AttackTechnique(name=name, mitre_id=mitre_id)
+            attack_techniques.append(AttackTechnique(name=name, mitre_id=mitre_id))
 
         return attack_techniques
 
-    def _load_enterprise_attack_techniques(self) -> dict[str, AttackTechnique]:
+    def _load_enterprise_attack_techniques(self) -> list[AttackTechnique]:
         """Load the enterprise technique lookup using a configured version.
 
         Returns (resolved_url, lookup).

@@ -34,6 +34,28 @@ ATTACK_DATASET = {
                 {"source_name": "mitre-attack", "external_id": "T1204.002"}
             ],
         },
+        {
+            "type": "attack-pattern",
+            "name": "Cloud Accounts",
+            "external_references": [
+                {"source_name": "mitre-attack", "external_id": "T1078.004"}
+            ],
+        },
+        {
+            "type": "attack-pattern",
+            "name": "Cloud Accounts",
+            "external_references": [
+                {"source_name": "mitre-attack", "external_id": "T1136.003"}
+            ],
+        },
+        {
+            "type": "attack-pattern",
+            "name": "PowerShell",
+            "revoked": True,
+            "external_references": [
+                {"source_name": "mitre-attack", "external_id": "T1086"}
+            ],
+        },
     ],
 }
 
@@ -136,3 +158,21 @@ def test_label_name_resolves_to_the_mitre_name(attack_lookup):
     assert technique is not None  # noqa: S101
     assert technique.name == "Endpoint Denial of Service"  # noqa: S101
     assert technique.mitre_id == "T1499"  # noqa: S101
+
+
+def test_techniques_sharing_a_name_are_all_found_by_mitre_id(attack_lookup):
+    for mitre_id in ("T1078.004", "T1136.003"):
+        technique = attack_lookup.lookup_technique_by_mitre_id(mitre_id)
+        assert technique is not None  # noqa: S101
+        assert technique.name == "Cloud Accounts"  # noqa: S101
+        assert technique.mitre_id == mitre_id  # noqa: S101
+
+
+def test_revoked_technique_is_left_out(attack_lookup):
+    assert attack_lookup.lookup_technique_by_mitre_id("T1086") is None  # noqa: S101
+    assert attack_lookup.lookup_technique_by_name("PowerShell") is None  # noqa: S101
+    attack_pattern = create_attack_pattern(
+        name="T1086", mitre_id="t1086", attack_lookup=attack_lookup
+    )
+    assert attack_pattern.name == "T1086"  # noqa: S101
+    assert attack_pattern.x_mitre_id == "T1086"  # noqa: S101
