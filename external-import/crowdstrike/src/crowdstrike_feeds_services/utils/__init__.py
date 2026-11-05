@@ -21,6 +21,7 @@ from typing import (
 )
 
 import stix2
+from crowdstrike_feeds_services.utils.attack_lookup import normalize_mitre_id
 from lxml.html import fromstring
 from pycti import (
     AttackPattern,
@@ -38,7 +39,6 @@ from pycti import (
 from pycti.utils.constants import LocationTypes
 from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
-from .attack_lookup import normalize_mitre_id
 from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
     TLP_MARKING_DEFINITION_MAPPING,
@@ -92,7 +92,7 @@ from .observables import (
 )
 
 if TYPE_CHECKING:
-    from .attack_lookup import AttackTechniqueLookup
+    from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 
 logger = logging.getLogger(__name__)
 
