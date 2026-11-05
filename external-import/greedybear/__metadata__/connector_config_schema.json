@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/greedybear_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "GreedyBear",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "Autonomous-System",
+        "Location",
+        "Infrastructure"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "Interval between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "GREEDYBEAR_API_BASE_URL": {
+      "description": "GreedyBear base URL, e.g. https://greedybear.example.com",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "GREEDYBEAR_API_KEY": {
+      "default": null,
+      "description": "GreedyBear API token (used for advanced and ASN feeds). Leave empty to use only the public standard feed (no auth required).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "GREEDYBEAR_TLP_LEVEL": {
+      "default": "green",
+      "description": "Default TLP level for all imported entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "GREEDYBEAR_OPERATOR_NAME": {
+      "default": "Honeypot Operator",
+      "description": "Name of the organization operating the honeypots. This becomes the 'created by' identity in OpenCTI.",
+      "type": "string"
+    },
+    "GREEDYBEAR_OPERATOR_DESCRIPTION": {
+      "default": null,
+      "description": "Optional description of the honeypot operator.",
+      "type": "string"
+    },
+    "GREEDYBEAR_OPERATOR_URL": {
+      "default": null,
+      "description": "Optional URL of the honeypot operator (website, GitHub, etc.).",
+      "type": "string"
+    },
+    "GREEDYBEAR_FEED_TYPE": {
+      "default": "all",
+      "description": "Honeypot feed type. Comma-separated names or 'all'. Valid values: all, cowrie, dionaea, adbhoney, ciscoasa, conpot, ...",
+      "type": "string"
+    },
+    "GREEDYBEAR_ATTACK_TYPE": {
+      "default": "all",
+      "description": "Attack type filter: 'scanner', 'payload_request', or 'all'.",
+      "type": "string"
+    },
+    "GREEDYBEAR_IOC_TYPE": {
+      "default": "all",
+      "description": "IoC type filter: 'ip', 'domain', or 'all'.",
+      "type": "string"
+    },
+    "GREEDYBEAR_PRIORITIZE": {
+      "default": "recent",
+      "description": "Standard feed prioritization: 'recent', 'persistent', 'likely_to_recur', 'most_expected_hits'.",
+      "type": "string"
+    },
+    "GREEDYBEAR_INCLUDE_MASS_SCANNERS": {
+      "default": false,
+      "description": "Include IoCs flagged as mass scanners.",
+      "type": "boolean"
+    },
+    "GREEDYBEAR_INCLUDE_TOR_EXIT_NODES": {
+      "default": true,
+      "description": "Include IoCs flagged as Tor exit nodes.",
+      "type": "boolean"
+    },
+    "GREEDYBEAR_MAX_AGE": {
+      "default": 3,
+      "description": "Maximum age of entries in days (advanced feed, default 3).",
+      "type": "integer"
+    },
+    "GREEDYBEAR_FEED_SIZE": {
+      "default": 5000,
+      "description": "Maximum number of IoCs to import per run (default 5000).",
+      "type": "integer"
+    },
+    "GREEDYBEAR_MIN_SCORE": {
+      "default": null,
+      "description": "Minimum recurrence_probability (0.0-1.0). None means no filter.",
+      "type": "number"
+    },
+    "GREEDYBEAR_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Create STIX Indicators for every imported observable. Indicators are linked via based-on to the observable and via indicates to the MITRE Attack Pattern (if known).",
+      "type": "boolean"
+    },
+    "GREEDYBEAR_DEEP_ENRICH": {
+      "default": false,
+      "description": "Per-IoC enrichment call adding the actual destination ports and the days-seen count to the Note, plus FireHOL blocklist categories as labels. One extra API call per IoC - slow for large feeds; needs an API key.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GREEDYBEAR_API_BASE_URL"
+  ],
+  "additionalProperties": true
+}

@@ -7,10 +7,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
+| OPENCTI_TOKEN | `string` | ✅ | Length: `string >= 1` |  | The token of the user who represents the connector in the OpenCTI platform. |
 | VIRUSTOTAL_DOWNLOADER_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key used to authenticate requests to the VirusTotal Downloader service. |
-| CONNECTOR_NAME | `string` |  | string | `"VirusTotal Downloader"` | Name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["StixFile"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
+| CONNECTOR_NAME | `string` |  | Length: `string >= 1` | `"VirusTotal Downloader"` | Name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | Length: `string >= 1` | `["StixFile"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Enables or disables automatic enrichment of observables for OpenCTI. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |

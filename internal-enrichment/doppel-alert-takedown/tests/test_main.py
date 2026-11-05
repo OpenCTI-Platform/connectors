@@ -37,12 +37,13 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "Url,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
-                    "max_tlp": "TLP:CLEAR",
+                    "organization_code": "ACM",
                 },
             }
         )
@@ -76,3 +77,8 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+    assert connector.client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert connector.client.session.headers["User-Agent"] == (
+        "doppel-opencti/7.260901.0"
+    )
+    assert connector.client.session.headers["x-organization-code"] == "ACM"

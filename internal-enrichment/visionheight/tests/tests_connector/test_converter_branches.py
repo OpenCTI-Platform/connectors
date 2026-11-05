@@ -25,7 +25,7 @@ def _labels(stix_entity: dict):
 
 def test_enrich_ip_full_payload_emits_all_object_types():
     """A rich IP payload exercises every enrichment branch in enrich_ip."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     data = {
         "risk": {
@@ -86,7 +86,7 @@ def test_enrich_ip_full_payload_emits_all_object_types():
 
 
 def test_enrich_ip_asn_present_country_absent_emits_only_asn():
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     data = {
         "risk": {"latest_risk": "SUSPICIOUS"},
@@ -103,7 +103,7 @@ def test_enrich_ip_asn_present_country_absent_emits_only_asn():
 
 def test_enrich_domain_full_payload_emits_all_object_types():
     """A rich domain payload exercises DNS, cert, WHOIS note and indicator branches."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     domain_entity = _make_domain_entity("evil.com")
     data = {
         "risk": {"score": "HIGH"},
@@ -145,7 +145,7 @@ def test_enrich_domain_full_payload_emits_all_object_types():
 
 def test_enrich_domain_none_tags_does_not_raise():
     """A payload with an explicit null `tags` must be treated as no tags."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     domain_entity = _make_domain_entity("benign.com")
     data = {"risk": {"score": "UNRATED"}, "tags": None}
 

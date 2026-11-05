@@ -6,16 +6,15 @@ COPY src /opt/opencti-connector-spur
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-spur && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && \
-    addgroup -S connector && adduser -S -G connector connector
+RUN addgroup -S connector && adduser -S -G connector connector
 USER connector
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-spur
+
+CMD ["python3", "main.py"]

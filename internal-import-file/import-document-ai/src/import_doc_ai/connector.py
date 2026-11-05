@@ -4,11 +4,11 @@ See : https://github.com/OpenCTI-Platform/connectors/blob/42e0ad002318224e88cac2
 
 import json
 
-from pycti import OpenCTIConnectorHelper
-
-from .client_api import ImportDocumentAIClient
-from .config_loader import ConfigConnector
-from .util import (
+import stix2
+from import_doc_ai.client_api import ImportDocumentAIClient
+from import_doc_ai.refang import refang_bundle_observables
+from import_doc_ai.settings import ConnectorSettings
+from import_doc_ai.util import (
     OpenCTIFileObject,
     bulk_update_object_markings,
     compute_bundle_stats,
@@ -25,9 +25,11 @@ from .util import (
     make_report,
     relate_to,
     replace_in_bundle,
+    replace_objects_in_bundle,
     update_custom_properties,
     update_object_refs,
 )
+from pycti import OpenCTIConnectorHelper
 
 
 class Connector:
@@ -40,7 +42,9 @@ class Connector:
     It basically uses the same functions and principle than the internal enrichment connector type.
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
@@ -50,7 +54,7 @@ class Connector:
 
         self.import_doc_ia_client = ImportDocumentAIClient(helper, config)
 
-        if not self.config.include_relationships:
+        if not self.config.import_document_ai.include_relationships:
             # for backward behavior due to previous connector capabilities
             self.allowed_relationships_triplets = set()
         else:
@@ -58,6 +62,38 @@ class Connector:
             self.allowed_relationships_triplets = (
                 fetch_octi_allowed_stix_relations_triplets(self.helper)
             )
+
+    def _refang_observables(self, bundle: stix2.Bundle) -> stix2.Bundle:
+        """Refang the observables the extraction returned defanged."""
+        refanged_bundle, summary = refang_bundle_observables(bundle)
+        for observable in summary.refanged:
+            self.helper.connector_logger.debug(
+                "Refanged a defanged observable",
+                {
+                    "type": observable.observable_type,
+                    "value": observable.original_value,
+                    "refanged_value": observable.refanged_value,
+                },
+            )
+        if summary.refanged:
+            self.helper.connector_logger.info(
+                "Refanged the defanged observables of the extracted bundle",
+                {
+                    "refanged": len(summary.refanged),
+                    "merged_duplicates": summary.merged_objects,
+                },
+            )
+        for observable in summary.unrefanged:
+            self.helper.connector_logger.warning(
+                "Observable value looks defanged but does not refang into a "
+                "valid value, sending it unchanged",
+                {
+                    "type": observable.observable_type,
+                    "id": observable.observable_id,
+                    "value": observable.value,
+                },
+            )
+        return refanged_bundle
 
     def _resolve_agent_slug(self, data: dict) -> str | None:
         """Extract agent_slug from the message configuration field if present."""
@@ -99,7 +135,10 @@ class Connector:
             )
         else:
             # Legacy mode: direct call to Ariane web service
-            if not self.config.api_base_url or not self.config.api_key:
+            if (
+                not self.config.import_document_ai.api_base_url
+                or not self.config.import_document_ai.api_key
+            ):
                 raise ValueError(
                     "No agent_slug provided and api_base_url/api_key is not configured. "
                     "Either configure XTM One on the platform or set api_base_url/api_key for legacy mode."
@@ -110,6 +149,12 @@ class Connector:
                 file_data=file.buffered_data,
                 allowed_relationship_triplets=self.allowed_relationships_triplets,
             )
+
+        # Documents defang their indicators ("admin[at]filigran[dot]io"):
+        # OpenCTI rejects such values, and with them every object referencing
+        # the observable, so they are refanged before any id is relied upon.
+        ai_bundle = self._refang_observables(ai_bundle)
+
         # Handle Attack pattern special case reunification if already present in OCTI platform
         for ai_attack_pattern in filter_bundle_entities_by_type(
             ai_bundle, {"attack-pattern"}
@@ -125,23 +170,26 @@ class Connector:
 
         # Handle location: special case x_opencti_location_type
         ai_locations_bundle = filter_bundle_entities_by_type(ai_bundle, {"location"})
-        for ai_location in ai_locations_bundle.get("objects", []):
-            ai_bundle = replace_in_bundle(
-                ai_bundle,
-                ai_location["id"],
-                convert_location_to_octi_location(ai_location),
-            )
+        ai_bundle = replace_objects_in_bundle(
+            ai_bundle,
+            {
+                ai_location["id"]: convert_location_to_octi_location(ai_location)
+                for ai_location in ai_locations_bundle.get("objects", [])
+            },
+        )
 
         # Handle observables: indicator creation delegation to the platform if relevant
-        if self.config.create_indicator:
+        if self.config.import_document_ai.create_indicator:
             ai_observables_bundle = filter_bundle_observables(ai_bundle)
-            for ai_observable in ai_observables_bundle.get("objects", []):
-                updated_observable = update_custom_properties(
-                    {"x_opencti_create_indicator": True}, ai_observable
-                )
-                ai_bundle = replace_in_bundle(
-                    ai_bundle, ai_observable["id"], new_object=updated_observable
-                )
+            ai_bundle = replace_objects_in_bundle(
+                ai_bundle,
+                {
+                    ai_observable["id"]: update_custom_properties(
+                        {"x_opencti_create_indicator": True}, ai_observable
+                    )
+                    for ai_observable in ai_observables_bundle.get("objects", [])
+                },
+            )
 
         # Enrich the triggering entity reference if relevant
         # then propagate the triggering entity's marking_refs to the imported
@@ -216,7 +264,16 @@ class Connector:
         ## send bundle to OpenCTI
         # TODO sanitize entity with name <2 char
 
-        self.helper.send_stix2_bundle(
+        # No cleanup_inconsistent_bundle=True: the bundle references platform
+        # objects it does not carry (the triggering entity's markings, the
+        # triggering entity targeted by the related-to relationships, the
+        # existing content of a triggering container), and the cleanup strips
+        # every such reference before the platform can resolve it. Shipping the
+        # marking definitions instead is not an option: the worker re-imports
+        # them through markingDefinitionAdd, which the importing user may not be
+        # allowed to call. A reference the platform cannot resolve is already
+        # handled there (optional reference ignored, relationship rejected).
+        self.helper.send_stix2_bundle(  # noqa: VC312
             bundle=ai_bundle.serialize(),
             bypass_validation=data.get("bypass_validation", False),
             file_name="import-document-ai-" + file.stem + ".json",

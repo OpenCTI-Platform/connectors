@@ -39,7 +39,7 @@ class ShodanConnector:
         self.helper = helper
 
         self.token = self.config.shodan.token.get_secret_value()
-        self.max_tlp = self.config.shodan.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.shodanAPI = shodan.Shodan(self.token)
         self.default_score = self.config.shodan.default_score
         self.import_search_results = self.config.shodan.import_search_results
@@ -178,11 +178,29 @@ class ShodanConnector:
             )
             self.stix_objects.append(observable_to_hostname)
 
+    @staticmethod
+    def _parse_asn_number(raw_asn):
+        # bool is a subclass of int, so it must be rejected explicitly
+        if isinstance(raw_asn, bool):
+            return None
+        if isinstance(raw_asn, int):
+            return raw_asn if raw_asn >= 0 else None
+        if isinstance(raw_asn, str):
+            cleaned = raw_asn.strip()
+            if cleaned.upper().startswith("AS"):
+                cleaned = cleaned[2:].strip()
+            try:
+                asn_number = int(cleaned)
+            except ValueError:
+                return None
+            return asn_number if asn_number >= 0 else None
+        return None
+
     def _generate_stix_asn(self, data):
-        if "asn" in data and data["asn"] is not None and (len(data["asn"]) > 0):
+        asn_number = self._parse_asn_number(data.get("asn"))
+        if asn_number is not None:
             # Generate ASN
-            entity_asn = data["isp"] if self.use_isp_name_for_asn else data["asn"]
-            asn_number = int(data["asn"].replace("AS", ""))
+            entity_asn = data["isp"] if self.use_isp_name_for_asn else f"AS{asn_number}"
             stix_asn = stix2.AutonomousSystem(
                 type="autonomous-system",
                 number=asn_number,
@@ -257,40 +275,72 @@ class ShodanConnector:
                 self.stix_objects.append(observable_to_x509)
 
     def _generate_stix_location(self, data):
-        # Generate City Location
-        stix_city_location = stix2.Location(
-            id=Location.generate_id(data["city"], "City"),
-            name=data["city"],
-            country=data["country_name"],
-            latitude=data["latitude"],
-            longitude=data["longitude"],
-            custom_properties={"x_opencti_location_type": "City"},
-        )
-        self.stix_objects.append(stix_city_location)
+        """Generate the City and Country locations Shodan actually returned.
 
-        # Generate Relationship : observable -> "located-at" -> City
-        observable_to_city = self._generate_stix_relationship(
-            self.stix_entity["id"], "located-at", stix_city_location.id
-        )
-        self.stix_objects.append(observable_to_city)
+        Geolocation is optional in the Shodan response: `city`, `country_name`
+        and the coordinates may be absent or null. Location.generate_id()
+        needs a name, so only the levels that are present are built, and the
+        observable gets a `located-at` to each of them. When both are present,
+        the City is also linked to the Country to keep the hierarchy explicit.
+        """
+        city = data.get("city")
+        country_name = data.get("country_name")
+
+        # Generate City Location
+        stix_city_location = None
+        if city:
+            latitude = data.get("latitude")
+            longitude = data.get("longitude")
+            if latitude is None or longitude is None:
+                # STIX 2.1 requires the two coordinates together.
+                latitude = longitude = None
+            stix_city_location = stix2.Location(
+                id=Location.generate_id(city, "City"),
+                name=city,
+                country=country_name,
+                latitude=latitude,
+                longitude=longitude,
+                custom_properties={"x_opencti_location_type": "City"},
+            )
+            self.stix_objects.append(stix_city_location)
+
+            # create relationship "located-at" with the city
+            observable_to_location = self._generate_stix_relationship(
+                self.stix_entity["id"],
+                "located-at",
+                stix_city_location.id,
+            )
+            self.stix_objects.append(observable_to_location)
 
         # Generate Country Location
-        stix_country_location = stix2.Location(
-            id=Location.generate_id(data["country_name"], "Country"),
-            name=data["country_name"],
-            country=data["country_name"],
-            custom_properties={
-                "x_opencti_location_type": "Country",
-                "x_opencti_aliases": [data["country_code"]],
-            },
-        )
-        self.stix_objects.append(stix_country_location)
+        stix_country_location = None
+        if country_name:
+            country_custom_properties = {"x_opencti_location_type": "Country"}
+            country_code = data.get("country_code")
+            if country_code:
+                country_custom_properties["x_opencti_aliases"] = [country_code]
+            stix_country_location = stix2.Location(
+                id=Location.generate_id(country_name, "Country"),
+                name=country_name,
+                country=country_name,
+                custom_properties=country_custom_properties,
+            )
+            self.stix_objects.append(stix_country_location)
 
-        # Generate Relationship : City -> "located-at" -> Country
-        city_to_country = self._generate_stix_relationship(
-            stix_city_location.id, "located-at", stix_country_location.id
-        )
-        self.stix_objects.append(city_to_country)
+            # create relationship "located-at" with the country
+            observable_to_location = self._generate_stix_relationship(
+                self.stix_entity["id"],
+                "located-at",
+                stix_country_location.id,
+            )
+            self.stix_objects.append(observable_to_location)
+
+        # create relationship City -> "located-at" -> Country
+        if stix_city_location is not None and stix_country_location is not None:
+            city_to_country = self._generate_stix_relationship(
+                stix_city_location.id, "located-at", stix_country_location.id
+            )
+            self.stix_objects.append(city_to_country)
 
     def _generate_stix_vulnerability(self, data):
         if "vulns" in data:

@@ -21,11 +21,7 @@ class Intel471IndicatorsStream(TitanStream):
         return api_response.cursor_next
 
     def _get_initial_history(self):
-        stored_initial_history = self._get_state(self.initial_history_key)
-        if not stored_initial_history:
-            stored_initial_history = self.initial_history
-            self._set_state(self.initial_history_key, stored_initial_history)
-        return stored_initial_history
+        return self._get_stored_initial_history(self.initial_history_key)
 
     def _get_offsets(self) -> list[Union[None, int]]:
         return [None]

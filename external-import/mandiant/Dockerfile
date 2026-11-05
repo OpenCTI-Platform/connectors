@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-RUN apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
 
 COPY src/requirements.txt /tmp/
 

@@ -14,9 +14,10 @@ services:
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       # --- Zscaler ---
-      - ZSCALER_USERNAME=ChangeMe
-      - ZSCALER_PASSWORD=ChangeMe
-      - ZSCALER_API_KEY=ChangeMe
-      # - ZSCALER_BLACKLIST_NAME=BLACK_LIST_DYNDNS # optional (default: BLACK_LIST_DYNDNS)
-      # - ZSCALER_SSL_VERIFY=false # optional (default: false)
+      - ZSCALER_CLIENT_ID=ChangeMe
+      - ZSCALER_CLIENT_SECRET=ChangeMe
+      - ZSCALER_VANITY_DOMAIN=ChangeMe
+      # - ZSCALER_CLOUD=beta # optional (default: production cloud, api.zsapi.net)
+      # - ZSCALER_BLACKLIST_NAME=BLACK_LIST_DYNDNS # optional, URL category ID such as CUSTOM_01 (default: BLACK_LIST_DYNDNS)
+      # - ZSCALER_SSL_VERIFY=true # optional (default: true)
     restart: always

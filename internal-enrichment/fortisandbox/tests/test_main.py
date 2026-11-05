@@ -24,12 +24,12 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "fortisandbox": {
                     "api_base_url": "http://test.com",
                     "username": "api-user",
                     "password": "api-pass",
-                    "max_tlp": "TLP:CLEAR",
                 },
             }
         )

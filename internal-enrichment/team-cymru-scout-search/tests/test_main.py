@@ -40,11 +40,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "test-api-key",
-                    "max_tlp": "TLP:AMBER",
                     "search_interval": 1,
                 },
             }

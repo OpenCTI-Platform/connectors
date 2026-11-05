@@ -182,6 +182,44 @@ class TestConnectorConfigJsonSchemaGenerator:
             in result["properties"]["OLD_NAMESPACE_FIELD"]["description"]
         )
 
+    def test_flatten_with_deprecated_namespace_keeps_namespace_target_after_field_level_new_namespace(
+        self,
+    ):
+        """Test that a field-level new_namespace does not leak to the next fields of a deprecated namespace."""
+        # Given: A deprecated namespace whose first field moves to another namespace
+        root_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "$id": "test",
+            "type": "object",
+            "properties": {
+                "old_namespace": {
+                    "deprecated": True,
+                    "new_namespace": "new_namespace",
+                    "properties": {
+                        "moved_field": {
+                            "type": "string",
+                            "new_namespaced_var": "moved_field",
+                            "new_namespace": "connector",
+                        },
+                        "next_field": {"type": "string"},
+                    },
+                },
+            },
+        }
+
+        # When: The schema is flattened
+        result = ConnectorConfigJsonSchemaGenerator.to_environment_variable_schema(
+            root_schema
+        )
+
+        # Then: The next field still points to the namespace-level target
+        assert result["properties"]["OLD_NAMESPACE_MOVED_FIELD"]["description"] == (
+            "Use CONNECTOR_MOVED_FIELD instead."
+        )
+        assert result["properties"]["OLD_NAMESPACE_NEXT_FIELD"]["description"] == (
+            "Use NEW_NAMESPACE_NEXT_FIELD instead."
+        )
+
     def test_flatten_with_new_namespaced_var(self):
         """Test flattening with new_namespaced_var metadata."""
         root_schema = {

@@ -6,6 +6,7 @@ from connectors_sdk import (
 )
 from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field
+from pydantic.json_schema import SkipJsonSchema
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -26,6 +27,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The scope of the connector.",
         default=["Artifact"],
     )
+    # Hidden from the config schema: the connector scans artifacts locally and sends no
+    # data outside OpenCTI, so a max TLP would protect nothing. The field stays inherited
+    # from the SDK base config.
+    max_tlp: SkipJsonSchema[TLPLevel] = Field(default=TLPLevel.RED)
 
 
 class YaraConfig(BaseConfigModel):

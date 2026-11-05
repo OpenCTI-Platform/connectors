@@ -65,6 +65,7 @@ This connector enriches observables and indicators with Silent Push intelligence
 | `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `Indicator,URL,IPv4-Addr,IPv6-Addr,Domain-Name` |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `SILENTPUSH_MAX_TLP` |
 
 ### Silent Push Configuration
 
@@ -72,7 +73,6 @@ This connector enriches observables and indicators with Silent Push intelligence
 |-----------|---------------|-----------|-------------|
 | `silentpush_api_key` | `SILENTPUSH_API_KEY` | Yes | Silent Push API key |
 | `silentpush_api_base_url` | `SILENTPUSH_API_BASE_URL` | No | API base URL (default: https://app.silentpush.com/api/v2/) |
-| `silentpush_max_tlp_level` | `SILENTPUSH_MAX_TLP_LEVEL` | No | Maximum TLP level for processing |
 | `silentpush_verify_cert` | `SILENTPUSH_VERIFY_CERT` | No | Verify SSL certificates (default: true) |
 
 ---
@@ -94,7 +94,7 @@ services:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - SILENTPUSH_API_KEY=ChangeMe
-      - SILENTPUSH_MAX_TLP_LEVEL=TLP:AMBER
+      - CONNECTOR_MAX_TLP=TLP:AMBER
     restart: always
 ```
 

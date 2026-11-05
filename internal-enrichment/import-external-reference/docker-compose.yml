@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector-import-:
+  connector-import-external-reference:
     image: opencti/connector-import-external-reference:latest
     environment:
       - OPENCTI_URL=http://localhost
@@ -8,10 +8,14 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ImportExternalReference
       - CONNECTOR_SCOPE=External-Reference
-      - CONNECTOR_AUTO=false # Enable/disable auto-import of external references
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=error
-      - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF=true # Import as PDF file
-      - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD=true # Import as MarkDown file
-      - IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD=true # If import_as_md is true, try to convert PDF as Markdown
+#      - CONNECTOR_AUTO=false # Enable/disable auto-import of external references
+#      - CONNECTOR_LOG_LEVEL=error
+#      - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF=true # Import external references as PDF files
+#      - IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD=true # Import external references as MarkDown files
+#      - IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD=true # If import_as_md is true, try to convert the PDF to Markdown
+#      - IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES=false # Timestamp imported files to prevent overwriting versions
+#      - IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE=32 # Size of the LRU URL cache to avoid fetching the same object repeatedly
+#      - IMPORT_EXTERNAL_REFERENCE_CACHE_TTL=3600 # Time-to-live (in seconds) for cache entries
+#      - IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT=4 # Number of browser worker threads to use
+#      - IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE=52428800 # Maximum download size in bytes (50 MB)
     restart: always

@@ -1,9 +1,10 @@
+from typing import Any
+
 import requests
 from pycognito import Cognito
 
 
 class ConnectorClient:
-
     def __init__(self, helper, config):
         """
         Initialize the client with necessary configurations
@@ -19,17 +20,17 @@ class ConnectorClient:
         """
         try:
             u = Cognito(
-                user_pool_id=self.config.acti_user_pool_id,
-                client_id=self.config.acti_client_id,
-                username=self.config.acti_username,
+                user_pool_id=self.config.accenture_acti.user_pool_id,
+                client_id=self.config.accenture_acti.client_id,
+                username=self.config.accenture_acti.username,
             )
-            u.authenticate(self.config.acti_password)
+            u.authenticate(self.config.accenture_acti.password.get_secret_value())
             id_token = u.id_token
 
             headers = {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Accept": "*/*",
-                "Authorization": "Bearer " + id_token,
+                "Authorization": f"Bearer {id_token}",
             }
             self.session.headers.update(headers)
 
@@ -38,7 +39,7 @@ class ConnectorClient:
             self.helper.connector_logger.error(error_msg, {"error": str(err)})
             raise Exception(error_msg)
 
-    def get_reports(self, since: str, until: str) -> any:
+    def get_reports(self, since: str, until: str) -> Any:
         """
         :param since:
         :return:
@@ -53,8 +54,6 @@ class ConnectorClient:
             return response
 
         except Exception as err:
-            error_msg = (
-                f"[API] Error while retrieving reports since: {str(since)}: {err}"
-            )
+            error_msg = f"[API] Error while retrieving reports since: {since}: {err}"
             self.helper.connector_logger.error(error_msg)
             raise Exception(error_msg)

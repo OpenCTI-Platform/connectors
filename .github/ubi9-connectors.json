@@ -1,11 +1,13 @@
 [
   "external-import/alienvault",
+  "external-import/assetnote-import",
   "external-import/cisa-known-exploited-vulnerabilities",
   "external-import/crowdstrike",
   "external-import/crowdstrike-recon",
   "external-import/cpe",
   "external-import/cve",
   "external-import/group-ib",
+  "external-import/misp",
   "external-import/mitre",
   "external-import/opencti",
   "external-import/ransomwarelive",

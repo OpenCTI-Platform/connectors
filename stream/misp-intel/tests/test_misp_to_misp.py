@@ -35,7 +35,6 @@ def mock_config():
             "type": "STREAM",
             "name": "MISP Intel",
             "scope": "misp",
-            "confidence_level": 80,
             "log_level": "info",
             "live_stream_id": "test-stream-id",
             "live_stream_listen_delete": True,

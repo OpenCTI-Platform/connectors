@@ -9,12 +9,13 @@ from connector.src.custom.models.gti.gti_software_toolkit_model import (
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models import ExternalReference, Tool
-from connectors_sdk.models.enums import ToolType
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
+    ExternalReference,
     OrganizationAuthor,
     TLPMarking,
+    Tool,
 )
+from connectors_sdk.models.enums import ToolType
 from stix2.v21 import Tool as Stix2Tool
 
 

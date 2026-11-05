@@ -1,18 +1,10 @@
 import json
-import os
-import time
 import traceback
 from datetime import datetime, timezone
 
-import yaml
 from pycti import OpenCTIConnectorHelper
 from trukno_connector.client import TruKnoClient
-from trukno_connector.config import (
-    DEFAULT_CONNECTOR_NAME,
-    DEFAULT_CONNECTOR_SCOPE,
-    load_config,
-    merge_config_with_env,
-)
+from trukno_connector.settings import ConnectorSettings
 from trukno_connector.state import ConnectorState, next_checkpoint
 from trukno_connector.transform import transform_breach_to_bundle
 
@@ -21,55 +13,23 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _resolve_config_path() -> str | None:
-    explicit_path = os.environ.get("TRUKNO_CONNECTOR_CONFIG")
-    if explicit_path:
-        candidate = os.path.expanduser(explicit_path)
-        if not os.path.isfile(candidate):
-            raise FileNotFoundError(
-                f"Configured connector file was not found: {candidate}"
-            )
-        return candidate
-
-    module_root = os.path.dirname(os.path.dirname(__file__))
-    candidates = [
-        os.path.join(os.getcwd(), "config.yml"),
-        os.path.join(os.getcwd(), "src", "config.yml"),
-        os.path.join(module_root, "config.yml"),
-    ]
-    for candidate in candidates:
-        if os.path.isfile(candidate):
-            return candidate
-    return None
-
-
-def _load_raw_config() -> dict:
-    config_path = _resolve_config_path()
-    if config_path is None:
-        return {}
-
-    with open(config_path, encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
-
-
-def _prepare_helper_config(raw: dict) -> dict:
-    helper_config = dict(raw)
-    # Mirror load_config's behaviour: treat missing *and* blank values as unset
-    # so an explicit empty string (e.g. connector.name: "") falls back to the
-    # same default the parsed config uses, keeping the helper and config in sync.
-    connector = dict(helper_config.get("connector") or {})
-    connector["type"] = connector.get("type") or "EXTERNAL_IMPORT"
-    connector["name"] = connector.get("name") or DEFAULT_CONNECTOR_NAME
-    connector["scope"] = connector.get("scope") or DEFAULT_CONNECTOR_SCOPE
-    connector["log_level"] = connector.get("log_level") or "info"
-    helper_config["connector"] = connector
-    return helper_config
-
-
-def _persist_checkpoint(helper, state, updated_at: str) -> ConnectorState:
-    next_state = next_checkpoint(state, [updated_at])
-    helper.set_state({"last_seen_updated_at": next_state.last_seen_updated_at})
+def _persist_checkpoint(
+    helper,
+    state,
+    updated_at: str | None,
+    last_successful_scan_at: str,
+) -> ConnectorState:
+    seen_timestamps = [updated_at] if updated_at is not None else []
+    next_state = next_checkpoint(state, seen_timestamps)
+    next_state.last_successful_scan_at = last_successful_scan_at
+    helper.set_state(
+        {
+            "last_seen_updated_at": next_state.last_seen_updated_at,
+            "last_successful_scan_at": next_state.last_successful_scan_at,
+        }
+    )
     state.last_seen_updated_at = next_state.last_seen_updated_at
+    state.last_successful_scan_at = next_state.last_successful_scan_at
     return state
 
 
@@ -95,33 +55,57 @@ def _complete_work(
 ) -> None:
     if work_id is None:
         return
-    helper.api.work.to_processed(work_id, message, in_error=in_error)
+    try:
+        helper.api.work.to_processed(work_id, message, in_error=in_error)
+    except Exception as exc:
+        _log(
+            helper,
+            "warning",
+            "Unable to finalize TruKno import work.",
+            {"work_id": work_id, "in_error": in_error, "error": str(exc)},
+        )
 
 
-def build_runtime():
-    raw = _load_raw_config()
-    raw = merge_config_with_env(raw, os.environ)
-    config = load_config(raw)
-    helper = OpenCTIConnectorHelper(config=_prepare_helper_config(raw))
-    client = TruKnoClient(config.trukno_api_base_url, config.trukno_api_key)
+def build_runtime(settings: ConnectorSettings | None = None):
+    if settings is None:
+        settings = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    client = TruKnoClient(
+        str(settings.trukno.api_base_url),
+        settings.trukno.api_key.get_secret_value(),
+    )
     persisted_state = helper.get_state() or {}
     if persisted_state.get("last_seen_updated_at"):
         state = ConnectorState(
-            last_seen_updated_at=persisted_state["last_seen_updated_at"]
+            last_seen_updated_at=persisted_state["last_seen_updated_at"],
+            last_successful_scan_at=persisted_state.get("last_successful_scan_at"),
         )
     else:
-        state = ConnectorState.empty(config.initial_lookback_days, _utc_now_iso())
-    return helper, client, state, config
+        state = ConnectorState.empty(settings.trukno.initial_lookback, _utc_now_iso())
+    return helper, client, state, settings
 
 
 def run_once(helper, client, state, connector_name: str = "TruKno"):
-    items = client.list_updated_breaches(state.last_seen_updated_at)
+    scan_started_at = _utc_now_iso()
+    items = client.list_updated_breaches(
+        updated_after=state.last_seen_updated_at,
+        scan_after=state.scan_after(),
+    )
     if not items:
+        _persist_checkpoint(
+            helper,
+            state,
+            updated_at=None,
+            last_successful_scan_at=scan_started_at,
+        )
         _log(
             helper,
             "info",
             "No updated TruKno breaches found for this cycle.",
-            {"last_seen_updated_at": state.last_seen_updated_at},
+            {
+                "last_seen_updated_at": state.last_seen_updated_at,
+                "last_successful_scan_at": state.last_successful_scan_at,
+            },
         )
         return state
 
@@ -137,12 +121,19 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
             if bundle["objects"]:
                 helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
                 sent_count += 1
-            _persist_checkpoint(helper, state, item.updated_at)
+        # Persist only after the complete batch succeeds. If a later item fails,
+        # the next cycle retries the whole timestamp window without data loss.
+        _persist_checkpoint(
+            helper,
+            state,
+            updated_at=items[-1].updated_at,
+            last_successful_scan_at=scan_started_at,
+        )
     except Exception as exc:
         # Don't leave the work item stuck in a running state if a breach
-        # fetch/transform/send fails mid-batch: mark it errored (the per-item
-        # checkpoint above means the next cycle resumes after the last
-        # successfully imported breach) and re-raise so main() logs and backs off.
+        # fetch/transform/send fails mid-batch: mark it errored and re-raise so
+        # main() logs and backs off. The checkpoint remains at the last complete
+        # batch, so the next cycle retries any partial work safely.
         _complete_work(
             helper,
             work_id,
@@ -163,22 +154,29 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
         {
             "bundles_sent": sent_count,
             "last_seen_updated_at": state.last_seen_updated_at,
+            "last_successful_scan_at": state.last_successful_scan_at,
         },
     )
     return state
 
 
-def main():
-    helper, client, state, config = build_runtime()
-    while True:
+def main(settings: ConnectorSettings | None = None):
+    helper, client, state, settings = build_runtime(settings)
+
+    def scheduled_run():
+        nonlocal state
         try:
             state = run_once(
                 helper=helper,
                 client=client,
                 state=state,
-                connector_name=config.connector_name,
+                connector_name=settings.connector.name,
             )
         except Exception as exc:
             _log(helper, "error", f"Connector cycle failed: {exc}")
             traceback.print_exc()
-        time.sleep(config.interval_minutes * 60)
+
+    helper.schedule_process(
+        message_callback=scheduled_run,
+        duration_period=settings.connector.duration_period.total_seconds(),
+    )

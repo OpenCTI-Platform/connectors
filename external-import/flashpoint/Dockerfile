@@ -6,7 +6,7 @@ COPY src /opt/opencti-connector-flashpoint
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxslt libxslt-dev libxml2 libxml2-dev && \
     cd /opt/opencti-connector-flashpoint && \
     pip3 install --no-cache-dir -r requirements.txt && \

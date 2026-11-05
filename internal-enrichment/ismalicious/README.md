@@ -13,24 +13,12 @@ isMalicious is a threat intelligence platform that aggregates data from multiple
 
 ## Configuration variables
 
-Find below the detailed configuration options:
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter           | Docker envvar               | Mandatory | Description                                                    |
-| ------------------- | --------------------------- | --------- | -------------------------------------------------------------- |
-| OpenCTI URL         | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform                                |
-| OpenCTI Token       | `OPENCTI_TOKEN`             | Yes       | The token of the OpenCTI user                                  |
-| Connector ID        | `CONNECTOR_ID`              | No        | A unique `UUIDv4` for this connector (default: auto-generated) |
-| Connector Name      | `CONNECTOR_NAME`            | No        | Name shown in OpenCTI (default: `isMalicious`)                 |
-| Connector Scope     | `CONNECTOR_SCOPE`           | No        | Observable types (default: `IPv4-Addr,IPv6-Addr,Domain-Name`)  |
-| Log Level           | `CONNECTOR_LOG_LEVEL`       | No        | Log level: `debug`, `info`, `warn`, `error` (default: `info`)  |
-| Auto Mode           | `CONNECTOR_AUTO`            | No        | Enable automatic enrichment (default: `false`)                 |
-| isMalicious API URL | `ISMALICIOUS_API_URL`       | No        | API URL (default: `https://api.ismalicious.com`)               |
-| isMalicious API Key | `ISMALICIOUS_API_KEY`       | Yes       | API credential from Dashboard → Account → Team Management (sent as `X-API-KEY`) |
-| Max TLP             | `ISMALICIOUS_MAX_TLP`       | No        | Max TLP to process (default: `TLP:AMBER`)                      |
-| Enrich IPv4         | `ISMALICIOUS_ENRICH_IPV4`   | No        | Enrich IPv4 addresses (default: `true`)                        |
-| Enrich IPv6         | `ISMALICIOUS_ENRICH_IPV6`   | No        | Enrich IPv6 addresses (default: `true`)                        |
-| Enrich Domain       | `ISMALICIOUS_ENRICH_DOMAIN` | No        | Enrich domains (default: `true`)                               |
-| Min Score           | `ISMALICIOUS_MIN_SCORE`     | No        | Minimum score to report (default: `0`)                         |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
+
+The API key is issued from the isMalicious dashboard (Account → Team Management) and sent as the `X-API-KEY` header (see [API Authentication](#api-authentication)).
 
 ## Deployment
 
@@ -62,11 +50,30 @@ When an observable is enriched, the connector adds:
 
 | Data                | Description                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Score               | Risk score (0-100) based on confidence and threat level                                                              |
+| Score               | Risk score (0-100) returned by the API in `riskScore.score`                                                          |
 | Labels              | Threat categories: `malicious`, `phishing`, `malware`, `command-and-control`, `botnet`, `ransomware`, `spam`, `scam` |
 | External References | Links to isMalicious report and original detection sources                                                           |
-| Description         | Summary of findings including source count and reputation breakdown                                                  |
+| Description         | Summary of findings: detection count, categories, infrastructure attributes and reputation breakdown                 |
 | Location + Sighting | Geographic information when available                                                                                |
+
+Each source listing returned by the API carries a `threatClass`. Only `threat`
+listings (the default) count as detections and produce labels. Listings of
+class `infrastructure` (cloud ranges, CDNs, Tor exits, DNS resolvers), `policy`
+(ads, tracking) or `allowlist` describe what the observable is rather than
+accuse it: they are kept as external references (`Listed as: …`) and
+summarised in the description as `Infrastructure: cloud, …`.
+
+A missing or invalid `riskScore.score` leaves the existing OpenCTI score
+unchanged. The connector does not invent a low score from `malicious=false`
+or derive a replacement risk score from detection ratios. With a positive
+`ISMALICIOUS_MIN_SCORE`, a response without a score is skipped because the
+threshold cannot be evaluated. At the default threshold of zero, its context
+is still reported without writing a score. A valid numeric score of zero is
+preserved.
+
+`malicious=false` is reported as "not flagged as malicious", not "clean" or
+"safe". Missing verdicts are reported as unknown. An absence of detections
+is not proof of safety.
 
 ## Supported Observable Types
 
@@ -81,6 +88,12 @@ The enrichment API expects:
 - **Base URL:** `https://api.ismalicious.com`
 - **Endpoint:** `GET /check?query=<value>&enrichment=standard`
 - **Authentication:** `X-API-KEY: <your-api-key>` header
+- **User-Agent:** `ismalicious-opencti/<version> (+https://ismalicious.com)`
+
+API keys are issued from the isMalicious dashboard; a free plan with a monthly
+lookup quota is available. A rejected key (HTTP 401) or an exhausted quota
+(HTTP 429) is reported in the connector logs and the observable is left
+unchanged.
 
 Example:
 
@@ -113,3 +126,4 @@ The enrichment connector and the TAXII feed complement each other — use both f
 
 - Website: [https://ismalicious.com](https://ismalicious.com)
 - API Documentation: [https://ismalicious.com/api](https://ismalicious.com/api)
+- Playbooks: the connector can be used in OpenCTI playbooks. An observable it skips (out of scope, TLP too high, enrichment disabled for its type, API failure or score below `ISMALICIOUS_MIN_SCORE`) is passed on unchanged.

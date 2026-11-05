@@ -21,8 +21,9 @@ services:
       - RECORDED_FUTURE_PERSON_TO_TA=False #optional, can remove
       - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False # optional. Set to true to map Threat Actor entities to Intrusion Set.
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
-      - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
+      - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove. Analyst notes indicators (IP, domain, URL, hash) below this risk score, or without a score, are not imported. 0 disables the filtering.
       - RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS=False #optional, can remove
+      - RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES=False #optional, can remove. Set to true to also import analyst notes context entities (can be noisy).
       - RECORDED_FUTURE_PULL_RISK_LIST=False #optional, can remove
       - RECORDED_FUTURE_RISKRULES_AS_LABEL=False #optional, can remove
       - RECORDED_FUTURE_RISK_LIST_THRESHOLD=70 #optional, can remove

@@ -1,28 +1,30 @@
 # Dummy End to End Octi Models Test Examples
 
-Here is a minimal example of how to test the end-to-end functionality of the `connectors_sdk.models.octi` package and see the results in the Octi UI.
+Here is a minimal example of how to test the end-to-end functionality of the `connectors_sdk.models` package and see the results in the Octi UI.
 
 ```python
-"""Minimal exemple of OpenCTI connector using connectors-sdk octi model objects."""
+"""Minimal example of OpenCTI connector using connectors-sdk octi model objects."""
 
 import sys
 import traceback
 from typing import TYPE_CHECKING
 
 import pycti
+from connectors_sdk.logger import get_logger
 from connectors_sdk.models import (
     ExternalReference,
     Indicator,
     IPV4Address,
     Organization,
     OrganizationAuthor,
+    Relationship,
     TLPMarking,
 )
-from connectors_sdk.models.octi import based_on, related_to
 
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseObject
 
+logger = get_logger(__name__)
 
 class ConnectorExample:
     """Example OpenCTI connector using connectors-sdk."""
@@ -86,10 +88,18 @@ class ConnectorExample:
             )
             octi_models.append(observable)
             # Related-to
-            rel_related_to = observable | related_to | organization  # type: ignore[operator]
+            rel_related_to = Relationship(
+                type="related-to",
+                source=observable,
+                target=organization,
+            )
             octi_models.append(rel_related_to)
             # Based-on
-            rel_based_on = indicator | based_on | observable  # type: ignore[operator]
+            rel_based_on = Relationship(
+                type="based-on",
+                source=indicator,
+                target=observable,
+            )
             octi_models.append(rel_based_on)
             # Indicator with conversion
             indicator_with_obs = Indicator(
@@ -123,13 +133,14 @@ class ConnectorExample:
                 self.helper.api.work.to_processed(work_id, "Done")
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+            logger.info(
+                "Connector stopped",
+                meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            # `exception()` also logs the traceback
+            logger.exception("Unexpected error", meta={"error": str(err)})
 
     def run(self) -> None:
         """Run the connector."""

@@ -19,5 +19,9 @@ connector:
   #send_to_directory_retention: 7
 
 hunt_io:
+  # 'v2' pairs with https://api.hunt.io/v1/feeds/c2 and a plain API key.
+  # 'v3' pairs with https://a.hunt.io/feeds/c2 and an 'ak_'-prefixed key.
+  # api_version and api_base_url must be changed together, or the API returns 401.
+  api_version: 'v2'
   api_base_url: 'https://api.hunt.io/v1/feeds/c2'
   api_key: 'ChangeMe'

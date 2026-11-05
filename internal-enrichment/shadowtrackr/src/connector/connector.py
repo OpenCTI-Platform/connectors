@@ -61,7 +61,7 @@ class ShadowTrackrConnector:
         )
 
         # Define variables
-        self.max_tlp = self.config.shadowtrackr.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.replace_with_lower_score = (
             self.config.shadowtrackr.replace_with_lower_score
         )

@@ -18,6 +18,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
+| CONNECTOR_LIVE_STREAM_START_TIMESTAMP | `integer` |  | integer | `null` | Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state). |
+| CONNECTOR_LIVE_STREAM_RECOVER | `boolean` |  | boolean | `true` | Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state). |
+| CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state). |
 | MICROSOFT_SENTINEL_INTEL_AUTH_TYPE | `string` |  | `app_registration` `azure_credential` | `"app_registration"` | Authentication method used to call Azure APIs. 'app_registration' (default) requires tenant_id, client_id and client_secret. 'azure_credential' uses DefaultAzureCredential (managed identity, workload identity, or a local `az login` session) and ignores tenant_id/client_id/client_secret. |
 | MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` |  | string | `null` | Your Azure App Tenant ID, see the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` |  | string | `null` | Your Azure App Client ID, see the screenshot to help you find this information. |
@@ -25,6 +28,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP | `string` |  | string | `"default"` | The name of the resource group where the log analytics is |
 | MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM | `string` |  | string | `"Opencti Stream Connector"` | The name of the source system displayed in Microsoft Sentinel |
 | MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS | `boolean` |  | boolean | `true` | Delete the extensions in the stix bundle sent to the SIEM |
+| MICROSOFT_SENTINEL_INTEL_USE_SCORE_AS_CONFIDENCE | `boolean` |  | boolean | `false` | Send the OpenCTI score in the STIX confidence property instead of the OpenCTI confidence. Objects without a score are sent without confidence. Microsoft Sentinel has no score field and does not index STIX extensions. |
 | MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS | `array` |  | string | `[]` | Extra labels added to the bundle sent. String separated by comma |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION | `string` |  | string | `"2024-02-01-preview"` | API version of the Microsoft log analytics workspace interface |
 | MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION | `string` |  | string | `"2025-03-01"` | API version of the Microsoft management interface |

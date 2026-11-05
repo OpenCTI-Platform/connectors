@@ -10,6 +10,14 @@ from typing import Any, Dict, List, Optional
 import requests
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+# SIEM rule severity for each minimum OpenCTI score, from the highest
+SEVERITY_THRESHOLDS = (
+    (80, "critical"),
+    (60, "high"),
+    (40, "medium"),
+    (0, "low"),
+)
+
 
 class ElasticApiHandlerError(Exception):
     def __init__(self, msg, metadata=None):
@@ -153,6 +161,7 @@ class ElasticApiHandler:
 
             # Convert pattern to Elastic query
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
+            risk_score = self._get_rule_risk_score(indicator_data)
 
             # Build the rule
             rule = {
@@ -160,8 +169,8 @@ class ElasticApiHandler:
                 "description": indicator_data.get(
                     "description", "Rule created from OpenCTI threat indicator"
                 ),
-                "risk_score": self._calculate_risk_score(indicator_data),
-                "severity": self._get_severity(indicator_data),
+                "risk_score": risk_score,
+                "severity": self._get_severity(risk_score),
                 "type": "query",
                 "query": query_config["query"],
                 "language": query_config["language"],
@@ -245,6 +254,7 @@ class ElasticApiHandler:
 
             # Convert pattern to Elastic query
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
+            risk_score = self._get_rule_risk_score(indicator_data)
 
             # Build the update
             rule_update = {
@@ -253,8 +263,8 @@ class ElasticApiHandler:
                 "description": indicator_data.get(
                     "description", "Rule created from OpenCTI threat indicator"
                 ),
-                "risk_score": self._calculate_risk_score(indicator_data),
-                "severity": self._get_severity(indicator_data),
+                "risk_score": risk_score,
+                "severity": self._get_severity(risk_score),
                 "query": query_config["query"],
                 "language": query_config["language"],
             }
@@ -355,24 +365,24 @@ class ElasticApiHandler:
             self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
             return None
 
-    def _calculate_risk_score(self, indicator_data: dict) -> int:
-        """Calculate risk score based on indicator confidence and severity"""
-        confidence = indicator_data.get("confidence", 50)
-        # Map confidence (0-100) to risk score (0-100)
-        return min(100, max(1, confidence))
+    @staticmethod
+    def _get_rule_risk_score(indicator_data: dict) -> int:
+        """Rule risk score: the OpenCTI score, which every indicator has"""
+        return OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", indicator_data
+        )
 
-    def _get_severity(self, indicator_data: dict) -> str:
-        """Get severity level for the rule"""
-        confidence = indicator_data.get("confidence", 50)
-
-        if confidence >= 80:
-            return "critical"
-        elif confidence >= 60:
-            return "high"
-        elif confidence >= 40:
-            return "medium"
-        else:
-            return "low"
+    @staticmethod
+    def _get_severity(risk_score: int) -> str:
+        """Get the rule severity from its risk score"""
+        return next(
+            (
+                severity
+                for min_score, severity in SEVERITY_THRESHOLDS
+                if risk_score >= min_score
+            ),
+            "low",
+        )
 
     def _build_threat_mapping(self, indicator_data: dict) -> List[dict]:
         """Build MITRE ATT&CK threat mapping from kill chain phases"""
@@ -462,6 +472,14 @@ class ElasticApiHandler:
             },
         }
 
+        # OpenCTI score: ECS has no score field, so use the vendor field of the
+        # official Elastic OpenCTI integration (threat.indicator.sightings is a count)
+        score = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", observable_data
+        )
+        if score is not None:
+            ecs_doc["opencti"] = {"indicator": {"score": score}}
+
         # Core threat.indicator fields (ECS compliant)
         threat_indicator = ecs_doc["threat"]["indicator"]
 
@@ -482,10 +500,6 @@ class ElasticApiHandler:
         threat_indicator["first_seen"] = created
         threat_indicator["last_seen"] = modified
         threat_indicator["modified_at"] = modified
-
-        # Sightings (using OpenCTI score if available)
-        if "x_opencti_score" in observable_data:
-            threat_indicator["sightings"] = observable_data["x_opencti_score"]
 
         # Reference (OpenCTI source) - use proper URL format with /id/{ID}
         threat_indicator["reference"] = f"{self.opencti_url}/dashboard/id/{opencti_id}"
@@ -907,6 +921,38 @@ class ElasticApiHandler:
 
         return success
 
+    def _delete_docs_by_opencti_id(self, doc_id: str) -> int:
+        """
+        Delete every document matching the given opencti_doc_id from the data stream.
+
+        Data streams auto-generate document IDs, so deduplication can only be done by
+        query. ``conflicts=proceed`` prevents version conflicts from aborting the
+        deletion and leaving stale duplicates behind.
+
+        :param doc_id: The opencti_doc_id shared by the documents to remove
+        :return: Number of documents deleted
+        """
+        delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
+        url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
+        response = requests.post(
+            url,
+            headers=self.headers,
+            params={"conflicts": "proceed"},
+            json=delete_query,
+            verify=self._get_verify_config(),
+            cert=self.cert,
+            timeout=30,
+        )
+
+        if response.status_code in [200, 404]:  # 404 is ok, index/doc not there yet
+            result = response.json() if response.status_code == 200 else {}
+            return result.get("deleted", 0)
+
+        raise ElasticApiHandlerError(
+            f"Failed to delete indicator(s): {response.status_code}",
+            {"response": response.text},
+        )
+
     def create_indicator(self, observable_data: dict) -> Optional[dict]:
         """Create a threat indicator in Elastic Security"""
         try:
@@ -915,6 +961,10 @@ class ElasticApiHandler:
 
             # Add document ID as a field for reference (since data streams auto-generate IDs)
             ecs_doc["opencti_doc_id"] = doc_id
+
+            # Remove any pre-existing document for this indicator so a duplicated
+            # "create" event cannot accumulate several copies in the data stream.
+            self._delete_docs_by_opencti_id(doc_id)
 
             # For data streams, use POST without specifying document ID
             # Data streams require POST with auto-generated IDs
@@ -1061,24 +1111,13 @@ class ElasticApiHandler:
             ecs_doc["opencti_doc_id"] = doc_id
 
             # For data streams, we can't update directly - need to delete old and create new
-            # First, try to delete the old document by opencti_doc_id
-            delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
-
-            delete_url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            delete_request = requests.post(
-                delete_url,
-                headers=self.headers,
-                json=delete_query,
-                verify=self._get_verify_config(),
-                cert=self.cert,
-                timeout=30,
+            # First, delete any existing document(s) for this indicator
+            deleted_count = self._delete_docs_by_opencti_id(doc_id)
+            self.helper.connector_logger.debug(
+                f"Deleted {deleted_count} old indicator(s) for update",
+                {"opencti_doc_id": doc_id},
             )
-            if delete_request.status_code == 200:
-                delete_result = delete_request.json()
-                self.helper.connector_logger.debug(
-                    f"Successfully deleted {delete_result["total"]} old indicator for update",
-                    {"opencti_doc_id": doc_id},
-                )
+
             # Now create the new document (data streams are append-only)
             url = f"{self.elastic_url}/{self.index_name}/_doc"
             response = requests.post(
@@ -1121,32 +1160,12 @@ class ElasticApiHandler:
         try:
             doc_id = self._generate_doc_id(observable_data)
 
-            # For data streams, use delete by query
-            delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
-
-            url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            response = requests.post(
-                url,
-                headers=self.headers,
-                json=delete_query,
-                verify=self._get_verify_config(),
-                cert=self.cert,
-                timeout=30,
+            deleted_count = self._delete_docs_by_opencti_id(doc_id)
+            self.helper.connector_logger.debug(
+                "Successfully deleted indicator(s) from Elastic",
+                {"opencti_doc_id": doc_id, "deleted_count": deleted_count},
             )
-
-            if response.status_code in [200, 404]:  # 404 is ok, already deleted
-                result = response.json() if response.status_code == 200 else {}
-                deleted_count = result.get("deleted", 0)
-                self.helper.connector_logger.debug(
-                    "Successfully deleted indicator(s) from Elastic",
-                    {"opencti_doc_id": doc_id, "deleted_count": deleted_count},
-                )
-                return True
-            else:
-                raise ElasticApiHandlerError(
-                    f"Failed to delete indicator: {response.status_code}",
-                    {"response": response.text},
-                )
+            return True
 
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
@@ -1429,6 +1448,13 @@ class ElasticApiHandler:
                                     "hosts": {"type": "keyword"},
                                     "hash": {"type": "keyword"},
                                     "user": {"type": "keyword"},
+                                }
+                            },
+                            "opencti": {
+                                "properties": {
+                                    "indicator": {
+                                        "properties": {"score": {"type": "long"}}
+                                    }
                                 }
                             },
                             # Store raw STIX for reference

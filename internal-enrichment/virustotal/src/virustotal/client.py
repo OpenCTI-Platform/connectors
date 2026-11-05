@@ -5,11 +5,21 @@ import hashlib
 import json
 import time
 import urllib.parse
+from collections.abc import Callable
 
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+
+# Longest Retry-After (in seconds) the client waits for on HTTP 429. A longer
+# wait means a daily or monthly quota is exhausted: waiting for the reset would
+# block the whole enrichment queue for hours, so the request fails instead.
+QUOTA_MAX_WAIT = 60
+
+
+class VirusTotalQuotaExceededError(Exception):
+    """VirusTotal answered HTTP 429 and its quota does not reset soon."""
 
 
 class VirusTotalClient:
@@ -28,6 +38,85 @@ class VirusTotalClient:
             "accept": "application/json",
             "x-tool": f"OpenCTI VirusTotal Connector {self.helper.connector_id}",
         }
+
+    def _send(self, send: Callable[[], requests.Response]) -> requests.Response:
+        """
+        Send a request, waiting once when VirusTotal answers HTTP 429.
+
+        The request is sent again only when the Retry-After header asks for
+        at most QUOTA_MAX_WAIT seconds (per-minute quota). Otherwise, or when
+        the second attempt gets HTTP 429 too, the quota is reported as
+        exhausted.
+
+        Parameters
+        ----------
+        send : Callable[[], requests.Response]
+            Sends the request and returns the response.
+
+        Returns
+        -------
+        requests.Response
+            The first response that is not HTTP 429.
+
+        Raises
+        ------
+        VirusTotalQuotaExceededError
+            When the quota does not reset within QUOTA_MAX_WAIT seconds.
+        """
+        response = send()
+        if response.status_code != 429:
+            return response
+
+        retry_after = self._retry_after(response)
+        if retry_after <= QUOTA_MAX_WAIT:
+            self.helper.connector_logger.warning(
+                "[VirusTotal] Quota exceeded, waiting before retrying",
+                {"retry_after": retry_after},
+            )
+            time.sleep(retry_after)
+            response = send()
+            if response.status_code != 429:
+                return response
+            retry_after = self._retry_after(response)
+
+        try:
+            error = response.json().get("error") or {}
+        except (ValueError, AttributeError):
+            error = {}
+        message = (
+            f"VirusTotal quota exceeded ({error.get('code', 'HTTP 429')}: "
+            f"{error.get('message', 'Too many requests')}), retry after "
+            f"{retry_after} seconds. Reduce the enrichment volume or upgrade "
+            "the VirusTotal API quota."
+        )
+        self.helper.connector_logger.warning(
+            "[VirusTotal] Quota exceeded",
+            meta={"message": message, "retry_after": retry_after},
+        )
+        raise VirusTotalQuotaExceededError(message)
+
+    @staticmethod
+    def _retry_after(response: requests.Response) -> int:
+        """
+        Read the Retry-After header of an HTTP 429 response, in seconds.
+
+        A missing or unreadable header counts as QUOTA_MAX_WAIT: a per-minute
+        quota resets within that time.
+
+        Parameters
+        ----------
+        response : requests.Response
+            HTTP 429 response.
+
+        Returns
+        -------
+        int
+            Seconds to wait before the quota resets.
+        """
+        try:
+            return max(0, int(response.headers["Retry-After"]))
+        except (KeyError, TypeError, ValueError):
+            return QUOTA_MAX_WAIT
 
     def _query(self, url):
         """
@@ -49,20 +138,28 @@ class VirusTotalClient:
             The result of the query, as JSON or None in case of failure.
         """
         # Configure the adapter for the retry strategy.
+        # HTTP 429 is handled by _send, see QUOTA_MAX_WAIT. urllib3 must ignore
+        # Retry-After, or it retries 429 itself and sleeps until the reset.
         retry_strategy = Retry(
             total=3,
-            status_forcelist=[429, 500, 502, 503, 504],
+            status_forcelist=[500, 502, 503, 504],
             allowed_methods=["HEAD", "GET", "OPTIONS"],
+            respect_retry_after_header=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
         response = None
         try:
-            response = http.get(
-                url, headers=self.headers | {"content-type": "application/json"}
+            response = self._send(
+                lambda: http.get(
+                    url, headers=self.headers | {"content-type": "application/json"}
+                )
             )
             response.raise_for_status()
+        except VirusTotalQuotaExceededError:
+            self.helper.metric.inc("client_error_count")
+            raise
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
             self.helper.metric.inc("client_error_count")
@@ -119,10 +216,15 @@ class VirusTotalClient:
             else self.headers | additional_headers
         )
         try:
-            response = requests.post(
-                url, data=data, files=files, headers=headers, timeout=60
+            response = self._send(
+                lambda: requests.post(
+                    url, data=data, files=files, headers=headers, timeout=60
+                )
             )
             response.raise_for_status()
+        except VirusTotalQuotaExceededError:
+            self.helper.metric.inc("client_error_count")
+            raise
         except requests.exceptions.HTTPError as errh:
             self.helper.log_error(f"[VirusTotal] Http error: {errh}")
             self.helper.metric.inc("client_error_count")
@@ -221,6 +323,36 @@ class VirusTotalClient:
             IP address object, see https://developers.virustotal.com/reference/ip-object
         """
         url = f"{self.url}/ip_addresses/{ip}"
+        return self._query(url)
+
+    def get_ip_resolutions_page(
+        self, ip: str, cursor: str | None = None, limit: int = 40
+    ) -> dict | None:
+        """
+        Retrieve one page of the domains resolving to the given IP.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+        cursor : str | None
+            Cursor returned in the `meta` of the previous page, None for the first page.
+        limit : int
+            Number of resolutions to return (VirusTotal maximum: 40).
+
+        Returns
+        -------
+        dict | None
+            Resolutions page, newest first, see https://developers.virustotal.com/reference/ip-relationships
+            or None in case of failure.
+        """
+        params = {"limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+        url = (
+            f"{self.url}/ip_addresses/{ip}/resolutions?"
+            f"{urllib.parse.urlencode(params)}"
+        )
         return self._query(url)
 
     def get_domain_info(self, domain):
@@ -338,7 +470,7 @@ class VirusTotalClient:
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
 
-    def get_url_related_objects(self, url, relationship):
+    def get_url_related_objects(self, url, relationship, extra_query=""):
         """
         Retrieve URL report based on the given URL.
 
@@ -348,17 +480,115 @@ class VirusTotalClient:
             Url.
         relationship : str
             Relationship to Url
+        extra_query : str
+            Additional query string to append to the request (e.g. "limit=10").
 
         Returns
         -------
         dict
             URL Object, see https://developers.virustotal.com/reference/url-object
         """
-        base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}/{relationship}"
+        suffix = f"?{extra_query}" if extra_query else ""
+        base64_url = (
+            f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
+            f"/{relationship}{suffix}"
+        )
         results = self._query(base64_url)
         if results is None:
             return None
         if "error" in results:
-            sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}/{relationship}"
+            sha256_url = (
+                f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
+                f"/{relationship}{suffix}"
+            )
             results = self._query(sha256_url)
         return results
+
+    def get_gti_relationship(
+        self, endpoint_type: str, identifier: str, relationship: str, limit: int
+    ) -> dict | None:
+        """
+        Retrieve a GTI collection relationship (malware_families,
+        threat_actors, campaigns, or reports) for the given entity,
+        following pagination until `limit` items are collected.
+
+        Parameters
+        ----------
+        endpoint_type : str
+            VirusTotal endpoint path segment for the entity type
+            (`ip_addresses`, `domains`, `files`, or `urls`).
+        identifier : str
+            Entity identifier (IP, domain, file hash, or URL value).
+        relationship : str
+            Relationship name, e.g. `malware_families`.
+        limit : int
+            Maximum number of related objects to return.
+
+        Returns
+        -------
+        dict or None
+            VirusTotal list response with `data` truncated to `limit` items.
+        """
+        if limit <= 0:
+            return {"data": []}
+
+        page_size = min(limit, 40)
+        if endpoint_type == "urls":
+            first_page = self.get_url_related_objects(
+                identifier, relationship, extra_query=f"limit={page_size}"
+            )
+        else:
+            url = f"{self.url}/{endpoint_type}/{identifier}/{relationship}?limit={page_size}"
+            first_page = self._query(url)
+        return self._collect_paginated(first_page, limit)
+
+    def _collect_paginated(self, first_page: dict | None, limit: int) -> dict | None:
+        """
+        Follow `links.next` on a VirusTotal list response until `limit`
+        items have been collected or there are no more pages.
+
+        Parameters
+        ----------
+        first_page : dict, optional
+            First page of a VirusTotal list response.
+        limit : int
+            Maximum number of items to collect across all pages.
+
+        Returns
+        -------
+        dict or None
+            `first_page` with `data` extended across pages and truncated to `limit`.
+        """
+        if first_page is None or "error" in first_page:
+            return first_page
+
+        page_data = first_page.get("data", [])
+        # Prevents erroring when data: null
+        collected_data = [] if not page_data else list(page_data)
+
+        page = first_page
+        # Only loop while there is more data, and the last page returned data
+        while (
+            page_data
+            and len(collected_data) < limit
+            and page.get("links", {}).get("next")
+        ):
+            try:
+                page = self._query(page["links"]["next"])
+            except VirusTotalQuotaExceededError:
+                break
+            if page is None or "error" in page:
+                break
+            # Break and warn when consecutive pages return the same result
+            if page_data == page.get("data", []):
+                self.helper.connector_logger.warning(
+                    "[VirusTotal] Consecutive pages returned the same result",
+                    {"page": page, "previous_page_data": page_data},
+                )
+                break
+            page_data = page.get("data", [])
+            # Prevents erroring when data: null
+            collected_data.extend([] if not page_data else page_data)
+
+        first_page["data"] = collected_data[:limit]
+        return first_page

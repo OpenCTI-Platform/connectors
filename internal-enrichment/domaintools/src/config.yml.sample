@@ -9,8 +9,8 @@ connector:
   #scope: 'Domain-Name,Ipv4-Addr'
   #auto: false # Enable/disable auto-enrichment of observables
   #log_level: 'info'
+  #max_tlp: 'TLP:AMBER'
 
 domaintools:
   api_username: 'ChangeMe'
   api_key: 'ChangeMe'
-  #max_tlp: 'TLP:AMBER'

@@ -63,8 +63,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |            | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true       | No        | Listen to delete events.                                                       |
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true       | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            | 80         | No        | Default confidence level (0-100).                                              |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info       | No        | Determines the verbosity of the logs.                                          |
+| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error      | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
 
@@ -81,6 +80,7 @@ There are a number of configuration options, which are set either in `docker-com
 | STIX Version     | taxii.stix_version  | `TAXII_STIX_VERSION`        | 2.1     | No        | STIX output version (2.0 or 2.1).                          |
 | Delete Created By Ref  | taxii.delete_created_by_ref  | `TAXII_DELETE_CREATED_BY_REF` | true | No | Strip `created_by_ref` from objects before posting. |
 | Delete Marking Definition | taxii.delete_marking_definition | `TAXII_DELETE_MARKING_DEFINITION` | true | No | Strip `object_marking_refs` from objects before posting. |
+| Identity ID Mapping | taxii.identity_id_mapping | `TAXII_IDENTITY_ID_MAPPING` | | No | Comma separated `original_id:replacement_id` identity ID pairs (e.g. `identity--<uuid>:identity--<uuid>`). Replaces each original ID with its replacement in the STIX fields `id`, `created_by_ref`, `source_ref`, `target_ref`, `sighting_of_ref`, `where_sighted_refs` and `object_refs` before posting. Note that these changes do not propagate back to the OpenCTI instance and are altered only for the bundles sent to the TAXII server. `created_by_ref` is only remapped when `TAXII_DELETE_CREATED_BY_REF` is `false`, since it is removed by default.|
 
 ## Deployment
 
@@ -103,7 +103,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=TAXII POST
       - CONNECTOR_SCOPE=taxii
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - TAXII_URL=https://taxii.example.com
       - TAXII_SSL_VERIFY=true

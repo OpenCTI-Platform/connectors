@@ -1,4 +1,4 @@
 # Main dependencies needs to be installed
 -r ../src/requirements.txt
-pytest==9.0.3
+pytest==9.1.1
 pytest-mock

@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -50,16 +51,11 @@ class UrlscanEnrichmentConfig(BaseConfigModel):
         description="Allows you to filter by date available: `>now-1h`, `>now-1d`, `>now-1y`, `[2022 TO 2023]`, `[2022/01/01 TO 2023/12/01]`",
         default=">now-1y",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Do not send any data to URLScan if the TLP of the observable is greater than MAX_TLP",
-        default="TLP:AMBER",
     )
     create_indicator: bool = Field(
         description="Decide whether or not to create an indicator based on this observable",

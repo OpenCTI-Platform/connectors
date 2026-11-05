@@ -85,7 +85,13 @@ class Utils:
 
     @staticmethod
     def get_location_info(geolocation: dict) -> dict:
-        """This method allows you to retrieve the official name of the country based only on the country code.
+        """Retrieve the official country name from the country code when possible.
+
+        The code is not always resolvable: ET Intelligence also returns codes
+        that are not part of ISO 3166-1, such as `XK` (Kosovo) or the MaxMind
+        pseudo-codes `EU`, `AP`, `A1` and `A2`, for which pycountry has no
+        entry. The name carried by the payload is then kept, and `country` is
+        left empty when there is none either.
 
         Args:
             geolocation:
@@ -94,13 +100,18 @@ class Utils:
 
         """
         country_code = geolocation.get("country_code")
-        country_info = pycountry.countries.get(alpha_2=country_code)
+        # pycountry returns None for a code it does not know, and raises a
+        # LookupError on alpha_2=None.
+        country_info = (
+            pycountry.countries.get(alpha_2=country_code) if country_code else None
+        )
 
         # If possible get official country name and update country name
-        if hasattr(country_info, "official_name"):
-            country_name = country_info.official_name
-        else:
-            country_name = geolocation.get("country", country_info.name)
+        country_name = (
+            getattr(country_info, "official_name", None)
+            or geolocation.get("country")
+            or getattr(country_info, "name", None)
+        )
         geolocation["country"] = country_name
 
         # If possible update region name

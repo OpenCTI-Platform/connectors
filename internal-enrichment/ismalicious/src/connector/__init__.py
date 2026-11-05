@@ -1,4 +1,4 @@
 from .ismalicious import IsMaliciousConnector
-from .models import ConfigLoader
+from .settings import ConnectorSettings
 
-__all__ = ["IsMaliciousConnector", "ConfigLoader"]
+__all__ = ["ConnectorSettings", "IsMaliciousConnector"]

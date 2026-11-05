@@ -32,7 +32,7 @@ ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE \
 WORKDIR /opt/opencti-connector-export-file-ods
 COPY src/requirements.txt /opt/opencti-connector-export-file-ods/requirements.txt
 
-# ``git`` is required because the CircleCI rolling/prerelease build rewrites
+# ``git`` is required because the rolling/prerelease image build rewrites
 # the ``pycti==<version>`` line in ``requirements.txt`` to a
 # ``pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@<ref>...``
 # requirement, which pip can only resolve when ``git`` is on ``PATH``. It is
@@ -40,6 +40,7 @@ COPY src/requirements.txt /opt/opencti-connector-export-file-ods/requirements.tx
 # not bloated.
 # hadolint ignore=DL3008
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         ca-certificates \
         default-jre-headless \

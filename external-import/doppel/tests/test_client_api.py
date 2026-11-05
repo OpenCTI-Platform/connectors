@@ -1,0 +1,292 @@
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
+import pytest
+import requests
+from doppel.client_api import ConnectorClient, ResultWindowExceededError
+from pydantic import SecretStr
+
+
+@pytest.fixture
+def client():
+    return ConnectorClient(helper=MagicMock(), config=_config(api_version="v1"))
+
+
+def _response(payload=None, *, status_code: int = 200):
+    response = MagicMock()
+    response.status_code = status_code
+    response.json.return_value = payload or {
+        "metadata": {"total_pages": 0},
+        "alerts": [],
+    }
+    return response
+
+
+def test_client_sets_attribution_headers(client):
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
+
+
+@pytest.mark.parametrize("total_pages", [0, 1, 3])
+def test_get_alerts_requests_one_page(client, total_pages):
+    def request_data(_url, params):
+        assert params == {
+            "last_activity_timestamp": "2026-08-03T00:00:00Z",
+            "last_activity_before": "2026-08-03T02:00:00Z",
+            "sort_type": "last_activity",
+            "sort_order": "asc",
+            "page": 0,
+            "page_size": 100,
+        }
+        return _response(
+            {
+                "alerts": [{"id": "alert-0"}] if total_pages else [],
+                "metadata": {
+                    "total_pages": total_pages,
+                    "count": total_pages * 100,
+                },
+            }
+        )
+
+    client._request_data = MagicMock(side_effect=request_data)
+    client._request_data.retry = MagicMock()
+
+    alerts, returned_pages, returned_count = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+    )
+
+    assert client._request_data.call_count == 1
+    assert client._request_data.call_args.args[0] == "https://api.doppel.test/v1/alerts"
+    assert returned_pages == total_pages
+    assert returned_count == total_pages * 100
+    assert alerts == ([{"id": "alert-0"}] if total_pages else [])
+
+
+def test_get_alerts_defaults_missing_metadata_to_zero(client):
+    client._request_data = MagicMock(return_value=_response({"alerts": []}))
+    client._request_data.retry = MagicMock()
+
+    assert client.get_alerts("2026-08-03T00:00:00Z", "2026-08-03T02:00:00Z") == (
+        [],
+        0,
+        0,
+    )
+
+
+def test_get_alerts_v1_sends_bounded_ascending_params_to_prevent_backlog_skips(
+    client,
+):
+    client._request_data = MagicMock(return_value=_response())
+    client._request_data.retry = MagicMock()
+
+    client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
+    )
+
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
+        "page": 2,
+        "page_size": 50,
+    }
+
+
+def test_get_alerts_v2_sends_window_and_sort_params():
+    client = ConnectorClient(helper=MagicMock(), config=_config(api_version="v2"))
+    client._request_data = MagicMock(
+        return_value=_response(
+            {
+                "alerts": [{"id": "alert-2"}],
+                "metadata": {"total_pages": 4, "count": 151},
+            }
+        )
+    )
+    client._request_data.retry = MagicMock()
+
+    alerts, total_pages, total_count = client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
+    )
+
+    assert client._request_data.call_count == 1
+    assert alerts == [{"id": "alert-2"}]
+    assert total_pages == 4
+    assert total_count == 151
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "last_activity_before": "2026-08-03T02:00:00Z",
+        "sort_type": "last_activity",
+        "sort_order": "asc",
+        "page": 2,
+        "page_size": 50,
+    }
+
+
+def test_request_data_maps_result_window_response_without_retry(client):
+    response = _response(
+        {
+            "code": "result_window_exceeded",
+            "message": "Narrow the activity time range",
+            "maximum_results": 50_000,
+        },
+        status_code=422,
+    )
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(ResultWindowExceededError) as error:
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    assert error.value.response is response
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.warning.assert_called_once_with(
+        "[API] Alert result window exceeded; narrowing activity range",
+        {
+            "url": "https://api.doppel.test/v1/alerts",
+            "maximum_results": 50_000,
+            "params": {"page": 0},
+        },
+    )
+
+
+def test_request_data_does_not_map_unrelated_422(client):
+    response = _response({"message": "Invalid search filters"}, status_code=422)
+    response.raise_for_status.side_effect = requests.HTTPError(response=response)
+    client._authenticated_get = MagicMock(return_value=response)
+
+    with pytest.raises(requests.HTTPError):
+        client._request_data("https://api.doppel.test/v1/alerts", params={"page": 0})
+
+    client._authenticated_get.assert_called_once()
+    client.helper.connector_logger.error.assert_called_once()
+
+
+def _config(*, api_version: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        doppel=SimpleNamespace(
+            api_base_url="https://api.doppel.test/v1/",
+            api_version=api_version,
+            api_key=SecretStr("api-key") if api_version == "v1" else None,
+            user_api_key=(SecretStr("user-api-key") if api_version == "v1" else None),
+            organization_code="ACM" if api_version == "v1" else None,
+            client_id="client-id" if api_version == "v2" else None,
+            client_secret=(SecretStr("client-secret") if api_version == "v2" else None),
+            token_url=None,
+            token_audience="doppel-external",
+            alerts_endpoint="/v1/alerts",
+            retry_delay=0,
+            max_retries=1,
+        )
+    )
+
+
+def test_v1_uses_static_headers_and_normalized_v1_url():
+    helper = MagicMock()
+    client = ConnectorClient(helper, _config(api_version="v1"))
+
+    assert client.session.headers["x-api-key"] == "api-key"
+    assert client.session.headers["x-user-api-key"] == "user-api-key"
+    assert client.session.headers["x-organization-code"] == "ACM"
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
+    assert "Authorization" not in client.session.headers
+
+    client.session = MagicMock()
+    client.session.get.return_value = _response()
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
+
+    assert client.session.get.call_args.args[0] == "https://api.doppel.test/v1/alerts"
+
+
+def test_v2_mints_token_and_uses_only_bearer_auth():
+    helper = MagicMock()
+    client = ConnectorClient(helper, _config(api_version="v2"))
+    assert client.oauth_token_provider is not None
+    assert client.oauth_token_provider.token_url == (
+        "https://api.doppel.test/oauth/token"
+    )
+    assert "x-api-key" not in client.session.headers
+    assert "x-user-api-key" not in client.session.headers
+    assert "x-organization-code" not in client.session.headers
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
+
+    token_response = _response(
+        payload={
+            "access_token": "access-token",
+            "token_type": "Bearer",
+            "expires_in": 86400,
+        }
+    )
+    token_session = MagicMock()
+    token_session.post.return_value = token_response
+    client.oauth_token_provider.session = token_session
+
+    client.session = MagicMock()
+    client.session.get.return_value = _response()
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
+
+    call = client.session.get.call_args
+    assert call.args[0] == "https://api.doppel.test/v2/alerts"
+    assert call.kwargs["headers"] == {"Authorization": "Bearer access-token"}
+    token_session.post.assert_called_once()
+
+
+def test_v2_refreshes_once_after_unauthorized():
+    client = ConnectorClient(MagicMock(), _config(api_version="v2"))
+    assert client.oauth_token_provider is not None
+
+    token_session = MagicMock()
+    token_session.post.side_effect = [
+        _response(
+            payload={
+                "access_token": "token-1",
+                "token_type": "Bearer",
+                "expires_in": 86400,
+            }
+        ),
+        _response(
+            payload={
+                "access_token": "token-2",
+                "token_type": "Bearer",
+                "expires_in": 86400,
+            }
+        ),
+    ]
+    client.oauth_token_provider.session = token_session
+
+    unauthorized = _response(status_code=401)
+    client.session = MagicMock()
+    client.session.get.side_effect = [unauthorized, _response()]
+
+    client.get_alerts(
+        "2026-08-01T00:00:00",
+        "2026-08-01T01:00:00",
+        page_size=100,
+    )
+
+    assert token_session.post.call_count == 2
+    assert client.session.get.call_count == 2
+    assert client.session.get.call_args_list[0].kwargs["headers"] == {
+        "Authorization": "Bearer token-1"
+    }
+    assert client.session.get.call_args_list[1].kwargs["headers"] == {
+        "Authorization": "Bearer token-2"
+    }
+    unauthorized.close.assert_called_once()

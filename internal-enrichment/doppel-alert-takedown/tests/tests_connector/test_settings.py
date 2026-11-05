@@ -3,6 +3,8 @@ from typing import Any
 import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
+from pydantic import ValidationError
 
 
 @pytest.mark.parametrize(
@@ -20,14 +22,15 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "Url,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
+                    "organization_code": "ACM",
                     "tags": ["test", "poc"],
                     "takedown_comment": "Confirmed phishing.",
-                    "max_tlp": "TLP:CLEAR",
                 },
             },
             id="full_valid_settings_dict",
@@ -49,6 +52,24 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
             },
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            id="valid_v2_settings_dict",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -66,6 +87,68 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.doppel_alert_takedown, BaseConfigModel) is True
+    if settings_dict["doppel_alert_takedown"].get("organization_code"):
+        assert settings.doppel_alert_takedown.organization_code == "ACM"
+
+
+def test_settings_should_default_max_tlp_to_red():
+    """The connector keeps its historical `TLP:RED` default for `connector.max_tlp`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name",
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == TLPLevel.RED
+
+
+def test_settings_should_migrate_deprecated_doppel_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `doppel_alert_takedown.max_tlp` (`DOPPEL_ALERT_TAKEDOWN_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name",
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                        # Not the default (TLP:RED), so the migrated value is observable
+                        "max_tlp": "TLP:GREEN",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="doppel_alert_takedown.max_tlp"):
+        settings = FakeConnectorSettings()
+    assert settings.connector.max_tlp == TLPLevel.GREEN
 
 
 def test_settings_should_split_comma_separated_tags():
@@ -96,12 +179,69 @@ def test_settings_should_split_comma_separated_tags():
     assert settings.doppel_alert_takedown.tags == ["test", "filigran-poc", "phishing"]
 
 
+def test_settings_should_allow_explicit_incident_takedown_scope():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name,Incident",
+                        "auto": False,
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.scope == ["Url", "Domain-Name", "Incident"]
+
+
+@pytest.mark.parametrize("automatic_field", ["auto", "auto_update"])
+def test_settings_should_reject_automatic_incident_takedowns(automatic_field):
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name,Incident",
+                        automatic_field: True,
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    with pytest.raises(ConfigValidationError) as err:
+        FakeConnectorSettings()
+    assert "CONNECTOR_AUTO and CONNECTOR_AUTO_UPDATE must be false" in str(
+        err.value.__cause__
+    )
+
+
 @pytest.mark.parametrize(
-    "settings_dict, field_name",
+    "settings_dict, expected_error",
     [
         pytest.param(
             {},
-            "settings",
+            "url\n  Field required",
             id="empty_settings_dict",
         ),
         pytest.param(
@@ -118,12 +258,72 @@ def test_settings_should_split_comma_separated_tags():
                     "api_key": "test-api-key",
                 },
             },
-            "doppel_alert_takedown.user_api_key",
+            "user_api_key is required",
             id="missing_user_api_key",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "client_id": "test-client-id",
+                },
+            },
+            "client_secret is required",
+            id="missing_v2_client_secret",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v1",
+                    "api_key": "test-api-key",
+                    "user_api_key": "test-user-api-key",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            "V2 OAuth settings must be unset",
+            id="mixed_v1_and_v2_credentials_in_v1_mode",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "api_key": "test-api-key",
+                    "user_api_key": "test-user-api-key",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            "V1 API key settings must be unset",
+            id="mixed_v1_and_v2_credentials_in_v2_mode",
         ),
     ],
 )
-def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+def test_settings_should_raise_when_invalid_input(settings_dict, expected_error):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
     """
@@ -135,4 +335,8 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
+
+    validation_error = err.value.__cause__
+    assert isinstance(validation_error, ValidationError)
+    assert expected_error in str(validation_error)

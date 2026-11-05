@@ -1,7 +1,7 @@
 # OpenCTI connectors
 
 [![Website](https://img.shields.io/badge/website-opencti.io-blue.svg)](https://opencti.io)
-[![CircleCI](https://circleci.com/gh/OpenCTI-Platform/connectors.svg?style=shield)](https://circleci.com/gh/OpenCTI-Platform/connectors/tree/master)
+[![Build](https://github.com/OpenCTI-Platform/connectors/actions/workflows/build-all-connectors.yml/badge.svg?branch=master)](https://github.com/OpenCTI-Platform/connectors/actions/workflows/build-all-connectors.yml)
 [![Slack Status](https://img.shields.io/badge/slack-3K%2B%20members-4A154B)](https://community.filigran.io)
 
 The following repository is used to store the OpenCTI connectors for the platform integration with other tools and

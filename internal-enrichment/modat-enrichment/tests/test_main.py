@@ -42,11 +42,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "ipv4-addr",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "modat": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:CLEAR",
                     "default_score": 75,
                     "create_note": True,
                     "include_cves": False,
@@ -230,7 +230,7 @@ def test_process_message_skips_invalid_ipv4(mock_opencti_connector_helper, monke
 
 
 def test_process_message_rejects_high_tlp(mock_opencti_connector_helper):
-    """Observables above MODAT_MAX_TLP must never be sent to Modat."""
+    """Observables above CONNECTOR_MAX_TLP must never be sent to Modat."""
     connector = _build_connector(mock_opencti_connector_helper)
     msg = _build_message(tlp_marking="TLP:RED")  # CLEAR is the configured max
     with pytest.raises(ValueError, match="TLP of the observable"):

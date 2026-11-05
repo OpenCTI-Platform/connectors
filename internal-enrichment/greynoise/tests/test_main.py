@@ -40,10 +40,10 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "greynoise": {
                     "key": "ChangeMe",
-                    "max_tlp": "TLP:AMBER",
                     "sighting_not_seen": False,
                     "no_sightings": False,
                 },

@@ -20,7 +20,7 @@ from pycti import (
     Vulnerability,
 )
 
-INTEGRATION_NAME = "opencti-enricher-v4.0"
+INTEGRATION_NAME = "opencti-enricher-v4.1"
 
 
 class GreyNoiseConnector:
@@ -30,7 +30,7 @@ class GreyNoiseConnector:
 
         # Greynoise configuration
         self.greynoise_key = self.config.greynoise.key.get_secret_value()
-        self.max_tlp = self.config.greynoise.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.sighting_not_seen = self.config.greynoise.sighting_not_seen
         self.no_sightings = self.config.greynoise.no_sightings
         self.greynoise_ent_name = self.config.greynoise.name
@@ -48,7 +48,7 @@ class GreyNoiseConnector:
     def _get_indicator_score(self, classification):
         if classification == "malicious":
             self.indicator_score = self.indicator_score_malicious
-        elif classification == "suspicious" or classification == "2":
+        elif classification == "suspicious" or classification in ["2", "3"]:
             self.indicator_score = self.indicator_score_suspicious
         else:
             self.indicator_score = self.indicator_score_benign
@@ -123,6 +123,12 @@ class GreyNoiseConnector:
                 f"gn-provider: {data['business_service_intelligence']['name']} ",
                 "#57B9FF",
             )
+        elif data["business_service_intelligence"]["trust_level"] == "3":
+            self._create_custom_label("gn-trust-level: context only", "#94A3B8")
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#94A3B8",
+            )
         if data["internet_scanner_intelligence"].get("bot") is True:
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
         if data["internet_scanner_intelligence"]["tor"] is True:
@@ -134,7 +140,7 @@ class GreyNoiseConnector:
                 self._create_custom_label(f"{tag['name']}", "#ff8178")
             elif tag["category"] == "worm":
                 malware_worm = {
-                    "name": f"{tag}",
+                    "name": tag["name"],
                     "description": f"{tag['description']}",
                     "type": "worm",
                 }
@@ -566,7 +572,7 @@ class GreyNoiseConnector:
                     data["business_service_intelligence"]["last_updated"]
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 self._get_indicator_score(
-                    data["business_service_intelligence"].get("trust_level", "2")
+                    data["business_service_intelligence"].get("trust_level", "3")
                 )
 
             if (

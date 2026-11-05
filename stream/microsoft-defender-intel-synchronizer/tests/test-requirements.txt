@@ -6,4 +6,3 @@
 # default Python environment.
 -r ../src/requirements.txt
 pytest
-pytest-cov

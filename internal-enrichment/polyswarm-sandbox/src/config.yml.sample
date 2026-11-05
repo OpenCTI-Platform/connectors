@@ -9,12 +9,12 @@ connector:
   scope: 'Artifact'
   auto: false
   log_level: 'error'
+  max_tlp: 'TLP:AMBER'
 
 polyswarm:
   api_key: 'ChangeMe'
   api_url: 'https://api.polyswarm.network'
   community: 'default'
-  max_tlp: 'TLP:AMBER'
   replace_with_lower_score: true
   timeout: 300
 

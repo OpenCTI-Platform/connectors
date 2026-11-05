@@ -1,0 +1,105 @@
+{
+  "data": [
+    {
+      "tag": "cnc",
+      "description": "Command and Control infrastructure",
+      "subtags": [
+        "reverse-shell"
+      ]
+    },
+    {
+      "tag": "phishing",
+      "description": "Used for phishing. For example a phishing site or a email sender address sending phishing emails.",
+      "subtags": [
+        "smishing"
+      ]
+    },
+    {
+      "tag": "payload",
+      "description": "Used for payload delivery. For example a URL hosting malware, or a email sender",
+      "subtags": [
+        "staging",
+        "stage1",
+        "stage2",
+        "stage3",
+        "stage4",
+        "infection",
+        "delivery"
+      ]
+    },
+    {
+      "tag": "lure",
+      "description": "Used for social engineering. For example fake or spoofed email sender addresses, or domains used for typosquatting.",
+      "subtags": [
+        "fake",
+        "scam",
+        "typosquat"
+      ]
+    },
+    {
+      "tag": "leak",
+      "description": "Used for data leaks. For example a URL hosting leaked data.",
+      "subtags": []
+    },
+    {
+      "tag": "proxy",
+      "description": "Used for proxy. For example a domain hosting a proxy server.",
+      "subtags": [
+        "vpns",
+        "tor",
+        "reverse-ssh"
+      ]
+    },
+    {
+      "tag": "attacker",
+      "description": "Used as attacker infrastructure. For example an IP launching DDoS attacks.",
+      "subtags": []
+    },
+    {
+      "tag": "exfil",
+      "description": "Used for exfiltration. For example a domain where stolen data is exfiltrated to.",
+      "subtags": []
+    },
+    {
+      "tag": "mail",
+      "description": "Used for email infrastructure. For example a domain used as a mail server.",
+      "subtags": [
+        "spam"
+      ]
+    },
+    {
+      "tag": "remote",
+      "description": "Remote desktop software. For example IPs of ScreenConnect instance.",
+      "subtags": [
+        "commercial",
+        "terminal"
+      ]
+    },
+    {
+      "tag": "lookup",
+      "description": "Services used to lookup IP or geolocation information, mostly benign services.",
+      "subtags": []
+    },
+    {
+      "tag": "compromised",
+      "description": "Compromised service such as hacked websites.",
+      "subtags": [
+        "hacked"
+      ]
+    },
+    {
+      "tag": "cloaking",
+      "description": "Cloaking infrastructure.",
+      "subtags": []
+    },
+    {
+      "tag": "tracker",
+      "description": "Services used for tracking. For example, analytics trackers. Often benign.",
+      "subtags": []
+    }
+  ],
+  "meta": {
+    "count": 14,
+    "paginated": false
+  }
+}

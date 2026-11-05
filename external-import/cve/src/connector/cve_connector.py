@@ -67,8 +67,11 @@ class CVEConnector:
         CPE resolution starts immediately and runs concurrently
         with further CVE fetching (bounded by cpe_max_concurrency).
         """
-        # Reset rate limiter state to avoid stale asyncio.Lock across runs
-        self.converter._rate_limiter.reset()
+        # Drop the stale asyncio.Lock from the previous asyncio.run() while
+        # keeping the sliding-window request history, so the rate limiter stays
+        # continuous across consecutive runs (e.g. historical-backfill chunks)
+        # instead of allowing a fresh burst at every chunk boundary.
+        self.converter._rate_limiter.invalidate_lock()
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting CVE+CPE streaming pipeline"
@@ -176,10 +179,17 @@ class CVEConnector:
             "[CONNECTOR] Getting the last CVEs since the last run..."
         )
 
-        last_run_ts = datetime.fromtimestamp(last_run, tz=timezone.utc)
+        start_date = datetime.fromtimestamp(last_run, tz=timezone.utc)
+        max_date_range = timedelta(days=MAX_AUTHORIZED)
 
-        cve_params = self._update_cve_params(last_run_ts, now)
-        asyncio.run(self._async_ingest(cve_params))
+        # The NVD API rejects any date range longer than MAX_AUTHORIZED days,
+        # so split the last_run-to-now range into consecutive windows of at
+        # most MAX_AUTHORIZED days each.
+        while start_date < now:
+            end_date = min(start_date + max_date_range, now)
+            cve_params = self._update_cve_params(start_date, end_date)
+            asyncio.run(self._async_ingest(cve_params))
+            start_date = end_date
 
     @staticmethod
     def _format_exception(err: BaseException) -> str:

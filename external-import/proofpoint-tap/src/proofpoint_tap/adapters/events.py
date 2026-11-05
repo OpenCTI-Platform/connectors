@@ -250,7 +250,7 @@ class ClickEventAPIV2(ClickEventPort):
     @property
     def threats(self) -> Optional[list[EventThreatPort]]:
         """Get the threats."""
-        return [EventThreatAPIV2.from_threat_url(self._event.threat_url)]
+        return [EventThreatAPIV2.from_threat_url(self._event.threat_url or "")]
 
     @property
     def sender_address(self) -> str:

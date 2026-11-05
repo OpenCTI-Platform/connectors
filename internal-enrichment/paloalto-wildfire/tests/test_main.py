@@ -24,11 +24,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "paloalto_wildfire": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:CLEAR",
                 },
             }
         )

@@ -111,6 +111,11 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "GOOGLE_DTM_IMPORT_PASSWORDS": {
+      "default": true,
+      "description": "Whether to import plaintext passwords from Compromised Credentials alerts. When false, UserAccount observables are created without a credential and the password is redacted in the alert content.",
+      "type": "boolean"
     }
   },
   "required": [

@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from pydantic import HttpUrl, SecretStr
 from requests import Response
 from spycloud_connector.models.spycloud import BreachCatalog, BreachRecord
 from spycloud_connector.services import SpycloudClient
@@ -24,9 +25,40 @@ def mock_spycloud_client():
 
     config = Mock()
     config.spycloud.api_base_url = TEST_API_BASE_URL
-    config.spycloud.api_key = TEST_API_KEY
+    config.spycloud.api_key = SecretStr(TEST_API_KEY)
 
     return SpycloudClient(helper=helper, config=config)
+
+
+@pytest.mark.parametrize(
+    "api_base_url, expected",
+    [
+        pytest.param(
+            HttpUrl("https://api.spycloud.io/enterprise-v2"),
+            "https://api.spycloud.io/enterprise-v2/",
+            id="url_with_path_without_trailing_slash",
+        ),
+        pytest.param(
+            HttpUrl("https://api.spycloud.io/enterprise-v2/"),
+            "https://api.spycloud.io/enterprise-v2/",
+            id="url_with_path_and_trailing_slash",
+        ),
+        pytest.param(
+            HttpUrl("https://api.spycloud.io"),
+            "https://api.spycloud.io/",
+            id="url_without_path",
+        ),
+    ],
+)
+def test_client_should_normalize_base_url_when_given_http_url(api_base_url, expected):
+    """Should build a string base URL ending with a slash from an `HttpUrl`."""
+    config = Mock()
+    config.spycloud.api_base_url = api_base_url
+    config.spycloud.api_key = SecretStr(TEST_API_KEY)
+
+    client = SpycloudClient(helper=Mock(), config=config)
+
+    assert client.base_url == expected
 
 
 def mock_response(status_code: int, body: dict = None):

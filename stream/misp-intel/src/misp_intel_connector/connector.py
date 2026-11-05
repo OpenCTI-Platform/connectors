@@ -9,11 +9,12 @@ creating, updating, and deleting MISP events from OpenCTI containers
 import queue
 import threading
 import traceback
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import MispApiHandler
+from .event_tags import get_marking_tag, get_removed_container_values
 from .utils import (
     convert_stix_bundle_to_misp_event,
     get_container_type,
@@ -323,11 +324,17 @@ class MispIntelConnector:
             )
             return None
 
-    def _update_misp_event(self, container_data: Dict, misp_event_uuid: str) -> bool:
+    def _update_misp_event(
+        self,
+        container_data: Dict,
+        misp_event_uuid: str,
+        tags_to_remove: Optional[List[str]] = None,
+    ) -> bool:
         """
         Update an existing MISP event from an OpenCTI container
         :param container_data: Container STIX data
         :param misp_event_uuid: UUID of the MISP event to update
+        :param tags_to_remove: Event tags of removed markings/report types
         :return: True if successful, False otherwise
         """
         try:
@@ -349,7 +356,9 @@ class MispIntelConnector:
                 return False
 
             # Update event in MISP
-            result = self.api.update_event(misp_event_uuid, misp_event_data)
+            result = self.api.update_event(
+                misp_event_uuid, misp_event_data, tags_to_remove=tags_to_remove
+            )
             if result:
                 self.helper.connector_logger.info(
                     "[UPDATE] MISP event updated",
@@ -365,6 +374,42 @@ class MispIntelConnector:
                 {"trace": traceback.format_exc()},
             )
             return False
+
+    def _resolve_removed_event_tags(self, removed: Optional[Dict]) -> List[str]:
+        """
+        Convert the markings and report types removed from a container to
+        the MISP event tags they were converted to.
+
+        :param removed: Removed values, as returned by get_removed_container_values()
+        :return: Sorted list of MISP tag names
+        """
+        if not removed:
+            return []
+
+        tags = set()
+        allowlist = self.config.misp.get_marking_types_allowlist()
+        for marking_id in removed.get("object_marking_refs", []):
+            try:
+                marking = self.helper.api.marking_definition.read(id=marking_id)
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    f"Could not read removed marking definition: {str(e)}",
+                    {"marking_id": marking_id},
+                )
+                continue
+            if not marking:
+                continue
+            definition_type = marking.get("definition_type") or ""
+            if definition_type.upper() not in allowlist:
+                continue
+            tag = get_marking_tag(definition_type, marking.get("definition") or "")
+            if tag:
+                tags.add(tag)
+
+        for report_type in removed.get("report_types", []):
+            tags.add(f"report-type:{report_type}")
+
+        return sorted(tags)
 
     def _delete_misp_event(self, container_id: str) -> bool:
         """
@@ -475,11 +520,14 @@ class MispIntelConnector:
             try:
                 # Get item from queue with timeout to check stop signal
                 try:
-                    event_type, container_data, container_id = self.work_queue.get(
-                        timeout=1
-                    )
+                    item = self.work_queue.get(timeout=1)
                 except queue.Empty:
                     continue
+
+                # Items are (event_type, container_data, container_id), plus the
+                # markings/report types removed from the container for updates
+                event_type, container_data, container_id = item[:3]
+                removed = item[3] if len(item) > 3 else None
 
                 self.helper.connector_logger.info(
                     f"Worker processing {event_type} for container {container_id}"
@@ -507,7 +555,13 @@ class MispIntelConnector:
                         existing_event = self.api.get_event_by_uuid(misp_event_uuid)
 
                     if existing_event:
-                        self._update_misp_event(container_data, misp_event_uuid)
+                        tags_to_remove = self._resolve_removed_event_tags(removed)
+                        if tags_to_remove:
+                            self._update_misp_event(
+                                container_data, misp_event_uuid, tags_to_remove
+                            )
+                        else:
+                            self._update_misp_event(container_data, misp_event_uuid)
                     else:
                         # If no existing event, create a new one
                         self.helper.connector_logger.info(
@@ -613,9 +667,16 @@ class MispIntelConnector:
             else:
                 # Queue create/update events for processing by worker thread
                 # This avoids stream timeouts for large containers
+                item = (event_type, data, container_id)
+                if event_type == "update":
+                    # The stream context is not available anymore when the
+                    # worker processes the item, so compute removals now
+                    removed = get_removed_container_values(data, payload.get("context"))
+                    if removed:
+                        item += (removed,)
                 try:
                     # Try to add to queue without blocking
-                    self.work_queue.put_nowait((event_type, data, container_id))
+                    self.work_queue.put_nowait(item)
                     self.helper.connector_logger.info(
                         f"Queued {event_type} event for {container_type}",
                         {

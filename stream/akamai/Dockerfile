@@ -15,7 +15,8 @@ WORKDIR /opt/opencti-connector-akamai
 
 # Install system dependencies required for cryptography and EdgeGrid
 
-RUN apk add --no-cache \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
     build-base \
     libffi-dev \
     openssl-dev \

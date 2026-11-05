@@ -14,9 +14,6 @@ The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filte
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -24,6 +21,7 @@ The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filte
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+  - [Migrating from the legacy API](#migrating-from-the-legacy-api)
 
 ## Introduction
 
@@ -42,42 +40,19 @@ Key features:
 ### Requirements
 
 - OpenCTI Platform >= 6.0.0
-- Zscaler account with API access
-- Zscaler API key, username, and password
+- Zscaler tenant migrated to [ZIdentity](https://help.zscaler.com/zidentity/migrating-zscaler-service-admins-zidentity)
+- A ZIdentity API client (client ID and client secret) with a ZIA API role allowed to manage URL categories and activate changes
+
+The connector uses [Zscaler OneAPI](https://automate.zscaler.com/docs/api-reference-and-guides/guides/UnderstandingOneAPI)
+(OAuth 2.0 client credentials). The legacy ZIA API authentication (username, password and API key) still works but is
+deprecated, see [Migrating from the legacy API](#migrating-from-the-legacy-api).
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml   | Docker environment variable | Mandatory | Description                                          |
-|---------------|--------------|------------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url          | `OPENCTI_URL`                | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token        | `OPENCTI_TOKEN`              | Yes       | The default admin token set in the OpenCTI platform. |
-| SSL Verify    | ssl_verify   | `OPENCTI_SSL_VERIFY`         | No        | Verify SSL certificates (default: false).            |
-
-### Base connector environment variables
-
-| Parameter                      | config.yml                 | Docker environment variable              | Default          | Mandatory | Description                                                                    |
-|--------------------------------|----------------------------|------------------------------------------|------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                         | `CONNECTOR_ID`                           |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Type                 | type                       | `CONNECTOR_TYPE`                         | STREAM           | Yes       | Should always be set to `STREAM` for this connector.                           |
-| Connector Name                 | name                       | `CONNECTOR_NAME`                         | ZscalerConnector | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                      | `CONNECTOR_SCOPE`                        | Zscaler          | Yes       | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id             | `CONNECTOR_LIVE_STREAM_ID`               |                  | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete  | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`    | true             | Yes       | Listen to delete events.                                                       |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`  | true             | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                  | `CONNECTOR_LOG_LEVEL`                    | info             | No        | Determines the verbosity of the logs.                                          |
-
-### Connector extra parameters environment variables
-
-| Parameter        | config.yml            | Docker environment variable | Default           | Mandatory | Description                                         |
-|------------------|----------------------|------------------------------|-------------------|-----------|-----------------------------------------------------|
-| Username         | zscaler.username     | `ZSCALER_USERNAME`           |                   | Yes       | Zscaler username for API authentication.            |
-| Password         | zscaler.password     | `ZSCALER_PASSWORD`           |                   | Yes       | Zscaler password for API authentication.            |
-| API Key          | zscaler.api_key      | `ZSCALER_API_KEY`            |                   | Yes       | Zscaler API key.                                    |
-| Blacklist Name   | zscaler.blacklist_name | `ZSCALER_BLACKLIST_NAME`   | BLACK_LIST_DYNDNS | Yes       | Name of the Zscaler URL category to manage.         |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -105,10 +80,10 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - ZSCALER_USERNAME=ChangeMe
-      - ZSCALER_PASSWORD=ChangeMe
-      - ZSCALER_API_KEY=ChangeMe
-      - ZSCALER_BLACKLIST_NAME=YOUR_CUSTOM_BLACKLIST
+      - ZSCALER_CLIENT_ID=ChangeMe
+      - ZSCALER_CLIENT_SECRET=ChangeMe
+      - ZSCALER_VANITY_DOMAIN=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=CUSTOM_01
     restart: always
     networks:
       - opencti_network
@@ -143,10 +118,10 @@ connector:
   log_level: 'info'
 
 zscaler:
-  username: 'YOUR_ZSCALER_USERNAME'
-  password: 'YOUR_ZSCALER_PASSWORD'
-  api_key: 'YOUR_ZSCALER_API_KEY'
-  blacklist_name: 'BLACK_LIST_DYNDNS'
+  client_id: 'YOUR_ZIDENTITY_CLIENT_ID'
+  client_secret: 'YOUR_ZIDENTITY_CLIENT_SECRET'
+  vanity_domain: 'YOUR_VANITY_DOMAIN'
+  blacklist_name: 'CUSTOM_01'
 ```
 
 2. Install dependencies:
@@ -169,7 +144,7 @@ python3 main.py
 4. Start the connector
 
 The connector will:
-- Authenticate with Zscaler API on startup
+- Request a Zscaler OneAPI access token on startup
 - Listen for domain indicator create/delete events
 - Add domains to the specified blacklist category
 - Automatically activate changes in Zscaler
@@ -230,9 +205,8 @@ graph LR
 ### Rate Limiting
 
 The connector handles Zscaler API rate limits:
-- Maximum 400 requests per hour
-- Automatic retry with exponential backoff
-- Respects `Retry-After` headers
+- On HTTP 429, waits for the delay given by the `x-ratelimit-reset` header (or `Retry-After`) before retrying
+- Retries activation with exponential backoff while another activation is in progress (HTTP 503)
 
 ## Debugging
 
@@ -246,7 +220,8 @@ CONNECTOR_LOG_LEVEL=debug
 
 | Issue                          | Solution                                              |
 |--------------------------------|-------------------------------------------------------|
-| Authentication failed          | Verify username, password, and API key                |
+| Authentication failed          | Verify client ID, client secret and vanity domain, and that the API client has a ZIA role |
+| HTTP 500 on URL category calls | `ZSCALER_BLACKLIST_NAME` must be a category ID (`CUSTOM_XX`), not a display name |
 | Domain already in blacklist    | Normal behavior - domain is skipped                   |
 | Invalid domain pattern         | Ensure indicator uses STIX pattern format             |
 | Rate limit exceeded (429)      | Connector will automatically retry                    |
@@ -264,6 +239,30 @@ CONNECTOR_LOG_LEVEL=debug
 
 - **Supported Indicators**: Only `domain-name` type indicators
 - **Pattern Format**: Must use STIX pattern `[domain-name:value = 'example.com']`
-- **API Endpoint**: Uses `zsapi.zscalertwo.net` - adjust if using different Zscaler cloud
-- **Session Management**: Automatic re-authentication when session expires
-- **Activation**: Changes are automatically activated after each operation
+- **API Endpoint**: Uses Zscaler OneAPI, `https://api.zsapi.net/zia/api/v1` (or `api.<cloud>.zsapi.net` when `ZSCALER_CLOUD` is set)
+- **Token Management**: The access token is cached and renewed before it expires, or when the API rejects it
+- **Activation**: Changes are automatically activated after each successful update
+
+## Migrating from the legacy API
+
+Earlier versions of this connector authenticated against the legacy ZIA API
+(`zsapi.zscalertwo.net`) with a username, a password and an API key. Zscaler is
+removing this authentication method, so the connector now uses Zscaler OneAPI.
+
+The legacy settings are deprecated but still work. When `ZSCALER_CLIENT_ID`,
+`ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN` are not set, the connector
+falls back to `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY`
+against `ZSCALER_API_BASE_URL` (default `https://zsapi.zscalertwo.net`), and logs
+a deprecation warning at startup. This fallback stops working when Zscaler
+removes the legacy authentication.
+
+To migrate:
+
+1. Make sure your tenant is migrated to ZIdentity.
+2. In ZIdentity, create an API client and assign it a ZIA API role allowed to
+   manage URL categories and activate changes.
+3. Replace `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY` with
+   `ZSCALER_CLIENT_ID`, `ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN`.
+
+4. Remove the legacy variables, including `ZSCALER_API_BASE_URL`. If they are
+   still set next to the OneAPI ones, the connector ignores them and logs a warning.

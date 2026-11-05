@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'IPGeolocation.io'
+  # scope: 'IPv4-Addr,IPv6-Addr'
+  # log_level: 'error'
+  # auto: false # every lookup spends API credits
+
+ipgeolocation:
+  api_key: 'ChangeMe'
+  # api_base_url: 'https://api.ipgeolocation.io'
+  # timeout: 30
+  # include_security: true # threat score and VPN, proxy, Tor flags (paid plans, 2 extra credits)
+  # include_abuse: true # abuse contact (paid plans, 1 extra credit)
+  # include_hostname: true # hostname (paid plans, no extra credit)
+  # max_tlp_level: 'amber+strict' # 'clear', 'white', 'green', 'amber', 'amber+strict' or 'red'
+  # tlp_level: 'clear' # marking of the objects the connector creates
+  # create_labels: true
+  # create_relationships: true
+  # create_indicator: false # indicators often feed detection tools: enable on purpose
+  # indicator_threshold: 50
+  # create_note: true

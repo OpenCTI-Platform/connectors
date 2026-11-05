@@ -16,6 +16,14 @@ def calculate_priority(score) -> str:
         return "P4"
 
 
+def calculate_opencti_score(score) -> int:
+    """Scale a Doppel score to OpenCTI's integer score representation."""
+    try:
+        return round(float(score) * 100) if score is not None else 0
+    except (ValueError, TypeError):
+        return 0
+
+
 def _normalize_queue_state(queue_state) -> str:
     """
     Normalize a Doppel queue state for robust comparison.
@@ -36,16 +44,6 @@ def _normalize_queue_state(queue_state) -> str:
 def in_takedown_state(queue_state) -> bool:
     """Check if alert is in takedown state"""
     return _normalize_queue_state(queue_state) in {"actioned", "taken_down"}
-
-
-def is_reverted_state(queue_state) -> bool:
-    """Check if alert is reverted from takedown"""
-    return _normalize_queue_state(queue_state) in {
-        "archived",
-        "needs_confirmation",
-        "doppel_review",
-        "monitoring",
-    }
 
 
 def build_external_references(alert) -> list:
@@ -150,16 +148,9 @@ def build_custom_properties(alert, author_id) -> dict:
     :return: Dict of custom properties
     """
     custom_properties = {}
-    raw_score = alert.get("score")
-    try:
-        # Source API returns a score like 0.34
-        # It has to be scaled to 34 in OpenCTI (multiplied by 100)
-        score = int(float(raw_score) * 100) if raw_score is not None else 0
-    except (ValueError, TypeError):
-        score = 0
 
     custom_properties["x_opencti_created_by_ref"] = author_id
-    custom_properties["x_opencti_score"] = score
+    custom_properties["x_opencti_score"] = calculate_opencti_score(alert.get("score"))
     custom_properties["x_opencti_workflow_id"] = alert.get(
         "id"
     )  # Store alert_id for lookup

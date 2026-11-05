@@ -287,11 +287,13 @@ class ConverterToStix:
         cve: str,
         description: str = "",
         custom_properties: dict | None = None,
+        labels: list[str] | None = None,
     ) -> stix2.Vulnerability:
         """Create Vulnerability Object
 
         Args:
             cve (str): Common Vulnerabilities and Exposures
+            labels (list[str]): Optional labels to apply
 
         Returns:
             stix2.Vulnerability: Vulnerability Object
@@ -311,6 +313,7 @@ class ConverterToStix:
                 created_by_ref=self.author,
                 external_references=[external_ref],
                 object_marking_refs=[stix2.TLP_AMBER],
+                labels=labels or [],
                 custom_properties=custom_properties or {},
             )
             if description != ""
@@ -320,6 +323,7 @@ class ConverterToStix:
                 created_by_ref=self.author,
                 external_references=[external_ref],
                 object_marking_refs=[stix2.TLP_AMBER],
+                labels=labels or [],
                 custom_properties=custom_properties or {},
             )
         )

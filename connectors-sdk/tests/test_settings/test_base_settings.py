@@ -1,17 +1,21 @@
+import logging
 import sys
 from pathlib import Path
 from typing import Annotated
 from unittest.mock import patch
 
 import pytest
+from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
+    BaseStreamConnectorConfig,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, ValidationError
 
 
 def test_base_config_model_should_retrieve_deprecated_fields():
@@ -329,6 +333,88 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["connector"]["log_level"] == "error"
 
 
+def test_base_connector_settings_should_keep_a_logging_setup_made_by_others(
+    mock_environment, monkeypatch
+):
+    """Test that settings do not change a logging setup made by the developer.
+
+    JSON logging is disabled in the tests (see `conftest.py`), so the developer owns
+    the logging setup. Here, pytest's capture handlers are on the root logger, so
+    creating settings changes nothing.
+    """
+    # Given: A configured log level, and a root logger filtering on another one
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    logging.getLogger().setLevel(logging.CRITICAL)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: The root logger still filters on its own level
+    assert logging.getLogger().level == logging.CRITICAL
+
+
+@pytest.mark.parametrize(
+    "env_value, expected",
+    [
+        pytest.param(None, True, id="default"),
+        pytest.param("true", True, id="true"),
+        pytest.param("false", False, id="false"),
+        pytest.param("0", False, id="0"),
+        pytest.param("no", False, id="no"),
+    ],
+)
+def test_base_connector_settings_should_read_json_logging(
+    mock_environment, monkeypatch, env_value, expected
+):
+    """Test that `OPENCTI_JSON_LOGGING` is read as a boolean, JSON by default."""
+    # Given: The environment variable, set or not
+    if env_value is None:
+        monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
+    else:
+        monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
+
+    # When: Settings are instantiated
+    settings = BaseConnectorSettings()
+
+    # Then: The value is a boolean
+    assert settings.opencti.json_logging is expected
+
+
+def test_base_connector_settings_should_configure_logging(
+    mock_environment, monkeypatch
+):
+    """Test that the validated log level and format apply as soon as they are known."""
+    # Given: A log level and a format
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    monkeypatch.setenv("OPENCTI_JSON_LOGGING", "false")
+
+    # When: Settings are instantiated
+    with patch(
+        "connectors_sdk.settings.base_settings.configure_logging"
+    ) as configure_logging:
+        BaseConnectorSettings()
+
+    # Then: Logging is configured with the validated values
+    configure_logging.assert_called_once_with(log_level="debug", json_logging=False)
+
+
+def test_base_connector_settings_should_never_log_settings_values(
+    mock_environment, monkeypatch, caplog
+):
+    """Test that settings values (possibly secrets) never end up in logs."""
+    # Given: Debug logs enabled
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    caplog.set_level(logging.DEBUG)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: Settings are logged, without any value
+    assert caplog.records
+    assert "changeme" not in caplog.text  # OPENCTI_TOKEN
+    assert not any(hasattr(record, "attributes") for record in caplog.records)
+
+
 def test_base_connector_settings_should_validate_settings_from_dot_env_file(
     mock_dot_env_file_presence,
 ):
@@ -401,13 +487,17 @@ def test_base_connector_settings_should_raise_when_missing_mandatory_env_vars():
         BaseConnectorSettings()
 
 
-def test_base_connector_settings_should_provide_helper_config(mock_environment):
+def test_base_connector_settings_should_provide_helper_config(
+    mock_environment, monkeypatch
+):
     """
     Test that `BaseConnectorSettings().to_helper_config` returns a valid `config` dict for `pycti.OpenCTIConnectorHelper`.
     For testing purpose, `os.environ` is patched.
     """
 
     # Given: A valid BaseConnectorSettings instance built from patched environment
+    # (without `OPENCTI_JSON_LOGGING`, whatever the shell running the tests sets)
+    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
     # When: OpenCTIConnectorHelper config dict is generated
     settings = BaseConnectorSettings()
     json_dump = settings.model_dump(mode="json")
@@ -422,6 +512,7 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
         "opencti": {
             "token": "changeme",  # clear token
             "url": "http://localhost:8080/",
+            "json_logging": True,
         },
         "connector": {
             "duration_period": "PT5M",
@@ -465,3 +556,155 @@ def test_base_connector_settings_config_json_schema():
 
     # Then: CONNECTOR_ID is intentionally excluded from generated properties
     assert "CONNECTOR_ID" not in schema["properties"]
+
+    # Then: OPENCTI_JSON_LOGGING is not a setting for end users
+    assert "OPENCTI_JSON_LOGGING" not in schema["properties"]
+
+
+def test_base_stream_connector_config_recovery_fields_default_to_none():
+    """Test that `BaseStreamConnectorConfig` recovery fields are optional and default to None."""
+
+    # Given: A stream connector config with only the mandatory live stream id
+    config = BaseStreamConnectorConfig(
+        id="connector--uid", name="Test", scope=["scope1"], live_stream_id="stream--uid"
+    )
+
+    # When/Then: Recovery fields are optional with sensible defaults
+    assert config.live_stream_start_timestamp is None
+    assert config.live_stream_recover is True
+    assert config.live_stream_recover_iso_date is None
+
+
+def test_base_stream_connector_config_accepts_recovery_values():
+    """Test that `BaseStreamConnectorConfig` casts and keeps provided recovery values."""
+
+    # Given: A stream connector config with recovery values provided
+    config = BaseStreamConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["scope1"],
+        live_stream_id="stream--uid",
+        live_stream_start_timestamp=1788426304677,
+        live_stream_recover_iso_date="2026-09-07T00:00:00Z",
+    )
+
+    # When/Then: Values are validated and the recover date serializes to an ISO string for pycti
+    assert config.live_stream_start_timestamp == 1788426304677
+    dumped = config.model_dump(mode="json")
+    assert dumped["live_stream_recover_iso_date"] == "2026-09-07T00:00:00Z"
+
+
+def test_base_stream_connector_config_rejects_start_timestamp_in_seconds():
+    """Test that `BaseStreamConnectorConfig` rejects an epoch start timestamp given in seconds."""
+
+    # Given/When/Then: A 10-digit (seconds) timestamp is rejected to avoid a silent full replay
+    with pytest.raises(ValidationError):
+        BaseStreamConnectorConfig(
+            id="connector--uid",
+            name="Test",
+            scope=["scope1"],
+            live_stream_id="stream--uid",
+            live_stream_start_timestamp=1788426304,
+        )
+
+
+def test_base_stream_connector_config_recover_false_disables_recovery_for_pycti():
+    """Test that `live_stream_recover=False` serializes the recover date to "none" for pycti."""
+
+    # Given: A stream connector config disabling recovery via the boolean toggle
+    config = BaseStreamConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["scope1"],
+        live_stream_id="stream--uid",
+        live_stream_recover=False,
+    )
+
+    # When: The config is serialized for the pycti helper
+    pycti_value = config.model_dump(mode="json", context={"mode": "pycti"})[
+        "live_stream_recover_iso_date"
+    ]
+
+    # Then: The recover date is converted to the "none" keyword understood by pycti
+    assert pycti_value == "none"
+
+
+def test_base_stream_connector_config_json_schema_exposes_recovery_vars():
+    """Test that the generated config JSON schema exposes the recovery env vars for stream connectors."""
+
+    # Given: A stream connector settings class
+    class _StreamSettings(BaseConnectorSettings):
+        connector: BaseStreamConnectorConfig = Field(
+            default_factory=BaseStreamConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _StreamSettings.config_json_schema(connector_name="test-stream")
+
+    # Then: The recovery env vars are exposed as properties
+    assert "CONNECTOR_LIVE_STREAM_START_TIMESTAMP" in schema["properties"]
+    assert "CONNECTOR_LIVE_STREAM_RECOVER" in schema["properties"]
+    assert "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE" in schema["properties"]
+
+
+def test_base_internal_enrichment_connector_config_max_tlp_defaults_to_amber():
+    """Test that `BaseInternalEnrichmentConnectorConfig.max_tlp` defaults to `amber`."""
+
+    # Given/When: An internal enrichment connector config without max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"]
+    )
+
+    # Then: The default max TLP is amber
+    assert config.max_tlp is TLPLevel.AMBER
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("TLP:RED", TLPLevel.RED),
+        ("amber+strict", TLPLevel.AMBER_STRICT),
+        (" TLP:Amber+Strict ", TLPLevel.AMBER_STRICT),
+        ("clear", TLPLevel.CLEAR),
+        ("WHITE", TLPLevel.WHITE),
+    ],
+)
+def test_base_internal_enrichment_connector_config_normalizes_max_tlp(value, expected):
+    """Test that `max_tlp` accepts levels with or without `TLP:` prefix, in any case."""
+
+    # Given/When: An internal enrichment connector config with a non-canonical max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+    )
+
+    # Then: The value is normalized to the matching TLP level
+    assert config.max_tlp is expected
+
+
+@pytest.mark.parametrize("value", ["purple", "TLP:PURPLE", 3])
+def test_base_internal_enrichment_connector_config_rejects_invalid_max_tlp(value):
+    """Test that `max_tlp` rejects unknown TLP levels."""
+
+    # Given/When/Then: An unknown TLP level is rejected
+    with pytest.raises(ValidationError):
+        BaseInternalEnrichmentConnectorConfig(
+            id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+        )
+
+
+def test_base_internal_enrichment_connector_config_json_schema_exposes_max_tlp():
+    """Test that the generated config JSON schema exposes `CONNECTOR_MAX_TLP`."""
+
+    # Given: An internal enrichment connector settings class
+    class _EnrichmentSettings(BaseConnectorSettings):
+        connector: BaseInternalEnrichmentConnectorConfig = Field(
+            default_factory=BaseInternalEnrichmentConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _EnrichmentSettings.config_json_schema(connector_name="test-enrichment")
+
+    # Then: The max TLP env var is exposed with its default and allowed values
+    max_tlp = schema["properties"]["CONNECTOR_MAX_TLP"]
+    assert max_tlp["default"] == "amber"
+    assert "amber+strict" in max_tlp["enum"]

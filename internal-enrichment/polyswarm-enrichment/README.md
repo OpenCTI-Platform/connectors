@@ -85,6 +85,7 @@ Key features:
 | `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `true`)                 |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | No        | Default confidence level (default: `80`)                         |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | No        | Log level: `debug`, `info`, `warning`, `error` (default: `info`) |
+| `connector_max_tlp`          | `CONNECTOR_MAX_TLP`          | No        | Max TLP level to enrich (default: `TLP:RED`, no limit). Replaces the deprecated `POLYSWARM_MAX_TLP` |
 
 ### PolySwarm Configuration
 
@@ -93,7 +94,6 @@ Key features:
 | `polyswarm_api_key`                  | `POLYSWARM_API_KEY`                  | Yes       | PolySwarm API authentication key                                             |
 | `polyswarm_community`                | `POLYSWARM_COMMUNITY`                | No        | Community: `default` or `private` (default: `default`)                       |
 | `polyswarm_max_polling_time`         | `POLYSWARM_MAX_POLLING_TIME`         | No        | Maximum API polling time in seconds (default: `120`)                         |
-| `polyswarm_max_tlp`                  | `POLYSWARM_MAX_TLP`                  | No        | Max TLP level to enrich (default: none = no limit). e.g. `TLP:AMBER`         |
 | `polyswarm_replace_with_lower_score` | `POLYSWARM_REPLACE_WITH_LOWER_SCORE` | No        | Overwrite score even if lower (default: `true`). Set `false` to keep higher. |
 | `polykg_api_url`                     | `POLYKG_API_URL`                     | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
@@ -124,9 +124,9 @@ services:
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_MAX_TLP=TLP:AMBER
       - POLYSWARM_API_KEY=ChangeMe
       - POLYSWARM_COMMUNITY=default
-      # - POLYSWARM_MAX_TLP=TLP:AMBER
       # - POLYSWARM_REPLACE_WITH_LOWER_SCORE=true
     restart: always
     networks:

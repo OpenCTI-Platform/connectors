@@ -68,7 +68,7 @@ There are a number of configuration options, which are set either in `docker-com
 | TLP                             | alienvault.tlp                       | `ALIENVAULT_TLP`                              | White                        | No        | Default TLP marking if Pulse doesn't define one.                                 |
 | Create Observables              | alienvault.create_observables        | `ALIENVAULT_CREATE_OBSERVABLES`               | true                         | No        | Create observables from Pulse indicators.                                        |
 | Create Indicators               | alienvault.create_indicators         | `ALIENVAULT_CREATE_INDICATORS`                | true                         | No        | Create indicators from Pulse indicators.                                         |
-| Pulse Start Timestamp           | alienvault.pulse_start_timestamp     | `ALIENVAULT_PULSE_START_TIMESTAMP`            | 2020-05-01T00:00:00          | No        | ISO 8601 timestamp; import Pulses modified after this date.                      |
+| Pulse Start Timestamp           | alienvault.pulse_start_timestamp     | `ALIENVAULT_PULSE_START_TIMESTAMP`            | 2020-05-01T00:00:00Z         | No        | ISO 8601 timestamp; import Pulses modified after this date.                      |
 | Report Type                     | alienvault.report_type               | `ALIENVAULT_REPORT_TYPE`                      | threat-report                | No        | Report type in OpenCTI.                                                          |
 | Report Status                   | alienvault.report_status             | `ALIENVAULT_REPORT_STATUS`                    | New                          | No        | Report status: `New`, `In progress`, `Analyzed`, `Closed`.                       |
 | Guess Malware                   | alienvault.guess_malware             | `ALIENVAULT_GUESS_MALWARE`                    | false                        | No        | Use Pulse tags to guess related malware.                                         |
@@ -115,7 +115,7 @@ Configure the connector in `docker-compose.yml`:
       - ALIENVAULT_TLP=White
       - ALIENVAULT_CREATE_OBSERVABLES=true
       - ALIENVAULT_CREATE_INDICATORS=true
-      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00
+      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00Z
       - ALIENVAULT_REPORT_TYPE=threat-report
       - ALIENVAULT_REPORT_STATUS=New
       - ALIENVAULT_GUESS_MALWARE=false
@@ -199,7 +199,7 @@ graph LR
 | OTX Pulse Data         | OpenCTI Entity      | Description                                      |
 |------------------------|---------------------|--------------------------------------------------|
 | Pulse                  | Report              | Contains all related entities as object_refs     |
-| Adversary              | Intrusion Set       | Threat actor group                               |
+| Adversary              | Intrusion Set       | One Intrusion Set per comma-separated name       |
 | Malware Families       | Malware             | Malware families mentioned in Pulse              |
 | Attack IDs             | Attack Pattern      | MITRE ATT&CK techniques                          |
 | CVE Indicators         | Vulnerability       | CVE vulnerabilities                              |
@@ -215,6 +215,8 @@ graph LR
 | Mutex                  | Mutex               | Mutex observables                                |
 | BitcoinAddress         | Cryptocurrency-Wallet | Bitcoin wallet observables                     |
 | YARA                   | Indicator (YARA)    | YARA rule indicators                             |
+
+The Adversary value is split on every comma, so free text such as "Unknown, possibly Chinese" produces two Intrusion Sets, and aliases of one group listed in the same value (for example "APT28, Sofacy") produce one Intrusion Set each.
 
 ### Relationships Created
 

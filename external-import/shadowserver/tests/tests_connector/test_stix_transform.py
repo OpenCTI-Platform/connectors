@@ -1,8 +1,9 @@
-import logging
 import unittest
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
+from connectors_sdk import get_logger
+from freezegun import freeze_time
 from pycti import CustomObjectCaseIncident
 from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import datetime_to_string
@@ -35,6 +36,8 @@ class TestShadowserverStixTransformation(unittest.TestCase):
             "url": "http://example.com/report",
         }
         self.labels = ["Shadowserver"]
+        # The SDK logger the data processor passes in production (accepts `meta=`)
+        self.logger = get_logger(__name__)
 
         self.transformation = ShadowserverStixTransformation(
             marking_refs=self.marking_refs,
@@ -46,8 +49,21 @@ class TestShadowserverStixTransformation(unittest.TestCase):
                 "severity": "medium",
                 "priority": "P4",
             },
-            logger=logging.getLogger(__name__),
+            logger=self.logger,
         )
+
+    def test_handle_stix_object_creation_logs_failure_with_meta(self):
+        create_method = MagicMock(return_value=None)
+
+        with self.assertLogs(__name__, level="WARNING") as logs:
+            result = self.transformation.handle_stix_object_creation(
+                "ip", create_method, {"ip": "1.2.3.4"}
+            )
+
+        self.assertIsNone(result)
+        [record] = logs.records
+        self.assertEqual(record.getMessage(), "Failed to create ip")
+        self.assertEqual(record.attributes, {"value": "1.2.3.4"})
 
     def test_create_author(self):
         self.transformation.create_author()
@@ -75,6 +91,18 @@ class TestShadowserverStixTransformation(unittest.TestCase):
         self.assertEqual(
             self.transformation.get_published_date(self.report_list), expected_date
         )
+
+    @freeze_time("2026-01-02 03:04:05")
+    def test_get_published_date_falls_back_to_now_when_the_timestamp_is_invalid(self):
+        with self.assertLogs(__name__, level="ERROR") as logs:
+            published_date = self.transformation.get_published_date(
+                [{"timestamp": 12345}]
+            )
+
+        self.assertEqual(published_date, "2026-01-02T03:04:05.000Z")
+        [record] = logs.records
+        self.assertIn("Error parsing published date", record.getMessage())
+        self.assertIsNotNone(record.exc_info)  # Logged with its traceback
 
     def test_upload_stix2_artifact(self):
         with patch(

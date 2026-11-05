@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -13,16 +12,11 @@ class CriminalIPConfig(BaseConfigModel):
     token: SecretStr = Field(
         description="Criminal IP API key.",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level of entities to enrich.",
-        default="TLP:AMBER",
     )
 
 

@@ -21,9 +21,10 @@ class StubConnectorSettings(ConnectorSettings):
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "Artifact, Url",
+                    "scope": "Artifact, StixFile, Url",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "hatching_triage_sandbox": {
                     "token": "test-api-token",
@@ -33,7 +34,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "botnet_color": "#f79e00",
                     "campaign_color": "#7a01e5",
                     "tag_color": "#54483b",
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )
@@ -64,7 +64,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
     assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "Artifact,Url"
+    assert helper.connect_scope == "Artifact,StixFile,Url"
     assert helper.log_level == "ERROR"
     assert helper.connect_auto == True
 

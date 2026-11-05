@@ -246,6 +246,29 @@ Flashpoint Indicators are ingested into OpenCTI with the following score mapping
 | Suspicious       | `80`          |
 | Malicious        | `100`         |
 
+#### Extracted malware configurations
+
+Indicators of type `extracted_config` carry the configuration extracted from a malware sample (a JSON object whose keys vary from one family to another).
+They are not imported as STIX Indicators, since the raw JSON is not a usable detection pattern. Instead the connector creates:
+
+- the **Malware** families found in the `malware:` tags of the sightings;
+- **observables** for the network endpoints of the config (`Hosts`, `Domains`, `Server`, `host`, `ip`, `gateway`, `c2`, `c2s`, `dga_c2s`, `urls`, ...), linked to the Malware with a `communicates-with` relationship. A URL made only of a scheme and a host (no path or query) is imported as a Domain-Name or an IP address. Endpoints listed under `dga_c2s` are labeled `dga`: such domains are short-lived by nature;
+- a **Note** attached to the Malware and the observables, listing the other parameters of the config (ports, mutex, keys, certificate, ...).
+
+> **Warning — false positives:**  
+> IP addresses are always imported, but Domain-Name and URL observables are only created when `FLASHPOINT_IMPORT_EXTRACTED_CONFIG_DOMAINS_URLS` is set to `true` (default: `false`).
+> The endpoint lists of some families mix real C2 servers with legitimate domains (for example, the C2 list of Berbew contains `kaspersky.ru`).
+> When enabled, review the resulting `communicates-with` relationships before using them for detection or blocking.
+
+#### MITRE ATT&CK techniques
+
+When an indicator carries `mitre_attack_ids`, the connector creates the matching **Attack Patterns** and links them to the Malware family (or, when there is none, to the Intrusion Set) tagged on the indicator, with a `uses` relationship. They are not linked to the Indicator itself.
+
+> **Warning — ambiguous ownership:**  
+> The techniques in the payload are the profile of only one of the tagged families or actors, and the payload does not say which one.
+> Techniques are therefore only imported when the indicator has exactly one owner (a single Malware family, or no Malware and a single Intrusion Set).
+> With several families or actors, no Attack Pattern is created for that indicator, rather than attributing techniques to the wrong entity.
+
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get

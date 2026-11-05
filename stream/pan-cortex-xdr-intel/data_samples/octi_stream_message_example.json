@@ -1,0 +1,60 @@
+{
+    "event": "create",
+    "id": "609198385",
+    "retry": null,
+    "data": {
+        "data": {
+            "id": "indicator--32c6886b-68e6-45e5-bb0f-0f5defa8b7ef",
+            "spec_version": "2.1",
+            "type": "indicator",
+            "extensions": {
+                "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {
+                    "extension_type": "property-extension",
+                    "id": "15926f6f-44b9-446d-94e0-cf66c6aceec7",
+                    "type": "Indicator",
+                    "created_at": "2027-03-11T14:22:05.000Z",
+                    "updated_at": "2027-03-11T14:39:05.000Z",
+                    "is_inferred": false,
+                    "creator_ids": [
+                        "7d9118e3-5f2f-453d-a20a-b4acd9a50e7a"
+                    ],
+                    "detection": false,
+                    "score": 50,
+                    "main_observable_type": "StixFile",
+                    "observable_values": [
+                        {
+                            "type": "StixFile",
+                            "hashes": {
+                                "MD5": "c2f7c2f12563246ea8ce5a4ea425de8e"
+                            }
+                        },
+                        {
+                            "type": "StixFile",
+                            "hashes": {
+                                "SHA-256": "b59444a310faa5ab8a774161cd8961012e3c02daa70273bc75de8acfd8f504b7"
+                            }
+                        }
+                    ]
+                },
+                "extension-definition--322b8f77-262a-4cb8-a915-1e441e00329b": {
+                    "extension_type": "property-extension"
+                }
+            },
+            "created": "2027-03-11T14:22:05.000Z",
+            "modified": "2027-03-11T14:39:05.000Z",
+            "revoked": false,
+            "confidence": 100,
+            "lang": "en",
+            "name": "sample-indicator",
+            "pattern": "[file:hashes.MD5 = 'c2f7c2f12563246ea8ce5a4ea425de8e' AND file:hashes.'SHA-256' = 'b59444a310faa5ab8a774161cd8961012e3c02daa70273bc75de8acfd8f504b7']",
+            "pattern_type": "stix",
+            "valid_from": "2027-03-11T14:20:05.000Z",
+            "valid_until": "2027-12-26T14:22:05.000Z"
+        },
+        "message": "creates a Indicator `sample-indicator`",
+        "origin": {
+            "referer": "init-create"
+        },
+        "version": "4"
+    }
+}

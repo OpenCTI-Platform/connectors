@@ -23,21 +23,20 @@ class ConnectorSettings(BaseInternalEnrichmentConnectorConfig):
 class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
     url: str = Field(description="API base URL")
     token: str = Field(description="API token")
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP for entity that connector can enrich",
-        default="TLP:AMBER",
     )
     sandbox_os: Literal["windows11", "windows10", "windows7", "macos11", "linux"] = (
         Field(description="The platform to execute the sample on", default="windows10")
     )
     cloud_analysis: bool = Field(description="Enable cloud analysis", default=True)
+    ssl_verify: bool = Field(
+        description="Whether to verify the SSL certificate of the Spectra Analyze appliance.",
+        default=True,
+    )
 
 
 class ConfigLoader(BaseConnectorSettings):

@@ -91,6 +91,19 @@
       "default": 30,
       "description": "Number of days to retrieve data back in time.",
       "type": "integer"
+    },
+    "TWEETFEED_TLP_LEVEL": {
+      "description": "TLP marking applied to imported observables and indicators (clear, white, green, amber, amber+strict, red).",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "green"
     }
   },
   "required": [

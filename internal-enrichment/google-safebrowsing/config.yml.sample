@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Google Safe Browsing'
+  # scope: 'Url,Domain-Name,Hostname'
+  # log_level: 'error'
+  # auto: false
+  # max_tlp: 'amber' # Available values: clear, white, green, amber, amber+strict, red
+
+safe_browsing:
+  api_key: 'ChangeMe' # Your Google/Yandex Safe Browsing API key
+  # api_url: 'https://safebrowsing.googleapis.com' # Use 'https://sba.yandex.net' for Yandex

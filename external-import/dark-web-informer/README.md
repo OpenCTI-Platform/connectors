@@ -1,5 +1,31 @@
 # OpenCTI Dark Web Informer Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
+The Dark Web Informer connector ingests Dark Web Informer intelligence into OpenCTI from its prebuilt STIX 2.1 bundles.
+
+## Table of Contents
+
+- [OpenCTI Dark Web Informer Connector](#opencti-dark-web-informer-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
+  - [Development](#development)
+
 ## Introduction
 
 Dark Web Informer monitors dark web forums, ransomware leak sites, and cybercrime
@@ -13,27 +39,29 @@ author and a TLP marking — attached to the ingested objects that do not alread
 declare their own. Because the bundles are already valid STIX 2.1 carrying
 deterministic IDs, OpenCTI deduplicates and merges on re-ingest.
 
-## Requirements
+## Installation
+
+### Requirements
 
 - OpenCTI Platform >= 6.8.12
 - Python 3.11 or 3.12
 - A Dark Web Informer API key (`X-API-Key`)
 
-## Configuration
+## Configuration variables
 
 Configuration is provided via environment variables, `config.yml`, or
 `docker-compose.yml`. The connector uses `connectors-sdk` Pydantic settings.
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI
+### OpenCTI environment variables
 
 | Parameter | Docker env var  | Mandatory | Description                                 |
 |-----------|-----------------|-----------|---------------------------------------------|
 | URL       | `OPENCTI_URL`   | Yes       | URL of the OpenCTI platform.                |
 | Token     | `OPENCTI_TOKEN` | Yes       | Token of a user with the right permissions. |
 
-### Connector
+### Base connector environment variables
 
 | Parameter       | Docker env var              | Default            | Description                                                                                                                                                                                                                                                              |
 |-----------------|-----------------------------|--------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -43,7 +71,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Log Level       | `CONNECTOR_LOG_LEVEL`       | error              | debug, info, warn, error.                                                                                                                                                                                                                                                |
 | Duration Period | `CONNECTOR_DURATION_PERIOD` | PT6H               | ISO-8601 period between runs. Dark Web Informer regenerates its STIX exports every 30 minutes, so polling faster than hourly provides no benefit; hourly or slower is recommended. OpenCTI deduplicates on deterministic STIX IDs, so overlapping runs merge rather than duplicate. |
 
-### Dark Web Informer
+### Connector extra parameters environment variables
 
 | Parameter            | Docker env var                        | Default                          | Description                                                                                  |
 |----------------------|---------------------------------------|----------------------------------|----------------------------------------------------------------------------------------------|
@@ -56,13 +84,15 @@ Find all the configuration variables available here: [Connector Configurations](
 
 ## Deployment
 
-### Docker
+### Docker Deployment
+
+Configure the connector in `docker-compose.yml`, then build and start it:
 
 ```shell
 docker compose up -d --build
 ```
 
-### Manual
+### Manual Deployment
 
 ```shell
 cd src
@@ -70,6 +100,14 @@ pip install -r requirements.txt
 cp ../config.yml.sample ../config.yml   # then edit
 python main.py
 ```
+
+## Usage
+
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
@@ -92,8 +130,8 @@ The bundles are forwarded with `helper.send_stix2_bundle`, using
 `cleanup_inconsistent_bundle=True` so a dangling reference in a third-party bundle
 drops the offending object instead of failing the whole import. Dark Web Informer's
 bundles already include its own identity and a copyright marking, and use
-deterministic STIX IDs, so repeated full-snapshot ingestion merges rather than
-duplicates objects in the platform.
+deterministic STIX IDs, so objects ingested again merge rather than duplicate in
+the platform.
 
 **Provenance.** No STIX is rewritten on the connector side, but a "Dark Web
 Informer" organization author and a `tlp_level` marking are prepended to each
@@ -104,6 +142,16 @@ SCOs cannot carry `created_by_ref`.
 
 A work is only registered once a non-empty bundle is available, so a run that
 finds nothing does not leave an empty job in OpenCTI.
+
+## Debugging
+
+Enable verbose logging:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+## Additional information
 
 **Authentication.** Each request carries `X-API-Key` and a single-use `X-Nonce`
 (`<10-digit epoch>:<>=6 chars [A-Za-z0-9_-]>`, 120 s window). No client-side HMAC.

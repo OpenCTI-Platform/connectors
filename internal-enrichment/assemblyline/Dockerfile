@@ -21,7 +21,8 @@ COPY src/requirements.txt /opt/opencti-connector-assemblyline/requirements.txt
 # ``libffi-dev`` for the runtime, ``git`` + ``build-base`` only for
 # ``pip install`` (removed afterwards).
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-assemblyline && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base

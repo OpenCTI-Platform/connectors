@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 
 # Install necessary packages
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector files
 COPY src /opt/connector

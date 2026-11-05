@@ -1,17 +1,67 @@
-from typing import Any
+import re
 
 from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import BaseModel, Field, Json
+from connectors_sdk.models.enums import TLPLevel
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    Json,
+    PrivateAttr,
+    model_validator,
+)
+from pydantic.json_schema import SkipJsonSchema
 from pydantic_settings import BaseSettings
 
 
+class Rule(BaseModel):
+    # Reject unknown keys so a typo (e.g. "flag") fails at load time instead of
+    # being silently dropped and leaving the rule misconfigured.
+    model_config = ConfigDict(extra="forbid")
+
+    label: str
+    search: str
+    flags: list[str] = Field(default_factory=list)
+    attributes: list[str]
+    # Compiled once at load time so patterns are validated before the connector
+    # starts consuming messages and are not re-resolved on every call. Kept as a
+    # private attribute so it stays out of model_dump() and the JSON schema.
+    _pattern: re.Pattern = PrivateAttr()
+
+    @model_validator(mode="after")
+    def compile_pattern(self) -> "Rule":
+        flags = 0
+        for flag_name in self.flags:
+            flag = getattr(re, flag_name, None)
+            if not isinstance(flag, re.RegexFlag):
+                raise ValueError(
+                    f"Invalid regex flag {flag_name!r} in rule {self.label!r}"
+                )
+            flags |= flag
+
+        try:
+            self._pattern = re.compile(self.search, flags)
+        except re.error as exc:
+            raise ValueError(
+                f"Invalid regular expression {self.search!r} in rule {self.label!r}: {exc}"
+            ) from exc
+
+        return self
+
+    @property
+    def pattern(self) -> re.Pattern:
+        return self._pattern
+
+
 class Definition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     scopes: list[str]
-    rules: list[dict[str, Any]]
+    rules: list[Rule]
 
 
 class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -35,6 +85,10 @@ class ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         default=True,
         description="If True, the connector will automatically import data from the API.",
     )
+    # Hidden from the config schema: the connector only applies labels inside OpenCTI and
+    # sends no data outside, so a max TLP would protect nothing. The field stays inherited
+    # from the SDK base config.
+    max_tlp: SkipJsonSchema[TLPLevel] = Field(default=TLPLevel.RED)
 
 
 class TaggerConfig(BaseSettings):

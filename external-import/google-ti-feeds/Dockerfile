@@ -1,7 +1,7 @@
 FROM python:3.12-alpine AS base
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
     pip3 install --no-cache-dir --upgrade pip
 
@@ -18,5 +18,8 @@ RUN cd /opt/ && \
     rm -rf /opt/connector
 
 FROM package AS app
-# Run the app
-CMD ["GoogleTIFeeds"]
+# Run the app.
+# Started as a module rather than through the `GoogleTIFeeds` console script: the
+# script lives in /usr/local/bin, so pycti would anchor its version lookup there
+# and never find the stamp shipped inside the package.
+CMD ["python3", "-m", "connector"]

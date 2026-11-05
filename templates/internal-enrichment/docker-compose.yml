@@ -12,8 +12,8 @@ services:
       - CONNECTOR_SCOPE=CHANGEME
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_AUTO=false # optional (default: false)
+      - CONNECTOR_MAX_TLP=TLP:AMBER # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
       # Custom parameters for connector-template
       - TEMPLATE_API_BASE_URL=CHANGEME
       - TEMPLATE_API_KEY=CHANGEME
-      - TEMPLATE_MAX_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
     restart: always

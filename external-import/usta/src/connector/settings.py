@@ -7,70 +7,16 @@ the OpenCTI connector SDK patterns.
 
 # pylint: disable=too-few-public-methods
 
-from abc import ABC
 from datetime import timedelta
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_serializer
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class BaseConfigModel(BaseModel, ABC):
-    """Base class for config models — frozen and accepts extra fields."""
-
-    model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
-
-
-class _OpenCTIConfig(BaseConfigModel):
-    url: HttpUrl = Field(description="The base URL of the OpenCTI instance.")
-    token: SecretStr = Field(description="The API token to connect to OpenCTI.")
-
-    @field_serializer("token")
-    def _serialize_token(self, v: SecretStr) -> str:
-        return v.get_secret_value()
-
-
-class _BaseConnectorConfig(BaseConfigModel, ABC):
-    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
-    name: str = Field(description="The name of the connector.")
-    scope: str = Field(description="The scope of the connector.")
-    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display.",
-        default="error",
-    )
-
-
-class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
-    """Base config for external import connectors."""
-
-    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    duration_period: timedelta = Field(
-        description="The period of time to await between two runs of the connector."
-    )
-
-
-class BaseConnectorSettings(BaseSettings):
-    """Base settings class — loads configuration from environment variables."""
-
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="_",
-        env_nested_max_split=1,
-        extra="allow",
-        frozen=True,
-    )
-
-    opencti: _OpenCTIConfig = Field(
-        default_factory=_OpenCTIConfig,  # type: ignore[arg-type]
-        description="OpenCTI configurations.",
-    )
-    connector: _BaseConnectorConfig = Field(
-        default_factory=_BaseConnectorConfig,  # type: ignore[arg-type]
-        description="Connector configurations.",
-    )
-
-    def to_helper_config(self) -> dict[str, Any]:
-        """Convert settings to a dict suitable for OpenCTIConnectorHelper."""
-        return self.model_dump(mode="json", exclude_none=True)
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+    ListFromString,
+)
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -79,13 +25,26 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     and/or defaults specific to the USTA connector.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="8188b707-0b74-49e0-ba39-59b0c77f85da",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="USTA",
     )
-    scope: str = Field(
+    scope: ListFromString = Field(
         description="The scope of the connector.",
-        default="indicator,observable,malware,identity,incident,user-account,report,threat-actor",
+        default=[
+            "indicator",
+            "observable",
+            "malware",
+            "identity",
+            "incident",
+            "user-account",
+            "report",
+            "threat-actor",
+        ],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs.",
@@ -105,11 +64,6 @@ class UstaConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="USTA API bearer token for authentication.",
     )
-
-    @field_serializer("api_key")
-    def _serialize_api_key(self, v: SecretStr) -> str:
-        return v.get_secret_value()
-
     import_start_date: timedelta = Field(
         description=(
             "ISO 8601 duration string specifying how far back to import data "

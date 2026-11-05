@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -44,16 +45,11 @@ class ReversinglabsSpectraIntelSubmissionConfig(BaseConfigModel):
     password: SecretStr = Field(
         description="ReversingLabs Spectra Intelligence password.",
     )
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level for entities that the connector can enrich.",
-        default="TLP:AMBER",
     )
     sandbox_os: Literal["windows7", "windows10", "windows11", "macos11", "linux"] = (
         Field(

@@ -29,6 +29,7 @@ THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
 INSIKT_SOURCE = "VKz42X"
 THREAT_MAPS_PATH = API_BASE + "/threat/maps"
 LINKS_PATH = API_BASE + "/links/search"
+ENTITY_MATCH_PATH = API_BASE + "/entity-match/entity"
 
 ANALYST_NOTES_ENDPOINT = API_BASE + "/analyst-note"
 ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE + "/analyst-note/search"
@@ -271,24 +272,60 @@ class RFClient:
         return threat_map_data
 
     def get_entities_links(self, entities_id: list):
+        # The Links API accepts at most 100 entities per request,
+        # so all mapped entities are enriched in batches of 100.
+        entity_links = []
+        for batch_start in range(0, len(entities_id), 100):
+            entities_batch = entities_id[batch_start : batch_start + 100]
+            try:
+                res = self.session.post(LINKS_PATH, json={"entities": entities_batch})
+                res.raise_for_status()
+
+                entity_links.extend(res.json()["data"])
+            except requests.RequestException as err:
+                error_msg = (
+                    f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
+                )
+                error_response = err.response.json()
+                self.helper.connector_logger.error(
+                    error_msg, {"error_response": str(error_response["message"])}
+                )
+                return None
+        return entity_links
+
+    def get_entity_aliases(self, entity_id: str) -> list:
+        """Fetches known alternate names ("AKA") for a Recorded Future entity.
+
+        Uses the Entity Match API, which exposes the entity's well-known
+        alternative names and full alias list. These are mapped to the STIX
+        `aliases` property so OpenCTI can deduplicate Threat Actors and
+        Intrusion Sets coming from other feeds using short group names.
+
+        Args:
+            * entity_id: Recorded Future entity ID
+        Returns:
+            A deduplicated list of alias names, excluding empty values.
+            Returns an empty list when no alias is found or on API error.
+        """
         try:
-            # The Links API doesn't allow more than 100 links between entities.
-            # The connector will retrieve only the 100 first links.
-            entities_params = {"entities": entities_id[:1]}
-
-            res = self.session.post(LINKS_PATH, json=entities_params)
+            value_entity_id = parse.quote(entity_id, safe="")
+            res = self.session.get(f"{ENTITY_MATCH_PATH}/{value_entity_id}")
             res.raise_for_status()
-
-            entity_links = res.json()["data"]
-
-            return entity_links
+            attributes = res.json().get("data", {}).get("attributes", {})
         except requests.RequestException as err:
-            error_msg = f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
-            error_response = err.response.json()
-            self.helper.connector_logger.error(
-                error_msg, {"error_response": str(error_response["message"])}
+            self.helper.connector_logger.warning(
+                "[API] Unable to fetch aliases for entity",
+                {"entity_id": entity_id, "error": str(err)},
             )
-            return None
+            return []
+
+        aliases = []
+        for alias in (attributes.get("common_names") or []) + (
+            attributes.get("alias") or []
+        ):
+            if alias and alias not in aliases:
+                aliases.append(alias)
+        return aliases
 
     def check_vul_entitlement(self):
         try:

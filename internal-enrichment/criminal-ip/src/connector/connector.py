@@ -19,7 +19,7 @@ class CriminalIPConnector:
         self.helper = helper
 
         self.token = self.config.criminal_ip.token.get_secret_value()
-        self.max_tlp = self.config.criminal_ip.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.client = CriminalIpClient(helper=self.helper, token=self.token)
 
         self.domain_enricher = DomainEnricher(

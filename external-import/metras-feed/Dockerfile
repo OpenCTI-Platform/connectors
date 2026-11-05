@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 
 COPY src /opt/opencti-connector-metras-feed
 
-RUN apk update && apk upgrade --no-cache && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add libmagic libffi libxml2 libxslt && \
     apk --no-cache add --virtual .build-deps git build-base libffi-dev libxml2-dev libxslt-dev && \
     cd /opt/opencti-connector-metras-feed && \

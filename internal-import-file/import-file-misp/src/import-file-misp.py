@@ -1,12 +1,10 @@
 import json
-import os
 import re
 import sys
 import time
 from datetime import datetime
 
 import stix2
-import yaml
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -24,8 +22,8 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    get_config_variable,
 )
+from settings import ConnectorSettings
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -74,110 +72,37 @@ FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 class MispImportFile:
     def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        # Instantiate the connector helper from validated Pydantic settings
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         # Extra config
-        self.misp_import_file_import_from_date = get_config_variable(
-            "MISP_IMPORT_FILE_IMPORT_FROM_DATE",
-            ["misp_import_file", "import_from_date"],
-            config,
+        misp_import_file = self.config.misp_import_file
+        self.misp_import_file_create_reports = misp_import_file.create_reports
+        self.misp_import_file_report_type = misp_import_file.report_type
+        self.misp_import_file_create_indicators = misp_import_file.create_indicators
+        self.misp_import_file_create_observables = misp_import_file.create_observables
+        self.misp_import_file_create_tags_as_labels = (
+            misp_import_file.create_tags_as_labels
         )
-        self.misp_import_file_create_reports = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_REPORTS",
-            ["misp_import_file", "create_reports"],
-            config,
-            False,
-            True,
+        self.misp_import_file_guess_threats_from_tags = (
+            misp_import_file.guess_threats_from_tags
         )
-        self.misp_import_file_report_type = get_config_variable(
-            "MISP_IMPORT_FILE_REPORT_TYPE",
-            ["misp_import_file", "report_type"],
-            config,
-            False,
-            "misp-event",
+        self.misp_import_file_author_from_tags = misp_import_file.author_from_tags
+        self.misp_import_file_markings_from_tags = misp_import_file.markings_from_tags
+        self.misp_import_file_create_object_observables = (
+            misp_import_file.create_object_observables
         )
-        self.misp_import_file_create_indicators = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_INDICATORS",
-            ["misp_import_file", "create_indicators"],
-            config,
+        self.misp_import_file_import_to_ids_no_score = (
+            misp_import_file.import_to_ids_no_score
         )
-        self.misp_import_file_create_observables = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_OBSERVABLES",
-            ["misp_import_file", "create_observables"],
-            config,
+        self.misp_import_file_import_with_attachments = (
+            misp_import_file.import_with_attachments
         )
-        self.misp_import_file_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp_import_file", "create_tags_as_labels"],
-            config,
-            default=True,
+        self.misp_import_file_import_unsupported_observables_as_text = (
+            misp_import_file.import_unsupported_observables_as_text
         )
-        self.misp_import_file_guess_threats_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_GUESS_THREAT_FROM_TAGS",
-            ["misp_import_file", "guess_threats_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_author_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_AUTHOR_FROM_TAGS",
-            ["misp_import_file", "author_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_markings_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_MARKINGS_FROM_TAGS",
-            ["misp_import_file", "markings_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_create_object_observables = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_OBJECT_OBSERVABLES",
-            ["misp_import_file", "create_object_observables"],
-            config,
-            False,
-            False,
-        )
-        self.misp_import_file_import_to_ids_no_score = get_config_variable(
-            "MISP_IMPORT_FILE_IMPORT_TO_IDS_NO_SCORE",
-            ["misp_import_file", "import_to_ids_no_score"],
-            config,
-            True,
-        )
-        self.misp_import_file_import_with_attachments = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_WITH_ATTACHMENTS",
-                ["misp_import_file", "import_with_attachments"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_import_file_import_unsupported_observables_as_text = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp_import_file", "import_unsupported_observables_as_text"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_import_file_import_unsupported_observables_as_text_transparent = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                [
-                    "misp_import_file",
-                    "import_unsupported_observables_as_text_transparent",
-                ],
-                config,
-                isNumber=False,
-                default=True,
-            )
+        self.misp_import_file_import_unsupported_observables_as_text_transparent = (
+            misp_import_file.import_unsupported_observables_as_text_transparent
         )
 
     def _resolve_markings(self, tags, with_default=True):
@@ -262,7 +187,7 @@ class MispImportFile:
         added_names = []
         for galaxy in galaxies:
             if "namespace" not in galaxy:
-                self.helper.log_info("Skipping galaxy without namespace")
+                self.helper.connector_logger.info("Skipping galaxy without namespace")
                 continue
             # Get the linked intrusion sets
             if (
@@ -292,7 +217,6 @@ class MispImportFile:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 labels=["intrusion-set"],
                                 description=galaxy_entity["description"],
                                 created_by_ref=author["id"],
@@ -465,7 +389,6 @@ class MispImportFile:
                                 stix2.IntrusionSet(
                                     id=IntrusionSet.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -478,7 +401,6 @@ class MispImportFile:
                                     id=Malware.generate_id(threat["name"]),
                                     name=threat["name"],
                                     is_family=True,
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -490,7 +412,6 @@ class MispImportFile:
                                 stix2.Tool(
                                     id=Tool.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -502,7 +423,6 @@ class MispImportFile:
                                 stix2.AttackPattern(
                                     id=AttackPattern.generate_id(threat["name"]),
                                     name=threat["name"],
-                                    confidence=self.helper.connect_confidence_level,
                                     created_by_ref=author["id"],
                                     object_marking_refs=markings,
                                     allow_custom=True,
@@ -546,7 +466,6 @@ class MispImportFile:
                             stix2.IntrusionSet(
                                 id=IntrusionSet.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -577,7 +496,6 @@ class MispImportFile:
                             stix2.Tool(
                                 id=Tool.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -613,7 +531,6 @@ class MispImportFile:
                                 id=Malware.generate_id(name),
                                 name=name,
                                 is_family=True,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -645,7 +562,6 @@ class MispImportFile:
                             stix2.AttackPattern(
                                 id=AttackPattern.generate_id(name),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
                                 allow_custom=True,
@@ -662,7 +578,6 @@ class MispImportFile:
                             stix2.Identity(
                                 id=Identity.generate_id(name, "class"),
                                 name=name,
-                                confidence=self.helper.connect_confidence_level,
                                 identity_class="class",
                                 created_by_ref=author["id"],
                                 object_marking_refs=markings,
@@ -883,14 +798,14 @@ class MispImportFile:
 
         attr_data = attribute.get("data")
         if attr_data is None:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "No data for attribute: {0} ({1}:{2})".format(
                     attr_uuid, attr_type, attr_category
                 )
             )
             return None
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
                 attr_value, attr_uuid, attr_type, attr_category
             )
@@ -1020,7 +935,6 @@ class MispImportFile:
                         id=Indicator.generate_id(pattern),
                         name=name,
                         description=attribute["comment"],
-                        confidence=self.helper.connect_confidence_level,
                         pattern_type=pattern_type,
                         pattern=pattern,
                         valid_from=datetime.utcfromtimestamp(
@@ -1043,7 +957,9 @@ class MispImportFile:
                         },
                     )
                 except Exception as e:
-                    self.helper.log_error(f"Error processing indicator {name}: {e}")
+                    self.helper.connector_logger.error(
+                        f"Error processing indicator {name}: {e}"
+                    )
             observable = None
             if self.misp_import_file_create_observables and observable_type is not None:
                 try:
@@ -1212,7 +1128,7 @@ class MispImportFile:
                             external_references=attribute_external_references,
                         )
                 except Exception as e:
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         f"Error creating observable type {observable_type} with value {observable_value}: {e}"
                     )
             sightings = []
@@ -1337,7 +1253,6 @@ class MispImportFile:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1353,7 +1268,6 @@ class MispImportFile:
                             target_ref=threat.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1380,7 +1294,6 @@ class MispImportFile:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1396,7 +1309,6 @@ class MispImportFile:
                             target_ref=threat_id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1423,7 +1335,6 @@ class MispImportFile:
                         target_ref=attack_pattern.id,
                         description=attribute["comment"],
                         object_marking_refs=attribute_markings,
-                        confidence=self.helper.connect_confidence_level,
                         allow_custom=True,
                     )
                     relationships.append(relationship_uses)
@@ -1437,7 +1348,6 @@ class MispImportFile:
                     #         source_ref=indicator.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1451,7 +1361,6 @@ class MispImportFile:
                     #         source_ref=observable.id,
                     #         target_ref=relationship_uses.id,
                     #         description=attribute["comment"],
-                    #         confidence=self.helper.connect_confidence_level,
                     #         object_marking_refs=attribute_markings,
                     #     )
                     #     relationships.append(relationship_indicates)
@@ -1474,7 +1383,6 @@ class MispImportFile:
                             "uses", threat_id, attack_pattern.id
                         ),
                         relationship_type="uses",
-                        confidence=self.helper.connect_confidence_level,
                         created_by_ref=author["id"],
                         source_ref=threat_id,
                         target_ref=attack_pattern.id,
@@ -1493,7 +1401,6 @@ class MispImportFile:
                     #        source_ref=indicator.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1507,7 +1414,6 @@ class MispImportFile:
                     #        source_ref=observable.id,
                     #        target_ref=relationship_uses.id,
                     #        description=attribute["comment"],
-                    #        confidence=self.helper.connect_confidence_level,
                     #        object_marking_refs=attribute_markings,
                     #    )
                     #    relationships.append(relationship_indicates)
@@ -1524,7 +1430,6 @@ class MispImportFile:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1540,7 +1445,6 @@ class MispImportFile:
                             target_ref=sector.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1558,7 +1462,6 @@ class MispImportFile:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -1574,7 +1477,6 @@ class MispImportFile:
                             target_ref=country.id,
                             description=attribute["comment"],
                             object_marking_refs=attribute_markings,
-                            confidence=self.helper.connect_confidence_level,
                             allow_custom=True,
                         )
                     )
@@ -2000,7 +1902,6 @@ class MispImportFile:
                 labels=event_tags,
                 object_refs=object_refs,
                 external_references=event_external_references,
-                confidence=self.helper.connect_confidence_level,
                 custom_properties={
                     "x_opencti_files": added_files,
                 },
@@ -2015,7 +1916,6 @@ class MispImportFile:
                         ),
                         self._process_note(note["content"], bundle_objects),
                     ),
-                    confidence=self.helper.connect_confidence_level,
                     created=datetime.utcfromtimestamp(int(note["timestamp"])).strftime(
                         "%Y-%m-%dT%H:%M:%SZ"
                     ),
@@ -2037,7 +1937,7 @@ class MispImportFile:
         bypass_validation = data["bypass_validation"]
         file_markings = data.get("file_markings", [])
         file_uri = self.helper.opencti_url + file_fetch
-        self.helper.log_info(f"Importing the file {file_uri}")
+        self.helper.connector_logger.info(f"Importing the file {file_uri}")
         file_content = self.helper.api.fetch_opencti_file(file_uri)
         events = json.loads(file_content)
         if not isinstance(events, list):
@@ -2050,7 +1950,7 @@ class MispImportFile:
             bundle_json = self._process_event(event)
             entity_id = data.get("entity_id", None)
             if entity_id:
-                self.helper.log_info("Contextual import.")
+                self.helper.connector_logger.info("Contextual import.")
                 bundle = json.loads(bundle_json)["objects"]
                 bundle = self._update_container(bundle, entity_id)
                 bundle_json = self.helper.stix2_create_bundle(bundle)
@@ -2105,7 +2005,7 @@ class MispImportFile:
             ][0]
             if self._is_container(container_stix.get("type")):
                 if self._contains_container(bundle):
-                    self.helper.log_info("Bundle contains container.")
+                    self.helper.connector_logger.info("Bundle contains container.")
                     container_stix["object_refs"] = []
                     for elem in bundle:
                         if self._is_container(elem.get("type")):
@@ -2114,7 +2014,7 @@ class MispImportFile:
                                 for object_id in elem.get("object_refs"):
                                     container_stix["object_refs"].append(object_id)
                 else:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "No container in Stix file. Updating current container"
                     )
                     container_stix["object_refs"] = [object["id"] for object in bundle]

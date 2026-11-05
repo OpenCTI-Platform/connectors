@@ -1,24 +1,11 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
-
-# TLP levels accepted by `OpenCTIConnectorHelper.check_max_tlp`.
-# The Vulners SDK does not ship a dedicated TLPLevel enum, so we mirror the
-# canonical pycti TLP marking names here.
-TLPLevel = Literal[
-    "TLP:CLEAR",
-    "TLP:WHITE",
-    "TLP:GREEN",
-    "TLP:AMBER",
-    "TLP:AMBER+STRICT",
-    "TLP:RED",
-]
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -44,7 +31,7 @@ class VulnersConfig(BaseConfigModel):
     Environment variables (handled by connectors-sdk env mapping):
         VULNERS_API_KEY        -> api_key (required)
         VULNERS_API_BASE_URL   -> api_base_url
-        VULNERS_MAX_TLP_LEVEL  -> max_tlp_level
+        VULNERS_MAX_TLP_LEVEL  -> max_tlp_level (deprecated, use CONNECTOR_MAX_TLP)
     """
 
     api_key: SecretStr = Field(
@@ -54,9 +41,11 @@ class VulnersConfig(BaseConfigModel):
         description="Vulners API base URL.",
         default="https://vulners.com",
     )
-    max_tlp_level: TLPLevel = Field(
+    max_tlp_level: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP level of the entities the connector is allowed to enrich.",
-        default="TLP:AMBER",
     )
 
 

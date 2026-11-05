@@ -5,7 +5,7 @@ ENV CONNECTOR_TYPE=STREAM
 COPY src /opt/opencti-connector-splunk-soar-push
 
 # Install system dependencies
-RUN apk update && \
+RUN apk --no-cache upgrade && \
     apk add --no-cache git build-base libffi-dev libxml2-dev libxslt-dev && \
     apk add --no-cache curl jq
 

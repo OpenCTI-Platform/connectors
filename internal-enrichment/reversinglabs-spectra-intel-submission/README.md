@@ -69,6 +69,7 @@ Key features:
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment (default: false) |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_MAX_TLP` |
 
 ### ReversingLabs Spectra Intelligence Configuration
 
@@ -77,7 +78,6 @@ Key features:
 | `reversinglabs_spectra_intelligence_url` | `REVERSINGLABS_SPECTRA_INTELLIGENCE_URL` | Yes | API URL (default: data.reversinglabs.com) |
 | `reversinglabs_spectra_intelligence_username` | `REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME` | Yes | API username |
 | `reversinglabs_spectra_intelligence_password` | `REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD` | Yes | API password |
-| `reversinglabs_max_tlp` | `REVERSINGLABS_MAX_TLP` | Yes | Maximum TLP for enrichment |
 | `reversinglabs_sandbox_os` | `REVERSINGLABS_SANDBOX_OS` | Yes | Sandbox OS for analysis |
 | `reversinglabs_sandbox_internet_sim` | `REVERSINGLABS_SANDBOX_INTERNET_SIM` | No | Use simulated internet (default: false) |
 | `reversinglabs_create_indicators` | `REVERSINGLABS_CREATE_INDICATORS` | Yes | Create indicators from analysis |
@@ -107,10 +107,10 @@ services:
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - REVERSINGLABS_SPECTRA_INTELLIGENCE_URL=data.reversinglabs.com
       - REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME=ChangeMe
       - REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD=ChangeMe
-      - REVERSINGLABS_MAX_TLP=TLP:AMBER
       - REVERSINGLABS_SANDBOX_OS=windows10
       - REVERSINGLABS_SANDBOX_INTERNET_SIM=false
       - REVERSINGLABS_CREATE_INDICATORS=true

@@ -62,40 +62,90 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
+    "CONNECTOR_LIVE_STREAM_START_TIMESTAMP": {
+      "default": null,
+      "description": "Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state).",
+      "type": "integer"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER": {
+      "default": true,
+      "description": "Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state).",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE": {
+      "default": null,
+      "description": "ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "ZSCALER_CLIENT_ID": {
+      "default": null,
+      "description": "Client ID of the ZIdentity API client used to authenticate to Zscaler OneAPI. Required unless the deprecated legacy credentials are used.",
+      "type": "string"
+    },
+    "ZSCALER_CLIENT_SECRET": {
+      "default": null,
+      "description": "Client secret of the ZIdentity API client. Required unless the deprecated legacy credentials are used.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZSCALER_VANITY_DOMAIN": {
+      "default": null,
+      "description": "ZIdentity vanity domain of the organization, i.e. the `<vanity_domain>` part of `https://<vanity_domain>.zslogin.net`. Required unless the deprecated legacy credentials are used.",
+      "type": "string"
+    },
+    "ZSCALER_CLOUD": {
+      "default": null,
+      "description": "Zscaler cloud to target with OneAPI (for example `beta`). Leave empty to use the production cloud (`api.zsapi.net`).",
+      "type": "string"
+    },
+    "ZSCALER_BLACKLIST_NAME": {
+      "default": "BLACK_LIST_DYNDNS",
+      "description": "ID of the Zscaler URL category used as blacklist (for example `CUSTOM_01`), not its display name.",
+      "type": "string"
+    },
+    "ZSCALER_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify SSL certificates when connecting to the Zscaler API.",
+      "type": "boolean"
+    },
     "ZSCALER_USERNAME": {
-      "description": "Zscaler account username used for authentication.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler account username (deprecated legacy API authentication).",
       "type": "string"
     },
     "ZSCALER_PASSWORD": {
-      "description": "Zscaler account password used for authentication.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler account password (deprecated legacy API authentication).",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "ZSCALER_API_KEY": {
-      "description": "Zscaler API key used to obfuscate the authenticated session.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler API key (deprecated legacy API authentication).",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "ZSCALER_BLACKLIST_NAME": {
-      "default": "BLACK_LIST_DYNDNS",
-      "description": "Name of the Zscaler URL category used as blacklist.",
+    "ZSCALER_API_BASE_URL": {
+      "default": null,
+      "deprecated": true,
+      "description": "Base URL of the legacy Zscaler ZIA API, without the `/api/v1` path (default: `https://zsapi.zscalertwo.net`). Only used with the deprecated legacy credentials; use 'cloud' with OneAPI.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
-    },
-    "ZSCALER_SSL_VERIFY": {
-      "default": false,
-      "description": "Whether to verify SSL certificates when connecting to OpenCTI.",
-      "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_LIVE_STREAM_ID",
-    "ZSCALER_USERNAME",
-    "ZSCALER_PASSWORD",
-    "ZSCALER_API_KEY"
+    "CONNECTOR_LIVE_STREAM_ID"
   ],
   "additionalProperties": true
 }
