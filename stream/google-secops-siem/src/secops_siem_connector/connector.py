@@ -106,6 +106,31 @@ class SecOpsSIEMConnector:
                     "[API] Error while ingesting indicator"
                 )
 
+    def _ingest_raw_stix(self, indicator: dict) -> None:
+        """
+        Send the raw STIX indicator as a log entry via logs:import API.
+        :param indicator: Raw STIX indicator data from the stream
+        """
+        result = self.api_client.ingest_raw_logs([indicator])
+
+        if result:
+            self.helper.connector_logger.info(
+                "[API] Raw STIX log has been successfully ingested",
+            )
+        else:
+            self.helper.connector_logger.error(
+                "[API] Error while ingesting raw STIX log"
+            )
+
+    def _process_indicator(self, data: dict) -> None:
+        """
+        Route the indicator to the correct ingestion path based on publish_mode.
+        """
+        if self.config.secops_siem.publish_mode == "STIX":
+            self._ingest_raw_stix(data)
+        else:
+            self._upsert_ioc_rule(data)
+
     def process_message(self, msg) -> None:
         """
         Processes a message event received from the OpenCTI stream.
@@ -159,12 +184,12 @@ class SecOpsSIEMConnector:
                 # Handle creation
                 if msg.event == "create":
                     self.handle_logger_info(data)
-                    self._upsert_ioc_rule(data)
+                    self._process_indicator(data)
 
                 # Handle update
                 elif msg.event == "update":
                     self.handle_logger_info(data, event_context)
-                    self._upsert_ioc_rule(data)
+                    self._process_indicator(data)
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(

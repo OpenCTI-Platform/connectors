@@ -1,4 +1,7 @@
+import base64
+import json
 import time
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from google.auth.transport import requests as ChronicleRequests
@@ -13,6 +16,8 @@ if TYPE_CHECKING:
 
 SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+
+STIX_LOG_TYPE = "OPENCTI"
 
 
 class SecOpsEntitiesClient:
@@ -36,7 +41,18 @@ class SecOpsEntitiesClient:
             f"locations/{self.config.project_region}/"
             f"instances/{self.config.project_instance}"
         )
+        # UDM mode: v1alpha entities:import (existing behavior)
         self.url = f"{self.base_url_with_region}/v1alpha/{parent}/entities:import"
+        # STIX mode: v1 logs:import — uses lowercase region as required by v1 API
+        logs_parent = (
+            f"projects/{self.config.project_id}/"
+            f"locations/{self.config.project_region.lower()}/"
+            f"instances/{self.config.project_instance}"
+        )
+        self.logs_url = (
+            f"{self.base_url_with_region}/v1/{logs_parent}/"
+            f"logTypes/{STIX_LOG_TYPE}/logs:import"
+        )
 
     def init_session(self) -> ChronicleRequests.AuthorizedSession:
         """
@@ -265,6 +281,97 @@ class SecOpsEntitiesClient:
         except Exception as err:
             self.helper.connector_logger.error(
                 "An unexpected error occurred during data handling",
+                {"error": str(err)},
+            )
+            return None
+
+    def _send_raw_logs_request(
+        self,
+        logs: List[dict],
+        backoff_factor: int = 30,
+        total: int = 4,
+        retry_status_forcelist: Optional[List[int]] = None,
+    ) -> Optional[Response]:
+        """
+        Send raw STIX JSON logs via the logs:import API with retry logic.
+        """
+        if retry_status_forcelist is None:
+            retry_status_forcelist = []
+        last_response: Optional[Response] = None
+
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        log_entries = []
+        for log_data in logs:
+            raw_json = json.dumps(log_data)
+            encoded = base64.b64encode(raw_json.encode("utf-8")).decode("utf-8")
+            log_entries.append(
+                {"data": encoded, "logEntryTime": now, "collectionTime": now}
+            )
+
+        for attempt in range(total):
+            body = {"inlineSource": {"logs": log_entries}}
+            response = self.chronicle_http_session.request(
+                method="POST", url=self.logs_url, json=body
+            )
+
+            if response.status_code in retry_status_forcelist:
+                delay = self.backoff_delay(backoff_factor, attempt)
+                time.sleep(delay)
+                self.helper.connector_logger.info(
+                    "[API] Raw logs request failed. Retrying in a few seconds",
+                    {"status_code": response.status_code, "delay_in_seconds": delay},
+                )
+                last_response = response
+                continue
+            else:
+                return response
+
+        return last_response
+
+    def ingest_raw_logs(self, stix_objects: list) -> bool | None:
+        """
+        Ingest raw STIX objects as logs into Google SecOps via the logs:import API.
+        """
+        try:
+            response = self._send_raw_logs_request(
+                logs=stix_objects, retry_status_forcelist=[429]
+            )
+
+            if response is not None and response.status_code == 200:
+                return response.ok
+            else:
+                if response is not None:
+                    self.helper.connector_logger.error(
+                        "[API] Raw logs ingestion failed",
+                        {
+                            "status_code": response.status_code,
+                            "response": response.text,
+                        },
+                    )
+                    response.raise_for_status()
+                else:
+                    self.helper.connector_logger.error(
+                        "[API] Raw logs request failed after retries with no response."
+                    )
+                    return None
+
+        except HTTPError as err:
+            self.helper.connector_logger.error(
+                "An HTTP error occurred during raw logs ingestion",
+                {"http_error": str(err)},
+            )
+            return None
+
+        except (Timeout, ConnectionError) as err:
+            self.helper.connector_logger.error(
+                "A connection error occurred during raw logs ingestion",
+                {"error": str(err)},
+            )
+            return None
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "An unexpected error occurred during raw logs ingestion",
                 {"error": str(err)},
             )
             return None
