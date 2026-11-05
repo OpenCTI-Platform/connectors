@@ -123,6 +123,12 @@
       "minLength": 1,
       "type": "string"
     },
+    "SPLUNK_SOAR_LOW_SCORE_SEVERITY": {
+      "default": "low",
+      "description": "SOAR severity of artifacts whose OpenCTI score is below 20. Must exist in SOAR, which only ships with high, medium and low (set to a custom severity such as informational if you created one).",
+      "minLength": 1,
+      "type": "string"
+    },
     "SPLUNK_SOAR_MAX_ARTIFACTS_PER_CONTAINER": {
       "default": 1000,
       "description": "Maximum artifacts per container.",
