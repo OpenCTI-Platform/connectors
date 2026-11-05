@@ -372,11 +372,14 @@ class DectraxConnector:
         if not telemetry:
             return []
 
-        stix_objects: List[Any] = [self.identity]
+        stix_objects: List[Any] = [self.identity, self.tlp_marking]
         attack_patterns = self._create_attack_patterns()
         stix_objects.extend(attack_patterns.values())
 
         for threat in telemetry:
+            if not isinstance(threat, dict):
+                self.helper.connector_logger.warning("Skipping non-dict telemetry item", {"item": str(threat)})
+                continue
             ip_str = threat.get("attacker_ip")
             if not ip_str:
                 continue
