@@ -1,0 +1,27 @@
+{
+  "title": "WhoisFreaks",
+  "slug": "whoisfreaks-enrichment",
+  "description": "WhoisFreaks enriches Domain-Name observables with live WHOIS data from one API request: registrar, registration, update and expiry dates, name servers, DNSSEC status, domain status codes and registrant, administrative, technical, billing and abuse contacts.\n\nKey features:\n\n- Registrar turned into an Organization with a related-to relationship, carrying the IANA ID, website and abuse contact\n- Name servers created as Domain-Name observables and linked to the domain\n- Registrant organization and contact e-mail addresses (registrant, administrative, technical, billing, abuse) created and linked, skipping redacted placeholders\n- Registration, update and expiry dates, DNSSEC and EPP status codes surfaced as labels and in a note with the full WHOIS report\n- TLP checked before any data leaves OpenCTI",
+  "short_description": "Enriches Domain-Name observables with live WHOIS data from WhoisFreaks: registrar, creation/expiry dates, name servers, domain status and registrant contacts.",
+  "logo": "internal-enrichment/whoisfreaks-enrichment/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@whoisfreaks.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261016.0",
+  "subscription_link": "https://whoisfreaks.com/pricing/whois-api.html",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/whoisfreaks-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-whoisfreaks-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

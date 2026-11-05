@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'WhoisFreaks'
+  # scope: 'Domain-Name'
+  # log_level: 'error'
+  # auto: false # every lookup spends API credits
+  # max_tlp: 'amber+strict' # 'clear', 'white', 'green', 'amber', 'amber+strict' or 'red'
+
+whoisfreaks:
+  api_key: 'ChangeMe'
+  # api_base_url: 'https://api.whoisfreaks.com'
+  # timeout: 30
+  # tlp_level: 'clear' # marking of the objects the connector creates
+  # create_labels: true
+  # create_relationships: true
+  # create_note: true

@@ -1,0 +1,25 @@
+services:
+  connector-whoisfreaks-enrichment:
+    image: opencti/connector-whoisfreaks-enrichment:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      # From inside Docker, localhost is the container itself: use the URL OpenCTI is
+      # reachable at, e.g. http://opencti:8080 when both run in the same compose project.
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=WhoisFreaks
+      # - CONNECTOR_SCOPE=Domain-Name
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=amber+strict
+      # Custom parameters for WhoisFreaks
+      - WHOISFREAKS_API_KEY=ChangeMe
+      # - WHOISFREAKS_API_BASE_URL=https://api.whoisfreaks.com
+      # - WHOISFREAKS_TIMEOUT=30
+      # - WHOISFREAKS_TLP_LEVEL=clear
+      # - WHOISFREAKS_CREATE_LABELS=true
+      # - WHOISFREAKS_CREATE_RELATIONSHIPS=true
+      # - WHOISFREAKS_CREATE_NOTE=true
+    restart: always
