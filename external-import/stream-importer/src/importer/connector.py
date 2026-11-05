@@ -11,6 +11,7 @@ from pika.exceptions import ChannelClosedByBroker, NackError, UnroutableError
 
 from .lib.external_import import ExternalImportConnector
 from .metrics import Metrics
+from .s3_config import S3Settings
 from .utils import create_mq_ssl_context
 
 Event = namedtuple("Event", "path entries")
@@ -26,7 +27,7 @@ class WrongFileOrder(Exception):
 
 
 class StreamImporterConnector(ExternalImportConnector):
-    """StreamImporterConnector read events from minio and sent them to RabbitMQ.
+    """StreamImporterConnector read events from S3 and sent them to RabbitMQ.
 
     The events are transformed to be sent to RabbitMQ for ingestion by OpenCTI.
     Once processed, the files are moved to another bucket.
@@ -50,22 +51,36 @@ class StreamImporterConnector(ExternalImportConnector):
             os.environ.get("METRICS_SUBSYSTEM", os.environ.get("METRICS_SUBSYTEM")),
         )
 
-        minio_endpoint = os.environ.get("MINIO_ENDPOINT")
-
-        minio_port = os.environ.get("MINIO_PORT")
+        # All the settings are read before the deprecation warnings, so that
+        # the warnings come first even when a value is then refused.
+        s3_settings = S3Settings()
+        minio_endpoint = s3_settings.get("ENDPOINT")
+        minio_port = s3_settings.get("PORT")
+        src_path = s3_settings.get("SRC_PATH")
+        src_recurse = s3_settings.get("SRC_RECURSE", default="false")
+        dst_path = s3_settings.get("DST_PATH")
+        minio_access_key = s3_settings.get("ACCESS_KEY")
+        minio_secret_key = s3_settings.get("SECRET_KEY")
+        secure = s3_settings.get("SECURE", default="true")
+        cert_check = s3_settings.get("CERT_CHECK", default="true")
+        if s3_settings.former_names_used:
+            self.helper.connector_logger.warning(
+                "Deprecated MinIO setting names, rename them to their "
+                "STREAM_IMPORTER_S3_* names",
+                meta={"names": s3_settings.former_names_used},
+            )
+        if s3_settings.names_ignored:
+            self.helper.connector_logger.warning(
+                "S3 setting names ignored, the setting is read from its new name",
+                meta={"names": s3_settings.names_ignored},
+            )
         # Extract the bucket and the path for the source and the destination.
         self.minio_src_bucket, self.minio_src_path = (
-            os.environ.get("MINIO_SRC_PATH").split("/", 1)
-            if "/" in os.environ.get("MINIO_SRC_PATH")
-            else (os.environ.get("MINIO_SRC_PATH"), "")
+            src_path.split("/", 1) if "/" in src_path else (src_path, "")
         )
-        self.minio_src_recurse = str_to_bool(
-            os.environ.get("MINIO_SRC_RECURSE", default="false")
-        )
+        self.minio_src_recurse = str_to_bool(src_recurse)
         self.minio_dst_bucket, self.minio_dst_path = (
-            os.environ.get("MINIO_DST_PATH").split("/", 1)
-            if "/" in os.environ.get("MINIO_DST_PATH")
-            else (os.environ.get("MINIO_DST_PATH"), "")
+            dst_path.split("/", 1) if "/" in dst_path else (dst_path, "")
         )
         # Reject the unsafe ``src bucket == dst bucket AND dst_path is
         # empty`` configuration up front. The ``bucket_exists`` /
@@ -81,30 +96,27 @@ class StreamImporterConnector(ExternalImportConnector):
         # from destination keys in a single bucket; the
         # ``_collect_intelligence`` listing loop also relies on that
         # prefix to skip already-moved files when
-        # ``MINIO_SRC_RECURSE=true`` (see the ``dst_prefix`` guard
+        # ``STREAM_IMPORTER_S3_SRC_RECURSE=true`` (see the ``dst_prefix`` guard
         # there). Failing fast with a clear ``ValueError`` here keeps
         # the operator's misconfiguration loud at startup instead of
         # turning into silent attrition on every run.
         if self.minio_src_bucket == self.minio_dst_bucket and not self.minio_dst_path:
             raise ValueError(
-                "Unsafe MinIO configuration: MINIO_SRC_PATH and "
-                "MINIO_DST_PATH resolve to the same bucket "
+                "Unsafe S3 configuration: STREAM_IMPORTER_S3_SRC_PATH and "
+                "STREAM_IMPORTER_S3_DST_PATH (formerly MINIO_SRC_PATH and "
+                "MINIO_DST_PATH) resolve to the same bucket "
                 f"({self.minio_src_bucket!r}) with no destination "
-                "subfolder. Set MINIO_DST_PATH to a distinct bucket "
+                "subfolder. Set STREAM_IMPORTER_S3_DST_PATH to a distinct bucket "
                 "or to a non-empty subfolder under "
                 f"{self.minio_src_bucket!r} (e.g. "
                 f"{self.minio_src_bucket}/processed)."
             )
-        minio_access_key = os.environ.get("MINIO_ACCESS_KEY")
-        minio_secret_key = os.environ.get("MINIO_SECRET_KEY")
-        minio_secure = str_to_bool(os.environ.get("MINIO_SECURE", default="true"))
-        minio_cert_check = str_to_bool(
-            os.environ.get("MINIO_CERT_CHECK", default="true")
-        )
+        minio_secure = str_to_bool(secure)
+        minio_cert_check = str_to_bool(cert_check)
         self.perfect_sync = str_to_bool(os.environ.get("PERFECT_SYNC", default="false"))
         self.helper.log_info(f"Perfect synchronization: {self.perfect_sync}")
 
-        self.helper.log_info(f"Minio endpoint: {minio_endpoint}:{minio_port}")
+        self.helper.log_info(f"S3 endpoint: {minio_endpoint}:{minio_port}")
         self.helper.log_info(
             f"Bucket to fetch the stream: {self.minio_src_bucket}/{self.minio_src_path}"
         )
@@ -119,26 +131,26 @@ class StreamImporterConnector(ExternalImportConnector):
             secure=minio_secure,
             cert_check=minio_cert_check,
         )
-        self.helper.log_info(f"Minio: {self.minio_client._base_url}")
+        self.helper.log_info(f"S3: {self.minio_client._base_url}")
 
         # Create the destination bucket if it does not exist.
         if not self.minio_client.bucket_exists(self.minio_dst_bucket):
             self.minio_client.make_bucket(self.minio_dst_bucket)
-            self.helper.log_info(f"Minio bucket {self.minio_dst_bucket} created")
+            self.helper.log_info(f"S3 bucket {self.minio_dst_bucket} created")
 
         self.helper.log_info("Stream importer connector initialized")
 
     def _collect_intelligence(self):
         """Collects intelligence from channels
 
-        Collect files from minio, process them and send them to RabbitMQ.
+        Collect files from S3, process them and send them to RabbitMQ.
         """
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
         # When the source and destination share the same bucket AND the
         # destination is a subfolder under the source prefix, a
-        # ``MINIO_SRC_RECURSE=true`` listing descends into the
+        # ``STREAM_IMPORTER_S3_SRC_RECURSE=true`` listing descends into the
         # destination subtree too and surfaces every already-moved
         # file. Without the skip below those files would be:
         #
@@ -170,7 +182,7 @@ class StreamImporterConnector(ExternalImportConnector):
             self.minio_dst_path.rstrip("/") + "/" if self.minio_dst_path else ""
         )
         src_dst_same_bucket = self.minio_src_bucket == self.minio_dst_bucket
-        # Read objects from minio, each object contains multiple events.
+        # Read objects from S3, each object contains multiple events.
         for obj in self.minio_client.list_objects(
             self.minio_src_bucket,
             prefix=self.minio_src_path,
@@ -314,7 +326,7 @@ class StreamImporterConnector(ExternalImportConnector):
         ----------
         event : Event
             ``Event`` namedtuple (``Event = namedtuple("Event", "path entries")``)
-            where ``path`` is the MinIO object key (a ``str``, not
+            where ``path`` is the S3 object key (a ``str``, not
             ``pathlib.Path``) and ``entries`` is the raw file content
             as a string (one JSON event per line, decoded from the
             ``minio_client.get_object(...)`` response). The previous
