@@ -176,3 +176,9 @@ def test_revoked_technique_is_left_out(attack_lookup):
     )
     assert attack_pattern.name == "T1086"  # noqa: S101
     assert attack_pattern.x_mitre_id == "T1086"  # noqa: S101
+
+
+def test_empty_name_or_id_is_not_resolved(attack_lookup):
+    assert attack_lookup.lookup_technique_by_name("") is None  # noqa: S101
+    assert attack_lookup.lookup_technique_by_mitre_id(None) is None  # noqa: S101
+    assert attack_lookup.lookup_mitre_id("Unknown Technique") is None  # noqa: S101
