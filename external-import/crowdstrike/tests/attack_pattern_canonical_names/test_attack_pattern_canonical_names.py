@@ -10,12 +10,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from crowdstrike_feeds_connector.actor.importer import ActorImporter
 from crowdstrike_feeds_connector.malware.importer import MalwareImporter
-from crowdstrike_feeds_services.utils import create_attack_pattern
+from crowdstrike_feeds_services.utils import create_attack_pattern, create_organization
 from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookup,
     normalize_mitre_id,
 )
-from stix2 import TLP_AMBER, Identity
+from stix2 import TLP_AMBER
 
 ATTACK_DATASET = {
     "type": "bundle",
@@ -59,7 +59,7 @@ ATTACK_DATASET = {
     ],
 }
 
-AUTHOR = Identity(name="CrowdStrike", identity_class="organization")
+AUTHOR = create_organization("CrowdStrike")
 
 
 @pytest.fixture
