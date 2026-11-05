@@ -210,6 +210,22 @@ class DectraxConnector:
             )
         self.tlp_marking = resolve_tlp_marking(self.tlp_level)
 
+        raw_confidence = get_config_variable(
+            "DECTRAX_CONFIDENCE_LEVEL",
+            ["dectrax", "confidence_level"],
+            config,
+            default=90,
+        )
+        try:
+            self.confidence_level = int(raw_confidence)
+            if not (0 <= self.confidence_level <= 100):
+                raise ValueError()
+        except (ValueError, TypeError):
+            raise ValueError(
+                f"Invalid DECTRAX_CONFIDENCE_LEVEL: '{raw_confidence}'. "
+                "Confidence level must be an integer between 0 and 100."
+            )
+
         self.create_indicators = _to_bool(
             get_config_variable(
                 "DECTRAX_CREATE_INDICATORS",
@@ -297,6 +313,7 @@ class DectraxConnector:
         """Collect attacker telemetry and EDL items from upstream DECTRAX API.
 
         An empty upstream feed remains empty (no synthetic canary fallback).
+        Raises RuntimeError on HTTP or retrieval failure to preserve error state.
         """
         headers = {
             "Accept": "application/json",
@@ -306,6 +323,7 @@ class DectraxConnector:
             headers["Authorization"] = f"Bearer {self.dectrax_api_key}"
 
         telemetry_records: List[Dict[str, Any]] = []
+        errors: List[str] = []
 
         # 1. Query structured telemetry endpoint
         telemetry_url = f"{self.dectrax_api_url}{self.dectrax_telemetry_endpoint}"
@@ -315,17 +333,27 @@ class DectraxConnector:
                 {"url": telemetry_url},
             )
             resp = requests.get(telemetry_url, headers=headers, timeout=20)
-            if resp.status_code == 200:
-                data = resp.json()
-                if isinstance(data, list):
-                    telemetry_records.extend(data)
-                elif isinstance(data, dict) and "threats" in data:
+            resp.raise_for_status()
+            data = resp.json()
+            if isinstance(data, list):
+                telemetry_records.extend(data)
+            elif isinstance(data, dict) and "threats" in data:
+                if isinstance(data["threats"], list):
                     telemetry_records.extend(data["threats"])
+                else:
+                    raise ValueError(
+                        f"Threats key in response is not a list: {type(data['threats'])}"
+                    )
+            else:
+                raise ValueError(
+                    f"Malformed telemetry JSON response format from {telemetry_url}"
+                )
         except Exception as e:
-            self.helper.connector_logger.warning(
+            self.helper.connector_logger.error(
                 f"Could not reach telemetry endpoint {telemetry_url}: {e}",
                 {"error": str(e)},
             )
+            errors.append(f"telemetry endpoint error: {e}")
 
         # 2. Query EDL endpoint
         edl_url = f"{self.dectrax_api_url}{self.dectrax_edl_endpoint}"
@@ -335,30 +363,36 @@ class DectraxConnector:
                 {"url": edl_url},
             )
             resp = requests.get(edl_url, headers=headers, timeout=20)
-            if resp.status_code == 200:
-                for line in resp.text.splitlines():
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    parts = line.split()
-                    ip_candidate = parts[0]
-                    if validate_ipv4_address(ip_candidate):
-                        telemetry_records.append(
-                            {
-                                "attacker_ip": ip_candidate,
-                                "decoy_service": "EDL_INTERDICTION",
-                                "dest_port": 0,
-                                "threat_level": "CRITICAL",
-                                "first_seen": datetime.datetime.now(
-                                    datetime.timezone.utc
-                                ).isoformat(),
-                                "techniques": ["T1046", "T1110"],
-                            }
-                        )
+            resp.raise_for_status()
+            for line in resp.text.splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split()
+                ip_candidate = parts[0]
+                if validate_ipv4_address(ip_candidate):
+                    telemetry_records.append(
+                        {
+                            "attacker_ip": ip_candidate,
+                            "decoy_service": "EDL_INTERDICTION",
+                            "dest_port": 0,
+                            "threat_level": "CRITICAL",
+                            "first_seen": datetime.datetime.now(
+                                datetime.timezone.utc
+                            ).isoformat(),
+                            "techniques": ["T1046", "T1110"],
+                        }
+                    )
         except Exception as e:
-            self.helper.connector_logger.warning(
+            self.helper.connector_logger.error(
                 f"Could not reach EDL endpoint {edl_url}: {e}",
                 {"error": str(e)},
+            )
+            errors.append(f"EDL endpoint error: {e}")
+
+        if errors:
+            raise RuntimeError(
+                f"DECTRAX telemetry retrieval failure: {'; '.join(errors)}"
             )
 
         return telemetry_records
@@ -378,7 +412,9 @@ class DectraxConnector:
 
         for threat in telemetry:
             if not isinstance(threat, dict):
-                self.helper.connector_logger.warning("Skipping non-dict telemetry item", {"item": str(threat)})
+                self.helper.connector_logger.warning(
+                    "Skipping non-dict telemetry item", {"item": str(threat)}
+                )
                 continue
             ip_str = threat.get("attacker_ip")
             if not ip_str:
@@ -392,35 +428,55 @@ class DectraxConnector:
                 )
                 continue
 
-            decoy = str(threat.get("decoy_service", "UNKNOWN"))
-            decoy_upper = decoy.upper()
+            dest_port = threat.get("dest_port", 0)
+            try:
+                dest_port_int = int(dest_port)
+            except (ValueError, TypeError):
+                dest_port_int = 0
 
-            # Protocol flag filtering
-            if not self.sync_rdp and decoy_upper in ["RDP", "3389"]:
+            decoy = str(threat.get("decoy_service", "UNKNOWN"))
+            decoy_normalized = decoy.strip().upper().replace("_", " ").replace("-", " ")
+
+            # Protocol flag filtering with normalized service variants and ports
+            is_rdp = (
+                "RDP" in decoy_normalized
+                or dest_port_int == 3389
+                or decoy_normalized == "3389"
+            )
+            if not self.sync_rdp and is_rdp:
                 self.helper.connector_logger.info(
                     f"Skipping RDP telemetry due to sync_rdp=False: {ip_str}",
-                    {"decoy": decoy, "ip": ip_str},
-                )
-                continue
-            if not self.sync_ldap and decoy_upper in ["LDAP", "AD", "389"]:
-                self.helper.connector_logger.info(
-                    f"Skipping LDAP telemetry due to sync_ldap=False: {ip_str}",
-                    {"decoy": decoy, "ip": ip_str},
-                )
-                continue
-            if not self.sync_modbus and decoy_upper in [
-                "MODBUS",
-                "SCADA",
-                "ICS",
-                "502",
-            ]:
-                self.helper.connector_logger.info(
-                    f"Skipping Modbus telemetry due to sync_modbus=False: {ip_str}",
-                    {"decoy": decoy, "ip": ip_str},
+                    {"decoy": decoy, "port": dest_port, "ip": ip_str},
                 )
                 continue
 
-            dest_port = threat.get("dest_port", 0)
+            is_ldap = (
+                "LDAP" in decoy_normalized
+                or "ACTIVE DIRECTORY" in decoy_normalized
+                or decoy_normalized in ("AD", "389", "636")
+                or dest_port_int in (389, 636)
+            )
+            if not self.sync_ldap and is_ldap:
+                self.helper.connector_logger.info(
+                    f"Skipping LDAP telemetry due to sync_ldap=False: {ip_str}",
+                    {"decoy": decoy, "port": dest_port, "ip": ip_str},
+                )
+                continue
+
+            is_modbus = (
+                "MODBUS" in decoy_normalized
+                or "SCADA" in decoy_normalized
+                or "ICS" in decoy_normalized
+                or dest_port_int == 502
+                or decoy_normalized == "502"
+            )
+            if not self.sync_modbus and is_modbus:
+                self.helper.connector_logger.info(
+                    f"Skipping Modbus telemetry due to sync_modbus=False: {ip_str}",
+                    {"decoy": decoy, "port": dest_port, "ip": ip_str},
+                )
+                continue
+
             threat_level = threat.get("threat_level", "HIGH")
             first_seen_str = threat.get("first_seen")
             try:
@@ -465,6 +521,7 @@ class DectraxConnector:
                 labels=labels,
                 created_by_ref=self.identity.id,
                 object_marking_refs=[self.tlp_marking],
+                confidence=self.confidence_level,
                 custom_properties={
                     "x_opencti_detection": True,
                 },
@@ -491,11 +548,11 @@ class DectraxConnector:
                 # Determine ATT&CK techniques
                 tech_list = threat.get("techniques", [])
                 if not tech_list:
-                    if decoy_upper in ["RDP", "3389"]:
+                    if is_rdp:
                         tech_list = ["T1021.001", "T1110"]
-                    elif decoy_upper in ["LDAP", "AD", "389"]:
+                    elif is_ldap:
                         tech_list = ["T1069.002", "T1078"]
-                    elif decoy_upper in ["MODBUS", "SCADA", "ICS", "502"]:
+                    elif is_modbus:
                         tech_list = ["T0855", "T1046"]
                     else:
                         tech_list = ["T1046"]
@@ -518,6 +575,8 @@ class DectraxConnector:
                             )
                         )
 
+        if len(stix_objects) == 2 + len(attack_patterns):
+            return []
         return stix_objects
 
     def send_bundle(
@@ -565,6 +624,7 @@ class DectraxConnector:
                 f"Could not initiate work on OpenCTI platform: {e}",
                 {"error": str(e)},
             )
+            raise
 
         try:
             # 1. Collect telemetry

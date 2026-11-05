@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import stix2
 from pycti import (
     Identity,
@@ -68,6 +69,7 @@ def _base_config(**overrides: Any) -> Dict[str, Any]:
             "edl_endpoint": "/api/v1/edl/firewall.txt",
             "telemetry_endpoint": "/api/v1/telemetry/threats",
             "tlp_level": "clear",
+            "confidence_level": 90,
             "create_indicators": True,
             "create_observables": True,
             "sync_modbus": True,
@@ -350,3 +352,142 @@ class TestLifecycleAndStatePersistence:
         assert helper.scheduled is True
         assert helper.duration_period == "PT1H"
         assert helper.schedule_callback == connector.process_message
+
+
+# ==============================================================================
+# Issue 11-15: Aikido Feedback & Security Review Enhancements
+# ==============================================================================
+
+
+class TestHTTPFailureAndErrorHandling:
+    """Verify HTTP failures and malformed payloads raise exceptions preserving error state."""
+
+    @patch("requests.get")
+    def test_collect_telemetry_http_error_raises(self, mock_get: MagicMock) -> None:
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_get.return_value = mock_resp
+
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
+        with pytest.raises(RuntimeError, match="DECTRAX telemetry retrieval failure"):
+            connector.collect()
+
+    @patch("requests.get")
+    def test_collect_malformed_json_raises(self, mock_get: MagicMock) -> None:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = "invalid payload string"
+        mock_get.return_value = mock_resp
+
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
+        with pytest.raises(RuntimeError, match="DECTRAX telemetry retrieval failure"):
+            connector.collect()
+
+
+class TestConfidenceConfiguration:
+    """Verify indicator confidence reflects configuration and rejects invalid bounds."""
+
+    def test_confidence_applied_to_indicators(self) -> None:
+        cfg = _base_config(confidence_level=85)
+        connector = DectraxConnector(config=cfg, helper=MockConnectorHelper())
+        telemetry = [
+            {
+                "attacker_ip": "198.51.100.99",
+                "decoy_service": "SSH",
+                "threat_level": "HIGH",
+            }
+        ]
+        objects = connector.transform(telemetry)
+        indicators = [o for o in objects if isinstance(o, stix2.Indicator)]
+        assert len(indicators) == 1
+        assert indicators[0].confidence == 85
+
+    def test_invalid_confidence_raises_error(self) -> None:
+        cfg = _base_config(confidence_level=150)
+        with pytest.raises(ValueError, match="Invalid DECTRAX_CONFIDENCE_LEVEL"):
+            DectraxConnector(config=cfg, helper=MockConnectorHelper())
+
+
+class TestEmptyFilteredFeed:
+    """Verify feed with all invalid or filtered records returns empty bundle."""
+
+    def test_all_filtered_telemetry_returns_empty_list(self) -> None:
+        cfg = _base_config(sync_rdp=False)
+        connector = DectraxConnector(config=cfg, helper=MockConnectorHelper())
+        telemetry = [
+            {
+                "attacker_ip": "198.51.100.5",
+                "decoy_service": "RDP Brute Force",
+                "dest_port": 3389,
+            }
+        ]
+        objects = connector.transform(telemetry)
+        assert objects == []
+
+    def test_all_invalid_ips_returns_empty_list(self) -> None:
+        connector = DectraxConnector(
+            config=_base_config(), helper=MockConnectorHelper()
+        )
+        telemetry = [{"attacker_ip": "invalid-ip-candidate", "decoy_service": "SSH"}]
+        objects = connector.transform(telemetry)
+        assert objects == []
+
+
+class TestWorkInitiationErrorHandling:
+    """Verify process_message preserves failure state when work initiation fails."""
+
+    def test_work_initiation_failure_raises(self) -> None:
+        helper = MockConnectorHelper()
+        helper.api.work.initiate_work.side_effect = RuntimeError(
+            "OpenCTI Work API Offline"
+        )
+        connector = DectraxConnector(config=_base_config(), helper=helper)
+
+        with pytest.raises(RuntimeError, match="OpenCTI Work API Offline"):
+            connector.process_message()
+
+
+class TestProtocolFilteringVariantsAndPorts:
+    """Verify protocol disable flags match service variants and destination ports."""
+
+    def test_rdp_variant_and_port_disabled(self) -> None:
+        cfg = _base_config(sync_rdp=False)
+        connector = DectraxConnector(config=cfg, helper=MockConnectorHelper())
+        telemetry = [
+            {"attacker_ip": "198.51.100.11", "decoy_service": "RDP Brute Force"},
+            {
+                "attacker_ip": "198.51.100.12",
+                "decoy_service": "CUSTOM_SVC",
+                "dest_port": 3389,
+            },
+        ]
+        assert connector.transform(telemetry) == []
+
+    def test_ldap_variant_and_port_disabled(self) -> None:
+        cfg = _base_config(sync_ldap=False)
+        connector = DectraxConnector(config=cfg, helper=MockConnectorHelper())
+        telemetry = [
+            {"attacker_ip": "198.51.100.21", "decoy_service": "LDAP Honeytoken"},
+            {"attacker_ip": "198.51.100.22", "decoy_service": "Active Directory Probe"},
+            {"attacker_ip": "198.51.100.23", "decoy_service": "SVC", "dest_port": 389},
+            {"attacker_ip": "198.51.100.24", "decoy_service": "SVC", "dest_port": 636},
+        ]
+        assert connector.transform(telemetry) == []
+
+    def test_modbus_variant_and_port_disabled(self) -> None:
+        cfg = _base_config(sync_modbus=False)
+        connector = DectraxConnector(config=cfg, helper=MockConnectorHelper())
+        telemetry = [
+            {"attacker_ip": "198.51.100.31", "decoy_service": "Modbus SCADA"},
+            {"attacker_ip": "198.51.100.32", "decoy_service": "ICS Sensor"},
+            {
+                "attacker_ip": "198.51.100.33",
+                "decoy_service": "UNKNOWN",
+                "dest_port": 502,
+            },
+        ]
+        assert connector.transform(telemetry) == []

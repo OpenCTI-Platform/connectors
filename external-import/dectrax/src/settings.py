@@ -56,6 +56,12 @@ class DectraxConfig(BaseConfigModel):
             default="clear",
         )
     )
+    confidence_level: int = Field(
+        description="Confidence score for generated STIX indicators (0-100).",
+        default=90,
+        ge=0,
+        le=100,
+    )
     create_indicators: bool = Field(
         description="Whether to generate STIX 2.1 Indicators.",
         default=True,
