@@ -15,7 +15,10 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
         "token": "test-token",
     },
     "connector": {},
-    "ocd": {},
+    "ocd": {
+        "datalake_token": "test-datalake-token",
+        "worldwatch_api_key": "test-worldwatch-api-key",
+    },
 }
 
 FULL_VALID_SETTINGS_DICT: dict[str, Any] = {
@@ -120,7 +123,7 @@ def test_settings_should_apply_defaults():
     assert ocd.import_threat_library is True
     assert ocd.import_worldwatch is True
     assert ocd.datalake_env == "prod"
-    assert ocd.datalake_token is None
+    assert ocd.datalake_token.get_secret_value() == "test-datalake-token"
     assert ocd.datalake_queries is None
     assert ocd.datalake_create_observables is True
     assert ocd.datalake_ignore_unscored_indicators is True
@@ -141,7 +144,7 @@ def test_settings_should_apply_defaults():
     assert ocd.datalake_zip_file_delete is True
     assert ocd.datalake_curate_labels is True
     assert ocd.datalake_threat_actor_as_intrusion_set is True
-    assert ocd.worldwatch_api_key is None
+    assert ocd.worldwatch_api_key.get_secret_value() == "test-worldwatch-api-key"
     assert ocd.worldwatch_import_indicators is True
     assert ocd.worldwatch_import_indicators_lookback == 2592000
     assert ocd.worldwatch_import_threat_entities is True
@@ -165,9 +168,23 @@ def test_settings_should_default_connector_id():
             {
                 "opencti": {"url": "http://localhost:8080"},
                 "connector": {},
-                "ocd": {},
+                "ocd": MINIMAL_VALID_SETTINGS_DICT["ocd"],
             },
             id="missing_opencti_token",
+        ),
+        pytest.param(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "ocd": {"worldwatch_api_key": "test-worldwatch-api-key"},
+            },
+            id="missing_datalake_token",
+        ),
+        pytest.param(
+            {
+                **MINIMAL_VALID_SETTINGS_DICT,
+                "ocd": {"datalake_token": "test-datalake-token"},
+            },
+            id="missing_worldwatch_api_key",
         ),
         pytest.param(
             {
@@ -186,14 +203,20 @@ def test_settings_should_default_connector_id():
         pytest.param(
             {
                 **MINIMAL_VALID_SETTINGS_DICT,
-                "ocd": {"datalake_fallback_score": "not-a-number"},
+                "ocd": {
+                    **MINIMAL_VALID_SETTINGS_DICT["ocd"],
+                    "datalake_fallback_score": "not-a-number",
+                },
             },
             id="invalid_datalake_fallback_score",
         ),
         pytest.param(
             {
                 **MINIMAL_VALID_SETTINGS_DICT,
-                "ocd": {"import_datalake": "not-a-boolean"},
+                "ocd": {
+                    **MINIMAL_VALID_SETTINGS_DICT["ocd"],
+                    "import_datalake": "not-a-boolean",
+                },
             },
             id="invalid_import_datalake",
         ),
@@ -217,7 +240,7 @@ def test_settings_should_migrate_deprecated_interval():
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
         "connector": {},
-        "ocd": {"interval": 60},
+        "ocd": {**MINIMAL_VALID_SETTINGS_DICT["ocd"], "interval": 60},
     }
 
     with pytest.warns(UserWarning, match="ocd.interval"):
@@ -231,7 +254,7 @@ def test_settings_should_prefer_duration_period_over_deprecated_interval():
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
         "connector": {"duration_period": "PT2H"},
-        "ocd": {"interval": 60},
+        "ocd": {**MINIMAL_VALID_SETTINGS_DICT["ocd"], "interval": 60},
     }
 
     with pytest.warns(UserWarning, match="Using only 'connector.duration_period'"):
@@ -278,7 +301,7 @@ def test_settings_should_migrate_deprecated_variables(
     """Each deprecated `OCD_*` alias MUST migrate to its new variable."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
-        "ocd": {deprecated_name: raw_value},
+        "ocd": {**MINIMAL_VALID_SETTINGS_DICT["ocd"], deprecated_name: raw_value},
     }
 
     with pytest.warns(UserWarning, match=f"ocd.{deprecated_name}"):
@@ -291,7 +314,10 @@ def test_settings_should_migrate_deprecated_worldwatch_api_key():
     """The deprecated `OCD_IMPORT_WORLDWATCH_API_KEY` MUST migrate to `OCD_WORLDWATCH_API_KEY`."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
-        "ocd": {"import_worldwatch_api_key": "legacy-api-key"},
+        "ocd": {
+            "datalake_token": "test-datalake-token",
+            "import_worldwatch_api_key": "legacy-api-key",
+        },
     }
 
     with pytest.warns(UserWarning, match="ocd.import_worldwatch_api_key"):
@@ -304,7 +330,11 @@ def test_settings_should_prefer_new_variable_over_deprecated_alias():
     """When both are set, the new variable MUST win over its deprecated alias."""
     settings_dict = {
         **MINIMAL_VALID_SETTINGS_DICT,
-        "ocd": {"fallback_score": 9, "datalake_fallback_score": 5},
+        "ocd": {
+            **MINIMAL_VALID_SETTINGS_DICT["ocd"],
+            "fallback_score": 9,
+            "datalake_fallback_score": 5,
+        },
     }
 
     with pytest.warns(UserWarning, match="Using only 'ocd.datalake_fallback_score'"):

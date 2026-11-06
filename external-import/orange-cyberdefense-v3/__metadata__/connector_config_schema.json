@@ -75,8 +75,7 @@
       "type": "string"
     },
     "OCD_DATALAKE_TOKEN": {
-      "default": null,
-      "description": "Long Term Token used to access Datalake API. Required when `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` or `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES` is enabled.",
+      "description": "Long Term Token used to access Datalake API, used by `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` and `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`. If all of them are disabled, set a placeholder such as a random string or `NO_PASSWORD`.",
       "format": "password",
       "type": "string",
       "writeOnly": true
@@ -208,8 +207,7 @@
       "description": "Use OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET instead."
     },
     "OCD_WORLDWATCH_API_KEY": {
-      "default": null,
-      "description": "World Watch API key. Required when `OCD_IMPORT_WORLDWATCH` is enabled.",
+      "description": "World Watch API key, used by `OCD_IMPORT_WORLDWATCH`. If it is disabled, set a placeholder such as a random string or `NO_PASSWORD`.",
       "format": "password",
       "type": "string",
       "writeOnly": true
@@ -262,7 +260,9 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN"
+    "OPENCTI_TOKEN",
+    "OCD_DATALAKE_TOKEN",
+    "OCD_WORLDWATCH_API_KEY"
   ],
   "additionalProperties": true
 }

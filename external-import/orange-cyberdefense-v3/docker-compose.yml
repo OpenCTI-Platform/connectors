@@ -14,7 +14,7 @@ services:
       # - OCD_IMPORT_THREAT_LIBRARY=true
       # - OCD_IMPORT_WORLDWATCH=true
       # - OCD_DATALAKE_ENV=prod
-      - OCD_DATALAKE_TOKEN=ChangeMe # Required when a Datalake-based import is enabled
+      - OCD_DATALAKE_TOKEN=ChangeMe # Required. Set a placeholder (e.g. NO_PASSWORD) if no Datalake-based import is enabled
       # - OCD_DATALAKE_QUERIES=[{"query_hash":"bb08a750538baea3e1c8cda0ae5b3aca","label":"high_confidence_network_iocs"},{"query_hash":"1ac760cbaec854a6c463d92c8f862c98","label":"ocd_peerpressure_c2_tracker"}] # Required when OCD_IMPORT_DATALAKE is enabled
       # - OCD_DATALAKE_CREATE_OBSERVABLES=true
       # - OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS=true
@@ -33,7 +33,7 @@ services:
       # - OCD_DATALAKE_ZIP_FILE_DELETE=true
       # - OCD_DATALAKE_CURATE_LABELS=true
       # - OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET=true
-      - OCD_WORLDWATCH_API_KEY=ChangeMe # Required when OCD_IMPORT_WORLDWATCH is enabled
+      - OCD_WORLDWATCH_API_KEY=ChangeMe # Required. Set a placeholder (e.g. NO_PASSWORD) if OCD_IMPORT_WORLDWATCH is disabled
       # - OCD_WORLDWATCH_IMPORT_INDICATORS=true
       # - OCD_WORLDWATCH_IMPORT_INDICATORS_LOOKBACK=2592000
       # - OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES=true

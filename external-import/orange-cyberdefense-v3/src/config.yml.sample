@@ -14,7 +14,7 @@ ocd:
   # import_threat_library: true
   # import_worldwatch: true
   # datalake_env: 'prod'
-  datalake_token: 'ChangeMe' # Required when a Datalake-based import is enabled
+  datalake_token: 'ChangeMe' # Required. Set a placeholder (e.g. NO_PASSWORD) if no Datalake-based import is enabled
   # datalake_queries: '[{"query_hash":"bb08a750538baea3e1c8cda0ae5b3aca","label":"high_confidence_network_iocs"},{"query_hash":"1ac760cbaec854a6c463d92c8f862c98","label":"ocd_peerpressure_c2_tracker"}]' # Required when import_datalake is enabled
   # datalake_create_observables: true
   # datalake_ignore_unscored_indicators: true
@@ -33,7 +33,7 @@ ocd:
   # datalake_threat_actor_as_intrusion_set: true
   # datalake_zip_file_path: '/opt/opencti-connector-orange-cyberdefense/data'
   # datalake_zip_file_delete: true
-  worldwatch_api_key: 'ChangeMe' # Required when import_worldwatch is enabled
+  worldwatch_api_key: 'ChangeMe' # Required. Set a placeholder (e.g. NO_PASSWORD) if import_worldwatch is disabled
   # worldwatch_import_indicators: true
   # worldwatch_import_indicators_lookback: 2592000
   # worldwatch_import_threat_entities: true

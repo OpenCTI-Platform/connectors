@@ -65,8 +65,8 @@ Other prerequisites for using this connector includes:
 3. Replace the value of `OPENCTI_TOKEN` with the token of the dedicated OpenCTI user you created for this integration (see [prerequisites](#prerequisites)).
 4. Replace the value of `CONNECTOR_ID` with a randomly generated UUIDv4 (you can find UUID generators online).
 5. Replace the value of `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY` and `OCD_IMPORT_WORLDWATCH` to enable the modules you want. Each one of these import types are detailed below.
-6. If required by enabled modules, replace the value of `OCD_DATALAKE_TOKEN` with your Datalake API token. The account must have the Datalake `bulk_search` permission.
-7. If required by enabled modules, replace the value of `OCD_WORLDWATCH_TOKEN` with your Datalake API token.
+6. Replace the value of `OCD_DATALAKE_TOKEN` with your Datalake API token. The account must have the Datalake `bulk_search` permission. This variable is mandatory: if `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` and `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES` are all disabled, set a placeholder such as a random string or `NO_PASSWORD`.
+7. Replace the value of `OCD_WORLDWATCH_API_KEY` with your World Watch API key. This variable is mandatory: if `OCD_IMPORT_WORLDWATCH` is disabled, set a placeholder such as a random string or `NO_PASSWORD`.
 8. Replace or add other variables to customize the behavior of this connector according to your needs. See [this section below](#environment-variables) for a full list of supported environment variable.
 9. Reload the connector's container configuration. If using Docker compose, this can be done using the `docker compose up -d` command.
 
@@ -100,7 +100,7 @@ Other prerequisites for using this connector includes:
 | `ocd.import_threat_library`<br/>`OCD_IMPORT_THREAT_LIBRARY`                                   | No        | If `true`, at each run the latest 500 entries (Malware, Intrusion Set, Tools, Attack Patterns, Vulnerabilities, ...) from the [Datalake Threat Library](https://datalake.cert.orangecyberdefense.com/gui/threats-library) will be ingested. Defaults to `true`. |
 | `ocd.import_worldwatch`<br/>`OCD_IMPORT_WORLDWATCH`                                           | No        | If `true`, World Watch reports will be ingested into OpenCTI. Defaults to `true`. |
 | `ocd.datalake_env`<br/>`OCD_DATALAKE_ENV`                                                     | No        | ⚠️ Advanced setting* - Datalake environment to use: `prod` or `preprod`. Defaults to `prod`. |
-| `ocd.datalake_token`<br/>`OCD_DATALAKE_TOKEN`                                                 | No        | Long Term Token used to access Datalake API. Mandatory if `OCD_IMPORT_DATALAKE` or `OCD_IMPORT_THREAT_LIBRARY` set to `true`. |
+| `ocd.datalake_token`<br/>`OCD_DATALAKE_TOKEN`                                                 | Yes       | Long Term Token used to access Datalake API, used by `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` and `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`. If all of them are disabled, set a placeholder such as a random string or `NO_PASSWORD`. |
 | `ocd.datalake_queries`<br/>`OCD_DATALAKE_QUERIES`                                             | No        | List of search `query_hash` for indicator's collection you want to ingest. Mandatory if `OCD_IMPORT_DATALAKE` set to `true`. |
 | ~~`ocd.create_observables`~~<br/>~~`OCD_CREATE_OBSERVABLES`~~                                 | No        | 🛑 Deprecated - Use `OCD_DATALAKE_CREATE_OBSERVABLES` instead. |
 | `ocd.datalake_create_observables`<br/>`OCD_DATALAKE_CREATE_OBSERVABLES`                       | No        | Create observables from indicators. Defaults to `true`. |
@@ -126,7 +126,7 @@ Other prerequisites for using this connector includes:
 | ~~`ocd.threat_actor_as_intrusion_set`~~<br/>~~`OCD_THREAT_ACTOR_AS_INTRUSION_SET`~~           | No        | 🛑 Deprecated - Use `OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET` instead. |
 | `ocd.datalake_threat_actor_as_intrusion_set`<br/>`OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET` | No        | ⚠️ Advanced setting* - Transform Threat Actor objects from Datalake to Intrusion Set objects. Defaults to `true`. |
 | ~~`ocd.import_worldwatch_api_key`~~<br/>~~`OCD_IMPORT_WORLDWATCH_API_KEY`~~                   | No        | 🛑 Deprecated - Use `OCD_WORLDWATCH_API_KEY` instead. |
-| `ocd.worldwatch_api_key`<br/>`OCD_WORLDWATCH_API_KEY`                                         | No        | WorldWatch API Key. Mandatory if `OCD_IMPORT_WORLDWATCH` set to `true`. |
+| `ocd.worldwatch_api_key`<br/>`OCD_WORLDWATCH_API_KEY`                                         | Yes       | World Watch API key, used by `OCD_IMPORT_WORLDWATCH`. If it is disabled, set a placeholder such as a random string or `NO_PASSWORD`. |
 | ~~`ocd.import_worldwatch_start_date`~~<br/>~~`OCD_IMPORT_WORLDWATCH_START_DATE`~~             | No        | 🛑 Deprecated - Use `OCD_WORLDWATCH_START_DATE` instead. |
 | `ocd.worldwatch_start_date`<br/>`OCD_WORLDWATCH_START_DATE`                                   | No        | Start date for import of World Watch reports. Defaults to `2026-01-01`. Mandatory if `OCD_IMPORT_WORLDWATCH` set to `true`. |
 | `ocd.worldwatch_import_indicators`<br/>`OCD_WORLDWATCH_IMPORT_INDICATORS`                     | No        | Whether to import indicators from Datalake related to imported reports. Full explanation in [this section below](#related-indicators-and-entities). Defaults to `true`. |

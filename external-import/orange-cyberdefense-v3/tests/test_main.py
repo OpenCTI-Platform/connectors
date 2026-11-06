@@ -210,12 +210,12 @@ def test_connector_is_instantiated(
             id="missing_datalake_queries",
         ),
         pytest.param(
-            {"worldwatch_api_key": None},
+            {"worldwatch_api_key": ""},
             "Parameter 'OCD_WORLDWATCH_API_KEY' is missing",
             id="missing_worldwatch_api_key",
         ),
         pytest.param(
-            {"datalake_token": None},
+            {"datalake_token": ""},
             "Parameter 'OCD_DATALAKE_TOKEN' is missing",
             id="missing_datalake_token",
         ),
@@ -240,12 +240,13 @@ def test_connector_should_raise_when_conditionally_required_setting_is_missing(
         OrangeCyberdefense()
 
 
-def test_connector_should_not_require_credentials_when_imports_are_disabled(
+def test_connector_should_accept_placeholder_secrets_when_imports_are_disabled(
     monkeypatch, mock_opencti_connector_helper, mock_datalake
 ):
     """
-    Test that the Datalake token, queries and World Watch API key are optional
-    when every import is disabled, and that no Datalake client is built.
+    Test that placeholder values for the Datalake token and World Watch API key
+    are accepted when every import is disabled, that the Datalake queries stay
+    optional, and that no Datalake client is built.
     """
     settings_dict = deepcopy(STUB_SETTINGS_DICT)
     settings_dict["ocd"].update(
@@ -253,15 +254,15 @@ def test_connector_should_not_require_credentials_when_imports_are_disabled(
             "import_datalake": False,
             "import_threat_library": False,
             "import_worldwatch": False,
-            "datalake_token": None,
+            "datalake_token": "NO_PASSWORD",
             "datalake_queries": None,
-            "worldwatch_api_key": None,
+            "worldwatch_api_key": "NO_PASSWORD",
         }
     )
     monkeypatch.setattr("main.ConnectorSettings", build_stub_settings(settings_dict))
 
     connector = OrangeCyberdefense()
 
-    assert connector.ocd_datalake_token is None
-    assert connector.ocd_worldwatch_api_key is None
+    assert connector.ocd_datalake_token == "NO_PASSWORD"
+    assert connector.ocd_worldwatch_api_key == "NO_PASSWORD"
     mock_datalake.assert_not_called()

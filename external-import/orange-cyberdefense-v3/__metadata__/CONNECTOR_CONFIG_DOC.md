@@ -8,6 +8,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| OCD_DATALAKE_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Long Term Token used to access Datalake API, used by `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` and `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`. If all of them are disabled, set a placeholder such as a random string or `NO_PASSWORD`. |
+| OCD_WORLDWATCH_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | World Watch API key, used by `OCD_IMPORT_WORLDWATCH`. If it is disabled, set a placeholder such as a random string or `NO_PASSWORD`. |
 | CONNECTOR_NAME | `string` |  | string |  | `"Orange Cyberdefense Cyber Threat Intelligence"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string |  | `["Orange-Cyberdefense"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"info"` | The minimum level of logs to display. |
@@ -17,7 +19,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OCD_IMPORT_THREAT_LIBRARY | `boolean` |  | boolean |  | `true` | Whether to ingest the latest entries of the Datalake Threat Library (Malware, Intrusion Set, Tools, Attack Patterns, Vulnerabilities, ...). |
 | OCD_IMPORT_WORLDWATCH | `boolean` |  | boolean |  | `true` | Whether to ingest World Watch reports. |
 | OCD_DATALAKE_ENV | `string` |  | string |  | `"prod"` | Advanced setting - Datalake environment to use: `prod` or `preprod`. |
-| OCD_DATALAKE_TOKEN | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | Long Term Token used to access Datalake API. Required when `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` or `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES` is enabled. |
 | OCD_DATALAKE_QUERIES | `string` |  | string |  | `null` | JSON array of Datalake search query hashes to ingest, e.g. `[{"query_hash":"<hash>","label":"<label>"}]`. Required when `OCD_IMPORT_DATALAKE` is enabled. |
 | OCD_DATALAKE_CREATE_OBSERVABLES | `boolean` |  | boolean |  | `true` | Whether to create observables from indicators. |
 | OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS | `boolean` |  | boolean |  | `true` | Whether to skip Datalake indicators that do not have any score. |
@@ -36,7 +37,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OCD_DATALAKE_ZIP_FILE_DELETE | `boolean` |  | boolean |  | `true` | Advanced setting - Whether to delete temporary ZIP files after processing. |
 | OCD_DATALAKE_CURATE_LABELS | `boolean` |  | boolean |  | `true` | Advanced setting - Adapt Datalake CTI tags as STIX labels. |
 | OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET | `boolean` |  | boolean |  | `true` | Advanced setting - Transform Threat Actor objects from Datalake to Intrusion Set objects. |
-| OCD_WORLDWATCH_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | World Watch API key. Required when `OCD_IMPORT_WORLDWATCH` is enabled. |
 | OCD_WORLDWATCH_IMPORT_INDICATORS | `boolean` |  | boolean |  | `true` | Whether to import indicators from Datalake related to imported reports. |
 | OCD_WORLDWATCH_IMPORT_INDICATORS_LOOKBACK | `integer` |  | integer |  | `2592000` | Advanced setting - How far (in seconds) to look back for indicators related to imported reports, based on their update time. |
 | OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES | `boolean` |  | boolean |  | `true` | Whether to import objects from the Threat Library related to imported reports, such as malwares, campaigns, etc. |

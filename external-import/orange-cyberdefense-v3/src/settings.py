@@ -68,14 +68,14 @@ class OrangeCyberdefenseConfig(BaseConfigModel):
         description="Advanced setting - Datalake environment to use: `prod` or `preprod`.",
         default="prod",
     )
-    datalake_token: SecretStr | None = Field(
+    datalake_token: SecretStr = Field(
         description=(
-            "Long Term Token used to access Datalake API. Required when "
+            "Long Term Token used to access Datalake API, used by "
             "`OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, "
-            "`OCD_WORLDWATCH_IMPORT_INDICATORS` or "
-            "`OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES` is enabled."
+            "`OCD_WORLDWATCH_IMPORT_INDICATORS` and "
+            "`OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`. If all of them are "
+            "disabled, set a placeholder such as a random string or `NO_PASSWORD`."
         ),
-        default=None,
     )
     datalake_queries: str | None = Field(
         description=(
@@ -200,9 +200,11 @@ class OrangeCyberdefenseConfig(BaseConfigModel):
         deprecated="Use 'OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET' instead.",
         new_namespaced_var="datalake_threat_actor_as_intrusion_set",
     )
-    worldwatch_api_key: SecretStr | None = Field(
-        description="World Watch API key. Required when `OCD_IMPORT_WORLDWATCH` is enabled.",
-        default=None,
+    worldwatch_api_key: SecretStr = Field(
+        description=(
+            "World Watch API key, used by `OCD_IMPORT_WORLDWATCH`. If it is "
+            "disabled, set a placeholder such as a random string or `NO_PASSWORD`."
+        ),
     )
     import_worldwatch_api_key: SecretStr | None = DeprecatedField(
         deprecated="Use 'OCD_WORLDWATCH_API_KEY' instead.",

@@ -164,8 +164,6 @@ class OrangeCyberdefense:
         # OCD_WORLDWATCH_API_KEY
         self.ocd_worldwatch_api_key = (
             self.config.ocd.worldwatch_api_key.get_secret_value()
-            if self.config.ocd.worldwatch_api_key
-            else None
         )
         if not self.ocd_worldwatch_api_key and self.ocd_import_worldwatch:
             raise ValueError(
@@ -200,11 +198,7 @@ class OrangeCyberdefense:
         self.ocd_reset_state = self.config.ocd.reset_state
 
         # OCD_DATALAKE_TOKEN
-        self.ocd_datalake_token = (
-            self.config.ocd.datalake_token.get_secret_value()
-            if self.config.ocd.datalake_token
-            else None
-        )
+        self.ocd_datalake_token = self.config.ocd.datalake_token.get_secret_value()
         dtl_token_required = {
             "import_datalake": self.ocd_import_datalake,
             "import_threat_library": self.ocd_import_threat_library,
