@@ -138,9 +138,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
                 continue
             if connector_path.name.startswith((".", "_")):
                 continue
-            if not (connector_path / "Dockerfile").exists() and not (
-                connector_path / "src" / "requirements.txt"
-            ).exists():
+            if (
+                not (connector_path / "Dockerfile").exists()
+                and not (connector_path / "src" / "requirements.txt").exists()
+            ):
                 continue
             if not (
                 connector_path / "__metadata__" / "connector_manifest.json"
