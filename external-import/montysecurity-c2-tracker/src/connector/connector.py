@@ -204,6 +204,10 @@ class MontysecurityC2TrackerConnector:
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
+            if work_id:
+                self.helper.api.work.to_processed(
+                    work_id, "Connector stopped...", in_error=True
+                )
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))

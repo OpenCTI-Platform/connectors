@@ -82,6 +82,24 @@ def test_process_message_does_not_store_last_run_when_the_source_fails(
     )
 
 
+def test_process_message_closes_the_work_in_error_when_interrupted(mock_connector):
+    mock_connector.client.get_malware_list.side_effect = KeyboardInterrupt()
+    mock_connector.helper.get_state = MagicMock(return_value=None)
+    mock_connector.helper.set_state = MagicMock()
+    mock_connector.helper.connector_logger = MagicMock()
+
+    mock_connector.helper.api.work.initiate_work = MagicMock(return_value="work-1")
+    mock_connector.helper.api.work.to_processed = MagicMock()
+
+    with pytest.raises(SystemExit):
+        mock_connector.process_message()
+
+    mock_connector.helper.set_state.assert_not_called()
+    mock_connector.helper.api.work.to_processed.assert_called_once_with(
+        "work-1", "Connector stopped...", in_error=True
+    )
+
+
 def test_request_failure_is_logged_once_as_a_warning(client):
     client.session.get.side_effect = requests.ConnectionError("connection refused")
 
