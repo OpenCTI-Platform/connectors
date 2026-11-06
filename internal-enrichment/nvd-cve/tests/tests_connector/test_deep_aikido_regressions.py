@@ -70,6 +70,27 @@ def test_cve_suffix_has_no_seven_digit_limit(text, expected):
     assert extract_cve_ids(text) == expected
 
 
+@pytest.mark.parametrize("separator", ["-", "_", "[-]"])
+@pytest.mark.parametrize("length", [32, 33])
+def test_cve_suffix_operational_bound_does_not_truncate(separator, length):
+    candidate = f"CVE{separator}2024{separator}" + "1" * length
+    text = f"{candidate} and CVE-2024-3400"
+    expected = ["CVE-2024-" + "1" * length] if length == 32 else []
+    assert extract_cve_ids(text) == expected + ["CVE-2024-3400"]
+
+
+def test_oversized_suffix_is_not_logged_or_sent_to_nvd():
+    connector = _make_enrichment_connector()
+    data = payload()
+    data["event_type"] = "INTERNAL_ENRICHMENT"
+    oversized = "CVE-2024-" + "1" * 100000
+    data["stix_entity"]["name"] = oversized
+    assert "No CVE identifiers found" in connector.process_message(data)
+    connector.converter.client_api.get_vulnerability_by_id.assert_not_called()
+    connector.helper.send_stix2_bundle.assert_not_called()
+    assert oversized not in str(connector.helper.connector_logger.mock_calls)
+
+
 def test_long_cve_is_looked_up_and_can_create_a_placeholder():
     connector = _make_enrichment_connector()
     connector.converter.client_api.get_vulnerability_by_id = AsyncMock(

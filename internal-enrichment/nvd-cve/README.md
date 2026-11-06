@@ -55,6 +55,8 @@ Runtime environment variables take precedence over `src/.env`, then `src/config.
 
 Enrichment is processed and sent in chunks of at most five CVEs. Software resolution stops at 100 unique CPE names or 10 CPE Match API pages per CVE, whichever limit is reached first, and logs a warning when truncated. Each CVE creates at most 201 enrichment objects (one Vulnerability plus 100 Software objects and their relationships), plus one relationship to the source entity. These hard limits apply regardless of concurrency and history-window settings.
 
+CVE numeric suffixes are limited to 4–32 digits as an operational bound on NVD request size. Longer suffixes are ignored entirely, never truncated into another identifier.
+
 Source markings from both the STIX and OpenCTI representations are retained on generated objects and relationships, with marking definitions included in each chunk. Enrichment is refused before querying NVD if a source marking cannot be resolved.
 
 NVD lookup and conversion errors fail the current chunk and are raised to the worker for direct enrichment events. A successful NVD response with no matching CVE can still create a placeholder when enabled. For playbooks, an error returns the last successfully sent bundle, preserving earlier chunks and their references; if no chunk succeeded, the original bundle is returned unchanged.
