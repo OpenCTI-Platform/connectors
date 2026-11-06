@@ -133,7 +133,11 @@ class X509Certificate(BaseObservableEntity):
         """Make stix object."""
         return Stix2X509Certificate(
             is_self_signed=self.is_self_signed,
-            hashes={k.value: v for k, v in (self.hashes or {}).items()},
+            hashes=(
+                {algorithm.value: value for algorithm, value in self.hashes.items()}
+                if self.hashes
+                else None
+            ),
             serial_number=self.serial_number,
             signature_algorithm=self.signature_algorithm,
             issuer=self.issuer,
