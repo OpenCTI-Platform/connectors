@@ -1266,9 +1266,7 @@ def test_convert_indicator_to_stix_should_not_send_entity_tags_as_labels():
     assert sorted(indicators[0].labels) == ["source:feed", "type:trojan"]
     assert sorted(observables[0].labels) == ["source:feed", "type:trojan"]
     # The entities and their indicates relationships are still created.
-    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == [
-        "berbew"
-    ]
+    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == ["berbew"]
     assert [obj.name for obj in octi_objects if isinstance(obj, IntrusionSet)] == [
         "apt27"
     ]
@@ -1306,12 +1304,8 @@ def test_convert_extracted_config_should_not_send_malware_tags_as_labels():
     ]
     assert len(observables) == 2
     assert all(observable.labels == ["type:trojan"] for observable in observables)
-    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == [
-        "strrat"
-    ]
-    assert (
-        len(_relationships(octi_objects, RelationshipType.COMMUNICATES_WITH)) == 2
-    )
+    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == ["strrat"]
+    assert len(_relationships(octi_objects, RelationshipType.COMMUNICATES_WITH)) == 2
 
 
 def test_build_external_references_with_href_and_id():
