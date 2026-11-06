@@ -1,4 +1,4 @@
-pycti==7.260811.0.1
+pycti==7.260811.0.2
 pyjwt
 requests<=2.33.0
 pydantic==2.14.0

@@ -33,7 +33,7 @@ external reference.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260811.0-lts.1
+- OpenCTI Platform >= 7.260811.0-lts.2
 - A reachable Swimlane instance with the REST API enabled
 - A Swimlane API token (Personal Access Token)
 - The ID of the Swimlane application to import from

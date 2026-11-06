@@ -1,4 +1,4 @@
-pycti==7.260811.0.1
+pycti==7.260811.0.2
 ipaddress~=1.0
 pydantic==2.14.0
 validators~=0.35
