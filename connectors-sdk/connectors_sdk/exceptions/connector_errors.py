@@ -9,7 +9,7 @@ Hierarchy::
     ConnectorError                              (abstract)
     +-- UnknownError                            other.unknown               CRITICAL
     +-- ConfigurationError                      (abstract)
-    |   +-- ConfigurationInvalidError           config.invalid              CRITICAL
+    |   +-- ConfigurationInvalidError           config.invalid              CRITICAL  (also a ValueError)
     +-- ProviderApiError                        (abstract, the source the connector reads)
     |   +-- ProviderApiAuthenticationError      api.authentication          CRITICAL
     |   +-- ProviderApiAuthorizationError       api.authorization           CRITICAL
@@ -168,8 +168,13 @@ class ConfigurationError(ConnectorError):
     __abstract__ = True
 
 
-class ConfigurationInvalidError(ConfigurationError):
-    """A configuration value is missing or invalid."""
+class ConfigurationInvalidError(ConfigurationError, ValueError):
+    """A configuration value is missing or invalid.
+
+    It is also a ``ValueError``, so it can be raised in a Pydantic validator: Pydantic
+    reports it as a ``value_error`` in its ``ValidationError``, with the original error
+    in the ``ctx`` of the error details.
+    """
 
     code = "config.invalid"
     criticity = Criticity.CRITICAL

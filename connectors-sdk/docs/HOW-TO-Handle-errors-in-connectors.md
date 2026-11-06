@@ -136,6 +136,28 @@ All errors derive from `ConnectorError`, grouped into categories:
 
     → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
 
+- **Raise `ConfigurationInvalidError` in Pydantic validators**
+
+    → `ConfigurationInvalidError` is also a `ValueError`, so Pydantic handles it like any validation failure: it is collected with the other invalid fields into one `ValidationError`, as a `value_error`, with the original error in the `ctx` of the error details. `BaseConnectorSettings` then raises its usual `ConfigValidationError` from that `ValidationError`.
+
+    ```python
+    from connectors_sdk import BaseConfigModel, ConfigurationInvalidError
+    from pydantic import field_validator
+
+
+    class MyFeedConfig(BaseConfigModel):
+        url: str
+
+        @field_validator("url")
+        @classmethod
+        def check_scheme(cls, value: str) -> str:
+            if not value.startswith("https://"):
+                raise ConfigurationInvalidError("url must use https")
+            return value
+    ```
+
+    Outside a validator, it behaves like the other standard errors. Note that an `except ValueError` clause catches it too.
+
 - **The older SDK errors are `LegacyError`s**
 
     → `BaseClientApi` still raises `ApiClientError` and its subclasses, and connectors still raise `ConfigError`, `DataRetrievalError` and `UseCaseError`. These older errors are concrete subclasses of the abstract `LegacyError` category, so they are `ConnectorError`s that can be recorded and reported. Their names, modules, constructors and parent classes don't change, so existing `except` clauses keep working. `except LegacyError` catches all of them, and none of the standard categories does.

@@ -6,6 +6,8 @@ import pickle
 import pytest
 from connectors_sdk.exceptions import connector_errors
 from connectors_sdk.exceptions.connector_errors import (
+    ConfigurationError,
+    ConfigurationInvalidError,
     ConnectorError,
     Criticity,
     DataConversionError,
@@ -16,6 +18,7 @@ from connectors_sdk.exceptions.connector_errors import (
     TargetRejectedError,
 )
 from pycti.connector.opencti_connector_helper import _ConnectorRunError
+from pydantic import BaseModel, ValidationError, field_validator
 
 
 def test_criticity_values_match_logging_levels():
@@ -229,6 +232,9 @@ STANDARD_ERRORS = [
     ("UnknownError", "other.unknown", Criticity.CRITICAL, "ConnectorError"),
 ]
 
+# Built-in exceptions a standard error also inherits from, after its category
+EXTRA_BASES = {"ConfigurationInvalidError": (ValueError,)}
+
 CATEGORY_PREFIXES = {
     "ConfigurationError": "config.",
     "ProviderApiError": "api.",
@@ -261,7 +267,10 @@ def test_standard_error(name, code, criticity, category):
     # Then it should carry its code and criticity, under its category
     assert error_class.code == code
     assert error_class.criticity is criticity
-    assert error_class.__bases__ == (getattr(connector_errors, category),)
+    assert error_class.__bases__ == (
+        getattr(connector_errors, category),
+        *EXTRA_BASES.get(name, ()),
+    )
     assert code.startswith(CATEGORY_PREFIXES[category])
 
 
@@ -314,15 +323,67 @@ def test_instance_chains_the_original_exception():
     assert raised.value.__cause__ is original
 
 
-def test_instance_survives_pickling():
+@pytest.mark.parametrize(
+    "error_class",
+    [
+        pytest.param(TargetRejectedError, id="TargetRejectedError"),
+        pytest.param(ConfigurationInvalidError, id="ConfigurationInvalidError"),
+    ],
+)
+def test_instance_survives_pickling(error_class):
     """Test that a concrete error can be pickled and unpickled."""
     # Given a concrete error
-    error = TargetRejectedError("item refused")
+    error = error_class("item refused")
     # When pickling and unpickling it
     restored = pickle.loads(pickle.dumps(error))  # noqa: S301  # test data only
     # Then its class and message should be preserved
-    assert type(restored) is TargetRejectedError
+    assert type(restored) is error_class
     assert str(restored) == "item refused"
+
+
+def test_configuration_invalid_error_is_a_value_error():
+    """Test that ConfigurationInvalidError is the only standard error that is a ValueError."""
+    # Given the standard errors
+    # Then only ConfigurationInvalidError should be caught by `except ValueError`
+    value_errors = {
+        name
+        for name, *_ in STANDARD_ERRORS
+        if issubclass(getattr(connector_errors, name), ValueError)
+    }
+    assert value_errors == {"ConfigurationInvalidError"}
+    # And it should still be a configuration error first
+    assert ConfigurationInvalidError.__mro__[1:4] == (
+        ConfigurationError,
+        ConnectorError,
+        ValueError,
+    )
+
+
+def test_configuration_invalid_error_in_pydantic_validator():
+    """Test that ConfigurationInvalidError raised in a validator is a Pydantic error."""
+
+    # Given a Pydantic model whose validator raises ConfigurationInvalidError
+    class SampleConfig(BaseModel):
+        url: str
+
+        @field_validator("url")
+        @classmethod
+        def check_scheme(cls, value: str) -> str:
+            if not value.startswith("https://"):
+                raise ConfigurationInvalidError("url must use https")
+            return value
+
+    # When validating an invalid value
+    with pytest.raises(ValidationError) as raised:
+        SampleConfig(url="http://example.com")
+    # Then Pydantic should report it as a value error, keeping the original error
+    (detail,) = raised.value.errors()
+    assert detail["type"] == "value_error"
+    assert detail["loc"] == ("url",)
+    assert detail["msg"] == "Value error, url must use https"
+    assert type(detail["ctx"]["error"]) is ConfigurationInvalidError
+    # And a valid value should pass
+    assert SampleConfig(url="https://example.com").url == "https://example.com"
 
 
 @pytest.mark.parametrize(
