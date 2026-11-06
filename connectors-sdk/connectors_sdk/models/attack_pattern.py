@@ -59,6 +59,8 @@ class AttackPattern(BaseIdentifiedEntity):
                 for kill_chain_phase in self.kill_chain_phases or []
             ],
             allow_custom=True,
+            # Top level only, not in the OpenCTI MITRE extension: this is the format of
+            # MITRE ATT&CK STIX data, and pycti reads it before the extension.
             x_mitre_id=self.mitre_id,
             x_mitre_detection=self.mitre_detection,
             x_mitre_platforms=self.mitre_platforms,
