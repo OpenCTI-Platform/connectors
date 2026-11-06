@@ -46,9 +46,12 @@ class MontysecurityC2TrackerClient:
             return response
 
         except requests.RequestException as err:
+            # Logged as a warning, message only: the caller decides whether the
+            # failure fails the run (get_malware_list raises, and process_message
+            # logs the error once) or skips one malware file (get_ips).
             error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+            self.helper.connector_logger.warning(
+                error_msg, {"url_path": api_url, "error": str(err)}
             )
             return None
 

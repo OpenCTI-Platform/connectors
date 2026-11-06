@@ -124,6 +124,8 @@ class MontysecurityC2TrackerConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id: str | None = None
+
         try:
             # Get the current state
             now = datetime.now(timezone.utc).timestamp()
@@ -150,19 +152,18 @@ class MontysecurityC2TrackerConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
+            # Initiate the work before reading the source, so that a source
+            # failure is reported as a failed run in the connector's Works tab.
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                friendly_name,  # type: ignore
+            )
+
             # Collect intelligence and convert to STIX objects.
             entities = self._collect_intelligence()
             stix_objects = [entity.to_stix2_object() for entity in entities]
 
-            work_id: str | None = None
-
             if stix_objects:
-                # Initiate a new work
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id,
-                    friendly_name,  # type: ignore
-                )
-
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,  # type: ignore
@@ -194,8 +195,7 @@ class MontysecurityC2TrackerConnector:
                 f"storing last_run as {last_run_datetime}"
             )
 
-            if work_id:
-                self.helper.api.work.to_processed(work_id, message)
+            self.helper.api.work.to_processed(work_id, message)
 
             self.helper.connector_logger.info(message)
 
@@ -207,6 +207,8 @@ class MontysecurityC2TrackerConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         """
