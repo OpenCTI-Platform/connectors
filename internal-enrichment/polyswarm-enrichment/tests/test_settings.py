@@ -3,6 +3,7 @@
 from typing import Any
 
 import pytest
+from connectors_sdk import ConfigValidationError
 from connectors_sdk.models.enums import TLPLevel
 from polyswarm_enrichment.settings import ConnectorSettings
 
@@ -48,3 +49,50 @@ def test_settings_should_migrate_empty_deprecated_polyswarm_max_tlp_to_red():
 
     # Then: It still means no limit
     assert settings.connector.max_tlp == TLPLevel.RED
+
+
+def test_settings_should_default_network_lookup_settings():
+    # Given/When: No network lookup setting is configured
+    settings = _settings_from({})
+
+    # Then: Related files are capped at 10 and indicators need 2 detections
+    assert settings.polyswarm.network_related_files_max == 10
+    assert settings.polyswarm.network_indicator_min_detections == 2
+
+
+def test_settings_should_default_scope_to_files_and_network_observables():
+    # Given/When: No scope is configured
+    settings = _settings_from({})
+
+    # Then: Hashes and URL, domain and IP observables are all in scope
+    assert settings.connector.scope == [
+        "StixFile",
+        "Artifact",
+        "Url",
+        "Domain-Name",
+        "IPv4-Addr",
+        "IPv6-Addr",
+    ]
+
+
+def test_settings_should_read_network_lookup_settings_from_env(monkeypatch):
+    # Given: The connector is configured through environment variables
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
+    monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+    monkeypatch.setenv("POLYSWARM_NETWORK_RELATED_FILES_MAX", "0")
+    monkeypatch.setenv("POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS", "3")
+
+    # When: Settings are loaded
+    settings = ConnectorSettings()
+
+    # Then: The env values are used (0 disables related files)
+    assert settings.polyswarm.network_related_files_max == 0
+    assert settings.polyswarm.network_indicator_min_detections == 3
+
+
+def test_settings_should_reject_negative_related_files_max():
+    # Given/When/Then: A negative cap is a configuration error
+    with pytest.raises(ConfigValidationError):
+        _settings_from({"network_related_files_max": -1})

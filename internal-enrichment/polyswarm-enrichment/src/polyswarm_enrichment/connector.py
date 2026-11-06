@@ -11,12 +11,19 @@ Enriches file observables with comprehensive threat intelligence including:
 - Exploited vulnerabilities (CVEs)
 - Targeted industry sectors
 - Intrusion sets and campaigns
+
+Also enriches URL, domain and IP observables with PolySwarm URL scan
+verdicts and, for IPs and domains, related file hashes (lookup only).
 """
 
 import traceback
 from datetime import datetime, timezone
 
 from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
+from polyswarm_enrichment.client_api import (
+    NETWORK_OBSERVABLE_TYPES,
+    is_non_public_network_value,
+)
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
@@ -29,6 +36,17 @@ _TLP_MARKING_TO_NAME = {
     "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9": "TLP:AMBER+STRICT",
     "marking-definition--36218b84-3861-514a-8360-29dbdd9ba0d8": "TLP:RED",
 }
+
+# Human-readable names for network observable types in notes
+_NETWORK_KIND = {
+    "Url": "URL",
+    "Domain-Name": "domain",
+    "IPv4-Addr": "IP address",
+    "IPv6-Addr": "IP address",
+}
+
+# A URL scan older than this is flagged as stale in the note
+_STALE_SCAN_DAYS = 90
 
 
 class ConnectorTemplate:
@@ -52,6 +70,9 @@ class ConnectorTemplate:
         self.ioc_max_count = ps.ioc_max_count
         self.ioc_score = ps.ioc_score
         self.ioc_types = list(ps.ioc_types)
+        # URL, domain and IP observable lookups
+        self.network_related_files_max = ps.network_related_files_max
+        self.network_indicator_min_detections = ps.network_indicator_min_detections
 
         # Initialize client (PolySwarm SDK + polykg profile API)
         from polyswarm_enrichment.client_api import ConnectorClient
@@ -314,6 +335,115 @@ class ConnectorTemplate:
             "modified": current_time,
             "content": note_content,
             "abstract": "ℹ️ PolySwarm — Hash Not Found",
+            "created_by_ref": self.converter_to_stix.author.id,
+            "object_refs": [observable_id],
+        }
+
+    def _create_network_scan_note(
+        self, observable_id: str, observable_type: str, value: str, scan: dict
+    ) -> dict:
+        """Create a STIX Note with the PolySwarm URL scan of a URL, domain or IP."""
+        kind = _NETWORK_KIND.get(observable_type, "value")
+        community = scan.get("community", "default")
+        malicious = scan.get("malicious", 0)
+        total = scan.get("total", 0)
+        benign = scan.get("benign", 0)
+        score = scan.get("x_opencti_score")
+        scan_date_dt = scan.get("scan_date_dt")
+
+        abstract = (
+            f"PolySwarm ({community}) scan: {malicious}/{total} engines malicious"
+        )
+        score_text = (
+            f"{score}/100 (share of engines that flagged it)"
+            if score is not None
+            else "N/A (no engine verdicts)"
+        )
+
+        note_content = f"""**PolySwarm Enrichment Results**
+
+**Community:** {community}
+
+**Value:** `{value}`
+
+**Detection Summary:**
+- Malicious: {malicious}/{total}
+- Benign: {benign}/{total}
+- Score: {score_text}
+
+**Scan Date:** {scan.get("scan_date") or "N/A"}
+"""
+        if scan_date_dt:
+            age_days = (datetime.now(timezone.utc) - scan_date_dt).days
+            if age_days > _STALE_SCAN_DAYS:
+                note_content += (
+                    f"\n**Stale scan:** this scan is {age_days} days old (older than "
+                    f"{_STALE_SCAN_DAYS} days). The verdict may not reflect the "
+                    f"current state of this {kind}.\n"
+                )
+        if scan.get("window_closed") is False:
+            note_content += (
+                "\n**Scan in progress:** engines were still answering when "
+                "this result was read.\n"
+            )
+
+        permalink = scan.get("permalink")
+        if permalink:
+            note_content += f"\n**PolySwarm Analysis:**\n- {permalink}\n"
+
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        # Same stable-ID scheme as the file note: re-enrichment upserts
+        stable_content = f"polyswarm-network:{observable_id}:{community}"
+        note = {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": Note.generate_id(created=None, content=stable_content),
+            "created": current_time,
+            "modified": current_time,
+            "content": note_content,
+            "abstract": abstract,
+            "created_by_ref": self.converter_to_stix.author.id,
+            "object_refs": [observable_id],
+        }
+        if permalink:
+            note["external_references"] = [
+                self.converter_to_stix.create_scan_reference(
+                    scan, f"PolySwarm scan results ({community})"
+                )
+            ]
+        return note
+
+    def _create_network_not_found_note(
+        self, observable_id: str, observable_type: str, value: str
+    ) -> dict:
+        """Create a STIX Note saying PolySwarm has no scan for a URL, domain or IP."""
+        kind = _NETWORK_KIND.get(observable_type, "value")
+        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        note_content = f"""**PolySwarm Enrichment: No Scan Found**
+
+**Status:** PolySwarm has no scan for this {kind}.
+
+**Value:** `{value}`
+
+**What this means:**
+- PolySwarm has not scanned this exact value
+- This does NOT mean it is safe or malicious, it is simply unknown
+
+**Timestamp:** {current_time}
+"""
+
+        stable_content = f"polyswarm-not-found:{observable_id}"
+        note_id = Note.generate_id(created=None, content=stable_content)
+
+        return {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": note_id,
+            "created": current_time,
+            "modified": current_time,
+            "content": note_content,
+            "abstract": f"PolySwarm: No Scan Found for this {kind}",
             "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
@@ -775,6 +905,174 @@ class ConnectorTemplate:
             )
             return []
 
+    def _collect_network_intelligence(
+        self, observable: dict, observable_type: str, value: str, lookup: dict
+    ) -> list:
+        """Build the STIX objects for a URL, domain or IP lookup result."""
+        stix_objects = self.stix_objects_list.copy()
+        if self.converter_to_stix.author:
+            stix_objects.append(self.converter_to_stix.author)
+
+        errors = lookup.get("errors", [])
+        if errors:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] API errors detected", {"count": len(errors)}
+            )
+            stix_objects.append(self._create_error_note(observable["id"], errors))
+
+        scan = lookup.get("scan")
+        if scan:
+            stix_objects.append(
+                self._create_network_scan_note(
+                    observable["id"], observable_type, value, scan
+                )
+            )
+
+            # Score from engine detections; PolyScore is not used for URLs
+            score = scan.get("x_opencti_score")
+            if score is not None and self._should_replace_score(observable, score):
+                for i, obj in enumerate(stix_objects):
+                    if obj.get("id") == observable["id"]:
+                        enriched_obs = obj.copy()
+                        enriched_obs["x_opencti_score"] = score
+                        stix_objects[i] = enriched_obs
+                        break
+
+            if scan.get("malicious", 0) >= self.network_indicator_min_detections:
+                indicator = self.converter_to_stix.create_network_indicator(
+                    observable_type, value, scan
+                )
+                if indicator:
+                    stix_objects.append(indicator)
+                    based_on = self.converter_to_stix.create_relationship(
+                        source_id=indicator["id"],
+                        relationship_type="based-on",
+                        target_id=observable["id"],
+                        description=(
+                            "This indicator is based on the PolySwarm scan of "
+                            f"the observed {_NETWORK_KIND.get(observable_type)}"
+                        ),
+                    )
+                    if based_on:
+                        stix_objects.append(based_on)
+        elif not errors:
+            stix_objects.append(
+                self._create_network_not_found_note(
+                    observable["id"], observable_type, value
+                )
+            )
+
+        for sha256 in lookup.get("related_files", []):
+            related_file = self.converter_to_stix.create_related_file(sha256)
+            stix_objects.append(related_file)
+            relationship = self.converter_to_stix.create_relationship(
+                source_id=observable["id"],
+                relationship_type="related-to",
+                target_id=related_file["id"],
+                description=(
+                    "PolySwarm links this file to the "
+                    f"{_NETWORK_KIND.get(observable_type)} (search by IOC)"
+                ),
+            )
+            if relationship:
+                stix_objects.append(relationship)
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Network observable bundle built",
+            {
+                "scan_found": scan is not None,
+                "related_files": len(lookup.get("related_files", [])),
+                "objects": len(stix_objects),
+            },
+        )
+        return stix_objects
+
+    def _process_network_observable(
+        self, data: dict, opencti_entity: dict, observable: dict
+    ) -> str:
+        """Enrich a URL, domain or IP observable (lookup only, never upload)."""
+        observable_type = opencti_entity.get("entity_type")
+        if not self.entity_in_scope(data):
+            if not data.get("event_type"):
+                return self._send_bundle(self.stix_objects_list)
+            raise ValueError(f"Entity type {observable_type} not supported")
+
+        value = (observable.get("value") or "").strip()
+        if not value:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Observable does not contain a value",
+                {"entity_type": observable_type},
+            )
+            return "[CONNECTOR] No value found to enrich"
+
+        # Private and internal values never leave the platform
+        if is_non_public_network_value(value, observable_type):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Skipping: private or internal value is never sent to PolySwarm",
+                {"entity_type": observable_type, "value": value},
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Skipped private or internal value, nothing sent to PolySwarm"
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Enrichment starting for network observable",
+            {"entity_type": observable_type, "value": value},
+        )
+        lookup = self.client.lookup_network_observable(
+            value,
+            observable_type,
+            related_files_max=self.network_related_files_max,
+        )
+        stix_objects = self._collect_network_intelligence(
+            observable, observable_type, value, lookup
+        )
+
+        # Playbook compatibility: keep the original observable in the bundle
+        obs_ids = {obj.get("id") for obj in stix_objects}
+        if observable.get("id") and observable["id"] not in obs_ids:
+            stix_objects.insert(0, observable)
+
+        result = self._send_bundle(stix_objects)
+        score = (lookup.get("scan") or {}).get("x_opencti_score")
+        if score is not None and opencti_entity.get("id"):
+            self._update_observable_score(opencti_entity["id"], observable, score)
+        return result
+
+    def _should_replace_score(self, observable: dict, score: int) -> bool:
+        """#39 replace_with_lower_score: when False, keep a higher existing score."""
+        if self.replace_with_lower_score:
+            return True
+        existing_score = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", observable
+        )
+        if existing_score is not None and int(existing_score) > int(score):
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Keeping existing score {existing_score} "
+                f"(higher than new score {score})"
+            )
+            return False
+        return True
+
+    def _update_observable_score(
+        self, entity_id: str, observable: dict, score: int
+    ) -> None:
+        """Explicitly update the observable score (bundle import may not)."""
+        if not self._should_replace_score(observable, score):
+            return
+        try:
+            self.helper.api.stix_cyber_observable.update_field(
+                id=entity_id,
+                input={
+                    "key": "x_opencti_score",
+                    "value": str(score),
+                },
+            )
+        except Exception as score_err:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Could not update score: {score_err}"
+            )
+
     def entity_in_scope(self, data) -> bool:
         """Check if entity type is in connector scope."""
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
@@ -833,6 +1131,12 @@ class ConnectorTemplate:
                 )
                 return "Observable TLP exceeds configured max_tlp"
 
+            # URL, domain and IP observables take the lookup path
+            if opencti_entity.get("entity_type") in NETWORK_OBSERVABLE_TYPES:
+                return self._process_network_observable(
+                    data, opencti_entity, observable
+                )
+
             # Extract hash value
             hash_value = None
             if "hashes" in observable:
@@ -871,36 +1175,9 @@ class ConnectorTemplate:
                     enrichment_data = (polyswarm_data or {}).get("data") or {}
                     score = enrichment_data.get("x_opencti_score", 0)
                     if score and opencti_entity.get("id"):
-                        # #39 — replace_with_lower_score: skip update if existing
-                        # score is higher and config says don't replace.
-                        should_update = True
-                        if not self.replace_with_lower_score:
-                            existing_score = (
-                                OpenCTIConnectorHelper.get_attribute_in_extension(
-                                    "score", observable
-                                )
-                            )
-                            if existing_score is not None and int(existing_score) > int(
-                                score
-                            ):
-                                self.helper.connector_logger.info(
-                                    f"[CONNECTOR] Keeping existing score {existing_score} "
-                                    f"(higher than new score {score})"
-                                )
-                                should_update = False
-                        if should_update:
-                            try:
-                                self.helper.api.stix_cyber_observable.update_field(
-                                    id=opencti_entity["id"],
-                                    input={
-                                        "key": "x_opencti_score",
-                                        "value": str(score),
-                                    },
-                                )
-                            except Exception as score_err:
-                                self.helper.connector_logger.warning(
-                                    f"[CONNECTOR] Could not update score: {score_err}"
-                                )
+                        self._update_observable_score(
+                            opencti_entity["id"], observable, score
+                        )
                     return result
                 return "[CONNECTOR] No intelligence found or created"
             if not data.get("event_type"):

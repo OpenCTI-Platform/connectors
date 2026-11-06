@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'  # Valid UUIDv4
   type: 'INTERNAL_ENRICHMENT'
   name: 'PolySwarm Hash Enrichment'
-  scope: 'StixFile,Artifact'
+  scope: 'StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr'
   auto: true
   confidence_level: 80
   log_level: 'info'
@@ -17,6 +17,8 @@ polyswarm:
   community: 'default'        # 'default' or 'private' (enables dual-community)
   max_polling_time: 120
   # replace_with_lower_score: true  # Set false to keep higher existing scores
+  # network_related_files_max: 10        # Related file hashes per IP/domain (0 = disabled)
+  # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
 
 # Optional: polykg knowledge graph for advanced profile enrichment
 # Leave commented out to run without polykg (basic enrichment still works)

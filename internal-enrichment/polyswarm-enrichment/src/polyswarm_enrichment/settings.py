@@ -70,6 +70,24 @@ class PolySwarmConfig(BaseConfigModel):
         description="Which IOC types to create (comma-separated: ip,domain,url).",
     )
 
+    # URL, domain and IP observable lookups
+    network_related_files_max: int = Field(
+        default=10,
+        ge=0,
+        description=(
+            "Max related file hashes to import when enriching an IP or domain "
+            "observable (0 = disabled)."
+        ),
+    )
+    network_indicator_min_detections: int = Field(
+        default=2,
+        ge=1,
+        description=(
+            "Minimum malicious engine detections on a URL, domain or IP scan "
+            "before an Indicator is created."
+        ),
+    )
+
     # polykg (optional enrichment).
     # Default is empty (disabled) so an out-of-the-box deployment never
     # silently points at a staging environment. Operators who want
@@ -89,7 +107,14 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile", "Artifact"],
+        default=[
+            "StixFile",
+            "Artifact",
+            "Url",
+            "Domain-Name",
+            "IPv4-Addr",
+            "IPv6-Addr",
+        ],
         description="The scope of the connector.",
     )
     max_tlp: TLPLevel = Field(
