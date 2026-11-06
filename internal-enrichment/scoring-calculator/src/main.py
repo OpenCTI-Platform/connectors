@@ -17,7 +17,9 @@ if __name__ == "__main__":
     try:
         config = ConfigConnector()
         # playbook_compatible=True only if a bundle is sent !
-        helper = OpenCTIConnectorHelper(config=config.load, playbook_compatible=True)
+        helper = OpenCTIConnectorHelper(
+            config=config.settings.to_helper_config(), playbook_compatible=True
+        )
         api = OpenCTIApiClient(url=config.opencti_url, token=config.opencti_token)
 
         connector = ConnectorScoring(config=config, helper=helper, api=api)
