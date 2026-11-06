@@ -25,7 +25,6 @@ from connectors_sdk.models import (  # type: ignore[import-untyped]
 from stix2.v21 import IntrusionSet  # type: ignore
 
 LOG_PREFIX = "[GTIThreatActorToSTIXIntrusionSet]"
-_logger = logging.getLogger(__name__)
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
@@ -68,6 +67,7 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         organization: OrganizationAuthor,
         tlp_marking: TLPMarking,
         enable_threat_actor_aliases: bool = False,
+        logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the GTIThreatActorToSTIXIntrusionSet object.
 
@@ -76,12 +76,14 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             organization (OrganizationAuthor): The organization identity object.
             tlp_marking (TLPMarking): The TLP marking definition.
             enable_threat_actor_aliases (bool): Whether to enable importing threat actor aliases.
+            logger (logging.Logger | None): The connector logger.
 
         """
         self.threat_actor = threat_actor
         self.organization = organization
         self.tlp_marking = tlp_marking
         self.enable_threat_actor_aliases = enable_threat_actor_aliases
+        self.logger = logger or logging.getLogger(__name__)
 
     def to_stix(self) -> IntrusionSet:
         """Convert the GTI threat actor to a STIX intrusion set object.
@@ -168,8 +170,8 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
 
         return aliases if aliases else None
 
-    @staticmethod
     def _extract_seen_dates(
+        self,
         attributes: ThreatActorModel,
     ) -> tuple[datetime | None, datetime | None]:
         """Extract first_seen and last_seen dates from threat actor attributes.
@@ -181,17 +183,12 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             tuple: (first_seen, last_seen) datetime objects or None if dates don't exist
 
         """
-        first_seen = GTIThreatActorToSTIXIntrusionSet._parse_seen_date(
-            attributes.first_seen_details, "first_seen"
-        )
-        last_seen = GTIThreatActorToSTIXIntrusionSet._parse_seen_date(
-            attributes.last_seen_details, "last_seen"
-        )
+        first_seen = self._parse_seen_date(attributes.first_seen_details, "first_seen")
+        last_seen = self._parse_seen_date(attributes.last_seen_details, "last_seen")
         return first_seen, last_seen
 
-    @staticmethod
     def _parse_seen_date(
-        seen_details: list[SeenDetail] | None, field_name: str
+        self, seen_details: list[SeenDetail] | None, field_name: str
     ) -> datetime | None:
         """Parse the first seen detail value into a UTC datetime.
 
@@ -213,15 +210,15 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         try:
             seen_date = datetime.fromisoformat(value)
         except (ValueError, TypeError):
-            _logger.warning(
+            self.logger.warning(
                 "Invalid threat actor seen date, field left empty",
-                {"log_prefix": LOG_PREFIX, "field": field_name, "value": value},
+                {"prefix": LOG_PREFIX, "field": field_name, "value": value},
             )
             return None
 
         if seen_date.tzinfo is None:
             seen_date = seen_date.replace(tzinfo=timezone.utc)
-        return seen_date
+        return seen_date.astimezone(timezone.utc)
 
     def _extract_motivations(
         self, attributes: ThreatActorModel

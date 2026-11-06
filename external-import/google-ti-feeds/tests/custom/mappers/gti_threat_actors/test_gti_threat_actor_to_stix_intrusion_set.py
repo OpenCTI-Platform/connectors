@@ -2,10 +2,12 @@
 
 from datetime import datetime, timezone
 from typing import Any
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_intrusion_set import (
+    LOG_PREFIX,
     GTIThreatActorToSTIXIntrusionSet,
 )
 from connector.src.custom.models.gti.gti_threat_actor_model import (
@@ -614,6 +616,10 @@ def test_multiple_motivations(
             datetime(2024, 7, 29, 4, 0, 2, 522000, tzinfo=timezone.utc),
         ),
         ("2024-07-29T04:00:02", datetime(2024, 7, 29, 4, 0, 2, tzinfo=timezone.utc)),
+        (
+            "2024-07-29T06:00:02+02:00",
+            datetime(2024, 7, 29, 4, 0, 2, tzinfo=timezone.utc),
+        ),
     ],
 )
 def test_extract_seen_dates_parses_iso_formats(value: str, expected: datetime) -> None:
@@ -624,35 +630,32 @@ def test_extract_seen_dates_parses_iso_formats(value: str, expected: datetime) -
         last_seen_details=[SeenDetailFactory.build(value=value)],
     )
     # When extracting the seen dates
-    first_seen, last_seen = GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(
-        attributes
-    )
+    first_seen, last_seen = _when_extract_seen_dates(attributes)
     # Then both dates are parsed as UTC datetimes
     assert first_seen == expected  # noqa: S101
     assert last_seen == expected  # noqa: S101
-    assert first_seen.tzinfo is not None  # noqa: S101
+    assert first_seen.tzinfo == timezone.utc  # noqa: S101
 
 
 # Scenario: Log a warning when a seen date cannot be parsed
 @pytest.mark.order(1)
-def test_extract_seen_dates_logs_invalid_value(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_extract_seen_dates_logs_invalid_value() -> None:
     """Test that an invalid seen date is left empty and logged as a warning."""
     # Given GTI threat actor attributes with an invalid last seen date
     attributes = ThreatActorModelFactory.build(
         first_seen_details=[SeenDetailFactory.build(value="2017-12-31T00:00:00Z")],
         last_seen_details=[SeenDetailFactory.build(value="2023-13-32T25:61:61Z")],
     )
+    logger = MagicMock()
     # When extracting the seen dates
-    with caplog.at_level("WARNING"):
-        first_seen, last_seen = GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(
-            attributes
-        )
+    first_seen, last_seen = _when_extract_seen_dates(attributes, logger)
     # Then the valid date is kept, the invalid one is empty and logged
     assert first_seen == datetime(2017, 12, 31, tzinfo=timezone.utc)  # noqa: S101
     assert last_seen is None  # noqa: S101
-    assert "Invalid threat actor seen date" in caplog.text  # noqa: S101
+    logger.warning.assert_called_once_with(
+        "Invalid threat actor seen date, field left empty",
+        {"prefix": LOG_PREFIX, "field": "last_seen", "value": "2023-13-32T25:61:61Z"},
+    )
 
 
 # =====================
@@ -906,9 +909,16 @@ def _when_extract_aliases(attributes: ThreatActorModel) -> list[str] | None:
 # When extract seen dates
 def _when_extract_seen_dates(
     attributes: ThreatActorModel,
+    logger: MagicMock | None = None,
 ) -> tuple[datetime | None, datetime | None]:
     """Extract seen dates from threat actor attributes."""
-    return GTIThreatActorToSTIXIntrusionSet._extract_seen_dates(attributes)
+    mapper = GTIThreatActorToSTIXIntrusionSet(
+        GTIThreatActorDataFactory.build(attributes=attributes),
+        MagicMock(),
+        MagicMock(),
+        logger=logger or MagicMock(),
+    )
+    return mapper._extract_seen_dates(attributes)
 
 
 # When extract motivations
