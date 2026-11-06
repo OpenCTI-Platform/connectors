@@ -92,15 +92,17 @@ Other prerequisites for using this connector includes:
 | `opencti.url`<br/>`OPENCTI_URL`                                                               | Yes       | The URL of the OpenCTI platform. |
 | `opencti.token`<br/>`OPENCTI_TOKEN`                                                           | Yes       | The default admin token configured in the OpenCTI platform parameters file. |
 | `connector.id`<br/>`CONNECTOR_ID`                                                             | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector. |
-| `connector.name`<br/>`CONNECTOR_NAME`                                                         | Yes       | `Orange Cyberdefense Cyber Threat Intelligence` |
+| `connector.scope`<br/>`CONNECTOR_SCOPE`                                                       | No        | The scope of the connector. Defaults to `Orange-Cyberdefense`. |
+| `connector.duration_period`<br/>`CONNECTOR_DURATION_PERIOD`                                   | No        | ISO 8601 duration between two runs of the data ingestion process (minimum `PT1M`). Minimum recommended `PT30M`. Defaults to `PT30M`. |
+| `connector.name`<br/>`CONNECTOR_NAME`                                                         | No        | The name of the connector. Defaults to `Orange Cyberdefense Cyber Threat Intelligence`. |
 | `connector.log_level`<br/>`CONNECTOR_LOG_LEVEL`                                               | No        | Log output for the connector. Defaults to `INFO`. |
-| `ocd.import_datalake`<br/>`OCD_IMPORT_DATALAKE`                                               | Yes       | Set if you want to ingest indicators collections from the Datalake. Defaults to `true`. |
-| `ocd.import_threat_library`<br/>`OCD_IMPORT_THREAT_LIBRARY`                                   | Yes       | If `true`, at each run the latest 500 entries (Malware, Intrusion Set, Tools, Attack Patterns, Vulnerabilities, ...) from the [Datalake Threat Library](https://datalake.cert.orangecyberdefense.com/gui/threats-library) will be ingested. Defaults to `true`. |
-| `ocd.import_worldwatch`<br/>`OCD_IMPORT_WORLDWATCH`                                           | Yes       | If `true`, World Watch reports will be ingested into OpenCTI. Defaults to `true`. |
+| `ocd.import_datalake`<br/>`OCD_IMPORT_DATALAKE`                                               | No        | Set if you want to ingest indicators collections from the Datalake. Defaults to `true`. |
+| `ocd.import_threat_library`<br/>`OCD_IMPORT_THREAT_LIBRARY`                                   | No        | If `true`, at each run the latest 500 entries (Malware, Intrusion Set, Tools, Attack Patterns, Vulnerabilities, ...) from the [Datalake Threat Library](https://datalake.cert.orangecyberdefense.com/gui/threats-library) will be ingested. Defaults to `true`. |
+| `ocd.import_worldwatch`<br/>`OCD_IMPORT_WORLDWATCH`                                           | No        | If `true`, World Watch reports will be ingested into OpenCTI. Defaults to `true`. |
 | `ocd.datalake_env`<br/>`OCD_DATALAKE_ENV`                                                     | No        | ⚠️ Advanced setting* - Datalake environment to use: `prod` or `preprod`. Defaults to `prod`. |
 | `ocd.datalake_token`<br/>`OCD_DATALAKE_TOKEN`                                                 | No        | Long Term Token used to access Datalake API. Mandatory if `OCD_IMPORT_DATALAKE` or `OCD_IMPORT_THREAT_LIBRARY` set to `true`. |
 | `ocd.datalake_queries`<br/>`OCD_DATALAKE_QUERIES`                                             | No        | List of search `query_hash` for indicator's collection you want to ingest. Mandatory if `OCD_IMPORT_DATALAKE` set to `true`. |
-| ~~`ocd.create_observables`~~<br/>~~`OCD_CREATE_OBSERVABLES`~~                                 | No        | 🛑 Deprecated - Use `OCD_WORLDWATCH_START_DATE` instead. |
+| ~~`ocd.create_observables`~~<br/>~~`OCD_CREATE_OBSERVABLES`~~                                 | No        | 🛑 Deprecated - Use `OCD_DATALAKE_CREATE_OBSERVABLES` instead. |
 | `ocd.datalake_create_observables`<br/>`OCD_DATALAKE_CREATE_OBSERVABLES`                       | No        | Create observables from indicators. Defaults to `true`. |
 | ~~`ocd.ignore_unscored_indicators`~~<br/>~~`OCD_IGNORE_UNSCORED_INDICATORS`~~                 | No        | 🛑 Deprecated - Use `OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS` instead. |
 | `ocd.datalake_ignore_unscored_indicators`<br/>`OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS`       | No        | If `true`, Datalake indicators that do not have any score will NOT be imported into OpenCTI. Defaults to `true`. |
@@ -130,7 +132,7 @@ Other prerequisites for using this connector includes:
 | `ocd.worldwatch_import_indicators`<br/>`OCD_WORLDWATCH_IMPORT_INDICATORS`                     | No        | Whether to import indicators from Datalake related to imported reports. Full explanation in [this section below](#related-indicators-and-entities). Defaults to `true`. |
 | `ocd.worldwatch_import_indicators_lookback`<br/>`OCD_WORLDWATCH_IMPORT_INDICATORS_LOOKBACK`   | No        | ⚠️ Advanced setting* - How far (in seconds) to look back for indicators related to imported reports, based on their update time. Defaults to `2592000` (30 days). |
 | `ocd.worldwatch_import_threat_entities`<br/>`OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`           | No        | Whether to import objects from the Threat Library related to imported reports, such as malwares, campaigns, etc. Full explanation in [this section below](#related-indicators-and-entities). Defaults to `true`. |
-| `ocd.interval`<br/>`OCD_INTERVAL`                                                             | No        | Time interval in minutes defining the frequency of the data ingestion process. Minimum recommended `30`. Defaults to `30`. |
+| ~~`ocd.interval`~~<br/>~~`OCD_INTERVAL`~~                                                     | No        | 🛑 Deprecated - Use `CONNECTOR_DURATION_PERIOD` instead (the value in minutes is migrated automatically). |
 | `ocd.reset_state`<br/>`OCD_RESET_STATE`                                                       | No        | ⚠️ Advanced setting* - Force the use of the start date from the config instead of getting the state saved in OpenCTI. Full explanation in [this section below](#about-connector-state). Defaults to `false`. |
 
 Parameters prefixed by "⚠️ Advanced setting" are intended for users with very specific needs or developers. Do not edit these values if you're not 100% sure to understand the implications. Most of the time, default values will work just fine, so we recommend you omit these values from your configuration.
@@ -141,7 +143,7 @@ Enabled by the environment variable `OCD_IMPORT_DATALAKE`, this import type impo
 
 Notes:
 - When enabling this import type, the variables `OCD_DATALAKE_TOKEN` and `OCD_DATALAKE_QUERIES` are also required.
-- Although the import is based on a query hash, an additional filter is added to prevent overloaded queries and duplicate imports. This results in the exclusion of indicators older than n seconds, where `n = OCD_INTERVAL + 15 * 60`.
+- Although the import is based on a query hash, an additional filter is added to prevent overloaded queries and duplicate imports. This results in the exclusion of indicators older than n seconds, where `n = (CONNECTOR_DURATION_PERIOD in minutes + 15) * 60`.
   - Because of this, it make take a few days for the data to be representative.
   - This additional time constraint is only applied when the main query operator is 'AND', which is the default.
 - Parameters related to this import type (starting with `OCD_DATALAKE_`) also applies for indicators ingested by World Watch imports (see below in [this section dedicated to World Watch imports](#world-watch-import)).
