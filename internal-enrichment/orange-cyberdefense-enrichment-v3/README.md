@@ -73,8 +73,8 @@ Other prerequisites for using this connector includes:
 |-------------------------------------------------------------------------------------------|-----------|-------------|
 | `opencti.url`<br/>`OPENCTI_URL`                                                           | Yes       | The OpenCTI platform URL. |
 | `opencti.token`<br/>`OPENCTI_TOKEN`                                                       | Yes       | The OpenCTI API token of the user who represents the connector in the OpenCTI platform. |
-| `connector.id`<br/>`CONNECTOR_ID`                                                         | Yes       | A unique UUIDv4 identifier for this connector instance. |
-| `connector.auto`<br/>`CONNECTOR_AUTO`                                                     | Yes       | Whether to automatically enrich every newly created observable. Defaults to `false`. |
+| `connector.id`<br/>`CONNECTOR_ID`                                                         | No        | A unique UUIDv4 identifier for this connector instance. Defaults to a fixed UUIDv4; set a unique value for each instance. |
+| `connector.auto`<br/>`CONNECTOR_AUTO`                                                     | No        | Whether to automatically enrich every newly created observable. Defaults to `false`. |
 | `connector.name`<br/>`CONNECTOR_NAME`                                                     | No        | Name of the connector. Defaults to `Orange Cyberdefense CTI Enrichment`. |
 | `connector.scope`<br/>`CONNECTOR_SCOPE`                                                   | No        | OpenCTI observable types for which to enable the enrichment. Defaults to all supported types: `IPv4-Addr,IPv6-Addr,Domain-Name,URL,Email-Addr,Autonomous-System,X509-Certificate,Cryptocurrency-Wallet,StixFile,Phone-Number`. |
 | `connector.log_level`<br/>`CONNECTOR_LOG_LEVEL`                                           | No        | Determines the verbosity of the logs. Defaults to `info`. |
