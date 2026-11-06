@@ -1,4 +1,5 @@
 from src.services.client.api import CVEClient
+from src.services.utils.constants import MAX_CPE_PAGES_PER_CVE, MAX_CPES_PER_CVE
 
 CPE_MATCH_BASE_URL = "https://services.nvd.nist.gov/rest/json/cpematch/2.0"
 
@@ -13,7 +14,7 @@ class CPEMatchClient(CVEClient):
     async def get_cpes_for_cve(
         self, cve_id: str, request_params: dict | None = None
     ) -> list[str]:
-        """Retrieve all unique CPE names associated with a CVE.
+        """Retrieve a bounded selection of unique CPE names associated with a CVE.
 
         Calls the NVD CPE Match API with the given CVE ID, handles pagination,
         and returns a deduplicated list of CPE Name strings.
@@ -25,7 +26,11 @@ class CPEMatchClient(CVEClient):
             A deduplicated list of CPE Name strings (format cpe:2.3:...).
         """
         cpe_names: set[str] = set()
-        params: dict = {"cveId": cve_id, **(request_params or {})}
+        params: dict = {
+            **(request_params or {}),
+            "cveId": cve_id,
+            "resultsPerPage": 100,
+        }
 
         debug_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
         self.helper.connector_logger.debug(debug_msg)
@@ -56,7 +61,12 @@ class CPEMatchClient(CVEClient):
 
             start_index = results_per_page
 
-            while start_index < total_results:
+            pages_fetched = 1
+            while (
+                start_index < total_results
+                and len(cpe_names) < MAX_CPES_PER_CVE
+                and pages_fetched < MAX_CPE_PAGES_PER_CVE
+            ):
                 paginated_params = {
                     **params,
                     "startIndex": start_index,
@@ -67,6 +77,7 @@ class CPEMatchClient(CVEClient):
                 )
                 if page_data is None:
                     break
+                pages_fetched += 1
                 self._extract_cpe_names(page_data, cpe_names)
                 results_per_page = page_data.get("resultsPerPage", 0)
                 if not isinstance(results_per_page, int) or results_per_page <= 0:
@@ -77,6 +88,13 @@ class CPEMatchClient(CVEClient):
                     break
                 start_index += results_per_page
 
+            if len(cpe_names) >= MAX_CPES_PER_CVE or (
+                start_index < total_results and pages_fetched >= MAX_CPE_PAGES_PER_CVE
+            ):
+                self.helper.connector_logger.warning(
+                    f"[CPE MATCH API] Resource limit reached for {cve_id}; CPE results truncated."
+                )
+
             debug_msg = (
                 f"[CPE MATCH API] Found {len(cpe_names)} unique CPEs for {cve_id}"
             )
@@ -84,13 +102,13 @@ class CPEMatchClient(CVEClient):
 
         except Exception as err:
             warn_msg = (
-                f"[CPE MATCH API] Error fetching CPEs for {cve_id}: {str(err)}. "
+                f"[CPE MATCH API] Error fetching CPEs for {cve_id}: {err!s}. "
                 f"Continuing without CPE data."
             )
             self.helper.connector_logger.warning(warn_msg)
             return []
 
-        return list(cpe_names)
+        return sorted(cpe_names)
 
     @staticmethod
     def _extract_cpe_names(data: dict, cpe_names: set[str]) -> None:
@@ -113,4 +131,6 @@ class CPEMatchClient(CVEClient):
         for match_string in data.get("matchStrings", []):
             match_criteria = match_string.get("matchString", {})
             for match in match_criteria.get("matches", []):
+                if len(cpe_names) >= MAX_CPES_PER_CVE:
+                    return
                 add_cpe_name(match.get("cpeName"))

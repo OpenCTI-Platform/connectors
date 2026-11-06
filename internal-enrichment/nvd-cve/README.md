@@ -18,6 +18,7 @@ Instead of importing 250,000+ CVEs that may never be relevant to your environmen
 ## Configuration Variables
 
 Configuration options can be provided via `docker-compose.yml` environment variables, `.env`, or `src/config.yml`.
+Runtime environment variables take precedence over `src/.env`, then `src/config.yml`, with defaults used last. Explicit settings passed to the loader take priority over these sources.
 
 ### OpenCTI Environment Variables
 
@@ -50,17 +51,31 @@ Configuration options can be provided via `docker-compose.yml` environment varia
 | CPE History Interval | `cve.cpe_history_interval` | `CVE_CPE_HISTORY_INTERVAL` | `P120D` | No | Lookback window for CPE modifications when `import_software=true` (max 120 days). |
 | CPE Max Concurrency | `cve.cpe_max_concurrency` | `CVE_CPE_MAX_CONCURRENCY` | `10` | No | Maximum concurrent CPE resolution tasks. |
 | CVE Max Concurrency | `cve.cve_max_concurrency` | `CVE_CVE_MAX_CONCURRENCY` | `50` | No | Maximum concurrent CVE NVD lookup tasks per container. |
+| Max CVEs Per Entity | `cve.max_cves_per_entity` | `CVE_MAX_CVES_PER_ENTITY` | `100` | No | Maximum distinct CVEs per entity; values above the hard limit of 100 are capped. |
+
+Enrichment is processed and sent in chunks of at most five CVEs. Software resolution stops at 100 unique CPE names or 10 CPE Match API pages per CVE, whichever limit is reached first, and logs a warning when truncated. Each CVE creates at most 201 enrichment objects (one Vulnerability plus 100 Software objects and their relationships), plus one relationship to the source entity. These hard limits apply regardless of concurrency and history-window settings.
+
+Source markings from both the STIX and OpenCTI representations are retained on generated objects and relationships, with marking definitions included in each chunk. Enrichment is refused before querying NVD if a source marking cannot be resolved.
 
 ---
 
 ## Deployment
+
+Both Docker builds apply `src/requirements-overrides.txt` after installing the regular dependencies to upgrade setuptools to a patched version. This deliberately overrides pycti's `setuptools~=82.0.0` metadata constraint. For manual installations, apply the override last:
+
+```bash
+pip install -r src/requirements.txt
+pip install --upgrade --no-deps -r src/requirements-overrides.txt
+```
+
+Reapply the override after reinstalling dependencies. Until pycti relaxes its constraint, `pip check` will report the setuptools version conflict.
 
 ### Docker Deployment
 
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-cve-enrichment:latest .
+docker build -t opencti/connector-nvd-cve:latest .
 ```
 
 Start the connector using `docker-compose.yml`:

@@ -12,6 +12,7 @@ RUN apk --no-cache upgrade && \
 
 RUN cd /opt/opencti-connector-cve/src && \
     pip3 install --no-cache-dir -r /opt/opencti-connector-cve/src/requirements.txt && \
+    pip3 install --no-cache-dir --upgrade --no-deps -r requirements-overrides.txt && \
     apk del git build-base && \
     rm -rf /var/cache/apk/* && \
     addgroup -S appgroup && adduser -S appuser -G appgroup && \

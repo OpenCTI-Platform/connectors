@@ -1,16 +1,6 @@
 """OpenCTI CVE connector main module"""
 
-import traceback
-
-from src.connector import CVEConnector
+from runpy import run_module
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-    """
-    try:
-        connector = CVEConnector()
-        connector.run()
-    except Exception:
-        traceback.print_exc()
-        exit(1)
+    run_module("src.main", run_name="__main__")

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 from src.services.client.vulnerability import CVEVulnerability
 from src.services.converter.vulnerability_to_stix2 import CVEConverter
 from src.services.utils.rate_limiter import AsyncRateLimiter
-
 from tests.conftest import make_vulnerability
 
 

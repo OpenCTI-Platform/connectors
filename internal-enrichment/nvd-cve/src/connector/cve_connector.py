@@ -1,11 +1,15 @@
 import asyncio
 import json
+from copy import deepcopy
 from typing import Any
+from uuid import UUID
 
-from pycti import OpenCTIConnectorHelper, StixCoreRelationship
+import stix2
+from pycti import MarkingDefinition, OpenCTIConnectorHelper, StixCoreRelationship
 from src import ConfigLoader
 from src.services import CVEConverter
 from src.services.utils import extract_cves_from_entity
+from src.services.utils.constants import CVES_PER_CHUNK, MAX_CVES_PER_ENTITY
 
 CONTAINER_STIX_TYPES = {
     "report",
@@ -140,10 +144,7 @@ class CVEConnector:
             (stix_entity.get("type") or "").lower().replace("_", "-"),
             (enrichment_entity.get("entity_type") or "").lower().replace("_", "-"),
         }
-        candidates.discard("")
-        if not candidates:
-            return True
-        return bool(candidates & expanded_scope)
+        return "" not in candidates and candidates <= expanded_scope
 
     @staticmethod
     def _is_container(
@@ -198,6 +199,87 @@ class CVEConnector:
         for obj in stix_objects:
             if isinstance(obj, dict) and obj.get("id") == entity_id:
                 obj["object_refs"] = existing_refs
+
+    @staticmethod
+    def _resolve_source_markings(
+        source_entity: dict[str, Any],
+        enrichment_entity: dict[str, Any],
+        stix_objects: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Resolve every source marking before any external lookup; fail closed."""
+        definitions = {
+            obj["id"]: obj
+            for obj in stix_objects
+            if obj.get("type") == "marking-definition" and obj.get("id")
+        }
+        for marking in (
+            stix2.TLP_WHITE,
+            stix2.TLP_GREEN,
+            stix2.TLP_AMBER,
+            stix2.TLP_RED,
+        ):
+            definitions.setdefault(marking.id, json.loads(marking.serialize()))
+        strict_id = MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT")
+        definitions.setdefault(
+            strict_id,
+            {
+                "type": "marking-definition",
+                "spec_version": "2.1",
+                "id": strict_id,
+                "created": "2022-10-01T00:00:00.000Z",
+                "definition_type": "tlp",
+                "name": "TLP:AMBER+STRICT",
+                "definition": {"tlp": "amber+strict"},
+            },
+        )
+        refs = list(source_entity.get("object_marking_refs") or [])
+        for marking in enrichment_entity.get("objectMarking") or []:
+            if not isinstance(marking, dict):
+                raise TypeError("Cannot resolve source marking")
+            ref = marking.get("standard_id")
+            kind = (marking.get("definition_type") or "").lower()
+            value = marking.get("definition")
+            if kind == "tlp" and isinstance(value, str):
+                value = CVEConnector._normalize_tlp(value)
+                if value not in set(STIX_TLP_MARKING_DEFINITIONS.values()):
+                    raise ValueError("Cannot resolve unknown TLP marking")
+                canonical_ref = MarkingDefinition.generate_id("TLP", value)
+                ref = ref or canonical_ref
+                if ref not in definitions:
+                    definitions[ref] = {**definitions[canonical_ref], "id": ref}
+            elif ref not in definitions:
+                if (
+                    kind != "statement"
+                    or not isinstance(value, str)
+                    or not value.strip()
+                ):
+                    raise ValueError("Cannot resolve source marking definition")
+                ref = ref or MarkingDefinition.generate_id("statement", value)
+                definitions[ref] = {
+                    "type": "marking-definition",
+                    "spec_version": "2.1",
+                    "id": ref,
+                    "created": marking.get("created") or "1970-01-01T00:00:00.000Z",
+                    "definition_type": "statement",
+                    "definition": {"statement": value},
+                }
+            if ref not in refs:
+                refs.append(ref)
+        resolved = []
+        for ref in refs:
+            if ref not in definitions:
+                raise ValueError(f"Cannot resolve source marking {ref}")
+            try:
+                UUID(ref.removeprefix("marking-definition--"))
+            except (ValueError, AttributeError) as err:
+                raise ValueError("Invalid source marking reference") from err
+            definition = definitions[ref]
+            if not definition.get("definition"):
+                raise ValueError(f"Cannot resolve source marking definition {ref}")
+            resolved.append(definition)
+        if refs:
+            source_entity["object_marking_refs"] = refs
+        return resolved
 
     @staticmethod
     def _propagate_markings(
@@ -264,10 +346,14 @@ class CVEConnector:
         if not stix_objects:
             return []
         bundle = self.helper.stix2_create_bundle(stix_objects)
-        return self.helper.send_stix2_bundle(
+        # VC312 exception: every generated reference is resolved above, while
+        # cleanup would delete valid source refs and refs to earlier chunks.
+        return self.helper.send_stix2_bundle(  # noqa: VC312
             bundle=bundle,
             update=True,
-            cleanup_inconsistent_bundle=True,
+            # Existing source refs and refs from earlier chunks remain valid
+            # even when their objects are not repeated in the current chunk.
+            cleanup_inconsistent_bundle=False,
         )
 
     def _passthrough_if_playbook(
@@ -279,8 +365,9 @@ class CVEConnector:
 
     def process_message(self, data: dict[str, Any]) -> str:
         """Process an enrichment message from OpenCTI."""
-        stix_objects: list[dict[str, Any]] = list(data.get("stix_objects") or [])
-        stix_entity: dict[str, Any] | None = data.get("stix_entity")
+        former_bundle = data["stix_objects"] if "stix_objects" in data else []
+        stix_objects: list[dict[str, Any]] = deepcopy(former_bundle or [])
+        stix_entity: dict[str, Any] | None = deepcopy(data.get("stix_entity"))
         enrichment_entity: dict[str, Any] = data.get("enrichment_entity") or {}
         entity_id = data.get("entity_id") or (
             stix_entity.get("id") if stix_entity else None
@@ -300,9 +387,12 @@ class CVEConnector:
                 self._passthrough_if_playbook(data, stix_objects)
                 return msg
 
+            marking_definitions = self._resolve_source_markings(
+                stix_entity, enrichment_entity, stix_objects
+            )
             # 2. Check all TLP markings on the entity against max_tlp
             tlp_allowed, effective_tlp = self._check_entity_tlp(
-                enrichment_entity, stix_entity, stix_objects
+                enrichment_entity, stix_entity, stix_objects + marking_definitions
             )
             if not tlp_allowed:
                 msg = (
@@ -324,6 +414,7 @@ class CVEConnector:
                 return msg
 
             max_cves = getattr(self.config.cve, "max_cves_per_entity", 100)
+            max_cves = min(max_cves, MAX_CVES_PER_ENTITY)
             if isinstance(max_cves, int) and max_cves > 0 and len(cve_ids) > max_cves:
                 self.helper.connector_logger.warning(
                     f"[CONNECTOR] Truncating {len(cve_ids)} extracted CVEs to max_cves_per_entity={max_cves}",
@@ -336,94 +427,26 @@ class CVEConnector:
                 {"entity_id": entity_id, "cve_ids": cve_ids},
             )
 
-            # 4. Fetch NVD data and convert to STIX objects
-            enriched_objects, vulnerability_ids = asyncio.run(
-                self._async_enrich_cves(cve_ids)
-            )
-
-            if not enriched_objects:
-                msg = (
-                    f"[CONNECTOR] No NVD data or vulnerabilities produced for "
-                    f"{', '.join(cve_ids)}"
+            # Process and send bounded CVE chunks with their dependencies.
+            total_enriched = 0
+            total_bundles = 0
+            for start in range(0, len(cve_ids), CVES_PER_CHUNK):
+                count, sent = self._enrich_and_send_chunk(
+                    cve_ids[start : start + CVES_PER_CHUNK],
+                    stix_entity,
+                    enrichment_entity,
+                    stix_objects,
+                    marking_definitions,
                 )
-                self.helper.connector_logger.info(msg, {"entity_id": entity_id})
-                self._passthrough_if_playbook(data, stix_objects)
-                return msg
-
-            # Preserve markings from triggering entity on enriched objects
-            self._propagate_markings(stix_entity, enriched_objects)
-
-            author_dict = json.loads(self.converter.author.serialize())
-            is_container = self._is_container(stix_entity, enrichment_entity)
-
-            # 5. Link vulnerabilities (and any software/relationships) to the triggering entity
-            relationship_objects: list[dict[str, Any]] = []
-            if self.config.cve.create_relationships:
-                relationship_objects = self._build_entity_relationships(
-                    source_entity=stix_entity,
-                    enrichment_entity=enrichment_entity,
-                    vulnerability_ids=vulnerability_ids,
-                    author_id=author_dict["id"],
-                )
-
-            if is_container:
-                ref_ids = [
-                    obj["id"]
-                    for obj in (enriched_objects + relationship_objects)
-                    if "id" in obj
-                ]
-                self._append_container_object_refs(stix_entity, stix_objects, ref_ids)
-
-            # 6. Deduplicate and merge all objects into a single bundle.
-            # If an enriched object has the same STIX ID as an incoming object in
-            # stix_objects (e.g. direct Vulnerability enrichment), merge the NVD
-            # fields onto a copy of the incoming object so existing custom
-            # properties, labels, and markings are preserved.
-            existing_by_id: dict[str, dict[str, Any]] = {
-                obj["id"]: obj
-                for obj in stix_objects
-                if isinstance(obj, dict) and "id" in obj
-            }
-            merged_objects: list[dict[str, Any]] = []
-            seen_ids: set[str] = set()
-
-            for obj in (
-                [author_dict] + enriched_objects + relationship_objects + stix_objects
-            ):
-                if not isinstance(obj, dict):
-                    continue
-                obj_id = obj.get("id")
-                if obj_id:
-                    if obj_id in seen_ids:
-                        continue
-                    seen_ids.add(obj_id)
-                    if obj_id in existing_by_id and obj is not existing_by_id[obj_id]:
-                        base = dict(existing_by_id[obj_id])
-                        merged_markings = list(
-                            dict.fromkeys(
-                                list(base.get("object_marking_refs") or [])
-                                + list(obj.get("object_marking_refs") or [])
-                            )
-                        )
-                        base.update(obj)
-                        if merged_markings:
-                            base["object_marking_refs"] = merged_markings
-                        obj = base
-                merged_objects.append(obj)
-
-            bundles_sent = self._send_bundle(merged_objects)
+                total_enriched += count
+                total_bundles += sent
             msg = (
-                f"[CONNECTOR] Enriched {len(vulnerability_ids)} CVE(s) "
-                f"({', '.join(cve_ids)}), sent {len(bundles_sent)} bundle(s)."
+                f"[CONNECTOR] Enriched {total_enriched} CVE(s) "
+                f"({', '.join(cve_ids)}), sent {total_bundles} bundle(s)."
             )
-            self.helper.connector_logger.info(
-                msg,
-                {
-                    "entity_id": entity_id,
-                    "cve_ids": cve_ids,
-                    "bundles_sent": len(bundles_sent),
-                },
-            )
+            self.helper.connector_logger.info(msg, {"entity_id": entity_id})
+            if not total_enriched:
+                self._passthrough_if_playbook(data, stix_objects)
             return msg
 
         except Exception as err:
@@ -432,9 +455,93 @@ class CVEConnector:
             self.helper.connector_logger.error(
                 error_msg, {"entity_id": entity_id, "error": detail}
             )
-            # Ensure playbook continuity by forwarding the original bundle only for playbooks
-            self._passthrough_if_playbook(data, stix_objects)
+            self._passthrough_if_playbook(data, data.get("stix_objects") or [])
             return error_msg
+
+    def _enrich_and_send_chunk(
+        self,
+        cve_ids: list[str],
+        stix_entity: dict[str, Any],
+        enrichment_entity: dict[str, Any],
+        stix_objects: list[dict[str, Any]],
+        marking_definitions: list[dict[str, Any]],
+    ) -> tuple[int, int]:
+        # 4. Fetch NVD data and convert to STIX objects
+        enriched_objects, vulnerability_ids = asyncio.run(
+            self._async_enrich_cves(cve_ids)
+        )
+
+        if not enriched_objects:
+            return 0, 0
+
+        # Preserve markings from triggering entity on enriched objects
+        self._propagate_markings(stix_entity, enriched_objects)
+
+        author_dict = json.loads(self.converter.author.serialize())
+        is_container = self._is_container(stix_entity, enrichment_entity)
+
+        # 5. Link vulnerabilities (and any software/relationships) to the triggering entity
+        relationship_objects: list[dict[str, Any]] = []
+        if self.config.cve.create_relationships:
+            relationship_objects = self._build_entity_relationships(
+                source_entity=stix_entity,
+                enrichment_entity=enrichment_entity,
+                vulnerability_ids=vulnerability_ids,
+                author_id=author_dict["id"],
+            )
+
+        if is_container:
+            ref_ids = [
+                obj["id"]
+                for obj in (enriched_objects + relationship_objects)
+                if "id" in obj
+            ]
+            self._append_container_object_refs(stix_entity, stix_objects, ref_ids)
+
+        # 6. Deduplicate and merge all objects into a single bundle.
+        # If an enriched object has the same STIX ID as an incoming object in
+        # stix_objects (e.g. direct Vulnerability enrichment), merge the NVD
+        # fields onto a copy of the incoming object so existing custom
+        # properties, labels, and markings are preserved.
+        existing_by_id: dict[str, dict[str, Any]] = {
+            obj["id"]: obj
+            for obj in stix_objects
+            if isinstance(obj, dict) and "id" in obj
+        }
+        merged_objects: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+
+        for obj in (
+            [author_dict]
+            + marking_definitions
+            + enriched_objects
+            + relationship_objects
+            + [stix_entity]
+            + stix_objects
+        ):
+            if not isinstance(obj, dict):
+                continue
+            obj_id = obj.get("id")
+            if obj_id:
+                if obj_id in seen_ids:
+                    continue
+                seen_ids.add(obj_id)
+                if obj_id in existing_by_id and obj is not existing_by_id[obj_id]:
+                    base = dict(existing_by_id[obj_id])
+                    merged_markings = list(
+                        dict.fromkeys(
+                            list(base.get("object_marking_refs") or [])
+                            + list(obj.get("object_marking_refs") or [])
+                        )
+                    )
+                    base.update(obj)
+                    if merged_markings:
+                        base["object_marking_refs"] = merged_markings
+                    obj = base
+            merged_objects.append(obj)
+
+        bundles_sent = self._send_bundle(merged_objects)
+        return len(vulnerability_ids), len(bundles_sent)
 
     def run(self) -> None:
         """Start listening for enrichment messages from OpenCTI."""

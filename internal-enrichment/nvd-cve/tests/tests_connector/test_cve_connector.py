@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock
 from src.connector.cve_connector import CVEConnector
 from src.services.converter.vulnerability_to_stix2 import CVEConverter
 from src.services.utils.cve_extractor import extract_cve_ids, extract_cves_from_entity
-
 from tests.conftest import make_cpe_name, make_vulnerability
 
 
@@ -153,7 +152,7 @@ def test_process_message_enriches_report_container_with_nvd_data():
     assert (
         vuln_by_name["CVE-2024-3400"]["description"] == "Description of CVE-2024-3400"
     )
-    assert vuln_by_name["CVE-2024-9999"]["confidence"] == 60
+    assert "confidence" not in vuln_by_name["CVE-2024-9999"]
 
     # Verify software and 'has' relationship + 2 'related-to' container relationships
     software = [o for o in objects if o["type"] == "software"]

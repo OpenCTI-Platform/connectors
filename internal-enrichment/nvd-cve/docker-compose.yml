@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cve-enrichment:
-    image: opencti/connector-cve-enrichment:latest
+    image: opencti/connector-nvd-cve:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

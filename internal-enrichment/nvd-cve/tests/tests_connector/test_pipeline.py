@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from src.services.client.api import CVEClient
 from src.services.utils.rate_limiter import AsyncRateLimiter
-
 from tests.conftest import make_cpe_name, make_vulnerability
 
 # ---------------------------------------------------------------------------

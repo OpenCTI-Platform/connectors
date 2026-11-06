@@ -72,34 +72,26 @@ class ConfigLoader(ConfigBaseSettings):
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         env_path = Path(__file__).parents[2] / ".env"
         yaml_path = Path(__file__).parents[2] / "config.yml"
 
-        if env_path.exists():
-            return (
-                DotEnvSettingsSource(
-                    settings_cls,
-                    env_file=env_path,
-                    env_ignore_empty=True,
-                    env_file_encoding="utf-8",
-                ),
-            )
-        elif yaml_path.exists():
-            return (
-                YamlConfigSettingsSource(
-                    settings_cls,
-                    yaml_file=yaml_path,
-                    yaml_file_encoding="utf-8",
-                ),
-            )
-        else:
-            return (
-                EnvSettingsSource(
-                    settings_cls,
-                    env_ignore_empty=True,
-                ),
-            )
+        return (
+            init_settings,
+            EnvSettingsSource(settings_cls, env_ignore_empty=True),
+            DotEnvSettingsSource(
+                settings_cls,
+                env_file=env_path,
+                env_ignore_empty=True,
+                env_file_encoding="utf-8",
+            ),
+            YamlConfigSettingsSource(
+                settings_cls,
+                yaml_file=yaml_path,
+                yaml_file_encoding="utf-8",
+            ),
+            file_secret_settings,
+        )
 
     def model_dump_pycti(self) -> dict[str, Any]:
         data = self.model_dump(mode="json", context={"mode": "pycti"})
