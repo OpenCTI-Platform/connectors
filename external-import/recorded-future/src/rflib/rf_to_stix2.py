@@ -404,6 +404,9 @@ class EmailAddress(Indicator):
         )
 
 
+_HASH_TYPES_BY_LENGTH = {32: "MD5", 40: "SHA-1", 64: "SHA-256", 128: "SHA-512"}
+
+
 class FileHash(Indicator):
     """Converts Hash to File indicator and observable"""
 
@@ -415,20 +418,25 @@ class FileHash(Indicator):
 
     def _determine_algorithm(self):
         """Determine file hash algorithm from length"""
-        if len(self.name) == 64:
-            return "SHA-256"
-        elif len(self.name) == 40:
-            return "SHA-1"
-        elif len(self.name) == 32:
-            return "MD5"
+        algorithm = _HASH_TYPES_BY_LENGTH.get(len(self.name))
+        if algorithm:
+            return algorithm
+        # FileHash is shared by analyst notes, threat maps and risk lists, so the
+        # message names no feed: the caller's log gives the context
         msg = (
-            f"[ANALYST NOTES] Could not determine hash type for {self.name}. Only MD5, SHA1"
-            " and SHA256 hashes are supported"
+            f"Could not determine hash type for {self.name}. Only"
+            f" {', '.join(_HASH_TYPES_BY_LENGTH.values())} hashes are supported"
         )
         raise ConversionError(msg)
 
     def _create_pattern(self):
-        return f"[file:hashes.'{self.algorithm}' = '{self.name}']"
+        # Only quote hash keys that require it (e.g. SHA-256), so the pattern, and
+        # thus the indicator id, matches the form OpenCTI normalizes patterns to
+        if "-" in self.algorithm:
+            hash_key = f"'{self.algorithm}'"
+        else:
+            hash_key = self.algorithm
+        return f"[file:hashes.{hash_key} = '{self.name}']"
 
     def _create_obs(self):
         return stix2.File(
@@ -1336,7 +1344,20 @@ class StixNote:
                 self.helper.connector_logger.warning(msg)
                 continue
             else:
-                rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                try:
+                    rf_object = ENTITY_TYPE_MAPPER[type_](name, type_, self.author, tlp)
+                except ConversionError as err:
+                    # Skip this entity only, the rest of the note is still imported
+                    self.helper.connector_logger.warning(
+                        "[ANALYST NOTES] Skipping entity that could not be converted",
+                        meta={
+                            "note_id": note["id"],
+                            "entity": name,
+                            "type": type_,
+                            "error": str(err),
+                        },
+                    )
+                    continue
                 if type_ in [
                     "IpAddress",
                     "InternetDomainName",

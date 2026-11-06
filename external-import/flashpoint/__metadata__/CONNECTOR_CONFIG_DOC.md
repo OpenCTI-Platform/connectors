@@ -19,6 +19,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS | `boolean` |  | boolean | `false` | Whether to guess relationships between entities or not. |
 | FLASHPOINT_IMPORT_INDICATORS | `boolean` |  | boolean | `true` | Whether to import indicators of compromise (IoCs) or not. |
 | FLASHPOINT_IMPORT_EXTRACTED_CONFIG_DOMAINS_URLS | `boolean` |  | boolean | `false` | Whether to create Domain-Name and URL observables from the network endpoints of extracted malware configurations. Disabled by default: these lists can mix real C2 servers with legitimate domains (false positives). |
+| FLASHPOINT_IMPORT_INDICATOR_ATTACK_PATTERNS | `boolean` |  | boolean | `true` | Whether to import the MITRE ATT&CK techniques Flashpoint attaches to indicators. They are the technique profile of the malware family (or actor) of the indicator, so they are imported as Malware / Intrusion-Set uses Attack-Pattern, never linked to the indicator itself. |
 | FLASHPOINT_IMPORT_ALERTS | `boolean` |  | boolean | `true` | Whether to import alert data from Flashpoint or not. |
 | FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES | `boolean` |  | boolean | `false` | Whether to create alert related Channel entity and Media-Content observable or not. |
 | FLASHPOINT_IMPORT_COMMUNITIES | `boolean` |  | boolean | `false` | Whether to import community data or not. |
