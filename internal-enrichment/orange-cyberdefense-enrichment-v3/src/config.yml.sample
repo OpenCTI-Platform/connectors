@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   auto: false
   name: 'Orange Cyberdefense CTI Enrichment'
