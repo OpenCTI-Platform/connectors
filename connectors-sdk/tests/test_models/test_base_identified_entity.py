@@ -321,6 +321,16 @@ def test_deprecated_x_opencti_properties(implemented_base_identified_entity):
     }
 
 
+def test_deprecated_x_opencti_properties_renamed(implemented_base_identified_entity):
+    """Test that a renamed OpenCTI property gets the name of its x_opencti_* copy."""
+    # Given an implemented BaseIdentifiedEntity
+    entity = implemented_base_identified_entity(toto="toto")
+    # When getting the deprecated properties for a CVSS vector
+    properties = entity._deprecated_x_opencti_properties({"cvss_vector": "AV:N"})
+    # Then the x_opencti_* copy has its own name, as the platform exports it
+    assert properties == {"x_opencti_cvss_vector_string": "AV:N"}
+
+
 def test_merge_stix2_properties_merges_extensions(implemented_base_identified_entity):
     """Test that the merge combines the extensions instead of replacing them."""
     # Given properties with extensions, some with the same extension id
@@ -418,6 +428,13 @@ def test_merge_stix2_properties_accepts_same_value_twice(
                 "x_opencti_score": 1,
             },
             id="extension",
+        ),
+        pytest.param(
+            {
+                "extensions": {STIX_EXT_OCTI: {"cvss_vector": "AV:N"}},
+                "x_opencti_cvss_vector_string": "AV:N",
+            },
+            id="renamed",
         ),
         pytest.param(
             {"x_opencti_files": [], "x_opencti_create_indicator": True},
