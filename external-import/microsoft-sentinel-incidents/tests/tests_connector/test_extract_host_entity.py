@@ -1,6 +1,11 @@
 """Host entity without HostName must be skipped instead of failing conversion."""
 
+from unittest.mock import MagicMock
+
 import pytest
+import stix2
+from microsoft_sentinel_incidents_connector.converter_to_stix import ConverterToStix
+from pycti import Identity
 
 
 class TestExtractHostEntity:
@@ -38,4 +43,22 @@ class TestExtractHostEntity:
         )
         connector.converter_to_stix.create_evidence_custom_observable_hostname.assert_called_once_with(
             entity
+        )
+
+
+class TestConvertHostEntity:
+    def test_identity_system_uses_hostname(self):
+        converter = object.__new__(ConverterToStix)
+        converter.helper = MagicMock()
+        converter.tlp_marking = stix2.TLP_GREEN
+        converter.author = {"id": "identity--4f347cc9-0658-59ee-9707-134f434f9d1c"}
+
+        identity = converter.create_evidence_identity_system(
+            {"Type": "host", "HostName": "srv01"}
+        )
+
+        assert identity.name == "srv01"
+        assert identity.identity_class == "system"
+        assert identity.id == Identity.generate_id(
+            name="srv01", identity_class="system"
         )
