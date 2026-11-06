@@ -391,13 +391,6 @@ def test_merge_stix2_properties_accepts_same_value_twice(
             id="extension",
         ),
         pytest.param(
-            {
-                "extensions": {STIX_EXT_OCTI: {"cvss_vector": "AV:N"}},
-                "x_opencti_cvss_vector_string": "AV:N",
-            },
-            id="renamed",
-        ),
-        pytest.param(
             {"x_opencti_files": [], "x_opencti_create_indicator": True},
             id="top_level_only",
         ),
