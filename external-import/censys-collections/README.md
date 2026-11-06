@@ -41,7 +41,7 @@ For every asset in a collection, the connector creates:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.261023.1
+- OpenCTI Platform >= 7.261106.0
 - Censys account with API access (Organisation ID and Token) and at least one existing [Collection](https://docs.censys.com/docs/platform-collections)
 
 ## Configuration variables
