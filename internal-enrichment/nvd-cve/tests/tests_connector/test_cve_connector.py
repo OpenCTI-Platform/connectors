@@ -97,7 +97,7 @@ def test_process_message_enriches_report_container_with_nvd_data():
     connector = _make_enrichment_connector(import_software=True)
 
     # Mock NVD responses for CVE-2024-3400 (found) and CVE-2024-9999 (unmatched -> placeholder)
-    async def fake_get_vuln_by_id(cve_id: str):
+    async def fake_get_vuln_by_id(cve_id: str, *, raise_on_error: bool = False):
         if cve_id == "CVE-2024-3400":
             return make_vulnerability("CVE-2024-3400")
         return None

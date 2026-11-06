@@ -57,6 +57,8 @@ Enrichment is processed and sent in chunks of at most five CVEs. Software resolu
 
 Source markings from both the STIX and OpenCTI representations are retained on generated objects and relationships, with marking definitions included in each chunk. Enrichment is refused before querying NVD if a source marking cannot be resolved.
 
+NVD lookup and conversion errors fail the current chunk and are raised to the worker for direct enrichment events. A successful NVD response with no matching CVE can still create a placeholder when enabled. For playbooks, an error returns the last successfully sent bundle, preserving earlier chunks and their references; if no chunk succeeded, the original bundle is returned unchanged.
+
 ---
 
 ## Deployment

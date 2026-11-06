@@ -4,7 +4,7 @@ from typing import Any
 # Matches standard CVE identifiers (e.g. CVE-2024-1234, CVE-2021-44228)
 # Handles case-insensitivity and common defanging such as CVE[-]2024[-]1234 or CVE_2024_1234
 CVE_REGEX = re.compile(
-    r"\bCVE(?:\[-\]|[-_\u2010-\u2015])(\d{4})(?:\[-\]|[-_\u2010-\u2015])(\d{4,7})\b",
+    r"\bCVE(?:\[-\]|[-_\u2010-\u2015])(\d{4})(?:\[-\]|[-_\u2010-\u2015])(\d{4,})\b",
     re.IGNORECASE,
 )
 
