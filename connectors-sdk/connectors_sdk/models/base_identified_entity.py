@@ -19,6 +19,12 @@ _X_OPENCTI_TOP_LEVEL_ONLY_PROPERTIES = {
     "x_opencti_create_indicator",
     "x_opencti_create_observables",
 }
+# The OpenCTI extension properties whose x_opencti_* copy has another name
+_X_OPENCTI_RENAMED_PROPERTIES = {
+    "cvss_vector": "x_opencti_cvss_vector_string",
+    "cvss_v2_vector": "x_opencti_cvss_v2_vector_string",
+    "cvss_v4_vector": "x_opencti_cvss_v4_vector_string",
+}
 
 
 class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
@@ -150,7 +156,10 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
         This is the older format, kept for a deprecation period. This method must
         take exactly the same dict as `_custom_stix2_extensions` as argument.
         """
-        return {f"x_opencti_{key}": value for key, value in properties.items()}
+        return {
+            _X_OPENCTI_RENAMED_PROPERTIES.get(key) or f"x_opencti_{key}": value
+            for key, value in properties.items()
+        }
 
     @staticmethod
     def _merge_stix2_properties(*properties_args: dict[str, Any]) -> dict[str, Any]:
@@ -228,7 +237,10 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
             if name != "extension_type"
         }
         for extension_name, extension_value in opencti_extension_properties.items():
-            x_opencti_name = f"x_opencti_{extension_name}"
+            x_opencti_name = (
+                _X_OPENCTI_RENAMED_PROPERTIES.get(extension_name)
+                or f"x_opencti_{extension_name}"
+            )
             x_opencti_value = properties.get(x_opencti_name)
             if x_opencti_value != extension_value:
                 raise ValueError(
