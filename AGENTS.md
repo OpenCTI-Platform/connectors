@@ -48,7 +48,7 @@ the current layout, so read it before creating or restructuring a connector.
 │   └── test-requirements.txt        Starts with -r ../src/requirements.txt
 ├── config.yml.sample
 ├── docker-compose.yml
-├── Dockerfile                       Also sets the Python version used to build
+├── .build.env                       Optional: build arguments of the shared Dockerfile_alpine and Dockerfile_ubi9
 ├── Dockerfile_fips                  Optional: its presence triggers a FIPS image build
 └── README.md
 ```

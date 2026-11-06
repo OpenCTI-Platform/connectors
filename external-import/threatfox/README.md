@@ -80,7 +80,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-threatfox:latest .
+./build_alpine.sh external-import/threatfox latest
 ```
 
 Configure the connector in `docker-compose.yml`:

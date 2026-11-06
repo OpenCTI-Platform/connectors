@@ -55,12 +55,12 @@ API key.
 
 ### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example:
 
 ```shell
-docker build . -t opencti/connector-sochain:latest
+./build_alpine.sh internal-enrichment/sochain latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your

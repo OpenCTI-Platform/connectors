@@ -97,7 +97,7 @@ Below are the parameters you'll need to set for the Email Intel IMAP Connector
 1. Build the Docker image:
 
 ```bash
-docker build . -t opencti/connector-email-intel-imap:latest
+./build_alpine.sh external-import/email-intel-imap latest
 ```
 
 2. Run using Docker Compose:

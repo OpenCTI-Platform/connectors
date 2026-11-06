@@ -111,7 +111,7 @@ The connector supports multiple [ONYPHE data categories](https://search.onyphe.i
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 **Single instance (ctiscan, default behaviour):**
 

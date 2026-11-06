@@ -153,7 +153,7 @@ configuration error.
 Build:
 
 ```bash
-docker build -t opencti/connector-stairwell:latest .
+./build_alpine.sh internal-enrichment/stairwell latest
 ```
 
 Then add the service from `docker-compose.yml` to your OpenCTI deployment.

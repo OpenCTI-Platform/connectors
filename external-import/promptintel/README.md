@@ -90,7 +90,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-promptintel:latest .
+./build_alpine.sh external-import/promptintel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

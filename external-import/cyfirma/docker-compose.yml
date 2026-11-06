@@ -1,6 +1,10 @@
 services:
   connector-cyfirma:
-    build: .
+    build:
+      context: .
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "EXTERNAL_IMPORT"
     container_name: connector-cyfirma
     environment:
       # Generic parameters (connection with OpenCTI)

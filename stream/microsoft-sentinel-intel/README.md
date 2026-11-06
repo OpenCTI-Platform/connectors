@@ -99,7 +99,7 @@ Find all the configuration variables available here: [Connector Configurations](
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-microsoft-sentinel-intel:latest .
+./build_alpine.sh stream/microsoft-sentinel-intel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

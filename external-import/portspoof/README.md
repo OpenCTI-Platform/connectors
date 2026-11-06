@@ -128,7 +128,7 @@ PortSpoofPro Host:
 ### Build Image
 
 ```bash
-docker build . -t opencti/connector-portspoof:latest
+./build_alpine.sh external-import/portspoof latest
 ```
 
 ### Docker Compose

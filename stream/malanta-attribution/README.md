@@ -144,7 +144,7 @@ optimisations that stop the connector being woken for events it would discard an
 Build the image locally if needed:
 
 ```shell
-docker build . -t opencti/connector-malanta-attribution:latest
+./build_alpine.sh stream/malanta-attribution latest
 ```
 
 Set the environment variables in `docker-compose.yml`, then:

@@ -77,7 +77,7 @@ The connector fetches STIX 2.1 bundles from the DISINFOX API, enabling automated
 Build the Docker image:
 
 ```shell
-docker build . -t opencti/connector-disinfox:latest
+./build_alpine.sh external-import/disinfox latest
 ```
 
 Use the following `docker-compose.yml`:

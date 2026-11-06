@@ -153,7 +153,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-anyrun-task:latest .
+./build_alpine.sh internal-enrichment/anyrun-task latest
 ```
 
 Configure the connector in `docker-compose.yml`:

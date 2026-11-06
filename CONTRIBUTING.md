@@ -325,8 +325,7 @@ my-connector/
 ├── .dockerignore             
 ├── config.yml.sample             # Sample configuration
 ├── docker-compose.yml            # Docker Compose configuration
-├── Dockerfile                    # Container definition
-├── entrypoint.sh                 # Container entry point
+├── .build.env                    # Optional: build arguments of the shared Dockerfile_alpine
 └── README.md                     # Connector documentation
 ```
 

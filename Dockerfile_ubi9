@@ -13,6 +13,8 @@ RUN <<EOT
 EOT
 
 ENV PYTHONDONTWRITEBYTECODE=1
+# Keeps Python from buffering stdout and stderr, so that a crash still shows its logs.
+ENV PYTHONUNBUFFERED=1
 
 # Provide a dedicated HOME so tools that build per-user caches/config under "~"
 # (e.g. POST_INSTALL steps) have a valid writable location at build time and a
@@ -40,6 +42,8 @@ RUN <<EOT
     rpm -qa --qf '%{NAME}\n' | sort > /tmp/packages-before
     microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core
     pip3.12 install --no-cache-dir --requirement /opt/connector/src/requirements.txt
+    # Builds from source still leave caches under HOME (pip build isolation, cargo).
+    rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
     # POST_INSTALL is a shell command line, so it can chain commands (&&).
     if [ -n "${POST_INSTALL}" ]; then sh -c "${POST_INSTALL}"; fi
     # Make anything created under HOME at build time (e.g. POST_INSTALL caches)

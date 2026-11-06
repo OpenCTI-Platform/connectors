@@ -93,7 +93,7 @@ Configuration can be provided via environment variables or `config.yml`.
 Build the image from this connector directory before starting Compose:
 
 ```bash
-docker build -t opencti/connector-lamis-network:latest .
+./build_alpine.sh internal-enrichment/lamis-network latest
 ```
 
 ```yaml

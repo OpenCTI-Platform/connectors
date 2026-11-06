@@ -69,10 +69,10 @@ Below are the parameters you'll need to set for OpenCTI, the connector, and DShi
 
 ### Docker Deployment
 
-Build a Docker image using the provided Dockerfile:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```bash
-docker build -t opencti/connector-dshield:latest .
+./build_alpine.sh external-import/dshield latest
 ```
 
 Example `docker-compose.yml`:

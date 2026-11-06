@@ -109,7 +109,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-diode-import:latest .
+./build_alpine.sh external-import/diode-import latest
 ```
 
 #### Example: Directory consumption

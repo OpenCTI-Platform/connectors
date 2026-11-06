@@ -52,7 +52,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-disarm-framework:latest .
+./build_alpine.sh external-import/disarm-framework latest
 ```
 
 Configure the connector in `docker-compose.yml`:

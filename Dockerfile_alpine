@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1.28
+ARG PYTHON_VERSION_ALPINE=3.12
+FROM docker.io/library/python:${PYTHON_VERSION_ALPINE}-alpine
+
+# Runtime packages of the connector, under their Alpine names (set in .build.env).
+ARG EXTRA_PACKAGES_ALPINE=""
+# Packages needed only to build its Python dependencies, removed after pip install.
+ARG BUILD_PACKAGES_ALPINE=""
+
+RUN <<EOT
+    set -euxo pipefail
+
+    apk --no-cache upgrade
+    apk --no-cache add ${EXTRA_PACKAGES_ALPINE}
+    rm -f /var/log/apk.log
+EOT
+
+ENV PYTHONDONTWRITEBYTECODE=1
+# Keeps Python from buffering stdout and stderr, so that a crash still shows its logs.
+ENV PYTHONUNBUFFERED=1
+
+# Provide a dedicated HOME so tools that build per-user caches/config under "~"
+# (e.g. POST_INSTALL steps) have a valid writable location at build time and a
+# readable one at runtime for arbitrary non-root UIDs (OpenShift/Kubernetes).
+# HOME defaulting to "/" would otherwise fail with a PermissionError.
+ENV HOME=/opt/opencti-connector
+RUN mkdir -p "$HOME"
+
+ARG CONNECTOR_TYPE
+ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
+
+ARG CONNECTOR_CMD="main.py"
+ARG CONNECTOR_WORKDIR="/opt/connector/src"
+ARG POST_INSTALL=""
+
+ENV CONNECTOR_CMD=${CONNECTOR_CMD}
+
+COPY src /opt/connector/src
+
+RUN <<EOT
+    set -euxo pipefail
+
+    apk --no-cache add -t .pip_deps git ${BUILD_PACKAGES_ALPINE}
+    pip3 install --no-cache-dir --requirement /opt/connector/src/requirements.txt
+    # Builds from source still leave caches under HOME (pip build isolation, cargo).
+    rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
+    # POST_INSTALL is a shell command line, so it can chain commands (&&).
+    if [ -n "${POST_INSTALL}" ]; then sh -c "${POST_INSTALL}"; fi
+    # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
+    # world-readable so the connector can read it as an arbitrary non-root UID.
+    chmod -R a+rX "$HOME"
+    apk del .pip_deps
+    # setuptools stays: some dependencies still import distutils or pkg_resources.
+    pip3 uninstall --yes wheel pip
+    rm -f /var/log/apk.log
+EOT
+
+WORKDIR ${CONNECTOR_WORKDIR}
+
+# exec ensures python3 replaces the shell process and receives OS signals
+# (SIGTERM, SIGINT) directly as PID 1, while sh -c preserves the ${CONNECTOR_CMD}
+# variable expansion needed for per-connector overrides.
+CMD ["sh", "-c", "exec python3 ${CONNECTOR_CMD}"]

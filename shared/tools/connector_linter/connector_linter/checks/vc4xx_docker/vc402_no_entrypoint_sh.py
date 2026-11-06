@@ -47,6 +47,16 @@ _ENTRYPOINT_DIRECT_RE = re.compile(r'ENTRYPOINT\s+\[.*"python"', re.IGNORECASE)
 def check_no_entrypoint_sh(ctx: ConnectorContext) -> list[CheckFinding]:
     """Check that Dockerfile does not reference entrypoint.sh."""
     dockerfile_path = ctx.path / "Dockerfile"
+    shared_dockerfile = ctx.path.parent.parent / "Dockerfile_alpine"
+    if not dockerfile_path.is_file() and shared_dockerfile.is_file():
+        # Built from the shared Dockerfile_alpine, which runs Python directly.
+        return [
+            CheckFinding(
+                message="Built from the shared Dockerfile_alpine, no entrypoint.sh ✓",
+                severity=Severity.INFO,
+                file_path=shared_dockerfile,
+            ),
+        ]
     if not dockerfile_path.is_file():
         return [
             CheckFinding(

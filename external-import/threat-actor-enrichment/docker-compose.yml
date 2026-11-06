@@ -1,6 +1,10 @@
 services:
   connector-threat-actor-enrichment:
-    build: .
+    build:
+      context: .
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "EXTERNAL_IMPORT"
     container_name: opencti-connector-threat-actor-enrichment
     restart: unless-stopped
     environment:

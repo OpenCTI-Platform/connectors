@@ -145,7 +145,7 @@ Please ensure the connector's user has this permission assigned, in addition to 
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-microsoft-defender-intel-synchronizer:latest .
+./build_alpine.sh stream/microsoft-defender-intel-synchronizer latest
 ```
 
 Configure the connector in `docker-compose.yml`:

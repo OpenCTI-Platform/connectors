@@ -88,7 +88,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-webhook:latest .
+./build_alpine.sh stream/webhook latest
 ```
 
 Configure the connector in `docker-compose.yml`:
