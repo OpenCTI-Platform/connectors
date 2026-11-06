@@ -158,6 +158,19 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 )
 
 
+class CrowdStrikeAPIError(RuntimeError):
+    """CrowdStrike API failure that should stop the current import."""
+
+    def __init__(self, message: Any, code: Any = None) -> None:
+        self.code = code
+
+        formatted_message = str(message)
+        if code is not None:
+            formatted_message = f"{formatted_message} ({code})"
+
+        super().__init__(formatted_message)
+
+
 def paginate(func):
     """Paginate API calls."""
 
@@ -182,31 +195,9 @@ def paginate(func):
         while _next_batch(_limit, _offset, _total):
             response = func(*args, limit=_limit, offset=_offset, **kwargs)
 
-            errors = response["errors"]
-            if errors:
-                logger.error("Query completed with errors")
-                # ``errors`` may be a single dict, a list of dicts, or another
-                # shape, so normalize to a list before iterating (iterating a
-                # bare dict would yield its keys and mask the real error).
-                # FalconPy returns each error as a dict (e.g.
-                # ``{"code": 400, "message": "..."}``), not an object with
-                # ``.message`` / ``.code`` attributes; read the fields
-                # defensively and fall back to the raw error when no message is
-                # present so the underlying API error is never lost.
-                error_list = errors if isinstance(errors, (list, tuple)) else [errors]
-                for error in error_list:
-                    if isinstance(error, dict):
-                        error_message = error.get("message") or error
-                        error_code = error.get("code")
-                    else:
-                        error_message = error
-                        error_code = None
-                    logger.error("Error: %s (code: %s)", error_message, error_code)
-
-            meta = response["meta"]
-            if meta["pagination"] is not None:
-                pagination = meta["pagination"]
-
+            meta = response.get("meta") or {}
+            pagination = meta.get("pagination")
+            if pagination is not None:
                 _meta_limit = pagination["limit"]
                 _meta_offset = pagination["offset"]
                 _meta_total = pagination["total"]
@@ -221,7 +212,7 @@ def paginate(func):
                 _offset = _offset + _limit
                 _total = _meta_total
 
-            resources = response["resources"]
+            resources = response.get("resources")
 
             if resources is not None:
                 resources_count = len(resources)
@@ -233,6 +224,13 @@ def paginate(func):
                 yield resources
             else:
                 total_count = 0
+
+            if pagination is None:
+                # Without pagination metadata the next offset cannot be
+                # computed, so treat this response as the last page instead
+                # of re-querying the same offset forever.
+                logger.info("Query returned no pagination info, stopping")
+                break
 
         logger.info("Fetched %s resources in total", total_count)
 

@@ -50,6 +50,7 @@ For multi-platform deployments (multiple OpenCTI instances consuming from S3):
 - If bundle parsing fails → connector crashes → file remains in S3
 - If OpenCTI ingestion fails → connector crashes → file remains in S3
 - If deletion fails → connector crashes → prevents inconsistent state
+- If `S3_AUTHOR` is set and the author Organization cannot be created (refused, or an empty answer from the platform) → an error naming the cause is logged and the connector stops at startup; earlier versions kept running without `created_by_ref` on an empty answer
 
 This design ensures your platform team is immediately alerted when issues occur, and no data is ever silently lost.
 
