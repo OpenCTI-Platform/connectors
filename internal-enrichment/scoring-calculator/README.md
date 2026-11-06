@@ -80,15 +80,15 @@ new_score = 88
 
 ### Generic Parameters
 
-| Parameter             | Required | Description                            | Example                                |
+| Parameter             | Required | Description                            | Default                                |
 |-----------------------|----------|----------------------------------------|----------------------------------------|
-| `OPENCTI_URL`         | ✅        | URL of your OpenCTI platform           | `http://localhost`                     |
-| `OPENCTI_TOKEN`       | ✅        | OpenCTI API token                      | `ChangeMe`                             |
-| `CONNECTOR_ID`        | ✅        | Unique connector ID (UUIDv4)           | `12b22ff8-85fd-46e6-bb5f-d6c9b27e245d` |
-| `CONNECTOR_NAME`      | ✅        | Display name of the connector          | `Scoring calculator`                   |
-| `CONNECTOR_SCOPE`     | ✅        | Entity scope to enrich                 | `Indicator`                            |
-| `CONNECTOR_LOG_LEVEL` | ✅        | Log verbosity level                    | `error`                                |
-| `CONNECTOR_AUTO`      | ✅        | Auto-trigger on entity creation/update | `true`                                 |
+| `OPENCTI_URL`         | ✅        | URL of your OpenCTI platform           |                                        |
+| `OPENCTI_TOKEN`       | ✅        | OpenCTI API token                      |                                        |
+| `CONNECTOR_ID`        | ❌        | Unique connector ID (UUIDv4)           | `1f5865dc-085a-4b71-98a5-58ad6f03acf5` |
+| `CONNECTOR_NAME`      | ❌        | Display name of the connector          | `Scoring calculator`                   |
+| `CONNECTOR_SCOPE`     | ❌        | Entity scope to enrich                 | `Indicator`                            |
+| `CONNECTOR_LOG_LEVEL` | ❌        | Log verbosity level                    | `error`                                |
+| `CONNECTOR_AUTO`      | ❌        | Auto-trigger on entity creation/update | `false`                                |
 
 ### Scoring Parameters
 
