@@ -1,0 +1,11 @@
+**/logs
+**/*.gql
+**/venv
+**/.venv
+**/__pycache__/
+**/*.egg-info/
+**/config.yml
+**/.env
+**/__pycache__
+**/__metadata__
+**/__docs__

@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/nvd-cve_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "NIST NVD CVE Enrichment",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Report",
+        "Grouping",
+        "Note",
+        "Observed-Data",
+        "Opinion",
+        "Case-Incident",
+        "Case-Rfi",
+        "Case-Rft",
+        "Task",
+        "Feedback",
+        "Incident",
+        "Vulnerability"
+      ],
+      "description": "The scope of STIX entities the connector enriches (Containers and Vulnerability).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "Enables or disables automatic enrichment when an in-scope entity is ingested.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP level of the entities the connector is allowed to enrich.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CVE_BASE_URL": {
+      "default": "https://services.nvd.nist.gov/rest/json/cves",
+      "description": "URL for the CVE API.",
+      "type": "string"
+    },
+    "CVE_API_KEY": {
+      "default": "",
+      "description": "API Key for the CVE API (optional for low-volume testing, recommended for production rate limits).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CVE_CREATE_UNMATCHED_CVE": {
+      "default": true,
+      "description": "If set to `True`, create a minimal placeholder Vulnerability entity even if NVD has not published data for the extracted CVE ID yet.",
+      "type": "boolean"
+    },
+    "CVE_CREATE_RELATIONSHIPS": {
+      "default": true,
+      "description": "If set to `True`, create `related-to` / `targets` relationships when linking extracted CVEs to containers or incidents in addition to `object_refs`.",
+      "type": "boolean"
+    },
+    "CVE_IMPORT_SOFTWARE": {
+      "default": false,
+      "description": "\u26a0\ufe0f WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution. If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities.",
+      "type": "boolean"
+    },
+    "CVE_CPE_HISTORY_INTERVAL": {
+      "default": "P120D",
+      "description": "When import_software is enabled, The interval specifies how far back in time to search for CPEs that were modified within that period. This helps limit the number of CPEs resolved and imported. Maximum interval is 120 days. \u26a0\ufe0f WARNING: Null value will disable the time filter and may result in importing a very large number of CPEs. Use with caution.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CVE_CPE_MAX_CONCURRENCY": {
+      "default": 10,
+      "description": "Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CVE_CVE_MAX_CONCURRENCY": {
+      "default": 50,
+      "description": "Maximum number of concurrent CVE processing workers (bounds queued tasks and bundle sends).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CVE_MAX_CVES_PER_ENTITY": {
+      "default": 100,
+      "description": "Maximum number of distinct CVE identifiers extracted and enriched from a single entity/container.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

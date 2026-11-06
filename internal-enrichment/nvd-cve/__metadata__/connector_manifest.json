@@ -1,0 +1,27 @@
+{
+  "title": "NIST NVD CVE Enrichment",
+  "slug": "nist-nvd-cve-enrichment",
+  "description": "Internal enrichment connector that extracts CVE identifiers from Container objects (Reports, Case-Incidents, Notes, Groupings, etc.) and Vulnerability entities, creates missing Vulnerability STIX objects in OpenCTI, and enriches them on-demand with NIST NVD data (CVSS v2/v3.0/v3.1/v4.0, SSVC, CWEs, references, and optional CPE Software objects).",
+  "short_description": "Extracts CVE IDs from ingested containers/entities, creates missing Vulnerability objects, and enriches them with NIST NVD data.",
+  "logo": "internal-enrichment/nvd-cve/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Vulnerability & Exploit Awareness"
+  ],
+  "solution_categories": [
+    "Vulnerability Management"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 100,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://nvd.nist.gov/contact",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/nvd-cve",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-nvd-cve",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

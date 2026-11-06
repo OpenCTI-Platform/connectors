@@ -1,0 +1,22 @@
+FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+
+# Copy the connector
+COPY src /opt/opencti-connector-cve/src
+WORKDIR /opt/opencti-connector-cve
+
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
+
+RUN cd /opt/opencti-connector-cve/src && \
+    pip3 install --no-cache-dir -r /opt/opencti-connector-cve/src/requirements.txt && \
+    apk del git build-base && \
+    rm -rf /var/cache/apk/* && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup /opt/opencti-connector-cve
+
+USER appuser
+
+CMD ["python", "-m", "src"]
