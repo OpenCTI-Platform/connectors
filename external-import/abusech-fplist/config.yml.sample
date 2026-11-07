@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+  ssl_verify: true
+
+connector:
+  id: 'ChangeMe'  # UUID v4
+  #name: 'AbusechFplist'
+  #log_level: 'info'
+  #duration_period: 'P1D'
+
+abusech_fplist:
+  #api_base_url: 'https://hunting-api.abuse.ch/api/v1/'
+  api_key: 'ChangeMe'
+  #dry_run: true
