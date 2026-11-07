@@ -1,8 +1,8 @@
 {
   "title": "Akamai Stream Connector",
   "slug": "akamai-stream",
-  "description": "The Akamai Stream connector synchronizes IPv4 STIX Indicators from OpenCTI to an Akamai Client List. It listens to the OpenCTI live stream and automatically adds or removes IP indicators in the configured Akamai Client List, enabling near real-time enforcement of threat intelligence data.",
-  "short_description": "Akamai Stream connector synchronizes OpenCTI IPv4 indicators with an Akamai Client List via stream.",
+  "description": "The Akamai Stream connector synchronizes IP and ASN STIX Indicators from OpenCTI to dedicated Akamai Client Lists. It listens to the OpenCTI live stream and automatically adds or removes supported indicators from the configured Akamai Client Lists, enabling near real-time enforcement of threat intelligence data.",
+  "short_description": "Akamai Stream connector synchronizes OpenCTI IP and ASN indicators with Akamai Client Lists via stream.",
   "logo": "stream/akamai/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"

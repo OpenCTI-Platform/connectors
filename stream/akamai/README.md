@@ -2,17 +2,49 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Community | - | Initial IPv4 version |
+| Community | - | IPv4 and ASN support |
 
-The Akamai connector synchronizes OpenCTI IPv4 indicators with Akamai Client Lists.
+The Akamai connector synchronizes OpenCTI IP and ASN indicators with Akamai Client Lists.
 
 ## Introduction
 
-This STREAM connector listens to OpenCTI live stream and automatically updates an Akamai Client List based on IPv4 STIX Indicators.
+This STREAM connector listens to the OpenCTI live stream and automatically updates Akamai Client Lists based on IP and ASN STIX Indicators.
 
-Supported object:
+Supported objects:
 
 - IPv4 indicators
+- IPv6 indicators
+- ASN indicators
+
+For ASN indicators, the connector supports complete simple STIX patterns such as:
+
+```text
+[autonomous-system:number = 64512]
+```
+
+```text
+[autonomous-system:number = '64512']
+```
+
+```text
+[autonomous-system:number = 'AS200651']
+```
+
+The optional `AS` prefix is removed before the ASN is sent to Akamai.
+
+For example:
+
+```text
+AS200651
+```
+
+is sent to Akamai as:
+
+```text
+200651
+```
+
+Malformed or unrelated patterns are ignored.
 
 ## Requirements
 
@@ -20,6 +52,9 @@ Supported object:
 - Akamai Client List API enabled
 - EdgeGrid credentials
 - Target Client List of type IP
+- Optional Target Client List of type ASN when ASN synchronization is required
+
+Existing IPv4-only deployments do not need to configure an ASN Client List.
 
 ## Configuration variables
 
@@ -44,9 +79,13 @@ Supported object:
 | AKAMAI_CLIENT_TOKEN | Yes | EdgeGrid client token |
 | AKAMAI_CLIENT_SECRET | Yes | EdgeGrid client secret |
 | AKAMAI_ACCESS_TOKEN | Yes | EdgeGrid access token |
-| AKAMAI_CLIENT_LIST_ID | Yes | Target Client List ID |
+| AKAMAI_CLIENT_LIST_ID | Yes | Target IP Client List ID |
+| AKAMAI_ASN_CLIENT_LIST_ID | No | Optional target ASN Client List ID |
+
+When `AKAMAI_ASN_CLIENT_LIST_ID` is not configured, ASN indicators are skipped and IP synchronization continues normally.
 
 ## Deployment
 
 ```bash
 docker build -t opencti/connector-akamai-client-list:latest .
+```
