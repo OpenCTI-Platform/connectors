@@ -2,7 +2,19 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseStreamConnectorSettings,
+    ConfigValidationError,
+)
+
+
+def test_settings_should_be_stream_connector_settings():
+    """
+    Test that `ConnectorSettings` is an implementation of `BaseStreamConnectorSettings`
+    (from `connectors-sdk`), the settings base class dedicated to `STREAM` connectors.
+    """
+    assert issubclass(ConnectorSettings, BaseStreamConnectorSettings) is True
 
 
 @pytest.mark.parametrize(
