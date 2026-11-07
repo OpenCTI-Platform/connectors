@@ -1,0 +1,25 @@
+FROM filigran/alpine-python-nodejs-fips:python3.12-nodejs24
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+
+# Playwright publishes no wheel for musl. Its manylinux wheel is pure Python apart
+# from the Node.js runtime it bundles, replaced by the one of the base image, linked
+# against the system OpenSSL and its FIPS provider. The browser is Alpine's Chromium,
+# and the connector fetches every request it makes from Python, so that its own TLS
+# stack never reaches the network.
+ENV PLAYWRIGHT_NODEJS_PATH=/usr/bin/node
+ENV CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV BROWSER_FETCH_FROM_PYTHON=true
+
+WORKDIR /opt/opencti-connector-import-external-reference
+COPY src /opt/opencti-connector-import-external-reference
+
+# The fonts are the ones 'playwright install --with-deps' installs on Debian
+RUN apk --no-cache add chromium font-freefont font-ipa font-liberation font-noto-emoji font-unifont font-wqy-zenhei git && \
+    pip3 install --no-cache-dir --no-deps --only-binary=:all: --platform manylinux2014_x86_64 \
+      --target "$(python3 -c 'import sysconfig; print(sysconfig.get_path("purelib"))')" \
+      "$(grep '^playwright==' requirements.txt)" && \
+    rm "$(python3 -c 'import os, playwright; print(os.path.dirname(playwright.__file__))')/driver/node" && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git
+
+CMD ["python3", "import-external-reference.py"]
