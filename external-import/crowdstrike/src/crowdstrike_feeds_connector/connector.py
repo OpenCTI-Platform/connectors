@@ -8,18 +8,17 @@ from typing import TYPE_CHECKING, Any, cast
 
 import stix2
 import yaml
+from connectors_sdk.models import TLPMarking
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
     CrowdStrikeAPIError,
     create_organization,
-    get_tlp_string_marking_definition,
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookup,
     AttackTechniqueLookupError,
 )
-from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -66,9 +65,7 @@ class CrowdStrike:
         self.helper = helper
 
         scopes = self.config.crowdstrike.scopes
-        tlp_marking = self._convert_tlp_to_marking_definition(
-            self.config.crowdstrike.tlp
-        )
+        tlp_marking = TLPMarking(level=self.config.crowdstrike.tlp).to_stix2_object()
 
         create_observables = self.config.crowdstrike.create_observables
         create_indicators = self.config.crowdstrike.create_indicators
@@ -295,14 +292,6 @@ class CrowdStrike:
     @staticmethod
     def _get_environment_variable_name(yaml_path: list[str]) -> str:
         return "_".join(yaml_path).upper()
-
-    @classmethod
-    def _convert_tlp_to_marking_definition(
-        cls, tlp_value: str | None
-    ) -> stix2.MarkingDefinition:
-        if tlp_value is None:
-            return DEFAULT_TLP_MARKING_DEFINITION
-        return get_tlp_string_marking_definition(tlp_value)
 
     @classmethod
     def _convert_report_status_str_to_report_status_int(cls, report_status: str) -> int:

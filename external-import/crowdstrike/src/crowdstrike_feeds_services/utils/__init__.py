@@ -39,7 +39,6 @@ from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
 from .constants import (
     DEFAULT_X_OPENCTI_SCORE,
-    TLP_MARKING_DEFINITION_MAPPING,
     X_OPENCTI_ALIASES,
     X_OPENCTI_FILES,
     X_OPENCTI_LOCATION_TYPE,
@@ -242,14 +241,6 @@ def _next_batch(limit: int, offset: int, total: Optional[int]) -> bool:
     if total is None:
         return True
     return (total - offset) > 0
-
-
-def get_tlp_string_marking_definition(tlp: str) -> stix2.MarkingDefinition:
-    """Get marking definition for given TLP."""
-    marking_definition = TLP_MARKING_DEFINITION_MAPPING.get(tlp.lower())
-    if marking_definition is None:
-        raise ValueError(f"Invalid TLP value '{tlp}'")
-    return marking_definition
 
 
 def datetime_to_timestamp(datetime_value: datetime) -> int:
