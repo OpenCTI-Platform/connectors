@@ -156,6 +156,7 @@ class CrowdStrike:
                 author,
                 actor_start_timestamp,
                 tlp_marking,
+                attack_lookup=self.attack_lookup,
             )
 
             importers.append(actor_importer)
@@ -271,6 +272,7 @@ class CrowdStrike:
                 author,
                 malware_start_timestamp,
                 tlp_marking,
+                attack_lookup=self.attack_lookup,
             )
 
             importers.append(malware_importer)
