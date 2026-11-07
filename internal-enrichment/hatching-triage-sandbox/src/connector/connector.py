@@ -398,7 +398,7 @@ class HatchingTriageSandboxConnector:
                             observable["standard_id"],
                             attack_pattern.id,
                         ),
-                        relationship_type="uses",
+                        relationship_type=relationship_type,
                         created_by_ref=self.identity,
                         source_ref=observable["standard_id"],
                         target_ref=attack_pattern.id,
