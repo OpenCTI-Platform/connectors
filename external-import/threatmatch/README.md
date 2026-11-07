@@ -5,7 +5,7 @@
 | Partner Verified | -    | -       |
 
 The **ThreatMatch Connector** imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It
-authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured
+authenticates to the ThreatMatch Platform, fetches items since the last successful run (or a configured
 relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.
 
 ---
@@ -104,6 +104,15 @@ On each run (or according to `CONNECTOR_DURATION_PERIOD`):
 - **No destructive actions**: it does not delete/update items outside its scope.
 - **Error handling**: on 401 responses, the connector **refreshes the token and retries once**; other HTTP errors are
   logged and surfaced.
+- **STIX `object_refs` handling**: when profile entities (`threat-actor`, `intrusion-set`, `campaign`, `malware`, `tool`, `attack-pattern`) carry indicator references in `object_refs`, the connector creates explicit `indicator --indicates--> entity` relationships.
+- **Relationship normalization**: generic `associated-content`/`associated_content` links are normalized to `related-to` (the connector does not infer stronger semantics such as attribution from this source relation alone).
+- **TTP normalization**: labels matching ATT&CK techniques (for example `T1566.004 - Spearphishing Voice`) are converted into STIX `attack-pattern` objects, linked with `uses` from threat-actor/intrusion-set/campaign/malware/tool entities and with `indicates` from indicators, so they appear in OpenCTI TTP views.
+- **Description normalization**: HTML descriptions are converted to Markdown text and inline links are extracted into STIX `external_references`.
+- **Target geography & sector extraction**: summary footers (`Target geography: ...`, `Language: ...`, `Sectors: ...`) appended to ThreatMatch STIX descriptions are parsed into deterministic STIX `location` (Country/Region) and `identity` (Sector) entities linked via `targets` relationships, and stripped from flat `labels` along with language/placeholder tags (`Unknown`, `Global`, `All`).
+- **Indicator names**: for a simple single-value STIX equality pattern, the indicator name is set to the literal observable value (for example, a hash). ThreatMatch's contextual name is retained as the description when no source description is present; compound or unsupported patterns keep their source name.
+- **Report observables**: when a report and a referenced indicator are imported in the same run, a validated single-value STIX pattern for a SHA-256 file hash, HTTP(S) URL, email address, domain, or IPv4/IPv6 address also produces a deterministic STIX cyber-observable. The report retains its indicator reference and adds the observable reference, so both the Entities and Observables tabs have the corresponding item. Indicators without a report in the same run, unsupported patterns (including filenames and compound patterns), and unresolved references do not create observables. Report membership does not assert a sighting or a relationship between indicators.
+- **Metadata propagation**: markings and creators from source entities are propagated to derived entities and relationships created by the connector.
+- **Label merging across sources**: the same indicator can be reported by both profile exports and the TAXII IOC feed with different labels; rather than keeping only one source's labels, the connector merges all labels observed for a given indicator in a run.
 
 ---
 
