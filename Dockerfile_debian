@@ -48,6 +48,7 @@ ARG WRITABLE_DIRS=""
 
 ENV CONNECTOR_CMD=${CONNECTOR_CMD}
 
+COPY requirements.txt /opt/connector/requirements.txt
 COPY src /opt/connector/src
 
 RUN <<EOT
@@ -57,7 +58,7 @@ RUN <<EOT
     apt-get install -y --no-install-recommends python3-pip git ${BUILD_PACKAGES_DEBIAN}
     # --ignore-installed keeps every dependency under pip's control: a Python module
     # that apt installed with python3-pip would otherwise go with it below.
-    pip3 install --no-cache-dir --ignore-installed --requirement /opt/connector/src/requirements.txt
+    pip3 install --no-cache-dir --ignore-installed --requirement /opt/connector/requirements.txt
     # Builds from source still leave caches under HOME (pip build isolation, cargo).
     rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
     # POST_INSTALL is a shell command line, so it can chain commands (&&).

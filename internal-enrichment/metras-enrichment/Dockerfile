@@ -4,6 +4,7 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+COPY requirements.txt /opt/opencti-connector-metras-enrichment/requirements.txt
 COPY src /opt/opencti-connector-metras-enrichment
 
 RUN apk --no-cache upgrade && \

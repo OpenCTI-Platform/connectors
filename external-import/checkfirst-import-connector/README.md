@@ -53,7 +53,7 @@ All STIX IDs are deterministic — reruns produce no duplicates.
 
 ## Requirements
 
-- A running OpenCTI stack (platform + worker) at a version matching `pycti` in `src/requirements.txt`
+- A running OpenCTI stack (platform + worker) at a version matching `pycti` in `requirements.txt`
 - A dedicated OpenCTI token for the connector
 - Access to the Checkfirst API (URL + API key)
 
@@ -74,7 +74,7 @@ See `.env.sample` for a ready-to-use local template.
 1. Create a Python 3.12 virtualenv and install dependencies:
    ```sh
    python3.12 -m venv .venv
-   .venv/bin/pip install -r src/requirements.txt
+   .venv/bin/pip install -r requirements.txt
    ```
 
 2. Configure `.env`:

@@ -4,6 +4,7 @@ ENV CONNECTOR_TYPE=STREAM
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+COPY requirements.txt /opt/opencti-connector-metras-stream/requirements.txt
 COPY src /opt/opencti-connector-metras-stream
 
 RUN apk --no-cache upgrade && \

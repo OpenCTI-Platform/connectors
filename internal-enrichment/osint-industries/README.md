@@ -87,7 +87,7 @@ Create a `config.yml` file based on the provided `config.yml.sample`, then insta
 
 ```shell
 cd src
-pip3 install -r requirements.txt
+pip3 install -r ../requirements.txt
 python3 -m src
 ```
 

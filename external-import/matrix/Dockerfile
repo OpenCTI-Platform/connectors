@@ -61,7 +61,7 @@ RUN chmod u+x /scripts/build_and_install_libolm.sh && \
 # ``/python-libs/lib/python3.12/site-packages/`` layout as the rest of
 # the dependencies — ready to be copied over to ``/usr/local`` in the
 # runtime stage.
-COPY src/requirements.txt /tmp/requirements.txt
+COPY requirements.txt /tmp/requirements.txt
 RUN pip install --prefix=/python-libs --no-warn-script-location --no-cache-dir \
         -r /tmp/requirements.txt
 

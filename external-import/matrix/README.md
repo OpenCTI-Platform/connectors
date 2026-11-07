@@ -57,7 +57,7 @@ To use this connector you need:
 ### Requirements
 
 - OpenCTI Platform >= 6.7.0 (matches the `pycti==7.260515.0` pin in
-  `src/requirements.txt`; the `pycti` 7.x line targets the OpenCTI
+  `requirements.txt`; the `pycti` 7.x line targets the OpenCTI
   6.7+ API).
 - `libolm` (compiled by the connector's Dockerfile; if running outside
   Docker you must install it from your distribution: `libolm-dev` on
@@ -143,7 +143,7 @@ history (and re-fetch device keys) on every restart.
 3. Install the Python dependencies:
 
    ```bash
-   pip3 install -r src/requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 4. Start the connector:

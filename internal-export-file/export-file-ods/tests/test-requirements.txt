@@ -9,5 +9,5 @@
 # All four are intentionally free of ``unogenerator`` / ``pycti``
 # imports so the regression tests can run on a CI runner that does not
 # have LibreOffice installed. We therefore do *not* pull in
-# ``src/requirements.txt`` here.
+# ``requirements.txt`` here.
 pytest

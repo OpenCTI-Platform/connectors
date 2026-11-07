@@ -143,7 +143,7 @@ docker compose up -d
    extension (ABI mismatch):
 
    ```bash
-   sudo pip3 install --break-system-packages --no-cache-dir -r src/requirements.txt
+   sudo pip3 install --break-system-packages --no-cache-dir -r requirements.txt
    ```
 
 4. Start the connector with the same interpreter (`unogenerator` starts and

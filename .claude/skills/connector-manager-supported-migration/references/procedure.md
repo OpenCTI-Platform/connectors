@@ -115,7 +115,7 @@ the person who ships the branch makes sure the commits are signed.
 - Write booleans as `true`/`false`.
 - Create `.env.sample` from the docker-compose variables only when neither
   `config.yml.sample` nor `.env.sample` exists.
-- Append to `src/requirements.txt` if missing:
+- Append to `requirements.txt` if missing:
 
   ```text
   pydantic >=2.8.2, <3
@@ -352,7 +352,7 @@ Follow `templates/<type>/tests/` for layout and pins.
 `tests/test-requirements.txt`:
 
 ```text
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest==<same pin as templates/<type>/tests/test-requirements.txt>
 ```
 

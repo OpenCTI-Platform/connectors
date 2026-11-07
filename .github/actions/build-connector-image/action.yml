@@ -110,9 +110,9 @@ runs:
         find . -name pyproject.toml -exec sed -i "s|connectors-sdk.*$|${SDK_GIT}\",|" {} \;
 
         echo "✅ Dependency rewrite complete"
-        if [ -f src/requirements.txt ]; then
-          echo "--- src/requirements.txt ---"
-          grep -E 'pycti|connectors-sdk' src/requirements.txt || echo "(no matches)"
+        if [ -f requirements.txt ]; then
+          echo "--- requirements.txt ---"
+          grep -E 'pycti|connectors-sdk' requirements.txt || echo "(no matches)"
         fi
 
     - name: Pin connectors-sdk for release
@@ -135,9 +135,9 @@ runs:
           sed -i -E "s|connectors-sdk @ git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#]+#subdirectory=connectors-sdk|${SDK_GIT}|g" {} +
 
         echo "✅ connectors-sdk pinned"
-        if [ -f src/requirements.txt ]; then
-          echo "--- src/requirements.txt ---"
-          grep -E 'connectors-sdk' src/requirements.txt || echo "(no connectors-sdk ref)"
+        if [ -f requirements.txt ]; then
+          echo "--- requirements.txt ---"
+          grep -E 'connectors-sdk' requirements.txt || echo "(no connectors-sdk ref)"
         fi
 
     - name: Write connector version stamp

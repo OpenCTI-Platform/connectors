@@ -50,7 +50,7 @@ of:
 ### Requirements
 
 - OpenCTI Platform >= 6.7.0 (matches the `pycti==7.260515.0` pin in
-  `src/requirements.txt`; the `pycti` 7.x line targets the OpenCTI
+  `requirements.txt`; the `pycti` 7.x line targets the OpenCTI
   6.7+ API).
 - An Intel 471 account with API access.
 
@@ -114,7 +114,7 @@ docker compose up -d
 2. Install the Python dependencies:
 
    ```bash
-   pip3 install -r src/requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 3. Start the connector:

@@ -1,6 +1,7 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
+COPY requirements.txt /opt/opencti-connector-greedybear/requirements.txt
 COPY src /opt/opencti-connector-greedybear
 
 RUN apk --no-cache upgrade && \

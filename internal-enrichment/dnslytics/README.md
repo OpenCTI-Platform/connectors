@@ -68,7 +68,7 @@ Use the [docker-compose.yml](docker-compose.yml) and set the variables below. Ke
 
 ```bash
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

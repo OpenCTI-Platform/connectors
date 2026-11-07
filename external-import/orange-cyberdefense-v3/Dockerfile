@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy only requirements, to cache them in docker layer
 WORKDIR /opt/opencti-connector-orange-cyberdefense-v3
-COPY src/requirements.txt ./
+COPY requirements.txt ./
 
 # Install Python modules
 # hadolint ignore=DL3003

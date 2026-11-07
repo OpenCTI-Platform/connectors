@@ -104,7 +104,7 @@ docker compose up -d
 2. Install dependencies and start the connector from the connector root:
 
 ```bash
-uv run --python 3.12 --with-requirements src/requirements.txt python src/main.py
+uv run --python 3.12 --with-requirements requirements.txt python src/main.py
 ```
 
 ## Behavior

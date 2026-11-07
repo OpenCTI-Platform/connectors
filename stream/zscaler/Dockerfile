@@ -3,6 +3,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=STREAM
 
 # Copy the worker
+COPY requirements.txt /opt/opencti-connector-zscaler/requirements.txt
 COPY src /opt/opencti-connector-zscaler
 
 # Install Python modules and dependencies

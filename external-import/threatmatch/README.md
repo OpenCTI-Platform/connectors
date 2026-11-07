@@ -65,7 +65,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Minimal runtime deps
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 # For tests
 # pip install -r tests/test-requirements.txt
 

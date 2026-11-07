@@ -4,6 +4,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+COPY requirements.txt /opt/opencti-connector-metras-feed/requirements.txt
 COPY src /opt/opencti-connector-metras-feed
 
 RUN apk --no-cache upgrade && \

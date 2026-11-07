@@ -238,7 +238,7 @@ docker compose up -d
 
 ```bash
 python3.12 -m venv venv && source venv/bin/activate
-pip install -r src/requirements.txt   # or dev-requirements.txt
+pip install -r requirements.txt   # or dev-requirements.txt
 cp config.yml.sample config.yml       # edit values
 # or .env.sample .env
 python3 src/main.py

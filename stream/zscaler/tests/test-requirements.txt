@@ -1,4 +1,4 @@
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest>=7.0
 pytest-mock>=3.0
 

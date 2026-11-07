@@ -109,7 +109,7 @@ variables (especially `ChangeMe` placeholders).
 Install the Python dependencies, preferably in a virtual environment:
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Then start the connector from the `src` directory:

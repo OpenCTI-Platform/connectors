@@ -2,6 +2,7 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Copy the connector
+COPY requirements.txt /opt/opencti-connector-spur/requirements.txt
 COPY src /opt/opencti-connector-spur
 
 # Install Python modules

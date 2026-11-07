@@ -2,7 +2,7 @@
 # the same dependency set as the connector image (matches the
 # convention used by the sibling ``stream/microsoft-defender-intel``
 # tests). Without this any new runtime import added to
-# ``src/requirements.txt`` would silently fall through to the
+# ``requirements.txt`` would silently fall through to the
 # default Python environment.
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest

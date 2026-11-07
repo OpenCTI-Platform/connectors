@@ -121,7 +121,7 @@ docker compose up -d
 2. Install the Python dependencies:
 
    ```bash
-   pip3 install -r src/requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 3. Start the connector:

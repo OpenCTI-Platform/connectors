@@ -4,6 +4,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 WORKDIR /opt/opencti-connector-mokn
 
 # Copy the connector
+COPY requirements.txt /opt/opencti-connector-mokn/requirements.txt
 COPY src /opt/opencti-connector-mokn
 
 # Install Python modules

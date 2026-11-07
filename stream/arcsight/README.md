@@ -95,7 +95,7 @@ Create a `config.yml` file at the connector root from `config.yml.sample` and fi
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 
