@@ -34,6 +34,7 @@ ARG WRITABLE_DIRS=""
 
 ENV CONNECTOR_CMD=${CONNECTOR_CMD}
 
+COPY requirements.txt /opt/connector/requirements.txt
 COPY src /opt/connector/src
 
 RUN <<EOT
@@ -43,7 +44,7 @@ RUN <<EOT
     # package installed for the build is listed and removed at the end.
     rpm -qa --qf '%{NAME}\n' | sort > /tmp/packages-before
     microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core
-    pip3.12 install --no-cache-dir --requirement /opt/connector/src/requirements.txt
+    pip3.12 install --no-cache-dir --requirement /opt/connector/requirements.txt
     # Builds from source still leave caches under HOME (pip build isolation, cargo).
     rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
     # POST_INSTALL is a shell command line, so it can chain commands (&&).

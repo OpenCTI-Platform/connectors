@@ -1,4 +1,4 @@
--r ./base_connector/requirements.txt
+-r src/base_connector/requirements.txt
 imap-tools==1.16.0
 pycti==7.261109.0
 pydantic==2.14.0

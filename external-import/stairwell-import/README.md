@@ -141,7 +141,7 @@ Then add the service from `docker-compose.yml` to your OpenCTI deployment.
 
 ```bash
 cp config.yml.sample config.yml   # edit values
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python3 src/main.py
 ```
 

@@ -93,7 +93,7 @@ Create a `config.yml` from the sample, fill in your values, then:
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

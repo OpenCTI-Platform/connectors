@@ -478,7 +478,7 @@ pytest -s
 A connector has no Dockerfile of its own: its image is built from the shared
 `Dockerfile_alpine`, or from `Dockerfile_debian` when it needs glibc or Debian
 packages (Playwright, LibreOffice), and its UBI9 image from the shared
-`Dockerfile_ubi9`, all at the repository root. Each one installs `src/requirements.txt` and runs
+`Dockerfile_ubi9`, all at the repository root. Each one installs `requirements.txt` and runs
 `main.py` from the `src/` directory.
 
 **File:** `.build.env` (optional, only for values that differ from the defaults; one `KEY="value"` per line, without trailing comments)
@@ -635,8 +635,8 @@ docker compose up -d
 \```bash
 python3 -m venv venv
 source venv/bin/activate
-cd src
 pip install -r requirements.txt
+cd src
 python main.py
 \```
 

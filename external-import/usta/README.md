@@ -152,7 +152,7 @@ docker compose up --build
 ```bash
 cd src
 python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 # ..Set required env vars here..
 python main.py
 ```
@@ -165,7 +165,7 @@ Tests use `pytest` with `pytest-cov` for 95%+ code coverage.
 
 ```bash
 # From the project root:
-pip install -r src/requirements.txt -r tests/test-requirements.txt pytest-cov
+pip install -r requirements.txt -r tests/test-requirements.txt pytest-cov
 pytest --cov --cov-report=term-missing
 ```
 

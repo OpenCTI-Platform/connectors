@@ -17,7 +17,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV UV_LINK_MODE=copy
 # Create a virtual environment and install dependencies
 RUN uv venv
-RUN --mount=type=bind,source=src/requirements.txt,target=/tmp/requirements.txt \
+RUN --mount=type=bind,source=requirements.txt,target=/tmp/requirements.txt \
     --mount=type=cache,target=/root/.cache/uv \
     uv pip install -r /tmp/requirements.txt
 

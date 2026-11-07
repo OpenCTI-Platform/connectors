@@ -83,7 +83,7 @@ In `config.yml`, replace `connector.live_stream_id: 'ChangeMe'` with the dedicat
 Install dependencies and run from the `src/` directory:
 
 ```shell
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
 

@@ -141,7 +141,7 @@ networks:
 
 1. Clone the repository
 2. Copy `config.yml.sample` to `config.yml` and configure
-3. Install dependencies: `pip install -r src/requirements.txt`
+3. Install dependencies: `pip install -r requirements.txt`
 4. Run: `cd src && python main.py`
 
 ---

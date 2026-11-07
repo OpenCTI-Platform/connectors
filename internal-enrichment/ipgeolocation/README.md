@@ -94,7 +94,7 @@ Create `config.yml` from `config.yml.sample`, then install the dependencies and 
 
 ```shell
 cd src
-pip3 install -r requirements.txt
+pip3 install -r ../requirements.txt
 python3 main.py
 ```
 

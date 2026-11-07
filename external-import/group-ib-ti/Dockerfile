@@ -12,10 +12,11 @@ RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
+COPY requirements.txt /opt/connector/requirements.txt
 COPY src /opt/connector/src
 WORKDIR /opt/connector/src
 
-RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
+RUN pip3 install --no-cache-dir -r /opt/connector/requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
 RUN rm -rf /var/cache/apk/*
 

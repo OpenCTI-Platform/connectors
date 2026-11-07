@@ -19,7 +19,7 @@ RUN python -m venv /venv && \
     /venv/bin/pip install wheel
 
 # Install Python dependencies.
-COPY src/requirements.txt ./
+COPY requirements.txt ./
 RUN /venv/bin/pip install --no-cache-dir -r requirements.txt
 
 

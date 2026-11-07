@@ -108,7 +108,7 @@ docker compose up -d
 Create `config.yml` from [`config.yml.sample`](config.yml.sample) and replace the `ChangeMe` values. Then install the dependencies (preferably in a virtual environment) and start the connector from the `src` directory:
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cd src
 python3 main.py
 ```

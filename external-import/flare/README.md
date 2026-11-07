@@ -67,7 +67,7 @@ docker compose up -d
 1. Copy and configure `config.yml` from the provided `config.yml.sample`
 2. Install dependencies:
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 3. Start the connector:
 ```bash

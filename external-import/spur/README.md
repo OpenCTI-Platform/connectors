@@ -58,7 +58,7 @@ https://feeds.spur.us/v2/residential/feed.json.gz
 
 ### Docker Deployment
 
-Set the `pycti` version in `src/requirements.txt` to match your OpenCTI server version before building:
+Set the `pycti` version in `requirements.txt` to match your OpenCTI server version before building:
 
 ```text
 pycti==<your-opencti-version>
@@ -86,7 +86,7 @@ Install dependencies in a virtual environment:
 cd src
 python3 -m venv .venv
 source .venv/bin/activate
-pip3 install -r requirements.txt
+pip3 install -r ../requirements.txt
 ```
 
 Start the connector:
@@ -150,7 +150,7 @@ Common issues:
 
 ### pycti version alignment
 
-The `pycti` client library version must be compatible your OpenCTI server version. Update `src/requirements.txt` and rebuild the image when upgrading OpenCTI.
+The `pycti` client library version must be compatible your OpenCTI server version. Update `requirements.txt` and rebuild the image when upgrading OpenCTI.
 
 ### Feed access vs. Context API
 

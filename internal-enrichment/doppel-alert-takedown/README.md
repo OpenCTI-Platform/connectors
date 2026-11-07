@@ -98,7 +98,7 @@ Create a file `config.yml` based on the provided `config.yml.sample`. Replace th
 Install the required python dependencies (preferably in a virtual environment):
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Then start the connector from the `src` directory:

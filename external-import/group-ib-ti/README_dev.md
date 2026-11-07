@@ -78,7 +78,7 @@ $ grep -Ri template .
 ```sh
 $ python3 -m venv venv
 $ source ./venv/bin/activate
-$ pip3 install -r src/requirements.txt
+$ pip3 install -r requirements.txt
 $ cp config.yml.sample config.yml
 # Define the opencti url and token, as well as the connector's id
 $ vim config.yml
@@ -87,7 +87,7 @@ $ cd src && python3 main.py
 
 ## Formatting (development only)
 
-Runtime uses **`src/requirements.txt`** only. For local development and tests, install pinned tools from **`tests/test-requirements.txt`** (pytest + coverage + Black + isort + flake8 + pre-commit; line length **88** via `pyproject.toml`). Keeping them out of `src/` also keeps them out of the Docker image, which only copies `src/`.
+Runtime uses **`requirements.txt`** only. For local development and tests, install pinned tools from **`tests/test-requirements.txt`** (pytest + coverage + Black + isort + flake8 + pre-commit; line length **88** via `pyproject.toml`). Keeping them out of `src/` also keeps them out of the Docker image, which only copies `src/`.
 
 ```sh
 pip install -r tests/test-requirements.txt
@@ -119,7 +119,7 @@ The client-facing `README.md` shows a single `docker compose up -d` flow. The no
 
 ### Docker build — `pycti` pin
 
-Before building the Docker image, set the version of `pycti` in `src/requirements.txt` to match your OpenCTI server. Platform and `pycti` releases move in lockstep on the same date-based scheme, so the versions are identical: if OpenCTI is `7.260811.0`, set `pycti==7.260811.0`. Keep the `connectors-sdk` tag on the same version — it is pulled from the connectors repository at that tag. If you skip this, pip resolves the latest `pycti` and the SDK initializer may break (the SDK is tightly coupled to the platform version).
+Before building the Docker image, set the version of `pycti` in `requirements.txt` to match your OpenCTI server. Platform and `pycti` releases move in lockstep on the same date-based scheme, so the versions are identical: if OpenCTI is `7.260811.0`, set `pycti==7.260811.0`. Keep the `connectors-sdk` tag on the same version — it is pulled from the connectors repository at that tag. If you skip this, pip resolves the latest `pycti` and the SDK initializer may break (the SDK is tightly coupled to the platform version).
 
 ```bash
 docker compose up -d --build
@@ -131,7 +131,7 @@ docker compose up -d --build
 Install runtime dependencies (preferably in a virtual environment), then run the connector from `src/` and leave it running. OpenCTI uses RabbitMQ and `schedule_iso` for cadence; do **not** invoke `main.py` from cron.
 
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cd src
 python3 main.py
 ```

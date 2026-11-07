@@ -40,7 +40,7 @@ docker compose up -d
 
 ```bash
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

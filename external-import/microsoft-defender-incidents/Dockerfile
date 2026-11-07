@@ -8,7 +8,7 @@ RUN apk --no-cache upgrade && \
 
 # Copy the connector requirements and install them
 WORKDIR /opt/opencti-connector-microsoft-defender-incidents
-COPY src/requirements.txt .
+COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
 

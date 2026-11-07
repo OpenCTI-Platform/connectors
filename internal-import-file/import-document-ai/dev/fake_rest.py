@@ -9,7 +9,7 @@ from typing import Awaitable, Callable
 
 # Development server only: these packages are declared in
 # dev/dev-requirements.txt, while deptry checks the whole connector against the
-# runtime src/requirements.txt, which must not carry them.
+# runtime requirements.txt, which must not carry them.
 from cryptography import x509  # deptry: ignore[DEP003]
 from cryptography.hazmat.backends import default_backend  # deptry: ignore[DEP003]
 from cryptography.hazmat.primitives import (  # deptry: ignore[DEP003]

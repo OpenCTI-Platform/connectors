@@ -89,7 +89,7 @@ docker compose up -d
 Create a `config.yml` file from `config.yml.sample` (at the connector root) and fill in the values, then:
 
 ```shell
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
 

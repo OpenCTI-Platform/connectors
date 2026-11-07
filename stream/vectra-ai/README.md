@@ -100,7 +100,7 @@ Create a `config.yml` file at the connector root from `config.yml.sample` and
 fill in the values, then:
 
 ```shell
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
 

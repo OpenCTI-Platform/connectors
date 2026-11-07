@@ -70,7 +70,7 @@ def discover_connectors() -> dict[str, list[dict]]:
                 continue
             if (
                 not (connector_path / "Dockerfile").exists()
-                and not (connector_path / "src" / "requirements.txt").exists()
+                and not (connector_path / "requirements.txt").exists()
             ):
                 print(f"⚠️  Skipping {connector_path} — no Dockerfile")
                 continue

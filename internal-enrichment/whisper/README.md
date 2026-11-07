@@ -93,7 +93,7 @@ variables and run `docker compose up -d`.
 ### Manual Deployment
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cp config.yml.sample config.yml   # then edit config.yml
 cd src && python3 main.py
 ```

@@ -4,8 +4,8 @@
 # from the lint toolchain in `requirements-dev.txt`.
 #
 # CI's Tests job: `pip install -r tests/test-requirements.txt`.
-# Local: `pip install -r src/requirements.txt -r tests/test-requirements.txt`.
+# Local: `pip install -r requirements.txt -r tests/test-requirements.txt`.
 
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest==9.1.1
 responses==0.26.3

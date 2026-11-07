@@ -263,7 +263,7 @@ docker compose up --build
 
 ```bash
 cd src/
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 cp config.yml.sample config.yml
 # Edit config.yml — set opencti.url, opencti.token, a fresh connector.id
 # (python -c "import uuid; print(uuid.uuid4())"), datadog.token and datadog.app_key

@@ -6,6 +6,7 @@ RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev 
 
 # Copy the connector
+COPY requirements.txt /opt/abuseipdb-ipblacklist/requirements.txt
 COPY src /opt/abuseipdb-ipblacklist
 WORKDIR /opt/abuseipdb-ipblacklist
 

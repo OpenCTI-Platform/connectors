@@ -18,7 +18,7 @@ RUN apk --no-cache upgrade && \
         libxslt-dev && \
     rm -rf /var/cache/apk/*
 
-COPY src/requirements.txt /opt/opencti-connector/
+COPY requirements.txt /opt/opencti-connector/
 WORKDIR /opt/opencti-connector
 
 # The Pillow wheels bundle Brotli 1.2.0 (CVE-2026-111497) for FreeType: in the

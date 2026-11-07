@@ -1,4 +1,4 @@
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest
 pytest-mock
 requests-mock

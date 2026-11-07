@@ -4,7 +4,7 @@ WORKDIR /opt/opencti-connector-google-secops-siem
 RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
-RUN --mount=type=bind,source=src/requirements.txt,target=./requirements.txt,readonly \
+RUN --mount=type=bind,source=requirements.txt,target=./requirements.txt,readonly \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
 

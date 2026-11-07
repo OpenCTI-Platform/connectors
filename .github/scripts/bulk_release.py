@@ -123,7 +123,7 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
 
     A directory is a connector when it lives directly under a type directory,
     does not start with '.' or '_', contains a ``__metadata__/connector_manifest.json``
-    and either its own ``Dockerfile`` or a ``src/requirements.txt`` built with the
+    and either its own ``Dockerfile`` or a ``requirements.txt`` built with the
     shared ``Dockerfile_alpine``. This mirrors the CI build matrix
     (.github/scripts/build_alpine_matrix.py) so that every connector the
     pipeline can build is releasable in bulk.
@@ -140,7 +140,7 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
                 continue
             if (
                 not (connector_path / "Dockerfile").exists()
-                and not (connector_path / "src" / "requirements.txt").exists()
+                and not (connector_path / "requirements.txt").exists()
             ):
                 continue
             if not (

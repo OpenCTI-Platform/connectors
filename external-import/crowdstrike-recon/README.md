@@ -148,7 +148,7 @@ docker compose up -d
 
 ```bash
 cd src
-pip3 install -r requirements.txt
+pip3 install -r ../requirements.txt
 ```
 
 3. Start the connector from the `src` directory:

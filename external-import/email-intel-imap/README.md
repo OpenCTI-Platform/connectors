@@ -125,7 +125,7 @@ docker compose up -d
 - Minimal requirements
 
 ```bash
-  pip install -r src/requirements.txt 
+  pip install -r requirements.txt 
 ```
 
 - Tests + minimal requirements

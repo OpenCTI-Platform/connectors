@@ -152,7 +152,7 @@ services:
 ### Manual Deployment
 
 1. Clone the repository and navigate to the connector directory.
-2. Install dependencies: `pip install -r src/requirements.txt`
+2. Install dependencies: `pip install -r requirements.txt`
 3. Configure `src/config.yml` using `src/config.yml.sample`.
 4. Run: `python src/main.py`
 

@@ -40,14 +40,14 @@ the current layout, so read it before creating or restructuring a connector.
 │   ├── connector/
 │   │   ├── settings.py              Pydantic config (connectors-sdk BaseConnectorSettings)
 │   │   └── ...
-│   ├── main.py                      Entry point
-│   └── requirements.txt
+│   └── main.py                      Entry point
 ├── tests/
 │   ├── conftest.py
 │   ├── tests_connector/
-│   └── test-requirements.txt        Starts with -r ../src/requirements.txt
+│   └── test-requirements.txt        Starts with -r ../requirements.txt
 ├── config.yml.sample
 ├── docker-compose.yml
+├── requirements.txt                 Python dependencies, installed by the shared Dockerfiles
 ├── .build.env                       Optional: build arguments of the shared Dockerfile_alpine and Dockerfile_ubi9
 ├── Dockerfile_fips                  Optional: its presence triggers a FIPS image build
 └── README.md

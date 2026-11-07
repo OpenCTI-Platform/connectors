@@ -95,7 +95,7 @@ Create a `src/config.yml` file from the root `config.yml.sample` and fill in the
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 
