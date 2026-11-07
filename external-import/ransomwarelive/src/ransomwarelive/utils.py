@@ -2,7 +2,7 @@ from datetime import datetime
 
 import tldextract
 import validators
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 
 def get_group_entry(group_name: str, group_data: list[dict]) -> dict | None:
@@ -67,7 +67,12 @@ def safe_datetime(value: str | None) -> datetime | None:
         self.safe_datetime("invalid-date", "attack_date")
         > None
     """
-    return TypeAdapter(datetime).validate_python(value)
+    if value is None:
+        return None
+    try:
+        return TypeAdapter(datetime).validate_python(value)
+    except ValidationError:
+        return None
 
 
 def is_domain(value: str) -> bool:
