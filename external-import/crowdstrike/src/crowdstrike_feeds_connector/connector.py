@@ -395,12 +395,8 @@ class CrowdStrike:
         friendly_name = (
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
-        connect_id = self.helper.connect_id
-        if not connect_id:
-            raise ValueError("OpenCTI helper connect_id is not set")
-
         work_id = self.helper.api.work.initiate_work(
-            cast(str, connect_id), friendly_name
+            cast(str, self.helper.connect_id), friendly_name
         )
         work_id = cast(str, work_id)
 
