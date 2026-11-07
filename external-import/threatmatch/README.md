@@ -53,7 +53,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ```bash
 # Build
-./build_alpine.sh external-import/threatmatch latest
+./build.sh external-import/threatmatch latest
 # Or pull (when published)
 # docker pull opencti/connector-threatmatch:latest
 ```

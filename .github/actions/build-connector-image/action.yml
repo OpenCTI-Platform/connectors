@@ -223,7 +223,7 @@ runs:
         DOCKERFILE="${{ inputs.dockerfile }}"
 
         # Dockerfile: use override, else the connector's own Dockerfile, else
-        # the shared Dockerfile_alpine
+        # the shared Dockerfile_alpine or Dockerfile_debian
         SHARED="false"
         if [ -n "$VARIANT" ]; then
           SHARED="true"
@@ -232,13 +232,18 @@ runs:
           if [ -f "${CONNECTOR_PATH}/Dockerfile" ]; then
             DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
           else
-            DOCKERFILE="Dockerfile_alpine"
+            # .build.env picks the Debian image with DISTRO="debian"
+            DISTRO=""
+            if [ -f "${CONNECTOR_PATH}/.build.env" ]; then
+              DISTRO="$(sed -n 's/^DISTRO="\{0,1\}\([a-z]*\)"\{0,1\}$/\1/p' "${CONNECTOR_PATH}/.build.env")"
+            fi
+            DOCKERFILE="Dockerfile_${DISTRO:-alpine}"
             SHARED="true"
           fi
         fi
         echo "dockerfile=$DOCKERFILE" >> "$GITHUB_OUTPUT"
 
-        # Build args: auto-generate for shared Dockerfiles (Dockerfile_alpine, Dockerfile_ubi9)
+        # Build args: auto-generate for shared Dockerfiles (Dockerfile_alpine, Dockerfile_debian, Dockerfile_ubi9)
         BUILD_ARGS=""
         if [ "$SHARED" = "true" ]; then
           TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)

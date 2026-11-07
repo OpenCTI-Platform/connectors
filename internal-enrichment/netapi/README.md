@@ -71,7 +71,7 @@ Configuration comes from environment variables or from `config.yml` (see `config
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh internal-enrichment/netapi latest
+./build.sh internal-enrichment/netapi latest
 ```
 
 Set the environment variables in `docker-compose.yml` (at least `OPENCTI_URL`, `OPENCTI_TOKEN` and `CONNECTOR_ID`), then start the container:

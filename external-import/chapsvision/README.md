@@ -76,7 +76,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/chapsvision latest
+./build.sh external-import/chapsvision latest
 ```
 
 Configure the connector in `docker-compose.yml`:

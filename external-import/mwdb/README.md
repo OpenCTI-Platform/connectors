@@ -85,7 +85,7 @@ Below are the parameters you'll need to set for OpenCTI, the connector, and MWDB
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```bash
-./build_alpine.sh external-import/mwdb latest
+./build.sh external-import/mwdb latest
 ```
 
 Example `docker-compose.yml`:

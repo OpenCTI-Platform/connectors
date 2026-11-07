@@ -80,7 +80,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/backup-files latest
+./build.sh stream/backup-files latest
 ```
 
 Configure the connector in `docker-compose.yml`:

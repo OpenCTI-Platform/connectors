@@ -27,7 +27,7 @@ The API key is issued from the isMalicious dashboard (Account → Team Managemen
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 ```bash
-./build_alpine.sh internal-enrichment/ismalicious latest
+./build.sh internal-enrichment/ismalicious latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.

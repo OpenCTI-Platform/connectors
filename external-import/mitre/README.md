@@ -58,7 +58,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/mitre latest
+./build.sh external-import/mitre latest
 ```
 
 Configure the connector in `docker-compose.yml`:

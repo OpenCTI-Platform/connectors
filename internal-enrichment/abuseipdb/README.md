@@ -74,7 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh internal-enrichment/abuseipdb latest
+./build.sh internal-enrichment/abuseipdb latest
 ```
 
 Configure the connector in `docker-compose.yml`:

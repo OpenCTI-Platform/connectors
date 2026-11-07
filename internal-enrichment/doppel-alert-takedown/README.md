@@ -80,7 +80,7 @@ equal to whatever version of OpenCTI you're running.
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh internal-enrichment/doppel-alert-takedown latest
+./build.sh internal-enrichment/doppel-alert-takedown latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the

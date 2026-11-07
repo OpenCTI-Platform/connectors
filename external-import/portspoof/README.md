@@ -128,7 +128,7 @@ PortSpoofPro Host:
 ### Build Image
 
 ```bash
-./build_alpine.sh external-import/portspoof latest
+./build.sh external-import/portspoof latest
 ```
 
 ### Docker Compose

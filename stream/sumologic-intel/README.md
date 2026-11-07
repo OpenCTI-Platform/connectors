@@ -58,7 +58,7 @@ Before building the Docker container, ensure you have set the version of `pycti`
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/sumologic-intel latest
+./build.sh stream/sumologic-intel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

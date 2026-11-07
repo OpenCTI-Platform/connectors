@@ -38,7 +38,13 @@ ENV_FILE="${CONNECTOR_DIR}/.build.env"
 
 
 # Build argument list
-set -- -f "${SCRIPT_DIR}/Dockerfile_alpine"
+# The connector's .build.env picks the Debian image with DISTRO="debian"
+DISTRO="alpine"
+if [ -f "${ENV_FILE}" ]; then
+    DISTRO="$(sed -n 's/^DISTRO="\{0,1\}\([a-z]*\)"\{0,1\}$/\1/p' "${ENV_FILE}")"
+    DISTRO="${DISTRO:-alpine}"
+fi
+set -- -f "${SCRIPT_DIR}/Dockerfile_${DISTRO}"
 set -- "$@" --build-arg "CONNECTOR_TYPE=${CONNECTOR_TYPE}"
 
 # Append connector-specific overrides from env file as --build-arg flags

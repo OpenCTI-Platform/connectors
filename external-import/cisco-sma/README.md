@@ -100,7 +100,7 @@ Enable or disable specific feed categories:
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/cisco-sma latest
+./build.sh external-import/cisco-sma latest
 ```
 
 Configure the connector in `docker-compose.yml`:

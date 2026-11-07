@@ -55,7 +55,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/cybersixgill latest
+./build.sh external-import/cybersixgill latest
 ```
 
 Configure the connector in `docker-compose.yml`:

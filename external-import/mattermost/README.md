@@ -104,7 +104,7 @@ template.
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/mattermost latest
+./build.sh external-import/mattermost latest
 ```
 
 Configure the connector in `docker-compose.yml` and start it:

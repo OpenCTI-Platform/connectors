@@ -86,7 +86,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/pan-cortex-xsoar-intel latest
+./build.sh stream/pan-cortex-xsoar-intel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

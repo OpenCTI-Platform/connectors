@@ -82,7 +82,7 @@ environment variables.
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh external-import/arcsight-incidents latest
+./build.sh external-import/arcsight-incidents latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the

@@ -78,7 +78,7 @@ environment variables.
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh stream/fortiedr latest
+./build.sh stream/fortiedr latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
