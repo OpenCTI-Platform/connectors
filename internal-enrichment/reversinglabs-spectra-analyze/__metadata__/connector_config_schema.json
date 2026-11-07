@@ -99,6 +99,11 @@
       "description": "Enable cloud analysis",
       "type": "boolean"
     },
+    "REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify the SSL certificate of the Spectra Analyze appliance.",
+      "type": "boolean"
+    },
     "REVERSINGLABS_URL": {
       "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_URL instead.",
       "type": "string",
@@ -131,6 +136,12 @@
     "REVERSINGLABS_CLOUD_ANALYSIS": {
       "default": true,
       "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS instead.",
+      "type": "boolean",
+      "deprecated": true
+    },
+    "REVERSINGLABS_SSL_VERIFY": {
+      "default": true,
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY instead.",
       "type": "boolean",
       "deprecated": true
     }

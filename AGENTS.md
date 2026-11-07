@@ -237,7 +237,7 @@ Format (isort first, then black):
 
 ```bash
 uvx isort==7.0.0 --profile black --line-length 88 external-import/myconnector
-uvx black==26.5.1 external-import/myconnector
+uvx black==26.10.1 external-import/myconnector
 ```
 
 Lint:
@@ -291,20 +291,26 @@ mise run gs external-import/myconnector
 ```
 
 `gs` is the `generate_config_schema` mise task (`.mise/tasks/`); it takes the
-connector path and does not prompt. The equivalent `make` targets
+connector path and does not prompt. The `make` targets
 (`connector_config_schema`, `connectors_config_schemas`, `connector_manifest`,
 `connectors_manifests`, `global_manifest`) prompt for the connector folder
 name, so they need piped answers: `printf 'myconnector\ny\n' | make connector_config_schema`.
+The schema targets always install `connectors-sdk` from GitHub (`master`, or
+`RELEASE_REF` for `connectors_config_schemas`), so use `gs` when the change
+also touches `connectors-sdk/`.
 
-The generator installs `connectors-sdk` from GitHub `master`, which pins an
-exact pycti version. If the connector's `requirements.txt` pins an older
-pycti, dependency resolution fails and generation stops. Rebase on the latest
-`master` before regenerating.
+`gs` installs this checkout's `connectors-sdk/` (`SDK_SOURCE=local`,
+the default), so schemas pick up SDK changes that are not merged yet
+(for example the JSON schema of a settings type). CI does the same everywhere:
+the Config Schema check of pull requests and the merge queue, and the full
+regeneration of `build-manifest.yml`, which uses the SDK of the branch or tag
+commit it builds. To generate against the SDK published on GitHub instead
+(`master`, or the branch or tag set in `RELEASE_REF`), run
+`SDK_SOURCE=git mise run gs external-import/myconnector`.
 
-When the change also touches `connectors-sdk/` (for example the JSON schema of a
-settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
-SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
-`SDK_SOURCE=local mise run gs external-import/myconnector`.
+The SDK pins an exact pycti version. If the connector's `requirements.txt`
+pins an older pycti, dependency resolution fails and generation stops. Rebase
+on the latest `master` before regenerating.
 
 ## CI overview
 
@@ -317,6 +323,11 @@ connector directories changed.
 - `ci-connector-verified-linter.yml`: connector-linter on changed connectors,
   results posted as a PR comment.
 - `ci-unused-deps.yml`: deptry on changed connectors.
+- `ci-config-schema.yml`: config schema generation on changed
+  manager-supported connectors (all of them when the generation tooling or
+  `connectors-sdk/` changes), against the checked-out SDK. The generated files
+  are not compared with the committed ones.
+  `build-manifest.yml` calls it to regenerate every schema.
 - `ci-check-connector-identity-uniqueness.yml`: no two manifests share an
   identity.
 - `gh-pr-check-conventions.yml`: signed commits, linked issue, PR title format.

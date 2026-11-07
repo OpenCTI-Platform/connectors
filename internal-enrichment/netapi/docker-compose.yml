@@ -1,0 +1,23 @@
+services:
+  connector-netapi:
+    image: opencti/connector-netapi:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=NetAPI
+      # - CONNECTOR_SCOPE=Domain-Name,Hostname,Url
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=amber
+      # Custom parameters for NetAPI (no token needed)
+      # - NETAPI_API_TOKEN=ChangeMe
+      # - NETAPI_API_BASE_URL=https://netapi.com/api-json/
+      # - NETAPI_TIMEOUT=30
+      # - NETAPI_INCLUDE_RANK=true
+      # - NETAPI_UPDATE_SCORE=false
+      # - NETAPI_SCORE=80
+      # - NETAPI_TLP_LEVEL=clear
+    restart: always
