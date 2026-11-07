@@ -1,0 +1,7 @@
+anthropic==0.120.2
+pydantic>=2.8.2,<3
+# connectors-sdk pins an exact pycti version of its own (and that pin moves
+# frequently); pinning pycti here too just races it and breaks installs
+# whenever the two drift apart, so pycti's version is left to be resolved
+# transitively through connectors-sdk instead of fixed independently.
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
