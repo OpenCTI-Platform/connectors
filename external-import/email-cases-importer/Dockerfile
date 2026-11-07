@@ -6,12 +6,8 @@ ENV PYTHONUNBUFFERED=1
 RUN apk --no-cache upgrade && \
     apk add --no-cache \
         brotli-libs \
-        libmagic \
-        p7zip \
         libarchive-tools \
-        libffi \
-        libxml2 \
-        libxslt && \
+        libffi && \
     apk add --no-cache --virtual .build-deps \
         git \
         gcc \

@@ -7,13 +7,14 @@ LABEL org.opencontainers.image.description="[DEPRECATED] Group-IB connector, use
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/connector/src
 WORKDIR /opt/connector/src
 
-RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt
+RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 RUN rm -rf /var/cache/apk/*
 
 # Support arbitrary user id

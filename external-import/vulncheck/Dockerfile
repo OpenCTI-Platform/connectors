@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG PYTHON_VERSION=3.12.7
+ARG PYTHON_VERSION=3.12
 FROM python:${PYTHON_VERSION}-alpine as base
 
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
@@ -16,7 +16,7 @@ WORKDIR /app
 
 # Install dependencies
 RUN apk --no-cache upgrade && \
-  apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+  apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Install the connector as a proper package. Its packages live under src/
 # (src/ layout: connector/, vulncheck_client/), discovered via
@@ -26,7 +26,7 @@ RUN apk --no-cache upgrade && \
 COPY src ./src
 COPY pyproject.toml ./pyproject.toml
 RUN python -m pip install --no-cache-dir . && \
-  apk del git build-base && \
+  apk del git build-base libffi-dev libxml2-dev libxslt-dev && \
   rm -rf ./src ./pyproject.toml ./build
 
 # main.py is a top-level entry script (not part of an installed package), so

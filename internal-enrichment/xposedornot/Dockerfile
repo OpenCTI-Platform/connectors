@@ -18,8 +18,8 @@ WORKDIR /opt/connector
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev && \
+    apk --no-cache add git build-base libffi-dev && \
     pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 CMD ["python", "-m", "src"]
