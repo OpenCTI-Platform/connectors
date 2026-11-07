@@ -495,8 +495,8 @@ EXTRA_PACKAGES_UBI9="pango libbrotli"
 - `DISTRO`: `debian` builds the image from `Dockerfile_debian` instead of `Dockerfile_alpine`.
 - `EXTRA_PACKAGES_ALPINE`, `EXTRA_PACKAGES_DEBIAN`, `EXTRA_PACKAGES_UBI9`: runtime packages the connector needs, under the names of each distribution.
 - `BUILD_PACKAGES_ALPINE`, `BUILD_PACKAGES_DEBIAN`: packages needed only to build a Python dependency that has no wheel, removed after `pip install`.
-- `CONNECTOR_PRE_START`: a shell command run before the connector starts, such as a local service it talks to; the container stops when it fails.
 - `PYTHON_VERSION_ALPINE`: Python version of the Alpine image, `3.12` by default.
+- `DEBIAN_RELEASE`: Debian release of the Debian image, `bookworm` (Python 3.11) by default, `trixie` for Python 3.13.
 - `POST_INSTALL`: a shell command run after `pip install`.
 - `WRITABLE_DIRS`: directories the connector writes to at runtime, made writable for any UID (for instance a cache under `src/`).
 

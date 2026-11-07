@@ -31,13 +31,11 @@ ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
 
 ARG CONNECTOR_CMD="main.py"
 ARG CONNECTOR_WORKDIR="/opt/connector/src"
-ARG CONNECTOR_PRE_START=""
 ARG POST_INSTALL=""
 # Directories the connector writes to at runtime, made writable for any UID.
 ARG WRITABLE_DIRS=""
 
 ENV CONNECTOR_CMD=${CONNECTOR_CMD}
-ENV CONNECTOR_PRE_START=${CONNECTOR_PRE_START}
 
 COPY src /opt/connector/src
 
@@ -62,7 +60,7 @@ EOT
 
 WORKDIR ${CONNECTOR_WORKDIR}
 
-# CONNECTOR_PRE_START runs before the connector (e.g. a local service it talks to)
-# and stops the container when it fails. exec ensures python3 replaces the shell
-# process and receives OS signals (SIGTERM, SIGINT) directly as PID 1.
-CMD ["sh", "-c", "if [ -n \"${CONNECTOR_PRE_START}\" ]; then eval \"${CONNECTOR_PRE_START}\" || exit 1; fi; exec python3 ${CONNECTOR_CMD}"]
+# exec ensures python3 replaces the shell process and receives OS signals
+# (SIGTERM, SIGINT) directly as PID 1, while sh -c preserves the ${CONNECTOR_CMD}
+# variable expansion needed for per-connector overrides.
+CMD ["sh", "-c", "exec python3 ${CONNECTOR_CMD}"]
