@@ -133,6 +133,15 @@ configuration error.
   Bundles are sent with `update=True`, so an enrichment refreshes an existing
   observable's score and description. **Detonation data is intentionally
   excluded.**
+- **Related observables are publicly routable addresses and real host
+  names.** An IP extracted from a file or returned in a DNS answer becomes an
+  observable only when it is a public unicast address: loopback, private,
+  link-local, reserved, unspecified and multicast ones (and IPv6 outside the
+  global unicast block, `2000::/3`, or in the documentation prefix
+  `3fff::/20`) are common in malware strings and sinkholed answers. A hostname becomes a Domain-Name only when its last
+  label is a top-level domain, so an address, a version number like
+  `6.1.7601` or a file name like `kernel32.dll` does not. A DNS answer left out this way
+  stays in the DNS History Note.
 - **Objects are built with the `connectors_sdk.models`**, which validate
   them and compute OpenCTI's canonical IDs, so entities from other
   connectors merge with ours. The enriched observable keeps the ID OpenCTI
