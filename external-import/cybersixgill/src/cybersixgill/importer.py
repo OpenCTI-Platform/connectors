@@ -80,7 +80,7 @@ class IndicatorImporter:
             latest_indicator_modified,
         )
 
-        if latest_indicator_modified is None:
+        if feed_count == 0:
             return {}
 
         return self._create_pulse_state(latest_indicator_modified)

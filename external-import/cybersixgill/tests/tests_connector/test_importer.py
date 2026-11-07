@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+import pytest
 from cybersixgill.importer import IndicatorImporter, IndicatorImporterConfig
 
 
@@ -41,3 +42,10 @@ def test_run_with_an_empty_feed_leaves_the_state_unchanged():
 
     assert importer.run({"last_run": 1}, "work-id") == {}
     importer.helper.set_state.assert_not_called()
+
+
+def test_run_fails_when_the_last_indicator_has_no_modified_timestamp():
+    importer = make_importer([{"modified": "2026-11-03T10:00:01.123Z"}, {}])
+
+    with pytest.raises(TypeError):
+        importer.run({"last_run": 1}, "work-id")
