@@ -8,6 +8,7 @@ import types
 from unittest.mock import MagicMock, patch
 
 from connector.stix_builder import StixBuilder
+from pycti import OpenCTIConnectorHelper
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -62,9 +63,8 @@ class _StubHelper:
     def send_stix2_bundle(self, bundle, **kwargs):
         return ["bundle-1"]
 
-    @staticmethod
-    def check_max_tlp(markings, max_tlp):
-        return True
+    # pycti's real helper, so tests exercise its actual contract (#7955).
+    check_max_tlp = staticmethod(OpenCTIConnectorHelper.check_max_tlp)
 
 
 def _make_builder(**kw) -> StixBuilder:
