@@ -89,7 +89,7 @@ The connector ingest indicators based off of a defined "feed type" in the config
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-greynoise-feed:latest .
+./build.sh external-import/greynoise-feed latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -94,7 +94,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-alienvault:latest .
+./build.sh external-import/alienvault latest
 ```
 
 Configure the connector in `docker-compose.yml`:

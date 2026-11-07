@@ -106,7 +106,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-crowdstrike-recon:latest .
+./build.sh external-import/crowdstrike-recon latest
 ```
 
 Configure the connector in `docker-compose.yml`:

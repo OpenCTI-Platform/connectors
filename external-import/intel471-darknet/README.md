@@ -97,7 +97,7 @@ template.
 Build the Docker image from this directory:
 
 ```bash
-docker build -t opencti/connector-intel471-darknet:latest .
+./build.sh external-import/intel471-darknet latest
 ```
 
 Configure the connector in `docker-compose.yml` and start it:

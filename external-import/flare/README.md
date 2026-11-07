@@ -32,7 +32,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 ### Docker Deployment
 1. Build Docker image:
 ```bash
-docker build -t opencti/connector-flare:rolling .
+./build.sh external-import/flare latest
 ```
 2. Register connector in the **main** OpenCTI `docker-compose.yml`:
 ```yaml

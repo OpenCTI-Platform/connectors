@@ -69,10 +69,10 @@ Configuration parameters can be provided in either `config.yml` (see `config.yml
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-osint-industries:latest
+./build.sh internal-enrichment/osint-industries latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`:

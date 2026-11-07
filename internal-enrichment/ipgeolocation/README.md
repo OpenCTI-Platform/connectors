@@ -79,7 +79,7 @@ Configuration comes from environment variables or from `config.yml` (see `config
 Build the image:
 
 ```shell
-docker build . -t opencti/connector-ipgeolocation:latest
+./build.sh internal-enrichment/ipgeolocation latest
 ```
 
 Set the environment variables in `docker-compose.yml`, then start the connector:

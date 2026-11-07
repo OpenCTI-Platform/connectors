@@ -41,14 +41,20 @@ SHARED_PATHS = [
     ".github/workflows/build-connector-type.yml",
     ".github/scripts/build_alpine_matrix.py",
     "Dockerfile_ubi9",
+    "Dockerfile_alpine",
+    "Dockerfile_debian",
 ]
 
 
 def discover_connectors() -> dict[str, list[dict]]:
     """Discover all connector directories, grouped by type.
 
+    A connector without its own Dockerfile is built from the shared
+    Dockerfile_alpine, or Dockerfile_debian when its .build.env sets
+    DISTRO="debian", with the build arguments of its .build.env.
+
     Build variants are detected from the filesystem:
-      - FIPS: presence of Dockerfile_fips alongside Dockerfile
+      - FIPS: presence of Dockerfile_fips
     """
     by_type: dict[str, list[dict]] = {t: [] for t in CONNECTOR_TYPE_DIRS}
 
@@ -62,7 +68,10 @@ def discover_connectors() -> dict[str, list[dict]]:
                 continue
             if connector_path.name.startswith((".", "_")):
                 continue
-            if not (connector_path / "Dockerfile").exists():
+            if (
+                not (connector_path / "Dockerfile").exists()
+                and not (connector_path / "src" / "requirements.txt").exists()
+            ):
                 print(f"⚠️  Skipping {connector_path} — no Dockerfile")
                 continue
 

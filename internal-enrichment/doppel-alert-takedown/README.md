@@ -77,10 +77,10 @@ deciding whether to reuse a client credential.
 Before building the Docker container, set the version of pycti in `requirements.txt`
 equal to whatever version of OpenCTI you're running.
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-doppel-alert-takedown:latest
+./build.sh internal-enrichment/doppel-alert-takedown latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the

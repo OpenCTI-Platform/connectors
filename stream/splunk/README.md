@@ -55,7 +55,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-splunk:latest .
+./build.sh stream/splunk latest
 ```
 
 Configure the connector in `docker-compose.yml`:

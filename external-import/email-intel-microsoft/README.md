@@ -222,7 +222,7 @@ To restrict the app’s access to specific mailboxes, configure **Application Ac
 1. Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-email-intel-microsoft:latest .
+./build.sh external-import/email-intel-microsoft latest
 ```
 
 2. Run using Docker Compose:

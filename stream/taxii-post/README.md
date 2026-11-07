@@ -89,7 +89,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-taxii-post:latest .
+./build.sh stream/taxii-post latest
 ```
 
 Configure the connector in `docker-compose.yml`:

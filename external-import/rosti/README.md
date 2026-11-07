@@ -94,7 +94,7 @@ The connector is configured with environment variables or with a `config.yml` fi
 Build the image:
 
 ```shell
-docker build . -t opencti/connector-rosti:latest
+./build.sh external-import/rosti latest
 ```
 
 Fill in the `ChangeMe` values in [`docker-compose.yml`](docker-compose.yml), then start the connector:

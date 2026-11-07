@@ -89,7 +89,7 @@ configuration. Use `CONNECTOR_DURATION_PERIOD` to select the run frequency.
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-trukno:latest .
+./build.sh external-import/trukno latest
 ```
 
 Start the connector:
