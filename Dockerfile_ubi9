@@ -29,6 +29,8 @@ ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
 ARG CONNECTOR_CMD="main.py"
 ARG CONNECTOR_WORKDIR="/opt/connector/src"
 ARG POST_INSTALL=""
+# Directories the connector writes to at runtime, made writable for any UID.
+ARG WRITABLE_DIRS=""
 
 ENV CONNECTOR_CMD=${CONNECTOR_CMD}
 
@@ -49,6 +51,7 @@ RUN <<EOT
     # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
     # world-readable so the connector can read it as an arbitrary non-root UID.
     chmod -R a+rX "$HOME"
+    if [ -n "${WRITABLE_DIRS}" ]; then mkdir -p ${WRITABLE_DIRS} && chmod -R a+rwX ${WRITABLE_DIRS}; fi
     rpm -qa --qf '%{NAME}\n' | sort | comm -13 /tmp/packages-before - | xargs microdnf -y remove
     rm /tmp/packages-before
     microdnf clean all

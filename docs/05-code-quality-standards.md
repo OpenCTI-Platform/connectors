@@ -495,6 +495,7 @@ EXTRA_PACKAGES_UBI9="pango libbrotli"
 - `BUILD_PACKAGES_ALPINE`: packages needed only to build a Python dependency that has no wheel, removed after `pip install`.
 - `PYTHON_VERSION_ALPINE`: Python version of the Alpine image, `3.12` by default.
 - `POST_INSTALL`: a shell command run after `pip install`.
+- `WRITABLE_DIRS`: directories the connector writes to at runtime, made writable for any UID (for instance a cache under `src/`).
 
 Build an image locally from the repository root:
 
