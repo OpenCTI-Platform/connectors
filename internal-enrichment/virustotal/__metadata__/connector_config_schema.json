@@ -86,6 +86,13 @@
       "description": "Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true).",
       "type": "boolean"
     },
+    "VIRUSTOTAL_INDICATOR_MIN_SCORE": {
+      "default": 0,
+      "description": "Minimum VirusTotal score required to create an Indicator.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
     "VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT": {
       "default": true,
       "description": "Whether or not to include the full report as a Note.",
@@ -109,6 +116,7 @@
     "VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES": {
       "default": 2880,
       "description": "How long the indicator is valid for in minutes.",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "VIRUSTOTAL_FILE_INDICATOR_DETECT": {
@@ -129,6 +137,7 @@
     "VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES": {
       "default": 2880,
       "description": "How long the indicator is valid for in minutes.",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "VIRUSTOTAL_IP_INDICATOR_DETECT": {
@@ -202,6 +211,7 @@
     "VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES": {
       "default": 2880,
       "description": "How long the indicator is valid for in minutes.",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "VIRUSTOTAL_DOMAIN_INDICATOR_DETECT": {
@@ -222,6 +232,7 @@
     "VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES": {
       "default": 2880,
       "description": "How long the indicator is valid for in minutes.",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "VIRUSTOTAL_URL_INDICATOR_DETECT": {
