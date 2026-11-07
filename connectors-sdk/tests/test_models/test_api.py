@@ -60,6 +60,10 @@ def test_public_models_are_present():
         "UserAccount",
         "Vulnerability",
         "X509Certificate",
+        # Read-only models
+        "ProvenanceSummary",
+        "ProvenanceSummaryError",
+        "STIX_EXT_OCTI_PROVENANCE",
     }
     missing = models_import - set(models.__all__)
     extra = set(models.__all__) - models_import
