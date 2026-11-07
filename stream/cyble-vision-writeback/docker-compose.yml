@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-cyble-vision-writeback:
+    image: opencti/connector-cyble-vision-writeback:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      # - CONNECTOR_ID=ChangeMe # optional, UUIDv4, must differ from the import connector (default: 'db8442d4-2e03-4bcb-9d9c-7c119d50df61')
+      # - CONNECTOR_NAME=Cyble Vision Writeback # optional (default: 'Cyble Vision Writeback')
+      # - CONNECTOR_SCOPE=Incident # optional (default: 'Incident')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_LIVE_STREAM_ID=live # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false # optional (default: false)
+      # - CONNECTOR_LIVE_STREAM_RECOVER=false # optional (default: false)
+      # Custom parameters for connector-cyble-vision-writeback
+      - CYBLE_VISION_WRITEBACK_API_TOKEN=ChangeMe
+      # - CYBLE_VISION_WRITEBACK_API_BASE_URL=https://bifrost.cyble.ai # optional
+      # - CYBLE_VISION_WRITEBACK_IGNORED_USER_NAMES=Cyble Vision # optional, comma-separated OpenCTI user names whose changes are not written back
+    restart: always

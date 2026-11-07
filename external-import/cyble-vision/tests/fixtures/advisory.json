@@ -1,0 +1,28 @@
+{
+  "created_at": "2026-02-04T00:02:08.228970+00:00",
+  "updated_at": "2026-02-04T00:02:08.228970+00:00",
+  "deleted_at": null,
+  "id": "410527a7-0b35-5abb-a2ff-a2619ebc2bb2",
+  "data_id": "f89bdf2c-139a-56cc-ba90-dce18638d710",
+  "entity_id": 3437605,
+  "keyword_name": "example1.com",
+  "entity_type": 0,
+  "service": "advisory",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "MEDIUM",
+  "updated_by_id": "c327c32d-05f6-5f41-95be-33f0fe774568",
+  "created_by": null,
+  "user_severity": "MEDIUM",
+  "risk_score": null,
+  "bucket_id": 11643,
+  "bucket_name": "Example Bucket",
+  "data": {
+    "data": 6566
+  },
+  "tags": []
+}

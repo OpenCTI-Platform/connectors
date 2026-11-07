@@ -1,0 +1,30 @@
+{
+  "created_at": "2026-01-18T19:26:08.877+00:00",
+  "updated_at": "2026-01-18T19:26:08.877+00:00",
+  "deleted_at": null,
+  "id": "e6e6ba64-64ff-5035-b9d5-1ec8be48c668",
+  "data_id": "81b8d34d-6676-5575-a50b-88106c8f7954",
+  "entity_id": 2607825,
+  "keyword_name": "example3.com",
+  "entity_type": 0,
+  "service": "cyble_research_labs",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": "86f6392b-2240-5fd1-a69b-20381208d6ed",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": null,
+  "bucket_id": 12370,
+  "title": "jjhjhjkjk",
+  "bucket_name": "Example Bucket",
+  "data": {
+    "title": "jjhjhjkjk",
+    "details": "mnmnmn"
+  },
+  "tags": []
+}

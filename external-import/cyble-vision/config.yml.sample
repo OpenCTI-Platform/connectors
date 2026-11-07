@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: '7c2e8a4f-3b91-4d6e-9f12-a8c5e1d0b473'
+  name: 'Cyble Vision' # optional (default: 'Cyble Vision')
+  scope: 'Incident,Report,Note,Indicator,Vulnerability,Intrusion-Set,Domain-Name,IPv4-Addr,Url,X509-Certificate,User-Account' # optional
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, ISO-8601 interval between runs (default: 'PT1H')
+
+cyble_vision:
+  api_token: 'ChangeMe'
+  api_base_url: 'https://bifrost.cyble.ai' # optional
+  import_since: 'P7D' # optional, lookback on first run (default: 7 days ago)
+  alert_services: '' # optional, comma-separated allow-list; empty = every entitled service
+  exclude_statuses: 'FALSE_POSITIVE' # optional
+  page_size: 100 # optional
+  tlp_level: 'amber' # optional
+  portal_url_template: 'https://cyble.ai/alerts/{service}?id=["{alert_id}"]' # optional
+  engine_api_base_url: 'https://api.cyble.ai' # optional
+  enable_advisories: true # optional
+  enable_newsfeed: true # optional
+  enable_newsflash: true # optional
+  engine_page_size: 50 # optional

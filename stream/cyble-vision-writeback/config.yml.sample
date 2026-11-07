@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'db8442d4-2e03-4bcb-9d9c-7c119d50df61' # must differ from the Cyble Vision import connector
+  name: 'Cyble Vision Writeback' # optional (default: 'Cyble Vision Writeback')
+  scope: 'Incident' # optional (default: 'Incident')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'live' # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+  live_stream_listen_delete: false # optional (default: false)
+  live_stream_recover: false # optional (default: false)
+
+cyble_vision_writeback:
+  api_token: 'ChangeMe'
+  api_base_url: 'https://bifrost.cyble.ai' # optional
+  ignored_user_names: 'Cyble Vision' # optional, comma-separated OpenCTI user names whose changes are not written back
