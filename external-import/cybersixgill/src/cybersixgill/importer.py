@@ -56,23 +56,18 @@ class IndicatorImporter:
 
         failed = 0
         new_state = state.copy()
-
-        global latest_indicator_modified_datetime
+        latest_indicator_modified: Optional[str] = None
 
         for count, indicator in enumerate(feed_data, start=1):
             result = self._process_indicator(indicator)
 
             if not result:
                 failed += 1
-            latest_indicator_modified_datetime = indicator.get("modified")
+            latest_indicator_modified = indicator.get("modified")
 
             if count % self._STATE_UPDATE_INTERVAL_COUNT == 0:  # noqa: S001
-                self._info(
-                    "Store state: {0}: {1}", count, latest_indicator_modified_datetime
-                )
-                new_state.update(
-                    self._create_pulse_state(latest_indicator_modified_datetime)
-                )
+                self._info("Store state: {0}: {1}", count, latest_indicator_modified)
+                new_state.update(self._create_pulse_state(latest_indicator_modified))
                 self._set_state(new_state)
 
         imported = feed_count - failed
@@ -82,18 +77,18 @@ class IndicatorImporter:
             imported,
             failed,
             feed_count,
-            latest_indicator_modified_datetime,
+            latest_indicator_modified,
         )
 
-        return self._create_pulse_state(
-            datetime.strptime(
-                latest_indicator_modified_datetime, "%Y-%m-%dT%H:%M:%S.%fZ"
-            )
-        )
+        if latest_indicator_modified is None:
+            return {}
 
-    def _create_pulse_state(
-        self, latest_indicator_timestamp: datetime
-    ) -> Dict[str, Any]:
+        return self._create_pulse_state(latest_indicator_modified)
+
+    def _create_pulse_state(self, latest_indicator_modified: str) -> Dict[str, Any]:
+        latest_indicator_timestamp = datetime.strptime(
+            latest_indicator_modified, "%Y-%m-%dT%H:%M:%S.%fZ"
+        )
         return {
             self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_timestamp.isoformat()
         }
