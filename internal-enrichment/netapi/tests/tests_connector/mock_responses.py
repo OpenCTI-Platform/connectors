@@ -58,8 +58,27 @@ CHECK_IP_LISTED_NOW = {
     "source": SOURCE_IPS,
 }
 
-# compromised-check: an IP listed in the past only
+# compromised-check: a domain listed in the past only
 CHECK_LISTED_PAST = {
+    "value": "0-07.ru",
+    "type": "domain",
+    "listed_now": False,
+    "listed_ever": True,
+    "matched_value": "0-07.ru",
+    "first_seen": "2019-12-18",
+    "last_seen": "2019-12-25 00:00:00 UTC",
+    "block_reason": "suspicious",
+    "registrar": None,
+    "note": (
+        "Listed in the past but not seen in the last 24 hours; most such entries "
+        "reflect past incidents only."
+    ),
+    "lists": LISTS_DOMAINS,
+    "source": SOURCE,
+}
+
+# compromised-check: an IP listed in the past only
+CHECK_IP_LISTED_PAST = {
     "value": "1.0.140.8",
     "type": "ip",
     "listed_now": False,

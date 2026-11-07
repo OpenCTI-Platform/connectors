@@ -11,6 +11,7 @@ from connectors_sdk.exceptions.error import DataRetrievalError
 from mock_responses import (
     CHECK_CLEAN,
     CHECK_IP_LISTED_NOW,
+    CHECK_IP_LISTED_PAST,
     CHECK_LISTED_NOW,
     CHECK_LISTED_PAST,
     CHECK_LISTED_VIA_DOMAIN,
@@ -357,6 +358,12 @@ def test_score_is_written_only_when_enabled_and_listed_now():
     connector, helper, _ = make_connector(
         check=CHECK_LISTED_PAST, update_score=True, score=95
     )
+    connector.process_message(make_data(value="0-07.ru"))
+    assert "x_opencti_score" not in by_type(helper)["domain-name"]
+
+    connector, helper, _ = make_connector(
+        check=CHECK_IP_LISTED_PAST, update_score=True, score=95
+    )
     connector.process_message(
         make_data(
             entity_id="ipv4-addr--22222222-2222-4222-8222-222222222222",
@@ -391,6 +398,24 @@ def test_listed_ip_address_gets_the_label_and_the_48_hour_status():
 
 def test_past_listing_attaches_the_note_and_leaves_the_labels_alone():
     connector, helper, client = make_connector(check=CHECK_LISTED_PAST)
+    data = make_data(value="0-07.ru", entity={"x_opencti_labels": [OWN_LABEL]})
+
+    message = connector.process_message(data)
+
+    assert message.startswith("NetAPI: listed in the past (last seen 2019-12-25)")
+    client.domain_rank.assert_called_once_with("0-07.ru")
+    objects = by_type(helper)
+    # an earlier label stays: OpenCTI merges labels on import, the note has the status
+    assert objects["domain-name"]["x_opencti_labels"] == [OWN_LABEL]
+    assert (
+        objects["note"]["abstract"]
+        == "NetAPI - listed in the compromised feed in the past"
+    )
+    assert "| Reported by | suspicious |" in objects["note"]["content"]
+
+
+def test_past_ip_listing_attaches_the_note_and_leaves_the_labels_alone():
+    connector, helper, client = make_connector(check=CHECK_IP_LISTED_PAST)
     data = make_data(
         entity_id="ipv4-addr--22222222-2222-4222-8222-222222222222",
         value="1.0.140.8",
@@ -408,6 +433,11 @@ def test_past_listing_attaches_the_note_and_leaves_the_labels_alone():
         objects["note"]["abstract"]
         == "NetAPI - listed in the compromised feed in the past"
     )
+    assert (
+        "| Attack type | NetAPI network sensors: brute force |"
+        in objects["note"]["content"]
+    )
+    assert "Reported by" not in objects["note"]["content"]
 
 
 def test_hostname_listed_through_its_domain_names_the_match():
