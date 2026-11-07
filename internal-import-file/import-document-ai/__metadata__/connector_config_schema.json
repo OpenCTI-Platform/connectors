@@ -71,6 +71,11 @@
       "description": "Whether to flag extracted observables for indicator creation.",
       "type": "boolean"
     },
+    "IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES": {
+      "default": true,
+      "description": "Whether to bind the entities extracted from the document to the entities that already exist in OpenCTI (curationResolve query) instead of creating duplicates. Skipped on OpenCTI versions without curationResolve.",
+      "type": "boolean"
+    },
     "IMPORT_DOCUMENT_AI_API_BASE_URL": {
       "default": null,
       "description": "Base URL of the Import Document AI web service (legacy direct mode).",
