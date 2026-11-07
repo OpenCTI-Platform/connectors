@@ -474,27 +474,29 @@ class AttributeConverter:
         markings: list[stix2.v21.MarkingDefinition],
         external_references: list[stix2.ExternalReference],
     ):
-        if not observables:
-            return None
-
-        # ! Be sure that the first observable is the main one in create_observables method
-        octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES.get(
-            observables[0]["type"], None
-        )
-
-        if not octi_main_observable_type:
-            return None
-
         if attribute.type in ["yara", "sigma", "pcre", "snort", "suricata"]:
-            # Use MISP IOCs as-is
+            # Use MISP IOCs as-is: the rule is the pattern, so no observable is needed.
+            # Without one, the main observable type is left for the platform to set.
+            octi_main_observable_type = (
+                OCTI_MAIN_OBSERVABLE_TYPES.get(observables[0]["type"], None)
+                if observables
+                else None
+            )
             name = (
                 attribute.comment
                 if len(attribute.comment) > 2
-                else octi_main_observable_type
+                else octi_main_observable_type or attribute.type
             )
             pattern = attribute.value
             pattern_type = attribute.type
         elif observables:
+            # ! Be sure that the first observable is the main one in create_observables method
+            octi_main_observable_type = OCTI_MAIN_OBSERVABLE_TYPES.get(
+                observables[0]["type"], None
+            )
+            if not octi_main_observable_type:
+                return None
+
             # Use observables to build STIX pattern
             name = (
                 attribute.value
@@ -617,8 +619,14 @@ class AttributeConverter:
             if intrusion_set:
                 stix_objects.append(intrusion_set)
 
+        # The indicator's STIX pattern is built from the observables, so they are also
+        # created when only indicators are enabled, but they are only sent (and
+        # related to other objects) when observables are enabled.
         observables = []
-        if self.config.convert_attribute_to_observable:
+        if (
+            self.config.convert_attribute_to_observable
+            or self.config.convert_attribute_to_indicator
+        ):
             observables = self.create_observables(
                 attribute,
                 score=score,
@@ -627,10 +635,13 @@ class AttributeConverter:
                 markings=attribute_markings,
                 external_references=external_references,
             )
-            stix_objects.extend(observables)
+        sent_observables = (
+            observables if self.config.convert_attribute_to_observable else []
+        )
+        stix_objects.extend(sent_observables)
 
         indicator = None
-        if observables and self.config.convert_attribute_to_indicator:
+        if self.config.convert_attribute_to_indicator:
             indicator = self.create_indicator(
                 attribute,
                 observables=observables,
@@ -703,7 +714,7 @@ class AttributeConverter:
                     )
                     stix_objects.append(sighting)
 
-            for observable in observables:
+            for observable in sent_observables:
                 stix_objects.append(
                     stix2.Relationship(
                         id=pycti.StixCoreRelationship.generate_id(
@@ -747,7 +758,7 @@ class AttributeConverter:
                 case _:
                     continue
 
-        for observable in observables:
+        for observable in sent_observables:
             for entity in intrusion_sets + malwares + tools + countries + sectors:
                 stix_objects.append(
                     stix2.Relationship(
