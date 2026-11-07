@@ -1,0 +1,12 @@
+opencti:
+  url: 'http://opencti:8080'
+  token: 'CHANGEME'
+  opencti_admin_email: 'admin@opencti.io'
+  opencti_admin_password: 'CHANGEME'
+  
+connector:
+  id: 'CHANGEME'
+  type: 'EXTERNAL_IMPORT'
+  name: 'ThreatFox' # Required
+  
+
