@@ -42,6 +42,7 @@ SHARED_PATHS = [
     ".github/scripts/build_alpine_matrix.py",
     "Dockerfile_ubi9",
     "Dockerfile_alpine",
+    "Dockerfile_debian",
 ]
 
 
@@ -49,7 +50,8 @@ def discover_connectors() -> dict[str, list[dict]]:
     """Discover all connector directories, grouped by type.
 
     A connector without its own Dockerfile is built from the shared
-    Dockerfile_alpine, with the build arguments of its .build.env.
+    Dockerfile_alpine, or Dockerfile_debian when its .build.env sets
+    DISTRO="debian", with the build arguments of its .build.env.
 
     Build variants are detected from the filesystem:
       - FIPS: presence of Dockerfile_fips

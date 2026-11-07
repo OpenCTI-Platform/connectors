@@ -56,7 +56,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh external-import/honeylabs latest
+./build.sh external-import/honeylabs latest
 ```
 
 Set the environment variables in `docker-compose.yml` (at least `OPENCTI_URL`, `OPENCTI_TOKEN`,

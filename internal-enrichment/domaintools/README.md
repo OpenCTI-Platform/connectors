@@ -83,7 +83,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh internal-enrichment/domaintools latest
+./build.sh internal-enrichment/domaintools latest
 ```
 
 Configure the connector in `docker-compose.yml`:

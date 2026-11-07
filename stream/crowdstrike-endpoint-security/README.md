@@ -60,7 +60,7 @@ For more information regarding these variables, please refer to [OpenCTI's docum
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/crowdstrike-endpoint-security latest
+./build.sh stream/crowdstrike-endpoint-security latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -475,9 +475,10 @@ pytest -s
 
 ### Dockerfile Standards
 
-A connector has no Dockerfile of its own: its Alpine image is built from the shared
-`Dockerfile_alpine` and its UBI9 image from the shared `Dockerfile_ubi9`, both at
-the repository root. Each one installs `src/requirements.txt` and runs
+A connector has no Dockerfile of its own: its image is built from the shared
+`Dockerfile_alpine`, or from `Dockerfile_debian` when it needs glibc or Debian
+packages (Playwright, LibreOffice), and its UBI9 image from the shared
+`Dockerfile_ubi9`, all at the repository root. Each one installs `src/requirements.txt` and runs
 `main.py` from the `src/` directory.
 
 **File:** `.build.env` (optional, only for values that differ from the defaults; one `KEY="value"` per line, without trailing comments)
@@ -491,16 +492,18 @@ EXTRA_PACKAGES_UBI9="pango libbrotli"
 
 - `CONNECTOR_CMD`: what Python runs, `main.py` by default.
 - `CONNECTOR_WORKDIR`: where it runs, `/opt/connector/src` by default.
-- `EXTRA_PACKAGES_ALPINE`, `EXTRA_PACKAGES_UBI9`: runtime packages the connector needs, under the names of each distribution.
-- `BUILD_PACKAGES_ALPINE`: packages needed only to build a Python dependency that has no wheel, removed after `pip install`.
+- `DISTRO`: `debian` builds the image from `Dockerfile_debian` instead of `Dockerfile_alpine`.
+- `EXTRA_PACKAGES_ALPINE`, `EXTRA_PACKAGES_DEBIAN`, `EXTRA_PACKAGES_UBI9`: runtime packages the connector needs, under the names of each distribution.
+- `BUILD_PACKAGES_ALPINE`, `BUILD_PACKAGES_DEBIAN`: packages needed only to build a Python dependency that has no wheel, removed after `pip install`.
 - `PYTHON_VERSION_ALPINE`: Python version of the Alpine image, `3.12` by default.
+- `DEBIAN_RELEASE`: Debian release of the Debian image, `bookworm` (Python 3.11) by default, `trixie` for Python 3.13.
 - `POST_INSTALL`: a shell command run after `pip install`.
 - `WRITABLE_DIRS`: directories the connector writes to at runtime, made writable for any UID (for instance a cache under `src/`).
 
 Build an image locally from the repository root:
 
 ```shell
-./build_alpine.sh external-import/my-connector latest
+./build.sh external-import/my-connector latest
 ./build_ubi9.sh external-import/my-connector latest
 ```
 

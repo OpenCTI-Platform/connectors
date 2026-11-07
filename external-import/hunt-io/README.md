@@ -91,7 +91,7 @@ this setting being introduced.
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/hunt-io latest
+./build.sh external-import/hunt-io latest
 ```
 
 Configure the connector in `docker-compose.yml`:

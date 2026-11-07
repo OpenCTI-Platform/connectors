@@ -68,7 +68,7 @@ Build the Docker image from the repository root, with the shared `Dockerfile_alp
 Example:
 
 ```shell
-./build_alpine.sh external-import/ransomfeed latest
+./build.sh external-import/ransomfeed latest
 docker run --rm ransomfeed-connector
 ```
 

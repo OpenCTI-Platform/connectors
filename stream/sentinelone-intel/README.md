@@ -126,7 +126,7 @@ Build the Docker image from the repository root, with the shared `Dockerfile_alp
 Example:
 
 ```shell
-./build_alpine.sh stream/sentinelone-intel latest
+./build.sh stream/sentinelone-intel latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your

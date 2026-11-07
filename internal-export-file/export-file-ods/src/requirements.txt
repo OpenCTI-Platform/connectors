@@ -1,2 +1,4 @@
 pycti==7.261109.0
 unogenerator==1.5.0
+# pydicts 2.0.0, pulled by unogenerator, needs Python 3.14 to import
+pydicts==1.5.0

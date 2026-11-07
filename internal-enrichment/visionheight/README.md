@@ -81,7 +81,7 @@ Below are the VisionHeight-specific parameters:
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-./build_alpine.sh internal-enrichment/visionheight latest
+./build.sh internal-enrichment/visionheight latest
 ```
 
 Set the environment variables in `docker-compose.yml` for your environment, then start the connector:

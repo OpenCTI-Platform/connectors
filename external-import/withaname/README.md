@@ -16,7 +16,7 @@ The WithaName connector automatically retrieves snapshots of DDoS targets. For e
 
 1. Build the Docker image:
    ```shell
-   ./build_alpine.sh external-import/withaname latest
+   ./build.sh external-import/withaname latest
    ```
 
 2. Use the provided `docker-compose.yml` and configure the environment variables.

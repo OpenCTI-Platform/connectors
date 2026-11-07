@@ -53,7 +53,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 ### Docker
 
 ```shell
-./build_alpine.sh external-import/cybelangel latest
+./build.sh external-import/cybelangel latest
 docker compose up -d
 ```
 
