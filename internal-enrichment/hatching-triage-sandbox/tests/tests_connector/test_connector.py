@@ -1,8 +1,10 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 from connector.connector import HatchingTriageSandboxConnector
 from connectors_sdk.models.enums import TLPLevel
+from requests import RequestException
 from triage.client import ServerError
 
 
@@ -17,6 +19,7 @@ def connector(mock_opencti_connector_helper):
     config.hatching_triage_sandbox.botnet_color = "#f79e00"
     config.hatching_triage_sandbox.campaign_color = "#7a01e5"
     config.hatching_triage_sandbox.tag_color = "#54483b"
+    config.hatching_triage_sandbox.max_attempts = 3
     config.connector.max_tlp = TLPLevel.AMBER
 
     helper = MagicMock()
@@ -238,3 +241,182 @@ def _raise_server_error(http_error):
     """Generator that raises a ServerError when iterated."""
     raise ServerError(http_error)
     yield  # noqa: unreachable - makes this a generator
+
+
+def _server_error(status_code):
+    http_error = MagicMock()
+    http_error.response.status_code = status_code
+    http_error.response.json.return_value = {}
+    return ServerError(http_error)
+
+
+@patch("connector.connector.time.sleep")
+class TestRetries:
+    def test_overview_report_retries_on_server_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = [
+            _server_error(502),
+            {"analysis": {}},
+        ]
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        assert connector.triage_client.overview_report.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_overview_report_raises_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(502)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 3
+
+    def test_overview_report_does_not_retry_client_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(404)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_task_file_retries_until_available(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            b'{"error":"NOT_AVAILABLE"}',
+            b'{"error":"NOT_AVAILABLE"}',
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 3
+
+    def test_task_file_returns_none_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.return_value = (
+            b'{"error":"NOT_AVAILABLE"}'
+        )
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    def test_wait_for_analysis_retries_on_invalid_json(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            _raise_json_error(),
+            iter([{"status": "pending"}, {"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            RequestException("connection reset"),
+            iter([{"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+
+    def test_wait_for_analysis_raises_when_stream_never_reports(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = lambda _: iter(
+            [{"status": "pending"}]
+        )
+
+        with pytest.raises(ValueError, match="did not finish after 3 attempts"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 3
+
+    def test_wait_for_analysis_does_not_retry_failed_analysis(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.return_value = iter(
+            [{"status": "failed"}]
+        )
+
+        with pytest.raises(ValueError, match="Analysis sample-123 failed"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 1
+        mock_sleep.assert_not_called()
+
+
+def _raise_json_error():
+    raise json.JSONDecodeError("Expecting value", "<html>", 0)
+    yield  # noqa: unreachable - makes this a generator
+
+
+class TestSendBundle:
+    def test_sends_bundle_with_cleanup_of_inconsistent_objects(self, connector):
+        connector.helper.stix2_create_bundle.return_value = "bundle"
+        connector.helper.send_stix2_bundle.return_value = ["bundle"]
+
+        result = connector._send_bundle(["stix-object"])
+
+        connector.helper.stix2_create_bundle.assert_called_once_with(["stix-object"])
+        connector.helper.send_stix2_bundle.assert_called_once_with(
+            "bundle", cleanup_inconsistent_bundle=True
+        )
+        assert result == "Sent 1 stix bundle(s) for worker import"
+
+
+class TestExtractedFileDownload:
+    OBSERVABLE = {
+        "id": "observable-id",
+        "standard_id": "artifact--4cb2c4c1-7a3c-4e2b-9a8e-3c6f7f1b2d10",
+    }
+    OVERVIEW = {
+        "analysis": {},
+        "extracted": [
+            {
+                "config": {"rule": "Agenttesla", "c2": [], "credentials": []},
+                "tasks": ["behavioral1"],
+                "dumped_file": "memory/file.bin",
+            }
+        ],
+    }
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, connector):
+        connector.identity = "identity--7b0e9c3a-5d1f-4c8e-8f2a-1e6d3b9c4a70"
+        connector._send_bundle = MagicMock(return_value="sent")
+
+    def test_skips_extracted_file_when_not_available(self, connector):
+        connector._get_task_file = MagicMock(return_value=None)
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        connector._get_task_file.assert_called_once_with(
+            "sample-123", "behavioral1", "memory/file.bin"
+        )
+        connector.helper.api.stix_cyber_observable.upload_artifact.assert_not_called()
+        connector.helper.connector_logger.warning.assert_called_once()
+
+    @patch("connector.connector.magic.from_buffer", return_value="text/plain")
+    def test_uploads_extracted_file_when_available(self, _mock_magic, connector):
+        connector._get_task_file = MagicMock(return_value=b"file-content")
+        upload = connector.helper.api.stix_cyber_observable.upload_artifact
+        upload.return_value = {
+            "id": "artifact-id",
+            "standard_id": "artifact--9d1e2f3a-4b5c-4d6e-8f7a-0b1c2d3e4f50",
+        }
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        upload.assert_called_once()
+        assert upload.call_args.kwargs["data"] == b"file-content"
+        assert upload.call_args.kwargs["file_name"] == "sample-123_memory/file.bin"
