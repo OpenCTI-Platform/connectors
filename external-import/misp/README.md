@@ -48,7 +48,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/misp latest
+./build.sh external-import/misp latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -99,7 +99,7 @@ Find all the configuration variables available here: [Connector Configurations](
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/microsoft-sentinel-intel latest
+./build.sh stream/microsoft-sentinel-intel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

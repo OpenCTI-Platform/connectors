@@ -38,7 +38,7 @@ The Criminal IP connector enriches **IPv4 addresses** and **domain names** with 
 Build the Docker image:
 
 ```bash
-./build_alpine.sh internal-enrichment/criminal-ip latest
+./build.sh internal-enrichment/criminal-ip latest
 ```
 
 ### Docker Compose

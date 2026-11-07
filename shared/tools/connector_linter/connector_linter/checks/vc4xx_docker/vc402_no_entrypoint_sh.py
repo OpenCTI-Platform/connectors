@@ -49,10 +49,10 @@ def check_no_entrypoint_sh(ctx: ConnectorContext) -> list[CheckFinding]:
     dockerfile_path = ctx.path / "Dockerfile"
     shared_dockerfile = ctx.path.parent.parent / "Dockerfile_alpine"
     if not dockerfile_path.is_file() and shared_dockerfile.is_file():
-        # Built from the shared Dockerfile_alpine, which runs Python directly.
+        # Built from the shared Dockerfile_alpine or Dockerfile_debian, which run Python directly.
         return [
             CheckFinding(
-                message="Built from the shared Dockerfile_alpine, no entrypoint.sh ✓",
+                message="Built from a shared Dockerfile, no entrypoint.sh ✓",
                 severity=Severity.INFO,
                 file_path=shared_dockerfile,
             ),

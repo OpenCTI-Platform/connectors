@@ -58,7 +58,7 @@ Find all the configuration variables available here: [Connector Configurations](
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/google-dtm latest
+./build.sh external-import/google-dtm latest
 ```
 
 Configure the connector in `docker-compose.yml`:

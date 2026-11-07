@@ -51,7 +51,7 @@ supported.
 
 - OpenCTI Platform >= 6.4.3
 - A glibc-based Linux distribution able to run LibreOffice. The connector
-  ships with a `debian:bookworm-slim` Dockerfile because the
+  is built from the shared `Dockerfile_debian` (`debian:bookworm-slim`) because the
   `python:3.12-alpine` image used by the other internal-export
   connectors (`export-file-csv`, `export-file-stix`, `export-file-txt`,
   `export-file-yara`, `export-report-pdf`) cannot install LibreOffice /
@@ -93,7 +93,7 @@ There are a number of configuration options, which are set either in
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-export-file-ods:latest .
+./build.sh internal-export-file/export-file-ods latest
 ```
 
 Configure the connector in `docker-compose.yml`:

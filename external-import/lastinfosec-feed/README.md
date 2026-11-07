@@ -80,7 +80,7 @@ LastInfoSec (now part of Gatewatcher) provides comprehensive threat intelligence
 Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```bash
-./build_alpine.sh external-import/lastinfosec-feed latest
+./build.sh external-import/lastinfosec-feed latest
 ```
 
 Example `docker-compose.yml` (CTI feed enabled):

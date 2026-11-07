@@ -1,0 +1,78 @@
+# syntax=docker/dockerfile:1.28
+# For the connectors that need glibc or Debian packages (Playwright, LibreOffice),
+# selected with DISTRO="debian" in .build.env. Python is the system one, so that
+# Debian's Python modules (python3-uno) can be imported.
+ARG DEBIAN_RELEASE=bookworm
+FROM docker.io/library/debian:${DEBIAN_RELEASE}-slim
+
+# Runtime packages of the connector, under their Debian names (set in .build.env).
+ARG EXTRA_PACKAGES_DEBIAN=""
+# Packages needed only to build its Python dependencies, removed after pip install.
+ARG BUILD_PACKAGES_DEBIAN=""
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN <<EOT
+    # /bin/sh is dash, which has no pipefail; these steps use no pipe.
+    set -eux
+
+    apt-get update
+    apt-get upgrade -y
+    apt-get install -y --no-install-recommends ca-certificates python3 ${EXTRA_PACKAGES_DEBIAN}
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOT
+
+ENV PYTHONDONTWRITEBYTECODE=1
+# Keeps Python from buffering stdout and stderr, so that a crash still shows its logs.
+ENV PYTHONUNBUFFERED=1
+# pip installs into the system Python, next to the Debian Python modules (PEP 668).
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
+# Provide a dedicated HOME so tools that build per-user caches/config under "~"
+# (e.g. POST_INSTALL steps) have a valid writable location at build time and a
+# readable one at runtime for arbitrary non-root UIDs (OpenShift/Kubernetes).
+# HOME defaulting to "/" would otherwise fail with a PermissionError.
+ENV HOME=/opt/opencti-connector
+RUN mkdir -p "$HOME"
+
+ARG CONNECTOR_TYPE
+ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
+
+ARG CONNECTOR_CMD="main.py"
+ARG CONNECTOR_WORKDIR="/opt/connector/src"
+ARG CONNECTOR_PRE_START=""
+ARG POST_INSTALL=""
+# Directories the connector writes to at runtime, made writable for any UID.
+ARG WRITABLE_DIRS=""
+
+ENV CONNECTOR_CMD=${CONNECTOR_CMD}
+ENV CONNECTOR_PRE_START=${CONNECTOR_PRE_START}
+
+COPY src /opt/connector/src
+
+RUN <<EOT
+    set -eux
+
+    apt-get update
+    apt-get install -y --no-install-recommends python3-pip git ${BUILD_PACKAGES_DEBIAN}
+    pip3 install --no-cache-dir --requirement /opt/connector/src/requirements.txt
+    # Builds from source still leave caches under HOME (pip build isolation, cargo).
+    rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
+    # POST_INSTALL is a shell command line, so it can chain commands (&&).
+    if [ -n "${POST_INSTALL}" ]; then sh -c "${POST_INSTALL}"; fi
+    # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
+    # world-readable so the connector can read it as an arbitrary non-root UID.
+    chmod -R a+rX "$HOME"
+    if [ -n "${WRITABLE_DIRS}" ]; then mkdir -p ${WRITABLE_DIRS} && chmod -R a+rwX ${WRITABLE_DIRS}; fi
+    apt-get purge -y --auto-remove python3-pip git ${BUILD_PACKAGES_DEBIAN}
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOT
+
+WORKDIR ${CONNECTOR_WORKDIR}
+
+# CONNECTOR_PRE_START runs before the connector (e.g. a local service it talks to)
+# and stops the container when it fails. exec ensures python3 replaces the shell
+# process and receives OS signals (SIGTERM, SIGINT) directly as PID 1.
+CMD ["sh", "-c", "if [ -n \"${CONNECTOR_PRE_START}\" ]; then eval \"${CONNECTOR_PRE_START}\" || exit 1; fi; exec python3 ${CONNECTOR_CMD}"]

@@ -65,7 +65,7 @@ DATADOG_INTEL_DD_APPLICATION_KEY=<your-datadog-application-key>
 Build and start:
 
 ```shell
-./build_alpine.sh stream/datadog-intel latest
+./build.sh stream/datadog-intel latest
 docker compose up -d
 ```
 

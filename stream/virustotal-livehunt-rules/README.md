@@ -81,7 +81,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh stream/virustotal-livehunt-rules latest
+./build.sh stream/virustotal-livehunt-rules latest
 ```
 
 Configure the connector in `docker-compose.yml`:

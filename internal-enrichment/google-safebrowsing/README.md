@@ -81,7 +81,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-./build_alpine.sh internal-enrichment/google-safebrowsing latest
+./build.sh internal-enrichment/google-safebrowsing latest
 ```
 
 Configure the connector in `docker-compose.yml`:

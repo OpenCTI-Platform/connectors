@@ -72,7 +72,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-./build_alpine.sh external-import/group-ib latest
+./build.sh external-import/group-ib latest
 ```
 
 Configure environment variables and start:

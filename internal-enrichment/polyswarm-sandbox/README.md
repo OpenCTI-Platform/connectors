@@ -63,7 +63,7 @@ CONNECTOR_ID=generate-a-uuid-v4
 ### 3. Deploy with Docker
 ```bash
 # Build the image
-./build_alpine.sh internal-enrichment/polyswarm-sandbox latest
+./build.sh internal-enrichment/polyswarm-sandbox latest
 # Start the connector
 docker-compose up -d
 
