@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from rule_enrichment import IncompleteEnrichmentError, RuleEnricher
 
 
 class SiemrulesException(Exception):
@@ -45,6 +46,7 @@ class SiemrulesConnector:
         self.session.headers = {
             "API-KEY": self.api_key,
         }
+        self.enricher = RuleEnricher(self.helper)
 
     def _get_param(
         self, param_name: str, is_number: bool = False, default_value: str = None
@@ -82,10 +84,18 @@ class SiemrulesConnector:
         )
         pack_rules = sorted(pack_rules, key=lambda rule: rule["metadata"]["modified"])
         for rule in pack_rules:
+            # An incomplete enrichment stops the pack here: the cursor stays on
+            # the last rule sent, and the next run processes this rule again.
             self.process_rule(pack_id, rule, work_id)
             self.update_pack_state(pack_id, latest_update=rule["metadata"]["modified"])
 
     def process_rule(self, pack_id, rule: dict, work_id):
+        """Send the bundle of a rule, enriched with its ATT&CK links.
+
+        Raises:
+            IncompleteEnrichmentError: When the rule cannot be linked to its
+                techniques yet; other failures are logged and the rule skipped.
+        """
         indicator_id = rule["metadata"]["id"]
         rule_name = rule["metadata"]["name"]
         rule_repr = (
@@ -97,7 +107,7 @@ class SiemrulesConnector:
             path = f"v1/base-rules/{indicator_id}/objects/"
 
         try:
-            objects = self.retrieve(path, list_key="objects")
+            objects = self.enricher.enrich(self.retrieve(path, list_key="objects"))
             bundle = dict(
                 type="bundle",
                 id=f"bundle--{indicator_id}",
@@ -107,6 +117,9 @@ class SiemrulesConnector:
                 f"{rule_repr} sending bundle with {len(objects)} items"
             )
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
+        except IncompleteEnrichmentError as err:
+            self.helper.log_error(f"{rule_repr} retried on the next run: {err}")
+            raise
         except Exception:
             self.helper.log_error("could not process rule " + rule_repr)
 
@@ -126,6 +139,7 @@ class SiemrulesConnector:
 
     def _run_once(self):
         self.helper.log_info("running as scheduled")
+        self.enricher.reset()
         self.update_state(last_run_start=datetime.now(UTC).isoformat())
         for dpack in self.list_detection_packs():
             pack_id = dpack["id"]

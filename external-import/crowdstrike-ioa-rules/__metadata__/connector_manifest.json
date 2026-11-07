@@ -1,0 +1,26 @@
+{
+  "title": "CrowdStrike Falcon Custom IOA Rules",
+  "slug": "crowdstrike-ioa-rules",
+  "description": "Imports the custom IOA (Indicator of Attack) rules deployed in a CrowdStrike Falcon tenant into OpenCTI, read-only, through the CrowdStrike API. Each rule becomes an Indicator whose pattern is the canonical JSON of the rule logic (rule type, action and field values), with its severity, platform and log source category. The rule is linked with `indicates` relationships to the MITRE ATT&CK techniques written in its name, description or comment (or in those of its rule group), and recorded as deployed on the CrowdStrike Falcon platform with its status (active when the rule and its group are enabled and the group is assigned to an enabled prevention policy, deployed otherwise, removed when deleted since the previous run).\n\nThese deployments feed the detection layer of the OpenCTI Threat-Informed Defense Matrix: which techniques used by your threats are actually detected, and where. The connector never creates, modifies or enables a rule, a rule group or a policy in CrowdStrike Falcon.",
+  "short_description": "Imports the custom IOA rules deployed in CrowdStrike Falcon as Indicators linked to the ATT&CK techniques they detect and to the Falcon platform they run on.",
+  "logo": "external-import/crowdstrike-ioa-rules/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.crowdstrike.com/platform/endpoint-security/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike-ioa-rules",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdstrike-ioa-rules",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -1,0 +1,30 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Google SecOps Detection Rules'
+  scope: 'Indicator,Attack-Pattern,SecurityPlatform'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+google_secops_rules:
+  project_id: 'ChangeMe'
+  project_region: 'ChangeMe'
+  project_instance: 'ChangeMe'
+  client_email: 'ChangeMe'
+  private_key: 'ChangeMe'
+  # private_key_id: ''
+  # token_uri: 'https://oauth2.googleapis.com/token'
+  # base_url: 'https://chronicle.googleapis.com'
+  # api_version: 'v1alpha'
+  # import_disabled_rules: true
+  # page_size: 1000
+  # request_timeout: 60
+  # max_retries: 5
+  # platform_name: 'Google SecOps'
+  # platform_id: 'ChangeMe'
+  # platform_type: 'SIEM'
+  # tlp_level: 'amber'
