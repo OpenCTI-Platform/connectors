@@ -220,6 +220,7 @@ class CrowdStrike:
                 scopes=set(scopes),
                 attack_lookup=self.attack_lookup,
                 max_records_per_run=self.config.crowdstrike.indicator_max_records_per_run,
+                bundle_size=self.config.crowdstrike.indicator_bundle_size,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)

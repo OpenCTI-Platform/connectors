@@ -276,6 +276,16 @@ class CrowdstrikeConfig(BaseConfigModel):
         ),
     )
 
+    indicator_bundle_size: PositiveInt = Field(
+        default=500,
+        description=(
+            "Number of indicators grouped in one STIX bundle sent to OpenCTI. "
+            "Objects shared by these indicators (author, marking, malware, "
+            "attack patterns...) are sent once per bundle instead of once per "
+            "indicator. Set to 1 to send one bundle per indicator."
+        ),
+    )
+
     # Trigger import configuration
     no_file_trigger_import: bool = Field(
         default=True,
