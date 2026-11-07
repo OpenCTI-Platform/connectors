@@ -81,10 +81,10 @@ environment variables.
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-vectra-ai:latest
+./build_alpine.sh stream/vectra-ai latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the

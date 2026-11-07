@@ -78,7 +78,7 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Before building the Docker container, set the version of `pycti` (the OpenCTI Python SDK) in `requirements.txt` to match your OpenCTI version — for example, `pycti==6.5.1`. If you omit the version, the latest `pycti` is installed, which can fail to initialize against older OpenCTI releases.
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example:
 

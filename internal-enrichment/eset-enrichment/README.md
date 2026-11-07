@@ -56,7 +56,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-eset-enrichment:latest .
+./build_alpine.sh internal-enrichment/eset-enrichment latest
 ```
 
 Configure the connector in `docker-compose.yml`:

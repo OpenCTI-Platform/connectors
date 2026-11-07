@@ -85,7 +85,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-virustotal-livehunt-notifications:latest .
+./build_alpine.sh external-import/virustotal-livehunt-notifications latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -96,12 +96,12 @@ Before building the Docker container, you need to set the version of pycti in `r
 version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example:
 
 ```shell
-docker build . -t opencti/connector-assetnote-import:latest
+./build_alpine.sh external-import/assetnote-import latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your

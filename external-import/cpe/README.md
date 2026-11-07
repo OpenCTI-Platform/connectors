@@ -57,7 +57,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-cpe:latest .
+./build_alpine.sh external-import/cpe latest
 ```
 
 Configure the connector in `docker-compose.yml`:

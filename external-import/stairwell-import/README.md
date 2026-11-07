@@ -132,7 +132,7 @@ with a configuration error.
 ### Via Docker
 
 ```bash
-docker build -t opencti/connector-stairwell-import:latest .
+./build_alpine.sh external-import/stairwell-import latest
 ```
 
 Then add the service from `docker-compose.yml` to your OpenCTI deployment.

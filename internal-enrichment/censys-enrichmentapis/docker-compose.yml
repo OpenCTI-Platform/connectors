@@ -3,7 +3,9 @@ services:
   connector-censys-enrichmentapis:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
     image: opencti/connector-censys-enrichmentapis:latest
     environment:
       # OpenCTI configuration

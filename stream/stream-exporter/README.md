@@ -87,7 +87,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-stream-exporter:latest .
+./build_alpine.sh stream/stream-exporter latest
 ```
 
 Configure the connector in `docker-compose.yml`:

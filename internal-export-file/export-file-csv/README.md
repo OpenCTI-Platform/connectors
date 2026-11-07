@@ -75,7 +75,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-export-file-csv:latest .
+./build_alpine.sh internal-export-file/export-file-csv latest
 ```
 
 Configure the connector in `docker-compose.yml`:

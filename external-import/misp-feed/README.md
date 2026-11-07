@@ -88,7 +88,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-misp-feed:latest .
+./build_alpine.sh external-import/misp-feed latest
 ```
 
 Configure the connector in `docker-compose.yml`:
