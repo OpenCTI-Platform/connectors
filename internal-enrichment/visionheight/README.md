@@ -78,10 +78,10 @@ Below are the VisionHeight-specific parameters:
 
 ### Docker Deployment
 
-Build the Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-visionheight:latest
+./build_alpine.sh internal-enrichment/visionheight latest
 ```
 
 Set the environment variables in `docker-compose.yml` for your environment, then start the connector:

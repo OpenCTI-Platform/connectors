@@ -103,7 +103,7 @@ Key features:
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example `docker-compose.yml`:
 
@@ -329,7 +329,6 @@ During cooldown, enrichment continues with reduced data rather than blocking.
 
 ```
 polyswarm-enrichment/
-├── Dockerfile
 ├── docker-compose.yml
 ├── config.yml.sample
 ├── README.md

@@ -89,7 +89,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-google-drive:latest .
+./build_alpine.sh external-import/google-drive latest
 ```
 
 Configure the connector in `docker-compose.yml`:

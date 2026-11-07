@@ -223,8 +223,7 @@ my-connector/
 ├── config.yml.sample
 ├── .env.sample
 ├── docker-compose.yml
-├── Dockerfile
-├── entrypoint.sh
+├── .build.env
 └── README.md
 ```
 
@@ -243,7 +242,7 @@ my-connector/
 | `tests/`                             | Unit and integration tests                                |
 | `config.yml.sample`                  | Sample configuration for users                            |
 | `.env.sample`                        | Sample environment variables for users                    |
-| `Dockerfile`                         | Container image definition                                |
+| `.build.env`                         | Optional build arguments of the shared `Dockerfile_alpine` |
 | `docker-compose.yml`                 | Docker Compose service definition                         |
 
 ---

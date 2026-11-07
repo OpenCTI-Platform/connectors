@@ -65,7 +65,7 @@ DATADOG_INTEL_DD_APPLICATION_KEY=<your-datadog-application-key>
 Build and start:
 
 ```shell
-docker build . -t opencti/connector-datadog-intel:latest
+./build_alpine.sh stream/datadog-intel latest
 docker compose up -d
 ```
 

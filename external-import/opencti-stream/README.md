@@ -137,7 +137,7 @@ These parameters live under the `stream:` section of `config.yml`.
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-opencti-stream:latest .
+./build_alpine.sh external-import/opencti-stream latest
 ```
 
 #### Example: Queue mode (default)

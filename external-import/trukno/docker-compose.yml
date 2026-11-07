@@ -1,6 +1,10 @@
 services:
   connector-trukno:
-    build: .
+    build:
+      context: .
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "EXTERNAL_IMPORT"
     image: opencti/connector-trukno:latest
     environment:
       # SDK-managed configuration. Environment variables override config.yml.

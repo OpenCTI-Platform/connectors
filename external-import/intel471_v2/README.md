@@ -158,7 +158,7 @@ and the RabbitMQ queue. Provide configuration in `src/config.yaml`, install Pyth
 
 ### Docker
 
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t connector-intel471:latest`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`. Example: `docker build . -t connector-intel471:latest`.
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.
 Then, start the docker container with the provided `docker-compose.yml` or integrate it into the global `docker-compose.yml` file of OpenCTI.
 

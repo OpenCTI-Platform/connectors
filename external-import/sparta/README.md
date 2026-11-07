@@ -78,7 +78,7 @@ See configuration metadata in the `__metadata__` folder for additional connector
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-sparta:latest .
+./build_alpine.sh external-import/sparta latest
 ```
 
 Configure the connector in `docker-compose.yml`:

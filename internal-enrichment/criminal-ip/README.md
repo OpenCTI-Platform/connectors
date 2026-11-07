@@ -38,7 +38,7 @@ The Criminal IP connector enriches **IPv4 addresses** and **domain names** with 
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-criminal-ip:latest .
+./build_alpine.sh internal-enrichment/criminal-ip latest
 ```
 
 ### Docker Compose

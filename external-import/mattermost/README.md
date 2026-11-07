@@ -104,7 +104,7 @@ template.
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-mattermost:latest .
+./build_alpine.sh external-import/mattermost latest
 ```
 
 Configure the connector in `docker-compose.yml` and start it:

@@ -50,7 +50,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-maltiverse:latest .
+./build_alpine.sh external-import/maltiverse latest
 ```
 
 Configure the connector in `docker-compose.yml`:

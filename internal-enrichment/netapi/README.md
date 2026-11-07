@@ -68,10 +68,10 @@ Configuration comes from environment variables or from `config.yml` (see `config
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-netapi:latest
+./build_alpine.sh internal-enrichment/netapi latest
 ```
 
 Set the environment variables in `docker-compose.yml` (at least `OPENCTI_URL`, `OPENCTI_TOKEN` and `CONNECTOR_ID`), then start the container:

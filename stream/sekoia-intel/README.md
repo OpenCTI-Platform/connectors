@@ -86,7 +86,7 @@ Before building the Docker container, ensure you have set the version of `pycti`
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-sekoia-intel:latest .
+./build_alpine.sh stream/sekoia-intel latest
 ```
 
 Configure the connector in `docker-compose.yml`:

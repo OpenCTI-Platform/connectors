@@ -51,7 +51,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-citalid:latest .
+./build_alpine.sh external-import/citalid latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -87,7 +87,7 @@ Below are the connector specific parameters:
 Build a docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-cvelistv5:latest
+./build_alpine.sh external-import/cvelistv5 latest
 ```
 
 Update the environment variables in `docker-compose.yml` with the appropriate

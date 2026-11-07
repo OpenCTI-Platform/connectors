@@ -2,7 +2,11 @@ services:
   connector-xposedornot:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
+        CONNECTOR_CMD: "-m src"
+        CONNECTOR_WORKDIR: "/opt/connector"
     image: opencti/connector-xposedornot:latest
     environment:
       # OpenCTI configuration

@@ -74,7 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-ipsum:latest .
+./build_alpine.sh external-import/ipsum latest
 ```
 
 Configure the connector in `docker-compose.yml`:

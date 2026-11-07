@@ -53,10 +53,10 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-honeylabs:latest
+./build_alpine.sh external-import/honeylabs latest
 ```
 
 Set the environment variables in `docker-compose.yml` (at least `OPENCTI_URL`, `OPENCTI_TOKEN`,

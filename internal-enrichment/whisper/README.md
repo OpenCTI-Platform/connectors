@@ -84,7 +84,7 @@ file (manual deployment). See [`config.yml.sample`](config.yml.sample).
 Build the image and run it with the environment variables above:
 
 ```shell
-docker build . -t opencti/connector-whisper:latest
+./build_alpine.sh internal-enrichment/whisper latest
 ```
 
 Or use the provided [`docker-compose.yml`](docker-compose.yml): set the

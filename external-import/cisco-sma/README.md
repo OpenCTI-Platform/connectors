@@ -100,7 +100,7 @@ Enable or disable specific feed categories:
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-cisco-sma:latest .
+./build_alpine.sh external-import/cisco-sma latest
 ```
 
 Configure the connector in `docker-compose.yml`:

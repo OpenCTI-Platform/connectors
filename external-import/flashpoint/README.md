@@ -58,7 +58,7 @@ Find all the configuration variables available here: [Connector Configurations](
 
 Before building the Docker container, ensure you have set the version of `pycti` in `requirements.txt` to match the version of OpenCTI you are running. For example, `pycti==6.3.8`. Failing to do so may result in initialization issues.
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example:
 

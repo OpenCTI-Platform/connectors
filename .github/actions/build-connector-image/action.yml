@@ -222,15 +222,25 @@ runs:
         VARIANT="${{ inputs.variant }}"
         DOCKERFILE="${{ inputs.dockerfile }}"
 
-        # Dockerfile: use override or default to connector's own Dockerfile
+        # Dockerfile: use override, else the connector's own Dockerfile, else
+        # the shared Dockerfile_alpine
+        SHARED="false"
+        if [ -n "$VARIANT" ]; then
+          SHARED="true"
+        fi
         if [ -z "$DOCKERFILE" ]; then
-          DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
+          if [ -f "${CONNECTOR_PATH}/Dockerfile" ]; then
+            DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
+          else
+            DOCKERFILE="Dockerfile_alpine"
+            SHARED="true"
+          fi
         fi
         echo "dockerfile=$DOCKERFILE" >> "$GITHUB_OUTPUT"
 
-        # Build args: auto-generate for shared Dockerfiles (e.g. UBI9)
+        # Build args: auto-generate for shared Dockerfiles (Dockerfile_alpine, Dockerfile_ubi9)
         BUILD_ARGS=""
-        if [ -n "$VARIANT" ]; then
+        if [ "$SHARED" = "true" ]; then
           TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
           CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
           BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"

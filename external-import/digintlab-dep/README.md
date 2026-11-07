@@ -113,7 +113,7 @@ The platform tracks ransomware groups' activities, including victim announcement
 Build the Docker image:
 
 ```bash
-docker build -t opencti-connector-dep .
+./build_alpine.sh external-import/digintlab-dep latest
 ```
 
 Use the following `docker-compose.yml`:

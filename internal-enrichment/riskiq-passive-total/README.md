@@ -78,7 +78,7 @@ The RiskIQ PassiveTotal connector enriches IPv4 and Domain observables with pass
 
 ### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example `docker-compose.yml`:
 

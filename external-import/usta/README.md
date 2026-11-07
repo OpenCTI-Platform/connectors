@@ -205,8 +205,6 @@ usta/
 │   │   └── test_utils.py                # Utility tests
 │   └── test_client/
 │       └── test_api_client.py           # API client tests
-├── entrypoint.sh                        # Docker entrypoint
-├── Dockerfile
 ├── pytest.ini 
 ├── .env.sample                          # Sample environment variables
 └── docker-compose.yml
