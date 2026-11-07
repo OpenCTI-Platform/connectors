@@ -1250,6 +1250,64 @@ def test_extract_entities_from_tags_empty_names_ignored():
     assert len(malware) == 0
 
 
+def test_convert_indicator_to_stix_should_not_send_entity_tags_as_labels():
+    """Issue #8160: malware: and actor: tags become entities, not labels."""
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(
+        tags=["malware:berbew", "actor:apt27", "type:trojan", "source:feed"]
+    )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    indicators = [obj for obj in octi_objects if isinstance(obj, Indicator)]
+    observables = [obj for obj in octi_objects if isinstance(obj, IPV4Address)]
+    assert len(indicators) == 1
+    assert len(observables) == 1
+    assert sorted(indicators[0].labels) == ["source:feed", "type:trojan"]
+    assert sorted(observables[0].labels) == ["source:feed", "type:trojan"]
+    # The entities and their indicates relationships are still created.
+    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == ["berbew"]
+    assert [obj.name for obj in octi_objects if isinstance(obj, IntrusionSet)] == [
+        "apt27"
+    ]
+    targets = {
+        type(rel.target)
+        for rel in _relationships(octi_objects, RelationshipType.INDICATES)
+    }
+    assert {Malware, IntrusionSet} <= targets
+
+
+def test_convert_indicator_to_stix_should_keep_empty_entity_tags_as_labels():
+    """A tag that creates no entity (empty name) is left as it was."""
+    converter = _build_converter()
+    indicator = _build_mitre_indicator(tags=["malware:", "actor: "])
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    octi_indicator = next(obj for obj in octi_objects if isinstance(obj, Indicator))
+    assert sorted(octi_indicator.labels) == ["actor: ", "malware:"]
+    assert not any(isinstance(obj, (Malware, IntrusionSet)) for obj in octi_objects)
+
+
+def test_convert_extracted_config_should_not_send_malware_tags_as_labels():
+    """Issue #8160: config observables keep type: labels, not malware: ones."""
+    converter = _build_converter(import_extracted_config_domains_urls=True)
+    indicator = _build_extracted_config(
+        '{"Hosts": "example.com", "ip": ["162.216.243.56"]}',
+        tags=["malware:strrat", "type:trojan"],
+    )
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    observables = [
+        obj for obj in octi_objects if isinstance(obj, (DomainName, IPV4Address))
+    ]
+    assert len(observables) == 2
+    assert all(observable.labels == ["type:trojan"] for observable in observables)
+    assert [obj.name for obj in octi_objects if isinstance(obj, Malware)] == ["strrat"]
+    assert len(_relationships(octi_objects, RelationshipType.COMMUNICATES_WITH)) == 2
+
+
 def test_build_external_references_with_href_and_id():
     converter = _build_converter()
     refs = converter._build_external_references(
