@@ -10,6 +10,7 @@ The Google SecOps SIEM connector streams OpenCTI STIX indicators to Google SecOp
   - [Installation](#installation)
     - [Requirements](#requirements)
     - [Google Cloud Service Account Setup](#google-cloud-service-account-setup)
+    - [Application Default Credentials / Workload Identity Setup](#application-default-credentials--workload-identity-setup)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
@@ -69,6 +70,25 @@ Follow these steps to create and configure a service account for the connector:
    - `SECOPS_SIEM_PROJECT_INSTANCE` :  Your SecOps customer ID (found under **Settings > SIEM Settings > Profile** in the SecOps UI).
    - All other `SECOPS_SIEM_*` variables map directly to fields in the service account JSON key.
 
+### Application Default Credentials / Workload Identity Setup
+
+If you deploy the connector inside Google Cloud (or with Workload Identity Federation), you can avoid exporting a
+service account key by setting `SECOPS_SIEM_AUTH_METHOD=adc`. The connector then authenticates through
+[Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials)
+using `google.auth.default()`, and the `SECOPS_SIEM_PRIVATE_KEY*`/`SECOPS_SIEM_CLIENT_*` fields are not required.
+
+This covers two deployment models:
+
+- **GKE Workload Identity**: bind the pod's Kubernetes service account to a Google service account that has the
+  **Chronicle API Editor** (`roles/chronicle.editor`) role. Credentials are fetched from the GKE metadata server; no
+  key file is mounted.
+- **Workload Identity Federation**: provide an `external_account` credential configuration file and point
+  `GOOGLE_APPLICATION_CREDENTIALS` at it. The federated identity must be able to impersonate a Google service account
+  with the **Chronicle API Editor** role.
+
+`SECOPS_SIEM_PROJECT_ID`, `SECOPS_SIEM_PROJECT_INSTANCE`, and `SECOPS_SIEM_PROJECT_REGION` are still required in both
+cases, since they build the `entities.import` API URL independently of authentication.
+
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
@@ -99,14 +119,15 @@ There are a number of configuration options, which are set either in `docker-com
 | Google Project Region     | secops_siem.project_region     | `SECOPS_SIEM_PROJECT_REGION`     |         | Yes       | Region where the Google SecOps instance is located.  |
 | Google Project ID         | secops_siem.project_id         | `SECOPS_SIEM_PROJECT_ID`         |         | Yes       | GCP Project ID.                                      |
 | Google Project Instance   | secops_siem.project_instance   | `SECOPS_SIEM_PROJECT_INSTANCE`   |         | Yes       | Google SecOps customer ID.                           |
-| Google Private Key ID     | secops_siem.private_key_id     | `SECOPS_SIEM_PRIVATE_KEY_ID`     |         | Yes       | Service account `private_key_id` value.              |
-| Google Private Key        | secops_siem.private_key        | `SECOPS_SIEM_PRIVATE_KEY`        |         | Yes       | Service account `private_key` value.                 |
-| Google Client Email       | secops_siem.client_email       | `SECOPS_SIEM_CLIENT_EMAIL`       |         | Yes       | Service account `client_email` value.                |
-| Google Client ID          | secops_siem.client_id          | `SECOPS_SIEM_CLIENT_ID`          |         | Yes       | Service account `client_id` value.                   |
+| Auth Method               | secops_siem.auth_method        | `SECOPS_SIEM_AUTH_METHOD`        | service_account | No | Authentication method: `service_account` (JSON key fields below) or `adc` (Application Default Credentials / Workload Identity). |
+| Google Private Key ID     | secops_siem.private_key_id     | `SECOPS_SIEM_PRIVATE_KEY_ID`     |         | Conditional | Service account `private_key_id` value. Required when `auth_method=service_account`. |
+| Google Private Key        | secops_siem.private_key        | `SECOPS_SIEM_PRIVATE_KEY`        |         | Conditional | Service account `private_key` value. Required when `auth_method=service_account`. |
+| Google Client Email       | secops_siem.client_email       | `SECOPS_SIEM_CLIENT_EMAIL`       |         | Conditional | Service account `client_email` value. Required when `auth_method=service_account`. |
+| Google Client ID          | secops_siem.client_id          | `SECOPS_SIEM_CLIENT_ID`          |         | Conditional | Service account `client_id` value. Required when `auth_method=service_account`. |
 | Google Auth URI           | secops_siem.auth_uri           | `SECOPS_SIEM_AUTH_URI`           |         | Yes       | Service account `auth_uri` value.                    |
 | Google Token URI          | secops_siem.token_uri          | `SECOPS_SIEM_TOKEN_URI`          |         | Yes       | Service account `token_uri` value.                   |
 | Google Auth Provider Cert | secops_siem.auth_provider_cert | `SECOPS_SIEM_AUTH_PROVIDER_CERT` |         | Yes       | Service account `auth_provider_x509_cert_url` value. |
-| Google Client Cert URL    | secops_siem.client_cert_url    | `SECOPS_SIEM_CLIENT_CERT_URL`    |         | Yes       | Service account `client_x509_cert_url` value.        |
+| Google Client Cert URL    | secops_siem.client_cert_url    | `SECOPS_SIEM_CLIENT_CERT_URL`    |         | Conditional | Service account `client_x509_cert_url` value. Required when `auth_method=service_account`. |
 
 For `secops_siem.private_key` in `config.yml`, prefer YAML multiline format to preserve PEM newlines:
 
