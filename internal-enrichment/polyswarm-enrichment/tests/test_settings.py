@@ -1,8 +1,10 @@
 """Tests for the PolySwarm enrichment connector settings."""
 
+from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml
 from connectors_sdk import ConfigValidationError
 from connectors_sdk.models.enums import TLPLevel
 from polyswarm_enrichment.settings import ConnectorSettings
@@ -96,3 +98,22 @@ def test_settings_should_reject_negative_related_files_max():
     # Given/When/Then: A negative cap is a configuration error
     with pytest.raises(ConfigValidationError):
         _settings_from({"network_related_files_max": -1})
+
+
+def test_settings_should_default_connector_auto_to_false():
+    # Given/When: No auto setting is configured
+    settings = _settings_from({})
+
+    # Then: Enrichment is manual, nothing is sent to PolySwarm unasked
+    assert settings.connector.auto is False
+
+
+def test_samples_should_keep_connector_auto_false():
+    # Given: The sample config and docker-compose shipped with the connector
+    root = Path(__file__).resolve().parent.parent
+    config_sample = yaml.safe_load((root / "config.yml.sample").read_text())
+    compose = (root / "docker-compose.yml").read_text()
+
+    # Then: Neither sample turns on auto-enrichment
+    assert config_sample["connector"]["auto"] is False
+    assert "CONNECTOR_AUTO=true" not in compose

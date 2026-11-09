@@ -11,7 +11,8 @@ services:
       # - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       # - CONNECTOR_NAME=PolySwarm Hash Enrichment
       # - CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr
-      # - CONNECTOR_AUTO=true
+      # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
+      # - CONNECTOR_AUTO=false
       # - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_MAX_TLP=TLP:RED
 

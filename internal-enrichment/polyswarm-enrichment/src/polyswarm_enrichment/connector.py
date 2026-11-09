@@ -16,6 +16,7 @@ Also enriches URL, domain and IP observables with PolySwarm URL scan
 verdicts and, for IPs and domains, related file hashes (lookup only).
 """
 
+import json
 import traceback
 from datetime import datetime, timezone
 
@@ -23,18 +24,32 @@ from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 from polyswarm_enrichment.client_api import (
     NETWORK_OBSERVABLE_TYPES,
     is_non_public_network_value,
+    loggable_network_value,
+    url_has_userinfo,
 )
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
 
-# Standard TLP marking definition IDs (STIX 2.1)
+# Standard TLP marking definition IDs: the STIX 2.1 ids (stix2.TLP_WHITE,
+# TLP_GREEN, TLP_AMBER, TLP_RED) plus the OpenCTI TLP:AMBER+STRICT id that
+# pycti uses. OpenCTI shows the STIX TLP:WHITE id as TLP:CLEAR.
 _TLP_MARKING_TO_NAME = {
-    "marking-definition--36218b84-3861-514a-8360-29dbdd9ba0d9": "TLP:WHITE",
+    "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9": "TLP:CLEAR",
     "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da": "TLP:GREEN",
-    "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ea": "TLP:AMBER",
-    "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9": "TLP:AMBER+STRICT",
-    "marking-definition--36218b84-3861-514a-8360-29dbdd9ba0d8": "TLP:RED",
+    "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82": "TLP:AMBER",
+    "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37": "TLP:AMBER+STRICT",
+    "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed": "TLP:RED",
+}
+
+# TLP restriction rank, used to report the most restrictive marking
+_TLP_RANK = {
+    "TLP:CLEAR": 0,
+    "TLP:WHITE": 0,
+    "TLP:GREEN": 1,
+    "TLP:AMBER": 2,
+    "TLP:AMBER+STRICT": 3,
+    "TLP:RED": 4,
 }
 
 # Human-readable names for network observable types in notes
@@ -906,23 +921,34 @@ class ConnectorTemplate:
             return []
 
     def _collect_network_intelligence(
-        self, observable: dict, observable_type: str, value: str, lookup: dict
+        self,
+        observable: dict,
+        observable_type: str,
+        value: str,
+        lookup: dict,
+        marking_refs: list | None = None,
     ) -> list:
-        """Build the STIX objects for a URL, domain or IP lookup result."""
+        """Build the STIX objects for a URL, domain or IP lookup result.
+
+        Every object created here carries the source observable's
+        ``marking_refs``; the observable score goes in the bundle only.
+        """
+        # Incoming objects (observable and its marking definitions) are kept
         stix_objects = self.stix_objects_list.copy()
         if self.converter_to_stix.author:
             stix_objects.append(self.converter_to_stix.author)
+        derived: list = []
 
         errors = lookup.get("errors", [])
         if errors:
             self.helper.connector_logger.warning(
                 "[CONNECTOR] API errors detected", {"count": len(errors)}
             )
-            stix_objects.append(self._create_error_note(observable["id"], errors))
+            derived.append(self._create_error_note(observable["id"], errors))
 
         scan = lookup.get("scan")
         if scan:
-            stix_objects.append(
+            derived.append(
                 self._create_network_scan_note(
                     observable["id"], observable_type, value, scan
                 )
@@ -937,13 +963,15 @@ class ConnectorTemplate:
                         enriched_obs["x_opencti_score"] = score
                         stix_objects[i] = enriched_obs
                         break
+                else:
+                    stix_objects.insert(0, {**observable, "x_opencti_score": score})
 
             if scan.get("malicious", 0) >= self.network_indicator_min_detections:
                 indicator = self.converter_to_stix.create_network_indicator(
                     observable_type, value, scan
                 )
                 if indicator:
-                    stix_objects.append(indicator)
+                    derived.append(indicator)
                     based_on = self.converter_to_stix.create_relationship(
                         source_id=indicator["id"],
                         relationship_type="based-on",
@@ -954,9 +982,9 @@ class ConnectorTemplate:
                         ),
                     )
                     if based_on:
-                        stix_objects.append(based_on)
+                        derived.append(based_on)
         elif not errors:
-            stix_objects.append(
+            derived.append(
                 self._create_network_not_found_note(
                     observable["id"], observable_type, value
                 )
@@ -964,7 +992,7 @@ class ConnectorTemplate:
 
         for sha256 in lookup.get("related_files", []):
             related_file = self.converter_to_stix.create_related_file(sha256)
-            stix_objects.append(related_file)
+            derived.append(related_file)
             relationship = self.converter_to_stix.create_relationship(
                 source_id=observable["id"],
                 relationship_type="related-to",
@@ -975,7 +1003,24 @@ class ConnectorTemplate:
                 ),
             )
             if relationship:
-                stix_objects.append(relationship)
+                derived.append(relationship)
+
+        # Derived objects keep the source's visibility (TLP and other markings)
+        if marking_refs:
+            # stix2 objects (relationships, indicators) become plain JSON dicts first:
+            # copying them with ** keeps stix2 datetimes that json can't serialize
+            derived = [
+                {
+                    **(
+                        json.loads(obj.serialize())
+                        if hasattr(obj, "serialize")
+                        else obj
+                    ),
+                    "object_marking_refs": list(marking_refs),
+                }
+                for obj in derived
+            ]
+        stix_objects.extend(derived)
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Network observable bundle built",
@@ -1003,13 +1048,28 @@ class ConnectorTemplate:
                 "[CONNECTOR] Observable does not contain a value",
                 {"entity_type": observable_type},
             )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
             return "[CONNECTOR] No value found to enrich"
+
+        log_value = loggable_network_value(value, observable_type)
+
+        # URLs with a username or password are never sent (credentials)
+        if observable_type == "Url" and url_has_userinfo(value):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Skipping: URL contains a username or password and is "
+                "never sent to PolySwarm",
+                {"entity_type": observable_type, "value": log_value},
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Skipped URL with credentials, nothing sent to PolySwarm"
 
         # Private and internal values never leave the platform
         if is_non_public_network_value(value, observable_type):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Skipping: private or internal value is never sent to PolySwarm",
-                {"entity_type": observable_type, "value": value},
+                {"entity_type": observable_type, "value": log_value},
             )
             if not data.get("event_type"):
                 self._send_bundle(self.stix_objects_list)
@@ -1017,7 +1077,7 @@ class ConnectorTemplate:
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Enrichment starting for network observable",
-            {"entity_type": observable_type, "value": value},
+            {"entity_type": observable_type, "value": log_value},
         )
         lookup = self.client.lookup_network_observable(
             value,
@@ -1025,7 +1085,11 @@ class ConnectorTemplate:
             related_files_max=self.network_related_files_max,
         )
         stix_objects = self._collect_network_intelligence(
-            observable, observable_type, value, lookup
+            observable,
+            observable_type,
+            value,
+            lookup,
+            marking_refs=self._source_marking_refs(observable, opencti_entity),
         )
 
         # Playbook compatibility: keep the original observable in the bundle
@@ -1033,11 +1097,10 @@ class ConnectorTemplate:
         if observable.get("id") and observable["id"] not in obs_ids:
             stix_objects.insert(0, observable)
 
-        result = self._send_bundle(stix_objects)
-        score = (lookup.get("scan") or {}).get("x_opencti_score")
-        if score is not None and opencti_entity.get("id"):
-            self._update_observable_score(opencti_entity["id"], observable, score)
-        return result
+        # The score travels in the bundle (no separate API write). Marking refs
+        # are kept even when their definition is not in the bundle: OpenCTI
+        # resolves them, and stripping them would drop the source's TLP.
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
 
     def _should_replace_score(self, observable: dict, score: int) -> bool:
         """#39 replace_with_lower_score: when False, keep a higher existing score."""
@@ -1080,19 +1143,80 @@ class ConnectorTemplate:
         return entity_type in scopes
 
     @staticmethod
-    def _get_tlp(stix_entity: dict, opencti_entity: dict = None) -> str | None:
-        """Extract TLP marking name from a STIX entity or OpenCTI entity."""
-        # Try OpenCTI entity objectMarking first
-        if opencti_entity:
-            for marking in opencti_entity.get("objectMarking", []):
-                definition = marking.get("definition", "")
-                if definition.startswith("TLP:"):
-                    return definition
-        # Fallback to STIX object_marking_refs
-        for ref in stix_entity.get("object_marking_refs", []):
-            if ref in _TLP_MARKING_TO_NAME:
-                return _TLP_MARKING_TO_NAME[ref]
-        return None
+    def _marking_object_tlp(marking: dict) -> str | None:
+        """TLP name of a marking-definition object (None when it is not a TLP)."""
+        if str(marking.get("x_opencti_definition_type", "")).upper() == "TLP":
+            return str(marking.get("x_opencti_definition", "")).upper() or None
+        if str(marking.get("definition_type", "")).lower() != "tlp":
+            return None
+        definition = marking.get("definition")
+        if isinstance(definition, dict) and definition.get("tlp"):
+            return f"TLP:{str(definition['tlp']).upper()}"
+        if isinstance(definition, str) and definition.upper().startswith("TLP:"):
+            return definition.upper()
+        name = str(marking.get("name", "")).upper()
+        return name if name.startswith("TLP:") else None
+
+    @classmethod
+    def _get_tlps(
+        cls,
+        stix_entity: dict,
+        opencti_entity: dict | None = None,
+        stix_objects: list | None = None,
+    ) -> tuple[list[str], list[str]]:
+        """
+        Resolve every marking on the source observable.
+
+        Returns: (TLP names, unresolved marking refs). A ref is resolved when
+        it is a standard TLP id, a marking-definition object in the bundle, or
+        an objectMarking entry of the OpenCTI entity. Resolved markings that
+        are not TLPs (PAP, statements) are not returned as TLPs.
+        """
+        known: dict[str, str | None] = dict(_TLP_MARKING_TO_NAME)
+        for obj in stix_objects or []:
+            if (
+                isinstance(obj, dict)
+                and obj.get("type") == "marking-definition"
+                and obj.get("id")
+            ):
+                known[obj["id"]] = cls._marking_object_tlp(obj)
+
+        tlps: list[str] = []
+        for marking in (opencti_entity or {}).get("objectMarking") or []:
+            definition = str(marking.get("definition") or "").upper()
+            tlp = definition if definition.startswith("TLP:") else None
+            if marking.get("standard_id"):
+                known[marking["standard_id"]] = tlp
+            if tlp and tlp not in tlps:
+                tlps.append(tlp)
+
+        unresolved: list[str] = []
+        for ref in stix_entity.get("object_marking_refs") or []:
+            if ref not in known:
+                unresolved.append(ref)
+            elif known[ref] and known[ref] not in tlps:
+                tlps.append(known[ref])
+        return tlps, unresolved
+
+    @classmethod
+    def _get_tlp(cls, stix_entity: dict, opencti_entity: dict = None) -> str | None:
+        """Most restrictive TLP marking name of a STIX or OpenCTI entity."""
+        tlps, _ = cls._get_tlps(stix_entity, opencti_entity)
+        if not tlps:
+            return None
+        return max(tlps, key=lambda tlp: _TLP_RANK.get(tlp, len(_TLP_RANK)))
+
+    @staticmethod
+    def _source_marking_refs(stix_entity: dict, opencti_entity: dict) -> list[str]:
+        """Marking refs of the source observable, copied to every derived object."""
+        refs = list(stix_entity.get("object_marking_refs") or [])
+        if not refs:
+            refs = [
+                marking["standard_id"]
+                for marking in opencti_entity.get("objectMarking") or []
+                if marking.get("standard_id")
+            ]
+        return refs
 
     def process_message(self, data: dict) -> str:
         """Process the enrichment request."""
@@ -1120,19 +1244,30 @@ class ConnectorTemplate:
                                 )
                                 break
 
-            # #38 — max_tlp: refuse enrichment for high-TLP observables
-            entity_tlp = self._get_tlp(observable, opencti_entity)
-            if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
-                entity_tlp, self.max_tlp
-            ):
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
-                    {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
-                )
-                return "Observable TLP exceeds configured max_tlp"
+            # #38 max_tlp: refuse enrichment when any TLP marking is too high
+            entity_tlps, unresolved_markings = self._get_tlps(
+                observable, opencti_entity, self.stix_objects_list
+            )
+            for entity_tlp in entity_tlps:
+                if not OpenCTIConnectorHelper.check_max_tlp(entity_tlp, self.max_tlp):
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: observable TLP exceeds configured max_tlp",
+                        {"entity_tlp": entity_tlp, "max_tlp": self.max_tlp},
+                    )
+                    return "Observable TLP exceeds configured max_tlp"
 
             # URL, domain and IP observables take the lookup path
             if opencti_entity.get("entity_type") in NETWORK_OBSERVABLE_TYPES:
+                # Fail closed: a marking that can't be resolved may be above max_tlp
+                if unresolved_markings and self.max_tlp != "TLP:RED":
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: observable has a marking that can't "
+                        "be resolved to a TLP, nothing sent to PolySwarm",
+                        {"markings": unresolved_markings, "max_tlp": self.max_tlp},
+                    )
+                    if not data.get("event_type"):
+                        self._send_bundle(self.stix_objects_list)
+                    return "Observable marking can't be resolved against max_tlp"
                 return self._process_network_observable(
                     data, opencti_entity, observable
                 )
@@ -1190,7 +1325,9 @@ class ConnectorTemplate:
             self.helper.connector_logger.error(error_msg, {"error_message": str(err)})
             return error_msg
 
-    def _send_bundle(self, stix_objects: list) -> str:
+    def _send_bundle(
+        self, stix_objects: list, cleanup_inconsistent_bundle: bool = True
+    ) -> str:
         """Create and send STIX bundle to OpenCTI with deduplication."""
         try:
             # PERF-5: Deduplicate STIX objects by ID before sending
@@ -1222,7 +1359,8 @@ class ConnectorTemplate:
 
             stix_objects_bundle = self.helper.stix2_create_bundle(unique_objects)
             bundles_sent = self.helper.send_stix2_bundle(
-                stix_objects_bundle, cleanup_inconsistent_bundle=True
+                stix_objects_bundle,
+                cleanup_inconsistent_bundle=cleanup_inconsistent_bundle,
             )
 
             return f"[CONNECTOR] Successfully sent {len(bundles_sent)} bundle(s)"

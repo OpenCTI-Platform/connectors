@@ -86,7 +86,7 @@ Key features:
 | `connector_id`               | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` unique for this connector             |
 | `connector_name`             | `CONNECTOR_NAME`             | No        | Display name (default: `PolySwarm Hash Enrichment`)              |
 | `connector_scope`            | `CONNECTOR_SCOPE`            | No        | Observable types to enrich (default: `StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr`) |
-| `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `true`)                 |
+| `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `false`)                |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | No        | Default confidence level (default: `80`)                         |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | No        | Log level: `debug`, `info`, `warning`, `error` (default: `info`) |
 | `connector_max_tlp`          | `CONNECTOR_MAX_TLP`          | No        | Max TLP level to enrich (default: `TLP:RED`, no limit). Replaces the deprecated `POLYSWARM_MAX_TLP` |
@@ -127,7 +127,8 @@ services:
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=PolySwarm Hash Enrichment
       - CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr
-      - CONNECTOR_AUTO=true
+      # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
+      - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=80
       - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_MAX_TLP=TLP:AMBER
@@ -185,9 +186,16 @@ The connector enriches URL, domain and IP (v4 and v6) observables by:
    `related-to` relationship
 6. Creating a short "No Scan Found" Note when PolySwarm has no scan of the value
 
-Private, reserved, loopback, link-local and multicast IPs, and internal domains
-(single label, `.local`, `.internal`, `.lan`, `.corp`, `.home.arpa`,
-`.localhost`) are skipped and never sent to PolySwarm.
+Private, reserved, shared (`100.64.0.0/10`), loopback, link-local and
+multicast IPs (including IPv4-mapped IPv6 forms and non-canonical IPv4 forms
+such as `127.1` or `2130706433`), internal domains (single label, `.local`,
+`.internal`, `.lan`, `.corp`, `.home.arpa`, `.localhost`) and URLs containing
+a username or password are skipped and never sent to PolySwarm. Observables
+carrying a marking the connector can't resolve to a TLP are also skipped,
+unless `CONNECTOR_MAX_TLP` is `TLP:RED`.
+
+Notes, Indicators, relationships and related file observables created for a
+URL, domain or IP carry the same markings as the source observable.
 
 Trigger enrichment:
 - Manually via the OpenCTI UI observable detail page
@@ -323,7 +331,7 @@ unset to disable.
 What leaves your environment, and when. The connector sends data to PolySwarm only when it enriches an observable, which is manual by default (`CONNECTOR_AUTO=false`).
 
 - **File observables: hashes only.** The observable's file hash (SHA-256, SHA-1 or MD5) is sent to PolySwarm to look up existing scan results, and the SHA-256 is used to look up associated indicators. Files are never uploaded.
-- **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
+- **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For URLs, the full URL is sent, including its query string. URLs containing a username or password are never sent. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
 - **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
 - **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
