@@ -175,3 +175,26 @@ class AttackTechniqueLookup:
             return str(name).strip().lower()
 
         return ""
+
+
+class GithubAttackTechniqueLookup(AttackTechniqueLookup):
+    """Lookup built from the MITRE ATT&CK Enterprise dataset published on GitHub.
+
+    Tries the dataset of the given version first, then the generic one.
+    """
+
+    def __init__(self, attack_version: str):
+        super().__init__(attack_version=attack_version)
+
+
+class CustomAttackTechniqueLookup(AttackTechniqueLookup):
+    """Lookup built from an ATT&CK Enterprise dataset at a custom URL (mirror, air-gapped host).
+
+    Only the given URL is tried.
+    """
+
+    def __init__(self, enterprise_attack_url: str):
+        # The version only builds the GitHub URLs, which are not used with a custom URL.
+        super().__init__(
+            attack_version=None, enterprise_attack_url=enterprise_attack_url
+        )
