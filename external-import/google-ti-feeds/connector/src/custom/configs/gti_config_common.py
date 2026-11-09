@@ -111,6 +111,14 @@ ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES = [
     "attack_techniques",
 ]
 
+ALLOWED_INDICATOR_SUBENTITIES = [
+    "malware_families",
+    "threat_actors",
+    "software_toolkits",
+    "attack_techniques",
+    # "campaigns",
+]
+
 
 def validate_origins_list(
     v: list[str], field_name: str, allowed_origins: list[str] | None = None

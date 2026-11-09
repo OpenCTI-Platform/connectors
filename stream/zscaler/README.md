@@ -21,6 +21,7 @@ The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filte
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+  - [Migrating from the legacy API](#migrating-from-the-legacy-api)
 
 ## Introduction
 
@@ -39,8 +40,12 @@ Key features:
 ### Requirements
 
 - OpenCTI Platform >= 6.0.0
-- Zscaler account with API access
-- Zscaler API key, username, and password
+- Zscaler tenant migrated to [ZIdentity](https://help.zscaler.com/zidentity/migrating-zscaler-service-admins-zidentity)
+- A ZIdentity API client (client ID and client secret) with a ZIA API role allowed to manage URL categories and activate changes
+
+The connector uses [Zscaler OneAPI](https://automate.zscaler.com/docs/api-reference-and-guides/guides/UnderstandingOneAPI)
+(OAuth 2.0 client credentials). The legacy ZIA API authentication (username, password and API key) still works but is
+deprecated, see [Migrating from the legacy API](#migrating-from-the-legacy-api).
 
 ## Configuration variables
 
@@ -75,10 +80,10 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - ZSCALER_USERNAME=ChangeMe
-      - ZSCALER_PASSWORD=ChangeMe
-      - ZSCALER_API_KEY=ChangeMe
-      - ZSCALER_BLACKLIST_NAME=YOUR_CUSTOM_BLACKLIST
+      - ZSCALER_CLIENT_ID=ChangeMe
+      - ZSCALER_CLIENT_SECRET=ChangeMe
+      - ZSCALER_VANITY_DOMAIN=ChangeMe
+      - ZSCALER_BLACKLIST_NAME=CUSTOM_01
     restart: always
     networks:
       - opencti_network
@@ -113,10 +118,10 @@ connector:
   log_level: 'info'
 
 zscaler:
-  username: 'YOUR_ZSCALER_USERNAME'
-  password: 'YOUR_ZSCALER_PASSWORD'
-  api_key: 'YOUR_ZSCALER_API_KEY'
-  blacklist_name: 'BLACK_LIST_DYNDNS'
+  client_id: 'YOUR_ZIDENTITY_CLIENT_ID'
+  client_secret: 'YOUR_ZIDENTITY_CLIENT_SECRET'
+  vanity_domain: 'YOUR_VANITY_DOMAIN'
+  blacklist_name: 'CUSTOM_01'
 ```
 
 2. Install dependencies:
@@ -139,7 +144,7 @@ python3 main.py
 4. Start the connector
 
 The connector will:
-- Authenticate with Zscaler API on startup
+- Request a Zscaler OneAPI access token on startup
 - Listen for domain indicator create/delete events
 - Add domains to the specified blacklist category
 - Automatically activate changes in Zscaler
@@ -200,9 +205,8 @@ graph LR
 ### Rate Limiting
 
 The connector handles Zscaler API rate limits:
-- Maximum 400 requests per hour
-- Automatic retry with exponential backoff
-- Respects `Retry-After` headers
+- On HTTP 429, waits for the delay given by the `x-ratelimit-reset` header (or `Retry-After`) before retrying
+- Retries activation with exponential backoff while another activation is in progress (HTTP 503)
 
 ## Debugging
 
@@ -216,7 +220,8 @@ CONNECTOR_LOG_LEVEL=debug
 
 | Issue                          | Solution                                              |
 |--------------------------------|-------------------------------------------------------|
-| Authentication failed          | Verify username, password, and API key                |
+| Authentication failed          | Verify client ID, client secret and vanity domain, and that the API client has a ZIA role |
+| HTTP 500 on URL category calls | `ZSCALER_BLACKLIST_NAME` must be a category ID (`CUSTOM_XX`), not a display name |
 | Domain already in blacklist    | Normal behavior - domain is skipped                   |
 | Invalid domain pattern         | Ensure indicator uses STIX pattern format             |
 | Rate limit exceeded (429)      | Connector will automatically retry                    |
@@ -234,6 +239,30 @@ CONNECTOR_LOG_LEVEL=debug
 
 - **Supported Indicators**: Only `domain-name` type indicators
 - **Pattern Format**: Must use STIX pattern `[domain-name:value = 'example.com']`
-- **API Endpoint**: Defaults to `https://zsapi.zscalertwo.net/`. If your organization is on another Zscaler cloud, set `ZSCALER_API_BASE_URL` (e.g. `https://zsapi.zscalerone.net`). See [Getting Started | Zscaler](https://help.zscaler.com/zia/getting-started-zia-api) to find your cloud name
-- **Session Management**: Automatic re-authentication when session expires
-- **Activation**: Changes are automatically activated after each operation
+- **API Endpoint**: Uses Zscaler OneAPI, `https://api.zsapi.net/zia/api/v1` (or `api.<cloud>.zsapi.net` when `ZSCALER_CLOUD` is set)
+- **Token Management**: The access token is cached and renewed before it expires, or when the API rejects it
+- **Activation**: Changes are automatically activated after each successful update
+
+## Migrating from the legacy API
+
+Earlier versions of this connector authenticated against the legacy ZIA API
+(`zsapi.zscalertwo.net`) with a username, a password and an API key. Zscaler is
+removing this authentication method, so the connector now uses Zscaler OneAPI.
+
+The legacy settings are deprecated but still work. When `ZSCALER_CLIENT_ID`,
+`ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN` are not set, the connector
+falls back to `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY`
+against `ZSCALER_API_BASE_URL` (default `https://zsapi.zscalertwo.net`), and logs
+a deprecation warning at startup. This fallback stops working when Zscaler
+removes the legacy authentication.
+
+To migrate:
+
+1. Make sure your tenant is migrated to ZIdentity.
+2. In ZIdentity, create an API client and assign it a ZIA API role allowed to
+   manage URL categories and activate changes.
+3. Replace `ZSCALER_USERNAME`, `ZSCALER_PASSWORD` and `ZSCALER_API_KEY` with
+   `ZSCALER_CLIENT_ID`, `ZSCALER_CLIENT_SECRET` and `ZSCALER_VANITY_DOMAIN`.
+
+4. Remove the legacy variables, including `ZSCALER_API_BASE_URL`. If they are
+   still set next to the OneAPI ones, the connector ignores them and logs a warning.

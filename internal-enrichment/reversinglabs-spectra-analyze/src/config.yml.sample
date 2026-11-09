@@ -16,3 +16,4 @@ reversinglabs-spectra_analyze:
   token: 'ChangeMe'
   #sandbox_os: 'windows10'
   #cloud_analysis: true
+  #ssl_verify: true

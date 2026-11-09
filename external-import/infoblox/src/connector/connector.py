@@ -5,12 +5,32 @@ from datetime import datetime, timezone
 import requests
 import stix2
 from connector.settings import ConnectorSettings
+from connectors_sdk.exceptions.error import UseCaseError
 from pycti import (
     Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
+
+
+class InvalidTimestampError(UseCaseError, ValueError):
+    """Raised when a TIDE timestamp is missing or cannot be parsed."""
+
+
+def parse_tide_timestamp(value: str | None) -> datetime:
+    """Parse a TIDE ISO 8601 timestamp into a timezone-aware UTC datetime.
+
+    Accepts a trailing ``Z`` or an explicit offset, with or without fractional
+    seconds. A naive timestamp is assumed to be UTC.
+    """
+    try:
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except (TypeError, ValueError, OverflowError) as err:
+        raise InvalidTimestampError(f"Invalid TIDE timestamp: {value!r}") from err
 
 
 class Infoblox:
@@ -156,12 +176,8 @@ class Infoblox:
                 pattern_type="stix",
                 description=description,
                 created_by_ref=identity_id,
-                created=datetime.strptime(
-                    threat["detected"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).replace(tzinfo=timezone.utc),
-                modified=datetime.strptime(
-                    threat["imported"], "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).replace(tzinfo=timezone.utc),
+                created=parse_tide_timestamp(threat.get("detected")),
+                modified=parse_tide_timestamp(threat.get("imported")),
                 labels=[threat["class"], threat["property"]],
                 confidence=threat["confidence"],
                 object_marking_refs=[self.marking],
@@ -215,7 +231,19 @@ class Infoblox:
         stix_objects = [identity, self.marking]
         all_threats = urls + ips + domains
         for threat in all_threats:
-            stix_object = self.create_stix_object(threat, identity_id)
+            try:
+                stix_object = self.create_stix_object(threat, identity_id)
+            except InvalidTimestampError as err:
+                self.helper.connector_logger.warning(
+                    "Skipping Infoblox threat with an invalid timestamp",
+                    {
+                        "threat_id": threat.get("id"),
+                        "type": threat.get("type"),
+                        "error": str(err),
+                        "cause": str(err.__cause__),
+                    },
+                )
+                continue
             if stix_object:
                 stix_objects.extend(stix_object)
 
