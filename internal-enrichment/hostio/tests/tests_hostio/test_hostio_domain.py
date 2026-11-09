@@ -40,8 +40,10 @@ def generate_random_token():
 
 class TestHostioDomain:
     @pytest.fixture
-    def domain(self):
+    def domain(self, mocker):
         """Create a Host IO instance with a mock token."""
+        # The constructor fetches the domain info: keep it off the live API.
+        mocker.patch.object(HostIODomain, "_request_data", return_value=None)
         # Use a mock token for testing
         return HostIODomain(
             token=generate_random_token(),
