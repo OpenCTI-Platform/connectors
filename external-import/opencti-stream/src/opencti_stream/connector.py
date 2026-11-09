@@ -69,7 +69,7 @@ class OpenCTIStream:
                     if self.direct_url.endswith("/")
                     else self.direct_url + "/"
                 )
-                file_uri = file["uri"][file["uri"].index("storage/get"):]
+                file_uri = file["uri"][file["uri"].index("storage/get") :]
                 url = target_uri + file_uri
                 file_data = self.helper.api.fetch_opencti_file(
                     url, binary=True, serialize=True
@@ -83,7 +83,10 @@ class OpenCTIStream:
             return
         try:
             payload = json.loads(msg.data)
-            if self.config.live_stream_include_file_data:
+            if (
+                self.config.connector.live_stream_include_file_data
+                and "data" in payload
+            ):
                 payload["data"] = self._enrich_with_files(payload["data"])
         except json.JSONDecodeError as exc:
             self.helper.connector_logger.warning(
