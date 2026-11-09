@@ -195,16 +195,28 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 The connector imports threat intelligence from CrowdStrike Falcon Intelligence API.
 
-### MITRE ATT&CK Label Resolution
+### MITRE ATT&CK Technique Resolution
 
-CrowdStrike indicators may include ATT&CK-related labels (e.g. `MitreATTCK/DefenseEvasion/ProcessInjection`).
+CrowdStrike references ATT&CK techniques in three places:
+- Indicators carry ATT&CK labels with the technique name (e.g. `MitreATTCK/DefenseEvasion/ProcessInjection`).
+- Actor TTPs carry the technique ID only (e.g. `T1055`).
+- Malware families carry the technique ID and name.
 
-When ATT&CK lookup is enabled, the connector:
-- Loads the MITRE ATT&CK Enterprise STIX dataset once at startup
-- Resolves label-derived ATT&CK technique names to canonical MITRE technique IDs (e.g. `T1055`)
-- Creates Attack Pattern relationships using deterministic STIX IDs that match the MITRE ATT&CK external import connector (source of truth)
+The connector loads the MITRE ATT&CK Enterprise STIX dataset once at startup.
+It resolves every technique against this dataset, by name for indicator labels and by ID for actors and malware families.
+A resolved technique gets the MITRE name and ID, so every path sends the same Attack Pattern as the MITRE ATT&CK external import connector (source of truth).
 
-If ATT&CK labels are present but a technique cannot be resolved, the connector will skip Attack Pattern creation to avoid creating duplicate or non-canonical objects.
+When the dataset does not resolve a technique:
+- Indicators and actors skip it, to avoid creating duplicate or non-canonical Attack Patterns.
+- Malware families keep the name received from CrowdStrike, with the ID in upper case.
+
+Revoked techniques are left out of the lookup, as the MITRE ATT&CK connector does not import them.
+
+> **Upgrading from a pinned ATT&CK version**
+> `CROWDSTRIKE_ATTACK_VERSION` defaults to `latest`.
+> Earlier versions of `docker-compose.yml` and `config.yml.sample` set it to `17.1`.
+> If your deployment still sets `17.1`, set it to `latest`, or to the version the MITRE ATT&CK connector imports.
+> Otherwise, the two connectors rename some Attack Patterns back and forth.
 
 ### IOC Extraction from Report Text
 
