@@ -94,6 +94,8 @@ def test_missing_service_key_is_an_empty_result():
     [
         {"success": False, "data": {}},
         {"success": True, "data": {"github": 0}},
+        {"success": True},
+        {"success": True, "data": None},
         "not json",
     ],
 )

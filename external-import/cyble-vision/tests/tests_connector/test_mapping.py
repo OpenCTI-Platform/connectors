@@ -192,7 +192,8 @@ def test_phishing_indicator_is_explicit_and_based_on_the_observable():
 
 def test_same_name_and_time_alerts_get_distinct_incidents():
     other = copy.deepcopy(ALERT)
-    other["id"] = "0f0f0f0f-0000-5000-8000-000000000000"
+    # Same first eight characters: a prefix suffix would still collide.
+    other["id"] = ALERT["id"][:8] + "-0000-5000-8000-000000000000"
 
     def incident(alert):
         return next(
@@ -203,4 +204,4 @@ def test_same_name_and_time_alerts_get_distinct_incidents():
 
     first, second = incident(copy.deepcopy(ALERT)), incident(other)
     assert first["id"] != second["id"]
-    assert first["name"].endswith(f"[{ALERT['id'][:8]}]")
+    assert first["name"].endswith(f"[{ALERT['id']}]")

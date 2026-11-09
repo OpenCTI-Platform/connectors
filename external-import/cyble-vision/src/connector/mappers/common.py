@@ -141,12 +141,13 @@ class AlertContext:
         }
 
     def incident_name(self, name: str) -> str:
-        """Suffix the short alert ID to an Incident name.
+        """Suffix the alert ID to an Incident name.
 
         Incident STIX IDs derive from name and created time only, so two
-        alerts with the same title and timestamp would otherwise merge.
+        alerts with the same title and timestamp would otherwise merge. The
+        full ID is used: a prefix could still collide.
         """
-        return f"{name} [{self.alert_id[:8]}]"
+        return f"{name} [{self.alert_id}]"
 
     def observable_kwargs(self) -> dict[str, Any]:
         return {

@@ -112,7 +112,7 @@ class CybleVisionClient(BaseClientApi):
                 raise ApiClientError("Unexpected Cyble Vision alerts response")
             if response.get("success") is False:
                 raise ApiClientError("Cyble Vision alerts API returned success=false")
-            data = response.get("data") or {}
+            data = response.get("data")
             if not isinstance(data, dict):
                 raise ApiClientError("Cyble Vision alerts response has no data object")
             page = data.get(service)
