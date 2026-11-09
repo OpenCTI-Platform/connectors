@@ -484,7 +484,7 @@ class AttributeConverter:
             )
             name = (
                 attribute.comment
-                if len(attribute.comment) > 2
+                if len(attribute.comment or "") > 2
                 else octi_main_observable_type or attribute.type
             )
             pattern = attribute.value
@@ -503,7 +503,7 @@ class AttributeConverter:
                 if len(attribute.value) > 2
                 else (
                     attribute.comment
-                    if len(attribute.comment) > 2
+                    if len(attribute.comment or "") > 2
                     else octi_main_observable_type
                 )
             )

@@ -235,12 +235,28 @@ class TestIndicatorWithoutObservables:
         assert "x_opencti_main_observable_type" not in indicators[0]
         assert _observables(result) == []
 
-    def test_rule_attribute_without_comment_is_named_after_its_type(self):
+    @pytest.mark.parametrize(
+        "comment_field",
+        [{"comment": ""}, {"comment": None}, {}],
+        ids=["empty", "null", "omitted"],
+    )
+    def test_rule_attribute_without_comment_is_named_after_its_type(
+        self, comment_field
+    ):
         """Without a usable comment, the rule indicator is named after its type."""
-        attribute = _make_ids_attribute("yara", "rule test { condition: true }")
+        attribute = ExtendedAttributeItem.model_validate(
+            {
+                "type": "yara",
+                "category": "Payload installation",
+                "value": "rule test { condition: true }",
+                "to_ids": True,
+                "timestamp": "1700000000",
+                **comment_field,
+            }
+        )
 
         result = _process_with_flags(
-            attribute, create_indicators=True, create_observables=True
+            attribute, create_indicators=True, create_observables=False
         )
 
         assert _of_type(result, "indicator")[0]["name"] == "yara"
