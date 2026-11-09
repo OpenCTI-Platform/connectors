@@ -142,7 +142,7 @@ class ConnectorClient:
         self._polykg_url = config.polykg_api_url
         if self._polykg_url:
             self._polykg_url = self._polykg_url.rstrip("/")
-        # polykg enrichment is opt-in: a blank POLYKG_API_URL disables every
+        # polykg enrichment is opt-in: a blank POLYSWARM_POLYKG_API_URL disables every
         # profile / attack-pattern lookup. Guard on this flag rather than
         # building a schemeless "/v3/kg/..." URL, which raises MissingSchema.
         self._polykg_enabled = bool(self._polykg_url)
@@ -153,7 +153,7 @@ class ConnectorClient:
             self._check_polykg_connectivity()
         else:
             self.helper.connector_logger.info(
-                "[CLIENT] polykg enrichment disabled (POLYKG_API_URL not set); "
+                "[CLIENT] polykg enrichment disabled (POLYSWARM_POLYKG_API_URL not set); "
                 "skipping malware-profile and attack-pattern lookups"
             )
 
