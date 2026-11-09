@@ -101,7 +101,7 @@ Key features:
 | `polyswarm_replace_with_lower_score` | `POLYSWARM_REPLACE_WITH_LOWER_SCORE` | No        | Overwrite score even if lower (default: `true`). Set `false` to keep higher. |
 | `polyswarm_network_related_files_max` | `POLYSWARM_NETWORK_RELATED_FILES_MAX` | No       | Max related file hashes imported per IP or domain lookup (default: `10`, `0` disables) |
 | `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
-| `polykg_api_url`                     | `POLYKG_API_URL`                     | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
+| `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
 
@@ -321,7 +321,7 @@ If polykg is unreachable, the connector logs a warning and continues with
 PolySwarm-only enrichment. A circuit breaker skips polykg for 5 minutes after
 a connection failure to avoid blocking the single-threaded enrichment queue.
 
-Set `POLYKG_API_URL` to enable (e.g. `http://polykg:4141`). Leave empty or
+Set `POLYSWARM_POLYKG_API_URL` to enable (e.g. `http://polykg:4141`). Leave empty or
 unset to disable.
 
 ---
@@ -355,7 +355,7 @@ CONNECTOR_LOG_LEVEL=debug
 | Error Note: "401 Access Denied"  | Invalid API key or no community access   | Verify `POLYSWARM_API_KEY`                             |
 | Error Note: "429 Rate Limited"   | API quota exceeded                       | Reduce feeder rate or upgrade PolySwarm plan           |
 | Error Note: "Circuit Breaker"    | 5+ consecutive API failures              | Check network; breaker resets after 5 min              |
-| No profile enrichment            | polykg unreachable or not configured     | Set `POLYKG_API_URL` or verify polykg is running       |
+| No profile enrichment            | polykg unreachable or not configured     | Set `POLYSWARM_POLYKG_API_URL` or verify polykg is running       |
 | Score not updating               | Bundle import doesn't persist scores     | This is expected; connector uses explicit `update_field()` |
 
 ### Circuit Breaker

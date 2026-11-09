@@ -117,3 +117,21 @@ def test_samples_should_keep_connector_auto_false():
     # Then: Neither sample turns on auto-enrichment
     assert config_sample["connector"]["auto"] is False
     assert "CONNECTOR_AUTO=true" not in compose
+
+
+def test_settings_should_read_polykg_url_from_polyswarm_prefixed_env(monkeypatch):
+    # Given: The documented variable, and the old unprefixed name that is not read
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+    monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000001")
+    monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+    monkeypatch.setenv("POLYSWARM_POLYKG_API_URL", "http://polykg:4141")
+    monkeypatch.setenv("POLYKG_API_URL", "http://ignored:4141")
+    monkeypatch.setenv("POLYSWARM_COMMUNITY", "private")
+
+    # When
+    settings = ConnectorSettings()
+
+    # Then: Only the POLYSWARM_ prefixed names are used, as the README documents
+    assert settings.polyswarm.polykg_api_url == "http://polykg:4141"
+    assert settings.polyswarm.community == "private"
