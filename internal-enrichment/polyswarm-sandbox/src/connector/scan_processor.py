@@ -67,11 +67,18 @@ class ScanProcessor:
         # File metadata — PE/exiftool/LIEF (no top-level equivalent)
         file_info = ScanProcessor._extract_file_info(result, metadata)
 
+        # A scan whose window closed with no engine verdicts and no polyscore says
+        # nothing about the file; it must not read as a clean score of 0.
+        has_verdicts = result.get("polyscore") is not None or any(
+            isinstance(a, dict) and a.get("verdict") is not None for a in raw_assertions
+        )
+
         # STIX labels
         stix_labels = []
         if family:
             stix_labels.append(f"polyswarm-family:{family.lower()}")
-        stix_labels.append(f"polyscore:{threat_score}")
+        if has_verdicts:
+            stix_labels.append(f"polyscore:{threat_score}")
         for label in labels:
             stix_labels.append(f"polyswarm-type:{label.lower()}")
 
@@ -97,6 +104,7 @@ class ScanProcessor:
             "family": family or "Unknown",
             "labels": labels,
             "stix_labels": stix_labels,
+            "has_verdicts": has_verdicts,
             "operating_systems": operating_systems,
             "permalink": (
                 f"https://polyswarm.network/scan/results/file/{result.get('sha256')}"

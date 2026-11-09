@@ -216,3 +216,37 @@ class TestScanProcessorNullFields:
         assert processed["labels"] == []
         assert processed["detection_stats"]["malicious"] == 1
         assert processed["engine_detections"][0]["family"] == "Malicious"
+
+
+# A closed scan window with no engine responses, as returned by the live API for
+# EICAR on 2026-11-09 (bounty_state 7, not failed, no assertions, nulls).
+NO_VERDICT_SCAN = {
+    "sha256": EICAR_SHA256,
+    "window_closed": True,
+    "failed": False,
+    "bounty_state": 7,
+    "assertions": [],
+    "detections": None,
+    "polyscore": None,
+    "metadata": [],
+}
+
+
+class TestScanProcessorNoVerdicts:
+    """A scan with no engine verdicts must not read as a clean score of 0."""
+
+    def test_no_verdict_scan_is_flagged(self):
+        result = ScanProcessor.process(NO_VERDICT_SCAN)
+        assert result["has_verdicts"] is False
+        assert not any(
+            label.startswith("polyscore:") for label in result["stix_labels"]
+        )
+
+    def test_recorded_final_scan_has_verdicts(self):
+        final = _recorded_scan_polls()[-1]
+        assert ScanProcessor.process(final)["has_verdicts"] is True
+
+    def test_verdicts_without_polyscore_count(self):
+        scan = copy.deepcopy(NO_VERDICT_SCAN)
+        scan["assertions"] = [{"verdict": False, "author_name": "engine"}]
+        assert ScanProcessor.process(scan)["has_verdicts"] is True
