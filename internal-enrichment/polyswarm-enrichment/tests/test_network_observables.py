@@ -1029,3 +1029,11 @@ def test_sdk_does_not_log_searched_values():
     ):
         ConnectorClient(MagicMock(), config)
     assert sdk_logger.level == logging.WARNING
+
+
+def test_extra_brackets_are_treated_as_malformed():
+    # One bracket pair is IPv6 notation; nested brackets are malformed and never sent
+    assert is_non_public_network_value("[[2001:4860:4860::8888]]", "IPv6-Addr")
+    assert is_non_public_network_value("[[8.8.8.8]]", "IPv4-Addr")
+    assert not is_non_public_network_value("[2001:4860:4860::8888]", "IPv6-Addr")
+    assert is_non_public_network_value("[[google.com]]", "Domain-Name")

@@ -48,8 +48,12 @@ _LEGACY_IPV4_CHARS = frozenset("0123456789abcdefx.")
 
 def _is_non_public_ip(ip_str: str) -> bool:
     """Private or noise IPs, plus reserved, shared and unspecified, or not an IP."""
+    value = ip_str.strip()
+    # Exactly one pair of brackets ([2001:db8::1]); anything else is malformed
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
     try:
-        addr = ipaddress.ip_address(ip_str.strip().strip("[]"))
+        addr = ipaddress.ip_address(value)
     except ValueError:
         # CIDR ranges, legacy numeric forms and malformed values are never looked up
         return True
