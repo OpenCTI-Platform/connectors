@@ -3,18 +3,17 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'DomainTools Feeds' # optional
-  scope: 'stix2'
-  log_level: 'error' # optional (default: 'error')
-  duration_period: 'PT5M' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  # name: 'DomainToolsFeedsConnector'
+  # scope: 'domaintools-feeds'
+  # log_level: 'error'
+  # duration_period: 'PT1H' # ISO-8601 format, interval between two runs of the connector
 
 domaintools:
   api_base_url: 'https://api.domaintools.com'
   api_key: 'ChangeMe'
-  feed_type: 'ChangeMe'  # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
-  session_id: 'ChangeMe'     #
-  # domain: *bank*              # optional
-  # top: 10                     # optional
-  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  feed_type: 'ChangeMe' # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
+  # session_id: 'OpenCTI-DomainTools-Feeds'
+  # domain: '*bank*'
+  # top: 10
+  # tlp_level: 'clear' # available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red'

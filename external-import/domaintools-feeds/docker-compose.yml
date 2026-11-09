@@ -5,18 +5,19 @@ services:
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type EXTERNAL_IMPORT
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME # optional
-      - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=DomainToolsFeedsConnector
+      # - CONNECTOR_SCOPE=domaintools-feeds
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO-8601 format, interval between two runs of the connector
+      # Connector's custom parameters
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com
       - DOMAINTOOLS_API_KEY=ChangeMe
-      - DOMAINTOOLS_FEED_TYPE=ChangeMe  # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
-      - DOMAINTOOLS_SESSION_ID=ChangeMe     #
-      # - DOMAINTOOLS_DOMAIN=*bank*              # optional
-      # - DOMAINTOOLS_TOP=10                     # optional
-      - DOMAINTOOLS_TLP_LEVEL=clear
+      - DOMAINTOOLS_FEED_TYPE=ChangeMe # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
+      # - DOMAINTOOLS_SESSION_ID=OpenCTI-DomainTools-Feeds
+      # - DOMAINTOOLS_DOMAIN=*bank*
+      # - DOMAINTOOLS_TOP=10
+      # - DOMAINTOOLS_TLP_LEVEL=clear # available values: clear, white, green, amber, amber+strict, red
     restart: always
