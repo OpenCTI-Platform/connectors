@@ -87,6 +87,7 @@ def test_versioned_dataset_is_used_when_available(mock_get):
     assert requested_urls(mock_get) == [VERSIONED_URL]
     assert lookup.enterprise_attack_url == VERSIONED_URL
     assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert lookup.retrieval_errors == []
 
 
 def test_missing_versioned_dataset_falls_back_to_generic_dataset(mock_get):
@@ -97,6 +98,9 @@ def test_missing_versioned_dataset_falls_back_to_generic_dataset(mock_get):
     assert requested_urls(mock_get) == [VERSIONED_URL, DEFAULT_ATTACK_URL]
     assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
     assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert len(lookup.retrieval_errors) == 1
+    assert VERSIONED_URL in lookup.retrieval_errors[0]
+    assert "HTTP 404" in lookup.retrieval_errors[0]
 
 
 def test_invalid_versioned_payload_falls_back_to_generic_dataset(mock_get):
