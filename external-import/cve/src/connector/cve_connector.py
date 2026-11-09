@@ -53,6 +53,8 @@ class CVEConnector:
         self.helper.connector_logger.info(msg)
         if self.converter.work_id is not None:
             self.helper.api.work.to_processed(self.converter.work_id, msg)
+            # Each run must start its own work.
+            self.converter.work_id = None
         self.helper.set_state({"last_run": current_time})
 
         interval_in_hours = round(self.interval / 60 / 60, 2)
@@ -306,3 +308,19 @@ class CVEConnector:
             detail = self._format_exception(e)
             error_msg = f"[CONNECTOR] Error while processing data: {detail}"
             self.helper.connector_logger.error(error_msg, meta={"error": detail})
+            self._close_work_in_error(error_msg)
+
+    def _close_work_in_error(self, message: str) -> None:
+        """Close the work of a failed run, so that the next run starts its own."""
+        work_id = self.converter.work_id
+        if work_id is None:
+            return
+        self.converter.work_id = None
+        try:
+            self.helper.api.work.to_processed(work_id, message, in_error=True)
+        except Exception as err:  # pylint: disable=broad-except
+            # The run has already failed: do not hide its error behind this one.
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Unable to close the work of the failed run",
+                meta={"work_id": work_id, "error": str(err)},
+            )
