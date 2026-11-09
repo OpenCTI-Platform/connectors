@@ -132,6 +132,12 @@ class CrowdStrike:
                     attack_version=self.config.crowdstrike.attack_version
                 )
 
+            # Sources that failed before the one that provided the dataset (e.g. a missing versioned file).
+            for retrieval_error in self.attack_lookup.retrieval_errors:
+                self.helper.log_warning(
+                    f"ATT&CK Enterprise dataset source skipped: {retrieval_error}"
+                )
+
             self.helper.log_info(
                 f"Loaded ATT&CK Enterprise dataset from {self.attack_lookup.enterprise_attack_url} "
                 f"with {len(self.attack_lookup.attack_techniques)} techniques"
