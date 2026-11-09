@@ -135,3 +135,16 @@ def test_settings_should_read_polykg_url_from_polyswarm_prefixed_env(monkeypatch
     # Then: Only the POLYSWARM_ prefixed names are used, as the README documents
     assert settings.polyswarm.polykg_api_url == "http://polykg:4141"
     assert settings.polyswarm.community == "private"
+
+
+def test_settings_should_strip_url_query_strings_by_default():
+    # Given/When: Nothing is configured
+    settings = _settings_from({})
+
+    # Then: URL query strings are not sent unless opted in
+    assert settings.polyswarm.network_url_send_query is False
+
+
+def test_settings_should_accept_url_query_opt_in():
+    settings = _settings_from({"network_url_send_query": True})
+    assert settings.polyswarm.network_url_send_query is True

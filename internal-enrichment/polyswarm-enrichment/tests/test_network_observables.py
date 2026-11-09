@@ -20,6 +20,7 @@ from polyswarm_enrichment.client_api import (
     ConnectorClient,
     is_non_public_network_value,
     loggable_network_value,
+    url_for_lookup,
     url_has_userinfo,
 )
 from polyswarm_enrichment.connector import _TLP_MARKING_TO_NAME, ConnectorTemplate
@@ -95,6 +96,7 @@ def _make_connector(client=None, scope=None):
     connector.ioc_enabled = False
     connector.network_related_files_max = 10
     connector.network_indicator_min_detections = 2
+    connector.network_url_send_query = False
     connector._send_bundle = MagicMock(return_value="[CONNECTOR] sent")
     return connector
 
@@ -645,13 +647,13 @@ class TestUrlCredentialsAndLogging:
         assert loggable_network_value("wicar.org", "Domain-Name") == "wicar.org"
         assert loggable_network_value("8.8.8.8", "IPv4-Addr") == "8.8.8.8"
 
-    def test_full_url_sent_but_only_host_logged(self, capsys):
+    def test_query_stripped_and_only_host_logged(self, capsys):
         value = "https://example.com/reset?token=abc123"
         client = _make_client(search_url=lambda _v: iter([_url_scan(0, 3)]))
         connector = _make_connector(client=client)
         connector.process_message(_message("Url", value))
-        # The full URL, query string included, is what PolySwarm receives
-        client.polyswarm.search_url.assert_called_once_with(value)
+        # By default PolySwarm receives the URL without its query string
+        client.polyswarm.search_url.assert_called_once_with("https://example.com/reset")
         logs = capsys.readouterr().out
         assert "https://example.com" in logs
         assert "abc123" not in logs
@@ -1037,3 +1039,37 @@ def test_extra_brackets_are_treated_as_malformed():
     assert is_non_public_network_value("[[8.8.8.8]]", "IPv4-Addr")
     assert not is_non_public_network_value("[2001:4860:4860::8888]", "IPv6-Addr")
     assert is_non_public_network_value("[[google.com]]", "Domain-Name")
+
+
+# ===========================================================================
+# URL query strings: stripped by default, sent only on opt-in
+# ===========================================================================
+class TestUrlQueryString:
+    URL = "https://example.org/login?token=SECRET123&next=%2Fhome#frag"
+
+    def _searched(self, send_query):
+        seen = []
+        client = _make_client(
+            search_url=lambda v: seen.append(v) or iter([_url_scan(0, 3)])
+        )
+        connector = _make_connector(client=client)
+        connector.network_url_send_query = send_query
+        connector.process_message(_message("Url", self.URL))
+        return seen
+
+    def test_query_and_fragment_stripped_by_default(self):
+        assert self._searched(False) == ["https://example.org/login"]
+
+    def test_opt_in_sends_full_url(self):
+        assert self._searched(True) == [self.URL]
+
+    def test_url_without_query_is_unchanged(self):
+        assert url_for_lookup("http://malware.wicar.org/data/eicar.com") == (
+            "http://malware.wicar.org/data/eicar.com"
+        )
+
+    def test_fragment_only_is_stripped(self):
+        assert url_for_lookup("https://example.org/a#b") == "https://example.org/a"
+
+    def test_schemeless_value_is_stripped(self):
+        assert url_for_lookup("example.org/a?x=1") == "example.org/a"

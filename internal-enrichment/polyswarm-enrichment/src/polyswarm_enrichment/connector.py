@@ -25,6 +25,7 @@ from polyswarm_enrichment.client_api import (
     NETWORK_OBSERVABLE_TYPES,
     is_non_public_network_value,
     loggable_network_value,
+    url_for_lookup,
     url_has_userinfo,
 )
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
@@ -88,6 +89,7 @@ class ConnectorTemplate:
         # URL, domain and IP observable lookups
         self.network_related_files_max = ps.network_related_files_max
         self.network_indicator_min_detections = ps.network_indicator_min_detections
+        self.network_url_send_query = ps.network_url_send_query
 
         # Initialize client (PolySwarm SDK + polykg profile API)
         from polyswarm_enrichment.client_api import ConnectorClient
@@ -1079,8 +1081,13 @@ class ConnectorTemplate:
             "[CONNECTOR] Enrichment starting for network observable",
             {"entity_type": observable_type, "value": log_value},
         )
+        lookup_value = (
+            url_for_lookup(value, self.network_url_send_query)
+            if observable_type == "Url"
+            else value
+        )
         lookup = self.client.lookup_network_observable(
-            value,
+            lookup_value,
             observable_type,
             related_files_max=self.network_related_files_max,
         )

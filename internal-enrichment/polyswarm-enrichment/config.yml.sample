@@ -20,6 +20,7 @@ polyswarm:
   # replace_with_lower_score: true  # Set false to keep higher existing scores
   # network_related_files_max: 10        # Related file hashes per IP/domain (0 = disabled)
   # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
+  # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)
 
 # Optional: polykg knowledge graph for advanced profile enrichment
 # Leave commented out to run without polykg (basic enrichment still works)

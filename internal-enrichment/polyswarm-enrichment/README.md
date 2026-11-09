@@ -100,6 +100,7 @@ Key features:
 | `polyswarm_max_polling_time`         | `POLYSWARM_MAX_POLLING_TIME`         | No        | Maximum API polling time in seconds (default: `120`)                         |
 | `polyswarm_replace_with_lower_score` | `POLYSWARM_REPLACE_WITH_LOWER_SCORE` | No        | Overwrite score even if lower (default: `true`). Set `false` to keep higher. |
 | `polyswarm_network_related_files_max` | `POLYSWARM_NETWORK_RELATED_FILES_MAX` | No       | Max related file hashes imported per IP or domain lookup (default: `10`, `0` disables) |
+| `polyswarm_network_url_send_query` | `POLYSWARM_NETWORK_URL_SEND_QUERY` | No | Send a URL's query string and fragment for lookup (default: `false`, only scheme, host and path are sent) |
 | `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
 | `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
@@ -331,7 +332,7 @@ unset to disable.
 What leaves your environment, and when. The connector sends data to PolySwarm only when it enriches an observable, which is manual by default (`CONNECTOR_AUTO=false`).
 
 - **File observables: hashes only.** The observable's file hash (SHA-256, SHA-1 or MD5) is sent to PolySwarm to look up existing scan results, and the SHA-256 is used to look up associated indicators. Files are never uploaded.
-- **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For URLs, the full URL is sent, including its query string. URLs containing a username or password are never sent. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
+- **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For URLs, only the scheme, host and path are sent by default: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_NETWORK_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password are never sent. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
 - **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
 - **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.

@@ -79,6 +79,14 @@ class PolySwarmConfig(BaseConfigModel):
             "observable (0 = disabled)."
         ),
     )
+    network_url_send_query: bool = Field(
+        default=False,
+        description=(
+            "Send a URL observable's query string and fragment to PolySwarm. Off by "
+            "default: only scheme, host and path are looked up, so tokens in a query "
+            "string never leave OpenCTI."
+        ),
+    )
     network_indicator_min_detections: int = Field(
         default=2,
         ge=1,

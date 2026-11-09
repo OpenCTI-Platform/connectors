@@ -5,7 +5,7 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import requests
 from dateutil import parser as dateutil_parser
@@ -120,6 +120,16 @@ def url_has_userinfo(value: str) -> bool:
         return bool(parsed.username or parsed.password or "@" in parsed.netloc)
     except ValueError:
         return False
+
+
+def url_for_lookup(value: str, send_query: bool = False) -> str:
+    """The URL sent to PolySwarm: without query string and fragment unless opted in."""
+    if send_query:
+        return value
+    parts = urlsplit(value.strip())
+    if not parts.scheme or not parts.netloc:
+        return value.strip().split("#", 1)[0].split("?", 1)[0]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
 
 
 def loggable_network_value(value: str, observable_type: str) -> str:
