@@ -14,4 +14,4 @@ connector:
 cyble_vision_writeback:
   api_token: 'ChangeMe'
   api_base_url: 'https://bifrost.cyble.ai' # optional
-  ignored_user_ids: 'ChangeMe' # recommended, comma-separated OpenCTI user IDs whose changes are not written back (the import connector's user)
+  import_user_ids: 'ChangeMe' # ID of the OpenCTI user the import connector runs as (comma-separated if several)

@@ -48,7 +48,7 @@ class VulnerabilitiesMapper(ServiceMapper):
         description = first_text(context.description, payload.get("description"), title)
 
         incident = Incident(
-            name=title,
+            name=context.incident_name(title),
             description=description,
             incident_type=IncidentType.ALERT,
             severity=context.severity,

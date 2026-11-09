@@ -105,9 +105,23 @@ class CybleVisionClient(BaseClientApi):
                 )
                 raise
 
-            page = (response.get("data") or {}).get(service) or []
-            if not isinstance(page, list):
+            # An error must raise rather than read as an empty page: the
+            # processor advances the service checkpoint after a clean fetch.
+            # A missing service key is a genuine empty result (no alerts).
+            if not isinstance(response, dict):
+                raise ApiClientError("Unexpected Cyble Vision alerts response")
+            if response.get("success") is False:
+                raise ApiClientError("Cyble Vision alerts API returned success=false")
+            data = response.get("data") or {}
+            if not isinstance(data, dict):
+                raise ApiClientError("Cyble Vision alerts response has no data object")
+            page = data.get(service)
+            if page is None:
                 page = []
+            elif not isinstance(page, list):
+                raise ApiClientError(
+                    f"Cyble Vision alerts data for {service} is not a list"
+                )
 
             self._logger.info(
                 "Fetched Cyble Vision alerts page",

@@ -52,7 +52,7 @@ class GenericMapper(ServiceMapper):
 
         return [
             Incident(
-                name=name,
+                name=context.incident_name(name),
                 description=description_lines(
                     context.description,
                     labeled("Keyword", context.asset),

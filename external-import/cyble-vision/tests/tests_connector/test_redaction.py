@@ -61,3 +61,15 @@ def test_short_secrets_reveal_only_their_length():
 
 def test_ports_are_not_mistaken_for_passwords():
     assert scrub_text("admin@example.com:8443", []) == "admin@example.com:8443"
+
+
+def test_short_passwords_are_masked_as_whole_words_only():
+    alert = json.loads((FIXTURES / "telegram_mentions.json").read_text())
+    alert["data"]["password"] = "pw42"
+    alert["data"]["message"] = "login pw42 for admin; npw42x is unrelated"
+    text = "".join(
+        entity.to_stix2_object().serialize()
+        for entity in map_alert(alert, AUTHOR, MARKING)
+    )
+    assert " pw42 " not in text
+    assert "npw42x" in text

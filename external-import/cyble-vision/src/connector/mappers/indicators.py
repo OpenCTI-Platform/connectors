@@ -17,8 +17,9 @@ from connectors_sdk.models import (
     Incident,
     Indicator,
     IPV4Address,
+    Relationship,
 )
-from connectors_sdk.models.enums import IncidentType
+from connectors_sdk.models.enums import IncidentType, RelationshipType
 
 _INCIDENT_TYPES = {
     "phishing": IncidentType.PHISHING,
@@ -93,7 +94,9 @@ class IndicatorsMapper(ServiceMapper):
         )
         if not domain:
             return self._empty_fallback(context)
-        observable = observable_from_value(domain, context, create_indicator=True)
+        # The Indicator is built explicitly (with the alert's description and
+        # labels), so the observable must not ask OpenCTI to create another.
+        observable = observable_from_value(domain, context)
         indicator = Indicator(
             name=domain,
             pattern=f"[domain-name:value = '{domain}']",
@@ -106,13 +109,24 @@ class IndicatorsMapper(ServiceMapper):
             created=context.created,
             valid_from=context.created,
         )
-        return attach_related(
+        objects = attach_related(
             self._incident(context, domain), context, observable, indicator
         )
+        if observable is not None:
+            objects.append(
+                Relationship(
+                    type=RelationshipType.BASED_ON,
+                    source=indicator,
+                    target=observable,
+                    author=context.author,
+                    markings=context.markings,
+                )
+            )
+        return objects
 
     def _incident(self, context: AlertContext, value: str, *details: Any) -> Incident:
         return Incident(
-            name=f"{context.service} - {value}",
+            name=context.incident_name(f"{context.service} - {value}"),
             description=description_lines(
                 context.description,
                 context.raw.get("llm_explanation"),

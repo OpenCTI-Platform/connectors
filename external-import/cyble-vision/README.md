@@ -94,7 +94,13 @@ On each run the connector:
    Reports.
 
 All STIX identifiers are deterministic. Re-importing an alert, or importing it again after its status changed in
-Vision, updates the existing OpenCTI objects instead of creating duplicates.
+Vision, updates the existing OpenCTI objects instead of creating duplicates. Incident names end with the first eight
+characters of the Vision alert ID (`… [c091eb6a]`), so two alerts with the same title and timestamp stay separate.
+
+Alerts are fetched by creation time. Changes made in Vision after an alert was imported are not pulled again, and an
+alert excluded by `CYBLE_VISION_EXCLUDE_STATUSES` when it was created (for example `FALSE_POSITIVE`) is not imported
+later if its status changes. Set `CYBLE_VISION_EXCLUDE_STATUSES` to an empty value to import every alert regardless of
+status.
 
 ### Alert mapping
 

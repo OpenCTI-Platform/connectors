@@ -102,7 +102,7 @@ class SslExpiryMapper(ServiceMapper):
             description_parts.append(f"Expiry: {payload['expiry']}")
 
         return Incident(
-            name=f"{title} - {asset}",
+            name=context.incident_name(f"{title} - {asset}"),
             description="\n".join(description_parts),
             incident_type=IncidentType.ALERT,
             severity=context.severity,

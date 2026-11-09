@@ -18,7 +18,10 @@ def test_settings_should_accept_minimal_input():
     settings = _settings(
         {
             "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-            "cyble_vision_writeback": {"api_token": "test-api-token"},
+            "cyble_vision_writeback": {
+                "api_token": "test-api-token",
+                "import_user_ids": "import-user-id",
+            },
         }
     )
 
@@ -30,7 +33,7 @@ def test_settings_should_accept_minimal_input():
     assert settings.connector.live_stream_recover is False
     cfg = settings.cyble_vision_writeback
     assert cfg.api_token.get_secret_value() == "test-api-token"
-    assert cfg.ignored_user_ids == []
+    assert cfg.import_user_ids == ["import-user-id"]
 
 
 def test_settings_should_honour_configured_connector_identity():
@@ -38,7 +41,10 @@ def test_settings_should_honour_configured_connector_identity():
         {
             "opencti": {"url": "http://localhost:8080", "token": "test-token"},
             "connector": {"id": "my-connector-id", "name": "My Writeback"},
-            "cyble_vision_writeback": {"api_token": "test-api-token"},
+            "cyble_vision_writeback": {
+                "api_token": "test-api-token",
+                "import_user_ids": "import-user-id",
+            },
         }
     )
 
@@ -54,7 +60,10 @@ def test_live_stream_recover_reaches_the_helper(recover, expected):
         {
             "opencti": {"url": "http://localhost:8080", "token": "test-token"},
             "connector": {"live_stream_recover": recover},
-            "cyble_vision_writeback": {"api_token": "test-api-token"},
+            "cyble_vision_writeback": {
+                "api_token": "test-api-token",
+                "import_user_ids": "import-user-id",
+            },
         }
     )
 
@@ -73,6 +82,14 @@ def test_live_stream_recover_reaches_the_helper(recover, expected):
             },
             "cyble_vision_writeback.api_token",
             id="missing_api_token",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "cyble_vision_writeback": {"api_token": "test-api-token"},
+            },
+            "cyble_vision_writeback.import_user_ids",
+            id="missing_import_user_ids",
         ),
     ],
 )

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+from connectors_sdk import ApiClientError
 from cyble_client.api_client import to_vision_timestamp
 from cyble_client.engine_client import CybleEngineClient
 from cyble_client.engine_dates import iso_date, next_page, parse_engine_datetime
@@ -57,3 +59,44 @@ def test_engine_client_walks_advisory_pages():
     )
     assert calls == [1, 2, 3]
     assert len(pages) == 3
+
+
+def _alerts_client(response):
+    from cyble_client import CybleVisionClient
+
+    class _ErrorLogger(_Logger):
+        def error(self, *args, **kwargs):
+            return None
+
+    client = CybleVisionClient(
+        base_url="https://bifrost.cyble.ai",
+        api_token="test",
+        page_size=100,
+        logger=_ErrorLogger(),
+    )
+    client._post = lambda path, json=None: response
+    return client
+
+
+def _pages(client):
+    now = datetime.now(timezone.utc)
+    return list(
+        client.iter_alerts(service="github", since=now, until=now, exclude_statuses=[])
+    )
+
+
+def test_missing_service_key_is_an_empty_result():
+    assert _pages(_alerts_client({"success": True, "data": {}})) == []
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"success": False, "data": {}},
+        {"success": True, "data": {"github": 0}},
+        "not json",
+    ],
+)
+def test_error_envelopes_raise_instead_of_reading_as_empty(response):
+    with pytest.raises(ApiClientError):
+        _pages(_alerts_client(response))

@@ -25,9 +25,11 @@ _SENSITIVE_KEY_PARTS = (
     "card_number",
     "cvv",
 )
-# Shorter values found under sensitive keys are masked in place but not
-# searched for elsewhere, to avoid masking unrelated words.
-_MIN_KNOWN_SECRET_LENGTH = 6
+# Values found under sensitive keys are also masked wherever else they appear.
+# Below _MIN_SUBSTRING_SECRET_LENGTH only whole-word matches are masked, so a
+# short password does not mask parts of unrelated words.
+_MIN_KNOWN_SECRET_LENGTH = 3
+_MIN_SUBSTRING_SECRET_LENGTH = 6
 
 # "Password: x", "pass=x", "pwd: x"
 _LABELED_SECRET = re.compile(r"(?i)\b(pass(?:word|wd)?|pwd)(\s*[:=]\s*)(\S+)")
@@ -56,8 +58,14 @@ def scrub_text(text: str, known_secrets: list[str]) -> str:
     )
     text = _EMAIL_SECRET.sub(lambda m: f"{m.group(1)}:{mask_secret(m.group(2))}", text)
     for secret in known_secrets:
-        if secret in text:
+        if secret not in text:
+            continue
+        if len(secret) >= _MIN_SUBSTRING_SECRET_LENGTH:
             text = text.replace(secret, mask_secret(secret))
+        else:
+            text = re.sub(
+                rf"(?<!\w){re.escape(secret)}(?!\w)", mask_secret(secret), text
+            )
     return text
 
 

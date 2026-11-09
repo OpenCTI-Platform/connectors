@@ -98,7 +98,9 @@ class ExposureMapper(ServiceMapper):
             incident_type = IncidentType.ALERT
 
         incident = Incident(
-            name=title or f"Cyble Vision alert: {context.service}",
+            name=context.incident_name(
+                title or f"Cyble Vision alert: {context.service}"
+            ),
             description=description,
             incident_type=incident_type,
             severity=context.severity,

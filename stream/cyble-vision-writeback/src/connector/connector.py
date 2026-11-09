@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from connector.mapping import build_update, changed_fields
+from connector.mapping import build_update, changed_fields, creator_ids
 from connector.settings import ConnectorSettings
 from cyble_client import CybleVisionClient
 from pycti import OpenCTIConnectorHelper
@@ -16,23 +16,20 @@ INCIDENT_TYPES = {"incident", "x-opencti-incident"}
 class CybleVisionWritebackConnector:
     """Listen for Incident updates and write severity/status back to Vision.
 
-    Only Incidents imported by the Cyble Vision connector are considered: they
-    carry the Vision alert ID in a "Cyble Vision" external reference and the
-    Vision service in a ``cyble:<service>`` label.
+    Only Incidents created by the Cyble Vision import connector's user are
+    considered. They carry the Vision alert ID in a "Cyble Vision" external
+    reference and the Vision service in a ``cyble:<service>`` label.
     """
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
         cfg = config.cyble_vision_writeback
-        self.ignored_user_ids = {
-            user_id.strip() for user_id in cfg.ignored_user_ids if user_id.strip()
+        # The user(s) the import connector runs as: their Incidents are the
+        # only ones written back, and their own updates are never echoed.
+        self.import_user_ids = {
+            user_id.strip() for user_id in cfg.import_user_ids if user_id.strip()
         }
-        if not self.ignored_user_ids:
-            self.helper.connector_logger.warning(
-                "No ignored user IDs configured: severity or status changes made by "
-                "the Cyble Vision import connector will be written back to Vision"
-            )
         self.client = CybleVisionClient(
             base_url=str(cfg.api_base_url),
             api_token=cfg.api_token.get_secret_value(),
@@ -59,9 +56,9 @@ class CybleVisionWritebackConnector:
         entity_type = str(entity.get("type") or entity.get("entity_type") or "")
         if entity_type.lower() not in INCIDENT_TYPES:
             return
-        if self._is_ignored_user(payload):
+        if self._is_import_user(payload):
             self.helper.connector_logger.debug(
-                "Skipping write-back for an update made by an ignored user"
+                "Skipping write-back for an update made by the import connector"
             )
             return
 
@@ -77,6 +74,15 @@ class CybleVisionWritebackConnector:
             return
 
         snapshot = self._refresh_incident(entity) or entity
+        # Labels and external references can be edited by any user with write
+        # access, so they alone must not decide which Vision alert is changed.
+        if not (creator_ids(snapshot) | creator_ids(entity)) & self.import_user_ids:
+            self.helper.connector_logger.debug(
+                "Skipping write-back, Incident was not created by the import connector",
+                {"id": entity.get("id")},
+            )
+            return
+
         update = build_update(snapshot, fields) or build_update(entity, fields)
         if update is None:
             self.helper.connector_logger.debug(
@@ -104,7 +110,7 @@ class CybleVisionWritebackConnector:
         payload = json.loads(raw) if isinstance(raw, str) else raw
         return payload if isinstance(payload, dict) else {}
 
-    def _is_ignored_user(self, payload: dict[str, Any]) -> bool:
+    def _is_import_user(self, payload: dict[str, Any]) -> bool:
         """True when the update was made by the import connector's user.
 
         Without this check an import that changes severity would be echoed
@@ -116,7 +122,7 @@ class CybleVisionWritebackConnector:
         if not isinstance(origin, dict):
             return False
         actors = {origin.get("user_id"), origin.get("applicant_id")} - {None}
-        return bool(actors & self.ignored_user_ids)
+        return bool(actors & self.import_user_ids)
 
     def _refresh_incident(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         """Reload the Incident, since stream update events can be partial."""

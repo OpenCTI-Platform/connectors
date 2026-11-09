@@ -45,6 +45,7 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "cyble_vision_writeback": {
                     "api_token": "test-api-token",
+                    "import_user_ids": "import-user-id",
                 },
             }
         )

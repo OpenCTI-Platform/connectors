@@ -65,15 +65,16 @@ def _incident(**overrides):
             {"source_name": "Cyble Vision", "external_id": ALERT_ID},
         ],
         "status": {"template": {"name": "Closed"}},
+        "creators": [{"id": IMPORT_USER_ID, "name": "Cyble Vision"}],
     }
     entity.update(overrides)
     return entity
 
 
-def _connector(sent, ignored_user_ids=(IMPORT_USER_ID,)):
+def _connector(sent, import_user_ids=(IMPORT_USER_ID,)):
     connector = CybleVisionWritebackConnector.__new__(CybleVisionWritebackConnector)
     connector.helper = SimpleNamespace(connector_logger=_Logger())
-    connector.ignored_user_ids = set(ignored_user_ids)
+    connector.import_user_ids = set(import_user_ids)
     connector.client = SimpleNamespace(update_alerts=sent.extend)
     connector._refresh_incident = lambda entity: entity
     return connector
@@ -280,3 +281,25 @@ def test_stream_recovery_is_left_to_the_connector_config():
     )
     connector.run()
     assert calls == [{"message_callback": connector.process_message}]
+
+
+def test_incident_not_created_by_the_import_connector_is_not_written_back():
+    """A hand-made Incident with a forged Cyble reference and label is ignored."""
+    sent = []
+    forged = _incident(creators=[{"id": ANALYST_USER_ID, "name": "Jane Analyst"}])
+    _connector(sent).process_message(_message("update", forged))
+    assert sent == []
+
+
+def test_creator_is_read_from_the_stream_extension():
+    sent = []
+    entity = _incident(
+        creators=None,
+        extensions={
+            "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba": {
+                "creator_ids": [IMPORT_USER_ID]
+            }
+        },
+    )
+    _connector(sent).process_message(_message("update", entity))
+    assert sent == [{"id": ALERT_ID, "service": "github", "user_severity": "LOW"}]

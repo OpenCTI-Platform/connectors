@@ -72,7 +72,9 @@ class CredentialsMapper(ServiceMapper):
             else IncidentType.COMPROMISE
         )
         incident = Incident(
-            name=name or f"Cyble Vision alert: {context.service}",
+            name=context.incident_name(
+                name or f"Cyble Vision alert: {context.service}"
+            ),
             description="\n".join(part for part in description_parts if part),
             incident_type=incident_type,
             severity=context.severity,

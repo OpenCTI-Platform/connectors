@@ -140,6 +140,14 @@ class AlertContext:
             "created": self.created,
         }
 
+    def incident_name(self, name: str) -> str:
+        """Suffix the short alert ID to an Incident name.
+
+        Incident STIX IDs derive from name and created time only, so two
+        alerts with the same title and timestamp would otherwise merge.
+        """
+        return f"{name} [{self.alert_id[:8]}]"
+
     def observable_kwargs(self) -> dict[str, Any]:
         return {
             "author": self.author,

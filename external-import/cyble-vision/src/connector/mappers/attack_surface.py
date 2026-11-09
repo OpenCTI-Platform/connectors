@@ -27,6 +27,10 @@ class AttackSurfaceMapper(ServiceMapper):
         self, payload: dict[str, Any], context: AlertContext
     ) -> list[BaseIdentifiedEntity]:
         raw = context.raw
+        # domain_watchlist nests the watched domain inside the DNS record.
+        dns_record = payload.get("new_dns_record")
+        if not isinstance(dns_record, dict):
+            dns_record = {}
         value = first_text(
             raw.get("asset"),
             raw.get("subdomain"),
@@ -37,6 +41,7 @@ class AttackSurfaceMapper(ServiceMapper):
             payload.get("domain"),
             payload.get("ip"),
             payload.get("host"),
+            dns_record.get("domain"),
         )
         title = first_text(
             raw.get("title"), payload.get("title"), payload.get("type_text")
@@ -54,7 +59,9 @@ class AttackSurfaceMapper(ServiceMapper):
             "domain_watchlist",
         }:
             incident = Incident(
-                name=title or f"{context.service} - {value or context.asset}",
+                name=context.incident_name(
+                    title or f"{context.service} - {value or context.asset}"
+                ),
                 description=first_text(context.description, title),
                 incident_type=IncidentType.ALERT,
                 severity=context.severity,

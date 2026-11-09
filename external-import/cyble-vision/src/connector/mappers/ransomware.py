@@ -31,7 +31,7 @@ class RansomwareMapper(ServiceMapper):
         )
 
         incident = Incident(
-            name=name or "Cyble ransomware alert",
+            name=context.incident_name(name or "Cyble ransomware alert"),
             description=first_text(
                 context.description,
                 payload.get("description"),

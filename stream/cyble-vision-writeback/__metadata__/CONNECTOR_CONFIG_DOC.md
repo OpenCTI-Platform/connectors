@@ -9,6 +9,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CYBLE_VISION_WRITEBACK_API_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Cyble Vision API bearer token with permission to update alerts. |
+| CYBLE_VISION_WRITEBACK_IMPORT_USER_IDS | `array` | ✅ | string |  | ID(s) of the OpenCTI user the Cyble Vision import connector runs as. Only Incidents created by this user are written back, and changes made by this user are never echoed back to Vision. |
 | CONNECTOR_NAME | `string` |  | string | `"Cyble Vision Writeback"` | Display name in OpenCTI. |
 | CONNECTOR_SCOPE | `array` |  | string | `["Incident"]` | Entity types this connector reacts to. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
@@ -20,4 +21,3 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LIVE_STREAM_RECOVER | `boolean` |  | boolean | `false` | Replay stream history on first start. Disabled by default so only new analyst updates are written back. |
 | CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state). |
 | CYBLE_VISION_WRITEBACK_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://bifrost.cyble.ai"` | Cyble Vision API base URL. |
-| CYBLE_VISION_WRITEBACK_IGNORED_USER_IDS | `array` |  | string | `[]` | OpenCTI user IDs whose changes are not written back. Set it to the ID of the user the Cyble Vision import connector runs as, so imported values are not echoed back to Vision. |

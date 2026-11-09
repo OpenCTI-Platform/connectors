@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Collection
 
 VISION_SOURCE = "Cyble Vision"
+OCTI_EXTENSION = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 
 USER_SEVERITY = "user_severity"
 STATUS = "status"
@@ -116,6 +117,26 @@ def workflow_name_from_entity(entity: dict[str, Any]) -> str | None:
         if status.get("name"):
             return str(status["name"])
     return None
+
+
+def creator_ids(entity: dict[str, Any]) -> set[str]:
+    """Return the IDs of the OpenCTI users who created the entity.
+
+    Set by the platform, not by users: ``creators`` on a GraphQL read and
+    ``creator_ids`` in the OpenCTI extension of a stream event. Unlike labels
+    and external references, it proves which connector imported an Incident.
+    """
+    ids = {
+        str(creator["id"])
+        for creator in entity.get("creators") or []
+        if isinstance(creator, dict) and creator.get("id")
+    }
+    extensions = entity.get("extensions")
+    if isinstance(extensions, dict):
+        octi = extensions.get(OCTI_EXTENSION)
+        if isinstance(octi, dict):
+            ids.update(str(i) for i in octi.get("creator_ids") or [] if i)
+    return ids
 
 
 def changed_fields(patch: Any) -> set[str]:

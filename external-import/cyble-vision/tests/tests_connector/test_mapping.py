@@ -163,3 +163,44 @@ def test_tor_exposure_url_is_extracted():
     assert urls == [
         "http://grqwuipwwfuu5mkyyqfea32kbkvwvxm36hau6bvkzoozchf57moj6yqd.onion/sources"
     ]
+
+
+def test_domain_watchlist_emits_the_watched_domain():
+    objects = _stix("domain_watchlist.json")
+    incident = next(obj for obj in objects if obj["type"] == "incident")
+    domain = next(obj for obj in objects if obj["type"] == "domain-name")
+    assert domain["value"] == "example46.com"
+    assert domain["id"] in _related_ids(objects, incident["id"])
+
+
+def test_phishing_indicator_is_explicit_and_based_on_the_observable():
+    objects = _stix("phishing.json")
+    indicator = next(obj for obj in objects if obj["type"] == "indicator")
+    domain = next(obj for obj in objects if obj["type"] == "domain-name")
+    indicators = [obj for obj in objects if obj["type"] == "indicator"]
+
+    assert len(indicators) == 1
+    assert not domain.get("x_opencti_create_indicator")
+    assert any(
+        obj["type"] == "relationship"
+        and obj["relationship_type"] == "based-on"
+        and obj["source_ref"] == indicator["id"]
+        and obj["target_ref"] == domain["id"]
+        for obj in objects
+    )
+
+
+def test_same_name_and_time_alerts_get_distinct_incidents():
+    other = copy.deepcopy(ALERT)
+    other["id"] = "0f0f0f0f-0000-5000-8000-000000000000"
+
+    def incident(alert):
+        return next(
+            entity.to_stix2_object()
+            for entity in map_alert(alert, AUTHOR, MARKING)
+            if entity.to_stix2_object()["type"] == "incident"
+        )
+
+    first, second = incident(copy.deepcopy(ALERT)), incident(other)
+    assert first["id"] != second["id"]
+    assert first["name"].endswith(f"[{ALERT['id'][:8]}]")

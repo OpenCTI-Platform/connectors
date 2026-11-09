@@ -34,7 +34,7 @@ class DocumentNoticeMapper(ServiceMapper):
             name = f"{name} - {pointer}"
         return [
             Incident(
-                name=name,
+                name=context.incident_name(name),
                 description=first_text(
                     context.description,
                     f"Document pointer from the Alerts API ({context.service}).",
