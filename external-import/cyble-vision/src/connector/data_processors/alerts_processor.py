@@ -68,10 +68,16 @@ class AlertsProcessor(BaseDataProcessor):
                     yield service, page
             except ApiClientError as err:
                 # One unentitled or failing service must not stop the whole run.
+                # Its checkpoint is left as is, so the next run retries the window.
                 self.logger.warning(
                     "Skipping Cyble Vision service after API error",
                     {"service": service, "error": str(err)},
                 )
+            else:
+                # The SDK sends each page before asking for the next, so every
+                # alert up to `until` is imported. Recording it also covers
+                # services that returned nothing this run.
+                self._advance_checkpoint(service, until)
 
     def transform(
         self, pages: Generator[tuple[str, list[dict]], None, None]
@@ -91,6 +97,7 @@ class AlertsProcessor(BaseDataProcessor):
                             author=self.author,
                             marking=self.tlp_marking,
                             portal_url_template=cfg.portal_url_template,
+                            include_plaintext_credentials=cfg.include_plaintext_credentials,
                         )
                     )
                     last_created = alert.get("created_at") or last_created
@@ -107,10 +114,7 @@ class AlertsProcessor(BaseDataProcessor):
             if last_created:
                 parsed = parse_datetime(last_created)
                 if parsed:
-                    self.state.last_alert_created_at = {
-                        **(self.state.last_alert_created_at or {}),
-                        service: parsed.isoformat(),
-                    }
+                    self._advance_checkpoint(service, parsed)
 
             if stix_objects:
                 self.work_name = f"Cyble Vision alerts import - {service}"
@@ -147,12 +151,19 @@ class AlertsProcessor(BaseDataProcessor):
                 )
         return selected
 
-    def _since_for(self, service: str) -> datetime:
+    def _checkpoint(self, service: str) -> datetime | None:
         raw = (self.state.last_alert_created_at or {}).get(service)
-        if raw:
-            parsed = parse_datetime(raw)
-            if parsed:
-                return parsed
-        if self.state.last_run:
-            return self.state.last_run
-        return self.settings.cyble_vision.import_since
+        return parse_datetime(raw) if raw else None
+
+    def _advance_checkpoint(self, service: str, moment: datetime) -> None:
+        current = self._checkpoint(service)
+        if current is None or moment > current:
+            self.state.last_alert_created_at = {
+                **(self.state.last_alert_created_at or {}),
+                service: moment.isoformat(),
+            }
+
+    def _since_for(self, service: str) -> datetime:
+        # Not the connector-wide last_run: it advances even when this service
+        # failed, and a service enabled later still needs its full lookback.
+        return self._checkpoint(service) or self.settings.cyble_vision.import_since

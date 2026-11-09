@@ -20,6 +20,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CYBLE_VISION_EXCLUDE_STATUSES | `array` |  | string | `["FALSE_POSITIVE"]` | Alert statuses to omit from import. |  |
 | CYBLE_VISION_PAGE_SIZE | `integer` |  | `1 <= x <= 500` | `100` | Alerts API page size (skip/take). |  |
 | CYBLE_VISION_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to every imported object. |  |
+| CYBLE_VISION_INCLUDE_PLAINTEXT_CREDENTIALS | `boolean` |  | boolean | `false` | Import leaked passwords, cookies and tokens in plain text. Disabled by default: they are masked (first and last two characters plus length) and the full value stays in Cyble Vision. |  |
 | CYBLE_VISION_PORTAL_URL_TEMPLATE | `string` |  | string | `"https://cyble.ai/alerts/{service}?id=[\"{alert_id}\"]"` | Deep-link template. Placeholders: {service}, {alert_id}. |  |
 | CYBLE_VISION_ENGINE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.cyble.ai"` | Cyble engine API base URL for advisories, newsfeed, and newsflash. |  |
 | CYBLE_VISION_ENABLE_ADVISORIES | `boolean` |  | boolean | `true` | Import research advisories from the engine API. |  |

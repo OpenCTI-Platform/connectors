@@ -93,11 +93,9 @@
       "type": "string",
       "writeOnly": true
     },
-    "CYBLE_VISION_WRITEBACK_IGNORED_USER_NAMES": {
-      "default": [
-        "Cyble Vision"
-      ],
-      "description": "OpenCTI user names whose changes are not written back. Set it to the user the Cyble Vision import connector runs as, so imported values are not echoed back to Vision.",
+    "CYBLE_VISION_WRITEBACK_IGNORED_USER_IDS": {
+      "default": [],
+      "description": "OpenCTI user IDs whose changes are not written back. Set it to the ID of the user the Cyble Vision import connector runs as, so imported values are not echoed back to Vision.",
       "items": {
         "type": "string"
       },

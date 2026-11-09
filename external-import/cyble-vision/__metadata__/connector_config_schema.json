@@ -124,6 +124,11 @@
       "type": "string",
       "default": "amber"
     },
+    "CYBLE_VISION_INCLUDE_PLAINTEXT_CREDENTIALS": {
+      "default": false,
+      "description": "Import leaked passwords, cookies and tokens in plain text. Disabled by default: they are masked (first and last two characters plus length) and the full value stays in Cyble Vision.",
+      "type": "boolean"
+    },
     "CYBLE_VISION_PORTAL_URL_TEMPLATE": {
       "default": "https://cyble.ai/alerts/{service}?id=[\"{alert_id}\"]",
       "description": "Deep-link template. Placeholders: {service}, {alert_id}.",

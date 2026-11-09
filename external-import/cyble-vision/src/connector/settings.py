@@ -84,6 +84,10 @@ class CybleVisionConfig(BaseConfigModel):
         description="TLP marking applied to every imported object.",
         default=TLPLevel.AMBER,
     )
+    include_plaintext_credentials: bool = Field(
+        description="Import leaked passwords, cookies and tokens in plain text. Disabled by default: they are masked (first and last two characters plus length) and the full value stays in Cyble Vision.",
+        default=False,
+    )
     portal_url_template: str = Field(
         description="Deep-link template. Placeholders: {service}, {alert_id}.",
         default='https://cyble.ai/alerts/{service}?id=["{alert_id}"]',

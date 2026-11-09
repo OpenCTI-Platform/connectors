@@ -40,9 +40,9 @@ connector. For more information regarding variables, please refer to
 Two settings deserve attention:
 
 - `CONNECTOR_ID` must be different from the import connector's ID.
-- `CYBLE_VISION_WRITEBACK_IGNORED_USER_NAMES` must match the OpenCTI user the import connector runs as (by default
-  any user whose name contains `Cyble Vision`). Updates made by that user are the import itself, and writing them
-  back would turn Vision's own severity into a customer override.
+- `CYBLE_VISION_WRITEBACK_IGNORED_USER_IDS` must contain the ID of the OpenCTI user the import connector runs as.
+  Updates made by that user are the import itself, and writing them back would turn Vision's own severity into a
+  customer override.
 
 ## Deployment
 
@@ -79,17 +79,25 @@ To reduce traffic, create a live stream in **Data sharing → Live streams** fil
 label `cyble`, and use its ID.
 
 Stream history is not replayed on first start (`CONNECTOR_LIVE_STREAM_RECOVER=false`): only changes made after the
-connector starts are written back.
+connector starts are written back. Enabling recovery replays past Incident edits and writes each of them to Vision.
+
+Run the import connector under its own OpenCTI user (not the admin account analysts use) and set
+`CYBLE_VISION_WRITEBACK_IGNORED_USER_IDS` to that user's ID, found in the URL of the user page under
+**Settings → Security → Users**. Without it, a severity change made by the import connector is written back to
+Vision.
 
 ## Behavior
 
 For every `update` event on an Incident, the connector:
 
-1. Ignores the event if the change was made by one of `CYBLE_VISION_WRITEBACK_IGNORED_USER_NAMES`.
-2. Reloads the Incident from OpenCTI, because stream update events can be partial.
-3. Reads the Vision alert ID from the `Cyble Vision` external reference and the Vision service from the
+1. Ignores the event if the change was made by one of `CYBLE_VISION_WRITEBACK_IGNORED_USER_IDS` (matched against
+   the event's `origin.user_id` and `origin.applicant_id`).
+2. Reads the event's change set (`context.patch`) and ignores it unless severity or workflow status changed. Edits to
+   labels, description, markings and so on are never written back.
+3. Reloads the Incident from OpenCTI, because stream update events can be partial.
+4. Reads the Vision alert ID from the `Cyble Vision` external reference and the Vision service from the
    `cyble:<service>` label set by the import connector. Incidents without both are skipped.
-4. Sends `PUT /y/alerts` to Cyble Vision with:
+5. Sends `PUT /y/alerts` to Cyble Vision with only the field(s) that changed:
 
 | OpenCTI | Cyble Vision |
 |---|---|

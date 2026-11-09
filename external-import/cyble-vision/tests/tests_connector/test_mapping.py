@@ -86,3 +86,80 @@ def test_hacktivism_includes_payload_and_relationships():
     note = next(obj for obj in objects if obj["type"] == "note")
     assert "DimasHxR" in note["content"]
     assert incident["id"] in note.get("object_refs", [])
+
+
+def _stix(name):
+    alert = json.loads((Path(__file__).parents[1] / "fixtures" / name).read_text())
+    return [entity.to_stix2_object() for entity in map_alert(alert, AUTHOR, MARKING)]
+
+
+def _related_ids(objects, source_id):
+    return {
+        obj["target_ref"]
+        for obj in objects
+        if obj["type"] == "relationship" and obj["source_ref"] == source_id
+    }
+
+
+def test_phishing_alert_has_an_incident_linked_to_its_indicator():
+    objects = _stix("phishing.json")
+    incident = next(obj for obj in objects if obj["type"] == "incident")
+    indicator = next(obj for obj in objects if obj["type"] == "indicator")
+    domain = next(obj for obj in objects if obj["type"] == "domain-name")
+    note = next(obj for obj in objects if obj["type"] == "note")
+
+    assert incident["incident_type"] == "phishing"
+    assert {indicator["id"], domain["id"]} <= _related_ids(objects, incident["id"])
+    assert note["object_refs"] == [incident["id"]]
+
+
+def test_ip_risk_score_alert_has_an_incident():
+    objects = _stix("ip_risk_score.json")
+    incident = next(obj for obj in objects if obj["type"] == "incident")
+    ip = next(obj for obj in objects if obj["type"] == "ipv4-addr")
+    assert ip["id"] in _related_ids(objects, incident["id"])
+
+
+def test_cve_alert_keeps_an_incident_and_links_the_shared_vulnerability():
+    objects = _stix("new_vulnerability.json")
+    incident = next(obj for obj in objects if obj["type"] == "incident")
+    vulnerability = next(obj for obj in objects if obj["type"] == "vulnerability")
+
+    assert vulnerability["id"] in _related_ids(objects, incident["id"])
+    assert "description" not in vulnerability
+
+
+def test_note_id_survives_a_severity_change():
+    def note_id(alert):
+        return next(
+            entity.to_stix2_object()["id"]
+            for entity in map_alert(alert, AUTHOR, MARKING)
+            if entity.to_stix2_object()["type"] == "note"
+        )
+
+    triaged = copy.deepcopy(ALERT)
+    triaged["user_severity"] = "CRITICAL"
+    triaged["true_positive"] = not ALERT.get("true_positive")
+    assert note_id(triaged) == note_id(copy.deepcopy(ALERT))
+
+
+def test_list_valued_ip_becomes_an_ip_observable():
+    objects = _stix("web_applications.json")
+    ips = [obj["value"] for obj in objects if obj["type"] == "ipv4-addr"]
+    domains = [obj["value"] for obj in objects if obj["type"] == "domain-name"]
+    assert ips == ["203.0.113.18"]
+    assert not any("[" in value for value in domains)
+
+
+def test_leaked_credentials_url_comes_from_the_payload():
+    urls = [
+        obj["value"] for obj in _stix("leaked_credentials.json") if obj["type"] == "url"
+    ]
+    assert urls == ["https://host29.example1.com/storage/manual-book/ss.php"]
+
+
+def test_tor_exposure_url_is_extracted():
+    urls = [obj["value"] for obj in _stix("tor_links.json") if obj["type"] == "url"]
+    assert urls == [
+        "http://grqwuipwwfuu5mkyyqfea32kbkvwvxm36hau6bvkzoozchf57moj6yqd.onion/sources"
+    ]

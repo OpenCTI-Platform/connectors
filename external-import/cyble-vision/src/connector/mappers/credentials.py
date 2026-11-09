@@ -14,7 +14,8 @@ from connectors_sdk.models.enums import IncidentType
 class CredentialsMapper(ServiceMapper):
     """Compromised credentials and stealer logs become Incidents plus observables.
 
-    Passwords are never written into STIX.
+    Passwords are masked before mapping (see ``redaction``) and never get a
+    STIX object of their own.
     """
 
     services = (
@@ -33,7 +34,12 @@ class CredentialsMapper(ServiceMapper):
         content = (
             payload.get("content") if isinstance(payload.get("content"), dict) else {}
         )
-        url = first_text(raw.get("url"), content.get("URL"), content.get("url"))
+        url = first_text(
+            raw.get("url"),
+            content.get("URL"),
+            content.get("url"),
+            payload.get("url"),
+        )
         username = first_text(
             raw.get("username"), content.get("Username"), content.get("username")
         )

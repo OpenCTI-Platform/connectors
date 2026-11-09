@@ -42,10 +42,9 @@ class EngineDocumentsProcessor(BaseDataProcessor):
         if checkpoint:
             since = parse_engine_datetime(checkpoint)
         if since is None:
-            if self.state.last_run:
-                since = self.state.last_run
-            else:
-                since = self.settings.cyble_vision.import_since
+            # Not the connector-wide last_run: it advances even when this
+            # product failed, and a product enabled later needs its lookback.
+            since = self.settings.cyble_vision.import_since
         return since, until
 
     def collect_pages(self, iterator: Callable, checkpoint: str | None, product: str):

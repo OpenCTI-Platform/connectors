@@ -98,16 +98,19 @@ Vision, updates the existing OpenCTI objects instead of creating duplicates.
 
 ### Alert mapping
 
-Every alert produces an **Incident** (type `alert`, with Vision severity, labels `cyble` and `cyble:<service>`, and a
-deep link to Vision) and a **Note** holding the alert details. Depending on the service, the connector adds:
+Every alert produces an **Incident** (with Vision severity, labels `cyble` and `cyble:<service>`, and a deep link to
+Vision) and a **Note** holding the alert details. The Incident is what analysts triage, and what the
+`cyble-vision-writeback` stream connector syncs back to Vision. The exceptions are `assets` and `subdomains`, which
+describe the monitored attack surface rather than an event and produce observables only. Depending on the service,
+the connector adds:
 
 | Vision services | Additional objects |
 |---|---|
 | `stealer_logs`, `leaked_credentials`, `compromised_files`, `compromised_endpoints_cookies`, `compromised_cards`, `darkweb_data_breaches` | Domain-Name, Url, User-Account, Malware (stealer family, when known) |
-| `phishing`, `suspicious_domains`, `ip_risk_score`, `botnet`, `malicious_ads`, `iocs` | Domain-Name / IPv4-Addr observables with an Indicator |
+| `phishing`, `suspicious_domains`, `ip_risk_score`, `botnet`, `malicious_ads`, `iocs` | Domain-Name / IPv4-Addr observables with an Indicator (Incident type `phishing` / `typosquatting` / `alert`) |
 | `assets`, `subdomains`, `domain_expiry`, `domain_watchlist`, `new_port`, `web_applications` | Domain-Name / IPv4-Addr observables of the monitored attack surface |
 | `ssl_expiry` | Domain-Name and X509-Certificate |
-| `new_vulnerability`, `product_vulnerability`, `vulnerability` | Vulnerability (CVE), affected IPv4-Addr |
+| `new_vulnerability`, `product_vulnerability`, `vulnerability` | Vulnerability (CVE, shared across alerts, so the alert text stays on the Incident), affected IPv4-Addr |
 | `ransomware_updates`, `darkweb_ransomware` | Intrusion-Set for the ransomware group |
 | `github`, `postman`, `cloud_storage`, `pastebin`, `telegram_mentions`, `social_media_monitoring`, `darkweb_marketplaces`, `hacktivism`, `i2p`, `tor_links`, `physical_threats`, `ot_ics` and other exposure services | Url of the exposure, Intrusion-Set / IPv4-Addr where the alert names an actor or address |
 | Any other service | Incident and Note only |
@@ -116,6 +119,13 @@ Related objects are linked to the alert Incident with `related-to` relationships
 
 Observables that belong to the customer (monitored assets, certificates, subdomains) never get an Indicator: an
 Indicator would push the customer's own infrastructure into detection tooling as malicious.
+
+Leaked passwords, cookies and tokens are masked before anything is sent to OpenCTI, both under named fields and inside
+free text such as combo-list lines or `email:password` pairs in chat messages. The mask keeps the first and last two
+characters and the length (`Pa***23 (10 chars)`), enough to tell whether a password is still current, and the full
+value stays in Cyble Vision behind the alert's deep link. Usernames, URLs, domains, breach sources and malware families
+are imported as is. Set `CYBLE_VISION_INCLUDE_PLAINTEXT_CREDENTIALS=true` only if every OpenCTI user, stream consumer
+and export allowed to see the configured TLP marking may see live credentials.
 
 When `CYBLE_VISION_ENABLE_ADVISORIES`, `CYBLE_VISION_ENABLE_NEWSFEED` or `CYBLE_VISION_ENABLE_NEWSFLASH` is enabled,
 the matching document alert services (`advisory`, `news_feed`, `flash_report`) are skipped in the alert import so the

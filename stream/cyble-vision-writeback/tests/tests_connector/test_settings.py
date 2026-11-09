@@ -30,7 +30,7 @@ def test_settings_should_accept_minimal_input():
     assert settings.connector.live_stream_recover is False
     cfg = settings.cyble_vision_writeback
     assert cfg.api_token.get_secret_value() == "test-api-token"
-    assert cfg.ignored_user_names == ["Cyble Vision"]
+    assert cfg.ignored_user_ids == []
 
 
 def test_settings_should_honour_configured_connector_identity():
@@ -46,6 +46,20 @@ def test_settings_should_honour_configured_connector_identity():
     assert helper_config["connector"]["id"] == "my-connector-id"
     assert helper_config["connector"]["name"] == "My Writeback"
     assert helper_config["connector"]["type"] == "STREAM"
+
+
+@pytest.mark.parametrize("recover, expected", [(False, "none"), (True, None)])
+def test_live_stream_recover_reaches_the_helper(recover, expected):
+    settings = _settings(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+            "connector": {"live_stream_recover": recover},
+            "cyble_vision_writeback": {"api_token": "test-api-token"},
+        }
+    )
+
+    helper_config = settings.to_helper_config()
+    assert helper_config["connector"]["live_stream_recover_iso_date"] == expected
 
 
 @pytest.mark.parametrize(

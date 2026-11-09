@@ -80,8 +80,14 @@ def extract_payload(alert: dict[str, Any]) -> dict[str, Any]:
 
 
 def first_text(*values: Any) -> str | None:
-    """Return the first non-empty string among the given values."""
+    """Return the first non-empty string among the given values.
+
+    A list counts as its first non-empty item, so ``"ip": ["203.0.113.18"]``
+    yields the address rather than the list's string form.
+    """
     for value in values:
+        if isinstance(value, (list, tuple)):
+            value = first_text(*value)
         if value is None:
             continue
         text = str(value).strip()

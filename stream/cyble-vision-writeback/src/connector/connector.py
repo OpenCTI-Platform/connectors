@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from connector.mapping import build_update
+from connector.mapping import build_update, changed_fields
 from connector.settings import ConnectorSettings
 from cyble_client import CybleVisionClient
 from pycti import OpenCTIConnectorHelper
@@ -25,9 +25,14 @@ class CybleVisionWritebackConnector:
         self.config = config
         self.helper = helper
         cfg = config.cyble_vision_writeback
-        self.ignored_user_names = [
-            name.strip().lower() for name in cfg.ignored_user_names if name.strip()
-        ]
+        self.ignored_user_ids = {
+            user_id.strip() for user_id in cfg.ignored_user_ids if user_id.strip()
+        }
+        if not self.ignored_user_ids:
+            self.helper.connector_logger.warning(
+                "No ignored user IDs configured: severity or status changes made by "
+                "the Cyble Vision import connector will be written back to Vision"
+            )
         self.client = CybleVisionClient(
             base_url=str(cfg.api_base_url),
             api_token=cfg.api_token.get_secret_value(),
@@ -60,8 +65,19 @@ class CybleVisionWritebackConnector:
             )
             return
 
+        context = payload.get("context")
+        fields = changed_fields(
+            context.get("patch") if isinstance(context, dict) else None
+        )
+        if not fields:
+            self.helper.connector_logger.debug(
+                "Skipping write-back, neither severity nor workflow status changed",
+                {"id": entity.get("id")},
+            )
+            return
+
         snapshot = self._refresh_incident(entity) or entity
-        update = build_update(snapshot) or build_update(entity)
+        update = build_update(snapshot, fields) or build_update(entity, fields)
         if update is None:
             self.helper.connector_logger.debug(
                 "Skipping write-back, Incident has no Vision alert ID or service",
@@ -78,10 +94,9 @@ class CybleVisionWritebackConnector:
     def run(self) -> None:
         """Listen to the live stream until the connector stops."""
         self.check_stream_id()
-        self.helper.listen_stream(
-            message_callback=self.process_message,
-            recover_iso_date="no",
-        )
+        # Recovery comes from CONNECTOR_LIVE_STREAM_RECOVER(_ISO_DATE) via the
+        # helper config, so it is not overridden here.
+        self.helper.listen_stream(message_callback=self.process_message)
 
     @staticmethod
     def _payload_from_message(msg) -> dict[str, Any]:
@@ -92,15 +107,16 @@ class CybleVisionWritebackConnector:
     def _is_ignored_user(self, payload: dict[str, Any]) -> bool:
         """True when the update was made by the import connector's user.
 
-        Without this check every import run would echo Vision's own values
-        back to Vision as a customer override.
+        Without this check an import that changes severity would be echoed
+        back to Vision as a customer override. Live stream events identify
+        the author under ``origin``: ``user_id``, plus ``applicant_id`` when a
+        worker writes on behalf of a connector.
         """
-        context = payload.get("context")
-        user = context.get("user") if isinstance(context, dict) else None
-        if not isinstance(user, dict):
+        origin = payload.get("origin")
+        if not isinstance(origin, dict):
             return False
-        name = str(user.get("name") or "").lower()
-        return any(ignored in name for ignored in self.ignored_user_names)
+        actors = {origin.get("user_id"), origin.get("applicant_id")} - {None}
+        return bool(actors & self.ignored_user_ids)
 
     def _refresh_incident(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         """Reload the Incident, since stream update events can be partial."""

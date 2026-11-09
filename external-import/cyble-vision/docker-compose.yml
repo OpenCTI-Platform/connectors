@@ -20,6 +20,7 @@ services:
       # - CYBLE_VISION_EXCLUDE_STATUSES=FALSE_POSITIVE # optional
       # - CYBLE_VISION_PAGE_SIZE=100 # optional
       # - CYBLE_VISION_TLP_LEVEL=amber # optional, 'clear', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+      # - CYBLE_VISION_INCLUDE_PLAINTEXT_CREDENTIALS=false # optional, masked by default
       # - CYBLE_VISION_PORTAL_URL_TEMPLATE=https://cyble.ai/alerts/{service}?id=["{alert_id}"] # optional
       # - CYBLE_VISION_ENGINE_API_BASE_URL=https://api.cyble.ai # optional
       # - CYBLE_VISION_ENABLE_ADVISORIES=true # optional

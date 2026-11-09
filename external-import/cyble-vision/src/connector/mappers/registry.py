@@ -12,6 +12,7 @@ from connector.mappers.exposure import ExposureMapper
 from connector.mappers.generic import GenericMapper
 from connector.mappers.indicators import IndicatorsMapper
 from connector.mappers.ransomware import RansomwareMapper
+from connector.mappers.redaction import redact_alert
 from connector.mappers.reports import DocumentNoticeMapper
 from connector.mappers.ssl_expiry import SslExpiryMapper
 from connector.mappers.vulnerabilities import VulnerabilitiesMapper
@@ -53,9 +54,15 @@ def map_alert(
     author: OrganizationAuthor,
     marking: TLPMarking,
     portal_url_template: str = DEFAULT_PORTAL_URL_TEMPLATE,
+    include_plaintext_credentials: bool = False,
 ) -> list[BaseIdentifiedEntity]:
-    """Map one Vision alert to a list of STIX objects."""
+    """Map one Vision alert to a list of STIX objects.
+
+    Credentials are masked first unless ``include_plaintext_credentials``.
+    """
     try:
+        if not include_plaintext_credentials:
+            alert = redact_alert(alert)
         context = build_context(alert, author, marking, portal_url_template)
         payload = extract_payload(alert)
         mapper = MAPPERS.get(alert.get("service", ""), GenericMapper())

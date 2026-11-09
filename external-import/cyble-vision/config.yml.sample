@@ -17,6 +17,7 @@ cyble_vision:
   exclude_statuses: 'FALSE_POSITIVE' # optional
   page_size: 100 # optional
   tlp_level: 'amber' # optional
+  include_plaintext_credentials: false # optional, leaked credentials are masked by default
   portal_url_template: 'https://cyble.ai/alerts/{service}?id=["{alert_id}"]' # optional
   engine_api_base_url: 'https://api.cyble.ai' # optional
   enable_advisories: true # optional

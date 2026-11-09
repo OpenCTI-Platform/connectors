@@ -57,6 +57,7 @@ class ExposureMapper(ServiceMapper):
             payload.get("url"),
             payload.get("website_url"),
             payload.get("i2p_url"),
+            payload.get("tor_url"),
         )
         ip = first_text(payload.get("ip"), raw.get("ip"))
         source_website = first_text(payload.get("source_website"))

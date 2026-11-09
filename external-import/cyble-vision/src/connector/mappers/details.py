@@ -2,6 +2,7 @@
 
 Per-service mappers pick graph objects (IP, URL, actor). This module keeps
 every remaining field so analysts can open Notes and see the original alert.
+Credentials are already masked by ``redaction`` before mapping starts.
 """
 
 from __future__ import annotations
@@ -13,19 +14,12 @@ from connector.mappers.common import AlertContext
 from connectors_sdk.models import BaseIdentifiedEntity, Note
 from connectors_sdk.models.enums import NoteType
 
-_SENSITIVE_KEY_PARTS = (
-    "password",
-    "passwd",
-    "secret",
-    "token",
-    "authorization",
-    "cookie",
-    "credit_card",
-    "card_number",
-    "cvv",
-)
+# Fields that change on triage, in Vision or through write-back. The Note ID is
+# derived from its content, so keeping them would create a new Note each time.
 _VOLATILE_KEYS = {
     "status",
+    "user_severity",
+    "true_positive",
     "assignee_id",
     "assignment_date",
     "updated_at",
@@ -46,7 +40,7 @@ _JSON_LIMIT = 20000
 def attach_details_note(
     objects: list[BaseIdentifiedEntity], context: AlertContext
 ) -> list[BaseIdentifiedEntity]:
-    """Append a Note containing the full redacted alert to the primary object."""
+    """Append a Note containing the full alert to the primary object."""
     primary = _primary_entity(objects)
     if primary is None:
         return objects
@@ -80,23 +74,7 @@ def _primary_entity(
 
 
 def _stable_snapshot(alert: dict[str, Any]) -> dict[str, Any]:
-    snapshot = {key: value for key, value in alert.items() if key not in _VOLATILE_KEYS}
-    return _redact(snapshot)
-
-
-def _redact(value: Any) -> Any:
-    if isinstance(value, dict):
-        redacted = {}
-        for key, inner in value.items():
-            lowered = str(key).lower()
-            if any(part in lowered for part in _SENSITIVE_KEY_PARTS):
-                redacted[key] = "[redacted]"
-            else:
-                redacted[key] = _redact(inner)
-        return redacted
-    if isinstance(value, list):
-        return [_redact(item) for item in value]
-    return value
+    return {key: value for key, value in alert.items() if key not in _VOLATILE_KEYS}
 
 
 def _format_note(alert: dict[str, Any], service: str) -> str:

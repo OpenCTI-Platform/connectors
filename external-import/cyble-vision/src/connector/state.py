@@ -11,7 +11,8 @@ from connectors_sdk import ExternalImportConnectorState
 class ConnectorState(ExternalImportConnectorState):
     """Resume markers for Cyble Vision imports."""
 
-    # service name -> ISO-8601 created_at of the last successfully converted alert
+    # service name -> ISO-8601 created_at of the last imported alert, or the end
+    # of the last window fetched successfully, whichever is later
     last_alert_created_at: dict[str, str] | None = None
     last_advisory_publish_date: str | None = None
     last_newsfeed_post_date: str | None = None

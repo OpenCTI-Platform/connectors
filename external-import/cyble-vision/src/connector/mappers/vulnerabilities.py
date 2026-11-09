@@ -12,9 +12,11 @@ from connectors_sdk.models.enums import IncidentType
 
 
 class VulnerabilitiesMapper(ServiceMapper):
-    """CVE-bearing alerts become Vulnerability objects.
+    """Each alert becomes an Incident plus the affected host/IP.
 
-    Host findings without a CVE stay as Incidents plus the host/IP.
+    When a CVE is known it is related as a Vulnerability. That object is
+    shared by every alert and source mentioning the CVE, so it carries no
+    alert-specific description; the Incident does.
     """
 
     services = (
@@ -36,26 +38,28 @@ class VulnerabilitiesMapper(ServiceMapper):
                 else None
             ),
         )
-        title = first_text(raw.get("title"), payload.get("title"), cve)
+        title = first_text(
+            raw.get("title"),
+            payload.get("title"),
+            " - ".join(
+                part for part in (cve or "Vulnerability finding", context.asset) if part
+            ),
+        )
         description = first_text(context.description, payload.get("description"), title)
 
-        if cve:
-            primary = Vulnerability(
-                name=cve,
-                description=description,
-                **context.entity_kwargs(),
-            )
-        else:
-            primary = Incident(
-                name=title or f"Vulnerability finding - {context.asset}",
-                description=description,
-                incident_type=IncidentType.ALERT,
-                severity=context.severity,
-                source="Cyble Vision",
-                first_seen=context.created,
-                last_seen=context.updated,
-                **context.entity_kwargs(),
-            )
+        incident = Incident(
+            name=title,
+            description=description,
+            incident_type=IncidentType.ALERT,
+            severity=context.severity,
+            source="Cyble Vision",
+            first_seen=context.created,
+            last_seen=context.updated,
+            **context.entity_kwargs(),
+        )
+        vulnerability = (
+            Vulnerability(name=cve, **context.entity_kwargs()) if cve else None
+        )
 
         observable = None
         for value in (
@@ -68,4 +72,4 @@ class VulnerabilitiesMapper(ServiceMapper):
             if observable:
                 break
 
-        return attach_related(primary, context, observable)
+        return attach_related(incident, context, vulnerability, observable)

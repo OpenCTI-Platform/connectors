@@ -32,7 +32,10 @@ class NewsfeedProcessor(EngineDocumentsProcessor):
                     objects.extend(
                         map_newsfeed(item, self.author, self.default_marking)
                     )
-                    stamp = checkpoint_value(item, "post_date", "created_at")
+                    # Requests filter on post_date: created_at is only a fallback.
+                    stamp = checkpoint_value(item, "post_date") or checkpoint_value(
+                        item, "created_at"
+                    )
                     if stamp and (last_posted is None or stamp > last_posted):
                         last_posted = stamp
                 except Exception as err:

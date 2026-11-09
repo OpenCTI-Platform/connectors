@@ -53,9 +53,9 @@ class CybleVisionWritebackConfig(BaseConfigModel):
     api_token: SecretStr = Field(
         description="Cyble Vision API bearer token with permission to update alerts.",
     )
-    ignored_user_names: ListFromString = Field(
-        description="OpenCTI user names whose changes are not written back. Set it to the user the Cyble Vision import connector runs as, so imported values are not echoed back to Vision.",
-        default=["Cyble Vision"],
+    ignored_user_ids: ListFromString = Field(
+        description="OpenCTI user IDs whose changes are not written back. Set it to the ID of the user the Cyble Vision import connector runs as, so imported values are not echoed back to Vision.",
+        default=[],
     )
 
 
