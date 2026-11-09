@@ -448,7 +448,7 @@ def create_attack_pattern(
         name = technique.name
         mitre_id = normalize_mitre_id(technique.mitre_id)
     attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
-    custom_properties = {"x_mitre_id": mitre_id}
+    custom_properties = {"x_mitre_id": mitre_id} if mitre_id else {}
 
     return stix2.AttackPattern(
         id=attack_pattern_id,

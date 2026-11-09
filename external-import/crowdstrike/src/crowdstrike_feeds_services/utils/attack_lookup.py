@@ -23,10 +23,15 @@ DEFAULT_ATTACK_URL = (
 )
 
 
-def normalize_mitre_id(mitre_id: str | None) -> str:
-    """Return a MITRE ATT&CK external ID in its canonical form (e.g. "t1059.001" -> "T1059.001")."""
+def normalize_mitre_id(mitre_id: str | None) -> str | None:
+    """Return a MITRE ATT&CK external ID in its canonical form (e.g. "t1059.001" -> "T1059.001").
 
-    return str(mitre_id).strip().upper() if mitre_id else ""
+    Return None when there is no ID (None, empty or blank).
+    """
+
+    if not mitre_id:
+        return None
+    return mitre_id.strip().upper() or None
 
 
 class AttackTechniqueLookupError(Exception):
@@ -87,7 +92,9 @@ class AttackTechniqueLookup:
 
         return self.attack_techniques.get(key)
 
-    def lookup_technique_by_mitre_id(self, mitre_id: str) -> AttackTechnique | None:
+    def lookup_technique_by_mitre_id(
+        self, mitre_id: str | None
+    ) -> AttackTechnique | None:
         """Return the MITRE technique (canonical name and external ID) for an external ID."""
 
         key = normalize_mitre_id(mitre_id)

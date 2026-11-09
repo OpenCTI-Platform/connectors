@@ -83,7 +83,8 @@ def _importer(importer_class, attack_lookup):
 
 def test_normalize_mitre_id():
     assert normalize_mitre_id(" t1204.002 ") == "T1204.002"  # noqa: S101
-    assert normalize_mitre_id(None) == ""  # noqa: S101
+    assert normalize_mitre_id(None) is None  # noqa: S101
+    assert normalize_mitre_id("  ") is None  # noqa: S101
 
 
 def test_lookup_by_mitre_id_ignores_case(attack_lookup):
