@@ -35,6 +35,7 @@ class OpenCTIStream:
         self.config = config
         self.helper = helper
         self._stream_thread = None
+        self.direct_url = self._live_stream_url()
 
     def _live_stream_url(self) -> str:
         """Resolve the OpenCTI URL to subscribe to.
@@ -58,12 +59,32 @@ class OpenCTIStream:
             return configured.get_secret_value()
         return self.helper.opencti_token
 
+    def _enrich_with_files(self, current):
+        entity = current
+        files = self.helper.api.get_attribute_in_extension("files", current)
+        if files is not None and len(files) > 0:
+            for file in files:
+                target_uri = (
+                    self.direct_url
+                    if self.direct_url.endswith("/")
+                    else self.direct_url + "/"
+                )
+                file_uri = file["uri"][file["uri"].index("storage/get"):]
+                url = target_uri + file_uri
+                file_data = self.helper.api.fetch_opencti_file(
+                    url, binary=True, serialize=True
+                )
+                file["data"] = file_data
+        return entity
+
     def _on_event(self, msg) -> None:
         """SSE callback: forward one stream event as a one-object STIX bundle."""
         if msg.event not in ("create", "update"):
             return
         try:
             payload = json.loads(msg.data)
+            if self.config.live_stream_include_file_data:
+                payload["data"] = self._enrich_with_files(payload["data"])
         except json.JSONDecodeError as exc:
             self.helper.connector_logger.warning(
                 "Skipping malformed stream message",

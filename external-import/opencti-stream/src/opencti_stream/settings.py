@@ -74,6 +74,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         ),
         default=False,
     )
+    live_stream_include_file_data: bool = Field(
+            description=(
+                "Whether to add encoded file data to exported bundle. "
+                "False by default so file data isn't encoded into the bundle."
+            ),
+            default=False,
+    )
 
 
 class OpenCTIStreamSettings(BaseConfigModel):
