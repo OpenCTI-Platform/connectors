@@ -122,7 +122,6 @@ class CrowdStrike:
         # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
         self.attack_lookup = None
         try:
-            attack_version = self.config.crowdstrike.attack_version
             attack_enterprise_url = self.config.crowdstrike.attack_enterprise_url
             if attack_enterprise_url:
                 self.attack_lookup = CustomAttackTechniqueLookup(
@@ -130,11 +129,11 @@ class CrowdStrike:
                 )
             else:
                 self.attack_lookup = GithubAttackTechniqueLookup(
-                    attack_version=attack_version
+                    attack_version=self.config.crowdstrike.attack_version
                 )
 
             self.helper.log_info(
-                f"Loaded ATT&CK Enterprise dataset ({attack_version}) from {self.attack_lookup.enterprise_attack_url} "
+                f"Loaded ATT&CK Enterprise dataset from {self.attack_lookup.enterprise_attack_url} "
                 f"with {len(self.attack_lookup.attack_techniques)} techniques"
             )
         except AttackTechniqueLookupError as e:
