@@ -42,7 +42,7 @@ class ThreatFox:
         self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
         # Extra config
-        self.threatfox_csv_url = self.config.threatfox.csv_url
+        self.threatfox_csv_url = self.config.threatfox.export_url
         self.threatfox_import_offline = self.config.threatfox.import_offline
         self.threatfox_interval = self.config.threatfox.interval
         self.create_indicators = self.config.threatfox.create_indicators
@@ -212,7 +212,13 @@ class ThreatFox:
                 )
 
         except Exception:  # pylint:disable=broad-exception-caught
+            # Keep `last_run` unchanged so the next loop retries instead of
+            # waiting a full interval, and report the work as failed.
             self.helper.log_error(traceback.format_exc())
+            self.helper.api.work.to_processed(
+                work_id, "Connector run failed, see connector logs", in_error=True
+            )
+            return
 
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"

@@ -1,16 +1,27 @@
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, SecretStr, model_validator
 from src.models.configs.base_settings import ConfigBaseSettings
+
+EXPORT_URL_TEMPLATE = (
+    "https://threatfox-api.abuse.ch/v2/files/exports/{auth_key}/recent.csv"
+)
 
 
 class _ConfigLoaderThreatFox(ConfigBaseSettings):
     """Interface for loading Threat Fox dedicated configuration."""
 
     # Config Loader
-    csv_url: str = Field(
-        default="https://threatfox.abuse.ch/export/csv/recent/",
-        description="The Threat Fox URL",
+    auth_key: Optional[SecretStr] = Field(
+        default=None,
+        description="abuse.ch Auth-Key, available at https://auth.abuse.ch. "
+        "Required unless `csv_url` is set.",
+    )
+    csv_url: Optional[str] = Field(
+        default=None,
+        description="Override of the ThreatFox CSV export URL. "
+        "Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, "
+        "built from `auth_key`.",
     )
     import_offline: bool = Field(
         default=True,
@@ -48,3 +59,19 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         default="all_types",
         description="List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
     )
+
+    @model_validator(mode="after")
+    def _require_auth_key_or_csv_url(self) -> "_ConfigLoaderThreatFox":
+        if self.auth_key is None and self.csv_url is None:
+            raise ValueError(
+                "THREATFOX_AUTH_KEY is required: abuse.ch requires an Auth-Key to "
+                "download ThreatFox exports. Get one at https://auth.abuse.ch."
+            )
+        return self
+
+    @property
+    def export_url(self) -> str:
+        """URL of the CSV export: `csv_url` if set, otherwise built from `auth_key`."""
+        if self.csv_url is not None:
+            return self.csv_url
+        return EXPORT_URL_TEMPLATE.format(auth_key=self.auth_key.get_secret_value())

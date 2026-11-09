@@ -9,5 +9,6 @@ services:
       - CONNECTOR_NAME=ThreatFox
       - CONNECTOR_SCOPE=threatfox
       - CONNECTOR_LOG_LEVEL=error
+      - THREATFOX_AUTH_KEY=ChangeMe # From https://auth.abuse.ch
       - THREATFOX_INTERVAL=3 # In days
     restart: always
