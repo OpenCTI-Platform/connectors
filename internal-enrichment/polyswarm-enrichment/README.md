@@ -290,8 +290,8 @@ unset to disable.
 What leaves your environment, and when. The connector sends data to PolySwarm only when it enriches an observable, which is manual by default (`CONNECTOR_AUTO=false`).
 
 - **Hashes only.** The observable's file hash (SHA-256, SHA-1 or MD5) is sent to PolySwarm to look up existing scan results, and the SHA-256 is used to look up associated indicators. Files are never uploaded.
-- **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`.
-- **Malware profiles (opt-in).** With `POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
+- **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---

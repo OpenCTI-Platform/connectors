@@ -41,7 +41,7 @@ The connector sends data to PolySwarm only when it enriches an artifact, which i
 - **Where it goes.** Uploads go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public `default` community become visible to the PolySwarm community, so the connector refuses to upload there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
-- **Malware profiles (opt-in).** With `POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements
