@@ -280,3 +280,23 @@ class TestIndicatorWithoutObservables:
         assert indicators[0]["name"] == "Text"
         assert [obs["type"] for obs in observables] == ["text"]
         assert _of_type(result, "relationship")[0]["relationship_type"] == "based-on"
+
+    @pytest.mark.parametrize("create_observables", [True, False])
+    def test_attribute_without_main_observable_type_creates_no_indicator(
+        self, create_observables
+    ):
+        """No indicator is created when the first object has no main observable type.
+
+        A ``full-name`` attribute becomes an Identity, which cannot back a STIX
+        pattern. The Identity is only sent when observables are enabled.
+        """
+        attribute = _make_ids_attribute("full-name", "John Doe", category="Person")
+
+        result = _process_with_flags(
+            attribute, create_indicators=True, create_observables=create_observables
+        )
+
+        assert _of_type(result, "indicator") == []
+        assert [obj["type"] for obj in result] == (
+            ["identity"] if create_observables else []
+        )
