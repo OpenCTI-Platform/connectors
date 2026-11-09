@@ -5,8 +5,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -15,9 +16,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="76db5e8d-8633-4e32-9a4c-53c4e5eb56ef",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="DomainToolsIrisDetectConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["stix2"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -31,7 +40,7 @@ class DomainToolsConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
 
     monitor_id: str | None = Field(
         description="Monitor ID from the monitors response – only used when requesting domains for specific monitors.",
