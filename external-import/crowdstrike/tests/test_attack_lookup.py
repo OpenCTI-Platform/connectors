@@ -9,6 +9,8 @@ from crowdstrike_feeds_services.utils.attack_lookup import (
     DEFAULT_ATTACK_URL,
     AttackTechniqueLookup,
     AttackTechniqueLookupError,
+    CustomAttackTechniqueLookup,
+    GithubAttackTechniqueLookup,
 )
 
 VERSION = "17.1"
@@ -130,3 +132,21 @@ def test_non_object_payload_gives_empty_lookup(mock_get):
     lookup = AttackTechniqueLookup(attack_version=VERSION)
 
     assert lookup.attack_techniques == {}
+
+
+def test_github_lookup_tries_versioned_then_generic_dataset(mock_get):
+    mock_get.side_effect = [not_found(), ok()]
+
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
+
+    assert [r.url for r in lookup.retrievers] == [VERSIONED_URL, DEFAULT_ATTACK_URL]
+    assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
+
+
+def test_custom_lookup_tries_only_the_custom_url(mock_get):
+    mock_get.return_value = ok()
+
+    lookup = CustomAttackTechniqueLookup(enterprise_attack_url=CUSTOM_URL)
+
+    assert [r.url for r in lookup.retrievers] == [CUSTOM_URL]
+    assert lookup.enterprise_attack_url == CUSTOM_URL
