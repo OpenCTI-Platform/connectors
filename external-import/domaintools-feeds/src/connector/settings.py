@@ -5,8 +5,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -15,9 +16,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="7eae6a8d-4c09-424f-822d-bc2529680596",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="DomainToolsFeedsConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["domaintools-feeds"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -31,7 +40,7 @@ class DomainToolsConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
     feed_type: Literal[
         "domainhotlist", "domainrisk", "nod", "nad", "noh", "domaindiscovery"
     ] = Field(description="Name of the feed.")
