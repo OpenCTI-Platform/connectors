@@ -14,8 +14,12 @@ Design goals:
 """
 
 from dataclasses import dataclass
+from typing import Any
 
-import requests
+from crowdstrike_feeds_services.utils.json_retriever import (
+    JsonRetrievalError,
+    JsonRetriever,
+)
 
 DEFAULT_ATTACK_URL = (
     "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
@@ -45,14 +49,20 @@ class AttackTechniqueLookup:
         timeout_seconds: int = 30,
     ):
         self.attack_version = attack_version
-        self.enterprise_attack_url = (
-            enterprise_attack_url or self._build_enterprise_attack_url()
-        )
         self.timeout_seconds = timeout_seconds
+        self.retrievers = self._build_retrievers(enterprise_attack_url)
+        self.retrieval_errors: list[str] = []
 
         # Load attack_techniques on initialization
         # If it fails, the connector can choose to run in degraded mode without ATT&CK lookups.
-        self.attack_techniques = self._load_enterprise_attack_techniques()
+        retrieved = self._retrieve_attack_json()
+        if retrieved is None:
+            raise AttackTechniqueLookupError(
+                "Unable to retrieve the ATT&CK Enterprise dataset: "
+                + "; ".join(self.retrieval_errors)
+            )
+        self.enterprise_attack_url, data = retrieved
+        self.attack_techniques = self._parse_attack_json(data)
 
     def lookup_mitre_id(self, technique_name: str) -> str | None:
         """Return the MITRE technique ID (external_id) for a given technique name."""
@@ -78,24 +88,43 @@ class AttackTechniqueLookup:
             f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
         )
 
-    def _load_from_url(self, url: str) -> dict[str, AttackTechnique]:
-        """Download the enterprise dataset and build the lookup.
+    def _build_retrievers(
+        self, enterprise_attack_url: str | None
+    ) -> list[JsonRetriever]:
+        """Build the retrievers to try, in order.
 
-        Caller should handle exceptions and decide whether to run in degraded mode.
+        Without an explicit URL, the versioned dataset is tried first, then the generic one.
+        With an explicit URL, only that URL is tried.
         """
-        response = requests.get(
-            url,
-            headers={"User-Agent": "opencti-crowdstrike-connector"},
-            timeout=self.timeout_seconds,
-        )
-        response.raise_for_status()
+        if enterprise_attack_url is None:
+            urls = [self._build_enterprise_attack_url(), DEFAULT_ATTACK_URL]
+        else:
+            urls = [enterprise_attack_url]
 
-        return self._parse_attack_json(response.json())
+        return [
+            JsonRetriever(url=url, timeout_seconds=self.timeout_seconds) for url in urls
+        ]
 
-    def _parse_attack_json(self, data: dict) -> dict[str, AttackTechnique]:
+    def _retrieve_attack_json(self) -> tuple[str, Any] | None:
+        """Try the retrievers in order.
+
+        Returns the URL and the JSON document of the first retriever that succeeds,
+        or None if all of them fail (the failures are kept in `retrieval_errors`).
+        """
+        for retriever in self.retrievers:
+            try:
+                return retriever.url, retriever.retrieve()
+            except JsonRetrievalError as e:
+                self.retrieval_errors.append(str(e))
+
+        return None
+
+    def _parse_attack_json(self, data: Any) -> dict[str, AttackTechnique]:
         """Parse techniques from STIX bundle."""
 
         attack_techniques: dict[str, AttackTechnique] = {}
+        if not isinstance(data, dict):
+            return attack_techniques
 
         objects = data.get("objects") or []
         for obj in objects:
@@ -134,30 +163,6 @@ class AttackTechniqueLookup:
                 attack_techniques[key] = AttackTechnique(name=name, mitre_id=mitre_id)
 
         return attack_techniques
-
-    def _load_enterprise_attack_techniques(self) -> dict[str, AttackTechnique]:
-        """Load the enterprise technique lookup using a configured version.
-
-        Returns (resolved_url, lookup).
-        """
-        # If the user did not explicitly override the URL, attempt to load the versioned file first.
-        if self.enterprise_attack_url == self._build_enterprise_attack_url():
-            try:
-                return self._load_from_url(url=self.enterprise_attack_url)
-            except requests.RequestException as e:
-                if e.response and e.response.status_code == 404:
-                    # Versioned file not found; will attempt fallback to generic URL.
-                    pass
-                else:
-                    raise AttackTechniqueLookupError(
-                        f"Error while fetching ATT&CK data: {str(e)}"
-                    ) from e
-
-            # Fallback to the generic enterprise bundle if the versioned file does not exist.
-            return self._load_from_url(url=DEFAULT_ATTACK_URL)
-
-        # If the user explicitly overrides the URL, do not attempt fallbacks.
-        return self._load_from_url(url=self.enterprise_attack_url)
 
     @staticmethod
     def _normalize_technique_name(name: str) -> str:
