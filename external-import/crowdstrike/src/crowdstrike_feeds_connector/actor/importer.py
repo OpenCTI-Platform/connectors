@@ -311,16 +311,33 @@ class ActorImporter(BaseImporter):
                 and ttp_id.split("_")[2].startswith("T")
             }
 
+            # The actor TTPs only carry the technique ID. A technique that the ATT&CK
+            # dataset does not resolve would be named after its ID, and the malware
+            # importer, which receives the name, would rename it back: skip it, as the
+            # indicator importer does.
+            techniques = [
+                self.attack_lookup.lookup_technique_by_mitre_id(technique_id)
+                for technique_id in technique_ids
+                if self.attack_lookup
+            ]
             attack_patterns = [
                 create_attack_pattern(
-                    name=technique_id,
-                    mitre_id=technique_id,
+                    name=technique.name,
+                    mitre_id=technique.mitre_id,
                     created_by=self.author,
                     object_markings=[self.tlp_marking],
                     attack_lookup=self.attack_lookup,
                 )
-                for technique_id in technique_ids
+                for technique in techniques
+                if technique is not None
             ]
+            skipped_count = len(technique_ids) - len(attack_patterns)
+            if skipped_count:
+                self._info(
+                    "Skipped {0} TTPs not found in the ATT&CK dataset for actor: {1}",
+                    skipped_count,
+                    actor_name,
+                )
 
             self._info(
                 "Created {0} AttackPattern entities for actor: {1}",

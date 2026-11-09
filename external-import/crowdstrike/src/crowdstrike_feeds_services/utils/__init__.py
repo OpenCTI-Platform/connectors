@@ -7,7 +7,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -21,7 +20,10 @@ from typing import (
 )
 
 import stix2
-from crowdstrike_feeds_services.utils.attack_lookup import normalize_mitre_id
+from crowdstrike_feeds_services.utils.attack_lookup import (
+    AttackTechniqueLookup,
+    normalize_mitre_id,
+)
 from lxml.html import fromstring
 from pycti import (
     AttackPattern,
@@ -90,9 +92,6 @@ from .observables import (
     create_observable_x509_certificate_serial_number,
     create_observable_x509_certificate_subject,
 )
-
-if TYPE_CHECKING:
-    from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 
 logger = logging.getLogger(__name__)
 
@@ -430,7 +429,7 @@ def create_attack_pattern(
     confidence: Optional[int] = None,
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
-    attack_lookup: Optional["AttackTechniqueLookup"] = None,
+    attack_lookup: Optional[AttackTechniqueLookup] = None,
 ) -> stix2.AttackPattern:
     """Create an attack pattern.
 
@@ -446,7 +445,7 @@ def create_attack_pattern(
     )
     if technique is not None:
         name = technique.name
-        mitre_id = normalize_mitre_id(technique.mitre_id)
+        mitre_id = technique.mitre_id
     attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
     custom_properties = {"x_mitre_id": mitre_id} if mitre_id else {}
 

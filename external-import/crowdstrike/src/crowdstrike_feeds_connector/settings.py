@@ -97,10 +97,12 @@ class CrowdstrikeConfig(BaseConfigModel):
 
     # MITRE ATT&CK Enterprise lookup (technique name -> external_id like T1059)
     attack_version: str = Field(
-        default="17.1",
+        default="latest",
         description=(
-            "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., 17.1). "
-            "Should match the version imported by the MITRE ATT&CK external import connector."
+            "MITRE ATT&CK Enterprise version used to resolve technique names and IDs (e.g. 17.1), "
+            'or "latest" for the latest release. Must match the version imported by the MITRE ATT&CK '
+            "external import connector, which imports the latest release by default: with another version, "
+            "the two connectors rename some Attack Patterns back and forth."
         ),
     )
     attack_enterprise_url: HttpUrl | None = Field(

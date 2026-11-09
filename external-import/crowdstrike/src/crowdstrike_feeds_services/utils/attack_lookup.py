@@ -43,7 +43,7 @@ class AttackTechnique:
     """Represents a MITRE ATT&CK technique with its name and external ID."""
 
     name: str
-    mitre_id: str  # external_id, e.g. "T1059"
+    mitre_id: str  # external_id in its canonical form, e.g. "T1059"
 
 
 class AttackTechniqueLookup:
@@ -73,15 +73,7 @@ class AttackTechniqueLookup:
             self.attack_techniques.setdefault(
                 self._normalize_technique_name(technique.name), technique
             )
-            self.attack_techniques_by_mitre_id.setdefault(
-                normalize_mitre_id(technique.mitre_id), technique
-            )
-
-    def lookup_mitre_id(self, technique_name: str) -> str | None:
-        """Return the MITRE technique ID (external_id) for a given technique name."""
-
-        attack_technique = self.lookup_technique_by_name(technique_name)
-        return attack_technique.mitre_id if attack_technique else None
+            self.attack_techniques_by_mitre_id.setdefault(technique.mitre_id, technique)
 
     def lookup_technique_by_name(self, technique_name: str) -> AttackTechnique | None:
         """Return the MITRE technique (canonical name and external ID) for a technique name."""
@@ -111,7 +103,10 @@ class AttackTechniqueLookup:
 
         Notes:
         * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
+        * "latest" (the default) uses the latest release, as the MITRE ATT&CK connector does.
         """
+        if not self.attack_version or self.attack_version.lower() == "latest":
+            return DEFAULT_ATTACK_URL
         return (
             "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
             f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
@@ -167,7 +162,7 @@ class AttackTechniqueLookup:
                     and isinstance(external_id, str)
                     and external_id.upper().startswith("T")
                 ):
-                    mitre_id = external_id.strip()
+                    mitre_id = normalize_mitre_id(external_id)
                     break
 
             if not mitre_id:
