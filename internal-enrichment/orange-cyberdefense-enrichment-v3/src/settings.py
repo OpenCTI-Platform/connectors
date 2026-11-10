@@ -59,7 +59,7 @@ class OrangeCyberdefenseEnrichmentConfig(BaseConfigModel):
     datalake_token: SecretStr = Field(
         description="Long Term Token used to access Orange Cyberdefense Datalake API.",
     )
-    datalake_env: str = Field(
+    datalake_env: Literal["prod", "preprod"] = Field(
         description="Datalake environment to use: `prod` or `preprod`.",
         default="prod",
     )
@@ -77,6 +77,8 @@ class OrangeCyberdefenseEnrichmentConfig(BaseConfigModel):
             "be used as a default for Datalake indicators without any score."
         ),
         default=0,
+        ge=0,
+        le=100,
     )
     add_tags_as_labels: bool = Field(
         description="Whether to add Datalake tags as labels to the enriched observable.",

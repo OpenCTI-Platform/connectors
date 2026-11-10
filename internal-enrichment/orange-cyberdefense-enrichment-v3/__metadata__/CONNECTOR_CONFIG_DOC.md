@@ -15,10 +15,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"green"` | Only perform enrichment for observables with this TLP level or less restrictive. |
-| OCD_ENRICH_DATALAKE_ENV | `string` |  | string |  | `"prod"` | Datalake environment to use: `prod` or `preprod`. |
+| OCD_ENRICH_DATALAKE_ENV | `string` |  | `prod` `preprod` |  | `"prod"` | Datalake environment to use: `prod` or `preprod`. |
 | OCD_ENRICH_IGNORE_UNSCORED_INDICATORS | `boolean` |  | boolean |  | `true` | If `true`, Datalake indicators that do not have any score will be ignored. |
 | OCD_ENRICH_IGNORE_WHITELISTED_INDICATORS | `boolean` |  | boolean |  | `true` | If `true`, Datalake indicators that are whitelisted will be ignored. |
-| OCD_ENRICH_FALLBACK_SCORE | `integer` |  | integer |  | `0` | If `OCD_ENRICH_IGNORE_UNSCORED_INDICATORS` is set to `false`, this value will be used as a default for Datalake indicators without any score. |
+| OCD_ENRICH_FALLBACK_SCORE | `integer` |  | `0 <= x <= 100` |  | `0` | If `OCD_ENRICH_IGNORE_UNSCORED_INDICATORS` is set to `false`, this value will be used as a default for Datalake indicators without any score. |
 | OCD_ENRICH_ADD_TAGS_AS_LABELS | `boolean` |  | boolean |  | `true` | Whether to add Datalake tags as labels to the enriched observable. |
 | OCD_ENRICH_ADD_SCORES_AS_LABELS | `boolean` |  | boolean |  | `true` | Whether to add Datalake threat scores as labels to the enriched observable. |
 | OCD_ENRICH_ADD_TLP | `boolean` |  | boolean |  | `true` | Whether to add a TLP marking to the enriched observable (overwrite existing). |

@@ -84,6 +84,10 @@
     "OCD_ENRICH_DATALAKE_ENV": {
       "default": "prod",
       "description": "Datalake environment to use: `prod` or `preprod`.",
+      "enum": [
+        "prod",
+        "preprod"
+      ],
       "type": "string"
     },
     "OCD_ENRICH_IGNORE_UNSCORED_INDICATORS": {
@@ -99,6 +103,8 @@
     "OCD_ENRICH_FALLBACK_SCORE": {
       "default": 0,
       "description": "If `OCD_ENRICH_IGNORE_UNSCORED_INDICATORS` is set to `false`, this value will be used as a default for Datalake indicators without any score.",
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "OCD_ENRICH_ADD_TAGS_AS_LABELS": {
