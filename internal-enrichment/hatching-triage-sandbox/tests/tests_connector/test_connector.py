@@ -238,3 +238,27 @@ def _raise_server_error(http_error):
     """Generator that raises a ServerError when iterated."""
     raise ServerError(http_error)
     yield  # noqa: unreachable - makes this a generator
+
+
+class TestBuildReportUrl:
+    @pytest.mark.parametrize(
+        "base_url, expected",
+        [
+            ("https://tria.ge/api", "https://tria.ge/sample-123/"),
+            ("https://tria.ge/api/", "https://tria.ge/sample-123/"),
+            ("https://private.tria.ge/api", "https://private.tria.ge/sample-123/"),
+            (
+                "https://sandbox.recordedfuture.com/api",
+                "https://sandbox.recordedfuture.com/sample-123/",
+            ),
+            (
+                "https://us-sandbox.recordedfuture.com/api",
+                "https://us-sandbox.recordedfuture.com/sample-123/",
+            ),
+        ],
+    )
+    def test_report_url_uses_the_configured_host(self, connector, base_url, expected):
+        """The analysis link should point to the host of the configured API base URL."""
+        connector.base_url = base_url
+
+        assert connector._build_report_url("sample-123") == expected
