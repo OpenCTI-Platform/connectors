@@ -368,7 +368,12 @@ class PolySwarmConnector(HashLookupMixin):
         ids, so each TLP marking on the entity is checked (the #7955 fix).
         """
         max_tlp = self.max_tlp
-        if max_tlp and stix_objects:
+        if max_tlp:
+            # The limit is always evaluated, whether or not the message carries
+            # a STIX bundle. Markings come from the OpenCTI entity and, when
+            # present, from the bundle's TLP marking definitions the entity
+            # references. An entity with no resolvable marking is allowed, as
+            # on the file path.
             tlp_levels = [
                 m["definition"]
                 for m in opencti_entity.get("objectMarking") or []
@@ -376,6 +381,23 @@ class PolySwarmConnector(HashLookupMixin):
                 and m.get("definition_type") == "TLP"
                 and m.get("definition")
             ]
+            by_id = {
+                o.get("id"): o.get("name")
+                for o in stix_objects or []
+                if isinstance(o, dict)
+                and o.get("type") == "marking-definition"
+                and str(o.get("name") or "").upper().startswith("TLP:")
+            }
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("id") in (
+                    opencti_entity.get("standard_id"),
+                    opencti_entity.get("id"),
+                ):
+                    tlp_levels += [
+                        by_id[r]
+                        for r in o.get("object_marking_refs") or []
+                        if r in by_id
+                    ]
             if any(not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels):
                 self.helper.connector_logger.info(
                     f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
@@ -1399,27 +1421,9 @@ class PolySwarmConnector(HashLookupMixin):
                 )
 
             # ── TLP CHECK (#38)
-            max_tlp = self.max_tlp
-            if max_tlp and stix_objects:
-                # check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of
-                # marking ids, so check each TLP marking on the entity.
-                tlp_levels = [
-                    m["definition"]
-                    for m in opencti_entity.get("objectMarking") or []
-                    if isinstance(m, dict)
-                    and m.get("definition_type") == "TLP"
-                    and m.get("definition")
-                ]
-                if any(
-                    not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels
-                ):
-                    self.helper.connector_logger.info(
-                        f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
-                    )
-                    return {
-                        "status": "skipped",
-                        "message": f"TLP exceeds configured max_tlp ({max_tlp})",
-                    }
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            if tlp_skip:
+                return tlp_skip
 
             # -- REUSE: an existing report for every provider means no re-upload
             import_files = opencti_entity.get("importFiles") or []

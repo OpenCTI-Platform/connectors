@@ -245,6 +245,45 @@ class TestUrlRefusals:
             assert result is None
             c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
 
+    @pytest.mark.parametrize(
+        "tlp, skipped",
+        [("TLP:RED", True), ("TLP:AMBER+STRICT", True), ("TLP:GREEN", False)],
+    )
+    def test_tlp_check_without_stix_objects(self, tlp, skipped):
+        """An empty stix_objects list must not bypass the TLP limit (#8351)."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        opencti = _opencti_url()
+        opencti["objectMarking"] = [{"definition_type": "TLP", "definition": tlp}]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, _url_entity(), opencti, [])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
+    def test_tlp_check_from_bundle_marking_refs(self):
+        """A TLP marking only present in the bundle is still enforced."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000001",
+            "name": "TLP:RED",
+        }
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        assert result["status"] == "skipped"
+        assert c.polyswarm_client.mock_calls == []
+
 
 # -- Submission: query string, provider and VM
 
