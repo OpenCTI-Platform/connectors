@@ -1,5 +1,6 @@
 from unittest.mock import Mock
 
+import pytest
 from connectors_sdk.models import (
     URL,
     AttackPattern,
@@ -562,6 +563,46 @@ def test_convert_indicator_to_stix_should_add_malware_description_from_html():
     malware_objects = [obj for obj in octi_objects if isinstance(obj, Malware)]
     assert len(malware_objects) == 1
     assert malware_objects[0].description == "A backdoor trojan used by APT groups."
+
+
+@pytest.mark.parametrize("placeholder", ["N/A", "n/a", " N/A ", "<p>N/A</p>"])
+def test_convert_indicator_to_stix_should_ignore_placeholder_malware_description(
+    placeholder,
+):
+    """The "N/A" placeholder must not become the description of the Malware."""
+    converter = _build_converter()
+    indicator = {
+        "id": "ind-mw-desc-na",
+        "type": "file",
+        "value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "created_at": "2026-03-06T12:00:00Z",
+        "modified_at": "2026-03-06T12:00:00Z",
+        "malware_description": placeholder,
+        "sightings": [
+            {
+                "id": "sight-desc-na",
+                "source": "flashpoint_extraction",
+                "sighted_at": "2026-03-06T11:00:00Z",
+                "tags": ["malware:cobaltstrike"],
+            }
+        ],
+    }
+
+    octi_objects = converter.convert_indicator_to_stix(indicator)
+
+    malware_objects = [obj for obj in octi_objects if isinstance(obj, Malware)]
+    assert len(malware_objects) == 1
+    assert malware_objects[0].description is None
+
+
+def test_resolve_malware_description_keeps_real_text_containing_na():
+    """Only the whole placeholder is dropped, not a description mentioning it."""
+    assert (
+        IndicatorConverterToStix._resolve_malware_description(
+            {"malware_description": "Loader, N/A for macOS."}
+        )
+        == "Loader, N/A for macOS."
+    )
 
 
 def test_convert_indicator_to_stix_should_add_ignite_url_as_external_reference():
