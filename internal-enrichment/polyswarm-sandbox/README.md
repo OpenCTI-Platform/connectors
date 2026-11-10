@@ -373,10 +373,10 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ## 🤝 Support
 
-- **Sales & Quotas**: [sales@polyswarm.io](mailto:sales@polyswarm.io)
+- **Support, plans and quotas**: [customersuccess@polyswarm.io](mailto:customersuccess@polyswarm.io)
 - **PolySwarm Docs**: [docs.polyswarm.io](https://docs.polyswarm.io)
 - **OpenCTI Docs**: [docs.opencti.io](https://docs.opencti.io)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Issues**: [GitHub Issues](https://github.com/OpenCTI-Platform/connectors/issues)
 
 ## 🙏 Credits
 

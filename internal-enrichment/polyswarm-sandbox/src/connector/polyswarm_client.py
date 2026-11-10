@@ -127,7 +127,7 @@ class PolySwarmAPIError(Exception):
         self.recommendations = recommendations or [
             "Verify your POLYSWARM_API_KEY is valid and active.",
             "Check your PolySwarm plan includes the feature you're trying to use.",
-            "Contact sales@polyswarm.io for assistance with your account or quota.",
+            "Contact customersuccess@polyswarm.io for assistance with your account or quota.",
         ]
         super().__init__(f"{category}: {detail}")
 
@@ -140,7 +140,7 @@ _HTTP_ERROR_MAP = {
         [
             "Verify POLYSWARM_API_KEY is set correctly in your environment or config.",
             "Generate a new API key at https://polyswarm.network.",
-            "Contact sales@polyswarm.io if the issue persists.",
+            "Contact customersuccess@polyswarm.io if the issue persists.",
         ],
     ),
     403: (
@@ -149,7 +149,7 @@ _HTTP_ERROR_MAP = {
         "This usually means your plan does not include this feature.",
         [
             "Check that your PolySwarm subscription includes this feature (scanning, sandbox, LLM reports).",
-            "Upgrade your plan at https://polyswarm.network or contact sales@polyswarm.io.",
+            "Upgrade your plan at https://polyswarm.network or contact customersuccess@polyswarm.io.",
         ],
     ),
     402: (
@@ -158,7 +158,7 @@ _HTTP_ERROR_MAP = {
         "your quota resets or is increased.",
         [
             "Wait for your quota to reset (check your plan's reset cycle).",
-            "Contact sales@polyswarm.io to increase your quota or upgrade your plan.",
+            "Contact customersuccess@polyswarm.io to increase your quota or upgrade your plan.",
         ],
     ),
     429: (
@@ -168,7 +168,7 @@ _HTTP_ERROR_MAP = {
         [
             "Wait a few minutes and retry.",
             "Reduce POLYSWARM_POLL_INTERVAL to lower request frequency.",
-            "Contact sales@polyswarm.io to increase your rate limit.",
+            "Contact customersuccess@polyswarm.io to increase your rate limit.",
         ],
     ),
 }

@@ -1451,7 +1451,7 @@ class StixBuilder:
         content_parts.append("")
         content_parts.append("## Need Help?")
         content_parts.append(
-            "Contact **sales@polyswarm.io** for assistance with sandbox failures, "
+            "Contact **customersuccess@polyswarm.io** for assistance with sandbox failures, "
             "quota issues, or to upgrade your plan."
         )
         content_parts.append("")
@@ -1526,7 +1526,7 @@ class StixBuilder:
         content_parts.append(
             "For questions about API quotas, file size limits, feature access, or enterprise plans:"
         )
-        content_parts.append("- **Email:** sales@polyswarm.io")
+        content_parts.append("- **Email:** customersuccess@polyswarm.io")
         content_parts.append("- **Website:** https://polyswarm.io")
         content_parts.append("")
 
@@ -1546,7 +1546,7 @@ class StixBuilder:
                 {
                     "source_name": "PolySwarm Support",
                     "url": "https://polyswarm.io",
-                    "description": "Contact sales@polyswarm.io for assistance",
+                    "description": "Contact customersuccess@polyswarm.io for assistance",
                 }
             ],
         }
