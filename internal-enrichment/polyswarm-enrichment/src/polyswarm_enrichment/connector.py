@@ -1500,6 +1500,83 @@ class ConnectorTemplate:
         return max(tlps, key=lambda tlp: _TLP_RANK.get(tlp, len(_TLP_RANK)))
 
     @staticmethod
+    def _marking_definition_object(marking: dict) -> dict | None:
+        """STIX marking-definition built from an OpenCTI objectMarking entry."""
+        standard_id = (marking or {}).get("standard_id")
+        if not standard_id or not str(standard_id).startswith("marking-definition--"):
+            return None
+        definition = str(marking.get("definition") or "")
+        definition_type = str(marking.get("definition_type") or "")
+        if not definition_type and ":" in definition:
+            definition_type = definition.split(":", 1)[0]
+        if not definition or not definition_type:
+            return None
+        obj = {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": standard_id,
+            "created": "2017-01-20T00:00:00.000Z",
+            "name": definition,
+            "definition_type": definition_type.lower(),
+            "x_opencti_definition_type": definition_type,
+            "x_opencti_definition": definition,
+        }
+        if definition_type.upper() == "TLP":
+            obj["definition"] = {"tlp": definition.split(":")[-1].lower()}
+        else:
+            obj["definition"] = {definition_type.lower(): definition}
+        return obj
+
+    def _with_marking_definitions(self, objects: list, opencti_entity: dict) -> list:
+        """Add the marking definitions the bundle's markings point to.
+
+        OpenCTI drops a reference to an object the bundle does not contain when
+        it cleans up an inconsistent bundle, so a derived object's marking would
+        silently vanish. Definitions come from the source entity's markings, or
+        from OpenCTI when the entity does not list them.
+        """
+        present = {obj.get("id") for obj in objects}
+        wanted = []
+        for obj in objects:
+            for ref in obj.get("object_marking_refs") or []:
+                if ref not in present and ref not in wanted:
+                    wanted.append(ref)
+        if not wanted:
+            return objects
+        known = {
+            m.get("standard_id"): m
+            for m in (opencti_entity or {}).get("objectMarking") or []
+            if m.get("standard_id")
+        }
+        added = []
+        for ref in wanted:
+            marking = known.get(ref)
+            if marking is None:
+                try:
+                    marking = self.helper.api.marking_definition.read(
+                        filters={
+                            "mode": "and",
+                            "filters": [{"key": "standard_id", "values": [ref]}],
+                            "filterGroups": [],
+                        }
+                    )
+                except Exception as e:
+                    self.helper.connector_logger.warning(
+                        f"[CONNECTOR] Marking lookup failed: {type(e).__name__}"
+                    )
+                    marking = None
+            definition = self._marking_definition_object(marking or {})
+            if definition and definition["id"] == ref:
+                added.append(definition)
+            else:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Marking definition could not be resolved, "
+                    "it may be dropped from the bundle",
+                    {"marking": ref},
+                )
+        return list(objects) + added
+
+    @staticmethod
     def _source_marking_refs(stix_entity: dict, opencti_entity: dict) -> list[str]:
         """Marking refs of the source, copied to every derived object.
 
@@ -1867,6 +1944,11 @@ class ConnectorTemplate:
                     stix_objects.insert(0, observable)
 
                 if stix_objects and len(stix_objects) > 0:
+                    # This send cleans up dangling references, which would strip
+                    # any marking the bundle does not define: add them first.
+                    stix_objects = self._with_marking_definitions(
+                        stix_objects, opencti_entity
+                    )
                     result = self._send_bundle(stix_objects)
                     # Explicitly update observable score — bundle import
                     # doesn't always persist x_opencti_score on existing objects.

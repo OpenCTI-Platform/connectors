@@ -479,6 +479,77 @@ class TestImphashHook:
         for obj in pivots:
             assert obj["object_marking_refs"] == [TLP_AMBER, TLP_GREEN]
 
+    def test_bundle_gets_the_marking_definitions_it_references(self):
+        connector = _connector(_make_client())
+        self._wire(connector, None)
+        connector._collect_intelligence = MagicMock(
+            return_value=[
+                {"id": FILE_ID, "type": "file"},
+                {"id": "note--1", "type": "note"},
+            ]
+        )
+        message = self._file_message()
+        message["enrichment_entity"]["objectMarking"] = [
+            {
+                "standard_id": TLP_AMBER,
+                "definition_type": "TLP",
+                "definition": "TLP:AMBER",
+            }
+        ]
+        connector.process_message(message)
+        sent = {o["id"]: o for o in connector._send_bundle.call_args[0][0]}
+        assert sent["note--1"]["object_marking_refs"] == [TLP_AMBER]
+        definition = sent[TLP_AMBER]
+        assert definition["type"] == "marking-definition"
+        assert definition["definition_type"] == "tlp"
+        assert definition["definition"] == {"tlp": "amber"}
+        assert definition["x_opencti_definition"] == "TLP:AMBER"
+
+    def test_marking_definition_is_not_duplicated_when_already_present(self):
+        connector = _connector(_make_client())
+        present = {"id": TLP_AMBER, "type": "marking-definition"}
+        objects = [
+            present,
+            {"id": "note--1", "type": "note", "object_marking_refs": [TLP_AMBER]},
+        ]
+        assert connector._with_marking_definitions(objects, {}) == objects
+
+    def test_unresolvable_marking_is_left_alone(self):
+        connector = _connector(_make_client())
+        objects = [
+            {"id": "note--1", "type": "note", "object_marking_refs": [TLP_GREEN]}
+        ]
+        assert connector._with_marking_definitions(objects, {}) == objects
+
+    @pytest.mark.parametrize("with_definition", [False, True])
+    def test_opencti_cleanup_keeps_markings_only_when_defined(self, with_definition):
+        """pycti's cleanup removes refs to objects the bundle lacks."""
+        from pycti.utils.opencti_stix2_splitter import OpenCTIStix2Splitter
+
+        connector = _connector(_make_client())
+        objects = [
+            {"id": "note--1", "type": "note", "object_marking_refs": [TLP_AMBER]}
+        ]
+        if with_definition:
+            objects = connector._with_marking_definitions(
+                objects,
+                {
+                    "objectMarking": [
+                        {
+                            "standard_id": TLP_AMBER,
+                            "definition_type": "TLP",
+                            "definition": "TLP:AMBER",
+                        }
+                    ]
+                },
+            )
+        bundle = {"type": "bundle", "id": "bundle--1", "objects": objects}
+        _n, _bad, bundles = OpenCTIStix2Splitter().split_bundle_with_expectations(
+            bundle, use_json=False, cleanup_inconsistent_bundle=True
+        )
+        note = next(o for b in bundles for o in b["objects"] if o["id"] == "note--1")
+        assert note["object_marking_refs"] == ([TLP_AMBER] if with_definition else [])
+
     def test_hash_enrichment_objects_carry_the_source_markings(self):
         connector = _connector(_make_client())
         self._wire(connector, None)
