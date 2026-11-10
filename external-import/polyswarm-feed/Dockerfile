@@ -21,5 +21,9 @@ WORKDIR /opt/opencti-connector-polyswarm-feed
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
+# Run as an unprivileged user. The connector writes nothing to disk.
+RUN adduser -D -H -u 10001 connector
+USER connector
+
 # Expose and entrypoint
 ENTRYPOINT ["python", "main.py"]
