@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'PolySwarm Sandbox'
-  scope: 'Artifact,Url'
+  scope: 'Artifact,StixFile,Url'
   auto: false
   log_level: 'error'
   max_tlp: 'TLP:AMBER'
@@ -27,6 +27,9 @@ polyswarm:
   sandbox_network_enabled: true
   sandbox_timeout: 600
   sandbox_url_send_query: false         # Url observables: also send query string and fragment
+  sandbox_lookup_max_age_days: 0        # StixFile lookup / Artifact reuse: older reports count as missing (0 = any age)
+  sandbox_reuse_report: false           # Artifacts: use existing reports instead of uploading again
+  sandbox_detonate_by_hash: false       # StixFile with no report: detonate the sample PolySwarm holds (spends credits)
 
   # Polling
   poll_interval: 30

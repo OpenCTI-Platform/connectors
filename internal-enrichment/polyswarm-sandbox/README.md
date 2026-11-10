@@ -39,7 +39,9 @@ The connector sends data to PolySwarm only when it enriches an artifact or a URL
 
 - **The file.** The artifact's file, its file name, and its archive password if one is set are uploaded to PolySwarm for a multi-engine scan. When `POLYSWARM_SANDBOX_ENABLED=true` (the default), the file is also detonated in the selected sandbox provider(s) (CAPE, Triage).
 - **The URL.** For a Url observable, the URL is sent to PolySwarm and opened in the selected sandbox provider(s). It is not scanned by the engines, and nothing is uploaded from OpenCTI. By default only the scheme, host and path are sent: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_SANDBOX_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password, and URLs whose host is private, loopback, link-local, shared (`100.64.0.0/10`), reserved or internal, are never sent (see [URLs](#urls)). The sandbox always has internet access for a URL, since it has to load it, whatever `POLYSWARM_SANDBOX_NETWORK_ENABLED` says.
-- **Where it goes.** Uploads (files and URLs) go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public community (`default`, also listed as `public`) become visible to the PolySwarm community, so the connector refuses to upload files or submit URLs there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
+- **Hash lookup (StixFile).** For a StixFile observable (a hash, no file), only the hash is sent to PolySwarm, to read the latest existing sandbox report. Nothing is uploaded, nothing is detonated and no sandbox credits are spent. The lookup itself is read-only, but turning a found report into attachments is not: with `POLYSWARM_PDF_REPORT_ENABLED=true` (the default), PolySwarm generates a PDF report in your account for each report found (one job per provider, polled for up to 5 minutes), and with `POLYSWARM_LLM_REPORT_ENABLED=true` it creates an LLM report task. These may count against your report quota. Set `POLYSWARM_PDF_REPORT_ENABLED=false` to avoid the PDF jobs. With `POLYSWARM_SANDBOX_REUSE_REPORT=true` (off by default), an Artifact whose reports already exist is looked up the same way and is not uploaded again.
+- **Detonate by hash (opt-in).** With `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true` (off by default), a StixFile with no usable report is detonated from the sample PolySwarm already holds for that hash. Nothing is uploaded from OpenCTI, but each detonation spends PolySwarm sandbox credits and runs in the community set in `POLYSWARM_COMMUNITY`. The same public-community rule as for uploads applies (see below).
+- **Where it goes.** Uploads (files and URLs) go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public community (`default`, also listed as `public`) become visible to the PolySwarm community, so the connector refuses to upload files, submit URLs or detonate by hash there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
@@ -131,6 +133,9 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_NETWORK_ENABLED` | `true` | Allow internet access |
 | `POLYSWARM_SANDBOX_TIMEOUT` | `600` | Timeout in seconds |
 | `POLYSWARM_SANDBOX_URL_SEND_QUERY` | `false` | Url observables: also send the query string and fragment. By default only scheme, host and path are submitted |
+| `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` | `0` | StixFile lookup and Artifact reuse: a sandbox report older than this many days counts as missing. `0` means a report of any age is used |
+| `POLYSWARM_SANDBOX_REUSE_REPORT` | `false` | Artifacts: look for an existing sandbox report by SHA-256 before uploading. If every configured provider has one and a finished scan of the hash exists, they are used and the file is not uploaded again |
+| `POLYSWARM_SANDBOX_DETONATE_BY_HASH` | `false` | StixFile observables: when no usable report exists, detonate the sample PolySwarm already holds for the hash. Spends sandbox credits, nothing is uploaded from OpenCTI, runs in `POLYSWARM_COMMUNITY`. Refused in the public community unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true` |
 
 #### Enrichment Settings
 | Variable | Default | Description |
@@ -186,9 +191,19 @@ Malware → attributed-to → Threat Actor
 2. **Trigger enrichment** via the connector
 3. **View results** in the artifact's enrichment tab
 
+### File hashes (StixFile)
+
+`StixFile` is in the default `CONNECTOR_SCOPE` (`Artifact,StixFile,Url`). Trigger the enrichment on a StixFile observable that has a SHA-256 (an MD5 or SHA-1 is resolved to a SHA-256 through a PolySwarm hash search). For each provider in `POLYSWARM_SANDBOX_PROVIDER`, the connector reads the latest existing sandbox report for the hash, which costs no sandbox credits. Each report found produces what a detonation produces: the sandbox note per provider, the JSON and PDF reports attached to the observable, the sandbox score, the malware family, ATT&CK techniques, and contacted domains and IPs. Only reports that finished successfully are used, and a report older than `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` (when above 0) counts as missing. The lookup runs in the community set in `POLYSWARM_COMMUNITY`. It needs `POLYSWARM_SANDBOX_ENABLED=true`.
+
+If no usable report exists, the connector adds a note saying so and what setting would detonate the sample. By default nothing else happens. To detonate, set `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`: the connector then finds the sample PolySwarm already holds for the hash and starts a sandbox run for each provider that has no usable report, polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, and processes the result the same way. If PolySwarm does not hold the sample, the note says so, and the way to analyse it is to upload the file as an Artifact. Detonation spends credits for every enrichment of a hash without a report, so keep `CONNECTOR_AUTO=false`.
+
+For an Artifact, `POLYSWARM_SANDBOX_REUSE_REPORT=true` (off by default) checks the same way before uploading. If every configured provider has a usable report and a finished scan of the hash exists, the file is not downloaded or uploaded, and the scan result is taken from that existing scan. Otherwise the Artifact is scanned and detonated as before.
+
+Because `StixFile` is in the default scope, keep `CONNECTOR_AUTO=false` (the default). With automatic enrichment on, every new File observable, including those created by feed imports and by other enrichments, would trigger lookups and PDF report jobs in your PolySwarm account (and detonations if `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`). If you want automatic enrichment, narrow `CONNECTOR_SCOPE` to `Artifact` or use playbooks to choose what is enriched.
+
 ### URLs
 
-Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`. Keep `CONNECTOR_AUTO=false` (the default): with automatic enrichment, every new Url observable would be detonated.
+Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,StixFile,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`. Keep `CONNECTOR_AUTO=false` (the default): with automatic enrichment, every new Url observable would be detonated.
 
 The connector picks a VM that accepts URLs from the provider listing (`POLYSWARM_SANDBOX_VM` is used when it accepts URLs). It polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, then adds the same results it adds for a file's sandbox run: the sandbox note per provider, the JSON report and PDF report attached to the Url observable (named from the URL's SHA-256, never the URL), the sandbox score on the observable, and the malware family, ATT&CK techniques and contacted domains and IPs, related to the Url observable.
 
@@ -294,6 +309,8 @@ polyswarm-sandbox/
 ├── docker-compose.yml
 └── README.md
 ```
+
+The `connector` package also contains `hash_lookup.py`, which holds the report lookup by hash and detonate-by-hash logic.
 
 ## 📈 Performance
 

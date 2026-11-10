@@ -1528,6 +1528,38 @@ class StixBuilder:
             ],
         }
 
+    def create_info_note(
+        self,
+        entity: dict,
+        title: str,
+        detail: str,
+        next_steps: list[str] | None = None,
+    ) -> dict:
+        """Create a STIX Note for an outcome that is not an error.
+
+        Used when a hash lookup finds no PolySwarm sandbox report: nothing
+        failed, there is just nothing to import. Same deterministic ID scheme
+        as error notes, so re-running the enrichment updates the note.
+        """
+        parts = ["# PolySwarm Sandbox\n", f"## {title}", detail, ""]
+        if next_steps:
+            parts.append("## Next Steps")
+            for i, step in enumerate(next_steps, 1):
+                parts.append(f"{i}. {step}")
+            parts.append("")
+        entity_id = entity.get("id", "") if isinstance(entity, dict) else str(entity)
+        return {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": self._note_id(entity_id, f"info:{title}"),
+            "created": self._now,
+            "modified": self._now,
+            "created_by_ref": self.author_id,
+            "abstract": f"PolySwarm Sandbox - {title}",
+            "content": "\n".join(parts),
+            "object_refs": [entity_id],
+        }
+
     def _create_threat_intel_note(
         self, entity: dict, profile: dict, family: str | None
     ) -> dict | None:

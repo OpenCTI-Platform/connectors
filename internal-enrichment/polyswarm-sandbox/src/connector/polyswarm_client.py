@@ -15,6 +15,7 @@ import requests
 from connector.polyswarm import PolyswarmAPI
 from connector.quota import QuotaMonitor
 from polyswarm_api.exceptions import (
+    NoResultsException,
     NotFoundException,
     PolyswarmException,
     UsageLimitsExceededException,
@@ -109,6 +110,12 @@ class PolySwarmAPIError(Exception):
         detail: Human-readable description for the Note body
         recommendations: List of suggested actions for the user
     """
+
+    QUOTA_CATEGORY = "API Quota Exhausted"
+
+    @property
+    def is_quota_exhausted(self) -> bool:
+        return self.category.startswith(self.QUOTA_CATEGORY)
 
     def __init__(
         self, category: str, detail: str, recommendations: list | None = None
@@ -370,7 +377,7 @@ class PolySwarmClient:
         """Error for an exhausted quota, with the remaining quota and reset time."""
         quota_lines = self.quota.exhausted_note_lines()
         return PolySwarmAPIError(
-            category=f"API Quota Exhausted ({operation})",
+            category=f"{PolySwarmAPIError.QUOTA_CATEGORY} ({operation})",
             detail=(
                 "PolySwarm reported that the account's usage limits are exceeded "
                 f"(HTTP 429 during {operation}).\n\n**Account quota**\n"
@@ -535,6 +542,109 @@ class PolySwarmClient:
         except Exception as e:
             self.helper.connector_logger.error(
                 f"[POLYSWARM] URL sandbox submit unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def get_latest_sandbox_task(self, sha256: str, provider: str) -> dict | None:
+        """Latest existing sandbox task for a SHA-256 and provider, read only.
+
+        Returns the task's JSON (the same shape ``get_sandbox_results`` returns,
+        report included), or None when PolySwarm has no task for the hash (the
+        API answers 404 "No tasks found.") or the call failed. Only the hash is
+        sent. Nothing is submitted and no credits are spent.
+        """
+
+        def _latest() -> dict | None:
+            try:
+                task = self.api.sandbox_task_latest(sha256, provider)
+            except NotFoundException:
+                return None
+            return task.json if task else None
+
+        try:
+            return self._retry_sdk_call(
+                _latest, operation=f"sandbox lookup by hash ({provider})"
+            )
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Sandbox lookup unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def find_instance_by_hash(self, hash_value: str) -> dict | None:
+        """Latest scan instance PolySwarm holds for a hash, read only.
+
+        Accepts an MD5, SHA-1 or SHA-256. Returns the instance JSON (``id``,
+        ``sha256``, ``community``, ``created`` ...), or None when PolySwarm
+        does not hold the sample. Only the hash is sent.
+        """
+
+        def _search() -> dict | None:
+            try:
+                instances = list(self.api.search(hash_value))
+            except (NoResultsException, NotFoundException):
+                return None
+            return instances[0].json if instances else None
+
+        try:
+            return self._retry_sdk_call(_search, operation="search by hash")
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Hash search unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def get_scan_by_hash(self, hash_value: str) -> tuple[str | None, dict | None]:
+        """Latest finished scan for a hash, read only: (instance id, scan JSON).
+
+        Returns (None, None) when PolySwarm holds no scan that has finished.
+        """
+        instance = self.find_instance_by_hash(hash_value)
+        if not instance or not instance.get("id"):
+            return None, None
+        scan = self.get_scan_results(str(instance["id"]))
+        return (str(instance["id"]), scan) if scan else (None, None)
+
+    def submit_sandbox_by_instance_async(
+        self,
+        instance_id: str,
+        provider: str,
+        vm_slug: str,
+        network: bool = True,
+    ) -> str | None:
+        """Detonate a sample PolySwarm already holds, by scan instance id.
+
+        Nothing is uploaded. This spends sandbox credits. Returns the sandbox
+        task ID or None.
+        """
+        try:
+            self.helper.connector_logger.info(
+                f"[POLYSWARM] Detonating held sample by instance "
+                f"(provider={provider}, vm={vm_slug}, network={network})"
+            )
+            task = self._retry_sdk_call(
+                self.api.sandbox,
+                instance_id,
+                provider,
+                vm_slug,
+                network,
+                operation=f"sandbox by hash ({provider})",
+            )
+            if task and task.id:
+                self.helper.connector_logger.info(
+                    f"[POLYSWARM] Sandbox started, task_id: {task.id}"
+                )
+                return task.id
+            return None
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[POLYSWARM] Sandbox by hash unexpected error: {type(e).__name__}"
             )
             return None
 

@@ -14,8 +14,9 @@ services:
       - CONNECTOR_ID=${CONNECTOR_ID:-22119d8d-5297-41b1-aa31-b8e317e7144c}
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=polyswarm_scan_sandbox_connector
-      # Artifact: scan and detonate the attached file. Url: detonate the URL.
-      - CONNECTOR_SCOPE=Artifact,Url
+      # Artifact: scan and detonate the attached file. StixFile: fetch the existing
+      # sandbox report for the hash. Url: detonate the URL.
+      - CONNECTOR_SCOPE=Artifact,StixFile,Url
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_MAX_TLP=TLP:AMBER
@@ -67,6 +68,14 @@ services:
       # Url observables: send the query string and fragment too (default false:
       # only scheme, host and path are submitted)
       - POLYSWARM_SANDBOX_URL_SEND_QUERY=false
+      # StixFile lookup and Artifact reuse: a report older than this many days
+      # counts as missing (0 = any age)
+      - POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS=0
+      # Artifacts: use an existing sandbox report instead of uploading again
+      - POLYSWARM_SANDBOX_REUSE_REPORT=false
+      # StixFile with no report: detonate the sample PolySwarm already holds.
+      # Spends sandbox credits; nothing is uploaded from OpenCTI.
+      - POLYSWARM_SANDBOX_DETONATE_BY_HASH=false
       - POLYSWARM_POLL_INTERVAL=30
       - POLYSWARM_POLL_TIMEOUT=900
       

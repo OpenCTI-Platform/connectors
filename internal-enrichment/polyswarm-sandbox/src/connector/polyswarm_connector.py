@@ -14,6 +14,7 @@ import uuid
 from typing import Any
 
 from connector.artifact_handler import ArtifactHandler
+from connector.hash_lookup import HashLookupMixin
 from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.sandbox_processor import SandboxProcessor
 from connector.scan_processor import ScanProcessor
@@ -33,7 +34,7 @@ from pycti import OpenCTIConnectorHelper
 PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
 
 
-class PolySwarmConnector:
+class PolySwarmConnector(HashLookupMixin):
     """OpenCTI internal enrichment connector for PolySwarm file scanning and sandbox analysis."""
 
     def __init__(self, config, helper: OpenCTIConnectorHelper) -> None:
@@ -1332,6 +1333,13 @@ class PolySwarmConnector:
         if str(opencti_entity.get("entity_type", "")).lower() == "url":
             return self._enrich_url(entity_id, entity, opencti_entity, stix_objects)
 
+        # StixFile observables carry a hash and no file: look up the existing
+        # sandbox report (and detonate by hash only when enabled)
+        if str(opencti_entity.get("entity_type", "")).lower() == "stixfile":
+            return self._enrich_stixfile(
+                entity_id, entity, opencti_entity, stix_objects
+            )
+
         file_data = None
         short_id = (entity_id or "unknown")[:12]
         self._enrich_ctx = f"[entity={short_id}]"
@@ -1365,6 +1373,19 @@ class PolySwarmConnector:
                         "status": "skipped",
                         "message": f"TLP exceeds configured max_tlp ({max_tlp})",
                     }
+
+            # -- REUSE: an existing report for every provider means no re-upload
+            import_files = opencti_entity.get("importFiles") or []
+            reuse_name = (
+                (import_files[0].get("name") if import_files else None)
+                or entity.get("name")
+                or lookup_hash
+                or "sample"
+            )
+            if self._try_reuse_existing_reports(
+                entity, lookup_hash, reuse_name, stix_objects
+            ):
+                return None
 
             # ── PUBLIC COMMUNITY GUARD: refuse to upload publicly unless allowed
             if not self._upload_community_allowed():

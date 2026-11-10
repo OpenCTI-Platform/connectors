@@ -97,6 +97,33 @@ class PolySwarmConfig(BaseConfigModel):
             "so tokens in a query string never leave OpenCTI."
         ),
     )
+    sandbox_lookup_max_age_days: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Hash lookup (StixFile observables) and report reuse (Artifacts): "
+            "an existing PolySwarm sandbox report older than this many days is "
+            "treated as missing. 0 means a report of any age is used."
+        ),
+    )
+    sandbox_reuse_report: bool = Field(
+        default=False,
+        description=(
+            "For an Artifact, look for an existing PolySwarm sandbox report by "
+            "SHA-256 before uploading. When every configured provider has a usable "
+            "report, it is used and the file is not uploaded again (the scan "
+            "result is also taken from the latest existing scan of the hash)."
+        ),
+    )
+    sandbox_detonate_by_hash: bool = Field(
+        default=False,
+        description=(
+            "For a StixFile observable with no usable existing report, detonate "
+            "the sample PolySwarm already holds for that hash. Nothing is uploaded "
+            "from OpenCTI, but each detonation spends sandbox credits and runs in "
+            "the community set in POLYSWARM_COMMUNITY. Off by default."
+        ),
+    )
 
     # Polling
     poll_interval: int = Field(
@@ -175,9 +202,11 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     Only ``name`` and ``scope`` are overridden here; everything else
     (ID, confidence, log level) comes from env vars or SDK defaults.
 
-    Scope is ``Artifact`` and ``Url``: the sandbox detonates an uploaded
-    file (so it needs the file attached to an Artifact) or a URL. A StixFile
-    observable carrying just a hash has nothing to detonate.
+    Scope is ``Artifact``, ``StixFile`` and ``Url``: the sandbox detonates an
+    uploaded file (so it needs the file attached to an Artifact) or a URL. A
+    StixFile observable carrying just a hash has no file to upload, so it gets
+    the latest existing PolySwarm sandbox report for its hash (the lookup is read-only), and
+    is only detonated when POLYSWARM_SANDBOX_DETONATE_BY_HASH is true.
     """
 
     name: str = Field(
@@ -185,7 +214,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["Artifact", "Url"],
+        default=["Artifact", "StixFile", "Url"],
         description="The scope of the connector.",
     )
 

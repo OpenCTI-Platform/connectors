@@ -630,7 +630,7 @@ class TestUrlSettings:
     def test_defaults(self, monkeypatch):
         config = _settings(monkeypatch)
         assert config.polyswarm.sandbox_url_send_query is False
-        assert config.connector.scope == ["Artifact", "Url"]
+        assert config.connector.scope == ["Artifact", "StixFile", "Url"]
 
     def test_send_query_from_env(self, monkeypatch):
         config = _settings(monkeypatch, POLYSWARM_SANDBOX_URL_SEND_QUERY="true")
