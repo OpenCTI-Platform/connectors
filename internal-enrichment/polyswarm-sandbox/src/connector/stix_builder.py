@@ -570,12 +570,26 @@ class StixBuilder:
         )
 
         # Deduplicate
-        seen_ids = set()
+        # A duplicate id may carry markings the first copy lacks (for example
+        # a deterministic IP built unmarked and again with the source
+        # markings), so the marking refs are merged rather than dropped.
+        by_id: dict[str, dict] = {}
         unique_objects = []
         for obj in objects:
-            if obj.get("id") not in seen_ids:
-                seen_ids.add(obj["id"])
+            kept = by_id.get(obj.get("id"))
+            if kept is None:
+                by_id[obj["id"]] = obj
                 unique_objects.append(obj)
+                continue
+            extra = [
+                ref
+                for ref in obj.get("object_marking_refs") or []
+                if ref not in (kept.get("object_marking_refs") or [])
+            ]
+            if extra:
+                kept["object_marking_refs"] = (
+                    list(kept.get("object_marking_refs") or []) + extra
+                )
 
         # Sort: all entities/observables first, then relationships last.
         # OpenCTI worker imports in order — relationships fail with

@@ -494,6 +494,22 @@ class TestBuildBundleHook:
         assert len(_dropped(objs)) == 3
         assert any(o["type"] == "indicator" and o["name"] == "bore.pub" for o in objs)
 
+    def test_ip_in_contacted_list_and_c2_config_keeps_markings(self, builder):
+        marking = "marking-definition--00000000-0000-4000-8000-0000000000aa"
+        entity = dict(ENTITY, object_marking_refs=[marking])
+        results = {
+            "triage": SandboxProcessor.process(_triage_task()),
+            "cape": SandboxProcessor.process(_cape_task()),
+        }
+        results["triage"]["ips"] = ["147.185.221.23"]
+        objs = builder.build_bundle(
+            entity=entity, sandbox_results=results, config=self.CONFIG
+        )
+        ips = [o for o in objs if o["id"].startswith("ipv4-addr--")]
+        matching = [o for o in ips if o["value"] == "147.185.221.23"]
+        assert len(matching) == 1
+        assert matching[0]["object_marking_refs"] == [marking]
+
     def test_relationships_sorted_after_objects(self, builder):
         objs = self._bundle(builder, self.CONFIG)
         first_rel = next(i for i, o in enumerate(objs) if o["type"] == "relationship")
