@@ -688,6 +688,45 @@ class TestArtifactReuse:
             c._enrich_file(ARTIFACT_ID, entity, opencti, [entity])
         c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
 
+    def test_quota_exhausted_lookup_ends_enrichment_without_upload(self):
+        c = _connector(sandbox_reuse_report=True)
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(
+            side_effect=PolySwarmAPIError(
+                f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox lookup)", "429"
+            )
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
+        with pytest.raises(PolySwarmAPIError) as exc:
+            self._run_artifact(c)
+        assert exc.value.is_quota_exhausted
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+
+    def test_quota_exhausted_lookup_reaches_the_quota_note(self):
+        c = _connector(sandbox_reuse_report=True)
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(
+            side_effect=PolySwarmAPIError(
+                f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox lookup)", "429"
+            )
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
+        c._send_error_note = MagicMock()
+        c._send_original_bundle = MagicMock()
+        entity, opencti = self._artifact()
+        result = c._process_message(
+            {
+                "enrichment_entity": opencti,
+                "stix_entity": entity,
+                "stix_objects": [entity],
+                "entity_id": ARTIFACT_ID,
+            }
+        )
+        assert json.loads(result)["status"] == "error"
+        assert c._send_error_note.call_args.args[1].startswith(
+            PolySwarmAPIError.QUOTA_CATEGORY
+        )
+        c.artifact_handler.download_artifact.assert_not_called()
+
 
 # -- Client
 
@@ -865,42 +904,3 @@ class TestSettings:
     def test_negative_age_rejected(self, monkeypatch):
         with pytest.raises(Exception):
             _settings(monkeypatch, POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS="-1")
-
-    def test_quota_exhausted_lookup_ends_enrichment_without_upload(self):
-        c = _connector(sandbox_reuse_report=True)
-        c.polyswarm_client.get_latest_sandbox_task = MagicMock(
-            side_effect=PolySwarmAPIError(
-                f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox lookup)", "429"
-            )
-        )
-        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
-        with pytest.raises(PolySwarmAPIError) as exc:
-            self._run_artifact(c)
-        assert exc.value.is_quota_exhausted
-        c.artifact_handler.download_artifact.assert_not_called()
-        c.polyswarm_client.submit_file_async.assert_not_called()
-
-    def test_quota_exhausted_lookup_reaches_the_quota_note(self):
-        c = _connector(sandbox_reuse_report=True)
-        c.polyswarm_client.get_latest_sandbox_task = MagicMock(
-            side_effect=PolySwarmAPIError(
-                f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox lookup)", "429"
-            )
-        )
-        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
-        c._send_error_note = MagicMock()
-        c._send_original_bundle = MagicMock()
-        entity, opencti = self._artifact()
-        result = c._process_message(
-            {
-                "enrichment_entity": opencti,
-                "stix_entity": entity,
-                "stix_objects": [entity],
-                "entity_id": ARTIFACT_ID,
-            }
-        )
-        assert json.loads(result)["status"] == "error"
-        assert c._send_error_note.call_args.args[1].startswith(
-            PolySwarmAPIError.QUOTA_CATEGORY
-        )
-        c.artifact_handler.download_artifact.assert_not_called()
