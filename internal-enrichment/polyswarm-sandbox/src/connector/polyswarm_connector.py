@@ -27,6 +27,11 @@ from connector.url_utils import (
 )
 from pycti import OpenCTIConnectorHelper
 
+# Names that all mean PolySwarm's public community: an account's community list
+# shows it as "public", the API's default is "default", and task records say
+# "mainnet1".
+PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
 
 class PolySwarmConnector:
     """OpenCTI internal enrichment connector for PolySwarm file scanning and sandbox analysis."""
@@ -212,8 +217,10 @@ class PolySwarmConnector:
 
         try:
             result = self._enrich_file(entity_id, entity, opencti_entity, stix_objects)
-            if result and result.get("status") == "error":
-                error_msg = result.get("error", "Unknown error")
+            if result and result.get("status") in ("error", "skipped"):
+                error_msg = result.get("error") or result.get(
+                    "message", "Unknown error"
+                )
                 self.helper.connector_logger.warning(f"[CONNECTOR] {error_msg}")
                 self._send_original_bundle(stix_objects)
                 return json.dumps(result)
@@ -375,7 +382,7 @@ class PolySwarmConnector:
     def _upload_community_allowed(self) -> bool:
         """True unless uploads would go to the public community without opt-in."""
         community = (self.config.polyswarm.community or "").strip().lower()
-        if community not in ("", "default"):
+        if community not in PUBLIC_COMMUNITY_NAMES:
             return True
         return self.config.polyswarm.allow_public_community is True
 
@@ -1334,15 +1341,18 @@ class PolySwarmConnector:
             # ── TLP CHECK (#38)
             max_tlp = self.max_tlp
             if max_tlp and stix_objects:
-                markings = entity.get("object_marking_refs", [])
-                if not markings:
-                    obj_markings = opencti_entity.get("objectMarking", [])
-                    markings = [
-                        m.get("standard_id") or m.get("id", "")
-                        for m in obj_markings
-                        if isinstance(m, dict)
-                    ]
-                if markings and not self.helper.check_max_tlp(markings, max_tlp):
+                # check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of
+                # marking ids, so check each TLP marking on the entity.
+                tlp_levels = [
+                    m["definition"]
+                    for m in opencti_entity.get("objectMarking") or []
+                    if isinstance(m, dict)
+                    and m.get("definition_type") == "TLP"
+                    and m.get("definition")
+                ]
+                if any(
+                    not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels
+                ):
                     self.helper.connector_logger.info(
                         f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
                     )

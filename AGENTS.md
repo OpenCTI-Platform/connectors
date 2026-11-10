@@ -274,6 +274,11 @@ Things to know about `run_test.sh`:
   subdirectory) at `RELEASE_REF` (default `master`), and installs the local
   `connectors-sdk` when the connector depends on it. A test that passes with
   the pinned pycti can still fail here.
+- It blocks network access with `pytest-socket`: only localhost and Unix
+  sockets are allowed, and any other connection raises
+  `SocketConnectBlockedError`. Mock every external API call (constructors and
+  startup checks included). A test that really needs a host opts in with
+  `@pytest.mark.allow_hosts([...])`.
 - Coverage and JUnit output go to `test_outputs/`.
 
 Changes to `connectors-sdk/` must keep 100% test coverage
