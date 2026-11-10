@@ -986,7 +986,8 @@ class ConnectorClient:
             # Compare the real age, not whole days: a scan 31 hours old is older
             # than a 1-day limit.
             unit = "day" if age.days == 1 else "days"
-            return f"latest scan is {age.days} {unit} old (limit {days})"
+            limit_unit = "day" if days == 1 else "days"
+            return f"latest scan is {age.days} {unit} old, limit {days} {limit_unit}"
         return None
 
     def _instance_for(self, community_name: str) -> PolyswarmAPI:
