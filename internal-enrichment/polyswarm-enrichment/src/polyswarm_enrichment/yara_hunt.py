@@ -20,6 +20,7 @@ until the timeout.
 """
 
 import hashlib
+import importlib
 import json
 import re
 import time
@@ -30,8 +31,8 @@ import stix2
 from polyswarm_enrichment.polyswarm_client import polyswarm_exceptions
 from pycti import Note
 
-try:  # optional: only used when already present in the image
-    import yara as _yara
+try:  # optional: only used when already present in the image, so not a requirement
+    _yara = importlib.import_module("yara")
 except Exception:  # pragma: no cover - depends on the image
     _yara = None
 
