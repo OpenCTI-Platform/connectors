@@ -519,13 +519,11 @@ class ConnectorAccenture:
             sys.exit(0)
         except ConnectorError as connector_err:
             self.helper.connector_logger.error(
-                f"[ERROR] Connector failed: {connector_err}", exc_info=True
+                f"[ERROR] Connector failed: {connector_err}"
             )
             return [connector_err.convert_to_pycti_format()]
         except Exception as err:
-            self.helper.connector_logger.error(
-                f"[ERROR] Connector failed: {err}", exc_info=True
-            )
+            self.helper.connector_logger.error(f"[ERROR] Connector failed: {err}")
             return [UnknownError(str(err)).convert_to_pycti_format()]
 
     def run(self) -> None:
