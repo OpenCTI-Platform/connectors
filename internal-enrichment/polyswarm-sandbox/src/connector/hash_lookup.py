@@ -376,16 +376,33 @@ class HashLookupMixin:
                     entity, sha256, missing
                 )
                 if started:
-                    results.update(
-                        self._phase_poll_sandboxes(
-                            entity,
-                            started,
-                            ps.poll_interval,
-                            ps.sandbox_timeout,
-                            llm_task_ids,
-                        )
+                    polled = self._phase_poll_sandboxes(
+                        entity,
+                        started,
+                        ps.poll_interval,
+                        ps.sandbox_timeout,
+                        llm_task_ids,
                     )
+                    # A provider still pending at the timeout (the timeout
+                    # note was sent while polling) is an explicit failure
+                    # result, not an empty one.
+                    for provider in started:
+                        if polled.get(provider) is None:
+                            polled[provider] = {
+                                "status": "TIMED OUT",
+                                "error": "The sandbox analysis did not complete "
+                                f"within {ps.sandbox_timeout} seconds",
+                            }
+                    results.update(polled)
                     tasks.update(started)
+                    if not any(
+                        r.get("status") != "TIMED OUT" for r in results.values() if r
+                    ):
+                        return {
+                            "status": "error",
+                            "error": "No sandbox analysis completed before the "
+                            "timeout",
+                        }
                 elif held_outcome == "submit_failed":
                     self._send_error_note(
                         entity,

@@ -1036,7 +1036,7 @@ class PolySwarmConnector(HashLookupMixin):
             sandbox_tasks, poll_interval, sandbox_timeout, llm_task_ids=llm_task_ids
         )
         for provider, _task_id in sandbox_tasks.items():
-            if provider not in sandbox_results:
+            if sandbox_results.get(provider) is None:
                 self._send_error_note(
                     entity,
                     f"{provider.upper()} Sandbox Timeout",

@@ -516,6 +516,58 @@ class TestDetonateByHash:
         c.polyswarm_client.generate_pdf.assert_not_called()
         assert _notes(c)
 
+    def test_one_provider_times_out_other_succeeds(self):
+        c = _connector(
+            latest={},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=lambda sha, prov, *a, **k: f"task-{prov}"
+        )
+        c._poll_sandbox_results = MagicMock(
+            return_value={"cape": _task(id="task-cape"), "triage": None}
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert titles == ["TRIAGE Sandbox Timeout"]
+        abstracts = {n["abstract"] for n in _notes(c)}
+        assert "PolySwarm Cape Sandbox Analysis" in abstracts
+        assert "PolySwarm TRIAGE Sandbox - Execution TIMED OUT" in abstracts
+
+    def test_all_providers_time_out_returns_error(self):
+        c = _connector(
+            latest={},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+            sandbox_timeout=0,
+        )
+        c._send_error_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        assert "timeout" in result["error"]
+        titles = sorted(call.args[1] for call in c._send_error_note.call_args_list)
+        assert titles == ["CAPE Sandbox Timeout", "TRIAGE Sandbox Timeout"]
+        c.helper.stix2_create_bundle.assert_not_called()
+
+    def test_all_time_out_forwards_original_bundle(self):
+        c = _connector(latest={}, sandbox_detonate_by_hash=True, sandbox_timeout=0)
+        c._send_error_note = MagicMock()
+        c._send_original_bundle = MagicMock()
+        entity = _stixfile()
+        with patch("connector.polyswarm_connector.time.sleep"):
+            out = c._process_message(
+                {
+                    "enrichment_entity": _opencti_file(),
+                    "stix_entity": entity,
+                    "stix_objects": [entity],
+                    "entity_id": FILE_ID,
+                }
+            )
+        assert json.loads(out)["status"] == "error"
+        c._send_original_bundle.assert_called_once()
+
     def test_polling_uses_configured_timeouts(self):
         c = _connector(
             latest={},
