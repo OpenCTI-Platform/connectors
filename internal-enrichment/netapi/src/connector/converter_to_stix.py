@@ -78,7 +78,7 @@ class ConverterToStix:
         return OrganizationAuthor(
             name=OWN_SOURCE_NAME,
             description=(
-                "Compromised domain feed and Top 1M ranking provided by the "
+                "Compromised domain and IP feed and Top 1M ranking provided by the "
                 "NetAPI JSON API (https://netapi.com/)."
             ),
             organization_type="vendor",
@@ -87,7 +87,9 @@ class ConverterToStix:
     @staticmethod
     def status_line(check: dict[str, Any]) -> str:
         if check.get("listed_now"):
-            return "listed now (seen in the compromised feed within the last 24 hours)"
+            # the IP feed keeps an address for 48 hours, the domain feed for 24
+            hours = 48 if check.get("type") == "ip" else 24
+            return f"listed now (seen in the compromised feed within the last {hours} hours)"
         last_seen = _cell(str(check.get("last_seen") or "")[:10])
         return f"listed in the past (last seen {last_seen}), not in the current feed"
 
@@ -155,7 +157,11 @@ class ConverterToStix:
         rows += [
             ("First seen", _cell(check.get("first_seen"))),
             ("Last seen", _cell(check.get("last_seen"))),
-            ("Reported by", _cell(check.get("block_reason"))),
+            (
+                # for an IP address the reason is the attack seen by the sensors
+                "Attack type" if check.get("type") == "ip" else "Reported by",
+                _cell(check.get("block_reason")),
+            ),
         ]
         registrar = check.get("registrar")
         if isinstance(registrar, dict):
