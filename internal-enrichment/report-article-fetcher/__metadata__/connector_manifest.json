@@ -1,0 +1,26 @@
+{
+  "title": "Report Article Fetcher",
+  "slug": "report-article-fetcher",
+  "description": "Fetches the article page behind a report's external reference, keeps the article body only (no menus, footers or banners) and writes it to the report's content, where content mapping and AI extraction read it. By default it enriches the reports created by an RSS feed ingestion, which only carry a teaser. The article is written only when it matches the report and, when the report already has content, is clearly longer than it; otherwise the report is left unchanged.",
+  "short_description": "Writes the full article behind a report's external reference to the report's content.",
+  "logo": null,
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": "support@filigran.io",
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/report-article-fetcher",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-report-article-fetcher",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
