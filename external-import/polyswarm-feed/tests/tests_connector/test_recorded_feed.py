@@ -66,3 +66,29 @@ def test_every_indicator_is_valid_after_import(page, fake_logger):
 def test_freemium_keeps_attack_patterns(fake_logger):
     _, objects = _convert("taxii_objects_freemium_page1.json", fake_logger)
     assert any(o["type"] == "attack-pattern" for o in objects)
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_analyses_fit_what_opencti_accepts(page, fake_logger):
+    items, objects = _convert(page, fake_logger)
+    by_id = {o["id"]: o for o in objects}
+    relationship_types = {
+        o["relationship_type"] for o in objects if o["type"] == "relationship"
+    }
+    assert not relationship_types & {"av-analysis-of", "dynamic-analysis-of"}
+    analyses = [o for o in objects if o["type"] == "malware-analysis"]
+    assert analyses
+    for analysis in analyses:
+        assert analysis["result_name"]
+        assert analysis["submitted"]
+        assert by_id[analysis["sample_ref"]]["type"] == "file"
+
+
+@pytest.mark.parametrize("page", PAGES)
+def test_no_variant_of_between_same_named_malware(page, fake_logger):
+    _, objects = _convert(page, fake_logger)
+    by_id = {o["id"]: o for o in objects}
+    for obj in objects:
+        if obj["type"] == "relationship" and obj["relationship_type"] == "variant-of":
+            source = by_id[obj["source_ref"]]["name"].lower()
+            assert source != by_id[obj["target_ref"]]["name"].lower()

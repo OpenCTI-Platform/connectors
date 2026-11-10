@@ -60,12 +60,16 @@ def test_flattens_per_sample_bundles(converter):
 def test_keeps_polyswarm_ids(converter):
     sample = make_sample_bundle(1)
     # Everything keeps its id, except the indicators sharing one id and the
-    # relationships pointing at them (see the rewiring tests below).
+    # relationships pointing at them (see the rewiring tests below), and the
+    # analysis relationships OpenCTI stores as sample_ref instead, and the
+    # variant-of between same-named malware.
     original_ids = {
         obj["id"]
         for obj in sample["objects"]
         if obj["type"] != "indicator"
         and not obj.get("source_ref", "").startswith("indicator--")
+        and obj.get("relationship_type")
+        not in ("av-analysis-of", "dynamic-analysis-of", "variant-of")
     }
     converted_ids = {obj["id"] for obj in converter.convert_item(sample)}
     assert original_ids <= converted_ids

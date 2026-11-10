@@ -29,6 +29,7 @@ from pycti import Indicator, StixCoreRelationship
 
 # Reference properties that are handled separately and never filtered.
 _UNTOUCHED_REF_PROPERTIES = {"created_by_ref", "object_marking_refs"}
+_ANALYSIS_RELATIONSHIP_TYPES = {"av-analysis-of", "dynamic-analysis-of"}
 
 
 class MalformedItemError(ValueError):
@@ -198,7 +199,55 @@ class FeedConverter:
             for item in resolved:
                 result.setdefault(item["id"], item)
 
+        self._fit_analyses(result)
         return [self._decorate(obj) for obj in result.values()]
+
+    def _fit_analyses(self, objects: dict[str, dict[str, Any]]) -> None:
+        """Shape the sample's analyses and relationships the way OpenCTI stores them.
+
+        OpenCTI links a malware analysis to its sample through `sample_ref`, not
+        through relationships, and refuses the feed's `av-analysis-of` and
+        `dynamic-analysis-of` relationships. It also needs `result_name`, and it
+        merges analyses with the same product, result name and submission date,
+        so each analysis gets its own `submitted` date to stay per sample. A
+        `variant-of` between two malware objects with the same name would become
+        a relationship from an object to itself once OpenCTI merges them, which
+        it refuses, so those are dropped.
+        """
+        default_sample = next(
+            (
+                obj["sample_refs"][0]
+                for obj in objects.values()
+                if obj["type"] == "malware" and obj.get("sample_refs")
+            ),
+            None,
+        )
+        for obj_id, obj in list(objects.items()):
+            if obj["type"] != "relationship":
+                continue
+            relationship_type = obj.get("relationship_type")
+            source = objects.get(obj.get("source_ref"), {})
+            target = objects.get(obj.get("target_ref"), {})
+            if relationship_type in _ANALYSIS_RELATIONSHIP_TYPES:
+                # Some feeds point the sandbox analysis at the family, which
+                # has no sample, so fall back to the sample's file.
+                samples = target.get("sample_refs") or [default_sample]
+                if source.get("type") == "malware-analysis" and samples[0]:
+                    source.setdefault("sample_ref", samples[0])
+                del objects[obj_id]
+            elif relationship_type == "variant-of":
+                source_name = str(source.get("name", "")).strip().lower()
+                target_name = str(target.get("name", "")).strip().lower()
+                if source_name and source_name == target_name:
+                    del objects[obj_id]
+
+        for obj in objects.values():
+            if obj["type"] != "malware-analysis":
+                continue
+            if not obj.get("result_name"):
+                obj["result_name"] = obj.get("result") or "no result"
+            if not obj.get("submitted") and obj.get("created"):
+                obj["submitted"] = obj["created"]
 
     # ------------------------------------------------------------------
     # Internals
