@@ -379,6 +379,26 @@ feature.
 
 ---
 
+## Screenshots
+
+Taken on OpenCTI 7.261103.0 with a test account.
+
+The imphash pivot note listing other files with the same imphash
+
+![The imphash pivot note listing other files with the same imphash](./__docs__/media/imphash-pivot.png)
+
+A file's Knowledge tab with related files from the imphash pivot
+
+![A file's Knowledge tab with related files from the imphash pivot](./__docs__/media/imphash-pivot-knowledge.png)
+
+Rescan and sample download results in the enrichment note (here PolySwarm declines to rescan a known-good test file, and an existing sample is linked instead of downloaded again)
+
+![Rescan and sample download results in the enrichment note (here PolySwarm declines to rescan a known-good test file, and an existing sample is linked instead of downloaded again)](./__docs__/media/rescan-and-download.png)
+
+A downloaded sample stored as an Artifact, labelled as live malware
+
+![A downloaded sample stored as an Artifact, labelled as live malware](./__docs__/media/rescan-and-download-artifact.png)
+
 ## Behavior
 
 ### Data Flow
