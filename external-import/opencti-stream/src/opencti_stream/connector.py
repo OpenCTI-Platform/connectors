@@ -86,6 +86,7 @@ class OpenCTIStream:
             if (
                 self.config.connector.live_stream_include_file_data
                 and "data" in payload
+                and self._live_stream_url() == self.helper.opencti_url.rstrip("/")
             ):
                 payload["data"] = self._enrich_with_files(payload["data"])
         except json.JSONDecodeError as exc:
