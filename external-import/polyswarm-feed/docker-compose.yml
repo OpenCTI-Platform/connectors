@@ -8,7 +8,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=PolySwarm Feed # optional (default: 'PolySwarm Feed')
-      - CONNECTOR_SCOPE=malware,file,indicator,malware-analysis,attack-pattern,note,relationship # optional (default: the imported types)
+      - CONNECTOR_SCOPE=Malware,Indicator,StixFile,Malware-Analysis,Attack-Pattern,Note # optional (default: the imported types)
       - CONNECTOR_LOG_LEVEL=info # optional
       - CONNECTOR_DURATION_PERIOD=PT1H # optional, ISO-8601 interval between two runs (default: 'PT1H')
       # Custom parameters for connector-polyswarm-feed

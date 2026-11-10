@@ -67,7 +67,7 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 |-----------------|-------------------|-----------------------------|----------------------------------------------------------------------------|-----------|--------------------------------------------|
 | Connector ID    | `id`              | `CONNECTOR_ID`              |                                                                            | Yes       | A unique `UUIDv4` for this connector.      |
 | Connector Name  | `name`            | `CONNECTOR_NAME`            | `PolySwarm Feed`                                                           | No        | Name shown in OpenCTI.                     |
-| Connector Scope | `scope`           | `CONNECTOR_SCOPE`           | `malware,file,indicator,malware-analysis,attack-pattern,note,relationship` | No        | The object types the connector imports.    |
+| Connector Scope | `scope`           | `CONNECTOR_SCOPE`           | `Malware,Indicator,StixFile,Malware-Analysis,Attack-Pattern,Note` | No        | The object types the connector imports.    |
 | Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | `info`                                                                     | No        | `debug`, `info`, `warn` or `error`.        |
 | Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT1H`                                                                     | No        | Time between two runs, in ISO-8601 format. |
 

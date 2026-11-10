@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'PolySwarm Feed' # optional (default: 'PolySwarm Feed')
-  scope: 'malware,file,indicator,malware-analysis,attack-pattern,note,relationship' # optional (default: the imported types)
+  scope: 'Malware,Indicator,StixFile,Malware-Analysis,Attack-Pattern,Note' # optional (default: the imported types)
   log_level: 'info' # optional
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs (default: 'PT1H')
 

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/polyswarm-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "PolySwarm Feed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Malware",
+        "Indicator",
+        "StixFile",
+        "Malware-Analysis",
+        "Attack-Pattern",
+        "Note"
+      ],
+      "description": "The scope of the connector, i.e. the types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour).",
+      "format": "duration",
+      "type": "string"
+    },
+    "POLYSWARM_API_KEY": {
+      "description": "PolySwarm API key. Used as the TAXII Basic auth password and for the live hunting API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "POLYSWARM_ACCOUNT_NUMBER": {
+      "description": "PolySwarm account number. Used as the TAXII Basic auth username.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "POLYSWARM_API_URL": {
+      "default": "https://api.polyswarm.network",
+      "description": "PolySwarm API base URL. The connector appends the `/v3/...` paths.",
+      "type": "string"
+    },
+    "POLYSWARM_FEED_COLLECTIONS": {
+      "default": [
+        "trustgroup"
+      ],
+      "description": "Comma-separated list of PolySwarm TAXII API roots to import. Allowed values: trustgroup, ransomware, freemium.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "POLYSWARM_FEED_BACKFILL_DAYS": {
+      "default": 14,
+      "description": "On the first run only, how many days of feed data to import.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_FEED_INDICATOR_VALID_DAYS": {
+      "default": 90,
+      "description": "Feed indicators are valid until import time plus this many days.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_HUNTING_ENABLED": {
+      "default": false,
+      "description": "Import live hunting results (YARA rule matches) of the account.",
+      "type": "boolean"
+    },
+    "POLYSWARM_HUNTING_BACKFILL_HOURS": {
+      "default": 24,
+      "description": "On the first run only, how many hours of live hunting results to import.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_HUNTING_INDICATOR_VALID_DAYS": {
+      "default": 30,
+      "description": "Live hunting indicators are valid until import time plus this many days.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "POLYSWARM_TLP_LEVEL": {
+      "description": "TLP marking applied to every object the connector sends.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "POLYSWARM_MAX_OBJECTS_PER_RUN": {
+      "default": 20000,
+      "description": "Stop paging once this many objects were sent in a run. The next run resumes where this one stopped.",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "POLYSWARM_API_KEY",
+    "POLYSWARM_ACCOUNT_NUMBER"
+  ],
+  "additionalProperties": true
+}
