@@ -280,7 +280,7 @@ class TestConnectorWiring:
         assert "**Sample Download:**" in note["content"]
 
 
-def _process(download, entity_type, client):
+def _process(download, entity_type, client, entity_extra=None, observable_extra=None):
     connector = _connector(download=download, client=client)
     connector.max_tlp = "TLP:RED"
     connector.replace_with_lower_score = True
@@ -293,8 +293,13 @@ def _process(download, entity_type, client):
     connector._collect_intelligence = MagicMock(return_value=[_observable()])
     observable = _observable()
     observable["hashes"] = {"SHA-256": SHA256}
+    observable.update(observable_extra or {})
     message = {
-        "enrichment_entity": {"entity_type": entity_type, "id": "internal"},
+        "enrichment_entity": {
+            "entity_type": entity_type,
+            "id": "internal",
+            **(entity_extra or {}),
+        },
         "stix_objects": [observable],
         "stix_entity": observable,
         "event_type": "enrichment",
@@ -325,3 +330,41 @@ class TestProcessMessage:
         client = self._client()
         _process(True, "Artifact", client)
         client.download_sample.assert_not_called()
+
+
+class TestPivotImportedFiles:
+    """Files a pivot imported are not downloaded and not rescanned."""
+
+    def _client(self):
+        client = MagicMock()
+        client.query_polyswarm.return_value = {"data": _data(), "errors": []}
+        client.download_sample.return_value = (CONTENT, None)
+        return client
+
+    def test_objectlabel_skips_download_and_rescan(self):
+        client = self._client()
+        _process(
+            True,
+            "StixFile",
+            client,
+            entity_extra={"objectLabel": [{"value": "polyswarm-pivot-result"}]},
+        )
+        client.download_sample.assert_not_called()
+        client.query_polyswarm.assert_called_once_with(SHA256, allow_rescan=False)
+
+    def test_stix_label_skips_download_and_rescan(self):
+        client = self._client()
+        _process(
+            True,
+            "StixFile",
+            client,
+            observable_extra={"x_opencti_labels": ["Polyswarm-Pivot-Result"]},
+        )
+        client.download_sample.assert_not_called()
+        client.query_polyswarm.assert_called_once_with(SHA256, allow_rescan=False)
+
+    def test_unlabelled_file_still_downloads_and_may_rescan(self):
+        client = self._client()
+        _process(True, "StixFile", client)
+        client.download_sample.assert_called_once()
+        client.query_polyswarm.assert_called_once_with(SHA256)

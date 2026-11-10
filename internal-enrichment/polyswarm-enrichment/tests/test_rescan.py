@@ -354,3 +354,12 @@ class TestRescanQuotaExhausted:
         )
         assert "**Account quota:**" not in note["content"]
         connector.quota.exhausted_note_lines.assert_not_called()
+
+
+class TestRescanSkippedOnRequest:
+    def test_allow_rescan_false_never_rescans_a_stale_scan(self):
+        client = _client(days=7, search=[_instance(days_old=30)])
+        result = client.query_polyswarm(SHA256, allow_rescan=False)
+        client.polyswarm.rescan.assert_not_called()
+        assert "rescan" not in result["data"]
+        assert "_held" not in result

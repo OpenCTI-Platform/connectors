@@ -240,7 +240,8 @@ Warnings:
 - Files imported by either pivot are labelled `polyswarm-pivot-result`, and a
   file with that label is never pivoted again, so auto-enrichment can't follow
   the pivots outward level after level. Remove the label from a file if you do
-  want it pivoted.
+  want it pivoted. Pivot-imported files are also never rescanned or
+  downloaded, even with those options on.
 - Each pivot spends PolySwarm lookups from your quota. Keep the limits small.
 
 Both pivots only search: nothing is submitted, scanned or uploaded. Objects
@@ -437,6 +438,7 @@ flowchart LR
 | `related-to`     | IP / domain observable| File                | n/a        |
 | `related-to`     | Enriched file (imphash pivot) | Other file  | n/a        |
 | `related-to`     | File (technique pivot) | Attack Pattern     | n/a        |
+| `related-to`     | Artifact (sample download) | File           | n/a        |
 | `related-to`     | YARA Indicator        | File (hunt match)   | n/a        |
 | `related-to`     | Malware               | Related Malware     | 80         |
 | `uses`           | Threat Actor          | Malware             | 85         |

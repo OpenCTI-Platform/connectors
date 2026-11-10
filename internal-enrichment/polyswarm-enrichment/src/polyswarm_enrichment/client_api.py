@@ -1025,7 +1025,9 @@ class ConnectorClient:
             )
         return fresh, outcome
 
-    def query_polyswarm(self, hash_value: str) -> dict[str, Any]:
+    def query_polyswarm(
+        self, hash_value: str, allow_rescan: bool = True
+    ) -> dict[str, Any]:
         """Query PolySwarm (both communities in private mode), then rescan once.
 
         The opt-in rescan is decided after the primary result is chosen, so at
@@ -1036,6 +1038,8 @@ class ConnectorClient:
         """
         result = self._search_communities(hash_value)
         held = result.pop("_held", [])
+        if not allow_rescan:
+            return result
         try:
             data = result.get("data")
             source = data.get("_source_result") if data else None

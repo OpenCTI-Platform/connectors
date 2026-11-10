@@ -1732,12 +1732,21 @@ class ConnectorTemplate:
                 )
 
                 # Query PolySwarm
-                polyswarm_data = self.client.query_polyswarm(hash_value)
+                # Files imported by a pivot are neither rescanned nor downloaded,
+                # so auto-enrichment can't multiply that spend across them
+                pivot_result = has_pivot_label(observable, opencti_entity)
+                if pivot_result:
+                    polyswarm_data = self.client.query_polyswarm(
+                        hash_value, allow_rescan=False
+                    )
+                else:
+                    polyswarm_data = self.client.query_polyswarm(hash_value)
 
                 # Opt-in: store the sample PolySwarm holds as an Artifact
                 sample_objects = []
                 if (
                     self.download_sample
+                    and not pivot_result
                     and opencti_entity.get("entity_type") == "StixFile"
                 ):
                     sample_objects = self._download_sample_objects(
