@@ -388,11 +388,16 @@ class TestAttackPatternHook:
         assert "not supported" in result
         client.polyswarm.search_by_metadata.assert_not_called()
 
-    def test_attack_pattern_outside_scope_is_not_looked_up(self):
+    def test_explicit_env_scope_without_attack_pattern_still_pivots(self):
+        # The helper reads CONNECTOR_SCOPE from the environment first, so an
+        # explicit scope hides the type the settings added. The setting decides.
         client = _make_client()
-        connector = _connector(client, scope="stixfile")
-        connector.process_message(_ap_message(event_type=None))
-        client.polyswarm.search_by_metadata.assert_not_called()
+        connector = _connector(
+            client, scope="StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr"
+        )
+        result = connector.process_message(_ap_message())
+        assert "not supported" not in result
+        client.polyswarm.search_by_metadata.assert_called()
 
     def test_no_mitre_id_sends_nothing(self):
         client = _make_client()

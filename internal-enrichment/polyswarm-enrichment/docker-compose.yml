@@ -11,6 +11,9 @@ services:
       # - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       # - CONNECTOR_NAME=PolySwarm Hash Enrichment
       # - CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr
+      # If you set CONNECTOR_SCOPE, add Attack-Pattern (POLYSWARM_PIVOT_TTP_MAX) and
+      # Indicator (POLYSWARM_YARA_HUNT_ENABLED) to it, or OpenCTI will not offer
+      # this connector for those types. Unset, they are added for you.
       # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
       # - CONNECTOR_AUTO=false
       # - CONNECTOR_LOG_LEVEL=info
@@ -34,7 +37,7 @@ services:
       # - POLYSWARM_PIVOT_IMPHASH_MAX=0
       # - POLYSWARM_PIVOT_TTP_MAX=0
       # YARA hunting: creates hunts in your PolySwarm account, spends hunt quota,
-      # sends the rule text to PolySwarm. Adds Indicator to the scope when true.
+      # sends the rule text to PolySwarm. Needs Indicator in CONNECTOR_SCOPE.
       # - POLYSWARM_YARA_HUNT_ENABLED=false
       # - POLYSWARM_YARA_HUNT_WINDOW_DAYS=30
       # - POLYSWARM_YARA_HUNT_TIMEOUT=300

@@ -27,9 +27,11 @@ polyswarm:
   # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)
   # quota_warn_below: 100                # Warn when remaining quota is below this (0 = no warnings)
   # pivot_imphash_max: 0                 # Other files with the same imphash to import per file (0 = off, e.g. 10)
-  # pivot_ttp_max: 0                     # Files to import per Attack-Pattern (0 = off, e.g. 10); above 0 adds Attack-Pattern to the scope
+  # pivot_ttp_max: 0                     # Files to import per Attack-Pattern (0 = off, e.g. 10); above 0 adds Attack-Pattern to the default scope
+  # If you set scope above yourself, add Attack-Pattern (technique pivot) and
+  # Indicator (YARA hunts) to it, or OpenCTI will not offer this connector for them.
   # YARA hunting: creates hunts in your PolySwarm account, spends hunt quota,
-  # sends the rule text to PolySwarm. Adds Indicator to the scope when true.
+  # sends the rule text to PolySwarm. Adds Indicator to the default scope when true.
   # yara_hunt_enabled: false
   # yara_hunt_window_days: 30     # 30, 60, 90 or 180
   # yara_hunt_timeout: 300        # Seconds to wait before reporting the hunt as running

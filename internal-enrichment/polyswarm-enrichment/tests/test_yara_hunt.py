@@ -565,6 +565,21 @@ class TestConnector:
         connector.process_message(message)
         connector._send_bundle.assert_called_once_with(message["stix_objects"])
 
+    def test_explicit_env_scope_without_indicator_still_hunts(self):
+        # The helper's scope comes from CONNECTOR_SCOPE in the environment and
+        # may lack Indicator; the setting alone decides
+        connector = _connector(
+            scope="StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr"
+        )
+        with patch("polyswarm_enrichment.connector.YaraHunter") as hunter:
+            hunter.return_value.run.return_value = MagicMock(
+                results=[], failed=False, timed_out=False, status="FINISHED"
+            )
+            hunter.return_value.window_days = 30
+            with patch("polyswarm_enrichment.connector.build_note", return_value={}):
+                connector.process_message(_message())
+        hunter.return_value.run.assert_called_once()
+
     def test_non_yara_indicator_is_ignored_quietly(self):
         connector = _connector()
         with patch("polyswarm_enrichment.connector.YaraHunter") as hunter:

@@ -1280,7 +1280,10 @@ class ConnectorTemplate:
     ) -> str:
         """Technique pivot: files PolySwarm associates with an ATT&CK id."""
         pivots = getattr(self, "pivots", None)
-        if pivots is None or not pivots.ttp_enabled or not self.entity_in_scope(data):
+        # Gate on the setting, not on entity_in_scope: the helper takes
+        # CONNECTOR_SCOPE from the environment first, which hides the type the
+        # settings added, and the platform only sends types in that scope anyway
+        if pivots is None or not pivots.ttp_enabled:
             if not data.get("event_type"):
                 return self._send_bundle(self.stix_objects_list)
             raise ValueError("Entity type Attack-Pattern not supported")
@@ -1338,8 +1341,6 @@ class ConnectorTemplate:
             return self._ignore_entity(data, "YARA hunting is disabled")
         if not is_yara_indicator(indicator):
             return self._ignore_entity(data, "the Indicator is not a YARA rule")
-        if not self.entity_in_scope(data):
-            return self._ignore_entity(data, "Indicator is not in the connector scope")
 
         # Fail closed: the rule text leaves OpenCTI, so an unreadable marking
         # could hide a TLP above max_tlp

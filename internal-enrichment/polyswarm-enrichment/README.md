@@ -96,7 +96,7 @@ Key features:
 |------------------------------|------------------------------|-----------|------------------------------------------------------------------|
 | `connector_id`               | `CONNECTOR_ID`               | Yes       | A valid arbitrary `UUIDv4` unique for this connector             |
 | `connector_name`             | `CONNECTOR_NAME`             | No        | Display name (default: `PolySwarm Hash Enrichment`)              |
-| `connector_scope`            | `CONNECTOR_SCOPE`            | No        | Observable types to enrich (default: `StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr`) |
+| `connector_scope`            | `CONNECTOR_SCOPE`            | No        | Observable types to enrich (default: `StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr`). If you set it yourself, also add `Attack-Pattern` for the technique pivot and `Indicator` for YARA hunts, or OpenCTI will not offer the connector for those types |
 | `connector_auto`             | `CONNECTOR_AUTO`             | No        | Enable/disable auto-enrichment (default: `false`)                |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | No        | Default confidence level (default: `80`)                         |
 | `connector_log_level`        | `CONNECTOR_LOG_LEVEL`        | No        | Log level: `debug`, `info`, `warning`, `error` (default: `info`) |
@@ -119,8 +119,8 @@ Key features:
 | `polyswarm_download_sample` | `POLYSWARM_DOWNLOAD_SAMPLE` | No | **Stores LIVE MALWARE in OpenCTI.** Download the sample for a File PolySwarm holds and create an Artifact from it (default: `false`). Spends PolySwarm download quota |
 | `polyswarm_download_max_size_mb` | `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` | No | Largest sample, in MB, that will be downloaded (default: `20`) |
 | `polyswarm_pivot_imphash_max` | `POLYSWARM_PIVOT_IMPHASH_MAX` | No | Max other files with the same imphash imported per enriched file (default: `0` = off, range 0 to 100, e.g. `10`). Each enriched file with an imphash costs one extra search. Imported files are labelled `polyswarm-pivot-result` and never pivot again |
-| `polyswarm_pivot_ttp_max` | `POLYSWARM_PIVOT_TTP_MAX` | No | Max files imported per enriched Attack-Pattern (default: `0` = off, range 0 to 100, e.g. `10`). Any value above 0 adds `Attack-Pattern` to the connector scope. Use with `CONNECTOR_AUTO=false` only (skipped when auto is on) |
-| `polyswarm_yara_hunt_enabled` | `POLYSWARM_YARA_HUNT_ENABLED` | No | Hunt YARA Indicators in PolySwarm (default: `false`). **Writes to your PolySwarm account and spends hunt quota.** Adds `Indicator` to the scope. |
+| `polyswarm_pivot_ttp_max` | `POLYSWARM_PIVOT_TTP_MAX` | No | Max files imported per enriched Attack-Pattern (default: `0` = off, range 0 to 100, e.g. `10`). Any value above 0 adds `Attack-Pattern` to the default connector scope (add it to `CONNECTOR_SCOPE` yourself if you set that). Use with `CONNECTOR_AUTO=false` only (skipped when auto is on) |
+| `polyswarm_yara_hunt_enabled` | `POLYSWARM_YARA_HUNT_ENABLED` | No | Hunt YARA Indicators in PolySwarm (default: `false`). **Writes to your PolySwarm account and spends hunt quota.** Adds `Indicator` to the default scope (add it to `CONNECTOR_SCOPE` yourself if you set that). |
 | `polyswarm_yara_hunt_window_days` | `POLYSWARM_YARA_HUNT_WINDOW_DAYS` | No | How many days back a hunt reaches: `30`, `60`, `90` or `180` (default: `30`) |
 | `polyswarm_yara_hunt_timeout` | `POLYSWARM_YARA_HUNT_TIMEOUT` | No | Seconds to wait for a hunt before reporting it as still running (default: `300`, minimum `60`) |
 | `polyswarm_yara_hunt_max_results` | `POLYSWARM_YARA_HUNT_MAX_RESULTS` | No | Max matched files imported per hunt (default: `50`) |
@@ -228,8 +228,10 @@ lookups):
   index search uses `cape_sandbox_v2.ttp` and `triage_sandbox_v0.ttp`. The
   dedicated IOC search by technique (`search_by_ioc` with `ttp`) returned no
   results for any technique tried, so it is not used. `Attack-Pattern` is added
-  to the connector scope only when this setting is above 0. Without an ATT&CK
-  id, nothing is sent.
+  to the default connector scope only when this setting is above 0. If you set
+  `CONNECTOR_SCOPE` yourself, add `Attack-Pattern` to it, or OpenCTI will not
+  offer the connector for Attack-Patterns. Without an ATT&CK id, nothing is
+  sent.
 
 Warnings:
 
@@ -340,7 +342,8 @@ connector.
 > want that, and keep `CONNECTOR_AUTO=false` so only Indicators you choose are
 > hunted.
 
-When enabled, `Indicator` is added to the connector scope and only Indicators
+When enabled, `Indicator` is added to the default connector scope (if you set
+`CONNECTOR_SCOPE` yourself, add `Indicator` to it) and only Indicators
 whose pattern type is `yara` are handled. Any other Indicator is ignored
 quietly. For a YARA Indicator the connector:
 

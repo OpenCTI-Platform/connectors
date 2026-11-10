@@ -180,14 +180,14 @@
     },
     "POLYSWARM_PIVOT_TTP_MAX": {
       "default": 0,
-      "description": "Max files to import when enriching an Attack-Pattern with a MITRE ATT&CK id (0 = off, e.g. 10). Any value above 0 adds Attack-Pattern to the connector scope. Runs only with CONNECTOR_AUTO=false: with auto enrichment on, every Attack-Pattern created would trigger a search.",
+      "description": "Max files to import when enriching an Attack-Pattern with a MITRE ATT&CK id (0 = off, e.g. 10). Any value above 0 adds Attack-Pattern to the default connector scope; if you set CONNECTOR_SCOPE yourself, add Attack-Pattern to it or OpenCTI will not offer this connector for Attack-Patterns. Runs only with CONNECTOR_AUTO=false: with auto enrichment on, every Attack-Pattern created would trigger a search.",
       "maximum": 100,
       "minimum": 0,
       "type": "integer"
     },
     "POLYSWARM_YARA_HUNT_ENABLED": {
       "default": false,
-      "description": "Run a PolySwarm historical hunt for each YARA Indicator that is enriched. Writes to your PolySwarm account (creates hunts), spends hunt quota, and sends the YARA rule text to PolySwarm. Adds Indicator to the connector scope.",
+      "description": "Run a PolySwarm historical hunt for each YARA Indicator that is enriched. Writes to your PolySwarm account (creates hunts), spends hunt quota, and sends the YARA rule text to PolySwarm. Adds Indicator to the default connector scope; if you set CONNECTOR_SCOPE yourself, add Indicator to it or OpenCTI will not offer this connector for Indicators.",
       "type": "boolean"
     },
     "POLYSWARM_YARA_HUNT_WINDOW_DAYS": {

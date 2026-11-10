@@ -163,7 +163,9 @@ class PolySwarmConfig(BaseConfigModel):
         description=(
             "Max files to import when enriching an Attack-Pattern with a MITRE "
             "ATT&CK id (0 = off, e.g. 10). Any value above 0 adds Attack-Pattern "
-            "to the connector scope. Runs only with CONNECTOR_AUTO=false: with auto "
+            "to the default connector scope; if you set CONNECTOR_SCOPE "
+            "yourself, add Attack-Pattern to it or OpenCTI will not offer this "
+            "connector for Attack-Patterns. Runs only with CONNECTOR_AUTO=false: with auto "
             "enrichment on, every Attack-Pattern created would trigger a search."
         ),
     )
@@ -175,7 +177,9 @@ class PolySwarmConfig(BaseConfigModel):
             "Run a PolySwarm historical hunt for each YARA Indicator that is "
             "enriched. Writes to your PolySwarm account (creates hunts), spends "
             "hunt quota, and sends the YARA rule text to PolySwarm. Adds "
-            "Indicator to the connector scope."
+            "Indicator to the default connector scope; if you set "
+            "CONNECTOR_SCOPE yourself, add Indicator to it or OpenCTI will not "
+            "offer this connector for Indicators."
         ),
     )
     yara_hunt_window_days: int = Field(
