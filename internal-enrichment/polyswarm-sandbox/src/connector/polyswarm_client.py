@@ -387,7 +387,7 @@ class PolySwarmClient:
             ),
             recommendations=[
                 "Wait for your quota to reset (see the usage window above).",
-                "Contact sales@polyswarm.io to increase your quota or upgrade your plan.",
+                "Contact customersuccess@polyswarm.io to increase your quota or upgrade your plan.",
             ],
         )
 

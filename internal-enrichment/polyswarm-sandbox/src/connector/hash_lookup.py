@@ -394,7 +394,7 @@ class HashLookupMixin:
                         f"on provider(s): {', '.join(missing)}.",
                         [
                             "Verify your PolySwarm plan includes sandbox analysis.",
-                            "Contact sales@polyswarm.io to enable sandbox features "
+                            "Contact customersuccess@polyswarm.io to enable sandbox features "
                             "or increase quota.",
                         ],
                     )
