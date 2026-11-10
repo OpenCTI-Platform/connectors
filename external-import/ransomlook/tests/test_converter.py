@@ -527,7 +527,14 @@ def test_invalid_location_identity_is_rejected(value):
 
 @pytest.mark.parametrize(
     "link",
-    ["archive.php?company=299", "archive.php", "index.html", "post.aspx?id=7"],
+    [
+        "archive.php?company=299",
+        "archive.php",
+        "index.html",
+        "post.aspx?id=7",
+        "archive.php?next=/company/299",
+        "archive.php#company/299",
+    ],
 )
 def test_bare_relative_file_links_are_dropped(link):
     conv = converter()

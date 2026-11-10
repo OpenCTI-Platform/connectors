@@ -1169,7 +1169,7 @@ class RansomLookConverter:
         if (
             not parsed.scheme
             and not parsed.netloc
-            and "/" not in candidate
+            and "/" not in parsed.path
             and parsed.path.casefold().endswith(self.RELATIVE_FILE_EXTENSIONS)
         ):
             # A bare file name such as ``archive.php?company=299`` is relative
