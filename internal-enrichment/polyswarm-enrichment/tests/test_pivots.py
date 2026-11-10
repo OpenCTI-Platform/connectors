@@ -514,6 +514,48 @@ class TestImphashHook:
         ]
         assert connector._with_marking_definitions(objects, {}) == objects
 
+    def test_exported_definition_from_the_message_is_used_first(self):
+        connector = _connector(_make_client())
+        exported = {
+            "id": TLP_AMBER,
+            "type": "marking-definition",
+            "definition_type": "statement",
+        }
+        connector.stix_objects_list = [exported]
+        objects = [
+            {"id": "note--1", "type": "note", "object_marking_refs": [TLP_AMBER]}
+        ]
+        entity = {
+            "objectMarking": [
+                {
+                    "standard_id": TLP_AMBER,
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                }
+            ]
+        }
+        out = connector._with_marking_definitions(objects, entity)
+        assert out[-1] is exported
+
+    def test_non_dict_object_marking_entry_is_skipped(self):
+        connector = _connector(_make_client())
+        objects = [
+            {"id": "note--1", "type": "note", "object_marking_refs": [TLP_AMBER]}
+        ]
+        entity = {
+            "objectMarking": [
+                "junk",
+                None,
+                {
+                    "standard_id": TLP_AMBER,
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                },
+            ]
+        }
+        out = connector._with_marking_definitions(objects, entity)
+        assert out[-1]["id"] == TLP_AMBER
+
     def test_unresolvable_marking_is_left_alone(self):
         connector = _connector(_make_client())
         objects = [

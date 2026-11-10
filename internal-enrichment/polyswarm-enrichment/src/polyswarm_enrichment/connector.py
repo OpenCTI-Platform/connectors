@@ -1532,8 +1532,9 @@ class ConnectorTemplate:
 
         OpenCTI drops a reference to an object the bundle does not contain when
         it cleans up an inconsistent bundle, so a derived object's marking would
-        silently vanish. Definitions come from the source entity's markings, or
-        from OpenCTI when the entity does not list them.
+        silently vanish. Definitions come first from the platform-exported
+        marking-definition objects in the incoming message, then from the source
+        entity's markings, then from OpenCTI.
         """
         present = {obj.get("id") for obj in objects}
         wanted = []
@@ -1543,13 +1544,21 @@ class ConnectorTemplate:
                     wanted.append(ref)
         if not wanted:
             return objects
+        exported = {
+            o.get("id"): o
+            for o in self.stix_objects_list or []
+            if isinstance(o, dict) and o.get("type") == "marking-definition"
+        }
         known = {
             m.get("standard_id"): m
             for m in (opencti_entity or {}).get("objectMarking") or []
-            if m.get("standard_id")
+            if isinstance(m, dict) and m.get("standard_id")
         }
         added = []
         for ref in wanted:
+            if ref in exported:
+                added.append(exported[ref])
+                continue
             marking = known.get(ref)
             if marking is None:
                 try:
