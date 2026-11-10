@@ -635,6 +635,10 @@ polyswarm-enrichment/
     `-- test_*.py                        # Unit + integration tests
 ```
 
+## Support
+
+Support: customersuccess@polyswarm.io
+
 ## License
 
 Apache 2.0
