@@ -211,15 +211,13 @@ Malware → attributed-to → Threat Actor
 
 `StixFile` is in the default `CONNECTOR_SCOPE` (`Artifact,StixFile,Url`). Trigger the enrichment on a StixFile observable that has a SHA-256 (an MD5 or SHA-1 is resolved to a SHA-256 through a PolySwarm hash search). For each provider in `POLYSWARM_SANDBOX_PROVIDER`, the connector reads the latest existing sandbox report for the hash, which costs no sandbox credits. Each report found produces what a detonation produces: the sandbox note per provider, the JSON and PDF reports attached to the observable, the sandbox score, the malware family, ATT&CK techniques, and contacted domains and IPs. Only reports that finished successfully are used, and a report older than `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` (when above 0) counts as missing. The lookup runs in the community set in `POLYSWARM_COMMUNITY`. It needs `POLYSWARM_SANDBOX_ENABLED=true`.
 
-If no usable report exists, the connector adds a note saying so and what setting would detonate the sample. By default nothing else happens. To detonate, set `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`: the connector then finds the sample PolySwarm already holds for the hash and starts a sandbox run for each provider that has no usable report, polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, and processes the result the same way. If PolySwarm does not hold the sample, the note says so, and the way to analyse it is to upload the file as an Artifact. Detonation spends credits for every enrichment of a hash without a report, so keep `CONNECTOR_AUTO=false`.
+If no usable report exists, the connector adds a note saying so and what setting would detonate the sample. By default nothing else happens. To detonate, set `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`: the connector then finds the sample PolySwarm already holds for the hash and starts a sandbox run for each provider that has no usable report, polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, and processes the result the same way. If PolySwarm does not hold the sample, the note says so, and the way to analyse it is to upload the file as an Artifact. Detonation spends credits for every enrichment of a hash without a report.
 
 For an Artifact, `POLYSWARM_SANDBOX_REUSE_REPORT=true` (off by default) checks the same way before uploading. If every configured provider has a usable report and a finished scan of the hash exists, the file is not downloaded or uploaded, and the scan result is taken from that existing scan. Otherwise the Artifact is scanned and detonated as before.
 
-Because `StixFile` is in the default scope, keep `CONNECTOR_AUTO=false` (the default). With automatic enrichment on, every new File observable, including those created by feed imports and by other enrichments, would trigger lookups and PDF report jobs in your PolySwarm account (and detonations if `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`). If you want automatic enrichment, narrow `CONNECTOR_SCOPE` to `Artifact` or use playbooks to choose what is enriched.
-
 ### URLs
 
-Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,StixFile,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`. Keep `CONNECTOR_AUTO=false` (the default): with automatic enrichment, every new Url observable would be detonated.
+Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,StixFile,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`.
 
 The connector picks a VM that accepts URLs from the provider listing (`POLYSWARM_SANDBOX_VM` is used when it accepts URLs). It polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, then adds the same results it adds for a file's sandbox run: the sandbox note per provider, the JSON report and PDF report attached to the Url observable (named from the URL's SHA-256, never the URL), the sandbox score on the observable, and the malware family, ATT&CK techniques and contacted domains and IPs, related to the Url observable.
 
@@ -230,6 +228,10 @@ These URLs are refused, with a note on the observable explaining why, and nothin
 - Any URL while `POLYSWARM_COMMUNITY` is the public `default` community and `POLYSWARM_ALLOW_PUBLIC_COMMUNITY` is not `true`
 
 The query string and fragment are removed before submission unless `POLYSWARM_SANDBOX_URL_SEND_QUERY=true`. Logs only show the URL's scheme and host.
+
+### Automatic enrichment
+
+Keep `CONNECTOR_AUTO=false` (the default). The default `CONNECTOR_SCOPE` is `Artifact,StixFile,Url`, and with automatic enrichment on, every new matching observable would be enriched, including those created by feed imports and by other enrichments. For an Artifact that is an upload, a scan and a detonation. For a Url it is a detonation. For a StixFile it is a hash lookup, with PDF report jobs in your PolySwarm account (and a detonation if `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`). If you want automatic enrichment, narrow `CONNECTOR_SCOPE` or use playbooks to choose what is enriched.
 
 ### Password-Protected Files
 
@@ -266,7 +268,7 @@ The sandbox and hunt allowances shown are the account features `sandbox_request`
 
 - **Warning.** When the remaining daily API quota, or one of those allowances, is below `POLYSWARM_QUOTA_WARN_BELOW` (default `100`), the connector logs a warning. Set it to `0` to turn warnings off.
 - **Unlimited or exhausted.** A daily limit of `0` means the account has no cap: `daily_api_limit` and `daily_api_remaining` are both `0` on an uncapped plan (measured on an internal plan, where every feature also reports `base_uses` of `0`). Such an account is shown as unlimited and never warned about. A limit above `0` with nothing remaining means the quota is exhausted. A feature the plan does not include is reported as not on this plan. Reading `0` as "no cap" is inferred from the SDK and from that one measurement.
-- **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The connector then stops retrying that call and writes an error note on the artifact or URL that says the quota is exhausted, with the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so.
+- **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The connector then stops retrying that call and writes an error note on the artifact or URL that says the quota is exhausted, with the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so. The same applies to the report lookup that runs before an upload (`POLYSWARM_SANDBOX_REUSE_REPORT`): a quota error there ends the enrichment with this note and nothing is uploaded, since the upload would hit the same limit.
 - **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and carries on.
 
 ## 🔧 Troubleshooting
@@ -301,32 +303,33 @@ Set `CONNECTOR_LOG_LEVEL` to:
 
 ```
 polyswarm-sandbox/
-├── __metadata__/
-│   └── connector_manifest.json  # OpenCTI connector catalog metadata
-├── src/
-│   ├── main.py                  # Entry point (ConnectorSettings)
-│   ├── requirements.txt         # Python dependencies
-│   ├── config.yml.sample        # YAML config template
-│   ├── .env.sample              # Environment variable template
-│   └── connector/               # Main package
-│       ├── __init__.py
-│       ├── polyswarm_connector.py  # Orchestration (scan → sandbox → reports → STIX)
-│       ├── polyswarm_client.py     # PolySwarm API wrapper with retry
-│       ├── stix_builder.py         # STIX 2.1 object generation
-│       ├── scan_processor.py       # Scan result mapping
-│       ├── sandbox_processor.py    # Sandbox result mapping (Triage + Cape)
-│       ├── artifact_handler.py     # File download from OpenCTI
-│       ├── ttp_mapping.py          # MITRE ATT&CK TTP database
-│       └── models/configs/
-│           └── settings.py         # Pydantic config (connectors_sdk)
-├── tests/                       # 62+ unit tests
-├── .dockerignore
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+|-- __metadata__/
+|   `-- connector_manifest.json  # OpenCTI connector catalog metadata
+|-- src/
+|   |-- main.py                  # Entry point (ConnectorSettings)
+|   |-- requirements.txt         # Python dependencies
+|   |-- config.yml.sample        # YAML config template
+|   |-- .env.sample              # Environment variable template
+|   `-- connector/               # Main package
+|       |-- __init__.py
+|       |-- polyswarm_connector.py  # Orchestration (scan, sandbox, reports, STIX)
+|       |-- polyswarm_client.py     # PolySwarm API wrapper with retry
+|       |-- stix_builder.py         # STIX 2.1 object generation
+|       |-- scan_processor.py       # Scan result mapping
+|       |-- sandbox_processor.py    # Sandbox result mapping (Triage + Cape)
+|       |-- artifact_handler.py     # File download from OpenCTI
+|       |-- ttp_mapping.py          # MITRE ATT&CK TTP database
+|       |-- hash_lookup.py          # Report lookup by hash, detonate by hash
+|       |-- quota.py                # Account plan and quota visibility
+|       |-- report_depth.py         # Dropped files, configured C2, pcap selection
+|       `-- models/configs/
+|           `-- settings.py         # Pydantic config (connectors_sdk)
+|-- tests/                       # Unit tests
+|-- .dockerignore
+|-- Dockerfile
+|-- docker-compose.yml
+`-- README.md
 ```
-
-The `connector` package also contains `hash_lookup.py`, which holds the report lookup by hash and detonate-by-hash logic.
 
 ## 📈 Performance
 
