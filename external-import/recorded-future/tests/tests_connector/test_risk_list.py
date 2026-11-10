@@ -356,3 +356,58 @@ class TestRiskListRunNonVuln:
 
         add_labels_call = mock_stix_obj.add_labels.call_args[0][0]
         assert "No Score Rule" in add_labels_call
+
+
+# ── Tests for per-row error handling in RiskList.run() ───────────────────────
+
+
+def _risk_list_row(name):
+    return {
+        "Name": name,
+        "Risk": "80",
+        "FirstSeen": "2025-01-01T00:00:00.000Z",
+        "LastSeen": "2025-04-01T00:00:00.000Z",
+        "RuleCriticality": "[3]",
+        "RiskRules": '["Test Rule"]',
+        "Links": "{}",
+    }
+
+
+def _mock_stix_obj():
+    stix_obj = MagicMock()
+    stix_obj.to_stix_bundle.return_value = MagicMock(
+        objects=[1], serialize=MagicMock(return_value="{}")
+    )
+    return stix_obj
+
+
+# Scenario: one row that fails to convert does not abort the rest of the risk list
+def test_failing_row_is_skipped_and_remaining_rows_are_processed():
+    helper = _mock_helper()
+    risk_list = _build_risk_list(helper=helper)
+
+    bad_obj = _mock_stix_obj()
+    bad_obj.map_data.side_effect = KeyError("hits")
+    good_obj = _mock_stix_obj()
+    ip_mapper = {
+        "IP": {
+            "class": MagicMock(side_effect=[bad_obj, good_obj]),
+            "path": "/public/opencti/default_ip.csv",
+        }
+    }
+    rows = [_risk_list_row("1.1.1.1"), _risk_list_row("2.2.2.2")]
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", ip_mapper), patch(
+        "csv.DictReader", return_value=iter(rows)
+    ):
+        risk_list.run()
+
+    # The good row is still sent and the run completes
+    helper.send_stix2_bundle.assert_called_once()
+    helper.api.work.to_processed.assert_called_once()
+    helper.set_state.assert_called_once()
+    assert "last_risk_lists_run" in helper.set_state.call_args.kwargs["state"]
+    # The bad row is reported as a warning, not as a run-level error
+    helper.connector_logger.warning.assert_called_once()
+    assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
+    helper.connector_logger.error.assert_not_called()

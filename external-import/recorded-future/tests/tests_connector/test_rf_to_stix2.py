@@ -1204,3 +1204,25 @@ def _then_contains_no_intrusion_set(related_entities):
     assert (
         len(found) == 0
     ), f"Expected 0 IntrusionSet in related_entities, got {len(found)}"
+
+
+# Scenario: a risk list row whose Links has no "hits" key is mapped without error
+@pytest.mark.parametrize(
+    "links", [{"error": "no related entities"}, {"hits": None}, {"hits": []}]
+)
+def test_indicator_map_data_without_hits_skips_related_entities(links):
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_ip_indicator("1.1.1.1", author, tlp)
+    rf_row = {"Risk": "75", "Links": json.dumps(links)}
+
+    _when_indicator_map_data_with_ta_scope(
+        indicator,
+        rf_row,
+        tlp,
+        related_entity_types=["Threat Actor"],
+        ta_to_intrusion_set=False,
+    )
+
+    assert indicator.risk_score == 75
+    assert not indicator.related_entities

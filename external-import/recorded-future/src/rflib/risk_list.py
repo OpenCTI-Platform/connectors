@@ -215,30 +215,42 @@ class RiskList(threading.Thread):
                                     "Please update RISK_RULES_MAPPER in constants.py."
                                 )
                                 labels.append(risk_rules_list[index])
+                    try:
+                        # Convert into stix object
+                        stix_obj = risk_list_type["class"](
+                            row["Name"],
+                            key,
+                            tlp=self.tlp,
+                            first_seen=first_seen,
+                            last_seen=last_seen,
+                        )
 
-                    # Convert into stix object
-                    stix_obj = risk_list_type["class"](
-                        row["Name"],
-                        key,
-                        tlp=self.tlp,
-                        first_seen=first_seen,
-                        last_seen=last_seen,
-                    )
+                        stix_obj.map_data(
+                            row,
+                            self.tlp,
+                            self.risklist_related_entities,
+                            ta_to_intrusion_set=self.ta_to_intrusion_set,
+                        )
 
-                    stix_obj.map_data(
-                        row,
-                        self.tlp,
-                        self.risklist_related_entities,
-                        ta_to_intrusion_set=self.ta_to_intrusion_set,
-                    )
+                        stix_obj.add_description(description)
+                        if self.riskrules_as_label:
+                            stix_obj.add_labels(labels)
 
-                    stix_obj.add_description(description)
-                    if self.riskrules_as_label:
-                        stix_obj.add_labels(labels)
-
-                    stix_obj.build_bundle(stix_obj)
-                    # Create bundle
-                    bundle = stix_obj.to_stix_bundle()
+                        stix_obj.build_bundle(stix_obj)
+                        # Create bundle
+                        bundle = stix_obj.to_stix_bundle()
+                    except Exception as err:
+                        # Skip this row only, so one malformed row does not
+                        # abort the whole risk list run
+                        self.helper.connector_logger.warning(
+                            "[RISK LISTS] Skipping row that could not be converted",
+                            meta={
+                                "name": row.get("Name"),
+                                "risk_list": key,
+                                "error": str(err),
+                            },
+                        )
+                        continue
                     self.helper.connector_logger.info(
                         "[RISK LISTS] Sending Bundle to server with "
                         + str(len(bundle.objects))
