@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/orange-cyberdefense-v3_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Orange Cyberdefense Cyber Threat Intelligence",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Orange-Cyberdefense"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT30M",
+      "description": "The period of time to await between two runs of the connector (ISO 8601 duration, minimum 1 minute).",
+      "format": "duration",
+      "type": "string"
+    },
+    "OCD_IMPORT_DATALAKE": {
+      "default": true,
+      "description": "Whether to ingest indicators collections from Datalake.",
+      "type": "boolean"
+    },
+    "OCD_IMPORT_THREAT_LIBRARY": {
+      "default": true,
+      "description": "Whether to ingest the latest entries of the Datalake Threat Library (Malware, Intrusion Set, Tools, Attack Patterns, Vulnerabilities, ...).",
+      "type": "boolean"
+    },
+    "OCD_IMPORT_WORLDWATCH": {
+      "default": true,
+      "description": "Whether to ingest World Watch reports.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ENV": {
+      "default": "prod",
+      "description": "Advanced setting - Datalake environment to use: `prod` or `preprod`.",
+      "type": "string"
+    },
+    "OCD_DATALAKE_TOKEN": {
+      "description": "Long Term Token used to access Datalake API, used by `OCD_IMPORT_DATALAKE`, `OCD_IMPORT_THREAT_LIBRARY`, `OCD_WORLDWATCH_IMPORT_INDICATORS` and `OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES`. If all of them are disabled, set a placeholder such as a random string or `NO_PASSWORD`.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "OCD_DATALAKE_QUERIES": {
+      "default": null,
+      "description": "JSON array of Datalake search query hashes to ingest, e.g. `[{\"query_hash\":\"<hash>\",\"label\":\"<label>\"}]`. Required when `OCD_IMPORT_DATALAKE` is enabled.",
+      "type": "string"
+    },
+    "OCD_DATALAKE_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables from indicators.",
+      "type": "boolean"
+    },
+    "OCD_CREATE_OBSERVABLES": {
+      "default": null,
+      "deprecated": true,
+      "type": "boolean",
+      "description": "Use OCD_DATALAKE_CREATE_OBSERVABLES instead."
+    },
+    "OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS": {
+      "default": true,
+      "description": "Whether to skip Datalake indicators that do not have any score.",
+      "type": "boolean"
+    },
+    "OCD_IGNORE_UNSCORED_INDICATORS": {
+      "default": null,
+      "deprecated": true,
+      "type": "boolean",
+      "description": "Use OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS instead."
+    },
+    "OCD_DATALAKE_IGNORE_WHITELISTED_INDICATORS": {
+      "default": true,
+      "description": "Whether to skip Datalake indicators that are whitelisted.",
+      "type": "boolean"
+    },
+    "OCD_IGNORE_WHITELISTED_INDICATORS": {
+      "default": null,
+      "deprecated": true,
+      "type": "boolean",
+      "description": "Use OCD_DATALAKE_IGNORE_WHITELISTED_INDICATORS instead."
+    },
+    "OCD_DATALAKE_FALLBACK_SCORE": {
+      "default": 0,
+      "description": "Score used for Datalake indicators without any score, when `OCD_DATALAKE_IGNORE_UNSCORED_INDICATORS` is disabled.",
+      "type": "integer"
+    },
+    "OCD_FALLBACK_SCORE": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use OCD_DATALAKE_FALLBACK_SCORE instead."
+    },
+    "OCD_DATALAKE_ADD_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "Whether to add Datalake tags as labels to the imported indicators.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_SCORES_AS_LABELS": {
+      "default": true,
+      "description": "Whether to add Datalake threat scores as labels to the imported indicators.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_SCORE": {
+      "default": true,
+      "description": "Whether to add score to the imported indicators (overwrite existing).",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_TLP": {
+      "default": true,
+      "description": "Whether to add a TLP marking to the imported indicators (overwrite existing).",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_EXTREF": {
+      "default": true,
+      "description": "Whether to add external references to the imported indicators.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_SUMMARY": {
+      "default": true,
+      "description": "Whether to add a threat summary as a note to the imported indicators.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_RELATED": {
+      "default": true,
+      "description": "Whether to import objects from the Threat Library related to imported indicators, such as malwares, campaigns, etc.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_SIGHTINGS": {
+      "default": true,
+      "description": "Whether to import positive sightings from Datalake.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ADD_CREATEDBY": {
+      "default": true,
+      "description": "Whether to add a reference to the 'Orange Cyberdefense' organization as author of OpenCTI objects.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_ZIP_FILE_PATH": {
+      "default": "/opt/opencti-connector-orange-cyberdefense/data",
+      "description": "Advanced setting - Path where temporary ZIP files are saved.",
+      "type": "string"
+    },
+    "OCD_DATALAKE_ZIP_FILE_DELETE": {
+      "default": true,
+      "description": "Advanced setting - Whether to delete temporary ZIP files after processing.",
+      "type": "boolean"
+    },
+    "OCD_DATALAKE_CURATE_LABELS": {
+      "default": true,
+      "description": "Advanced setting - Adapt Datalake CTI tags as STIX labels.",
+      "type": "boolean"
+    },
+    "OCD_CURATE_LABELS": {
+      "default": null,
+      "deprecated": true,
+      "type": "boolean",
+      "description": "Use OCD_DATALAKE_CURATE_LABELS instead."
+    },
+    "OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET": {
+      "default": true,
+      "description": "Advanced setting - Transform Threat Actor objects from Datalake to Intrusion Set objects.",
+      "type": "boolean"
+    },
+    "OCD_THREAT_ACTOR_AS_INTRUSION_SET": {
+      "default": null,
+      "deprecated": true,
+      "type": "boolean",
+      "description": "Use OCD_DATALAKE_THREAT_ACTOR_AS_INTRUSION_SET instead."
+    },
+    "OCD_WORLDWATCH_API_KEY": {
+      "description": "World Watch API key, used by `OCD_IMPORT_WORLDWATCH`. If it is disabled, set a placeholder such as a random string or `NO_PASSWORD`.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "OCD_IMPORT_WORLDWATCH_API_KEY": {
+      "default": null,
+      "deprecated": true,
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "description": "Use OCD_WORLDWATCH_API_KEY instead."
+    },
+    "OCD_WORLDWATCH_IMPORT_INDICATORS": {
+      "default": true,
+      "description": "Whether to import indicators from Datalake related to imported reports.",
+      "type": "boolean"
+    },
+    "OCD_WORLDWATCH_IMPORT_INDICATORS_LOOKBACK": {
+      "default": 2592000,
+      "description": "Advanced setting - How far (in seconds) to look back for indicators related to imported reports, based on their update time.",
+      "type": "integer"
+    },
+    "OCD_WORLDWATCH_IMPORT_THREAT_ENTITIES": {
+      "default": true,
+      "description": "Whether to import objects from the Threat Library related to imported reports, such as malwares, campaigns, etc.",
+      "type": "boolean"
+    },
+    "OCD_WORLDWATCH_START_DATE": {
+      "default": "2026-01-01",
+      "description": "Start date for the import of World Watch reports.",
+      "type": "string"
+    },
+    "OCD_IMPORT_WORLDWATCH_START_DATE": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use OCD_WORLDWATCH_START_DATE instead."
+    },
+    "OCD_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    },
+    "OCD_RESET_STATE": {
+      "default": false,
+      "description": "Advanced setting - Force the use of the start date from the config instead of the state saved in OpenCTI.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "OCD_DATALAKE_TOKEN",
+    "OCD_WORLDWATCH_API_KEY"
+  ],
+  "additionalProperties": true
+}
