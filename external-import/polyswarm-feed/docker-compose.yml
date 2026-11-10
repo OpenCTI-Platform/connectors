@@ -26,4 +26,5 @@ services:
       - POLYSWARM_HUNTING_INDICATOR_VALID_DAYS=30 # optional (default: 30)
       - POLYSWARM_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
       - POLYSWARM_MAX_OBJECTS_PER_RUN=20000 # optional (default: 20000)
+      - POLYSWARM_QUOTA_WARN_BELOW=100 # optional, warn when remaining quota is below this, 0 = no warnings (default: 100)
     restart: always

@@ -79,6 +79,26 @@ def make_settings(**polyswarm_overrides: Any) -> ConnectorSettings:
     return FakeConnectorSettings()
 
 
+@pytest.fixture(autouse=True)
+def _offline_account_quota(monkeypatch):
+    """Keep the connector's default account client off the live API.
+
+    Tests of the quota reader inject their own fake account client.
+    """
+    import connector.connector as connector_module
+
+    class OfflineAccountClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def account_features(self):
+            raise ConnectionError("offline")
+
+    monkeypatch.setattr(
+        connector_module, "PolySwarmAccountClient", OfflineAccountClient
+    )
+
+
 @pytest.fixture
 def connector_settings() -> ConnectorSettings:
     return make_settings()
