@@ -142,6 +142,9 @@ class PolySwarmFeedConnector:
             indicator_valid_days=polyswarm.feed_indicator_valid_days,
             logger=self.logger,
             now=now,
+            families=polyswarm.feed_families,
+            exclude_families=polyswarm.feed_exclude_families,
+            min_confidence=polyswarm.feed_min_confidence,
         )
         max_objects = polyswarm.max_objects_per_run
         sent_total = 0
@@ -170,6 +173,13 @@ class PolySwarmFeedConnector:
             self.logger.warning(
                 "Some PolySwarm feed items were malformed and skipped",
                 {"skipped_items": converter.skipped_items},
+            )
+
+        if converter.filtered_items:
+            self.logger.info(
+                "Some PolySwarm feed samples were skipped by the family or "
+                "confidence filters",
+                {"filtered_items": converter.filtered_items},
             )
 
         if polyswarm.hunting_enabled:

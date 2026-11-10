@@ -95,6 +95,7 @@ def make_sample_bundle(
     with_attack_pattern: bool = False,
     with_dynamic_analysis: bool = False,
     created: str = "2026-10-27T14:53:00.063063Z",
+    confidence: int | None = 99,
 ) -> dict[str, Any]:
     """One per-sample bundle, shaped like a PolySwarm TAXII page item."""
     family_id = _uuid(1000 + n)
@@ -135,9 +136,11 @@ def make_sample_bundle(
             "is_family": False,
             "malware_types": ["trojan"],
             "sample_refs": [f"file--{sample_id}"],
-            "confidence": 99,
+            "confidence": confidence,
         },
     ]
+    if confidence is None:
+        del objects[-1]["confidence"]
     for algo, value in (("MD5", md5), ("'SHA-1'", sha1), ("'SHA-256'", sha256)):
         objects.append(
             {

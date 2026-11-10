@@ -81,6 +81,9 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 | Feed collections             | `feed_collections`             | `POLYSWARM_FEED_COLLECTIONS`             | `trustgroup`                    | No        | Comma-separated list of collections to import. Allowed values: `trustgroup`, `ransomware`, `freemium`. Unknown values are rejected. |
 | Feed backfill days           | `feed_backfill_days`           | `POLYSWARM_FEED_BACKFILL_DAYS`           | `14`                            | No        | How many days of feed history to import on the first run only.                                                                      |
 | Feed indicator valid days    | `feed_indicator_valid_days`    | `POLYSWARM_FEED_INDICATOR_VALID_DAYS`    | `90`                            | No        | Days from import time until feed indicators expire (`valid_until`).                                                                 |
+| Feed families | `feed_families` | `POLYSWARM_FEED_FAMILIES` |  | No | Comma-separated family names. When set, only feed samples of these families are imported. Case is ignored. Empty means no filtering. |
+| Feed excluded families | `feed_exclude_families` | `POLYSWARM_FEED_EXCLUDE_FAMILIES` |  | No | Comma-separated family names. Feed samples of these families are skipped. Case is ignored. Wins over the list above. |
+| Feed minimum confidence | `feed_min_confidence` | `POLYSWARM_FEED_MIN_CONFIDENCE` |  | No | Whole number from 0 to 100. Feed samples whose malware confidence is lower are skipped. Samples without a confidence are kept. Empty means no filtering. |
 | Hunting enabled             | `hunting_enabled`              | `POLYSWARM_HUNTING_ENABLED`              | `false`                         | No        | Import hits from your own PolySwarm live hunts.                                                                                     |
 | Hunting backfill hours       | `hunting_backfill_hours`       | `POLYSWARM_HUNTING_BACKFILL_HOURS`       | `24`                            | No        | How many hours of hunting hits to import on the first run only.                                                                     |
 | Hunting indicator valid days | `hunting_indicator_valid_days` | `POLYSWARM_HUNTING_INDICATOR_VALID_DAYS` | `30`                            | No        | Days from import time until hunting indicators expire.                                                                              |
@@ -143,6 +146,16 @@ The feed delivers one STIX bundle per sample. For each sample, OpenCTI receives:
 
 Every object carries the PolySwarm author identity and the TLP marking from `POLYSWARM_TLP_LEVEL`.
 
+### Filtering the feed
+
+By default every sample of the enabled collections is imported. Three optional settings narrow that down. They apply per sample, before any object of the sample is created, so a skipped sample produces nothing in OpenCTI and does not count toward `POLYSWARM_MAX_OBJECTS_PER_RUN`. The collection position still moves forward past skipped samples.
+
+- `POLYSWARM_FEED_FAMILIES`: only samples whose malware family is in the list.
+- `POLYSWARM_FEED_EXCLUDE_FAMILIES`: skip samples whose malware family is in the list. When a family is in both lists, it is skipped.
+- `POLYSWARM_FEED_MIN_CONFIDENCE`: skip samples whose malware confidence (the `confidence` the feed puts on the sample's malware object) is below the value. A sample whose feed data carries no confidence is kept.
+
+Family names are matched as whole names, ignoring case. The filters do not change what is fetched from PolySwarm; they only decide what is imported.
+
 ### Live hunting hits
 
 When `POLYSWARM_HUNTING_ENABLED=true`, the connector also reads hits from the live hunts in your own PolySwarm account. For each hit it creates:
@@ -179,6 +192,7 @@ Because each sample brings one malware-analysis object per engine, a sample is t
 
 - **401 or 403 errors.** The account number or API key is wrong, or your PolySwarm plan does not include access to that feed collection. Check both values, and check which collections your plan includes.
 - **Runs that import nothing.** This is normal between feed updates. The connector logs that there was nothing new and tries again at the next period.
+- **No samples are imported after setting a filter.** Check the spelling of the family names (whole names, case ignored) and lower `POLYSWARM_FEED_MIN_CONFIDENCE`. The run log reports how many samples the filters skipped.
 - **Unknown collection error at startup.** `POLYSWARM_FEED_COLLECTIONS` only accepts `trustgroup`, `ransomware` and `freemium`.
 - **A run stops early.** It reached `POLYSWARM_MAX_OBJECTS_PER_RUN`. The next run continues from where it stopped.
 - **More detail.** Set `CONNECTOR_LOG_LEVEL=debug`.

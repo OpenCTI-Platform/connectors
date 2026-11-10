@@ -15,7 +15,9 @@ list of STIX objects (plain dicts), keeping PolySwarm's object ids, and:
       own deterministic id, and rewires relationships to them;
     - drops references to objects that are not part of the sample;
     - drops objects already converted earlier in the run (by id);
-    - skips and logs malformed items instead of failing the whole page.
+    - skips and logs malformed items instead of failing the whole page;
+    - optionally skips samples by family and minimum malware confidence,
+      before any object of the sample is emitted.
 """
 
 from __future__ import annotations
@@ -93,6 +95,9 @@ class FeedConverter:
         indicator_valid_days: int,
         logger: Any,
         now: datetime | None = None,
+        families: list[str] | None = None,
+        exclude_families: list[str] | None = None,
+        min_confidence: int | None = None,
     ) -> None:
         """Initialize the converter.
 
@@ -102,6 +107,12 @@ class FeedConverter:
             indicator_valid_days: Indicators are valid until `now` plus this.
             logger: The connector logger.
             now: Import time (defaults to the current UTC time).
+            families: When not empty, only samples whose family is in the list
+                are converted (case-insensitive).
+            exclude_families: Samples whose family is in the list are skipped
+                (case-insensitive).
+            min_confidence: Samples whose malware confidence is below this are
+                skipped. Samples without a confidence are kept.
         """
         self._author_id = author["id"]
         self._marking_id = tlp_marking["id"]
@@ -110,6 +121,12 @@ class FeedConverter:
         self._now = now or datetime.now(tz=timezone.utc)
         self._seen: dict[str, dict[str, Any]] = {}
         self.skipped_items = 0
+        self.filtered_items = 0
+        self._families = {f.strip().lower() for f in families or [] if f.strip()}
+        self._exclude_families = {
+            f.strip().lower() for f in exclude_families or [] if f.strip()
+        }
+        self._min_confidence = min_confidence
 
     # ------------------------------------------------------------------
     # Public API
@@ -162,6 +179,9 @@ class FeedConverter:
             MalformedItemError: When the item is not a bundle or STIX object.
         """
         raw_objects = self._extract_objects(item)
+        if not self._passes_filters(raw_objects):
+            self.filtered_items += 1
+            return []
 
         groups: dict[str, list[dict[str, Any]]] = {}
         invalid = 0
@@ -266,6 +286,35 @@ class FeedConverter:
         if _is_stix_object(item):
             return [item]
         raise MalformedItemError("item is neither a STIX bundle nor a STIX object")
+
+    def _passes_filters(self, raw_objects: list[Any]) -> bool:
+        """Apply the family and confidence filters to one sample's objects."""
+        if not (self._families or self._exclude_families or self._min_confidence):
+            return True
+        malware = [
+            obj
+            for obj in raw_objects
+            if isinstance(obj, dict) and obj.get("type") == "malware"
+        ]
+        names = {
+            obj["name"].strip().lower()
+            for obj in malware
+            if isinstance(obj.get("name"), str) and obj["name"].strip()
+        }
+        if self._families and not names & self._families:
+            return False
+        if names & self._exclude_families:
+            return False
+        if self._min_confidence:
+            confidences = [
+                obj["confidence"]
+                for obj in malware
+                if isinstance(obj.get("confidence"), (int, float))
+                and not isinstance(obj.get("confidence"), bool)
+            ]
+            if confidences and max(confidences) < self._min_confidence:
+                return False
+        return True
 
     @staticmethod
     def _is_pattern_indicator(obj: dict[str, Any]) -> bool:
