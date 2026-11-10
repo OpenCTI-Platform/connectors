@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'PolySwarm Feed' # optional (default: 'PolySwarm Feed')
+  scope: 'malware,file,indicator,malware-analysis,attack-pattern,note,relationship' # optional (default: the imported types)
+  log_level: 'info' # optional
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs (default: 'PT1H')
+
+polyswarm:
+  api_key: 'ChangeMe'
+  account_number: 'ChangeMe'
+  api_url: 'https://api.polyswarm.network' # optional
+  feed_collections: 'trustgroup' # optional, comma separated: trustgroup, ransomware, freemium (default: 'trustgroup')
+  feed_backfill_days: 14 # optional, first run only (default: 14)
+  feed_indicator_valid_days: 90 # optional (default: 90)
+  hunting_enabled: false # optional, import hits from your live hunts (default: false)
+  hunting_backfill_hours: 24 # optional, first run only (default: 24)
+  hunting_indicator_valid_days: 30 # optional (default: 30)
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  max_objects_per_run: 20000 # optional (default: 20000)

@@ -1,0 +1,26 @@
+services:
+  connector-polyswarm-feed:
+    image: opencti/connector-polyswarm-feed:rolling
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=PolySwarm Feed # optional (default: 'PolySwarm Feed')
+      - CONNECTOR_SCOPE=malware,file,indicator,malware-analysis,attack-pattern,note,relationship # optional (default: the imported types)
+      - CONNECTOR_LOG_LEVEL=info # optional
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, ISO-8601 interval between two runs (default: 'PT1H')
+      # Custom parameters for connector-polyswarm-feed
+      - POLYSWARM_API_KEY=ChangeMe
+      - POLYSWARM_ACCOUNT_NUMBER=ChangeMe
+      - POLYSWARM_API_URL=https://api.polyswarm.network # optional
+      - POLYSWARM_FEED_COLLECTIONS=trustgroup # optional, comma separated: trustgroup, ransomware, freemium (default: 'trustgroup')
+      - POLYSWARM_FEED_BACKFILL_DAYS=14 # optional, first run only (default: 14)
+      - POLYSWARM_FEED_INDICATOR_VALID_DAYS=90 # optional (default: 90)
+      - POLYSWARM_HUNTING_ENABLED=false # optional, import hits from your live hunts (default: false)
+      - POLYSWARM_HUNTING_BACKFILL_HOURS=24 # optional, first run only (default: 24)
+      - POLYSWARM_HUNTING_INDICATOR_VALID_DAYS=30 # optional (default: 30)
+      - POLYSWARM_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - POLYSWARM_MAX_OBJECTS_PER_RUN=20000 # optional (default: 20000)
+    restart: always

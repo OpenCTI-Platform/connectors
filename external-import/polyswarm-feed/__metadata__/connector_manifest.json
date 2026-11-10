@@ -1,0 +1,27 @@
+{
+  "title": "PolySwarm Feed",
+  "slug": "polyswarm-feed",
+  "description": "Imports PolySwarm's curated file-hash threat feed into OpenCTI. By default it pulls the 14-day trust group feed over TAXII 2.1; the ransomware and freemium collections can be added. For each sample it creates the malware, the file, MD5, SHA-1 and SHA-256 indicators, one malware-analysis object per detection engine, relationships, and MITRE ATT&CK patterns where the feed provides them. Optionally it also imports hits from your own PolySwarm live hunts as files, SHA-256 indicators, notes and labels. File hashes only; no network indicators. Requires a PolySwarm account with feed access.",
+  "short_description": "Import PolySwarm's curated malware file-hash feed, per-engine analysis results and optional live-hunt hits into OpenCTI.",
+  "logo": "external-import/polyswarm-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://polyswarm.network",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/polyswarm-feed",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-polyswarm-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}
