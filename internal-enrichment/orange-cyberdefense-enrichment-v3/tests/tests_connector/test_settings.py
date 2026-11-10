@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from settings import ConnectorSettings
 
 CONNECTOR_ID_DEFAULT = "cb4ab06c-1514-4e80-8b35-46cbf914781b"
@@ -29,6 +30,7 @@ FULL_VALID_SETTINGS_DICT: dict[str, Any] = {
         "scope": "IPv4-Addr,Domain-Name",
         "log_level": "error",
         "auto": True,
+        "max_tlp": "amber",
     },
     "ocd_enrich": {
         "datalake_token": "test-datalake-token",
@@ -46,7 +48,6 @@ FULL_VALID_SETTINGS_DICT: dict[str, Any] = {
         "add_sightings": False,
         "add_createdby": False,
         "curate_labels": False,
-        "max_tlp": "TLP:AMBER",
         "threat_actor_as_intrusion_set": False,
     },
 }
@@ -99,6 +100,7 @@ def test_settings_should_apply_defaults():
     assert settings.connector.log_level == "info"
     assert settings.connector.auto is False
     assert settings.connector.type == "INTERNAL_ENRICHMENT"
+    assert settings.connector.max_tlp == TLPLevel.GREEN
 
     ocd_enrich = settings.ocd_enrich
     assert ocd_enrich.datalake_token.get_secret_value() == "test-datalake-token"
@@ -116,7 +118,6 @@ def test_settings_should_apply_defaults():
     assert ocd_enrich.add_sightings is True
     assert ocd_enrich.add_createdby is True
     assert ocd_enrich.curate_labels is True
-    assert ocd_enrich.max_tlp == "TLP:GREEN"
     assert ocd_enrich.threat_actor_as_intrusion_set is True
 
 
@@ -165,3 +166,30 @@ def test_settings_should_raise_when_invalid_input(settings_dict):
         _build_settings(settings_dict)
 
     assert "Error validating configuration" in str(err)
+
+
+def test_settings_should_migrate_deprecated_ocd_enrich_max_tlp_to_connector_max_tlp():
+    """The deprecated `OCD_ENRICH_MAX_TLP` MUST be migrated to `CONNECTOR_MAX_TLP`."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "ocd_enrich": {"datalake_token": "test-datalake-token", "max_tlp": "TLP:RED"},
+    }
+
+    with pytest.warns(UserWarning, match="ocd_enrich.max_tlp"):
+        settings = _build_settings(settings_dict)
+
+    assert settings.connector.max_tlp == TLPLevel.RED
+
+
+def test_settings_should_prefer_connector_max_tlp_over_deprecated_one():
+    """`CONNECTOR_MAX_TLP` MUST win when the deprecated `OCD_ENRICH_MAX_TLP` is also set."""
+    settings_dict = {
+        **MINIMAL_VALID_SETTINGS_DICT,
+        "connector": {"max_tlp": "amber"},
+        "ocd_enrich": {"datalake_token": "test-datalake-token", "max_tlp": "TLP:RED"},
+    }
+
+    with pytest.warns(UserWarning, match="ocd_enrich.max_tlp"):
+        settings = _build_settings(settings_dict)
+
+    assert settings.connector.max_tlp == TLPLevel.AMBER

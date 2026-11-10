@@ -8,6 +8,7 @@ connector:
   # name: 'Orange Cyberdefense CTI Enrichment'
   # scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,URL,Email-Addr,Autonomous-System,X509-Certificate,Cryptocurrency-Wallet,StixFile,Phone-Number'
   # log_level: 'info'
+  # max_tlp: 'green'
 
 
 ocd_enrich:
@@ -26,5 +27,4 @@ ocd_enrich:
   # add_sightings: true
   # add_createdby: true
   # curate_labels: true
-  # max_tlp: 'TLP:GREEN'
   # threat_actor_as_intrusion_set: true

@@ -62,6 +62,19 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
+    "CONNECTOR_MAX_TLP": {
+      "description": "Only perform enrichment for observables with this TLP level or less restrictive.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "green"
+    },
     "OCD_ENRICH_DATALAKE_TOKEN": {
       "description": "Long Term Token used to access Orange Cyberdefense Datalake API.",
       "format": "password",
@@ -144,8 +157,9 @@
       "type": "boolean"
     },
     "OCD_ENRICH_MAX_TLP": {
-      "default": "TLP:GREEN",
-      "description": "Only perform enrichment for observables with this TLP level or less restrictive.",
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_MAX_TLP instead.",
       "type": "string"
     }
   },

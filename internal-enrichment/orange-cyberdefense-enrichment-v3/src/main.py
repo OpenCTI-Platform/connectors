@@ -85,7 +85,7 @@ class OrangeCyberdefenseEnrichment:
         self.ocd_enrich_add_sightings = self.config.ocd_enrich.add_sightings
         self.ocd_enrich_add_createdby = self.config.ocd_enrich.add_createdby
         self.ocd_enrich_curate_labels = self.config.ocd_enrich.curate_labels
-        self.max_tlp = self.config.ocd_enrich.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
     def _init_variables(self):
         self.identity = None

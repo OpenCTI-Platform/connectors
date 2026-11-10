@@ -6,11 +6,11 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, SecretStr
-from pydantic.json_schema import SkipJsonSchema
 
 
 class OrangeCyberdefenseEnrichmentConnectorConfig(
@@ -45,10 +45,12 @@ class OrangeCyberdefenseEnrichmentConnectorConfig(
         description="The minimum level of logs to display.",
         default="info",
     )
-    # The connector gates enrichment on its own `OCD_ENRICH_MAX_TLP` variable, so the
-    # `CONNECTOR_MAX_TLP` inherited from the SDK base config would do nothing: keep it
-    # out of the config schema.
-    max_tlp: SkipJsonSchema[TLPLevel] = Field(default=TLPLevel.GREEN)
+    max_tlp: TLPLevel = Field(
+        description=(
+            "Only perform enrichment for observables with this TLP level or less restrictive."
+        ),
+        default=TLPLevel.GREEN,
+    )
 
 
 class OrangeCyberdefenseEnrichmentConfig(BaseConfigModel):
@@ -128,11 +130,13 @@ class OrangeCyberdefenseEnrichmentConfig(BaseConfigModel):
         description="Adapt Datalake CTI tags as STIX labels.",
         default=True,
     )
-    max_tlp: str = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description=(
             "Only perform enrichment for observables with this TLP level or less restrictive."
         ),
-        default="TLP:GREEN",
     )
 
 

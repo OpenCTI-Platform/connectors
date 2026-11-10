@@ -17,6 +17,7 @@ STUB_SETTINGS_DICT: dict[str, Any] = {
         "scope": "IPv4-Addr,Domain-Name,URL",
         "log_level": "error",
         "auto": True,
+        "max_tlp": "amber",
     },
     "ocd_enrich": {
         "datalake_token": "test-datalake-token",
@@ -34,7 +35,6 @@ STUB_SETTINGS_DICT: dict[str, Any] = {
         "add_sightings": False,
         "add_createdby": False,
         "curate_labels": False,
-        "max_tlp": "TLP:AMBER",
         "threat_actor_as_intrusion_set": False,
     },
 }
