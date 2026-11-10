@@ -151,7 +151,10 @@ When `POLYSWARM_HUNTING_ENABLED=true`, the connector also reads hits from the li
 - An indicator on the SHA-256
 - A note with the rule name, matched strings and detection counts
 - Labels of the form `polyswarm-hunt:<rule_name>`
-- A relationship to the malware family object, when the hit names a malware family
+- A `polyswarm-family:<name>` label on the file, the indicator and the note, whenever the hit reports a family name
+- A malware family object and an `indicates` relationship, only when the reported name looks like a real malware family
+
+Many hits report an antivirus style label in the family field (for example `Trojan.Packed2` or `PUA.Generic`) rather than a family name. The connector creates a malware object only for names that pass a conservative check: names with dots, slashes, colons or brackets, generic words (such as generic, agent, packed, heur, suspicious, malware, trojan, pua, adware, riskware, phishing, unknown, variant, gen), names made only of a type prefix, random-looking strings and very short names are not treated as families. The name is never lost: it stays in the note and in the `polyswarm-family:<name>` label. The check is a heuristic and errs on the side of not creating a malware object; PolySwarm's own list of known family names was not used because it does not contain several real family names seen in hits.
 
 A hit that was already imported is not imported again. The connector remembers a bounded number of recent hit identifiers in its state.
 

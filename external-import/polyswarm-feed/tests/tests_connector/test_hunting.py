@@ -225,8 +225,8 @@ def test_no_or_blank_family_creates_no_malware(family):
     source, _, _ = make_source([hit])
     objects, _ = source.collect({})
     if family == 123.0:
-        # Non string values are turned into text rather than dropped.
-        assert len(by_type(objects, "malware")) == 1
+        # Non string values are turned into text, which is not a family name.
+        assert by_type(objects, "malware") == []
     else:
         assert by_type(objects, "malware") == []
         assert all(
@@ -238,7 +238,10 @@ def test_no_or_blank_family_creates_no_malware(family):
 def test_long_family_name_truncated():
     source, _, _ = make_source([make_hit(malware_family="F" * 1000)])
     objects, _ = source.collect({})
-    assert len(by_type(objects, "malware")[0]["name"]) <= 128
+    # Far too long to be a family name: no Malware, and the label stays bounded.
+    assert by_type(objects, "malware") == []
+    label = by_type(objects, "indicator")[0]["labels"][0]
+    assert len(label) <= len("polyswarm-family:") + 128
 
 
 def test_score_omitted_without_detections():
