@@ -1,0 +1,13 @@
+{
+  "collections": [
+    {
+      "can_read": true,
+      "can_write": false,
+      "id": "019630e9-0cdb-5d7d-b8c1-120c793093ad",
+      "media_types": [
+        "application/stix+json;version=2.1"
+      ],
+      "title": "Freemium collection"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "api_roots": [
+    "https://api.polyswarm.network/v3/stix/trustgroup",
+    "https://api.polyswarm.network/v3/stix/ransomware",
+    "https://api.polyswarm.network/v3/stix/freemium"
+  ],
+  "contact": "REDACTED_EMAIL",
+  "default": "https://api.polyswarm.network/v3/stix/trustgroup",
+  "description": "This TAXII Server contains a listing of Polyswarm's feed data",
+  "title": "Polyswarm TAXII Service"
+}
