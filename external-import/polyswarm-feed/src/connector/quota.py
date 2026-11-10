@@ -1,8 +1,8 @@
 """Read-only account plan and quota visibility.
 
 Reads ``GET /public/accounts`` through ``PolyswarmAPI.account_features()`` at
-startup and at most once an hour after that. It never spends quota or writes
-anything, and a failure to read it is logged and swallowed: it must never break
+startup and about once an hour after that (plus at most one more read a minute
+after a quota error). It only reads, and a failure to read it is logged and swallowed: it must never break
 an enrichment or an import. The account number in the response is never read.
 
 How unlimited and exhausted are told apart (measured on an internal plan, where

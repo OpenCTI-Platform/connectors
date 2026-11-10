@@ -40,7 +40,7 @@ The connector only pulls data.
 
 - **Nothing from OpenCTI is sent to PolySwarm.** No observables, entities, reports, markings or users are uploaded, and the connector never submits files for scanning.
 - **Where requests go.** Outbound calls go to the PolySwarm API URL only (`POLYSWARM_API_URL`, default `https://api.polyswarm.network`).
-- **Account quota.** Once an hour at most, the connector reads your account's plan and quotas from the same API URL. Only your API key is sent.
+- **Account quota.** About once an hour, the connector reads your account's plan and quotas from the same API URL. Only your API key is sent.
 - **What is sent with each request.** Your PolySwarm account number and API key, for authentication, plus the paging and time-range parameters needed to ask for new data.
 
 ## Installation
@@ -177,7 +177,7 @@ Because each sample brings one malware-analysis object per engine, a sample is t
 
 ### Quota
 
-The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at the start of a run, at most once an hour, it makes one request to the account endpoint (`GET /v3/public/accounts`, the call behind the PolySwarm SDK's `account_features()`). The account number in the response is never read or logged.
+The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at the start of a run, about once an hour, it makes one read-only request to the account endpoint (`GET /v3/public/accounts`, the call behind the PolySwarm SDK's `account_features()`), plus at most one more per minute after a quota error. The account number in the response is never read or logged.
 
 What is logged, at info level:
 

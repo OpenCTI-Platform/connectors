@@ -102,9 +102,8 @@ class PolySwarmFeedConnector:
             api_key=polyswarm.api_key.get_secret_value(),
         )
         self.hunting_client = hunting_client
-        # Read-only account plan and quota visibility; never raises. Re-read at
-        # most hourly, a little sooner than the run period so a run never skips it.
-        period = config.connector.duration_period.total_seconds()
+        # Read-only account plan and quota visibility; never raises. Re-read
+        # about hourly, a little under an hour so an hourly run never skips it.
         self.quota = QuotaMonitor(
             account_client
             or PolySwarmAccountClient(
@@ -113,7 +112,7 @@ class PolySwarmFeedConnector:
             ),
             self.logger,
             warn_below=polyswarm.quota_warn_below,
-            refresh_seconds=int(min(REFRESH_SECONDS, max(60, period - 30))),
+            refresh_seconds=REFRESH_SECONDS - 30,
         )
         self.author = build_author()
         self.tlp_marking = build_tlp_marking(polyswarm.tlp_level)
