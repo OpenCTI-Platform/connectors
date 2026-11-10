@@ -38,6 +38,7 @@ class RansomLookConverter:
     MAX_NOTE_CONTENT_LENGTH = 1_000_000
     MAX_PROFILE_REFERENCES = 25
     MAX_ACTOR_VALUES = 100
+    RELATIVE_FILE_EXTENSIONS = (".php", ".html", ".htm", ".asp", ".aspx", ".jsp")
     ATTACK_ID = re.compile(r"^T[0-9]{4}(?:\.[0-9]{3})?$")
 
     @staticmethod
@@ -1165,6 +1166,15 @@ class RansomLookConverter:
             return None
         candidate = value.strip()
         parsed = urlsplit(candidate)
+        if (
+            not parsed.scheme
+            and not parsed.netloc
+            and "/" not in candidate
+            and parsed.path.casefold().endswith(self.RELATIVE_FILE_EXTENSIONS)
+        ):
+            # A bare file name such as ``archive.php?company=299`` is relative
+            # to the leak site, not to RansomLook, and is not a hostname.
+            return None
         if (
             not parsed.scheme
             and not parsed.netloc
