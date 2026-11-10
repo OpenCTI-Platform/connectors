@@ -24,10 +24,12 @@ from typing import TYPE_CHECKING, Any
 import stix2
 from connector.converter import FeedConverter
 from connector.hunting import HuntingSource
+from connector.quota import REFRESH_SECONDS, QuotaMonitor, is_quota_exhausted_error
 from connector.state import CollectionCursor, ConnectorState
 from connectors_sdk import ApiClientError
 from connectors_sdk.models import TLPMarking
 from polyswarm_client import (
+    PolySwarmAccountClient,
     PolySwarmTaxiiClient,
     TaxiiAuthenticationError,
     TaxiiPage,
@@ -77,6 +79,7 @@ class PolySwarmFeedConnector:
         helper: OpenCTIConnectorHelper,
         taxii_client: PolySwarmTaxiiClient | None = None,
         hunting_client: Any = None,
+        account_client: Any = None,
     ) -> None:
         """Initialize the connector.
 
@@ -86,6 +89,8 @@ class PolySwarmFeedConnector:
             taxii_client: Optional TAXII client (injected in tests).
             hunting_client: Optional live hunting client, handed to the
                 hunting source (injected in tests).
+            account_client: Optional account client with ``account_features()``
+                (injected in tests), used to read the plan and quotas.
         """
         self.config = config
         self.helper = helper
@@ -97,6 +102,19 @@ class PolySwarmFeedConnector:
             api_key=polyswarm.api_key.get_secret_value(),
         )
         self.hunting_client = hunting_client
+        # Read-only account plan and quota visibility; never raises. Re-read at
+        # most hourly, a little sooner than the run period so a run never skips it.
+        period = config.connector.duration_period.total_seconds()
+        self.quota = QuotaMonitor(
+            account_client
+            or PolySwarmAccountClient(
+                api_url=polyswarm.api_url,
+                api_key=polyswarm.api_key.get_secret_value(),
+            ),
+            self.logger,
+            warn_below=polyswarm.quota_warn_below,
+            refresh_seconds=int(min(REFRESH_SECONDS, max(60, period - 30))),
+        )
         self.author = build_author()
         self.tlp_marking = build_tlp_marking(polyswarm.tlp_level)
 
@@ -130,6 +148,7 @@ class PolySwarmFeedConnector:
     def _run_once(self) -> None:
         polyswarm = self.config.polyswarm
         now = datetime.now(tz=timezone.utc)
+        self.quota.refresh()
 
         state = ConnectorState()
         state.inject_dependencies(self.helper)
@@ -163,7 +182,7 @@ class PolySwarmFeedConnector:
                 self.logger.error(
                     "PolySwarm feed import failed, progress up to the last sent "
                     "page is kept",
-                    {"collection": collection, "error": str(err)},
+                    {"collection": collection, "error": self._describe_error(err)},
                 )
 
         if converter.skipped_items:
@@ -180,7 +199,7 @@ class PolySwarmFeedConnector:
             except Exception as err:
                 self.logger.error(
                     "PolySwarm live hunting import failed, its state is unchanged",
-                    {"error": str(err)},
+                    {"error": self._describe_error(err)},
                 )
 
         state.last_run = now
@@ -249,7 +268,9 @@ class PolySwarmFeedConnector:
         except Exception as err:
             if work_id is not None:
                 self.helper.api.work.to_processed(
-                    work_id, f"PolySwarm feed {collection} failed: {err}", in_error=True
+                    work_id,
+                    f"PolySwarm feed {collection} failed: {self._describe_error(err)}",
+                    in_error=True,
                 )
             raise
 
@@ -306,7 +327,9 @@ class PolySwarmFeedConnector:
                 self._send(objects, work_id)
             except Exception as err:
                 self.helper.api.work.to_processed(
-                    work_id, f"PolySwarm live hunting failed: {err}", in_error=True
+                    work_id,
+                    f"PolySwarm live hunting failed: {self._describe_error(err)}",
+                    in_error=True,
                 )
                 raise
             self.helper.api.work.to_processed(
@@ -314,6 +337,15 @@ class PolySwarmFeedConnector:
             )
         state.hunting = hunting_state
         state.save()
+
+    def _describe_error(self, err: Exception) -> str:
+        """The error text; a quota failure also shows the remaining quota."""
+        if not is_quota_exhausted_error(err):
+            return str(err)
+        return (
+            f"PolySwarm quota exhausted or rate limited (HTTP 429): {err}. "
+            f"Account: {self.quota.exhausted_summary()}"
+        )
 
     # ------------------------------------------------------------------
     # OpenCTI helpers

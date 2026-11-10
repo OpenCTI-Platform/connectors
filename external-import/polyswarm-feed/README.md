@@ -19,6 +19,7 @@ This external-import connector imports [PolySwarm](https://polyswarm.io/)'s cura
   - [Indicator lifetime](#indicator-lifetime)
   - [State and resuming](#state-and-resuming)
   - [Volume](#volume)
+  - [Quota](#quota)
 - [Troubleshooting](#troubleshooting)
 
 ## Introduction
@@ -39,6 +40,7 @@ The connector only pulls data.
 
 - **Nothing from OpenCTI is sent to PolySwarm.** No observables, entities, reports, markings or users are uploaded, and the connector never submits files for scanning.
 - **Where requests go.** Outbound calls go to the PolySwarm API URL only (`POLYSWARM_API_URL`, default `https://api.polyswarm.network`).
+- **Account quota.** Once an hour at most, the connector reads your account's plan and quotas from the same API URL. Only your API key is sent.
 - **What is sent with each request.** Your PolySwarm account number and API key, for authentication, plus the paging and time-range parameters needed to ask for new data.
 
 ## Installation
@@ -85,6 +87,7 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 | Hunting backfill hours       | `hunting_backfill_hours`       | `POLYSWARM_HUNTING_BACKFILL_HOURS`       | `24`                            | No        | How many hours of hunting hits to import on the first run only.                                                                     |
 | Hunting indicator valid days | `hunting_indicator_valid_days` | `POLYSWARM_HUNTING_INDICATOR_VALID_DAYS` | `30`                            | No        | Days from import time until hunting indicators expire.                                                                              |
 | TLP level                    | `tlp_level`                    | `POLYSWARM_TLP_LEVEL`                    | `clear`                         | No        | TLP marking applied to every object the connector sends. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.          |
+| Quota warning threshold      | `quota_warn_below`             | `POLYSWARM_QUOTA_WARN_BELOW`             | `100`                           | No        | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (`0` turns warnings off). See [Quota](#quota). |
 | Max objects per run          | `max_objects_per_run`          | `POLYSWARM_MAX_OBJECTS_PER_RUN`          | `20000`                         | No        | Stop paging once this many objects have been collected in a run. The next run resumes where this one stopped.                       |
 
 ## Deployment
@@ -171,6 +174,23 @@ Because each sample brings one malware-analysis object per engine, a sample is t
 - Lower `POLYSWARM_FEED_BACKFILL_DAYS` for the first run.
 - Lower `POLYSWARM_MAX_OBJECTS_PER_RUN` so each run does a smaller batch.
 - Shorten `POLYSWARM_FEED_INDICATOR_VALID_DAYS` if you want hashes to age out sooner.
+
+### Quota
+
+The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at the start of a run, at most once an hour, it makes one request to the account endpoint (`GET /v3/public/accounts`, the call behind the PolySwarm SDK's `account_features()`). The account number in the response is never read or logged.
+
+What is logged, at info level:
+
+```
+[QUOTA] plan Example Plan; daily API calls remaining 640 of 1000; sandbox_request: 300 of 500 remaining; usage window ends 2026-12-01T00:00:00+00:00
+```
+
+The sandbox and hunt allowances shown are the account features `sandbox_request`, `historical_hunt`, `live_hunt` and `manual_analysis`.
+
+- **Warning.** When the remaining daily API quota, or one of those allowances, is below `POLYSWARM_QUOTA_WARN_BELOW` (default `100`), the connector logs a warning. Set it to `0` to turn warnings off.
+- **Unlimited or exhausted.** A daily limit of `0` means the account has no cap: `daily_api_limit` and `daily_api_remaining` are both `0` on an uncapped plan (measured on an internal plan, where every feature also reports `base_uses` of `0`). Such an account is shown as unlimited and never warned about. A limit above `0` with nothing remaining means the quota is exhausted. A feature the plan does not include is reported as not on this plan. Reading `0` as "no cap" is inferred from the SDK and from that one measurement.
+- **When a request fails because of quota.** PolySwarm answers HTTP 429 when usage limits are exceeded (the response does not say whether it is a quota or a rate limit). After the client's own retries, the failed work's error message in OpenCTI, and the connector log, say the quota is exhausted or rate limited and show the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the message says so. Progress up to the last sent page is kept, as for any failure.
+- **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and the import carries on.
 
 ## Troubleshooting
 

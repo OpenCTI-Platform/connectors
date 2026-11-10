@@ -103,6 +103,15 @@ class PolySwarmFeedConfig(BaseConfigModel):
         ge=1,
     )
 
+    # --- Account quota (read-only) ---
+    quota_warn_below: int = Field(
+        description="Log a warning when the remaining daily API quota, or a sandbox "
+        "or hunt allowance, falls below this number (0 = no warnings). Accounts "
+        "with no cap are never warned.",
+        default=100,
+        ge=0,
+    )
+
     # --- Import behaviour ---
     tlp_level: TLPLevel = Field(
         description="TLP marking applied to every object the connector sends.",

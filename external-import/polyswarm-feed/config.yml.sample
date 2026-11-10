@@ -22,3 +22,4 @@ polyswarm:
   hunting_indicator_valid_days: 30 # optional (default: 30)
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
   max_objects_per_run: 20000 # optional (default: 20000)
+  quota_warn_below: 100 # optional, warn when remaining quota is below this, 0 = no warnings (default: 100)
