@@ -18,6 +18,11 @@ from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
 from pycti import OpenCTIConnectorHelper
 
+# Names that all mean PolySwarm's public community: an account's community list
+# shows it as "public", the API's default is "default", and task records say
+# "mainnet1".
+PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
 
 class PolySwarmConnector:
     """OpenCTI internal enrichment connector for PolySwarm file scanning and sandbox analysis."""
@@ -334,7 +339,7 @@ class PolySwarmConnector:
     def _upload_community_allowed(self) -> bool:
         """True unless uploads would go to the public community without opt-in."""
         community = (self.config.polyswarm.community or "").strip().lower()
-        if community not in ("", "default"):
+        if community not in PUBLIC_COMMUNITY_NAMES:
             return True
         return self.config.polyswarm.allow_public_community is True
 

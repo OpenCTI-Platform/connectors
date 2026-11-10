@@ -275,7 +275,10 @@ class TestEnrichFileOrchestration:
 class TestPublicCommunityGuard:
     """Uploads to the public community need POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true."""
 
-    @pytest.mark.parametrize("community", ["default", "DEFAULT", " default ", ""])
+    @pytest.mark.parametrize(
+        "community",
+        ["default", "DEFAULT", " default ", "", "public", "Public", "mainnet1"],
+    )
     def test_public_community_without_opt_in_is_refused(self, community):
         c = make_connector(
             polyswarm_overrides={

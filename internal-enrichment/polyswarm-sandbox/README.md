@@ -38,7 +38,7 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 The connector sends data to PolySwarm only when it enriches an artifact, which is manual by default (`CONNECTOR_AUTO=false`).
 
 - **The file.** The artifact's file, its file name, and its archive password if one is set are uploaded to PolySwarm for a multi-engine scan. When `POLYSWARM_SANDBOX_ENABLED=true` (the default), the file is also detonated in the selected sandbox provider(s) (CAPE, Triage).
-- **Where it goes.** Uploads go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public `default` community become visible to the PolySwarm community, so the connector refuses to upload there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
+- **Where it goes.** Uploads go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public community (`default`, also listed as `public`) become visible to the PolySwarm community, so the connector refuses to upload there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
