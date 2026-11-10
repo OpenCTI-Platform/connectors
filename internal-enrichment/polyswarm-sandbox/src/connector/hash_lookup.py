@@ -26,6 +26,12 @@ from connector.scan_processor import ScanProcessor
 _HASH_PREFERENCE = (("SHA-256", 64), ("SHA-1", 40), ("MD5", 32))
 
 
+def _is_timeout_status(result: dict) -> bool:
+    """True for any timeout variant a provider reports (TIMED OUT, TIMEDOUT, ...)."""
+    status = str(result.get("status", "")).upper()
+    return "TIMED OUT" in status or "TIMEDOUT" in status
+
+
 class HashLookupMixin:
     """Lookup by hash and detonate-by-hash, using the connector's own helpers."""
 
@@ -371,6 +377,7 @@ class HashLookupMixin:
             llm_task_ids = self._fire_llm_for_existing(found)
 
             held_outcome = ""
+            no_analysis = False
             if missing and ps.sandbox_detonate_by_hash is True:
                 started, held_outcome = self._detonate_held_sample(
                     entity, sha256, missing
@@ -383,21 +390,15 @@ class HashLookupMixin:
                         ps.sandbox_timeout,
                         llm_task_ids,
                     )
-                    # A provider still pending at the timeout (the timeout
-                    # note was sent while polling) is an explicit failure
-                    # result, not an empty one.
-                    for provider in started:
-                        if polled.get(provider) is None:
-                            polled[provider] = {
-                                "status": "TIMED OUT",
-                                "error": "The sandbox analysis did not complete "
-                                f"within {ps.sandbox_timeout} seconds",
-                            }
-                    results.update(polled)
+                    # A provider still pending at the local timeout already
+                    # got a timeout note while polling; it has no report to
+                    # attach, so it is left out of the results.
+                    results.update({p: r for p, r in polled.items() if r})
                     tasks.update(started)
-                    if not any(
-                        r.get("status") != "TIMED OUT" for r in results.values() if r
-                    ):
+                    no_analysis = not any(
+                        r and not _is_timeout_status(r) for r in results.values()
+                    )
+                    if no_analysis and not results:
                         return {
                             "status": "error",
                             "error": "No sandbox analysis completed before the "
@@ -456,6 +457,13 @@ class HashLookupMixin:
                 stix_objects,
                 llm_task_ids=llm_task_ids,
             )
+            if no_analysis:
+                # Every provider reported a timeout: the notes above explain
+                # it, and the enrichment is not acknowledged as a success.
+                return {
+                    "status": "error",
+                    "error": "No sandbox analysis completed before the timeout",
+                }
             return None
         except PolySwarmAPIError:
             raise

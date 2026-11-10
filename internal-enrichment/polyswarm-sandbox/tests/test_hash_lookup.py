@@ -534,7 +534,9 @@ class TestDetonateByHash:
         assert titles == ["TRIAGE Sandbox Timeout"]
         abstracts = {n["abstract"] for n in _notes(c)}
         assert "PolySwarm Cape Sandbox Analysis" in abstracts
-        assert "PolySwarm TRIAGE Sandbox - Execution TIMED OUT" in abstracts
+        # The timeout is reported once (the note above), never as a report
+        assert not any("TRIAGE" in a and "TIMED OUT" in a for a in abstracts)
+        assert not any("Sandbox_triage" in n for n in _file_names(c))
 
     def test_all_providers_time_out_returns_error(self):
         c = _connector(
@@ -550,6 +552,46 @@ class TestDetonateByHash:
         titles = sorted(call.args[1] for call in c._send_error_note.call_args_list)
         assert titles == ["CAPE Sandbox Timeout", "TRIAGE Sandbox Timeout"]
         c.helper.stix2_create_bundle.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "status", ["TIMEDOUT", "TIMED OUT WITH QUOTA REIMBURSEMENT", "timed out"]
+    )
+    def test_provider_reported_timeout_variants_return_error(self, status):
+        c = _connector(
+            latest={}, sandbox_provider="both", sandbox_detonate_by_hash=True
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=lambda sha, prov, *a, **k: f"task-{prov}"
+        )
+        c._poll_sandbox_results = MagicMock(
+            return_value={
+                "cape": _task(id="task-cape", status=status),
+                "triage": _task("triage", id="task-triage", status=status),
+            }
+        )
+        result = _run(c)
+        assert result["status"] == "error"
+        assert "timeout" in result["error"]
+        # the provider's own timeout explanation still reaches the analyst
+        assert _notes(c)
+        c.polyswarm_client.generate_pdf.assert_not_called()
+
+    def test_timeout_plus_real_failure_keeps_failure_path(self):
+        c = _connector(
+            latest={}, sandbox_provider="both", sandbox_detonate_by_hash=True
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=lambda sha, prov, *a, **k: f"task-{prov}"
+        )
+        c._poll_sandbox_results = MagicMock(
+            return_value={
+                "cape": _task(id="task-cape", status="FAILED"),
+                "triage": None,
+            }
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        assert not any("Sandbox_triage" in n for n in _file_names(c))
 
     def test_all_time_out_forwards_original_bundle(self):
         c = _connector(latest={}, sandbox_detonate_by_hash=True, sandbox_timeout=0)
