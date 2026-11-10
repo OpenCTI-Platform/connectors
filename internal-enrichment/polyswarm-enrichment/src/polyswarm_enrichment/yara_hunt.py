@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from itertools import islice
 
 import stix2
+from polyswarm_enrichment.pivots import PIVOT_LABEL
 from polyswarm_enrichment.polyswarm_client import polyswarm_exceptions
 from pycti import Note
 
@@ -474,6 +475,9 @@ def _file_observable(converter, result) -> dict:
             hashes[algo] = value
     file_obj = json.loads(stix2.File(hashes=hashes, allow_custom=True).serialize())
     file_obj["x_opencti_created_by_ref"] = converter.author.id
+    # Same label the pivots use, so these files are never rescanned, downloaded
+    # or pivoted again when auto-enrichment picks them up.
+    file_obj["x_opencti_labels"] = [PIVOT_LABEL]
     return file_obj
 
 

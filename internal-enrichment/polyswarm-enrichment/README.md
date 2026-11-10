@@ -239,10 +239,10 @@ Warnings:
   import creates hundreds of Attack-Patterns, and each would trigger a search.
   When the helper reports auto-enrichment is on, the connector skips the
   technique pivot (Attack-Patterns are still left untouched).
-- Files imported by either pivot are labelled `polyswarm-pivot-result`, and a
+- Files imported by either pivot, or by a YARA hunt, are labelled `polyswarm-pivot-result`, and a
   file with that label is never pivoted again, so auto-enrichment can't follow
   the pivots outward level after level. Remove the label from a file if you do
-  want it pivoted. Pivot-imported files are also never rescanned or
+  want it pivoted. These imported files are also never rescanned or
   downloaded, even with those options on.
 - Each pivot spends PolySwarm lookups from your quota. Keep the limits small.
 
@@ -356,7 +356,9 @@ quietly. For a YARA Indicator the connector:
    while it polls, so on a busy queue keep the timeout modest.
 3. Imports up to `POLYSWARM_YARA_HUNT_MAX_RESULTS` matched files as file
    observables with their hashes, each linked from the Indicator with a
-   `related-to` relationship.
+   `related-to` relationship. These files carry the `polyswarm-pivot-result`
+   label, so they are never rescanned, downloaded or pivoted, even with
+   auto-enrichment on.
 4. Adds one Note on the Indicator with the hunt id, the window, the rule name,
    the number of matches PolySwarm reports, the number imported and, for the
    first three files, the first five matched strings PolySwarm returns.

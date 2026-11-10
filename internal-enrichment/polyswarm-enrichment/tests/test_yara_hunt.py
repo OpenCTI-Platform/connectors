@@ -499,6 +499,17 @@ class TestStix:
         )
         assert file_obj["id"] == expected.id
 
+    def test_files_carry_the_pivot_result_label(self):
+        from polyswarm_enrichment.pivots import has_pivot_label
+
+        converter = ConverterToStix(StubHelper())
+        objects = build_file_objects(converter, INDICATOR, _outcome())
+        files = [o for o in objects if o["type"] == "file"]
+        assert files
+        for f in files:
+            assert f["x_opencti_labels"] == ["polyswarm-pivot-result"]
+            assert has_pivot_label(f)
+
     def test_invalid_extra_hashes_are_dropped(self):
         converter = ConverterToStix(StubHelper())
         result = _result(SHA_A)
