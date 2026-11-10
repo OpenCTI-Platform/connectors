@@ -347,6 +347,11 @@ class TestUrlResults:
         assert "github.com" in domains
         rels = [o for o in objects if o["type"] == "relationship"]
         assert any(
+            r["source_ref"] == URL_ID and r["relationship_type"] == "related-to"
+            for r in rels
+        )
+        # OpenCTI refuses communicates-with from a Url
+        assert not any(
             r["source_ref"] == URL_ID and r["relationship_type"] == "communicates-with"
             for r in rels
         )

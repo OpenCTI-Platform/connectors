@@ -1908,7 +1908,9 @@ class StixBuilder:
             }
             objects.append(domain_obj)
             objects.append(
-                self._create_rel(entity["id"], "communicates-with", domain_id)
+                self._create_rel(
+                    entity["id"], self._contact_rel_type(entity), domain_id
+                )
             )
 
         # === IP OBSERVABLES ===
@@ -1943,7 +1945,9 @@ class StixBuilder:
                     ip_obj["x_polyswarm_reason"] = c2.get("reason")
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
@@ -1973,12 +1977,27 @@ class StixBuilder:
             }
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
 
         return objects
+
+    @staticmethod
+    def _contact_rel_type(entity: dict) -> str:
+        """Relationship from the detonated observable to a host it contacted.
+
+        OpenCTI refuses ``communicates-with`` from a Url, so a detonated URL is
+        ``related-to`` the domains and IPs its sandbox run contacted.
+        """
+        return (
+            "related-to"
+            if str(entity.get("id", "")).startswith("url--")
+            else "communicates-with"
+        )
 
     # ============= HELPER OBJECTS =============
 
