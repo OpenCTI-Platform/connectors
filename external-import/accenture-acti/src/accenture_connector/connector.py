@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 from botocore.exceptions import ClientError
+from connectors_sdk import ConnectorError, UnknownError
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -415,10 +416,11 @@ class ConnectorAccenture:
             self.helper.api.work.to_processed(work_id, message)
         return bundles_sent
 
-    def process_message(self) -> None:
+    def process_message(self) -> Optional[List[Dict[str, Any]]]:
         """
         Connector main process to collect intelligence
-        :return: None
+        :return: The errors of a failed run, in the pycti format, reported to OpenCTI
+            with the connector's ping. None when the run succeeds.
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
@@ -515,10 +517,16 @@ class ConnectorAccenture:
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
+        except ConnectorError as connector_err:
+            self.helper.connector_logger.error(
+                f"[ERROR] Connector failed: {connector_err}", exc_info=True
+            )
+            return [connector_err.convert_to_pycti_format()]
         except Exception as err:
             self.helper.connector_logger.error(
                 f"[ERROR] Connector failed: {err}", exc_info=True
             )
+            return [UnknownError(str(err)).convert_to_pycti_format()]
 
     def run(self) -> None:
         """
