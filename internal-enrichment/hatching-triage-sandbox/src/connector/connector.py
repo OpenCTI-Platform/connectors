@@ -58,7 +58,14 @@ class HatchingTriageSandboxConnector:
         https://private.tria.ge/api -> https://private.tria.ge/<sample_id>/.
         """
         parsed = urlsplit(self.base_url)
-        return f"{parsed.scheme}://{parsed.netloc}/{sample_id}/"
+        # Use hostname and port, not netloc, so credentials that may be set in
+        # the base URL (user:password@) never end up in the OpenCTI link.
+        host = parsed.hostname or ""
+        if ":" in host:  # IPv6 literal
+            host = f"[{host}]"
+        if parsed.port is not None:
+            host += f":{parsed.port}"
+        return f"{parsed.scheme}://{host}/{sample_id}/"
 
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type

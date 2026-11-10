@@ -255,6 +255,15 @@ class TestBuildReportUrl:
                 "https://us-sandbox.recordedfuture.com/api",
                 "https://us-sandbox.recordedfuture.com/sample-123/",
             ),
+            (
+                "https://user:secret@private.tria.ge/api",
+                "https://private.tria.ge/sample-123/",
+            ),
+            ("https://triage.local:8443/api", "https://triage.local:8443/sample-123/"),
+            (
+                "https://[2001:db8::1]:8443/api",
+                "https://[2001:db8::1]:8443/sample-123/",
+            ),
         ],
     )
     def test_report_url_uses_the_configured_host(self, connector, base_url, expected):
