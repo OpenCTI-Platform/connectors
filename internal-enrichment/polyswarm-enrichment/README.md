@@ -104,6 +104,10 @@ Key features:
 | `polyswarm_network_url_send_query` | `POLYSWARM_NETWORK_URL_SEND_QUERY` | No | Send a URL's query string and fragment for lookup (default: `false`, only scheme, host and path are sent) |
 | `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
 | `polyswarm_quota_warn_below` | `POLYSWARM_QUOTA_WARN_BELOW` | No | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (default: `100`, `0` turns warnings off). See [Quota](#quota) |
+| `polyswarm_rescan_older_than_days` | `POLYSWARM_RESCAN_OLDER_THAN_DAYS` | No | Rescan a sample PolySwarm already holds when its latest scan is older than this many days, or it has no completed scan (default: `0` = never). Each rescan spends PolySwarm scan quota |
+| `polyswarm_rescan_timeout` | `POLYSWARM_RESCAN_TIMEOUT` | No | Seconds to wait for a rescan to finish (default: `300`). On timeout the previous result is used and the Note says so |
+| `polyswarm_download_sample` | `POLYSWARM_DOWNLOAD_SAMPLE` | No | **Stores LIVE MALWARE in OpenCTI.** Download the sample for a File PolySwarm holds and create an Artifact from it (default: `false`). Spends PolySwarm download quota |
+| `polyswarm_download_max_size_mb` | `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` | No | Largest sample, in MB, that will be downloaded (default: `20`) |
 | `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
@@ -199,6 +203,74 @@ unless `CONNECTOR_MAX_TLP` is `TLP:RED`.
 
 Notes, Indicators, relationships and related file observables created for a
 URL, domain or IP carry the same markings as the source observable.
+
+#### Rescanning stale hashes (off by default)
+
+By default the connector reads the latest scan PolySwarm already has. Set
+`POLYSWARM_RESCAN_OLDER_THAN_DAYS` to a number of days (for example `30`) and,
+for a file hash PolySwarm already holds, it asks PolySwarm to rescan the sample
+when either:
+
+- the latest scan is older than that many days, or
+- PolySwarm has the sample but no completed scan (a scan that is still running
+  is left to finish, not repeated).
+
+The connector then waits up to `POLYSWARM_RESCAN_TIMEOUT` seconds (default
+`300`) and enriches from the new result. If the rescan does not finish in time,
+or fails, it enriches from the previous result and the Note has a "Rescan"
+section saying so (after a quota error it also lists the account quota). Nothing is uploaded: the
+rescan is of the copy PolySwarm already holds, and a hash PolySwarm does not
+know is never rescanned. At most one rescan runs per enrichment, after the
+result to use is chosen, in the community that result came from. With
+`POLYSWARM_COMMUNITY=private` both communities are searched first, so a stale
+copy in one community is not rescanned when the other holds a fresh one. The
+age tested is that of the scan the enrichment would otherwise use. If PolySwarm
+holds the sample with no completed scan and the rescan fails or times out, the
+Note says that instead of "Hash Not Found".
+
+Each rescan spends PolySwarm scan quota, which is why this is off. A rescan
+also holds the enrichment for up to the timeout, so keep `CONNECTOR_AUTO=false`
+or a low day limit on busy instances.
+
+#### Downloading the sample as an Artifact (off by default)
+
+> WARNING: this stores a live malware sample in your OpenCTI file storage.
+> Anyone with access to the Artifact, and any other connector or export that
+> reads Artifacts, can obtain the file. Turn it on only if your OpenCTI
+> deployment is meant to hold malware (restricted access, isolated storage, no
+> automatic export or scanning of uploads that could execute it). It also
+> spends PolySwarm download quota.
+
+With `POLYSWARM_DOWNLOAD_SAMPLE=true`, when you enrich a File (StixFile)
+observable that PolySwarm holds, the connector downloads the sample and creates
+an Artifact observable with the file content and its MD5, SHA-1 and SHA-256
+hashes, plus a `related-to` relationship from the Artifact to the File. The
+Artifact carries the same markings (TLP and others) as the File, is labelled
+`polyswarm:live-malware-sample` and its description says it is a live malware
+sample. The Artifact can then be used by other connectors, such as a sandbox
+connector.
+
+- Samples larger than `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` (default `20`) are not
+  stored. When PolySwarm reports the size the check happens before the
+  download; otherwise the download is aborted as soon as the bytes received
+  pass the limit.
+- Size matters twice: the Artifact travels base64 encoded in one bundle, so a
+  20 MB sample is about 27 MB on the wire and in the connector's memory. Raise
+  the limit with care, and check your OpenCTI and RabbitMQ message size limits.
+- If OpenCTI already has an Artifact with the file's SHA-256, nothing is
+  downloaded; the existing Artifact is linked to the File with `related-to`.
+- A sandbox connector with auto-enrichment on (for example
+  `CONNECTOR_AUTO=true` on PolySwarm Sandbox) will detonate each new Artifact
+  this creates. That spends sandbox quota and runs the malware in the sandbox,
+  so decide on purpose whether the two connectors should be chained.
+- The Artifact is created only if the downloaded bytes hash to the SHA-256
+  PolySwarm reported.
+- A skipped or failed download never stops the enrichment. The Note has a
+  "Sample Download" section saying what happened.
+- Only File observables are downloaded. Artifact observables already hold their
+  file.
+- The sample is held in the connector's memory while it is processed. No file
+  is written inside the connector container.
 
 Trigger enrichment:
 - Manually via the OpenCTI UI observable detail page
@@ -352,6 +424,8 @@ What leaves your environment, and when. The connector sends data to PolySwarm on
 
 - **File observables: hashes only.** The observable's file hash (SHA-256, SHA-1 or MD5) is sent to PolySwarm to look up existing scan results, and the SHA-256 is used to look up associated indicators. Files are never uploaded.
 - **URL, domain and IP observables.** The observable's value (the URL, domain or IP) is sent to PolySwarm for lookup. For URLs, only the scheme, host and path are sent by default: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_NETWORK_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password are never sent. For IPs and domains, the same value is also used to search for related files. Private and internal values (see [Usage](#usage)) are never sent, and nothing is submitted for scanning.
+- **Rescan (opt-in).** With `POLYSWARM_RESCAN_OLDER_THAN_DAYS` above 0, the SHA-256 of a sample PolySwarm already holds is sent to ask PolySwarm to rescan its own copy. This spends scan quota in the community that holds the sample. No file content is sent.
+- **Sample download (opt-in).** With `POLYSWARM_DOWNLOAD_SAMPLE=true`, the SHA-256 of a File PolySwarm holds is sent to download the sample, and the sample is then stored in OpenCTI as an Artifact. This brings live malware into your OpenCTI storage (see [Usage](#usage)) and spends download quota. Nothing about the file leaves your environment, because it flows from PolySwarm to you.
 - **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
 - **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.

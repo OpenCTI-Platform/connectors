@@ -1,3 +1,4 @@
+import io
 import ipaddress
 import logging
 import socket
@@ -10,6 +11,7 @@ from urllib.parse import urlparse, urlsplit, urlunsplit
 import requests
 from dateutil import parser as dateutil_parser
 from polyswarm_enrichment.polyswarm_client import PolyswarmAPI, polyswarm_exceptions
+from polyswarm_enrichment.quota import is_quota_exhausted_error
 
 # OpenCTI entity types enriched by URL search (and IOC search for IPs/domains)
 NETWORK_OBSERVABLE_TYPES = ("Url", "Domain-Name", "IPv4-Addr", "IPv6-Addr")
@@ -176,6 +178,25 @@ def _parse_scan_date(value: Any) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed
+
+
+class _TooLarge(Exception):
+    """Raised by _CappedBuffer to stop a download that passes the size limit."""
+
+
+class _CappedBuffer(io.BytesIO):
+    """In-memory download target that aborts once more than ``limit`` bytes arrive."""
+
+    def __init__(self, limit: int) -> None:
+        super().__init__()
+        self.limit = limit
+        self.exceeded = False
+
+    def write(self, data) -> int:
+        if self.tell() + len(data) > self.limit:
+            self.exceeded = True
+            raise _TooLarge("download passed the size limit")
+        return super().write(data)
 
 
 class CircuitBreaker:
@@ -488,6 +509,8 @@ class ConnectorClient:
                 "poly_unite": [malware_family] if malware_family else [],
                 "tag_link_families": tag_link_families,
                 "filenames": [result.filename] if result.filename else [],
+                "size": getattr(result, "size", None),
+                "last_scanned_dt": getattr(result, "last_scanned", None),
                 "detections": {"malicious": positives, "total": total},
             }
 
@@ -603,21 +626,27 @@ class ConnectorClient:
                 f"Searching PolySwarm ({community_name}) for hash: {hash_value}"
             )
 
-            results = polyswarm_instance.search(hash_value)
+            results = list(polyswarm_instance.search(hash_value))
 
+            data = None
             for result in results:
                 data = self._parse_result(result, community_name)
                 if data:
-                    # Success - reset circuit breaker
-                    if circuit:
-                        circuit.record_success()
+                    # Kept for the opt-in rescan decision, removed before returning
+                    data["_source_result"] = result
+                    break
 
-                    self.helper.connector_logger.info(
-                        f"[CLIENT] PolySwarm ({community_name}) data: "
-                        f"SHA256={data['sha256']}, Score={data['x_opencti_score']}, "
-                        f"Last Seen={data['last_seen']}"
-                    )
-                    return data, None
+            if data:
+                # Success - reset circuit breaker
+                if circuit:
+                    circuit.record_success()
+
+                self.helper.connector_logger.info(
+                    f"[CLIENT] PolySwarm ({community_name}) data: "
+                    f"SHA256={data['sha256']}, Score={data['x_opencti_score']}, "
+                    f"Last Seen={data['last_seen']}"
+                )
+                return data, None
 
             # No results found (but no error) - this is not a failure
             self.helper.connector_logger.info(
@@ -632,6 +661,9 @@ class ConnectorClient:
                 "is_quota_error": False,
                 "is_no_results": True,
             }
+            if results:
+                # PolySwarm holds the sample but nothing usable finished scanning
+                error_info["held_results"] = results
             return None, error_info
 
         except polyswarm_exceptions.NoResultsException:
@@ -708,7 +740,7 @@ class ConnectorClient:
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
-    def query_polyswarm(self, hash_value: str) -> dict[str, Any]:
+    def _search_communities(self, hash_value: str) -> dict[str, Any]:
         """
         Query PolySwarm API with circuit breaker protection.
 
@@ -789,6 +821,15 @@ class ConnectorClient:
                                     "error_message": str(e),
                                     "is_no_results": False,
                                 }
+
+                result["_held"] = [
+                    (name, err["held_results"])
+                    for name, err in (
+                        ("private", private_error),
+                        ("default", default_error),
+                    )
+                    if err and err.get("held_results")
+                ]
 
                 # Collect reportable errors (not just "no results")
                 if private_error and not private_error.get("is_no_results"):
@@ -871,6 +912,10 @@ class ConnectorClient:
                     hash_value, self.polyswarm, self.polyswarm_community
                 )
 
+                if error and error.get("held_results"):
+                    result["_held"] = [
+                        (self.polyswarm_community, error["held_results"])
+                    ]
                 if data:
                     result["data"] = data
                     result["primary"] = data
@@ -900,6 +945,174 @@ class ConnectorClient:
                 }
             )
             return result
+
+    # ------------------------------------------------------------------
+    # Rescan (opt-in)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _scan_time(result) -> datetime | None:
+        """When a scan result was produced (None if the result doesn't say)."""
+        stamp = getattr(result, "last_scanned", None) or getattr(
+            result, "created", None
+        )
+        return _parse_scan_date(stamp)
+
+    def _rescan_reason(self, held: list, data: dict | None, source=None) -> str | None:
+        """Why a held sample should be rescanned, or None to leave it alone.
+
+        ``source`` is the scan result ``data`` was built from, so the age is
+        that of the scan actually used.
+        """
+        days = getattr(getattr(self, "config", None), "rescan_older_than_days", 0)
+        if not days or days <= 0:
+            return None
+        if data is None:
+            # PolySwarm holds the sample but nothing usable finished scanning.
+            # A scan that is still running is left to finish, never doubled.
+            in_progress = any(
+                not getattr(r, "failed", False)
+                and not getattr(r, "window_closed", True)
+                for r in held
+            )
+            return None if in_progress else "no completed scan"
+        scanned = (
+            self._scan_time(source) if source is not None else None
+        ) or _parse_scan_date(data.get("last_scanned_dt"))
+        if scanned is None:
+            return None
+        age_days = (datetime.now(timezone.utc) - scanned).days
+        if age_days > days:
+            return f"latest scan is {age_days} days old (limit {days})"
+        return None
+
+    def _instance_for(self, community_name: str) -> PolyswarmAPI:
+        """The SDK instance bound to a community."""
+        if community_name != self.polyswarm_community and self.polyswarm_default:
+            return self.polyswarm_default
+        return self.polyswarm
+
+    def _run_rescan(
+        self, sha256: str, instance: PolyswarmAPI, community_name: str, reason: str
+    ) -> tuple[dict | None, dict]:
+        """Rescan in one community and wait. Returns (fresh data or None, outcome).
+
+        Nothing is uploaded: PolySwarm rescans its own copy. Timeouts and errors
+        never fail the enrichment; ``outcome`` records what happened.
+        """
+        timeout = getattr(self.config, "rescan_timeout", 300)
+        self.helper.connector_logger.info(
+            f"[CLIENT] Rescanning in PolySwarm ({community_name}): {reason}"
+        )
+        outcome = {"reason": reason, "status": "failed", "timeout": timeout}
+        fresh = None
+        try:
+            started = instance.rescan(sha256, hash_type="sha256")
+            done = instance.wait_for(started, timeout=timeout)
+            fresh = self._parse_result(done, community_name)
+            outcome["status"] = "completed" if fresh else "no_result"
+        except polyswarm_exceptions.TimeoutException:
+            outcome["status"] = "timed_out"
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Rescan did not finish within {timeout}s ({community_name})"
+            )
+        except Exception as e:  # quota, auth, network: never fail the enrichment
+            outcome["error"] = type(e).__name__
+            if is_quota_exhausted_error(e):
+                outcome["quota_exhausted"] = True
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Rescan failed ({community_name}): {type(e).__name__}"
+            )
+        return fresh, outcome
+
+    def query_polyswarm(self, hash_value: str) -> dict[str, Any]:
+        """Query PolySwarm (both communities in private mode), then rescan once.
+
+        The opt-in rescan is decided after the primary result is chosen, so at
+        most one rescan runs per enrichment, in the community of the result the
+        enrichment uses. See ``_search_communities`` for the result shape; a
+        top-level ``rescan`` key is set when a rescan was due but no result
+        exists to carry it.
+        """
+        result = self._search_communities(hash_value)
+        held = result.pop("_held", [])
+        try:
+            data = result.get("data")
+            source = data.get("_source_result") if data else None
+            if data:
+                held_results = [source] if source is not None else []
+                community = data.get("community") or self.polyswarm_community
+            elif held:
+                community, held_results = held[0]
+            else:
+                return result
+            reason = self._rescan_reason(held_results, data, source)
+            if reason:
+                sha256 = data["sha256"] if data else held_results[0].sha256
+                fresh, outcome = self._run_rescan(
+                    sha256, self._instance_for(community), community, reason
+                )
+                if fresh:
+                    fresh["rescan"] = outcome
+                    result["data"] = result["primary"] = fresh
+                    result["errors"] = [
+                        e for e in result["errors"] if not e.get("is_no_results")
+                    ]
+                elif data:
+                    data["rescan"] = outcome
+                else:
+                    result["rescan"] = outcome
+        finally:
+            for entry in (
+                result.get("data"),
+                result.get("primary"),
+                result.get("secondary"),
+            ):
+                if entry:
+                    entry.pop("_source_result", None)
+        return result
+
+    # ------------------------------------------------------------------
+    # Sample download (opt-in)
+    # ------------------------------------------------------------------
+
+    def download_sample(self, data: dict) -> tuple[bytes | None, str | None]:
+        """Download the sample PolySwarm holds for ``data`` (opt-in, spends quota).
+
+        Returns (bytes, None) or (None, reason). When PolySwarm reports the size
+        it is checked against POLYSWARM_DOWNLOAD_MAX_SIZE_MB before anything is
+        downloaded; otherwise the download is aborted as soon as the bytes
+        received pass the limit. The sample is held in memory only.
+        """
+        max_mb = getattr(self.config, "download_max_size_mb", 20)
+        sha256 = data.get("sha256")
+        if not sha256:
+            return None, "no SHA-256 for the sample"
+        size = data.get("size")
+        if size is not None and size > max_mb * 1024 * 1024:
+            return None, f"sample is {size} bytes, over the {max_mb} MB limit"
+        community = data.get("community") or self.polyswarm_community
+        instance = (
+            self.polyswarm_default
+            if community == "default" and self.polyswarm_default
+            else self.polyswarm
+        )
+        limit = max_mb * 1024 * 1024
+        handle = _CappedBuffer(limit)
+        try:
+            instance.download_to_handle(sha256, handle, hash_type="sha256")
+        except Exception as e:
+            if handle.exceeded:
+                return None, f"sample is over the {max_mb} MB limit (download stopped)"
+            # Only the exception type is logged: request errors can carry a
+            # presigned download URL with a query string.
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Sample download failed: {type(e).__name__}"
+            )
+            return None, f"download failed ({type(e).__name__})"
+        if handle.exceeded:
+            return None, f"sample is over the {max_mb} MB limit (download stopped)"
+        return handle.getvalue(), None
 
     # ------------------------------------------------------------------
     # polykg — malware family profiles

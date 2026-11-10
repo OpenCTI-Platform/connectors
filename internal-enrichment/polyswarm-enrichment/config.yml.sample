@@ -18,6 +18,10 @@ polyswarm:
   community: 'default'        # 'default' or 'private' (enables dual-community)
   max_polling_time: 120
   # replace_with_lower_score: true  # Set false to keep higher existing scores
+  # rescan_older_than_days: 0           # Rescan samples PolySwarm holds when the last scan is older than N days (0 = never; spends scan quota)
+  # rescan_timeout: 300                  # Seconds to wait for a rescan; on timeout the previous result is used
+  # download_sample: false              # WARNING: true stores LIVE MALWARE in OpenCTI as an Artifact (spends download quota)
+  # download_max_size_mb: 20             # Largest sample to download
   # network_related_files_max: 10        # Related file hashes per IP/domain (0 = disabled)
   # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
   # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)

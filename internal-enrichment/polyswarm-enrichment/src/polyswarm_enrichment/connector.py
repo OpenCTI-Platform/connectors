@@ -30,6 +30,7 @@ from polyswarm_enrichment.client_api import (
 )
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.quota import QuotaMonitor
+from polyswarm_enrichment.sample_artifact import build_sample_artifact
 from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
 
@@ -74,6 +75,8 @@ class ConnectorTemplate:
 
     # Account quota reader (read-only); None until the connector is initialized
     quota: QuotaMonitor | None = None
+    # Opt-in sample download; set from settings in __init__
+    download_sample = False
 
     def __init__(self, settings: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Enhanced Connector."""
@@ -94,6 +97,9 @@ class ConnectorTemplate:
         self.network_related_files_max = ps.network_related_files_max
         self.network_indicator_min_detections = ps.network_indicator_min_detections
         self.network_url_send_query = ps.network_url_send_query
+
+        # Sample download (opt-in): live malware stored as an Artifact
+        self.download_sample = ps.download_sample
 
         # Initialize client (PolySwarm SDK + polykg profile API)
         from polyswarm_enrichment.client_api import ConnectorClient
@@ -180,6 +186,14 @@ class ConnectorTemplate:
 - Last Seen: {polyswarm_data.get("last_seen", "N/A")}
 """
 
+        rescan_section = self._rescan_note_section(polyswarm_data.get("rescan"))
+        if rescan_section:
+            note_content += f"\n{rescan_section}"
+
+        sample_text = polyswarm_data.get("sample_download")
+        if sample_text:
+            note_content += f"\n**Sample Download:**\n- {sample_text}\n"
+
         file_names = polyswarm_data.get("filenames", [])
         if file_names and file_names[0]:
             note_content += f"\n**File Names:**\n- {file_names[0]}\n"
@@ -257,6 +271,51 @@ class ConnectorTemplate:
             "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
+
+    @staticmethod
+    def _rescan_note_text(rescan: dict | None) -> str | None:
+        """One line for the note describing what the opt-in rescan did."""
+        if not rescan:
+            return None
+        reason = rescan.get("reason", "scan due for refresh")
+        status = rescan.get("status")
+        if status == "completed":
+            return f"Rescanned by PolySwarm ({reason}); these results are from the new scan."
+        if status == "timed_out":
+            return (
+                f"Rescan requested ({reason}) but not finished within "
+                f"{rescan.get('timeout')} seconds; these results are from the "
+                "previous scan."
+            )
+        if status == "no_result":
+            return (
+                f"Rescan requested ({reason}) but returned no usable result; these "
+                "results are from the previous scan."
+            )
+        if rescan.get("quota_exhausted"):
+            return (
+                f"Rescan requested ({reason}) but the account quota is exhausted "
+                "or the API rate limit was hit; these results are from the "
+                "previous scan, if any."
+            )
+        return (
+            f"Rescan requested ({reason}) but failed; these results are from the "
+            "previous scan, if any."
+        )
+
+    def _rescan_note_section(self, rescan: dict | None) -> str | None:
+        """The Rescan block of a note, with account quota lines after a 429."""
+        text = self._rescan_note_text(rescan)
+        if not text:
+            return None
+        section = f"**Rescan:**\n- {text}\n"
+        if rescan.get("quota_exhausted") and self.quota is not None:
+            section += (
+                "\n**Account quota:**\n"
+                + "\n".join(self.quota.exhausted_note_lines())
+                + "\n"
+            )
+        return section
 
     def _create_error_note(self, observable_id: str, errors: list) -> dict:
         """Create a STIX Note reporting API errors to the user."""
@@ -339,9 +398,35 @@ class ConnectorTemplate:
             "object_refs": [observable_id],
         }
 
-    def _create_hash_not_found_note(self, observable_id: str, hash_value: str) -> dict:
-        """Create a STIX Note informing the user the hash was not found in PolySwarm."""
+    def _create_hash_not_found_note(
+        self, observable_id: str, hash_value: str, rescan: dict | None = None
+    ) -> dict:
+        """Create a STIX Note informing the user the hash was not found in PolySwarm.
+
+        With ``rescan`` (PolySwarm holds the sample but had no completed scan, and
+        the requested rescan did not produce a result) the Note says that instead.
+        """
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        if rescan:
+            return {
+                "type": "note",
+                "spec_version": "2.1",
+                "id": Note.generate_id(
+                    created=None, content=f"polyswarm-not-found:{observable_id}"
+                ),
+                "created": current_time,
+                "modified": current_time,
+                "content": (
+                    "**PolySwarm Enrichment - No Completed Scan**\n\n"
+                    f"**Hash:** `{hash_value}`\n\n"
+                    "PolySwarm holds this sample but has no completed scan of it.\n\n"
+                    f"{self._rescan_note_section(rescan)}\n"
+                    f"**Timestamp:** {current_time}\n"
+                ),
+                "abstract": "PolySwarm - No Completed Scan",
+                "created_by_ref": self.converter_to_stix.author.id,
+                "object_refs": [observable_id],
+            }
 
         note_content = f"""**PolySwarm Enrichment — Hash Not Found**
 
@@ -545,7 +630,7 @@ class ConnectorTemplate:
                             obs_hash = observable["hashes"][algo]
                             break
                 not_found_note = self._create_hash_not_found_note(
-                    observable["id"], obs_hash
+                    observable["id"], obs_hash, polyswarm_result.get("rescan")
                 )
                 stix_objects.append(not_found_note)
                 self.helper.connector_logger.info(
@@ -1245,6 +1330,136 @@ class ConnectorTemplate:
             ]
         return refs
 
+    def _existing_artifact_id(self, sha256: str | None) -> str | None:
+        """STIX id of an Artifact with this SHA-256 already in OpenCTI, if any.
+
+        A failed lookup returns None (the download then proceeds; the Artifact id
+        is derived from the hashes, so a repeat updates the same Artifact).
+        """
+        if not sha256:
+            return None
+        try:
+            found = self.helper.api.stix_cyber_observable.read(
+                types=["Artifact"],
+                filters={
+                    "mode": "and",
+                    # read() ignores `types`, so the type is part of the filter;
+                    # without it the File being enriched would match its own hash
+                    "filters": [
+                        {"key": "entity_type", "values": ["Artifact"]},
+                        {"key": "hashes.SHA-256", "values": [sha256]},
+                    ],
+                    "filterGroups": [],
+                },
+            )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Existing Artifact lookup failed: {type(e).__name__}"
+            )
+            return None
+        return (found or {}).get("standard_id") if isinstance(found, dict) else None
+
+    def _sample_relationship(
+        self, artifact_id: str, observable_id: str, marking_refs: list[str]
+    ) -> dict | None:
+        """Artifact related-to File, carrying the File's markings."""
+        relationship = self.converter_to_stix.create_relationship(
+            source_id=artifact_id,
+            relationship_type="related-to",
+            target_id=observable_id,
+            description="Live malware sample downloaded from PolySwarm",
+        )
+        if not relationship:
+            return None
+        rel = (
+            json.loads(relationship.serialize())
+            if hasattr(relationship, "serialize")
+            else dict(relationship)
+        )
+        if marking_refs:
+            rel["object_marking_refs"] = list(marking_refs)
+        return rel
+
+    def _download_sample_objects(
+        self, observable: dict, opencti_entity: dict, polyswarm_result: dict | None
+    ) -> list:
+        """Download the sample and build its Artifact and relationship (opt-in).
+
+        The outcome is written to the result's ``sample_download`` text so the
+        Note shows what happened. Never raises: a failed download must not
+        stop the rest of the enrichment.
+        """
+        enrichment_data = (polyswarm_result or {}).get("data")
+        if not enrichment_data:
+            return []
+        try:
+            marking_refs = self._source_marking_refs(observable, opencti_entity)
+            existing_id = self._existing_artifact_id(enrichment_data.get("sha256"))
+            if existing_id:
+                enrichment_data["sample_download"] = (
+                    "Not downloaded: an Artifact with this SHA-256 is already in "
+                    "OpenCTI; it is linked to this file instead."
+                )
+                relationship = self._sample_relationship(
+                    existing_id, observable["id"], marking_refs
+                )
+                if not relationship:
+                    return []
+                # The Artifact must be in the bundle or the relationship is
+                # dropped as inconsistent: a minimal reference (id and hashes)
+                hashes = {
+                    algo: enrichment_data[key]
+                    for algo, key in (
+                        ("SHA-256", "sha256"),
+                        ("SHA-1", "sha1"),
+                        ("MD5", "md5"),
+                    )
+                    if enrichment_data.get(key)
+                }
+                reference = {
+                    "type": "artifact",
+                    "spec_version": "2.1",
+                    "id": existing_id,
+                    "hashes": hashes,
+                }
+                # No markings on the reference: OpenCTI merges them on upsert, which
+                # would add this File's TLP to someone else's Artifact. Rare race:
+                # if the Artifact is deleted before import, a hash-only one remains.
+                return [reference, relationship]
+            content, reason = self.client.download_sample(enrichment_data)
+            if content is None:
+                enrichment_data["sample_download"] = f"Not downloaded: {reason}."
+                return []
+            artifact = build_sample_artifact(
+                content,
+                enrichment_data,
+                self.converter_to_stix.author.id,
+                marking_refs,
+            )
+            if artifact is None:
+                enrichment_data["sample_download"] = (
+                    "Not stored: the downloaded bytes did not match the SHA-256 "
+                    "PolySwarm reported."
+                )
+                return []
+            objects = [artifact]
+            relationship = self._sample_relationship(
+                artifact["id"], observable["id"], marking_refs
+            )
+            if relationship:
+                objects.append(relationship)
+            enrichment_data["sample_download"] = (
+                f"Live malware sample ({len(content)} bytes) stored as an "
+                "Artifact. Handle it as malware."
+            )
+            return objects
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] Sample download skipped: {type(e).__name__}"
+            )
+            enrichment_data["sample_download"] = f"Not downloaded: {type(e).__name__}."
+            return []
+
     def process_message(self, data: dict) -> str:
         """Process the enrichment request."""
         if self.quota is not None:
@@ -1323,8 +1538,20 @@ class ConnectorTemplate:
                 # Query PolySwarm
                 polyswarm_data = self.client.query_polyswarm(hash_value)
 
+                # Opt-in: store the sample PolySwarm holds as an Artifact
+                sample_objects = []
+                if (
+                    self.download_sample
+                    and opencti_entity.get("entity_type") == "StixFile"
+                ):
+                    sample_objects = self._download_sample_objects(
+                        observable, opencti_entity, polyswarm_data
+                    )
+
                 # Collect comprehensive intelligence with profile enrichment
                 stix_objects = self._collect_intelligence(observable, polyswarm_data)
+                if stix_objects:
+                    stix_objects.extend(sample_objects)
 
                 # #40 — Playbook compatibility: ensure the original observable
                 # is present in the bundle so Playbook triggers fire correctly.

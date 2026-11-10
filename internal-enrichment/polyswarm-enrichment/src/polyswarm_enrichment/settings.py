@@ -70,6 +70,44 @@ class PolySwarmConfig(BaseConfigModel):
         description="Which IOC types to create (comma-separated: ip,domain,url).",
     )
 
+    # Rescan stale hashes (off by default: each rescan spends scan quota)
+    rescan_older_than_days: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Ask PolySwarm to rescan a sample it already holds when its latest scan "
+            "is older than this many days, or when it has no completed scan "
+            "(0 = never rescan). Each rescan spends PolySwarm scan quota. Nothing is "
+            "uploaded: PolySwarm rescans its own copy of the sample."
+        ),
+    )
+    rescan_timeout: int = Field(
+        default=300,
+        ge=1,
+        description=(
+            "Maximum seconds to wait for a rescan to finish. On timeout the "
+            "enrichment uses the previous scan result and says so in the note."
+        ),
+    )
+
+    # Sample download (off by default: stores live malware in OpenCTI)
+    download_sample: bool = Field(
+        default=False,
+        description=(
+            "Download the sample for a File PolySwarm holds and store it as an "
+            "Artifact in OpenCTI. This puts LIVE MALWARE in OpenCTI file storage "
+            "and spends PolySwarm download quota. Off by default."
+        ),
+    )
+    download_max_size_mb: int = Field(
+        default=20,
+        ge=1,
+        description=(
+            "Largest sample, in MB, that will be downloaded. Larger samples are "
+            "skipped and the note says so."
+        ),
+    )
+
     # URL, domain and IP observable lookups
     network_related_files_max: int = Field(
         default=10,
