@@ -354,7 +354,28 @@ class TestObjects:
         assert len(drops) == 3 and {d["source_ref"] for d in drops} == {mid}
 
     def test_cap_limits_files(self, builder):
-        assert len(_of(_build(builder, max_dropped_files=2), "file")) == 2
+        assert len(_of(_build(builder, max_dropped_files=1), "file")) == 2
+
+    def test_cap_applies_per_provider_with_cross_provider_dedup(self, builder):
+        def depth(*shas):
+            return {"dropped_files": [{"sha256": s} for s in shas], "c2": []}
+
+        first = [f"{i:064x}" for i in range(1, 5)]
+        second = [first[0]] + [f"{i:064x}" for i in range(10, 14)]
+        objs = build_report_depth_objects(
+            builder,
+            ENTITY,
+            None,
+            [depth(*first), depth(*second)],
+            max_dropped_files=2,
+            create_observables=True,
+            c2_indicators=True,
+            create_indicators=True,
+        )
+        got = {o["hashes"]["SHA-256"] for o in _of(objs, "file")}
+        # Two from the first report, two new ones from the second (the shared
+        # hash is skipped and does not use up the second report's cap).
+        assert got == {first[0], first[1], second[1], second[2]}
 
     def test_zero_turns_dropped_files_off_but_keeps_c2(self, builder):
         objs = _build(builder, max_dropped_files=0)

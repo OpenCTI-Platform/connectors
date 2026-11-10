@@ -141,7 +141,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` | `0` | StixFile lookup and Artifact reuse: a sandbox report older than this many days counts as missing. `0` means a report of any age is used |
 | `POLYSWARM_SANDBOX_REUSE_REPORT` | `false` | Artifacts: look for an existing sandbox report by SHA-256 before uploading. If every configured provider has one and a finished scan of the hash exists, they are used and the file is not uploaded again |
 | `POLYSWARM_SANDBOX_DETONATE_BY_HASH` | `false` | StixFile observables: when no usable report exists, detonate the sample PolySwarm already holds for the hash. Spends sandbox credits, nothing is uploaded from OpenCTI, runs in `POLYSWARM_COMMUNITY`. Refused in the public community unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true` |
-| `POLYSWARM_SANDBOX_MAX_DROPPED_FILES` | `25` | Most dropped files per detonation to create as File observables. `0` turns it off. Uses data already in the report |
+| `POLYSWARM_SANDBOX_MAX_DROPPED_FILES` | `25` | Most dropped files per provider report to create as File observables. `0` turns it off. Uses data already in the report |
 | `POLYSWARM_SANDBOX_C2_INDICATORS` | `true` | Create Indicators (valid 30 days) for C2 addresses in an extracted malware configuration. Observables are created either way. Also needs `POLYSWARM_CREATE_INDICATORS` |
 | `POLYSWARM_SANDBOX_ATTACH_PCAP` | `false` | Download the sandbox pcap and attach it to the observable. Off by default because it is an extra download |
 | `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` | `26214400` | Largest pcap to attach, in bytes (25 MB). Larger captures are downloaded but not attached |

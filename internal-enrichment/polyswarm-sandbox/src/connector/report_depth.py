@@ -415,12 +415,16 @@ def _build_objects(
     if max_dropped_files > 0:
         seen: set[str] = set()
         for depth in depths:
+            # The cap applies to each provider's report; files already
+            # created from another provider do not count against it.
+            taken = 0
             for item in depth.get("dropped_files", []):
                 sha256 = item["sha256"]
                 if sha256 == own_sha or sha256 in seen:
                     continue
-                if len(seen) >= max_dropped_files:
+                if taken >= max_dropped_files:
                     break
+                taken += 1
                 seen.add(sha256)
                 hashes = {"SHA-256": sha256}
                 if "md5" in item:
