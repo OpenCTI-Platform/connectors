@@ -208,6 +208,30 @@ The sandbox and hunt allowances shown are the account features `sandbox_request`
 - **When a request fails because of quota.** PolySwarm answers HTTP 429 when usage limits are exceeded (the response does not say whether it is a quota or a rate limit). After the client's own retries, the failed work's error message in OpenCTI, and the connector log, say the quota is exhausted or rate limited and show the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the message says so. Progress up to the last sent page is kept, as for any failure.
 - **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and the import carries on.
 
+## Screenshots
+
+Taken on OpenCTI 7.261103.0 with a test account.
+
+The PolySwarm Feed connector running in OpenCTI
+
+![The PolySwarm Feed connector running in OpenCTI](./__docs__/media/feed-connector.png)
+
+A malware family from the feed with its hash indicators
+
+![A malware family from the feed with its hash indicators](./__docs__/media/feed-sample.png)
+
+Per-engine malware analyses on a sample's file
+
+![Per-engine malware analyses on a sample's file](./__docs__/media/feed-sample-analyses.png)
+
+A live-hunting hit: the file with its hunt rule and family labels
+
+![A live-hunting hit: the file with its hunt rule and family labels](./__docs__/media/hunt-hit.png)
+
+The note written for a live-hunting hit
+
+![The note written for a live-hunting hit](./__docs__/media/hunt-hit-note.png)
+
 ## Troubleshooting
 
 - **401 or 403 errors.** The account number or API key is wrong, or your PolySwarm plan does not include access to that feed collection. Check both values, and check which collections your plan includes.
