@@ -244,7 +244,7 @@ class PolySwarmConnector:
                 [
                     "Retry the enrichment — this may be a transient issue.",
                     "Check the connector logs for full traceback details.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ],
             )
             self._send_original_bundle(stix_objects)
@@ -815,12 +815,12 @@ class PolySwarmConnector:
             if "exceeds the maximum" in download_error:
                 cat, recs = "File Size Limit Exceeded", [
                     "Increase POLYSWARM_MAX_FILE_SIZE in your connector configuration.",
-                    "Contact sales@polyswarm.io for enterprise file size limits.",
+                    "Contact customersuccess@polyswarm.io for enterprise file size limits.",
                 ]
             elif "disabled" in download_error.lower():
                 cat, recs = "Artifact Download Disabled", [
                     "Set POLYSWARM_DOWNLOAD_ARTIFACTS=true in your connector configuration.",
-                    "Contact sales@polyswarm.io if you need help enabling this feature.",
+                    "Contact customersuccess@polyswarm.io if you need help enabling this feature.",
                 ]
             elif "empty" in download_error.lower():
                 cat, recs = "Empty File", [
@@ -836,7 +836,7 @@ class PolySwarmConnector:
                 cat, recs = "File Download Failed", [
                     "Retry the enrichment — this may be a transient storage issue.",
                     "Verify the file still exists in OpenCTI.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ]
             self._send_error_note(entity, cat, download_error, recs)
             raise ValueError(download_error)
@@ -851,7 +851,7 @@ class PolySwarmConnector:
                 [
                     "Upload a file to this artifact before running enrichment.",
                     "Verify the file exists in OpenCTI storage.",
-                    "Contact sales@polyswarm.io if you need help.",
+                    "Contact customersuccess@polyswarm.io if you need help.",
                 ],
             )
             raise ValueError(err_msg)
@@ -910,7 +910,7 @@ class PolySwarmConnector:
                     "Retry the enrichment in a few minutes.",
                     "Check your PolySwarm API key is valid and active.",
                     "Verify your scan quota at https://polyswarm.network.",
-                    "Contact sales@polyswarm.io for quota increases or plan upgrades.",
+                    "Contact customersuccess@polyswarm.io for quota increases or plan upgrades.",
                 ],
             )
             raise ValueError(
@@ -932,7 +932,7 @@ class PolySwarmConnector:
                         "Check that sandbox provider(s) ({}) are valid.".format(
                             ", ".join(providers)
                         ),
-                        "Contact sales@polyswarm.io to enable sandbox features or increase quota.",
+                        "Contact customersuccess@polyswarm.io to enable sandbox features or increase quota.",
                     ],
                 )
         return scan_id, sandbox_tasks
@@ -978,7 +978,7 @@ class PolySwarmConnector:
                 [
                     f"Increase POLYSWARM_POLL_TIMEOUT (current: {poll_timeout}s).",
                     "Retry the enrichment later when the platform is less busy.",
-                    "Contact sales@polyswarm.io if scans consistently time out.",
+                    "Contact customersuccess@polyswarm.io if scans consistently time out.",
                 ],
             )
 
@@ -991,7 +991,7 @@ class PolySwarmConnector:
                 [
                     "Try re-uploading the file and running enrichment again.",
                     "Verify the file is not corrupt or password-protected without providing the password.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ],
             )
 
@@ -1038,7 +1038,7 @@ class PolySwarmConnector:
                     [
                         f"Increase POLYSWARM_SANDBOX_TIMEOUT (current: {sandbox_timeout}s).",
                         "Try a different sandbox provider (cape or triage).",
-                        "Contact sales@polyswarm.io for help with sandbox analysis.",
+                        "Contact customersuccess@polyswarm.io for help with sandbox analysis.",
                     ],
                 )
         return sandbox_results
@@ -1182,7 +1182,7 @@ class PolySwarmConnector:
                         f"The {source.upper()} AI-generated threat analysis report could not be retrieved. "
                         f"This is non-fatal — scan and sandbox results are still included.",
                         [
-                            "Your PolySwarm plan may not include LLM reports — contact sales@polyswarm.io to enable.",
+                            "Your PolySwarm plan may not include LLM reports, contact customersuccess@polyswarm.io to enable.",
                             "Set POLYSWARM_LLM_REPORT_ENABLED=false to disable LLM reports if not needed.",
                             f"Increase POLYSWARM_LLM_REPORT_TIMEOUT (current: {llm_timeout}s)"
                             " if reports are timing out.",
@@ -1214,7 +1214,7 @@ class PolySwarmConnector:
                     "Check the connector logs for detailed error information.",
                     "Verify your PolySwarm API key and quota at https://polyswarm.network.",
                     "Retry the enrichment in a few minutes.",
-                    "Contact sales@polyswarm.io for assistance.",
+                    "Contact customersuccess@polyswarm.io for assistance.",
                 ],
             )
             return
@@ -1240,7 +1240,7 @@ class PolySwarmConnector:
                 [
                     "This can be normal for benign files.",
                     "Try submitting to a different sandbox provider for deeper analysis.",
-                    "Contact sales@polyswarm.io if you believe this is an error.",
+                    "Contact customersuccess@polyswarm.io if you believe this is an error.",
                 ],
             )
             return
@@ -1646,7 +1646,7 @@ class PolySwarmConnector:
                         "Check that sandbox provider(s) ({}) are valid.".format(
                             ", ".join(providers)
                         ),
-                        "Contact sales@polyswarm.io to enable sandbox features or increase quota.",
+                        "Contact customersuccess@polyswarm.io to enable sandbox features or increase quota.",
                     ],
                 )
                 return {
