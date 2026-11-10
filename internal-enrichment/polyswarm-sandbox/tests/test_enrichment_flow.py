@@ -117,6 +117,20 @@ class TestTlpCheck:
         assert result["status"] == "skipped"
         c.artifact_handler.download_artifact.assert_not_called()
 
+    @pytest.mark.parametrize("tlp, skipped", [("TLP:RED", True), ("TLP:GREEN", False)])
+    def test_tlp_check_without_stix_objects(self, tlp, skipped):
+        """An empty stix_objects list must not bypass the TLP limit (#8351)."""
+        c = make_connector()
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(None, "Download disabled")
+        )
+        result = c._enrich_file(ENTITY_ID, _entity(), _marked(tlp), [])
+        if skipped:
+            assert result["status"] == "skipped"
+            c.artifact_handler.download_artifact.assert_not_called()
+        else:
+            c.artifact_handler.download_artifact.assert_called_once()
+
     def test_skipped_artifact_forwards_original_bundle(self):
         """A TLP skip must still forward the bundle so playbooks do not stall."""
         c = make_connector()
