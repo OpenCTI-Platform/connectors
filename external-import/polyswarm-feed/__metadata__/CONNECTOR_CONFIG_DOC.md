@@ -15,7 +15,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour). |
-| POLYSWARM_API_URL | `string` |  | string | `"https://api.polyswarm.network"` | PolySwarm API base URL. The connector appends the `/v3/...` paths. |
+| POLYSWARM_API_URL | `string` |  | string | `"https://api.polyswarm.network"` | PolySwarm API base URL. Must use https, because the account number and API key are sent with every request. The connector appends the `/v3/...` paths. |
 | POLYSWARM_FEED_COLLECTIONS | `array` |  | string | `["trustgroup"]` | Comma-separated list of PolySwarm TAXII API roots to import. Allowed values: trustgroup, ransomware, freemium. |
 | POLYSWARM_FEED_BACKFILL_DAYS | `integer` |  | `1 <= x ` | `14` | On the first run only, how many days of feed data to import. |
 | POLYSWARM_FEED_INDICATOR_VALID_DAYS | `integer` |  | `1 <= x ` | `90` | Feed indicators are valid until import time plus this many days. |
@@ -27,4 +27,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | POLYSWARM_HUNTING_INDICATOR_VALID_DAYS | `integer` |  | `1 <= x ` | `30` | Live hunting indicators are valid until import time plus this many days. |
 | POLYSWARM_QUOTA_WARN_BELOW | `integer` |  | `0 <= x ` | `100` | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (0 = no warnings). Accounts with no cap are never warned. |
 | POLYSWARM_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | TLP marking applied to every object the connector sends. |
-| POLYSWARM_MAX_OBJECTS_PER_RUN | `integer` |  | `1 <= x ` | `20000` | Stop paging once this many objects were sent in a run. The next run resumes where this one stopped. |
+| POLYSWARM_MAX_OBJECTS_PER_RUN | `integer` |  | `1 <= x ` | `20000` | Stop paging once this many objects were sent in a run. The cap is checked after each page, so a run can exceed it by up to one page. Live hunting is bounded separately by its page limit. The next run resumes where this one stopped. |

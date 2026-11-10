@@ -79,7 +79,7 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 |------------------------------|--------------------------------|------------------------------------------|---------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------|
 | API key                      | `api_key`                      | `POLYSWARM_API_KEY`                      |                                 | Yes       | Your PolySwarm API key.                                                                                                             |
 | Account number               | `account_number`               | `POLYSWARM_ACCOUNT_NUMBER`               |                                 | Yes       | Your PolySwarm account number. Used as the user name for the feed (TAXII) login.                                                    |
-| API URL                      | `api_url`                      | `POLYSWARM_API_URL`                      | `https://api.polyswarm.network` | No        | Base URL of the PolySwarm API.                                                                                                      |
+| API URL                      | `api_url`                      | `POLYSWARM_API_URL`                      | `https://api.polyswarm.network` | No        | Base URL of the PolySwarm API. Must use https.                                                                                                      |
 | Feed collections             | `feed_collections`             | `POLYSWARM_FEED_COLLECTIONS`             | `trustgroup`                    | No        | Comma-separated list of collections to import. Allowed values: `trustgroup`, `ransomware`, `freemium`. Unknown values are rejected. |
 | Feed backfill days           | `feed_backfill_days`           | `POLYSWARM_FEED_BACKFILL_DAYS`           | `14`                            | No        | How many days of feed history to import on the first run only.                                                                      |
 | Feed indicator valid days    | `feed_indicator_valid_days`    | `POLYSWARM_FEED_INDICATOR_VALID_DAYS`    | `90`                            | No        | Days from import time until feed indicators expire (`valid_until`).                                                                 |
@@ -91,7 +91,7 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 | Hunting indicator valid days | `hunting_indicator_valid_days` | `POLYSWARM_HUNTING_INDICATOR_VALID_DAYS` | `30`                            | No        | Days from import time until hunting indicators expire.                                                                              |
 | TLP level                    | `tlp_level`                    | `POLYSWARM_TLP_LEVEL`                    | `clear`                         | No        | TLP marking applied to every object the connector sends. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.          |
 | Quota warning threshold      | `quota_warn_below`             | `POLYSWARM_QUOTA_WARN_BELOW`             | `100`                           | No        | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (`0` turns warnings off). See [Quota](#quota). |
-| Max objects per run          | `max_objects_per_run`          | `POLYSWARM_MAX_OBJECTS_PER_RUN`          | `20000`                         | No        | Stop paging once this many objects have been collected in a run. The next run resumes where this one stopped.                       |
+| Max objects per run          | `max_objects_per_run`          | `POLYSWARM_MAX_OBJECTS_PER_RUN`          | `20000`                         | No        | Stop paging once this many objects have been collected in a run. Checked after each page, so a run can exceed it by up to one page. Live hunting is bounded separately by its page limit. The next run resumes where this one stopped.                       |
 
 ## Deployment
 
@@ -180,7 +180,7 @@ Indicators are given a `valid_until` of the import time plus `POLYSWARM_FEED_IND
 
 ### State and resuming
 
-The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging, and the next run resumes from the recorded position.
+The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging (the cap is checked after each page, so a run can exceed it by up to one page; live hunting is bounded separately by its page limit), and the next run resumes from the recorded position.
 
 ### Volume
 

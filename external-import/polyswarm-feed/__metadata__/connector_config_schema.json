@@ -72,7 +72,7 @@
     },
     "POLYSWARM_API_URL": {
       "default": "https://api.polyswarm.network",
-      "description": "PolySwarm API base URL. The connector appends the `/v3/...` paths.",
+      "description": "PolySwarm API base URL. Must use https, because the account number and API key are sent with every request. The connector appends the `/v3/...` paths.",
       "type": "string"
     },
     "POLYSWARM_FEED_COLLECTIONS": {
@@ -158,7 +158,7 @@
     },
     "POLYSWARM_MAX_OBJECTS_PER_RUN": {
       "default": 20000,
-      "description": "Stop paging once this many objects were sent in a run. The next run resumes where this one stopped.",
+      "description": "Stop paging once this many objects were sent in a run. The cap is checked after each page, so a run can exceed it by up to one page. Live hunting is bounded separately by its page limit. The next run resumes where this one stopped.",
       "minimum": 1,
       "type": "integer"
     }

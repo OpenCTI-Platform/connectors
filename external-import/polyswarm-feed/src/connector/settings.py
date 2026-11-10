@@ -66,7 +66,9 @@ class PolySwarmFeedConfig(BaseConfigModel):
         min_length=1,
     )
     api_url: str = Field(
-        description="PolySwarm API base URL. The connector appends the `/v3/...` paths.",
+        description="PolySwarm API base URL. Must use https, because the account "
+        "number and API key are sent with every request. The connector appends "
+        "the `/v3/...` paths.",
         default="https://api.polyswarm.network",
     )
 
@@ -140,7 +142,9 @@ class PolySwarmFeedConfig(BaseConfigModel):
     )
     max_objects_per_run: int = Field(
         description="Stop paging once this many objects were sent in a run. "
-        "The next run resumes where this one stopped.",
+        "The cap is checked after each page, so a run can exceed it by up to one "
+        "page. Live hunting is bounded separately by its page limit. The next "
+        "run resumes where this one stopped.",
         default=20000,
         ge=1,
     )
@@ -185,7 +189,13 @@ class PolySwarmFeedConfig(BaseConfigModel):
     @field_validator("api_url")
     @classmethod
     def _strip_api_url(cls, value: str) -> str:
-        """Drop a trailing slash so paths can be appended safely."""
+        """Require https and drop a trailing slash so paths can be appended."""
+        value = value.strip()
+        if not value.lower().startswith("https://"):
+            raise ValueError(
+                "api_url must start with https:// because credentials are sent "
+                "with every request."
+            )
         return value.rstrip("/")
 
 

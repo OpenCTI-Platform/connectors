@@ -77,6 +77,17 @@ def test_api_url_trailing_slash_is_stripped():
     assert settings.polyswarm.api_url == "https://example.test"
 
 
+@pytest.mark.parametrize(
+    "value",
+    ["http://api.polyswarm.network", "api.polyswarm.network", "ftp://x.test", ""],
+)
+def test_api_url_must_be_https(value):
+    with pytest.raises(ConfigValidationError) as err:
+        make_settings(api_url=value)
+    assert "polyswarm.api_url" in str(err.value.__cause__)
+    assert "https" in str(err.value.__cause__)
+
+
 def test_string_values_are_coerced():
     settings = make_settings(
         hunting_enabled="true",
