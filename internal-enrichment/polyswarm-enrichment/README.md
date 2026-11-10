@@ -57,6 +57,8 @@ Key features:
 - **Error reporting**: API errors surfaced as STIX Notes visible in OpenCTI
 - **URL, domain and IP lookups**: latest PolySwarm URL scan verdict, scored from
   engine detections, plus files PolySwarm links to an IP or domain
+- **Pivots** (optional, off by default): other files with the same imphash, and
+  files PolySwarm sandbox reports associate with an ATT&CK technique
 
 ---
 
@@ -108,6 +110,8 @@ Key features:
 | `polyswarm_rescan_timeout` | `POLYSWARM_RESCAN_TIMEOUT` | No | Seconds to wait for a rescan to finish (default: `300`). On timeout the previous result is used and the Note says so |
 | `polyswarm_download_sample` | `POLYSWARM_DOWNLOAD_SAMPLE` | No | **Stores LIVE MALWARE in OpenCTI.** Download the sample for a File PolySwarm holds and create an Artifact from it (default: `false`). Spends PolySwarm download quota |
 | `polyswarm_download_max_size_mb` | `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` | No | Largest sample, in MB, that will be downloaded (default: `20`) |
+| `polyswarm_pivot_imphash_max` | `POLYSWARM_PIVOT_IMPHASH_MAX` | No | Max other files with the same imphash imported per enriched file (default: `0` = off, range 0 to 100, e.g. `10`). Each enriched file with an imphash costs one extra search. Imported files are labelled `polyswarm-pivot-result` and never pivot again |
+| `polyswarm_pivot_ttp_max` | `POLYSWARM_PIVOT_TTP_MAX` | No | Max files imported per enriched Attack-Pattern (default: `0` = off, range 0 to 100, e.g. `10`). Any value above 0 adds `Attack-Pattern` to the connector scope. Use with `CONNECTOR_AUTO=false` only (skipped when auto is on) |
 | `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
@@ -192,6 +196,43 @@ The connector enriches URL, domain and IP (v4 and v6) observables by:
    files PolySwarm links to the value, as file observables (SHA-256) with a
    `related-to` relationship
 6. Creating a short "No Scan Found" Note when PolySwarm has no scan of the value
+
+Optional pivots (both off by default, because each one spends PolySwarm API
+lookups):
+
+- Imphash pivot, `POLYSWARM_PIVOT_IMPHASH_MAX` above 0: when PolySwarm reports a
+  PE imphash for the file being enriched, the connector searches PolySwarm for
+  other files with the same imphash and imports up to that many as file
+  observables (SHA-256), each linked to the enriched file with `related-to`,
+  plus a Note naming the shared imphash. The imphash is the one the connector
+  already reads for network IOC extraction; if `POLYSWARM_IOC_ENABLED` is off,
+  it is read with one extra lookup. A shared imphash is a pivot, not proof that
+  two files are related.
+- Technique pivot, `POLYSWARM_PIVOT_TTP_MAX` above 0: enriching an
+  Attack-Pattern that has a MITRE ATT&CK id (`x_mitre_id`, or a MITRE external
+  reference) searches the PolySwarm metadata index for files whose sandbox
+  reports list that technique, and imports up to that many as file observables
+  with a `related-to` relationship (file to Attack-Pattern), plus a Note. The
+  index search uses `cape_sandbox_v2.ttp` and `triage_sandbox_v0.ttp`. The
+  dedicated IOC search by technique (`search_by_ioc` with `ttp`) returned no
+  results for any technique tried, so it is not used. `Attack-Pattern` is added
+  to the connector scope only when this setting is above 0. Without an ATT&CK
+  id, nothing is sent.
+
+Warnings:
+
+- Do not use the technique pivot with `CONNECTOR_AUTO=true`. A MITRE ATT&CK
+  import creates hundreds of Attack-Patterns, and each would trigger a search.
+  When the helper reports auto-enrichment is on, the connector skips the
+  technique pivot (Attack-Patterns are still left untouched).
+- Files imported by either pivot are labelled `polyswarm-pivot-result`, and a
+  file with that label is never pivoted again, so auto-enrichment can't follow
+  the pivots outward level after level. Remove the label from a file if you do
+  want it pivoted.
+- Each pivot spends PolySwarm lookups from your quota. Keep the limits small.
+
+Both pivots only search: nothing is submitted, scanned or uploaded. Objects
+they create carry the same markings as the source entity.
 
 Private, reserved, shared (`100.64.0.0/10`), loopback, link-local and
 multicast IPs (including IPv4-mapped IPv6 forms and non-canonical IPv4 forms
@@ -312,6 +353,7 @@ flowchart LR
 | StixFile/Artifact | PolyScore, detections, PolyUnite family, platform tags, hashes, Indicator, Malware, Note |
 | Url               | Latest URL scan: engine detections, score, scan date, Note, Indicator (threshold) |
 | Domain-Name, IPv4-Addr, IPv6-Addr | Latest URL scan as above, plus related file hashes          |
+| Attack-Pattern (only when `POLYSWARM_PIVOT_TTP_MAX` > 0) | Files whose sandbox reports list the technique, Note |
 
 ### Generated STIX Objects
 
@@ -337,6 +379,8 @@ flowchart LR
 | `indicates`      | Indicator             | Malware             | 100        |
 | `based-on`       | Indicator             | Observable          | varies     |
 | `related-to`     | IP / domain observable| File                | n/a        |
+| `related-to`     | Enriched file (imphash pivot) | Other file  | n/a        |
+| `related-to`     | File (technique pivot) | Attack Pattern     | n/a        |
 | `related-to`     | Malware               | Related Malware     | 80         |
 | `uses`           | Threat Actor          | Malware             | 85         |
 | `uses`           | Intrusion Set         | Malware             | 85         |
@@ -430,6 +474,7 @@ What leaves your environment, and when. The connector sends data to PolySwarm on
 - **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
 - **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
+- **Pivots (opt-in, off by default).** With `POLYSWARM_PIVOT_IMPHASH_MAX` above 0, the file's imphash (a 32 character hash of its import table, as reported by PolySwarm) is sent back to PolySwarm as a search value. With `POLYSWARM_PIVOT_TTP_MAX` above 0, the MITRE ATT&CK id of an enriched Attack-Pattern (for example `T1486`) is sent as a search value. Nothing else about the file or the Attack-Pattern is sent, and Attack-Patterns without an ATT&CK id are never sent. Both are searches, so each one spends API lookups from your quota.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---

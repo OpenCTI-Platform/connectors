@@ -26,6 +26,8 @@ polyswarm:
   # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
   # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)
   # quota_warn_below: 100                # Warn when remaining quota is below this (0 = no warnings)
+  # pivot_imphash_max: 0                 # Other files with the same imphash to import per file (0 = off, e.g. 10)
+  # pivot_ttp_max: 0                     # Files to import per Attack-Pattern (0 = off, e.g. 10); above 0 adds Attack-Pattern to the scope
 
 # Optional: polykg knowledge graph for advanced profile enrichment
 # Leave commented out to run without polykg (basic enrichment still works)

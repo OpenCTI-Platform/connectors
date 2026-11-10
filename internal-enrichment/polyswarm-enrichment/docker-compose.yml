@@ -30,4 +30,7 @@ services:
       # - POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS=2
       # - POLYSWARM_NETWORK_URL_SEND_QUERY=false
       # - POLYSWARM_QUOTA_WARN_BELOW=100
+      # Pivots spend extra PolySwarm lookups, so both are off (0) by default
+      # - POLYSWARM_PIVOT_IMPHASH_MAX=0
+      # - POLYSWARM_PIVOT_TTP_MAX=0
     restart: always

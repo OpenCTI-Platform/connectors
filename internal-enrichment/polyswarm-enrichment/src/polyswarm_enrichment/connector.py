@@ -31,6 +31,7 @@ from polyswarm_enrichment.client_api import (
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.quota import QuotaMonitor
 from polyswarm_enrichment.sample_artifact import build_sample_artifact
+from polyswarm_enrichment.pivots import PivotService, extract_mitre_id, has_pivot_label
 from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
 
@@ -62,6 +63,8 @@ _NETWORK_KIND = {
     "IPv4-Addr": "IP address",
     "IPv6-Addr": "IP address",
 }
+
+_IOC_NOT_FETCHED = object()
 
 # A URL scan older than this is flagged as stale in the note
 _STALE_SCAN_DAYS = 90
@@ -117,6 +120,16 @@ class ConnectorTemplate:
 
         # Initialize STIX converter — client doubles as profile loader
         self.converter_to_stix = ConverterToStix(self.helper, self.client)
+
+        # Optional imphash and technique pivots (both off by default)
+        self.pivots = PivotService(
+            self.helper,
+            self.client,
+            self.converter_to_stix,
+            imphash_max=ps.pivot_imphash_max,
+            ttp_max=ps.pivot_ttp_max,
+        )
+        self._last_ioc_data = _IOC_NOT_FETCHED
 
         # Initialize Attack Pattern Handler — TTP data fetched via client
         ttp_data = self.client.fetch_attack_patterns()
@@ -963,6 +976,7 @@ class ConnectorTemplate:
                     sha256 = enrichment_data.get("sha256")
                     if sha256:
                         ioc_data = self.client.fetch_iocs(sha256)
+                        self._last_ioc_data = ioc_data
                         if ioc_data:
                             ioc_objects = self.converter_to_stix.create_ioc_observables(
                                 observable_id=observable["id"],
@@ -1212,6 +1226,85 @@ class ConnectorTemplate:
         # The score travels in the bundle (no separate API write). Marking refs
         # are kept even when their definition is not in the bundle: OpenCTI
         # resolves them, and stripping them would drop the source's TLP.
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
+
+    def _imphash_pivot(
+        self,
+        observable: dict,
+        opencti_entity: dict,
+        polyswarm_data: dict | None,
+        stix_objects: list,
+    ) -> list:
+        """Files sharing the enriched file's imphash (off unless configured)."""
+        pivots = getattr(self, "pivots", None)
+        if pivots is None or not pivots.imphash_enabled or not stix_objects:
+            return []
+        if has_pivot_label(observable, opencti_entity):
+            # A file imported by a pivot never pivots again
+            return []
+        try:
+            sha256 = ((polyswarm_data or {}).get("data") or {}).get("sha256")
+            if not sha256:
+                return []
+            ioc_data = getattr(self, "_last_ioc_data", _IOC_NOT_FETCHED)
+            self._last_ioc_data = _IOC_NOT_FETCHED
+            if ioc_data is _IOC_NOT_FETCHED:
+                # IOC extraction did not run for this file: read the imphash here
+                ioc_data = self.client.fetch_iocs(sha256)
+            return pivots.imphash_objects(
+                observable["id"],
+                sha256,
+                (ioc_data or {}).get("imphash"),
+                marking_refs=self._source_marking_refs(observable, opencti_entity),
+            )
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Imphash pivot failed", {"error_type": type(err).__name__}
+            )
+            return []
+
+    def _process_attack_pattern(
+        self, data: dict, opencti_entity: dict, attack_pattern: dict
+    ) -> str:
+        """Technique pivot: files PolySwarm associates with an ATT&CK id."""
+        pivots = getattr(self, "pivots", None)
+        if pivots is None or not pivots.ttp_enabled or not self.entity_in_scope(data):
+            if not data.get("event_type"):
+                return self._send_bundle(self.stix_objects_list)
+            raise ValueError("Entity type Attack-Pattern not supported")
+
+        if getattr(self.helper, "connect_auto", False) is True:
+            # Auto-enrichment would search for every Attack-Pattern created
+            # (a MITRE import is hundreds), so the technique pivot is manual only
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Technique pivot skipped: it runs only with "
+                "CONNECTOR_AUTO=false"
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] Technique pivot skipped (CONNECTOR_AUTO=true)"
+
+        mitre_id = extract_mitre_id(attack_pattern) or extract_mitre_id(opencti_entity)
+        if not mitre_id:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Attack-Pattern has no MITRE ATT&CK id, nothing sent"
+            )
+            if not data.get("event_type"):
+                self._send_bundle(self.stix_objects_list)
+            return "[CONNECTOR] No MITRE ATT&CK id found to enrich"
+
+        marking_refs = self._source_marking_refs(attack_pattern, opencti_entity)
+        derived = pivots.ttp_objects(
+            attack_pattern["id"], mitre_id, marking_refs=marking_refs
+        )
+        stix_objects = list(self.stix_objects_list)
+        if attack_pattern.get("id") and attack_pattern["id"] not in {
+            obj.get("id") for obj in stix_objects
+        }:
+            stix_objects.insert(0, attack_pattern)
+        if self.converter_to_stix.author:
+            stix_objects.append(self.converter_to_stix.author)
+        stix_objects.extend(derived)
         return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
 
     def _should_replace_score(self, observable: dict, score: int) -> bool:
@@ -1500,6 +1593,19 @@ class ConnectorTemplate:
                     )
                     return "Observable TLP exceeds configured max_tlp"
 
+            # Attack-Pattern: technique pivot (only in scope when it is enabled)
+            if opencti_entity.get("entity_type") == "Attack-Pattern":
+                if unresolved_markings and self.max_tlp != "TLP:RED":
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] Skipping: marking can't be resolved to a TLP, "
+                        "nothing sent to PolySwarm",
+                        {"markings": unresolved_markings, "max_tlp": self.max_tlp},
+                    )
+                    if not data.get("event_type"):
+                        self._send_bundle(self.stix_objects_list)
+                    return "Observable marking can't be resolved against max_tlp"
+                return self._process_attack_pattern(data, opencti_entity, observable)
+
             # URL, domain and IP observables take the lookup path
             if opencti_entity.get("entity_type") in NETWORK_OBSERVABLE_TYPES:
                 # Fail closed: a marking that can't be resolved may be above max_tlp
@@ -1549,9 +1655,15 @@ class ConnectorTemplate:
                     )
 
                 # Collect comprehensive intelligence with profile enrichment
+                self._last_ioc_data = _IOC_NOT_FETCHED
                 stix_objects = self._collect_intelligence(observable, polyswarm_data)
                 if stix_objects:
                     stix_objects.extend(sample_objects)
+                stix_objects.extend(
+                    self._imphash_pivot(
+                        observable, opencti_entity, polyswarm_data, stix_objects
+                    )
+                )
 
                 # #40 — Playbook compatibility: ensure the original observable
                 # is present in the bundle so Playbook triggers fire correctly.

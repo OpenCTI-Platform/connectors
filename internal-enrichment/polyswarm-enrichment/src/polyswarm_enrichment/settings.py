@@ -12,7 +12,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class PolySwarmConfig(BaseConfigModel):
@@ -145,6 +145,29 @@ class PolySwarmConfig(BaseConfigModel):
         ),
     )
 
+    # Pivots (off by default: every pivot costs PolySwarm API lookups)
+    pivot_imphash_max: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description=(
+            "Max other files with the same imphash to import when enriching a "
+            "file PolySwarm reports a PE imphash for (0 = off, e.g. 10). Imported "
+            "files are labelled polyswarm-pivot-result and never pivot again."
+        ),
+    )
+    pivot_ttp_max: int = Field(
+        default=0,
+        ge=0,
+        le=100,
+        description=(
+            "Max files to import when enriching an Attack-Pattern with a MITRE "
+            "ATT&CK id (0 = off, e.g. 10). Any value above 0 adds Attack-Pattern "
+            "to the connector scope. Runs only with CONNECTOR_AUTO=false: with auto "
+            "enrichment on, every Attack-Pattern created would trigger a search."
+        ),
+    )
+
     # polykg (optional enrichment).
     # Default is empty (disabled) so an out-of-the-box deployment never
     # silently points at a staging environment. Operators who want
@@ -197,3 +220,15 @@ class ConnectorSettings(BaseConnectorSettings):
     polyswarm: PolySwarmConfig = Field(
         default_factory=PolySwarmConfig,
     )
+
+    @model_validator(mode="after")
+    def _scope_follows_pivots(self) -> "ConnectorSettings":
+        """Add Attack-Pattern to the scope only when the technique pivot is on."""
+        scope = list(self.connector.scope)
+        if self.polyswarm.pivot_ttp_max > 0 and "attack-pattern" not in [
+            s.strip().lower() for s in scope
+        ]:
+            scope.append("Attack-Pattern")
+            # The models are frozen; this is the one derived value
+            object.__setattr__(self.connector, "scope", scope)
+        return self
