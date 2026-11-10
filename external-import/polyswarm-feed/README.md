@@ -240,3 +240,7 @@ The note written for a live-hunting hit
 - **Unknown collection error at startup.** `POLYSWARM_FEED_COLLECTIONS` only accepts `trustgroup`, `ransomware` and `freemium`.
 - **A run stops early.** It reached `POLYSWARM_MAX_OBJECTS_PER_RUN`. The next run continues from where it stopped.
 - **More detail.** Set `CONNECTOR_LOG_LEVEL=debug`.
+
+## Support
+
+Support: customersuccess@polyswarm.io
