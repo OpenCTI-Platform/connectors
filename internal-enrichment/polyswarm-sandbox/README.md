@@ -219,6 +219,18 @@ The connector checks these fields in order:
 
 When `POLYKG_API_URL` is configured, the connector fetches live malware family profiles from the polykg REST API. This provides enhanced intelligence including threat actors, target locations, exploited CVEs, and related malware. The connector works fully without polykg — it just produces basic scan/sandbox enrichment without the extended threat intel.
 
+## Screenshots
+
+Taken on OpenCTI 7.261103.0 with a test account.
+
+The sandbox note on a detonated URL
+
+![The sandbox note on a detonated URL](./__docs__/media/url-detonation-note.png)
+
+A detonated URL related to the domains and IPs its sandbox run contacted
+
+![A detonated URL related to the domains and IPs its sandbox run contacted](./__docs__/media/url-detonation.png)
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
