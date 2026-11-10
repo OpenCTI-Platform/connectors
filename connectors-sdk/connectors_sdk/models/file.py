@@ -3,9 +3,27 @@
 from typing import Any
 
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
-from connectors_sdk.models.enums import HashAlgorithm
+from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
+    HashAlgorithm,
+)
 from pydantic import AwareDatetime, Field, PositiveInt, model_validator
 from stix2.v21 import File as Stix2File
+
+
+class FileStix(Stix2File):  # type: ignore[misc]
+    # As stix2 is untyped, subclassing one of its element is not handled by type checkers.
+    """Override stix2 File to compute its id without the extensions.
+
+    stix2 counts "extensions" in the File id, so the OpenCTI extension (score,
+    labels...) would change the id. Without them, a File keeps the id it had
+    before OpenCTI properties were written in an extension.
+    """
+
+    _id_contributing_properties = [
+        name for name in Stix2File._id_contributing_properties if name != "extensions"
+    ]
 
 
 class File(BaseObservableEntity):
@@ -86,7 +104,11 @@ class File(BaseObservableEntity):
 
     def to_stix2_object(self) -> Stix2File:
         """Make stix object."""
-        return Stix2File(
+        custom_properties = {
+            "additional_names": self.additional_names,
+        }
+
+        return FileStix(
             hashes=self.hashes,
             size=self.size,
             name=self.name,
@@ -96,6 +118,13 @@ class File(BaseObservableEntity):
             ctime=self.ctime,
             mtime=self.mtime,
             atime=self.atime,
-            x_opencti_additional_names=self.additional_names,
-            **self._common_stix2_properties()
+            **self._merge_stix2_properties(
+                self._common_stix2_properties(),
+                self._custom_stix2_extensions(
+                    ExtensionDefinitionId.OCTI_SCO,
+                    extension_type=ExtensionType.PROPERTY_EXTENSION,
+                    properties=custom_properties,
+                ),
+                self._deprecated_x_opencti_properties(custom_properties),
+            ),
         )

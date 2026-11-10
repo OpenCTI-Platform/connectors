@@ -1,6 +1,7 @@
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.mac_address import MACAddress
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 from stix2.v21 import MACAddress as Stix2MACAddress
 
@@ -54,6 +55,19 @@ def test_mac_address_to_stix2_object(
         value="AA-BB-CC-DD-EE-FF",
         allow_custom=True,
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        extensions={
+            STIX_EXT_OCTI_SCO: {
+                "extension_type": "property-extension",
+                "labels": ["network", "endpoint"],
+                "description": "Observed suspicious endpoint identifier",
+                "score": 65,
+                "created_by_ref": fake_valid_organization_author.id,
+                "external_references": [
+                    external_ref.to_stix2_object()
+                    for external_ref in fake_valid_external_references
+                ],
+            }
+        },
         x_opencti_score=65,
         x_opencti_description="Observed suspicious endpoint identifier",
         x_opencti_labels=["network", "endpoint"],
