@@ -97,6 +97,19 @@ def stub_config():
     return StubConfig()
 
 
+@pytest.fixture(autouse=True)
+def stub_startup_api_access_check(monkeypatch):
+    """Keep the ``ConnectorClient`` startup access check off the live API.
+
+    ``_validate_api_access`` sends a HEAD request through ``PolyswarmAPI.exists``
+    whenever a client is built, outside any VCR cassette. Tests of the check
+    itself replace the SDK with a mock and are not affected.
+    """
+    monkeypatch.setattr(
+        "polyswarm_api.api.PolyswarmAPI.exists", lambda _self, *_args, **_kw: True
+    )
+
+
 # ---------------------------------------------------------------------------
 # Sample polykg profile responses for mocking
 # ---------------------------------------------------------------------------
