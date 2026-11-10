@@ -505,6 +505,47 @@ class TestImphashHook:
         assert definition["definition"] == {"tlp": "amber"}
         assert definition["x_opencti_definition"] == "TLP:AMBER"
 
+    @pytest.mark.parametrize("resolvable", [True, False])
+    def test_cleanup_is_skipped_only_when_a_marking_is_unresolved(self, resolvable):
+        connector = _connector(_make_client())
+        self._wire(connector, None)
+        connector._collect_intelligence = MagicMock(
+            return_value=[
+                {"id": FILE_ID, "type": "file"},
+                {"id": "note--1", "type": "note"},
+            ]
+        )
+        connector.helper.api = MagicMock()
+        connector.helper.api.marking_definition.read.side_effect = RuntimeError(
+            "platform down"
+        )
+        message = self._file_message()
+        if resolvable:
+            message["enrichment_entity"]["objectMarking"] = [
+                {
+                    "standard_id": TLP_AMBER,
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                }
+            ]
+        else:
+            message["stix_entity"] = {
+                **message["stix_entity"],
+                "object_marking_refs": [TLP_AMBER],
+            }
+        connector.process_message(message)
+        args, kwargs = connector._send_bundle.call_args
+        sent = {o["id"]: o for o in args[0]}
+        assert sent["note--1"]["object_marking_refs"] == [TLP_AMBER]
+        assert kwargs["cleanup_inconsistent_bundle"] is resolvable
+
+    def test_markings_defined(self):
+        connector = _connector(_make_client())
+        note = {"id": "note--1", "type": "note", "object_marking_refs": [TLP_AMBER]}
+        assert connector._markings_defined([note]) is False
+        assert connector._markings_defined([note, {"id": TLP_AMBER}, "junk"]) is True
+        assert connector._markings_defined([{"id": "note--2"}]) is True
+
     def test_marking_definition_is_not_duplicated_when_already_present(self):
         connector = _connector(_make_client())
         present = {"id": TLP_AMBER, "type": "marking-definition"}

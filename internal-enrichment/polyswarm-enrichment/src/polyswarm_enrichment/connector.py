@@ -1579,11 +1579,28 @@ class ConnectorTemplate:
                 added.append(definition)
             else:
                 self.helper.connector_logger.warning(
-                    "[CONNECTOR] Marking definition could not be resolved, "
-                    "it may be dropped from the bundle",
+                    "[CONNECTOR] Marking definition could not be resolved",
                     {"marking": ref},
                 )
         return list(objects) + added
+
+    def _markings_defined(self, objects: list) -> bool:
+        """True when every marking ref in the bundle has its definition in it."""
+        present = {obj.get("id") for obj in objects if isinstance(obj, dict)}
+        missing = {
+            ref
+            for obj in objects
+            if isinstance(obj, dict)
+            for ref in obj.get("object_marking_refs") or []
+            if ref not in present
+        }
+        if missing:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Sending without bundle cleanup so unresolved "
+                "markings are kept",
+                {"markings": sorted(missing)},
+            )
+        return not missing
 
     @staticmethod
     def _source_marking_refs(stix_entity: dict, opencti_entity: dict) -> list[str]:
@@ -1958,7 +1975,15 @@ class ConnectorTemplate:
                     stix_objects = self._with_marking_definitions(
                         stix_objects, opencti_entity
                     )
-                    result = self._send_bundle(stix_objects)
+                    # A definition that could not be resolved still exists in
+                    # OpenCTI (the source carries it): skip the client-side
+                    # cleanup so the reference is kept, never stripped.
+                    result = self._send_bundle(
+                        stix_objects,
+                        cleanup_inconsistent_bundle=self._markings_defined(
+                            stix_objects
+                        ),
+                    )
                     # Explicitly update observable score — bundle import
                     # doesn't always persist x_opencti_score on existing objects.
                     enrichment_data = (polyswarm_data or {}).get("data") or {}
