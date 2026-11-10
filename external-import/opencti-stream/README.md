@@ -101,7 +101,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                  | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              |                | Yes       | The OpenCTI live stream to subscribe to: `live`, `raw`, or a stream collection UUID.          |
 | Live Stream Listen Delete       | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | false          | No        | Whether to subscribe to delete events. Disabled by default (this connector forwards upserts). |
 | Live Stream No Dependencies     | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | false          | No        | Whether to receive only the event's own object (no dependent objects). Disabled by default so dependencies are included. |
-| Live Stream No Dependencies     | live_stream_include_file_data | `CONNECTOR_LIVE_STREAM_INCLUDE_FILE_DATA` | false          | No        | Whether to add encoded file data to exported bundle. Disabled by default so file data isn't encoded into the bundle. |
+| Live Stream No Dependencies     | live_stream_include_file_data | `CONNECTOR_LIVE_STREAM_INCLUDE_FILE_DATA` | false          | No        | Whether to add encoded file data to exported bundle. Disabled by default so file data isn't encoded into the bundle. This only functions if the connector is registered to the same instance of OpenCTI as the Stream |
 
 ### Output mode parameters
 
