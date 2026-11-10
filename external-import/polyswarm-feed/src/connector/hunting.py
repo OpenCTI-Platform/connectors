@@ -114,6 +114,11 @@ def _detections(hit: dict) -> tuple[int, int, int] | None:
     return malicious, (benign if benign is not None and benign >= 0 else 0), total
 
 
+def field_text(hit: dict, name: str) -> str:
+    text = _clean_text(hit.get(name), MAX_NOTE_FIELD_LENGTH)
+    return text or "not provided"
+
+
 def _rule_label(rule_name: str) -> str:
     return "polyswarm-hunt:" + _UNSAFE_LABEL_CHARS.sub("_", rule_name)
 
@@ -228,18 +233,20 @@ class HuntingSource:
                 skipped_invalid += 1
                 continue
             key = self._hit_key(hit)
-            if key is not None:
-                if key in seen:
-                    skipped_seen += 1
-                    continue
-                seen.add(key)
-                new_ids.append(key)
+            if key is not None and key in seen:
+                skipped_seen += 1
+                continue
+            # A hit that is unusable now may be complete in a later copy, so
+            # it is counted as skipped but not remembered as seen.
             if _clean_hash(hit.get("sha256"), "SHA-256") is None:
                 skipped_invalid += 1
                 continue
             if not _clean_text(hit.get("rule_name"), MAX_RULE_NAME_LENGTH):
                 skipped_invalid += 1
                 continue
+            if key is not None:
+                seen.add(key)
+                new_ids.append(key)
             new_hits.append(hit)
 
         objects = self._map_hits(new_hits, now)
@@ -278,6 +285,8 @@ class HuntingSource:
 
         The same file often matches the same rule many times; those hits are
         folded into one note per (rule, file), described from the newest hit.
+        The Malware object comes from the newest hit of the group whose family
+        passes the real-family check, and the note lists every reported family.
         """
         groups: dict[tuple[str, str], list[dict]] = {}
         for hit in hits:
@@ -329,8 +338,13 @@ class HuntingSource:
             observable_id, indicator_id = file_refs[sha256]
             newest = group[0]
             refs = [observable_id, indicator_id]
-            family = _clean_text(newest.get("malware_family"), MAX_FAMILY_NAME_LENGTH)
-            if family and is_malware_family_name(family):
+            families: list[str] = []
+            for hit in group:
+                name = _clean_text(hit.get("malware_family"), MAX_FAMILY_NAME_LENGTH)
+                if name and name not in families:
+                    families.append(name)
+            family = next((f for f in families if is_malware_family_name(f)), "")
+            if family:
                 malware = stix2.Malware(
                     id=Malware.generate_id(family),
                     name=family,
@@ -354,7 +368,17 @@ class HuntingSource:
                     )
                 )
                 refs += [malware_id, relationship_id]
-            add(self._note(newest, len(group), sha256, rule, refs, family))
+            add(
+                self._note(
+                    newest,
+                    len(group),
+                    sha256,
+                    rule,
+                    refs,
+                    families,
+                    has_malware=bool(family),
+                )
+            )
 
         return list(objects.values())
 
@@ -426,8 +450,10 @@ class HuntingSource:
         sha256: str,
         rule: str,
         refs: list[str],
-        family: str = "",
+        families: list[str] | None = None,
+        has_malware: bool = False,
     ) -> stix2.Note:
+        families = families or []
         detections = _detections(hit)
         if detections is not None:
             malicious, benign, total = detections
@@ -436,20 +462,22 @@ class HuntingSource:
             detection_text = "not provided by the API for this hit"
 
         family_note = ""
-        if family and not is_malware_family_name(family):
+        if families and not has_malware:
             family_note = (
                 " (looks like a detection label, so no malware object was created)"
             )
+        family_text = (
+            ", ".join(families) if families else field_text(hit, "malware_family")
+        )
 
         def field(name: str) -> str:
-            text = _clean_text(hit.get(name), MAX_NOTE_FIELD_LENGTH)
-            return text or "not provided"
+            return field_text(hit, name)
 
         lines = [
             f"PolySwarm live hunting rule `{rule}` matched file `{sha256}`.",
             "",
             f"- Rule name: {rule}",
-            f"- Malware family as reported: {field('malware_family')}{family_note}",
+            f"- Malware family as reported: {family_text}{family_note}",
             f"- Engine detections at hit time: {detection_text}",
             f"- PolyScore as reported: {field('polyscore')}",
             f"- First seen on PolySwarm: {field('first_seen')}",
@@ -467,6 +495,6 @@ class HuntingSource:
             abstract=f"PolySwarm live hunting hit: {rule}",
             content=content,
             object_refs=refs,
-            labels=[_rule_label(rule)] + ([_family_label(family)] if family else []),
+            labels=[_rule_label(rule)] + [_family_label(f) for f in families],
             **self._common(),
         )

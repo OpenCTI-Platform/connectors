@@ -339,8 +339,8 @@ def test_hits_without_usable_sha256_or_rule_are_skipped(bad):
     source, _, logger = make_source([make_hit(**bad)])
     objects, state = source.collect({})
     assert objects == []
-    # The id is still remembered, so the bad hit is not retried forever.
-    assert state["seen_hit_ids"] == ["1001"]
+    # The id is not remembered, so a later complete copy is still imported.
+    assert state["seen_hit_ids"] == []
     summary = [m for m in logger.messages if m[1].endswith("processed.")][0][2]
     assert summary["hits_skipped_invalid"] == 1
 
@@ -583,3 +583,70 @@ def test_default_client_built_from_config(monkeypatch):
         "api_url": "https://api.polyswarm.network",
         "api_key": "0" * 32,
     }
+
+
+# ----------------------------------------------------------------------
+# Review fixes: transient incomplete hits, grouped family selection
+# ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "broken",
+    [{"sha256": None}, {"sha256": "xyz"}, {"rule_name": ""}, {"rule_name": None}],
+)
+def test_incomplete_hit_is_not_remembered_and_later_copy_is_imported(broken):
+    source, _, logger = make_source([make_hit("77", **broken)])
+    objects, state = source.collect({})
+    assert objects == []
+    assert "77" not in state["seen_hit_ids"]
+    skipped = [m for m in logger.messages if m[1].endswith("hits processed.")][0][2]
+    assert skipped["hits_skipped_invalid"] == 1
+
+    source2, _, _ = make_source([make_hit("77")])
+    objects, state = source2.collect(state)
+    assert len(by_type(objects, "note")) == 1
+    assert "77" in state["seen_hit_ids"]
+
+
+def test_complete_hit_is_still_deduplicated_by_id():
+    source, _, _ = make_source([make_hit("5"), make_hit("5")])
+    objects, state = source.collect({})
+    assert state["seen_hit_ids"] == ["5"]
+    note = by_type(objects, "note")[0]
+    assert "Hits for this rule and file in this import: 1" in note["content"]
+
+
+def test_group_uses_newest_real_family_not_only_newest_hit():
+    hits = [
+        make_hit("3", malware_family="Trojan.Packed2"),
+        make_hit("2", malware_family="AsyncRat"),
+        make_hit("1", malware_family="Copak"),
+    ]
+    source, _, _ = make_source(hits)
+    objects, _ = source.collect({})
+    assert [m["name"] for m in by_type(objects, "malware")] == ["AsyncRat"]
+    indicates = [
+        r
+        for r in by_type(objects, "relationship")
+        if r["relationship_type"] == "indicates"
+    ]
+    assert len(indicates) == 1
+    note = by_type(objects, "note")[0]
+    assert indicates[0]["id"] in note["object_refs"]
+    for name in ("Trojan.Packed2", "AsyncRat", "Copak"):
+        assert name in note["content"]
+        assert f"polyswarm-family:{name}" in note["labels"]
+    assert "no malware object was created" not in note["content"]
+
+
+def test_group_with_only_labels_creates_no_malware_and_lists_them():
+    hits = [
+        make_hit("2", malware_family="Trojan.Packed2"),
+        make_hit("1", malware_family="PUA.Generic"),
+    ]
+    source, _, _ = make_source(hits)
+    objects, _ = source.collect({})
+    assert by_type(objects, "malware") == []
+    note = by_type(objects, "note")[0]
+    assert "Trojan.Packed2, PUA.Generic" in note["content"]
+    assert "no malware object was created" in note["content"]
