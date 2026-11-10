@@ -283,6 +283,14 @@ A detonated URL related to the domains and IPs its sandbox run contacted
 
 ![A detonated URL related to the domains and IPs its sandbox run contacted](./__docs__/media/url-detonation.png)
 
+A File known only by its hash, with the PolySwarm sandbox report fetched by hash (no upload)
+
+![A File known only by its hash, with the PolySwarm sandbox report fetched by hash (no upload)](./__docs__/media/hash-sandbox-report.png)
+
+The sandbox report attached to the File
+
+![The sandbox report attached to the File](./__docs__/media/hash-sandbox-report-data.png)
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
