@@ -5,6 +5,7 @@ _collect_intelligence, process_message), client_api.py (CircuitBreaker),
 and attack_pattern_handler.py (error paths).
 """
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -1436,3 +1437,103 @@ class TestConverterToStixErrorPaths:
             source_malware_id="malware--12345678-1234-4234-8234-123456789abc",
         )
         assert malware is None
+
+
+# ===========================================================================
+# connector.py - source markings on real converter output
+# ===========================================================================
+class TestSourceMarkingsOnRealOutput:
+    AMBER = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+
+    def _run(self):
+        import uuid
+
+        from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
+
+        c = TestCollectIntelligenceDeeper()._make_connector()
+        c.attack_pattern_handler = AttackPatternHandler(
+            c.helper,
+            c.converter_to_stix.author["id"],
+            {
+                "techniques": {
+                    "T1059": {"name": "Command Scripting", "tactic": "execution"}
+                },
+                "type_mappings": {},
+            },
+        )
+        c.client.get_profile.return_value = {
+            "description": "A trojan",
+            "aliases": ["TrickBot"],
+            "ttps": [{"technique_id": "T1059", "name": "x", "tactic": "execution"}],
+            "actors": [],
+            "systems_targeted": ["Windows"],
+        }
+        file_id = f"file--{uuid.uuid4()}"
+        observable = {"id": file_id, "type": "file", "hashes": {"SHA-256": "a" * 64}}
+        c.stix_objects_list = [observable]
+        polyswarm_result = {
+            "data": {
+                "community": "default",
+                "x_opencti_score": 85,
+                "x_opencti_labels": ["malware_type:trojan"],
+                "x_opencti_description": "Test",
+                "sha256": "a" * 64,
+                "md5": "b" * 32,
+                "sha1": "c" * 40,
+                "poly_unite": ["TrickBot"],
+                "detections": {"malicious": 30, "total": 60},
+                "polyscore": 0.85,
+                "first_seen": "2024-01-01",
+                "permalink": "https://polyswarm.network/scan/abc",
+            },
+            "errors": [],
+            "multi_community": False,
+        }
+        objects = c._collect_intelligence(observable, polyswarm_result)
+        # The converter links software through operating_system_refs only, so
+        # add the targets relationship a platform user could also create.
+        malware = next(o for o in objects if o["type"] == "malware")
+        software = next(o for o in objects if o["type"] == "software")
+        objects.append(
+            c.converter_to_stix.create_relationship(
+                malware["id"], "targets", software["id"]
+            )
+        )
+        marked = c._with_source_markings(objects, [self.AMBER], observable)
+        by_type: dict = {}
+        for obj in marked:
+            plain = obj if isinstance(obj, dict) else json.loads(obj.serialize())
+            by_type.setdefault(plain["type"], []).append(plain)
+        return by_type
+
+    def test_only_owned_objects_are_marked(self):
+        by_type = self._run()
+        assert by_type["note"] and by_type["indicator"]
+        assert by_type["identity"] and by_type["malware"]
+        assert by_type["attack-pattern"]
+        for kind in ("note", "indicator"):
+            for obj in by_type[kind]:
+                assert obj["object_marking_refs"] == [self.AMBER]
+        assert by_type["software"]
+        for kind in ("identity", "malware", "attack-pattern", "software"):
+            for obj in by_type[kind]:
+                assert "object_marking_refs" not in obj
+        software_ids = {o["id"] for o in by_type["software"]}
+        targets = [
+            r
+            for r in by_type["relationship"]
+            if r["target_ref"] in software_ids or r["source_ref"] in software_ids
+        ]
+        assert targets
+        for rel in targets:
+            assert "object_marking_refs" not in rel
+        shared = {"malware", "attack-pattern", "identity", "software"}
+        marked_rels = 0
+        for rel in by_type["relationship"]:
+            ends = {rel["source_ref"].split("--")[0], rel["target_ref"].split("--")[0]}
+            if ends <= shared:
+                assert "object_marking_refs" not in rel
+            else:
+                assert rel["object_marking_refs"] == [self.AMBER]
+                marked_rels += 1
+        assert marked_rels

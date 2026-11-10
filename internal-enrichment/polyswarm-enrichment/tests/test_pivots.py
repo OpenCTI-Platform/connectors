@@ -479,6 +479,62 @@ class TestImphashHook:
         for obj in pivots:
             assert obj["object_marking_refs"] == [TLP_AMBER, TLP_GREEN]
 
+    def test_hash_enrichment_objects_carry_the_source_markings(self):
+        connector = _connector(_make_client())
+        self._wire(connector, None)
+        connector._collect_intelligence = MagicMock(
+            return_value=[
+                {"id": FILE_ID, "type": "file"},
+                {"id": "marking-definition--x", "type": "marking-definition"},
+                {"id": "indicator--1", "type": "indicator"},
+                {"id": "malware--1", "type": "malware"},
+                {"id": "note--1", "type": "note"},
+                {
+                    "id": "relationship--1",
+                    "type": "relationship",
+                    "source_ref": "indicator--1",
+                    "target_ref": "malware--1",
+                },
+                {
+                    "id": "relationship--2",
+                    "type": "relationship",
+                    "source_ref": FILE_ID,
+                    "target_ref": "malware--1",
+                    "object_marking_refs": [TLP_GREEN],
+                },
+                {
+                    "id": "relationship--3",
+                    "type": "relationship",
+                    "source_ref": "malware--1",
+                    "target_ref": "attack-pattern--1",
+                },
+            ]
+        )
+        message = self._file_message()
+        message["stix_entity"] = {
+            **message["stix_entity"],
+            "object_marking_refs": [TLP_AMBER],
+        }
+        connector.process_message(message)
+        sent = {o["id"]: o for o in connector._send_bundle.call_args[0][0]}
+        for obj_id in (
+            "indicator--1",
+            "note--1",
+            "relationship--1",
+        ):
+            assert sent[obj_id]["object_marking_refs"] == [TLP_AMBER]
+        assert sent["relationship--2"]["object_marking_refs"] == [
+            TLP_GREEN,
+            TLP_AMBER,
+        ]
+        for obj_id in (
+            FILE_ID,
+            "marking-definition--x",
+            "malware--1",
+            "relationship--3",
+        ):
+            assert "object_marking_refs" not in sent[obj_id]
+
     def test_reuses_the_imphash_the_ioc_step_already_read(self):
         connector = _connector(_make_client())
         self._wire(connector, None)

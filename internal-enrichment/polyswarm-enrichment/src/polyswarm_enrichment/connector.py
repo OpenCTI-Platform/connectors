@@ -1515,6 +1515,92 @@ class ConnectorTemplate:
         ]
         return list(dict.fromkeys(refs))
 
+    # Per-sample observable types, the only ones that can be an owned end of a
+    # relationship or be marked as an observable. Anything else (identities,
+    # malware, attack patterns, actors, locations, software, unknown or custom
+    # types) is shared and left unmarked: OpenCTI merges markings on upsert, so
+    # marking a shared object would spread the source's markings platform-wide.
+    # STIX 2.1 SCO types plus OpenCTI observable types, except ``software``.
+    _SCO_TYPES = frozenset(
+        {
+            "artifact",
+            "autonomous-system",
+            "directory",
+            "domain-name",
+            "email-addr",
+            "email-message",
+            "file",
+            "ipv4-addr",
+            "ipv6-addr",
+            "mac-addr",
+            "mutex",
+            "network-traffic",
+            "process",
+            "url",
+            "user-account",
+            "windows-registry-key",
+            "x509-certificate",
+            "hostname",
+            "text",
+            "user-agent",
+            "cryptocurrency-wallet",
+            "bank-account",
+            "phone-number",
+            "payment-card",
+            "media-content",
+            "tracking-number",
+            "credential",
+        }
+    )
+
+    @classmethod
+    def _is_sco(cls, stix_id: str | None) -> bool:
+        """True for a per-sample cyber observable id (allowlist, not software)."""
+        return str(stix_id or "").split("--")[0] in cls._SCO_TYPES
+
+    def _with_source_markings(
+        self, objects: list, marking_refs: list[str], observable: dict
+    ) -> list:
+        """Union the source's markings onto the objects that belong to it.
+
+        Only Notes, Indicators, observables other than the source, and
+        relationships with at least one end that is the source, an Indicator or
+        an observable are marked. Shared objects (identities, malware families,
+        attack patterns, actors, locations and so on) and relationships between
+        them are never marked, because OpenCTI merges markings on upsert.
+        Markings an object already carries are kept.
+        """
+        if not marking_refs:
+            return objects
+        source_id = observable.get("id")
+        skip_ids = {source_id} | {obj.get("id") for obj in self.stix_objects_list}
+
+        def owned(ref: str | None) -> bool:
+            return (
+                ref == source_id
+                or str(ref or "").startswith("indicator--")
+                or self._is_sco(ref)
+            )
+
+        stamped = []
+        for obj in objects:
+            plain = json.loads(obj.serialize()) if hasattr(obj, "serialize") else obj
+            obj_type = plain.get("type")
+            if plain.get("id") in skip_ids:
+                mark = False
+            elif obj_type in ("note", "indicator"):
+                mark = True
+            elif obj_type == "relationship":
+                mark = owned(plain.get("source_ref")) or owned(plain.get("target_ref"))
+            else:
+                mark = self._is_sco(plain.get("id"))
+            if not mark:
+                stamped.append(obj)
+                continue
+            refs = list(plain.get("object_marking_refs") or []) + list(marking_refs)
+            stamped.append({**plain, "object_marking_refs": list(dict.fromkeys(refs))})
+        return stamped
+
     def _existing_artifact_id(self, sha256: str | None) -> str | None:
         """STIX id of an Artifact with this SHA-256 already in OpenCTI, if any.
 
@@ -1761,6 +1847,11 @@ class ConnectorTemplate:
                 # Collect comprehensive intelligence with profile enrichment
                 self._last_ioc_data = _IOC_NOT_FETCHED
                 stix_objects = self._collect_intelligence(observable, polyswarm_data)
+                stix_objects = self._with_source_markings(
+                    stix_objects,
+                    self._source_marking_refs(observable, opencti_entity),
+                    observable,
+                )
                 if stix_objects:
                     stix_objects.extend(sample_objects)
                 stix_objects.extend(
