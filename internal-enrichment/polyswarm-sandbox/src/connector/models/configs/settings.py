@@ -89,6 +89,14 @@ class PolySwarmConfig(BaseConfigModel):
         default=600,
         description="Maximum wait time for sandbox results in seconds.",
     )
+    sandbox_url_send_query: bool = Field(
+        default=False,
+        description=(
+            "Send a Url observable's query string and fragment to PolySwarm for "
+            "detonation. Off by default: only scheme, host and path are submitted, "
+            "so tokens in a query string never leave OpenCTI."
+        ),
+    )
 
     # Polling
     poll_interval: int = Field(
@@ -156,9 +164,9 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     Only ``name`` and ``scope`` are overridden here; everything else
     (ID, confidence, log level) comes from env vars or SDK defaults.
 
-    Scope is ``Artifact`` only: the sandbox detonates an uploaded file,
-    so it needs the file attached to an Artifact. A StixFile observable
-    carrying just a hash has nothing to detonate.
+    Scope is ``Artifact`` and ``Url``: the sandbox detonates an uploaded
+    file (so it needs the file attached to an Artifact) or a URL. A StixFile
+    observable carrying just a hash has nothing to detonate.
     """
 
     name: str = Field(
@@ -166,7 +174,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["Artifact"],
+        default=["Artifact", "Url"],
         description="The scope of the connector.",
     )
 

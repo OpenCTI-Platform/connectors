@@ -1,0 +1,1755 @@
+{
+ "account_number": null,
+ "artifact": {
+  "extended_type": "ASCII text, with no line terminators",
+  "failed": false,
+  "filename": "http://malware.wicar.org/data/eicar.com",
+  "mimetype": "text/plain",
+  "size": 39
+ },
+ "community": "mainnet1",
+ "config": {
+  "arguments": "",
+  "artifact_type": "URL",
+  "browser": null,
+  "network_enabled": true,
+  "provider": {
+   "id": "2",
+   "name": "triage",
+   "slug": "triage",
+   "tool": "triage_sandbox_v0"
+  },
+  "target": "http://malware.wicar.org/data/eicar.com",
+  "traige_analysis_score": 3,
+  "triage_static_score": 1,
+  "vm": {
+   "Architecture": "x64",
+   "id": "200",
+   "language": "English (United States)",
+   "name": "windows11-21h2-x64",
+   "os_name": "Windows 11 21h2 x64",
+   "os_version": "21H2 Build 22000.493",
+   "profile": "poly",
+   "slug": "windows11-21h2-x64"
+  }
+ },
+ "created": "2026-11-09T15:52:55.948953+00:00",
+ "expiration": "2026-11-09T18:52:55.951959+00:00",
+ "id": "77744957141072924",
+ "instance_id": "67839836949231784",
+ "report": {
+  "analysis": {
+   "score": 3,
+   "tags": [
+    "discovery"
+   ]
+  },
+  "dumped": [
+   {
+    "at": 859,
+    "kind": "martian",
+    "md5": "1f75669506cef107d86080eae0d9047c",
+    "name": "files/0x0001000000025951-4.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Crashpad\\settings.dat",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "1145830be9ff52e617b154d2cc124fb541b8d574",
+    "sha256": "d63063e75c637e21e0007507f134afedd9871ea3ff1e328560350267c7a91c49",
+    "sha512": "b3fe136f072fc0a70166c0cbe8755f89fd35cc127cd370cbad69b6959990a50ca57144f6904a1c5804228f2cec82d3d36d294ac43de5777fde0acb89c1b3181b",
+    "size": 152,
+    "tlsh": "T16CC00271FBE59C75E428847115FB075B4AADD84C61161F01468C780C8F0A80EB55746C"
+   },
+   {
+    "at": 1547,
+    "kind": "martian",
+    "md5": "d41d8cd98f00b204e9800998ecf8427e",
+    "name": "files/0x0000000000000097-11.dat",
+    "origin": "martian",
+    "path": "\\??\\pipe\\LOCAL\\crashpad_3860_VDPWNCAWMPNIMMGE",
+    "pid": 4676,
+    "procid": 79,
+    "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sha512": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+   },
+   {
+    "at": 2500,
+    "kind": "martian",
+    "md5": "c81731da3f9632e7fdbe30013bd4aad4",
+    "name": "files/0x0009000000029929-20.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Preferences",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "52de2ee790346e0a234663dac767606bb4c7e0bb",
+    "sha256": "43d6c210250b17475d45d85c385343d75e5f7fcddbebd602c0a77351ee113af6",
+    "sha512": "c17866f50b44de847828305a731b92acc538bbe26c07189bb2e42b3845ccd3ca09e9feae17f6ea3ef83cfe76818542369524e62fa47143d8d20f3d7ee10980b6",
+    "size": 4992,
+    "ssdeep": "96:n8k3bvmkAlRwSv0MoiVmdHIcXH0WQyV+VuiiX3:n8k3LmkWv0MAIc3Ld3",
+    "tlsh": "T10EA1B5166918A97F8CCAE11CBA56BB03E6FD147255D82E08E6FC9E2C05DB4CD225380F"
+   },
+   {
+    "at": 3719,
+    "kind": "martian",
+    "md5": "46295cac801e5d4857d09837238a6394",
+    "name": "files/0x0001000000029930-50.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\data_reduction_proxy_leveldb\\CURRENT",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "44e0fa1b517dbf802b18faf0785eeea6ac51594b",
+    "sha256": "0f1bad70c7bd1e0a69562853ec529355462fcd0423263a3d39d6d0d70b780443",
+    "sha512": "8969402593f927350e2ceb4b5bc2a277f3754697c1961e3d6237da322257fbab42909e1a742e22223447f3a4805f8d8ef525432a7c3515a549e984d3eff72b23",
+    "size": 16
+   },
+   {
+    "at": 3734,
+    "kind": "martian",
+    "md5": "206702161f94c5cd39fadd03f4014d98",
+    "name": "files/0x0001000000029935-52.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\data_reduction_proxy_leveldb\\CURRENT",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "bd8bfc144fb5326d21bd1531523d9fb50e1b600a",
+    "sha256": "1005a525006f148c86efcbfb36c6eac091b311532448010f70f7de9a68007167",
+    "sha512": "0af09f26941b11991c750d1a2b525c39a8970900e98cba96fd1b55dbf93fee79e18b8aab258f48b4f7bda40d059629bc7770d84371235cdb1352a4f17f80e145",
+    "size": 16
+   },
+   {
+    "at": 3812,
+    "kind": "martian",
+    "md5": "69630e4574ec6798239b091cda43dca0",
+    "name": "files/0x000a000000029929-57.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\Downloads\\Unconfirmed 884605.crdownload",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "cf8bd9dfddff007f75adf4c2be48005cea317c62",
+    "sha256": "131f95c51cc819465fa1797f6ccacf9d494aaaff46fa3eac73ae63ffbdfd8267",
+    "sha512": "5581f85b25f0d80fa84c69e7ca24d98344f5fbaec45b7707dccf139a8c065961391d6e762516ee1db3137c4d82eca7fbc67c348c37ea0d615bb88161cf3b3008",
+    "size": 69,
+    "tlsh": "T1E6A022003B0EEE2BA20B00200032E8B00808020F2CE00A3820A020B8C83308803EC228"
+   },
+   {
+    "at": 11390,
+    "kind": "martian",
+    "md5": "3e68d1385eb60eda14c11fdb2b450b20",
+    "name": "files/0x0002000000029952-73.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Local State",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "7c07cf815195c8841bb81e284c8f5fc15245a361",
+    "sha256": "20345b438a939b31d02ef6cc940f1224d60990a78ce3f8003668e9d46e480bc7",
+    "sha512": "52696deafd4f897424b5dfa1ebe950372e4342b19dfcc06abc7f8e4dbc5ca171fb0d750362eaa772068b32c836f5d1f741673ded600fcdb5e25f6a3fc5c33a57",
+    "size": 8736,
+    "ssdeep": "192:aoCL/Pgu90RZj8Sr6FA4ZiIxuERzA83h09RZxASGOm+8Fe2RUvNi3FourDXlu:e9iIxuERzA83h09RZxASGODWsiFourDY",
+    "tlsh": "T1570263E854B25DBB79C1A89EF5C7A2858B727037B0C308C490D71F2907FD36E40A226D"
+   },
+   {
+    "at": 12328,
+    "kind": "martian",
+    "md5": "ca9611d2aa3c31cd07b2cf30fbc4f13e",
+    "name": "files/0x0002000000029951-81.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Preferences",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "b8cd7ffb9b96f3101d86899b8b575262053ae268",
+    "sha256": "90e54dc7c164395903056b9056873712910d381322a1e00e69912aaef7e80e0f",
+    "sha512": "2e786732eec140feb2003e91f4b9470208c774c68d933c5ed8617a834eb2cdac20cb9602b837b5bfecbee197628235c31dbe2cc2600d37dce0a2c08222cb5c6a",
+    "size": 5327,
+    "ssdeep": "96:n8k3q2vmkAlRwSv0MoiVmdHIVJ2XH0WQyV+VpAiX3wI3:n8k3qqmkWv0MAIv23Le93",
+    "tlsh": "T1A3B1D5166918A93F9CC6D22CBA56BB03EAFC147245942E08E7FD9E2C05DB9CD125380F"
+   },
+   {
+    "at": 12859,
+    "kind": "martian",
+    "md5": "285252a2f6327d41eab203dc2f402c67",
+    "name": "files/0x00060000000259e3-86.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Network Persistent State",
+    "pid": 4676,
+    "procid": 79,
+    "sha1": "acedb7ba5fbc3ce914a8bf386a6f72ca7baa33c6",
+    "sha256": "5dfc321417fc31359f23320ea68014ebfd793c5bbed55f77dab4180bbd4a2026",
+    "sha512": "11ce7cb484fee66894e63c31db0d6b7ef66ad0327d4e7e2eb85f3bcc2e836a3a522c68d681e84542e471e54f765e091efe1ee4065641b0299b15613eb32dcc0d",
+    "size": 111,
+    "tlsh": "T136B01269E4517CFF074A83A41928F453C3FF0047421C8ABEEA3873AD42A21BD0C28C47"
+   },
+   {
+    "at": 12984,
+    "kind": "martian",
+    "md5": "4a5f12b987e4b0b5d3067839fdc61a73",
+    "name": "files/0x0002000000025a81-91.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Secure Preferences",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "1775aa1c5c956723fa9aa8fc062a10183764286f",
+    "sha256": "e338bf30a105424f5be3335efaf099cbaee9adcbd36f5c6bca6e14ef0aa6cb7a",
+    "sha512": "a78a7e4b2eda10dd9d3d558f32c25c193d59a900ae38e4a65d5a4da4c5769e438737c1c2f09307c421c7d316adf7a566b2bfab000e00cec7e7fd6e8b72ab47e7",
+    "size": 26470,
+    "ssdeep": "768:nUh8z2fWRjQO8F1+UoAYDCx9Tuqh0VfUC9xbog/OV3nLl/L06xrUpC5vZq68:nUh8z2fWRjQOu1jaKnLp466pC5vc68",
+    "tlsh": "T18DC2F93B740CCA7E5F800E99DD666F972E9802C766688D4487FE994C02C77ED91264CF"
+   },
+   {
+    "at": 22062,
+    "kind": "martian",
+    "md5": "5b6805863be12f791c570cf028220f98",
+    "name": "files/0x00030000000259e5-99.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Local State",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "1503edcb7c890d55df0fa812e0e89327ff3e61da",
+    "sha256": "411af8b0dd5f3446f187af2ab6de17738b06bffcf331c351d9c6144fdaa087ce",
+    "sha512": "6aee82bf18f97c74f217f7020cc005123afd05987dc75aa52ffe8c7502a0a5380e401f69c8f7c0cfcef3d9ef803d64e0698e574e6879cb7aa2bc55caccd24198",
+    "size": 8834,
+    "ssdeep": "192:ZoCL/Pgu90RZj8Sr6FA4ZiIxuERzA83h09RZxASGOm+8Fe2RUvNi3nourDXlu:F9iIxuERzA83h09RZxASGODWsinourDY",
+    "tlsh": "T19B0253E854B35DBB79C1A89EF5CBA2858B727027B0C708C490D71E2917FD36E40A226D"
+   },
+   {
+    "at": 24406,
+    "kind": "martian",
+    "md5": "ecec8af861ee4c9dc32487fdff78f75e",
+    "name": "files/0x0003000000029952-107.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\Preferences",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "4c51aab75316e401bbc16a868f5f72edc004f0ee",
+    "sha256": "a67d19ac3f1c304db716c278745b479f5bba12e1a5c96f2797a5c08ced0afb6c",
+    "sha512": "48000d505d90c0ebb6d642f271c99b3e6b3b7d0c75fc8cc16302146b74b841bef22c94d5978bb2cb1d4c4f1ea1e1f355704c328c045a8204909957999d980aa3",
+    "size": 5379,
+    "ssdeep": "96:nok3q2vmkAlRwSv0MoiVmdHIVJ2XH0WQyV+VpAiX3wI3:nok3qqmkWv0MAIv23Le93",
+    "tlsh": "T134B1D6166918A93F9CC6D21CBA56BB03EAFC147245D42E04E7FC9E2C05DB5CD125340F"
+   },
+   {
+    "at": 71734,
+    "kind": "martian",
+    "md5": "d0ce5e546367f96106cff664ec611b36",
+    "name": "files/0x000300000002614a-130.dat",
+    "origin": "ransom",
+    "path": "C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\de4a9f65-db39-43d0-ba38-6b980720669d.tmp",
+    "pid": 3860,
+    "procid": 76,
+    "sha1": "c1ca79bf52f8ca5ee61b04430c6667c47f7de71a",
+    "sha256": "3ee84bf43a7a259e86435107f755b55263aa951eaed82cf0fa032ca8a3a11414",
+    "sha512": "9804e79eb5a0aa0a7fa49403e55c00de224d25da4862f13c8246ca570cba3c0c99f62572a0914f51e7fbc1754f4ba337d35527a020a0bec0171ee5fef92f7999",
+    "size": 5443,
+    "ssdeep": "96:nok3q2vmkAlRwSv0MoiVmdHIBi3J2XH0WQyV+VpAiX3wI3:nok3qqmkWv0MAIw523Le93",
+    "tlsh": "T11DB1C4166918A93F9CC6D22CBA57BB03EAFC147245A42E08E6FD9E2C05DB9DD125340F"
+   }
+  ],
+  "extracted": null,
+  "extracted_c2_ip_port": [],
+  "extracted_c2_ips": [],
+  "malware_family": [],
+  "network": {
+   "flows": [
+    {
+     "domain": "malware.wicar.org",
+     "dst": "8.8.8.8:53",
+     "id": 5,
+     "proto": "udp",
+     "src": "10.127.0.3:62791"
+    },
+    {
+     "domain": "malware.wicar.org",
+     "dst": "208.94.116.246:80",
+     "id": 7,
+     "proto": "tcp",
+     "src": "10.127.0.3:49720"
+    },
+    {
+     "domain": "malware.wicar.org",
+     "dst": "208.94.116.246:80",
+     "id": 8,
+     "proto": "tcp",
+     "src": "10.127.0.3:49721"
+    },
+    {
+     "domain": "nav.smartscreen.microsoft.com",
+     "dst": "13.91.96.185:443",
+     "id": 9,
+     "proto": "tcp",
+     "src": "10.127.0.3:49722",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "nav.smartscreen.microsoft.com"
+    },
+    {
+     "domain": "nav.smartscreen.microsoft.com",
+     "dst": "13.91.96.185:443",
+     "id": 10,
+     "proto": "tcp",
+     "src": "10.127.0.3:49723",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "nav.smartscreen.microsoft.com"
+    },
+    {
+     "domain": "nav.smartscreen.microsoft.com",
+     "dst": "13.91.96.185:443",
+     "id": 11,
+     "proto": "tcp",
+     "src": "10.127.0.3:49725",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "nav.smartscreen.microsoft.com"
+    },
+    {
+     "domain": "data-edge.smartscreen.microsoft.com",
+     "dst": "172.183.192.109:443",
+     "id": 16,
+     "proto": "tcp",
+     "src": "10.127.0.3:49736",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "data-edge.smartscreen.microsoft.com"
+    },
+    {
+     "domain": "data-edge.smartscreen.microsoft.com",
+     "dst": "172.183.192.109:443",
+     "id": 17,
+     "proto": "tcp",
+     "src": "10.127.0.3:49738",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "data-edge.smartscreen.microsoft.com"
+    },
+    {
+     "domain": "data-edge.smartscreen.microsoft.com",
+     "dst": "172.183.192.109:443",
+     "id": 18,
+     "proto": "tcp",
+     "src": "10.127.0.3:49737",
+     "tls_ja3": "258a5a1e95b8a911872bae9081526644",
+     "tls_ja3s": "9ba82c251d6ef4f2064633ec8d7c618d",
+     "tls_sni": "data-edge.smartscreen.microsoft.com"
+    },
+    {
+     "dst": "224.0.0.251:5353",
+     "id": 19,
+     "proto": "udp",
+     "src": "10.127.0.3:5353"
+    }
+   ],
+   "ips": [
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "13.91.96.185"
+    },
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "150.171.109.145"
+    },
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "150.171.23.17"
+    },
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "172.183.192.109"
+    },
+    {
+     "asn": "AS54113",
+     "cc": "US",
+     "ip": "199.232.210.172"
+    },
+    {
+     "asn": "AS54113",
+     "cc": "US",
+     "ip": "199.232.214.172"
+    },
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "20.184.175.8"
+    },
+    {
+     "asn": "AS8075",
+     "cc": "US",
+     "ip": "20.190.157.9"
+    },
+    {
+     "asn": "AS8068",
+     "cc": "US",
+     "ip": "204.79.197.203"
+    },
+    {
+     "asn": "AS40630",
+     "cc": "US",
+     "ip": "208.94.116.246"
+    },
+    {
+     "asn": "AS33905",
+     "cc": "US",
+     "ip": "23.11.33.159"
+    },
+    {
+     "asn": "AS15169",
+     "cc": "US",
+     "ip": "8.8.8.8"
+    }
+   ]
+  },
+  "platform": {
+   "provider": "triage",
+   "vm": "windows11-21h2_x64"
+  },
+  "processes": [
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --start-maximized --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --single-argument http://malware.wicar.org/data/eicar.com",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3860,
+    "ppid": 2448,
+    "procid": 76,
+    "procid_parent": 52,
+    "started": 422
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=crashpad-handler \"--user-data-dir=C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\" /prefetch:7 --monitor-self-annotation=ptype=crashpad-handler \"--database=C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\\Crashpad\" \"--metrics-dir=C:\\Users\\Admin\\AppData\\Local\\Microsoft\\Edge\\User Data\" --annotation=IsOfficialBuild=1 --annotation=channel= --annotation=chromium-version=90.0.4430.212 \"--annotation=exe=C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --annotation=plat=Win64 \"--annotation=prod=Microsoft Edge\" --annotation=ver=90.0.818.66 --initial-client-data=0x100,0x104,0x108,0xdc,0x10c,0x7ffff4523cb8,0x7ffff4523cc8,0x7ffff4523cd8",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3888,
+    "ppid": 3860,
+    "procid": 77,
+    "procid_parent": 76,
+    "started": 484
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=gpu-process --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --gpu-preferences=SAAAAAAAAADgAAAwAAAAAAAAAAAAAAAAAABgAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAHgAAAAAAAAAKAAAAAQAAAAgAAAAAAAAACgAAAAAAAAAMAAAAAAAAAA4AAAAAAAAABAAAAAAAAAAAAAAAAUAAAAQAAAAAAAAAAAAAAAGAAAAEAAAAAAAAAABAAAABQAAABAAAAAAAAAAAQAAAAYAAAAIAAAAAAAAAAgAAAAAAAAA --mojo-platform-channel-handle=1896 /prefetch:2",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3040,
+    "ppid": 3860,
+    "procid": 78,
+    "procid_parent": 76,
+    "started": 1437
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=utility --utility-sub-type=network.mojom.NetworkService --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --service-sandbox-type=none --mojo-platform-channel-handle=2280 /prefetch:3",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 4676,
+    "ppid": 3860,
+    "procid": 79,
+    "procid_parent": 76,
+    "started": 1453
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=utility --utility-sub-type=storage.mojom.StorageService --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --service-sandbox-type=utility --mojo-platform-channel-handle=2656 /prefetch:8",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 5088,
+    "ppid": 3860,
+    "procid": 80,
+    "procid_parent": 76,
+    "started": 1672
+   },
+   {
+    "cmd": "C:\\Windows\\System32\\CompPkgSrv.exe -Embedding",
+    "image": "C:\\Windows\\System32\\CompPkgSrv.exe",
+    "orig": true,
+    "pid": 752,
+    "ppid": 812,
+    "procid": 81,
+    "procid_parent": 8,
+    "started": 1797,
+    "terminated": 1969
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --disable-client-side-phishing-detection --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=6 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=3312 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3780,
+    "ppid": 3860,
+    "procid": 82,
+    "procid_parent": 76,
+    "started": 1969
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --disable-client-side-phishing-detection --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=5 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=3356 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3836,
+    "ppid": 3860,
+    "procid": 83,
+    "procid_parent": 76,
+    "started": 1984
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=utility --utility-sub-type=chrome.mojom.UtilWin --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --service-sandbox-type=none --mojo-platform-channel-handle=3992 /prefetch:8",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 4432,
+    "ppid": 3860,
+    "procid": 84,
+    "procid_parent": 76,
+    "started": 2703,
+    "terminated": 3281
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --disable-gpu-compositing --lang=en-US --disable-client-side-phishing-detection --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=9 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=5428 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 1924,
+    "ppid": 3860,
+    "procid": 86,
+    "procid_parent": 76,
+    "started": 3687,
+    "terminated": 12281
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\90.0.818.66\\identity_helper.exe\" --type=utility --utility-sub-type=winrt_app_id.mojom.WinrtAppIdService --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --lang=en-US --service-sandbox-type=none --mojo-platform-channel-handle=5552 /prefetch:8",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\90.0.818.66\\identity_helper.exe",
+    "orig": true,
+    "pid": 4832,
+    "ppid": 3860,
+    "procid": 87,
+    "procid_parent": 76,
+    "started": 3953
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --disable-gpu-compositing --lang=en-US --disable-client-side-phishing-detection --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=11 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=3224 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 4124,
+    "ppid": 3860,
+    "procid": 91,
+    "procid_parent": 76,
+    "started": 12015,
+    "terminated": 14437
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --disable-gpu-compositing --lang=en-US --disable-client-side-phishing-detection --instant-process --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=12 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=2972 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 3852,
+    "ppid": 3860,
+    "procid": 92,
+    "procid_parent": 76,
+    "started": 12031,
+    "terminated": 14453
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --disable-gpu-compositing --lang=en-US --disable-client-side-phishing-detection --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=13 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=5420 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 2636,
+    "ppid": 3860,
+    "procid": 93,
+    "procid_parent": 76,
+    "started": 14125
+   },
+   {
+    "cmd": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --type=renderer --field-trial-handle=1884,9630248921971373273,17237341682879633728,131072 --disable-gpu-compositing --lang=en-US --disable-client-side-phishing-detection --instant-process --device-scale-factor=1 --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=14 --no-v8-untrusted-code-mitigations --mojo-platform-channel-handle=5972 /prefetch:1",
+    "image": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "orig": true,
+    "pid": 1588,
+    "ppid": 3860,
+    "procid": 94,
+    "procid_parent": 76,
+    "started": 14125
+   }
+  ],
+  "public_ip": "23.165.8.142",
+  "requests": [
+   {
+    "dns_request": [
+     {
+      "domains": [
+       "malware.wicar.org"
+      ],
+      "questions": [
+       {
+        "name": "malware.wicar.org",
+        "type": "IN A"
+       }
+      ]
+     },
+     {
+      "domains": [
+       "ctldl.windowsupdate.com"
+      ],
+      "questions": [
+       {
+        "name": "ctldl.windowsupdate.com",
+        "type": "IN A"
+       }
+      ]
+     },
+     {
+      "domains": [
+       "data-edge.smartscreen.microsoft.com"
+      ],
+      "questions": [
+       {
+        "name": "data-edge.smartscreen.microsoft.com",
+        "type": "IN A"
+       }
+      ]
+     },
+     {
+      "domains": [
+       "login.live.com"
+      ],
+      "questions": [
+       {
+        "name": "login.live.com",
+        "type": "IN A"
+       }
+      ]
+     },
+     {
+      "domains": [
+       "ctldl.windowsupdate.com"
+      ],
+      "questions": [
+       {
+        "name": "ctldl.windowsupdate.com",
+        "type": "IN A"
+       }
+      ]
+     }
+    ],
+    "dns_response": [
+     {
+      "answers": [
+       {
+        "name": "malware.wicar.org",
+        "type": "IN CNAME",
+        "value": "wicarmalware.nfshost.com"
+       },
+       {
+        "name": "wicarmalware.nfshost.com",
+        "type": "IN A",
+        "value": "208.94.116.246"
+       }
+      ],
+      "class": "IN",
+      "domains": [
+       "malware.wicar.org",
+       "wicarmalware.nfshost.com"
+      ],
+      "ip": [
+       "208.94.116.246"
+      ],
+      "type": "A"
+     },
+     {
+      "answers": [
+       {
+        "name": "ctldl.windowsupdate.com",
+        "type": "IN CNAME",
+        "value": "ctldl.windowsupdate.com.delivery.microsoft.com"
+       },
+       {
+        "name": "ctldl.windowsupdate.com.delivery.microsoft.com",
+        "type": "IN CNAME",
+        "value": "wu-b-net.trafficmanager.net"
+       },
+       {
+        "name": "wu-b-net.trafficmanager.net",
+        "type": "IN CNAME",
+        "value": "bg.microsoft.map.fastly.net"
+       },
+       {
+        "name": "bg.microsoft.map.fastly.net",
+        "type": "IN A",
+        "value": "199.232.214.172"
+       },
+       {
+        "name": "bg.microsoft.map.fastly.net",
+        "type": "IN A",
+        "value": "199.232.210.172"
+       }
+      ],
+      "class": "IN",
+      "domains": [
+       "ctldl.windowsupdate.com",
+       "ctldl.windowsupdate.com.delivery.microsoft.com",
+       "wu-b-net.trafficmanager.net",
+       "bg.microsoft.map.fastly.net",
+       "bg.microsoft.map.fastly.net"
+      ],
+      "ip": [
+       "199.232.214.172",
+       "199.232.210.172"
+      ],
+      "type": "A"
+     },
+     {
+      "answers": [
+       {
+        "name": "data-edge.smartscreen.microsoft.com",
+        "type": "IN CNAME",
+        "value": "prod-atm-wds-edge.trafficmanager.net"
+       },
+       {
+        "name": "prod-atm-wds-edge.trafficmanager.net",
+        "type": "IN CNAME",
+        "value": "prod-agic-ncu-2.northcentralus.cloudapp.azure.com"
+       },
+       {
+        "name": "prod-agic-ncu-2.northcentralus.cloudapp.azure.com",
+        "type": "IN A",
+        "value": "172.183.192.109"
+       }
+      ],
+      "class": "IN",
+      "domains": [
+       "data-edge.smartscreen.microsoft.com",
+       "prod-atm-wds-edge.trafficmanager.net",
+       "prod-agic-ncu-2.northcentralus.cloudapp.azure.com"
+      ],
+      "ip": [
+       "172.183.192.109"
+      ],
+      "type": "A"
+     },
+     {
+      "answers": [
+       {
+        "name": "login.live.com",
+        "type": "IN CNAME",
+        "value": "login.msa.msidentity.com"
+       },
+       {
+        "name": "login.msa.msidentity.com",
+        "type": "IN CNAME",
+        "value": "www.tm.lg.prod.aadmsa.akadns.net"
+       },
+       {
+        "name": "www.tm.lg.prod.aadmsa.akadns.net",
+        "type": "IN CNAME",
+        "value": "prdv4a.aadg.msidentity.com"
+       },
+       {
+        "name": "prdv4a.aadg.msidentity.com",
+        "type": "IN CNAME",
+        "value": "www.tm.v4.a.prd.aadg.trafficmanager.net"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "20.190.157.9"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.11"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.14"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.10"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.12"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "20.190.157.13"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.7"
+       },
+       {
+        "name": "www.tm.v4.a.prd.aadg.trafficmanager.net",
+        "type": "IN A",
+        "value": "40.126.29.9"
+       }
+      ],
+      "class": "IN",
+      "domains": [
+       "login.live.com",
+       "login.msa.msidentity.com",
+       "www.tm.lg.prod.aadmsa.akadns.net",
+       "prdv4a.aadg.msidentity.com",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net",
+       "www.tm.v4.a.prd.aadg.trafficmanager.net"
+      ],
+      "ip": [
+       "20.190.157.9",
+       "40.126.29.11",
+       "40.126.29.14",
+       "40.126.29.10",
+       "40.126.29.12",
+       "20.190.157.13",
+       "40.126.29.7",
+       "40.126.29.9"
+      ],
+      "type": "A"
+     },
+     {
+      "answers": [
+       {
+        "name": "ctldl.windowsupdate.com",
+        "type": "IN CNAME",
+        "value": "ctldl.windowsupdate.com.delivery.microsoft.com"
+       },
+       {
+        "name": "ctldl.windowsupdate.com.delivery.microsoft.com",
+        "type": "IN CNAME",
+        "value": "wu-b-net.trafficmanager.net"
+       },
+       {
+        "name": "wu-b-net.trafficmanager.net",
+        "type": "IN CNAME",
+        "value": "bg.microsoft.map.fastly.net"
+       },
+       {
+        "name": "bg.microsoft.map.fastly.net",
+        "type": "IN A",
+        "value": "199.232.210.172"
+       },
+       {
+        "name": "bg.microsoft.map.fastly.net",
+        "type": "IN A",
+        "value": "199.232.214.172"
+       }
+      ],
+      "class": "IN",
+      "domains": [
+       "ctldl.windowsupdate.com",
+       "ctldl.windowsupdate.com.delivery.microsoft.com",
+       "wu-b-net.trafficmanager.net",
+       "bg.microsoft.map.fastly.net",
+       "bg.microsoft.map.fastly.net"
+      ],
+      "ip": [
+       "199.232.210.172",
+       "199.232.214.172"
+      ],
+      "type": "A"
+     }
+    ],
+    "domain": "malware.wicar.org",
+    "http_request": [
+     {
+      "headers": [
+       "Host: malware.wicar.org",
+       "Connection: keep-alive",
+       "DNT: 1",
+       "Upgrade-Insecure-Requests: 1",
+       "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36 Edg/90.0.818.66",
+       "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+       "Accept-Encoding: gzip, deflate",
+       "Accept-Language: en-US,en;q=0.9"
+      ],
+      "method": "GET",
+      "request": "GET /data/eicar.com HTTP/1.1",
+      "url": "http://malware.wicar.org/data/eicar.com"
+     }
+    ],
+    "http_response": [
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:31:22 GMT",
+       "Server: Apache",
+       "Upgrade: h2c",
+       "Connection: Upgrade, Keep-Alive",
+       "Last-Modified: Mon, 27 Jul 2015 06:11:35 GMT",
+       "ETag: \"45-51bd539d140ca\"",
+       "Accept-Ranges: bytes",
+       "Age: 1306",
+       "Vary: Accept-Encoding",
+       "Content-Encoding: gzip",
+       "Via: e10",
+       "Content-Length: 89",
+       "Keep-Alive: timeout=5, max=100",
+       "Content-Type: application/x-msdownload"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     }
+    ]
+   },
+   {
+    "dns_request": [],
+    "dns_response": [],
+    "domain": "nav.smartscreen.microsoft.com",
+    "http_request": [
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json",
+       "Authorization: REDACTED",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 1296",
+       "Host: nav.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/navigate/2 HTTP/1.1",
+      "url": "https://nav.smartscreen.microsoft.com/api/browser/edge/navigate/2"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json",
+       "Authorization: REDACTED",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 1374",
+       "Host: nav.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/navigate/2 HTTP/1.1",
+      "url": "https://nav.smartscreen.microsoft.com/api/browser/edge/navigate/2"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json",
+       "Authorization: REDACTED",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 896",
+       "Host: nav.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/actions HTTP/1.1",
+      "url": "https://nav.smartscreen.microsoft.com/api/browser/edge/actions"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json",
+       "Authorization: REDACTED",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 997",
+       "Host: nav.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/downloadcomplete/1 HTTP/1.1",
+      "url": "https://nav.smartscreen.microsoft.com/api/browser/edge/downloadcomplete/1"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json",
+       "Authorization: REDACTED",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 1312",
+       "Host: nav.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/download/2 HTTP/1.1",
+      "url": "https://nav.smartscreen.microsoft.com/api/browser/edge/download/2"
+     }
+    ],
+    "http_response": [
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:08 GMT",
+       "Content-Type: application/json; charset=utf-8",
+       "Content-Length: 1558",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=0, private",
+       "Request-Context: appId=cid-v1:3d5e3eff-de07-43c3-a15d-06b05ff513c8"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:17 GMT",
+       "Content-Type: application/json; charset=utf-8",
+       "Content-Length: 952",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=0, private",
+       "Request-Context: appId=cid-v1:3d5e3eff-de07-43c3-a15d-06b05ff513c8"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:08 GMT",
+       "Content-Type: application/json; charset=utf-8",
+       "Content-Length: 702",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=0, private",
+       "Request-Context: appId=cid-v1:3d5e3eff-de07-43c3-a15d-06b05ff513c8"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Type: application/json; charset=utf-8",
+       "Content-Length: 483",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=0, private",
+       "Request-Context: appId=cid-v1:3d5e3eff-de07-43c3-a15d-06b05ff513c8"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:08 GMT",
+       "Content-Type: application/json; charset=utf-8",
+       "Content-Length: 1557",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=0, private",
+       "Request-Context: appId=cid-v1:3d5e3eff-de07-43c3-a15d-06b05ff513c8"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     }
+    ]
+   },
+   {
+    "dns_request": [],
+    "dns_response": [],
+    "domain": "data-edge.smartscreen.microsoft.com",
+    "http_request": [
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json; charset=utf-8",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"2.0-0\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 896",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/data/settings HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/api/browser/edge/data/settings"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"638004170464094982\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "GET",
+      "request": "GET /windows/browser/edge/data/toptraffic?pushCert=false&os=10.0.22000.493.co_release HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/toptraffic?pushCert=false&os=10.0.22000.493.co_release"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"170540185939602997400506234197983529371\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "GET",
+      "request": "GET /windows/browser/edge/data/toptraffic?pushCert=false&os=10.0.22000.493.co_release HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/toptraffic?pushCert=false&os=10.0.22000.493.co_release"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"636976985063396749.rel.v2\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "GET",
+      "request": "GET /windows/browser/edge/data/bloomfilter/x?pushCert=false&os=10.0.22000.493.co_release HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/bloomfilter/x?pushCert=false&os=10.0.22000.493.co_release"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"638343870221005468\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "GET",
+      "request": "GET /windows/browser/edge/data/bloomfilter/x?pushCert=false&os=10.0.22000.493.co_release HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/bloomfilter/x?pushCert=false&os=10.0.22000.493.co_release"
+     },
+     {
+      "headers": [
+       "Connection: Keep-Alive",
+       "Content-Type: application/json; charset=utf-8",
+       "Accept: application/x-patch-bsdiff, application/octet-stream",
+       "Authorization: REDACTED",
+       "If-None-Match: \"2.0-2f9188b68640dbf72295f9083a21d674a314721ef06f82db281cbcb052ff8ec1\"",
+       "User-Agent: SmartScreen/281479409434625",
+       "Content-Length: 956",
+       "Host: data-edge.smartscreen.microsoft.com"
+      ],
+      "method": "POST",
+      "request": "POST /api/browser/edge/data/settings HTTP/1.1",
+      "url": "https://data-edge.smartscreen.microsoft.com/api/browser/edge/data/settings"
+     }
+    ],
+    "http_response": [
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Type: application/octet-stream",
+       "Content-Length: 129085",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "ETag: \"2.0-2f9188b68640dbf72295f9083a21d674a314721ef06f82db281cbcb052ff8ec1\"",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Length: 0",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=86400",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3"
+      ],
+      "response": "HTTP/1.1 304 Not Modified",
+      "status": "304"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Type: application/octet-stream",
+       "Content-Length: 460992",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=86400",
+       "ETag: \"638004170464094982\"",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3",
+       "X-OI-Signature: v=1; a=sha384RSA; ha=SHA384; bh=7csvs6wrK3NA5rU73eamx5vAWfaIbGGGGrCaQymgYIKtYElVZVn8FMwEOPvCPHsR; b=iLJvug2xVRHV/zRkTuEyY8Zm5DV1r2rcoFmtOqM4Th8e1UGMuxxCMsEl3V0m2DZ1ibIhJJXHkKq6VicNjkeGtE2XNLuXUg4Nt1+9AjYEtAzZZmF4g52u81VFXkPXAYwDAkuaWGEU1H35w7fv6AlvtPAdSa2GidI4us0RI8m8w0emxetz7h12azENRS2EkL1SmLqM1QA6gpadyCfwnzLR9jRyPC4iCtc4/Pk8DdunPJ80tS/A9XRjUXiBanugKBbt7rxXgPMKd/53Lx1dNJWhhRZdrIb1nui9Uz0C6J98qUNgxElxK1ih7UYNKU4qSWoO4vL6jWtpd+QWlKRX3g2gvQ==; fp=37DBD367E84BB5891D0C8F421BAE3393C75DF49C; h=CACHE-CONTROL:ETAG;",
+       "X-OI-Cert: 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"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Type: application/octet-stream",
+       "Content-Length: 57",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=86400",
+       "ETag: \"638343870221005468\"",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3",
+       "X-OI-Signature: v=1; a=sha384RSA; ha=SHA384; bh=j4KrExT8d8Sta+9XdhCezD7hBBI07nd+3ZBLADaghRr4d/09v4f5U/qTjaOMrTCA; b=lsxejbsmixGwcuFeAOZKmpd1SHTEllQasQG2+/CD0NsAyZxEvj92iSXg4oIFBkMR6T5zGsr6fweTH5vZVeI6ucDD38nLM9KMrq5eRa9TryJWqO+IbvAljMHNXvAljPK2LeRsDTWYDgopZyWBvWkXXjA1SYiG1lcZjqGoeYE3RGB1av+gzIm0UtuS6l4lOPKBfqrbhng5p43VJZlfWnRtpUA6WIQlA77TnCYXYS+4qby6/glkxz/n6Kqj2AdZiBom/dT2adpHR7dqyW17hHIDaB6CYkxr/l3tputKOQWMABAZujw6r0VSf1RPj+lK+udHaMb0ncnK76ykfpMb9T1YBA==; fp=37DBD367E84BB5891D0C8F421BAE3393C75DF49C; h=CACHE-CONTROL:ETAG;",
+       "X-OI-Cert: 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"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Length: 0",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "Cache-Control: max-age=86400",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3"
+      ],
+      "response": "HTTP/1.1 304 Not Modified",
+      "status": "304"
+     },
+     {
+      "headers": [
+       "Date: Mon, 09 Nov 2026 15:53:09 GMT",
+       "Content-Type: application/octet-stream",
+       "Content-Length: 129085",
+       "Connection: keep-alive",
+       "Server: Kestrel",
+       "ETag: \"2.0-2f9188b68640dbf72295f9083a21d674a314721ef06f82db281cbcb052ff8ec1\"",
+       "Request-Context: appId=cid-v1:46ea1a4d-29cb-4e7e-a1ff-735721467fe3"
+      ],
+      "response": "HTTP/1.1 200 OK",
+      "status": "200"
+     }
+    ]
+   },
+   {
+    "dns_request": [],
+    "dns_response": [],
+    "domain": "224.0.0.251:5353",
+    "http_request": [],
+    "http_response": []
+   }
+  ],
+  "sample_id": "261109-tbkl7abfda",
+  "static": {
+   "score": 1,
+   "signatures": [],
+   "tags": []
+  },
+  "targets": [
+   {
+    "iocs": {
+     "domains": [
+      "malware.wicar.org",
+      "ctldl.windowsupdate.com",
+      "data-edge.smartscreen.microsoft.com",
+      "login.live.com"
+     ],
+     "ips": [
+      "8.8.8.8",
+      "208.94.116.246",
+      "13.91.96.185",
+      "172.183.192.109",
+      "224.0.0.251"
+     ],
+     "urls": [
+      "http://malware.wicar.org/data/eicar.com",
+      "https://nav.smartscreen.microsoft.com/api/browser/edge/navigate/2",
+      "https://nav.smartscreen.microsoft.com/api/browser/edge/actions",
+      "https://nav.smartscreen.microsoft.com/api/browser/edge/downloadcomplete/1",
+      "https://nav.smartscreen.microsoft.com/api/browser/edge/download/2",
+      "https://data-edge.smartscreen.microsoft.com/api/browser/edge/data/settings",
+      "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/toptraffic?pushCert=false&os=10.0.22000.493.co_release",
+      "https://data-edge.smartscreen.microsoft.com/windows/browser/edge/data/bloomfilter/x?pushCert=false&os=10.0.22000.493.co_release"
+     ]
+    },
+    "score": 3,
+    "signatures": [
+     {
+      "desc": "Enumerate browser information.",
+      "label": "browser_information_discovery",
+      "name": "Browser Information Discovery",
+      "score": 3,
+      "tags": [
+       "discovery"
+      ],
+      "ttp": [
+       "T1217"
+      ]
+     },
+     {
+      "indicators": [
+       {
+        "resource": "behavioral1/files/0x000a000000029929-57.dat",
+        "yara_rule": "eicar_test_file"
+       },
+       {
+        "resource": "behavioral1/files/0x000a000000029929-57.dat",
+        "yara_rule": "eicar_test_file"
+       }
+      ],
+      "name": "EICAR Anti-Malware test file",
+      "score": 1
+     },
+     {
+      "indicators": [
+       {
+        "description": "Key opened",
+        "ioc": "\\REGISTRY\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\BIOS",
+        "procid": 76
+       },
+       {
+        "description": "Key value queried",
+        "ioc": "\\REGISTRY\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\BIOS\\SystemManufacturer",
+        "procid": 76
+       },
+       {
+        "description": "Key value queried",
+        "ioc": "\\REGISTRY\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\BIOS\\SystemProductName",
+        "procid": 76
+       }
+      ],
+      "label": "reg_hw_system",
+      "name": "Enumerates system info in registry",
+      "ttp": [
+       "T1012",
+       "T1082"
+      ]
+     },
+     {
+      "indicators": [
+       {
+        "pid": 4676,
+        "procid": 79
+       },
+       {
+        "pid": 4676,
+        "procid": 79
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 4432,
+        "procid": 84
+       },
+       {
+        "pid": 4432,
+        "procid": 84
+       },
+       {
+        "pid": 4832,
+        "procid": 87
+       },
+       {
+        "pid": 4832,
+        "procid": 87
+       }
+      ],
+      "name": "Suspicious behavior: EnumeratesProcesses"
+     },
+     {
+      "indicators": [
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       }
+      ],
+      "name": "Suspicious behavior: NtCreateUserProcessBlockNonMicrosoftBinary"
+     },
+     {
+      "indicators": [
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       }
+      ],
+      "name": "Suspicious use of FindShellTrayWindow"
+     },
+     {
+      "indicators": [
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       },
+       {
+        "pid": 3860,
+        "procid": 76
+       }
+      ],
+      "name": "Suspicious use of SendNotifyMessage"
+     },
+     {
+      "indicators": [
+       {
+        "description": "PID 3860 wrote to memory of 3888",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 77
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3040",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 78
+       },
+       {
+        "description": "PID 3860 wrote to memory of 4676",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 79
+       },
+       {
+        "description": "PID 3860 wrote to memory of 5088",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 80
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3780",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 82
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3780",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 82
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3836",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 83
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3836",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 83
+       },
+       {
+        "description": "PID 3860 wrote to memory of 4432",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 84
+       },
+       {
+        "description": "PID 3860 wrote to memory of 1924",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 86
+       },
+       {
+        "description": "PID 3860 wrote to memory of 1924",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 86
+       },
+       {
+        "description": "PID 3860 wrote to memory of 4832",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 87
+       },
+       {
+        "description": "PID 3860 wrote to memory of 4124",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 91
+       },
+       {
+        "description": "PID 3860 wrote to memory of 4124",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 91
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3852",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 92
+       },
+       {
+        "description": "PID 3860 wrote to memory of 3852",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 92
+       },
+       {
+        "description": "PID 3860 wrote to memory of 2636",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 93
+       },
+       {
+        "description": "PID 3860 wrote to memory of 2636",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 93
+       },
+       {
+        "description": "PID 3860 wrote to memory of 1588",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 94
+       },
+       {
+        "description": "PID 3860 wrote to memory of 1588",
+        "pid": 3860,
+        "procid": 76,
+        "procid_target": 94
+       }
+      ],
+      "name": "Suspicious use of WriteProcessMemory"
+     }
+    ],
+    "tags": [
+     "discovery"
+    ],
+    "target": "http://malware.wicar.org/data/eicar.com",
+    "tasks": [
+     "behavioral1"
+    ]
+   }
+  ],
+  "ttp": [
+   "T1217",
+   "T1012",
+   "T1082"
+  ],
+  "version": "0.3.1"
+ },
+ "sandbox": "triage",
+ "sandbox_artifacts": [
+  {
+   "created": "2026-11-09T15:55:09.806520+00:00",
+   "extended_type": "JSON data",
+   "id": "5396055872",
+   "instance_id": "14248955289536052",
+   "mimetype": "",
+   "name": "triage_report.json",
+   "sandbox_task_id": "77744957141072924",
+   "type": "report"
+  },
+  {
+   "created": "2026-11-09T15:55:24.061896+00:00",
+   "extended_type": "JSON data",
+   "id": "5396058039",
+   "instance_id": "20194344277970275",
+   "mimetype": "",
+   "name": "triage_raw_report.json",
+   "sandbox_task_id": "77744957141072924",
+   "type": "raw_report"
+  },
+  {
+   "created": "2026-11-09T15:55:25.051728+00:00",
+   "extended_type": "JSON data",
+   "id": "5396058195",
+   "instance_id": "41632103022099243",
+   "mimetype": "",
+   "name": "triage_static_report.json",
+   "sandbox_task_id": "77744957141072924",
+   "type": "raw_report"
+  },
+  {
+   "created": "2026-11-09T15:55:24.167228+00:00",
+   "extended_type": "JSON data",
+   "id": "5396058056",
+   "instance_id": "68834050899184816",
+   "mimetype": "",
+   "name": "triage_behavioral_report.json",
+   "sandbox_task_id": "77744957141072924",
+   "type": "raw_report"
+  },
+  {
+   "created": "2026-11-09T15:55:23.273255+00:00",
+   "extended_type": "ISO Media, Apple iTunes Video (.M4V) Video",
+   "id": "5396057905",
+   "instance_id": "95673423320965721",
+   "mimetype": "",
+   "name": "behavioral_recording.m4v",
+   "sandbox_task_id": "77744957141072924",
+   "type": "recording"
+  }
+ ],
+ "sha256": "ab302ebc1e243ee089bee075e603f5146d08462e4a59a7b27270611c9f1ad82d",
+ "status": "SUCCEEDED",
+ "team_account_number": null,
+ "upload_url": null
+}

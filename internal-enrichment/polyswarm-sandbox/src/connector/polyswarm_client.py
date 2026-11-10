@@ -6,13 +6,14 @@ and proper resource management.
 """
 
 import io
+import logging
 import threading
 import time
 from typing import Any
 
 import requests
 from connector.polyswarm import PolyswarmAPI
-from polyswarm_api.exceptions import NotFoundException
+from polyswarm_api.exceptions import NotFoundException, PolyswarmException
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -166,6 +167,10 @@ class PolySwarmClient:
     SDK_MAX_RETRIES = 3
     SDK_BACKOFF_BASE = 2.0  # seconds; exponential: 2, 4, 8
 
+    # VMs that accept URL submissions, used only when the provider listing
+    # has no VM details (as listed by the API on 2026-11-10)
+    _URL_VM_FALLBACK = {"cape": "win-10-build-19041", "triage": "windows11-21h2-x64"}
+
     # Cache TTL for sandbox provider list (seconds)
     _PROVIDERS_CACHE_TTL = 300.0  # 5 minutes
 
@@ -204,6 +209,9 @@ class PolySwarmClient:
             helper: OpenCTI connector helper for logging.
         """
         self.helper = helper
+        # The SDK logs request parameters at debug level, and they carry a
+        # submitted URL (query string included). Keep its logger at WARNING.
+        logging.getLogger("polyswarm_api").setLevel(logging.WARNING)
         # The SDK expects the /v3 path; append it when the user supplies just the host.
         if (
             api_url
@@ -434,6 +442,59 @@ class PolySwarmClient:
             )
             return None
 
+    def submit_sandbox_url_async(
+        self,
+        url: str,
+        provider: str = "cape",
+        vm_slug: str = "win-10-build-19041",
+        browser: str | None = None,
+    ) -> str | None:
+        """Submit a URL for sandbox detonation. Returns the sandbox task ID or None.
+
+        The URL itself is never logged. SDK errors carry the request
+        parameters (and so the URL) in their message, so they are re-raised
+        with the HTTP status only before they reach any log or note.
+        """
+
+        def _submit() -> object:
+            try:
+                return self.api.sandbox_url(
+                    url,
+                    provider_slug=provider,
+                    vm_slug=vm_slug,
+                    browser=browser,
+                )
+            except PolyswarmException as e:
+                request = getattr(e, "request", None)
+                status_code = getattr(request, "status_code", None)
+                detail = f"HTTP {status_code}" if status_code else "request failed"
+                raise PolyswarmException(
+                    f"URL sandbox submission {type(e).__name__}: {detail}"
+                ) from None
+
+        try:
+            self.helper.connector_logger.info(
+                f"[POLYSWARM] Submitting URL for sandbox "
+                f"(provider={provider}, vm={vm_slug}, browser={browser or 'default'})"
+            )
+            task = self._retry_sdk_call(
+                _submit,
+                operation=f"URL sandbox submit ({provider})",
+            )
+            if task and task.id:
+                self.helper.connector_logger.info(
+                    f"[POLYSWARM] URL sandbox submitted, task_id: {task.id}"
+                )
+                return task.id
+            return None
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[POLYSWARM] URL sandbox submit unexpected error: {type(e).__name__}"
+            )
+            return None
+
     def get_scan_results(self, scan_id: str) -> dict[str, Any] | None:
         """Retrieves raw JSON results for a scan instance, or None if still pending.
 
@@ -564,6 +625,39 @@ class PolySwarmClient:
                         return slug
                 # No Windows VM — return first available
                 return slugs[0] if slugs else None
+        return None
+
+    def get_url_vm_for_provider(
+        self, provider_slug: str, preferred: str | None = None
+    ) -> str | None:
+        """Pick a VM that accepts URL submissions for a provider.
+
+        Uses each VM's ``supported_artifact_types`` from the provider listing.
+        ``preferred`` is used when that VM accepts URLs, otherwise a Windows
+        VM that accepts URLs, otherwise the first VM that does. Returns None
+        when the provider lists VMs but none accepts URLs, or is not listed.
+        If the listing has no VM details (API unreachable), ``preferred`` or
+        the provider's known URL VM is returned and the API decides.
+        """
+        for p in self.get_available_providers():
+            if p["slug"] != provider_slug:
+                continue
+            vms = p.get("vms") or {}
+            if not isinstance(vms, dict) or not vms:
+                return preferred or self._URL_VM_FALLBACK.get(provider_slug)
+            url_vms = [
+                slug
+                for slug, vm in vms.items()
+                if isinstance(vm, dict)
+                and "URL"
+                in [str(t).upper() for t in (vm.get("supported_artifact_types") or [])]
+            ]
+            if preferred and preferred in url_vms:
+                return preferred
+            for slug in url_vms:
+                if "win" in slug.lower():
+                    return slug
+            return url_vms[0] if url_vms else None
         return None
 
     def create_llm_report(

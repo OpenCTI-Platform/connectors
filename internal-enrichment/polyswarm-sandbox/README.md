@@ -35,10 +35,11 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 
 ## 🔐 Data Handling: What Leaves Your Environment
 
-The connector sends data to PolySwarm only when it enriches an artifact, which is manual by default (`CONNECTOR_AUTO=false`).
+The connector sends data to PolySwarm only when it enriches an artifact or a URL, which is manual by default (`CONNECTOR_AUTO=false`).
 
 - **The file.** The artifact's file, its file name, and its archive password if one is set are uploaded to PolySwarm for a multi-engine scan. When `POLYSWARM_SANDBOX_ENABLED=true` (the default), the file is also detonated in the selected sandbox provider(s) (CAPE, Triage).
-- **Where it goes.** Uploads go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public `default` community become visible to the PolySwarm community, so the connector refuses to upload there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
+- **The URL.** For a Url observable, the URL is sent to PolySwarm and opened in the selected sandbox provider(s). It is not scanned by the engines, and nothing is uploaded from OpenCTI. By default only the scheme, host and path are sent: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_SANDBOX_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password, and URLs whose host is private, loopback, link-local, shared (`100.64.0.0/10`), reserved or internal, are never sent (see [URLs](#urls)). The sandbox always has internet access for a URL, since it has to load it, whatever `POLYSWARM_SANDBOX_NETWORK_ENABLED` says.
+- **Where it goes.** Uploads (files and URLs) go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public `default` community become visible to the PolySwarm community, so the connector refuses to upload files or submit URLs there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
@@ -128,6 +129,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_VM_TRIAGE` | `windows11-21h2-x64` | Triage VM slug |
 | `POLYSWARM_SANDBOX_NETWORK_ENABLED` | `true` | Allow internet access |
 | `POLYSWARM_SANDBOX_TIMEOUT` | `600` | Timeout in seconds |
+| `POLYSWARM_SANDBOX_URL_SEND_QUERY` | `false` | Url observables: also send the query string and fragment. By default only scheme, host and path are submitted |
 
 #### Enrichment Settings
 | Variable | Default | Description |
@@ -181,6 +183,20 @@ Malware → attributed-to → Threat Actor
 1. **Upload a file** to OpenCTI as an Artifact
 2. **Trigger enrichment** via the connector
 3. **View results** in the artifact's enrichment tab
+
+### URLs
+
+Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`. Keep `CONNECTOR_AUTO=false` (the default): with automatic enrichment, every new Url observable would be detonated.
+
+The connector picks a VM that accepts URLs from the provider listing (`POLYSWARM_SANDBOX_VM` is used when it accepts URLs). It polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, then adds the same results it adds for a file's sandbox run: the sandbox note per provider, the JSON report and PDF report attached to the Url observable (named from the URL's SHA-256, never the URL), the sandbox score on the observable, and the malware family, ATT&CK techniques and contacted domains and IPs, related to the Url observable.
+
+These URLs are refused, with a note on the observable explaining why, and nothing is sent to PolySwarm:
+- URLs containing a username or password (`user:pass@host`)
+- URLs whose host is private, loopback, link-local, multicast, shared (`100.64.0.0/10`), reserved or unspecified, including IPv4-mapped IPv6 forms and non-canonical IPv4 forms such as `127.1` or `2130706433`
+- URLs whose host is an internal name: a single label, or ending in `.local`, `.internal`, `.lan`, `.corp`, `.home.arpa` or `.localhost`
+- Any URL while `POLYSWARM_COMMUNITY` is the public `default` community and `POLYSWARM_ALLOW_PUBLIC_COMMUNITY` is not `true`
+
+The query string and fragment are removed before submission unless `POLYSWARM_SANDBOX_URL_SEND_QUERY=true`. Logs only show the URL's scheme and host.
 
 ### Password-Protected Files
 
