@@ -12,7 +12,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 
 
 class PolySwarmConfig(BaseConfigModel):
@@ -167,6 +167,42 @@ class PolySwarmConfig(BaseConfigModel):
             "enrichment on, every Attack-Pattern created would trigger a search."
         ),
     )
+    # YARA hunting from OpenCTI Indicators. Off by default: it creates hunts in
+    # the PolySwarm account of the API key and spends hunt quota.
+    yara_hunt_enabled: bool = Field(
+        default=False,
+        description=(
+            "Run a PolySwarm historical hunt for each YARA Indicator that is "
+            "enriched. Writes to your PolySwarm account (creates hunts), spends "
+            "hunt quota, and sends the YARA rule text to PolySwarm. Adds "
+            "Indicator to the connector scope."
+        ),
+    )
+    yara_hunt_window_days: int = Field(
+        default=30,
+        description="How many days back a hunt reaches: 30, 60, 90 or 180.",
+    )
+    yara_hunt_timeout: int = Field(
+        default=300,
+        ge=60,
+        description=(
+            "Seconds to wait for a hunt before reporting it as still running "
+            "(hunts can be slow)."
+        ),
+    )
+    yara_hunt_max_results: int = Field(
+        default=50,
+        ge=1,
+        le=1000,
+        description="Max matched files imported as File observables per hunt.",
+    )
+
+    @field_validator("yara_hunt_window_days")
+    @classmethod
+    def _check_window_days(cls, value: int) -> int:
+        if value not in (30, 60, 90, 180):
+            raise ValueError("must be one of 30, 60, 90 or 180")
+        return value
 
     # polykg (optional enrichment).
     # Default is empty (disabled) so an out-of-the-box deployment never
@@ -222,13 +258,22 @@ class ConnectorSettings(BaseConnectorSettings):
     )
 
     @model_validator(mode="after")
-    def _scope_follows_pivots(self) -> "ConnectorSettings":
-        """Add Attack-Pattern to the scope only when the technique pivot is on."""
+    def _scope_follows_features(self) -> "ConnectorSettings":
+        """Add the entity types the enabled features need to the scope.
+
+        Attack-Pattern when the technique pivot is on, Indicator when YARA
+        hunting is on. Each type is added once; the scope is rebuilt as a new
+        list and set once.
+        """
         scope = list(self.connector.scope)
-        if self.polyswarm.pivot_ttp_max > 0 and "attack-pattern" not in [
-            s.strip().lower() for s in scope
-        ]:
-            scope.append("Attack-Pattern")
+        present = {item.strip().lower() for item in scope}
+        needed = []
+        if self.polyswarm.pivot_ttp_max > 0:
+            needed.append("Attack-Pattern")
+        if self.polyswarm.yara_hunt_enabled:
+            needed.append("Indicator")
+        added = [name for name in needed if name.lower() not in present]
+        if added:
             # The models are frozen; this is the one derived value
-            object.__setattr__(self.connector, "scope", scope)
+            object.__setattr__(self.connector, "scope", scope + added)
         return self

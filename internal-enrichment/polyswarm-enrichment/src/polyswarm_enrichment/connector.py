@@ -29,10 +29,17 @@ from polyswarm_enrichment.client_api import (
     url_has_userinfo,
 )
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
+from polyswarm_enrichment.pivots import PivotService, extract_mitre_id, has_pivot_label
 from polyswarm_enrichment.quota import QuotaMonitor
 from polyswarm_enrichment.sample_artifact import build_sample_artifact
-from polyswarm_enrichment.pivots import PivotService, extract_mitre_id, has_pivot_label
 from polyswarm_enrichment.settings import ConnectorSettings
+from polyswarm_enrichment.yara_hunt import (
+    YaraHunter,
+    build_file_objects,
+    build_note,
+    is_yara_indicator,
+    with_markings,
+)
 from pycti import Note, OpenCTIConnectorHelper
 
 # Standard TLP marking definition IDs: the STIX 2.1 ids (stix2.TLP_WHITE,
@@ -100,6 +107,11 @@ class ConnectorTemplate:
         self.network_related_files_max = ps.network_related_files_max
         self.network_indicator_min_detections = ps.network_indicator_min_detections
         self.network_url_send_query = ps.network_url_send_query
+        # YARA hunting (off by default: writes to the PolySwarm account)
+        self.yara_hunt_enabled = ps.yara_hunt_enabled
+        self.yara_hunt_window_days = ps.yara_hunt_window_days
+        self.yara_hunt_timeout = ps.yara_hunt_timeout
+        self.yara_hunt_max_results = ps.yara_hunt_max_results
 
         # Sample download (opt-in): live malware stored as an Artifact
         self.download_sample = ps.download_sample
@@ -1307,6 +1319,81 @@ class ConnectorTemplate:
         stix_objects.extend(derived)
         return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
 
+    def _ignore_entity(self, data: dict, reason: str) -> str:
+        """Quietly skip an entity; playbooks get their original bundle back."""
+        self.helper.connector_logger.info(f"[CONNECTOR] Ignored: {reason}")
+        if not data.get("event_type"):
+            self._send_bundle(self.stix_objects_list)
+        return f"[CONNECTOR] Ignored: {reason}"
+
+    def _process_yara_indicator(
+        self, data: dict, opencti_entity: dict, indicator: dict
+    ) -> str:
+        """Hunt a YARA Indicator's rule in PolySwarm and import the matches.
+
+        Creates a hunt in the customer's PolySwarm account, so it only runs
+        when yara_hunt_enabled is true and the Indicator is a YARA rule.
+        """
+        if not self.yara_hunt_enabled:
+            return self._ignore_entity(data, "YARA hunting is disabled")
+        if not is_yara_indicator(indicator):
+            return self._ignore_entity(data, "the Indicator is not a YARA rule")
+        if not self.entity_in_scope(data):
+            return self._ignore_entity(data, "Indicator is not in the connector scope")
+
+        # Fail closed: the rule text leaves OpenCTI, so an unreadable marking
+        # could hide a TLP above max_tlp
+        _, unresolved = self._get_tlps(
+            indicator, opencti_entity, self.stix_objects_list
+        )
+        if unresolved and self.max_tlp != "TLP:RED":
+            return self._ignore_entity(
+                data,
+                "marking can't be resolved against max_tlp, nothing sent to PolySwarm",
+            )
+
+        rule = indicator["pattern"].strip()
+        hunter = YaraHunter(
+            self.client.polyswarm,
+            self.helper,
+            window_days=self.yara_hunt_window_days,
+            timeout=self.yara_hunt_timeout,
+            max_results=self.yara_hunt_max_results,
+        )
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Starting YARA hunt",
+            {"indicator": indicator.get("id"), "window_days": hunter.window_days},
+        )
+        outcome = hunter.run(rule)
+
+        author = self.converter_to_stix.author
+        derived = [build_note(indicator, rule, outcome, author.id)]
+        if not outcome.failed and not outcome.timed_out:
+            derived.extend(
+                build_file_objects(self.converter_to_stix, indicator, outcome)
+            )
+        derived = with_markings(
+            derived, self._source_marking_refs(indicator, opencti_entity)
+        )
+
+        stix_objects = self.stix_objects_list.copy()
+        stix_objects.append(author)
+        stix_objects.extend(derived)
+        obj_ids = {obj.get("id") for obj in stix_objects}
+        if indicator.get("id") and indicator["id"] not in obj_ids:
+            stix_objects.insert(0, indicator)
+        self.helper.connector_logger.info(
+            "[CONNECTOR] YARA hunt finished",
+            {
+                "hunt_id": outcome.hunt_id,
+                "status": outcome.status,
+                "files": len(outcome.results),
+                "timed_out": outcome.timed_out,
+                "failed": outcome.failed,
+            },
+        )
+        return self._send_bundle(stix_objects, cleanup_inconsistent_bundle=False)
+
     def _should_replace_score(self, observable: dict, score: int) -> bool:
         """#39 replace_with_lower_score: when False, keep a higher existing score."""
         if self.replace_with_lower_score:
@@ -1605,6 +1692,9 @@ class ConnectorTemplate:
                         self._send_bundle(self.stix_objects_list)
                     return "Observable marking can't be resolved against max_tlp"
                 return self._process_attack_pattern(data, opencti_entity, observable)
+            # Indicators: only YARA hunting handles them, everything else is ignored
+            if opencti_entity.get("entity_type") == "Indicator":
+                return self._process_yara_indicator(data, opencti_entity, observable)
 
             # URL, domain and IP observables take the lookup path
             if opencti_entity.get("entity_type") in NETWORK_OBSERVABLE_TYPES:

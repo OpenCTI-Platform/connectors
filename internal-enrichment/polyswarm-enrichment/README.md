@@ -59,6 +59,9 @@ Key features:
   engine detections, plus files PolySwarm links to an IP or domain
 - **Pivots** (optional, off by default): other files with the same imphash, and
   files PolySwarm sandbox reports associate with an ATT&CK technique
+- **YARA hunting** (optional, off by default): run a PolySwarm historical hunt
+  for a YARA Indicator and import the matched files. Writes to your PolySwarm
+  account and spends hunt quota
 
 ---
 
@@ -112,6 +115,10 @@ Key features:
 | `polyswarm_download_max_size_mb` | `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` | No | Largest sample, in MB, that will be downloaded (default: `20`) |
 | `polyswarm_pivot_imphash_max` | `POLYSWARM_PIVOT_IMPHASH_MAX` | No | Max other files with the same imphash imported per enriched file (default: `0` = off, range 0 to 100, e.g. `10`). Each enriched file with an imphash costs one extra search. Imported files are labelled `polyswarm-pivot-result` and never pivot again |
 | `polyswarm_pivot_ttp_max` | `POLYSWARM_PIVOT_TTP_MAX` | No | Max files imported per enriched Attack-Pattern (default: `0` = off, range 0 to 100, e.g. `10`). Any value above 0 adds `Attack-Pattern` to the connector scope. Use with `CONNECTOR_AUTO=false` only (skipped when auto is on) |
+| `polyswarm_yara_hunt_enabled` | `POLYSWARM_YARA_HUNT_ENABLED` | No | Hunt YARA Indicators in PolySwarm (default: `false`). **Writes to your PolySwarm account and spends hunt quota.** Adds `Indicator` to the scope. |
+| `polyswarm_yara_hunt_window_days` | `POLYSWARM_YARA_HUNT_WINDOW_DAYS` | No | How many days back a hunt reaches: `30`, `60`, `90` or `180` (default: `30`) |
+| `polyswarm_yara_hunt_timeout` | `POLYSWARM_YARA_HUNT_TIMEOUT` | No | Seconds to wait for a hunt before reporting it as still running (default: `300`, minimum `60`) |
+| `polyswarm_yara_hunt_max_results` | `POLYSWARM_YARA_HUNT_MAX_RESULTS` | No | Max matched files imported per hunt (default: `50`) |
 | `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
@@ -312,6 +319,48 @@ connector.
   file.
 - The sample is held in the connector's memory while it is processed. No file
   is written inside the connector container.
+### YARA hunting (off by default)
+
+> **Warning.** With `POLYSWARM_YARA_HUNT_ENABLED=true`, enriching a YARA
+> Indicator **creates a historical hunt in the PolySwarm account of the API key
+> and spends hunt quota**. The hunt stays in that account (it can be deleted
+> there). The YARA rule text is sent to PolySwarm. Leave this off unless you
+> want that, and keep `CONNECTOR_AUTO=false` so only Indicators you choose are
+> hunted.
+
+When enabled, `Indicator` is added to the connector scope and only Indicators
+whose pattern type is `yara` are handled. Any other Indicator is ignored
+quietly. For a YARA Indicator the connector:
+
+1. Compiles the rule locally when a YARA library is already installed in the
+   image (none is added by the connector). Otherwise PolySwarm validates the
+   rule when the hunt is created, and its error is reported in the note.
+2. Starts a PolySwarm historical hunt with the rule and the window set in
+   `POLYSWARM_YARA_HUNT_WINDOW_DAYS`, then polls its status until it finishes
+   or `POLYSWARM_YARA_HUNT_TIMEOUT` seconds pass. The enrichment worker waits
+   while it polls, so on a busy queue keep the timeout modest.
+3. Imports up to `POLYSWARM_YARA_HUNT_MAX_RESULTS` matched files as file
+   observables with their hashes, each linked from the Indicator with a
+   `related-to` relationship.
+4. Adds one Note on the Indicator with the hunt id, the window, the rule name,
+   the number of matches PolySwarm reports, the number imported and, for the
+   first three files, the first five matched strings PolySwarm returns.
+
+Hunts are slow and the enrichment worker handles one message at a time, so the
+default wait is short (`POLYSWARM_YARA_HUNT_TIMEOUT=300`). If the hunt is still
+running at the timeout, the Note says so and gives the hunt id. The hunt keeps
+running in PolySwarm. **Enrich the Indicator again later** to import the
+matches of a slow hunt: the connector finds the hunt it already made for that
+rule (in its saved state, then in the hunts of the account, which it names
+`OpenCTI <rule name> <rule digest>`), and reads its results instead of starting
+another hunt. A hunt that already finished is reused the same way, so enriching
+the same rule again never creates a second hunt. Once the earlier hunt is older than its window
+(30 days for a 30 day window), the next enrichment starts a fresh hunt and the
+Note says so. To hunt sooner, delete the earlier hunt in PolySwarm first. A hunt that failed or
+was cancelled is not reused. A hunt PolySwarm ends at its result cap (status
+`LIMITED`) is imported like a finished one, and the Note says the match count
+is a lower bound. Syncing YARA Indicators to a live ruleset is not part of this
+feature.
 
 Trigger enrichment:
 - Manually via the OpenCTI UI observable detail page
@@ -381,6 +430,7 @@ flowchart LR
 | `related-to`     | IP / domain observable| File                | n/a        |
 | `related-to`     | Enriched file (imphash pivot) | Other file  | n/a        |
 | `related-to`     | File (technique pivot) | Attack Pattern     | n/a        |
+| `related-to`     | YARA Indicator        | File (hunt match)   | n/a        |
 | `related-to`     | Malware               | Related Malware     | 80         |
 | `uses`           | Threat Actor          | Malware             | 85         |
 | `uses`           | Intrusion Set         | Malware             | 85         |
@@ -475,6 +525,7 @@ What leaves your environment, and when. The connector sends data to PolySwarm on
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
 - **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
 - **Pivots (opt-in, off by default).** With `POLYSWARM_PIVOT_IMPHASH_MAX` above 0, the file's imphash (a 32 character hash of its import table, as reported by PolySwarm) is sent back to PolySwarm as a search value. With `POLYSWARM_PIVOT_TTP_MAX` above 0, the MITRE ATT&CK id of an enriched Attack-Pattern (for example `T1486`) is sent as a search value. Nothing else about the file or the Attack-Pattern is sent, and Attack-Patterns without an ATT&CK id are never sent. Both are searches, so each one spends API lookups from your quota.
+- **YARA hunting (opt-in).** With `POLYSWARM_YARA_HUNT_ENABLED=true`, the full YARA rule text of each Indicator you enrich is sent to PolySwarm, and a historical hunt is created in your PolySwarm account (it spends hunt quota and stays in the account until you delete it). Indicators above `CONNECTOR_MAX_TLP`, and Indicators carrying a marking the connector can't resolve to a TLP (unless `CONNECTOR_MAX_TLP` is `TLP:RED`), are never sent. Nothing is sent for non-YARA Indicators.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---

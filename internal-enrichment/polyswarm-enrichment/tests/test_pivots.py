@@ -581,3 +581,35 @@ class TestPivotSettings:
     def test_limits_are_bounded(self, name, value):
         with pytest.raises(ConfigValidationError):
             _settings_from({name: value})
+
+
+class TestScopeWithPivotsAndYaraHunt:
+    """The scope validator serves both features: each type added once."""
+
+    def test_both_features_add_both_types_once(self):
+        settings = _settings_from({"pivot_ttp_max": 5, "yara_hunt_enabled": True})
+        scope = list(settings.connector.scope)
+        assert scope.count("Attack-Pattern") == 1
+        assert scope.count("Indicator") == 1
+        assert scope[:2] == ["StixFile", "Artifact"]
+        helper_scope = settings.to_helper_config()["connector"]["scope"]
+        assert "Attack-Pattern" in helper_scope and "Indicator" in helper_scope
+
+    def test_each_feature_adds_only_its_own_type(self):
+        pivot_only = _settings_from({"pivot_ttp_max": 5}).connector.scope
+        assert "Attack-Pattern" in pivot_only and "Indicator" not in pivot_only
+        yara_only = _settings_from({"yara_hunt_enabled": True}).connector.scope
+        assert "Indicator" in yara_only and "Attack-Pattern" not in yara_only
+
+    def test_neither_feature_leaves_default_scope(self):
+        scope = _settings_from({"pivot_imphash_max": 5}).connector.scope
+        assert "Attack-Pattern" not in scope and "Indicator" not in scope
+
+    def test_configured_types_are_not_duplicated(self):
+        settings = _settings_from(
+            {"pivot_ttp_max": 5, "yara_hunt_enabled": True},
+            {"scope": "StixFile,attack-pattern,indicator"},
+        )
+        lowered = [item.lower() for item in settings.connector.scope]
+        assert lowered.count("attack-pattern") == 1
+        assert lowered.count("indicator") == 1

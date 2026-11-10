@@ -33,4 +33,10 @@ services:
       # Pivots spend extra PolySwarm lookups, so both are off (0) by default
       # - POLYSWARM_PIVOT_IMPHASH_MAX=0
       # - POLYSWARM_PIVOT_TTP_MAX=0
+      # YARA hunting: creates hunts in your PolySwarm account, spends hunt quota,
+      # sends the rule text to PolySwarm. Adds Indicator to the scope when true.
+      # - POLYSWARM_YARA_HUNT_ENABLED=false
+      # - POLYSWARM_YARA_HUNT_WINDOW_DAYS=30
+      # - POLYSWARM_YARA_HUNT_TIMEOUT=300
+      # - POLYSWARM_YARA_HUNT_MAX_RESULTS=50
     restart: always
