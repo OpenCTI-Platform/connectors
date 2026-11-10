@@ -26,6 +26,7 @@
   - [Relationship Types](#relationship-types)
   - [Multi-Community Mode](#multi-community-mode)
   - [polykg Integration (Optional)](#polykg-integration-optional)
+  - [Quota](#quota)
 - [Data Handling](#data-handling)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
@@ -102,6 +103,7 @@ Key features:
 | `polyswarm_network_related_files_max` | `POLYSWARM_NETWORK_RELATED_FILES_MAX` | No       | Max related file hashes imported per IP or domain lookup (default: `10`, `0` disables) |
 | `polyswarm_network_url_send_query` | `POLYSWARM_NETWORK_URL_SEND_QUERY` | No | Send a URL's query string and fragment for lookup (default: `false`, only scheme, host and path are sent) |
 | `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
+| `polyswarm_quota_warn_below` | `POLYSWARM_QUOTA_WARN_BELOW` | No | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (default: `100`, `0` turns warnings off). See [Quota](#quota) |
 | `polykg_api_url`                     | `POLYSWARM_POLYKG_API_URL`           | No        | polykg knowledge graph API URL (default: empty = disabled)                   |
 
 ---
@@ -325,6 +327,23 @@ a connection failure to avoid blocking the single-threaded enrichment queue.
 Set `POLYSWARM_POLYKG_API_URL` to enable (e.g. `http://polykg:4141`). Leave empty or
 unset to disable.
 
+### Quota
+
+The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at startup, and about once an hour after that, it makes one read-only request to the account endpoint (`GET /public/accounts`, through the SDK's `account_features()`), plus at most one more per minute after a quota error. The logic is in `src/polyswarm_enrichment/quota.py`. The account number in the response is never read or logged.
+
+What is logged, at info level:
+
+```
+[QUOTA] plan Example Plan; daily API calls remaining 640 of 1000; sandbox_request: 300 of 500 remaining; usage window ends 2026-12-01T00:00:00+00:00
+```
+
+The sandbox and hunt allowances shown are the account features `sandbox_request`, `historical_hunt`, `live_hunt` and `manual_analysis`.
+
+- **Warning.** When the remaining daily API quota, or one of those allowances, is below `POLYSWARM_QUOTA_WARN_BELOW` (default `100`), the connector logs a warning. Set it to `0` to turn warnings off.
+- **Unlimited or exhausted.** A daily limit of `0` means the account has no cap: `daily_api_limit` and `daily_api_remaining` are both `0` on an uncapped plan (measured on an internal plan, where every feature also reports `base_uses` of `0`). Such an account is shown as unlimited and never warned about. A limit above `0` with nothing remaining means the quota is exhausted. A feature the plan does not include is reported as not on this plan. The API does not say how a capped plan reports an exhausted quota beyond these fields, so this reading of `0` as "no cap" is inferred from the SDK and from that measurement.
+- **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The error note the connector writes on the observable then says the quota is exhausted or the rate limit was hit, and lists the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so.
+- **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and carries on enriching.
+
 ---
 
 ## Data Handling
@@ -336,6 +355,7 @@ What leaves your environment, and when. The connector sends data to PolySwarm on
 - **Community.** Lookups are made in the community set in `POLYSWARM_COMMUNITY`. With `POLYSWARM_COMMUNITY=private`, each lookup is made in your private community and also in the public `default` community.
 - **TLP.** Observables above `CONNECTOR_MAX_TLP` are never sent.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---

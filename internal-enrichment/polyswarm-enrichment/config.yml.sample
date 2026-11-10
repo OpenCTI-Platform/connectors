@@ -21,6 +21,7 @@ polyswarm:
   # network_related_files_max: 10        # Related file hashes per IP/domain (0 = disabled)
   # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
   # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)
+  # quota_warn_below: 100                # Warn when remaining quota is below this (0 = no warnings)
 
 # Optional: polykg knowledge graph for advanced profile enrichment
 # Leave commented out to run without polykg (basic enrichment still works)

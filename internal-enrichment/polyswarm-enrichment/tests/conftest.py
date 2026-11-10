@@ -110,6 +110,19 @@ def stub_startup_api_access_check(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def stub_account_quota_read(monkeypatch):
+    """Keep the startup account quota read off the live API.
+
+    Tests of the quota reader build their own fake API.
+    """
+
+    def _offline(_self, **_kwargs):
+        raise ConnectionError("offline")
+
+    monkeypatch.setattr("polyswarm_api.api.PolyswarmAPI.account_features", _offline)
+
+
 # ---------------------------------------------------------------------------
 # Sample polykg profile responses for mocking
 # ---------------------------------------------------------------------------

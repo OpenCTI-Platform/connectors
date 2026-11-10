@@ -148,3 +148,16 @@ def test_settings_should_strip_url_query_strings_by_default():
 def test_settings_should_accept_url_query_opt_in():
     settings = _settings_from({"network_url_send_query": True})
     assert settings.polyswarm.network_url_send_query is True
+
+
+def test_settings_should_default_quota_warn_below_to_100():
+    assert _settings_from({}).polyswarm.quota_warn_below == 100
+
+
+def test_settings_should_accept_zero_to_turn_quota_warnings_off():
+    assert _settings_from({"quota_warn_below": 0}).polyswarm.quota_warn_below == 0
+
+
+def test_settings_should_reject_a_negative_quota_warn_below():
+    with pytest.raises(ConfigValidationError):
+        _settings_from({"quota_warn_below": -1})

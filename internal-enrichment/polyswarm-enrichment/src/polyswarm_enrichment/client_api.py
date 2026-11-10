@@ -533,9 +533,8 @@ class ConnectorClient:
             )
 
         elif (
-            "429" in error_str
-            or "quota" in error_str.lower()
-            or "rate" in error_str.lower()
+            isinstance(error, polyswarm_exceptions.UsageLimitsExceededException)
+            or "429" in error_str
         ):
             error_info["error_type"] = "quota_exceeded"
             error_info["error_code"] = 429

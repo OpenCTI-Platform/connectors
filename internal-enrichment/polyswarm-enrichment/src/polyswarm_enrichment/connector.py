@@ -29,6 +29,7 @@ from polyswarm_enrichment.client_api import (
     url_has_userinfo,
 )
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
+from polyswarm_enrichment.quota import QuotaMonitor
 from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
 
@@ -71,6 +72,9 @@ class ConnectorTemplate:
     and MITRE ATT&CK attack pattern creation.
     """
 
+    # Account quota reader (read-only); None until the connector is initialized
+    quota: QuotaMonitor | None = None
+
     def __init__(self, settings: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Enhanced Connector."""
         self.settings = settings
@@ -95,6 +99,15 @@ class ConnectorTemplate:
         from polyswarm_enrichment.client_api import ConnectorClient
 
         self.client = ConnectorClient(self.helper, ps)
+
+        # Read the account plan and quota at startup and hourly after that. A
+        # failure here is logged and never stops the connector.
+        self.quota = QuotaMonitor(
+            self.client.polyswarm,
+            self.helper.connector_logger,
+            warn_below=ps.quota_warn_below,
+        )
+        self.quota.refresh()
 
         # Initialize STIX converter — client doubles as profile loader
         self.converter_to_stix = ConverterToStix(self.helper, self.client)
@@ -291,7 +304,7 @@ class ConnectorTemplate:
 - Contact PolySwarm support if the issue persists
 """
         elif has_quota_error:
-            note_content += """- Your API quota may be exceeded
+            note_content += """- Your API quota is exhausted or the API rate limit was hit
 - Wait for quota reset or upgrade your PolySwarm plan
 - Consider reducing enrichment frequency
 """
@@ -300,6 +313,13 @@ class ConnectorTemplate:
 - Verify network connectivity
 - Retry the enrichment later
 """
+
+        if has_quota_error and self.quota is not None:
+            note_content += (
+                "\n**Account quota:**\n"
+                + "\n".join(self.quota.exhausted_note_lines())
+                + "\n"
+            )
 
         note_content += f"\n**Timestamp:** {current_time}\n"
 
@@ -1227,6 +1247,8 @@ class ConnectorTemplate:
 
     def process_message(self, data: dict) -> str:
         """Process the enrichment request."""
+        if self.quota is not None:
+            self.quota.refresh()  # at most hourly; never raises
         try:
             opencti_entity = data["enrichment_entity"]
 

@@ -96,6 +96,17 @@ class PolySwarmConfig(BaseConfigModel):
         ),
     )
 
+    # Account quota visibility (read-only)
+    quota_warn_below: int = Field(
+        default=100,
+        ge=0,
+        description=(
+            "Log a warning when the remaining daily API quota, or a sandbox or "
+            "hunt allowance, falls below this number (0 = no warnings). Accounts "
+            "with no cap are never warned."
+        ),
+    )
+
     # polykg (optional enrichment).
     # Default is empty (disabled) so an out-of-the-box deployment never
     # silently points at a staging environment. Operators who want
