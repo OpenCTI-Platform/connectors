@@ -76,6 +76,13 @@ services:
       # StixFile with no report: detonate the sample PolySwarm already holds.
       # Spends sandbox credits; nothing is uploaded from OpenCTI.
       - POLYSWARM_SANDBOX_DETONATE_BY_HASH=false
+      # Dropped files to create as File observables per detonation (0 = off)
+      - POLYSWARM_SANDBOX_MAX_DROPPED_FILES=25
+      # Indicators for C2 addresses in an extracted malware configuration
+      - POLYSWARM_SANDBOX_C2_INDICATORS=true
+      # Download and attach the sandbox pcap (extra download, default false)
+      - POLYSWARM_SANDBOX_ATTACH_PCAP=false
+      - POLYSWARM_SANDBOX_PCAP_MAX_SIZE=26214400
       - POLYSWARM_POLL_INTERVAL=30
       - POLYSWARM_POLL_TIMEOUT=900
       

@@ -23,6 +23,8 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 | **Malware** | Family objects with aliases, types, and relationships |
 | **Attack Patterns** | MITRE ATT&CK TTPs from sandbox behavioral analysis |
 | **Network IOCs** | Domains, IPs, URLs, C2 candidates from sandbox execution |
+| **Dropped files** | File observables (hashes, name, size, MIME type when reported) for files dropped during detonation, related to the detonated observable |
+| **Configured C2** | Observables, and optionally Indicators, for the C2 addresses in a malware configuration the sandbox extracted |
 | **Threat Actors** | Associated actors from malware profiles |
 | **Vulnerabilities** | Exploited CVEs from malware profiles |
 | **Notes** | Separate analysis notes (Scan, Triage, CAPE, Threat Intel, LLM AI Summary) |
@@ -32,6 +34,7 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 - **JSON Reports**: Raw scan and sandbox results attached to artifacts
 - **PDF Reports**: Professional PDF reports for scan and each sandbox provider
 - **AI LLM Reports**: AI-generated threat analysis summaries embedded in scan and sandbox notes
+- **Network capture (opt-in)**: with `POLYSWARM_SANDBOX_ATTACH_PCAP=true`, the sandbox pcap is attached too
 
 ## 🔐 Data Handling: What Leaves Your Environment
 
@@ -46,6 +49,8 @@ The connector sends data to PolySwarm only when it enriches an artifact or a URL
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
 - **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
+- **Sandbox report depth.** Dropped files and extracted malware configuration are read from the sandbox report the connector already downloads. Nothing extra is requested or sent. Only the hashes and metadata of dropped files are used, the files themselves are not downloaded.
+- **Network capture (opt-in).** With `POLYSWARM_SANDBOX_ATTACH_PCAP=true`, the connector downloads the sandbox pcap from PolySwarm (one extra download per detonation, read only) and stores it as an attachment in OpenCTI. Captures larger than `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` are downloaded but not attached (the size is only known after the download). Nothing is sent from OpenCTI.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements
@@ -136,6 +141,10 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` | `0` | StixFile lookup and Artifact reuse: a sandbox report older than this many days counts as missing. `0` means a report of any age is used |
 | `POLYSWARM_SANDBOX_REUSE_REPORT` | `false` | Artifacts: look for an existing sandbox report by SHA-256 before uploading. If every configured provider has one and a finished scan of the hash exists, they are used and the file is not uploaded again |
 | `POLYSWARM_SANDBOX_DETONATE_BY_HASH` | `false` | StixFile observables: when no usable report exists, detonate the sample PolySwarm already holds for the hash. Spends sandbox credits, nothing is uploaded from OpenCTI, runs in `POLYSWARM_COMMUNITY`. Refused in the public community unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true` |
+| `POLYSWARM_SANDBOX_MAX_DROPPED_FILES` | `25` | Most dropped files per detonation to create as File observables. `0` turns it off. Uses data already in the report |
+| `POLYSWARM_SANDBOX_C2_INDICATORS` | `true` | Create Indicators (valid 30 days) for C2 addresses in an extracted malware configuration. Observables are created either way. Also needs `POLYSWARM_CREATE_INDICATORS` |
+| `POLYSWARM_SANDBOX_ATTACH_PCAP` | `false` | Download the sandbox pcap and attach it to the observable. Off by default because it is an extra download |
+| `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` | `26214400` | Largest pcap to attach, in bytes (25 MB). Larger captures are downloaded but not attached |
 
 #### Enrichment Settings
 | Variable | Default | Description |
@@ -159,6 +168,8 @@ docker-compose logs -f connector-polyswarm-sandbox
 - **Domain Names**: DNS queries and contacted domains
 - **IPv4 Addresses**: Network connections and C2 candidates
 - **Note**: Provider-specific analysis (scores, TTPs, signatures, IOCs)
+- **Files**: dropped files with a valid SHA-256, up to `POLYSWARM_SANDBOX_MAX_DROPPED_FILES`. CAPE reports list them under `dropped`, Triage reports under `dumped`. Name, size and the other hashes are set when the report has them, the MIME type only when PolySwarm reports one. Not created when `POLYSWARM_CREATE_OBSERVABLES=false`
+- **C2 addresses**: the `c2` entries of a Triage extracted malware configuration become IPv4, IPv6, Domain-Name or Url observables (private and loopback addresses are skipped). With `POLYSWARM_SANDBOX_C2_INDICATORS` each also gets an Indicator with a STIX pattern, valid for 30 days, whose description says it came from the extracted configuration. Network contacts that the report does not label as configured C2 never become Indicators. No Indicator is created when the C2 is just the bare address of a well-known shared service used as a dead drop (Telegram, Discord, Pastebin, GitHub and GitHub content hosts, GitLab, Bitbucket, Google, Dropbox, OneDrive, SharePoint, transfer.sh, ngrok): the listed domain and its subdomains, or a Url with no path or query on those hosts. For ngrok only the apex domain counts, so a tunnel subdomain keeps its Indicator. A Url with a specific path (a webhook, a stored object, a bot endpoint) also keeps its Indicator. The observable is always kept. C2 hosts that are private, loopback, reserved or internal names, in a bare address or inside a URL, are skipped. All objects created from the report carry the detonated observable's markings. The extraction lives in `src/connector/report_depth.py`. The CAPE reports checked had no extracted-configuration field, so CAPE adds dropped files only
 
 ### From Malware Profiles
 - **Threat Actors**: Associated APT groups
@@ -177,6 +188,11 @@ Malware → targets → Location
 Malware → targets → Sector
 Malware → exploits → Vulnerability
 Malware → related-to → Related Malware
+Detonated observable -> related-to -> Dropped File
+Detonated observable -> related-to -> C2 observable
+Malware -> communicates-with -> C2 IP or domain
+Indicator (C2) -> based-on -> C2 observable
+Indicator (C2) -> indicates -> Malware
 Threat Actor → uses → Malware
 Threat Actor → targets → Location
 Threat Actor → targets → Sector

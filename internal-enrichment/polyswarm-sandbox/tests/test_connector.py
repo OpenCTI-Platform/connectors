@@ -60,6 +60,10 @@ def _mock_polyswarm_config(**overrides):
         "download_artifacts": True,
         "polykg_api_url": None,
         "replace_with_lower_score": True,
+        "sandbox_max_dropped_files": 25,
+        "sandbox_c2_indicators": True,
+        "sandbox_attach_pcap": False,
+        "sandbox_pcap_max_size": 26214400,
     }
     defaults.update(overrides)
     m = MagicMock()

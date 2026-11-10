@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
+from connector.report_depth import build_report_depth_objects
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
@@ -545,6 +546,28 @@ class StixBuilder:
                     deduped_ioc_data, entity, malware_id
                 )
                 objects.extend(ioc_objs)
+
+        # === REPORT DEPTH: dropped files and configured C2 ===
+        objects.extend(
+            build_report_depth_objects(
+                self,
+                entity,
+                malware_id,
+                [
+                    r["report_depth"]
+                    for r in sandbox_results.values()
+                    if r and r.get("report_depth")
+                ],
+                max_dropped_files=int(
+                    self._cfg(config, "sandbox_max_dropped_files", 25)
+                ),
+                create_observables=create_observables,
+                c2_indicators=self._to_bool(
+                    self._cfg(config, "sandbox_c2_indicators", True)
+                ),
+                create_indicators=self._to_bool(create_indicators),
+            )
+        )
 
         # Deduplicate
         seen_ids = set()

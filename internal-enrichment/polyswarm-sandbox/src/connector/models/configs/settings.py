@@ -125,6 +125,39 @@ class PolySwarmConfig(BaseConfigModel):
         ),
     )
 
+    sandbox_max_dropped_files: int = Field(
+        default=25,
+        ge=0,
+        description=(
+            "Maximum dropped files per detonation to create as File observables "
+            "related to the detonated observable (0 turns it off). Uses data "
+            "already in the sandbox report."
+        ),
+    )
+    sandbox_c2_indicators: bool = Field(
+        default=True,
+        description=(
+            "Create Indicators (valid 30 days) for command and control addresses "
+            "the sandbox report lists in an extracted malware configuration. "
+            "Observables are created either way; needs create_indicators."
+        ),
+    )
+    sandbox_attach_pcap: bool = Field(
+        default=False,
+        description=(
+            "Download the sandbox network capture (pcap) and attach it to the "
+            "observable. Off by default: it is an extra download per detonation."
+        ),
+    )
+    sandbox_pcap_max_size: int = Field(
+        default=26214400,
+        ge=1,
+        description=(
+            "Largest pcap in bytes to attach (default 25MB). Larger captures "
+            "are skipped."
+        ),
+    )
+
     # Polling
     poll_interval: int = Field(
         default=30,

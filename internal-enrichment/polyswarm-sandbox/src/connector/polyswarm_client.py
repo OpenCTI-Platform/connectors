@@ -7,6 +7,8 @@ and proper resource management.
 
 import io
 import logging
+import os
+import tempfile
 import threading
 import time
 from typing import Any
@@ -956,6 +958,41 @@ class PolySwarmClient:
         """Close the underlying requests session."""
         if self._session:
             self._session.close()
+
+    def download_sandbox_artifact_bytes(
+        self, sandbox_task_id: str, instance_id: str, max_bytes: int
+    ) -> tuple[str, bytes] | None:
+        """Download one sandbox artifact (for example a pcap) into memory.
+
+        Returns ``(file_name, data)``, or None when the download fails or the
+        file is larger than ``max_bytes``. Reads only; nothing is submitted.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                # Called directly, not through the retry wrapper, so an error
+                # message that may carry a presigned URL is never logged.
+                art = self.api.download_sandbox_artifact(
+                    tmp, sandbox_task_id, instance_id
+                )
+                if not art:
+                    return None
+                names = os.listdir(tmp)
+                if len(names) != 1:
+                    return None
+                path = os.path.join(tmp, names[0])
+                if os.path.getsize(path) > max_bytes:
+                    self.helper.connector_logger.warning(
+                        "[POLYSWARM] Sandbox artifact larger than the configured "
+                        f"limit ({max_bytes} bytes), skipping"
+                    )
+                    return None
+                with open(path, "rb") as fh:
+                    return names[0], fh.read()
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Sandbox artifact download failed: {type(e).__name__}"
+            )
+            return None
 
     def generate_pdf(self, task_id: str, report_type: str) -> bytes | None:
         """Generate a PDF report for scan or sandbox results.

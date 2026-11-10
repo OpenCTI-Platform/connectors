@@ -16,6 +16,7 @@ from typing import Any
 from connector.artifact_handler import ArtifactHandler
 from connector.hash_lookup import HashLookupMixin
 from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
+from connector.report_depth import select_pcap_artifact
 from connector.sandbox_processor import SandboxProcessor
 from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
@@ -1027,6 +1028,48 @@ class PolySwarmConnector(HashLookupMixin):
                 )
         return sandbox_results
 
+    def _attach_pcaps(
+        self,
+        entity: dict[str, Any],
+        sandbox_tasks: dict[str, str],
+        sandbox_results: dict[str, dict | None],
+        lookup_hash: str | None,
+    ) -> None:
+        """Download each successful provider's pcap and attach it to the observable."""
+        max_bytes = self.config.polyswarm.sandbox_pcap_max_size
+        for provider, task_id in sandbox_tasks.items():
+            result = sandbox_results.get(provider)
+            if not result or not PolySwarmClient.is_sandbox_success(
+                str(result.get("status", "")).upper()
+            ):
+                continue
+            art = select_pcap_artifact(result)
+            if not art:
+                continue
+            try:
+                got = self.polyswarm_client.download_sandbox_artifact_bytes(
+                    task_id, str(art["instance_id"]), max_bytes
+                )
+                if not got:
+                    continue
+                _, data = got
+                short = lookup_hash[:16] if lookup_hash else "unknown"
+                pcap_filename = f"Sandbox_{provider}_{short}.pcap"
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] Attaching pcap: {pcap_filename}"
+                )
+                self.helper.api.stix_cyber_observable.add_file(
+                    id=entity["id"],
+                    file_name=pcap_filename,
+                    data=data,
+                    mime_type="application/vnd.tcpdump.pcap",
+                    no_trigger_import=True,
+                )
+            except (OSError, KeyError, RuntimeError, TypeError) as e:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Failed to attach {provider} pcap: {type(e).__name__}"
+                )
+
     def _phase_reports(
         self,
         entity: dict[str, Any],
@@ -1092,6 +1135,10 @@ class PolySwarmConnector(HashLookupMixin):
                         == "debug"
                     ):
                         self._debug_sandbox_structure(result)
+
+        # pcap (off by default: one extra download per detonation)
+        if self.config.polyswarm.sandbox_attach_pcap:
+            self._attach_pcaps(entity, sandbox_tasks, sandbox_results, lookup_hash)
 
         # ── PDF reports
         if self.config.polyswarm.pdf_report_enabled:

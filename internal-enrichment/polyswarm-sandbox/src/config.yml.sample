@@ -30,6 +30,10 @@ polyswarm:
   sandbox_lookup_max_age_days: 0        # StixFile lookup / Artifact reuse: older reports count as missing (0 = any age)
   sandbox_reuse_report: false           # Artifacts: use existing reports instead of uploading again
   sandbox_detonate_by_hash: false       # StixFile with no report: detonate the sample PolySwarm holds (spends credits)
+  sandbox_max_dropped_files: 25         # Dropped files to create as File observables (0 = off)
+  sandbox_c2_indicators: true           # Indicators for C2 in an extracted malware config
+  sandbox_attach_pcap: false            # Download and attach the sandbox pcap (extra download)
+  sandbox_pcap_max_size: 26214400       # Largest pcap to attach, in bytes
 
   # Polling
   poll_interval: 30
