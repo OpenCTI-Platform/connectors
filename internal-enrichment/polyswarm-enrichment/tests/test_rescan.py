@@ -126,6 +126,25 @@ class TestRescanTriggers:
         assert data["rescan"]["status"] == "completed"
         assert "latest scan is 30 days old" in data["rescan"]["reason"]
 
+    def test_partial_day_over_the_limit_rescans(self):
+        # 31 hours is older than a 1-day limit even though it is "1 day" in whole days
+        fresh = _instance(days_old=0, polyscore=0.9)
+        client = _client(
+            days=1,
+            search=[_instance(days_old=31 / 24, polyscore=0.1)],
+            rescan=_instance(days_old=0, assertions=False, window_closed=False),
+            wait_for=lambda *_a, **_k: fresh,
+        )
+        data, _ = _query(client)
+        client.polyswarm.rescan.assert_called_once_with(SHA256, hash_type="sha256")
+        assert data["rescan"]["status"] == "completed"
+
+    def test_just_under_the_limit_is_left_alone(self):
+        client = _client(days=1, search=[_instance(days_old=23 / 24)])
+        data, _ = _query(client)
+        client.polyswarm.rescan.assert_not_called()
+        assert "rescan" not in data
+
     def test_known_hash_without_completed_scan_rescans(self):
         fresh = _instance(days_old=0)
         client = _client(

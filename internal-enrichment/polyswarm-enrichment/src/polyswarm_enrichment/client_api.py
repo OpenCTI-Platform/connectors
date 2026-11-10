@@ -981,9 +981,12 @@ class ConnectorClient:
         ) or _parse_scan_date(data.get("last_scanned_dt"))
         if scanned is None:
             return None
-        age_days = (datetime.now(timezone.utc) - scanned).days
-        if age_days > days:
-            return f"latest scan is {age_days} days old (limit {days})"
+        age = datetime.now(timezone.utc) - scanned
+        if age > timedelta(days=days):
+            # Compare the real age, not whole days: a scan 31 hours old is older
+            # than a 1-day limit.
+            unit = "day" if age.days == 1 else "days"
+            return f"latest scan is {age.days} {unit} old (limit {days})"
         return None
 
     def _instance_for(self, community_name: str) -> PolyswarmAPI:
