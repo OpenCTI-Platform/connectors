@@ -9,7 +9,6 @@ from connector.family_names import is_malware_family_name
 # Real family names seen in live hunting hits and in the recorded feed.
 REAL = [
     "Copak",
-    "Sdum",
     "Satan",
     "Synaptics",
     "Impacket",
@@ -26,6 +25,44 @@ REAL = [
     "Mimikatz",
     "Emotet",
     "Qakbot",
+    "Cl0p",
+    "Gh0stRAT",
+    "MacStealer",
+    "RedLine",
+    "RedLineStealer",
+    "LokiBot",
+    "FormBook",
+    "lokibot",
+]
+
+# Generic engine family labels (Microsoft, ESET, Bitdefender, Kaspersky style).
+ENGINE_GENERIC = [
+    "Wacatac",
+    "Sabsik",
+    "Malgent",
+    "Kryptik",
+    "Injector",
+    "Krypt",
+    "Zusy",
+    "Razy",
+    "Tedy",
+    "Bulz",
+    "Jaik",
+    "Strab",
+    "Doina",
+    "Ulise",
+    "Fragtor",
+    "Barys",
+    "Midie",
+    "Lazy",
+    "Small",
+    "Common",
+    "Python",
+    "Autoit",
+    "CoinMiner",
+    "Sdum",
+    "wacatac",
+    "GenKryptik",
 ]
 
 # Engine label style names. The first five were measured in live hunting hits.
@@ -58,6 +95,10 @@ LABELS = [
     "",
     "   ",
     "abc",
+    "Tr0jan",
+    "Tr0jan.Generic",
+    "APT27",
+    "Gen3ric",
 ]
 
 
@@ -69,6 +110,17 @@ def test_real_family_names_are_accepted(name):
 @pytest.mark.parametrize("name", LABELS)
 def test_engine_labels_are_rejected(name):
     assert not is_malware_family_name(name)
+
+
+@pytest.mark.parametrize("name", ENGINE_GENERIC)
+def test_engine_generic_family_names_are_rejected(name):
+    assert not is_malware_family_name(name)
+
+
+def test_leet_digits_are_read_as_letters():
+    assert is_malware_family_name("Cl0p")
+    assert not is_malware_family_name("Tr0jan")
+    assert not is_malware_family_name("Pack3d")
 
 
 @pytest.mark.parametrize("value", [None, 123, 4.5, ["Copak"], {"a": 1}])

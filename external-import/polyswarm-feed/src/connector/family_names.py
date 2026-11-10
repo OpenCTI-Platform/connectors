@@ -3,7 +3,7 @@
 Live hunting hits carry a ``malware_family`` string. Many hits carry an engine
 style label instead of a family name (measured examples: ``Trojan.Packed2``,
 ``PUA.Generic``, ``Trojan.JS.Agent``, ``Phishing.HTML.Doc``, ``HkcAURkA``),
-while others carry real family names (``Copak``, ``Sdum``, ``Satan``,
+while others carry real family names (``Copak``, ``Satan``,
 ``Synaptics``, ``Impacket``, ``AsyncRat``). Creating a Malware object for an
 engine label would put noise in the OpenCTI knowledge base, so the connector
 only creates one when the name passes this check.
@@ -15,7 +15,7 @@ note and in a label.
 PolySwarm also serves a list of family names read-only
 (``GET /v3/tags/family/list``). It was measured on 2026-11-10 and was not used:
 it holds about 880 curated names and does not contain most of the real family
-names seen in live hunting hits (Copak, Sdum, Satan, Synaptics, Impacket),
+names seen in live hunting hits (Copak, Satan, Synaptics, Impacket),
 while it does contain generic labels such as ``Agent``. As a source of truth it
 would reject real families, so only the rules below decide.
 """
@@ -151,12 +151,135 @@ def _looks_random(name: str) -> bool:
     return False
 
 
+# Names that engines use as generic detection families, not as family names of
+# a specific malware. Compared with the whole name, ignoring case and
+# separators.
+_ENGINE_GENERIC_NAMES = frozenset(
+    {
+        "wacatac",
+        "sabsik",
+        "malgent",
+        "kryptik",
+        "genkryptik",
+        "injector",
+        "krypt",
+        "crypt",
+        "cryptz",
+        "zusy",
+        "razy",
+        "kazy",
+        "tedy",
+        "bulz",
+        "jaik",
+        "strab",
+        "doina",
+        "ulise",
+        "fragtor",
+        "barys",
+        "midie",
+        "lazy",
+        "small",
+        "common",
+        "python",
+        "autoit",
+        "coinminer",
+        "sdum",
+        "ursu",
+        "mikey",
+        "graftor",
+        "symmi",
+        "dynamer",
+        "ymacco",
+        "cerbu",
+        "vilsel",
+        "scarsi",
+        "occamy",
+        "eldorado",
+        "trickler",
+        "zpevdo",
+        "filerepmalware",
+        "behavgen",
+        "genpack",
+        "fakeav",
+        "bundler",
+    }
+)
+
+# Well-known real families whose names are built from type words or look odd
+# to the checks below. Compared with the whole name, ignoring case and
+# separators. APT and other intrusion set names are not malware, so they are
+# not listed.
+_KNOWN_FAMILIES = frozenset(
+    {
+        "macstealer",
+        "redline",
+        "redlinestealer",
+        "agenttesla",
+        "lokibot",
+        "formbook",
+        "cobaltstrike",
+        "lummastealer",
+        "lumma",
+        "asyncrat",
+        "nanocore",
+        "njrat",
+        "quasarrat",
+        "remcosrat",
+        "remcos",
+        "darkcomet",
+        "dcrat",
+        "plugx",
+        "shadowpad",
+        "trickbot",
+        "qakbot",
+        "icedid",
+        "wannacry",
+        "lockbit",
+        "blackcat",
+        "xworm",
+        "stealc",
+        "raccoonstealer",
+        "vidarstealer",
+        "smokeloader",
+        "guloader",
+        "bazarloader",
+        "metastealer",
+        "atomicstealer",
+        "jsworm",
+        "xloader",
+        "zloader",
+        "snakekeylogger",
+        "gh0strat",
+        "ghostrat",
+        "cl0p",
+        "clop",
+    }
+)
+
+_DIGIT_AS_LETTER = {"0": "o", "1": "i", "3": "e", "4": "a"}
+_LEET_DIGIT = re.compile(r"(?<=[A-Za-z])[0134](?=[A-Za-z])")
+
+
+def _normalize_leet(name: str) -> str:
+    """Read a digit between two letters as the letter it imitates (Cl0p)."""
+    return _LEET_DIGIT.sub(lambda m: _DIGIT_AS_LETTER[m.group(0)], name)
+
+
+def _key(name: str) -> str:
+    return re.sub(r"[ _\-]+", "", name).lower()
+
+
 def is_malware_family_name(name: object) -> bool:
     """Return True when ``name`` looks like a real malware family name.
 
-    Rejected: names with dots, slashes, colons, brackets or other punctuation,
-    names that are very short or very long, names built from generic words or
-    from type prefixes only, and random looking strings.
+    This is a heuristic with a denylist and an allowlist, not a lookup in a
+    list of all families. A short allowlist of well-known families is accepted
+    as is. A denylist of generic engine family labels (Wacatac, Kryptik, ...)
+    is rejected. Otherwise, rejected are names with dots, slashes, colons,
+    brackets or other punctuation, names that are very short or very long,
+    names built from generic words or from type prefixes only, and random
+    looking strings. Digits between letters are read as the letters they
+    imitate before the word checks (Cl0p is Clop, Tr0jan is Trojan).
     """
     if not isinstance(name, str):
         return False
@@ -167,11 +290,17 @@ def is_malware_family_name(name: object) -> bool:
         return False
     if not any(ch.isalpha() for ch in name):
         return False
-    words = _words(name)
+    normalized = _normalize_leet(name)
+    key = _key(normalized)
+    if key in _ENGINE_GENERIC_NAMES:
+        return False
+    if key in _KNOWN_FAMILIES:
+        return True
+    words = _words(normalized)
     if not words:
         return False
     if any(word in _STRONG_GENERIC for word in words):
         return False
     if all(word in _TYPE_WORDS or word.isdigit() for word in words):
         return False
-    return not _looks_random(name)
+    return not _looks_random(normalized)

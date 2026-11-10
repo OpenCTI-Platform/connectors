@@ -154,7 +154,7 @@ By default every sample of the enabled collections is imported. Three optional s
 - `POLYSWARM_FEED_EXCLUDE_FAMILIES`: skip samples whose malware family is in the list. When a family is in both lists, it is skipped.
 - `POLYSWARM_FEED_MIN_CONFIDENCE`: skip samples whose malware confidence (the `confidence` the feed puts on the sample's malware object) is below the value. A sample whose feed data carries no confidence is kept.
 
-Family names are matched as whole names, ignoring case. The filters do not change what is fetched from PolySwarm; they only decide what is imported.
+In the feed data recorded so far the malware confidence was mostly 99 (47 in the ransomware collection), so a minimum confidence rarely removes anything unless it is set high. Family names are matched as whole names, ignoring case. The filters do not change what is fetched from PolySwarm; they only decide what is imported.
 
 ### Live hunting hits
 
@@ -167,7 +167,7 @@ When `POLYSWARM_HUNTING_ENABLED=true`, the connector also reads hits from the li
 - A `polyswarm-family:<name>` label on the file, the indicator and the note, whenever the hit reports a family name
 - A malware family object and an `indicates` relationship, only when the reported name looks like a real malware family
 
-Many hits report an antivirus style label in the family field (for example `Trojan.Packed2` or `PUA.Generic`) rather than a family name. The connector creates a malware object only for names that pass a conservative check: names with dots, slashes, colons or brackets, generic words (such as generic, agent, packed, heur, suspicious, malware, trojan, pua, adware, riskware, phishing, unknown, variant, gen), names made only of a type prefix, random-looking strings and very short names are not treated as families. The name is never lost: it stays in the note and in the `polyswarm-family:<name>` label. The check is a heuristic and errs on the side of not creating a malware object; PolySwarm's own list of known family names was not used because it does not contain several real family names seen in hits.
+Many hits report an antivirus style label in the family field (for example `Trojan.Packed2` or `PUA.Generic`) rather than a family name. The connector decides with a heuristic, not with a complete list of families. It accepts a short allowlist of well-known family names, rejects a denylist of generic engine labels (for example Wacatac, Kryptik, Injector), and for all other names rejects dots, slashes, colons and brackets, generic words (such as generic, agent, packed, heur, suspicious, malware, trojan, pua, adware, riskware, phishing, unknown, variant, gen), names made only of type words, random-looking strings and very short names. It will get some names wrong in both directions. The name is never lost: it stays in the note and in the `polyswarm-family:<name>` label whether or not a malware object is created.
 
 A hit that was already imported is not imported again. The connector remembers a bounded number of recent hit identifiers in its state.
 

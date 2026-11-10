@@ -15,7 +15,7 @@ FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 
 
 @pytest.mark.parametrize(
-    "family", ["Copak", "Sdum", "Satan", "Synaptics", "Impacket", "AsyncRat"]
+    "family", ["Copak", "Satan", "Synaptics", "Impacket", "AsyncRat"]
 )
 def test_real_family_names_create_malware_and_label(family):
     source, _, _ = make_source([make_hit(malware_family=family)])
