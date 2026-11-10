@@ -475,50 +475,40 @@ pytest -s
 
 ### Dockerfile Standards
 
-**File:** `Dockerfile`
+A connector has no Dockerfile of its own: its image is built from the shared
+`Dockerfile_alpine`, or from `Dockerfile_debian` when it needs glibc or Debian
+packages (Playwright, LibreOffice), and its UBI9 image from the shared
+`Dockerfile_ubi9`, all at the repository root. Each one installs `requirements.txt` and runs
+`main.py` from the `src/` directory.
 
-```dockerfile
-FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+**File:** `.build.env` (optional, only for values that differ from the defaults; one `KEY="value"` per line, without trailing comments)
 
-# Copy the connector
-COPY src /opt/opencti-connector-cisa-known-exploited-vulnerabilities
-WORKDIR /opt/opencti-connector-cisa-known-exploited-vulnerabilities
-
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
-    cd /opt/opencti-connector-cisa-known-exploited-vulnerabilities && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
-
-CMD ["python", "main.py"]
+```shell
+CONNECTOR_CMD="-m src"
+CONNECTOR_WORKDIR="/opt/connector"
+EXTRA_PACKAGES_ALPINE="pango brotli-libs"
+EXTRA_PACKAGES_UBI9="pango libbrotli"
 ```
 
-Example with entrypoint.sh (DEPRECATED):
+- `CONNECTOR_CMD`: what Python runs, `main.py` by default.
+- `CONNECTOR_WORKDIR`: where it runs, `/opt/connector/src` by default.
+- `DISTRO`: `debian` builds the image from `Dockerfile_debian` instead of `Dockerfile_alpine`.
+- `EXTRA_PACKAGES_ALPINE`, `EXTRA_PACKAGES_DEBIAN`, `EXTRA_PACKAGES_UBI9`: runtime packages the connector needs, under the names of each distribution.
+- `BUILD_PACKAGES_ALPINE`, `BUILD_PACKAGES_DEBIAN`: packages needed only to build a Python dependency that has no wheel, removed after `pip install`.
+- `PYTHON_VERSION_ALPINE`: Python version of the Alpine image, `3.12` by default.
+- `DEBIAN_RELEASE`: Debian release of the Debian image, `bookworm` (Python 3.11) by default, `trixie` for Python 3.13.
+- `POST_INSTALL`: a shell command run after `pip install`.
+- `WRITABLE_DIRS`: directories the connector writes to at runtime, made writable for any UID (for instance a cache under `src/`).
 
-```dockerfile
-FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+Build an image locally from the repository root:
 
-# Copy the connector
-COPY src /opt/opencti-connector-template
-
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
-
-RUN cd /opt/opencti-connector-template && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
-
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+```shell
+./build.sh external-import/my-connector latest
+./build_ubi9.sh external-import/my-connector latest
 ```
 
+A connector keeps its own `Dockerfile` only when the shared one cannot build it
+(multi-stage build, non-root user, package installed from `pyproject.toml`...).
 
 ### Dockerfile Best Practices
 
@@ -645,8 +635,8 @@ docker compose up -d
 \```bash
 python3 -m venv venv
 source venv/bin/activate
-cd src
 pip install -r requirements.txt
+cd src
 python main.py
 \```
 

@@ -105,7 +105,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-taxii2:latest .
+./build.sh external-import/taxii2 latest
 ```
 
 Configure the connector in `docker-compose.yml`:

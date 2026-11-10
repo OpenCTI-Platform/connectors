@@ -84,7 +84,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-modat-enrichment:latest .
+./build.sh internal-enrichment/modat-enrichment latest
 ```
 
 Configure the connector in `docker-compose.yml`:
@@ -124,7 +124,7 @@ docker compose up -d
 2. Install dependencies:
 
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 3. Start the connector from the `src` directory:

@@ -137,7 +137,7 @@ These parameters live under the `stream:` section of `config.yml`.
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-opencti-stream:latest .
+./build.sh external-import/opencti-stream latest
 ```
 
 #### Example: Queue mode (default)
@@ -214,7 +214,7 @@ docker compose up -d
 2. Install dependencies:
 
    ```bash
-   pip3 install -r src/requirements.txt
+   pip3 install -r requirements.txt
    ```
 
 3. Start the connector:

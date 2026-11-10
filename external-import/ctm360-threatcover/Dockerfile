@@ -8,7 +8,7 @@ RUN apk --no-cache upgrade && \
 
 # Install requirements first to leverage Docker layer caching
 WORKDIR /opt/opencti-connector-ctm360-threatcover
-COPY src/requirements.txt ./
+COPY requirements.txt ./
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
 

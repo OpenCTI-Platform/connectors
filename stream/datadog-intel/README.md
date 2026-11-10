@@ -65,7 +65,7 @@ DATADOG_INTEL_DD_APPLICATION_KEY=<your-datadog-application-key>
 Build and start:
 
 ```shell
-docker build . -t opencti/connector-datadog-intel:latest
+./build.sh stream/datadog-intel latest
 docker compose up -d
 ```
 
@@ -83,7 +83,7 @@ In `config.yml`, replace `connector.live_stream_id: 'ChangeMe'` with the dedicat
 Install dependencies and run from the `src/` directory:
 
 ```shell
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
 

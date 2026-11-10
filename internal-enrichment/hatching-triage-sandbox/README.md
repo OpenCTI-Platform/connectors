@@ -63,7 +63,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example `docker-compose.yml`:
 
@@ -94,7 +94,7 @@ services:
 
 1. Clone the repository
 2. Copy `src/config.yml.sample` to `src/config.yml` and configure
-3. Install dependencies: `pip install -r src/requirements.txt`
+3. Install dependencies: `pip install -r requirements.txt`
 4. Run: `cd src && python3 main.py`
 
 ---

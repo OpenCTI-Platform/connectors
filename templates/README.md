@@ -144,7 +144,7 @@ docker compose up -build
 
 # If working locally
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

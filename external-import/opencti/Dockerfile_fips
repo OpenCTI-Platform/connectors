@@ -1,6 +1,7 @@
 FROM filigran/alpine-python-fips:python3.12
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
+COPY requirements.txt /opt/connector/requirements.txt
 COPY src /opt/connector
 WORKDIR /opt/connector
 

@@ -87,7 +87,7 @@ Below are the connector specific parameters:
 Build a docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-cvelistv5:latest
+./build.sh external-import/cvelistv5 latest
 ```
 
 Update the environment variables in `docker-compose.yml` with the appropriate
@@ -109,7 +109,7 @@ variables (especially `ChangeMe` placeholders).
 Install the Python dependencies, preferably in a virtual environment:
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Then start the connector from the `src` directory:

@@ -94,7 +94,7 @@ The connector is configured with environment variables or with a `config.yml` fi
 Build the image:
 
 ```shell
-docker build . -t opencti/connector-rosti:latest
+./build.sh external-import/rosti latest
 ```
 
 Fill in the `ChangeMe` values in [`docker-compose.yml`](docker-compose.yml), then start the connector:
@@ -108,7 +108,7 @@ docker compose up -d
 Create `config.yml` from [`config.yml.sample`](config.yml.sample) and replace the `ChangeMe` values. Then install the dependencies (preferably in a virtual environment) and start the connector from the `src` directory:
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cd src
 python3 main.py
 ```

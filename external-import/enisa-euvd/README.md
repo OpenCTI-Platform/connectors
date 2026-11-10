@@ -80,7 +80,7 @@ docker compose up -d
 Copy `config.yml.sample` to `config.yml`, adjust values, then:
 
 ```shell
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python3 src/main.py
 ```
 

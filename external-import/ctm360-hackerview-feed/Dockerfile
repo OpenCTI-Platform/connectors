@@ -9,7 +9,7 @@ RUN apk --no-cache upgrade && \
     apk add --no-cache --virtual .build-deps git build-base libffi-dev && \
     rm -rf /var/cache/apk/*
 
-COPY src/requirements.txt /opt/opencti-connector/
+COPY requirements.txt /opt/opencti-connector/
 WORKDIR /opt/opencti-connector
 
 RUN pip install --no-cache-dir -r requirements.txt && \

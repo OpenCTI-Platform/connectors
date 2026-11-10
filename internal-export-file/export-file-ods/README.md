@@ -51,13 +51,13 @@ supported.
 
 - OpenCTI Platform >= 6.4.3
 - A glibc-based Linux distribution able to run LibreOffice. The connector
-  ships with a `debian:bookworm-slim` Dockerfile because the
+  is built from the shared `Dockerfile_debian` (`debian:trixie-slim`) because the
   `python:3.12-alpine` image used by the other internal-export
   connectors (`export-file-csv`, `export-file-stix`, `export-file-txt`,
   `export-file-yara`, `export-report-pdf`) cannot install LibreOffice /
   `python3-uno` (LibreOffice is not packaged for `musl`), and Debian's
   `python3-uno` package only loads against the matching system Python
-  (Python 3.11 on Bookworm) — not a second interpreter installed under
+  (Python 3.13 on Trixie) — not a second interpreter installed under
   `/usr/local`. ``pycti`` and ``unogenerator`` are installed directly
   into that system Python so the connector and the apt-installed
   ``uno`` / ``unohelper`` / ``pyuno`` bridge share the same
@@ -93,7 +93,7 @@ There are a number of configuration options, which are set either in
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-export-file-ods:latest .
+./build.sh internal-export-file/export-file-ods latest
 ```
 
 Configure the connector in `docker-compose.yml`:
@@ -133,7 +133,7 @@ docker compose up -d
    `opencti.url` / `opencti.token` / `connector.id` values.
 
 3. Install the Python dependencies into the same system Python that
-   `python3-uno` was built for. On Debian Bookworm / recent Ubuntu
+   `python3-uno` was built for. On Debian Trixie / recent Ubuntu
    releases pip refuses to write to the system interpreter by default
    (PEP 668), so the install must be opted in to with
    `--break-system-packages`. This is intentional for this connector
@@ -143,16 +143,11 @@ docker compose up -d
    extension (ABI mismatch):
 
    ```bash
-   sudo pip3 install --break-system-packages --no-cache-dir -r src/requirements.txt
+   sudo pip3 install --break-system-packages --no-cache-dir -r requirements.txt
    ```
 
-4. Start the headless LibreOffice listener used by `unogenerator`:
-
-   ```bash
-   unogenerator_start
-   ```
-
-5. Start the connector with the same interpreter:
+4. Start the connector with the same interpreter (`unogenerator` starts and
+   stops a headless LibreOffice for each export):
 
    ```bash
    python3 src/main.py
@@ -268,7 +263,7 @@ level (`Could not remove temporary file: <path>`).
 |--------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | `An error occurred, the list is empty` | The selection or query returned no entities — refine filters and retry.                                                       |
 | `ODS export is not available for this entity type.` | The entity type is in the unsupported list; use the CSV or STIX export connectors instead.                                    |
-| LibreOffice / UNO errors at startup  | Make sure `unogenerator_start` is reachable and `python3-uno` is installed for the same Python version that runs `main.py`.    |
+| LibreOffice / UNO errors at startup  | Make sure LibreOffice (`soffice`) is installed and `python3-uno` is installed for the same Python version that runs `main.py`.    |
 | `Could not remove temporary file`    | The connector tried to delete a one-shot `.ods` rendering and failed (read-only mount, locked file). Inspect the `tmp/` folder. |
 
 ## Additional information

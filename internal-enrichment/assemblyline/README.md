@@ -135,7 +135,7 @@ docker compose up -d
 cp src/config.yml.sample src/config.yml
 # edit src/config.yml and fill in opencti.token, assemblyline.url,
 # assemblyline.user, assemblyline.apikey, ...
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 python3 src/main.py
 ```
 

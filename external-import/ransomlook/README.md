@@ -65,7 +65,7 @@ From this connector directory:
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 cp config.yml.sample config.yml
 python src/main.py
 ```

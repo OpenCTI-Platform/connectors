@@ -91,7 +91,7 @@ All connector-specific settings live under the `recorded-future-asi` key in `con
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-recorded-future-asi:latest .
+./build.sh external-import/recorded-future-asi latest
 ```
 
 Configure the connector in `docker-compose.yml`:
@@ -131,7 +131,7 @@ docker compose up -d
 2. Install dependencies:
 
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 1. Start the connector from the `src` directory:

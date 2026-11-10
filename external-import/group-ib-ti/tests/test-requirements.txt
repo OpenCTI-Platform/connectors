@@ -1,6 +1,6 @@
 # The CI test runner installs only this file, so the connector's own runtime
 # dependencies have to come with it or every test import fails.
--r ../src/requirements.txt
+-r ../requirements.txt
 
 ruff==0.16.8
 mypy==2.4.0

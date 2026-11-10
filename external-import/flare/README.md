@@ -32,7 +32,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 ### Docker Deployment
 1. Build Docker image:
 ```bash
-docker build -t opencti/connector-flare:rolling .
+./build.sh external-import/flare latest
 ```
 2. Register connector in the **main** OpenCTI `docker-compose.yml`:
 ```yaml
@@ -67,7 +67,7 @@ docker compose up -d
 1. Copy and configure `config.yml` from the provided `config.yml.sample`
 2. Install dependencies:
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 3. Start the connector:
 ```bash

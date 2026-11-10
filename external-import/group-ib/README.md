@@ -72,7 +72,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-group-ib:latest .
+./build.sh external-import/group-ib latest
 ```
 
 Configure environment variables and start:
@@ -93,7 +93,7 @@ nano .env
 2. Install dependencies:
 
 ```bash
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 ```
 
 3. Start the connector:

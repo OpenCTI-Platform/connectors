@@ -83,7 +83,7 @@ fi
 
 if [[ $set_venv == true ]]; then
     "$VENV"/bin/pip install --upgrade pip
-    "$VENV"/bin/pip install -r src/requirements.txt
+    "$VENV"/bin/pip install -r requirements.txt
 
     echo
     echo "Created virtualenv: $VENV"

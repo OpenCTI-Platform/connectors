@@ -24,7 +24,7 @@ RUN apk --no-cache upgrade && \
     git
 
 # Copy Python dependencies first (better Docker layer caching)
-COPY src/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt && \

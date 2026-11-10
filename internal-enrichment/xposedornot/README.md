@@ -87,7 +87,7 @@ docker compose up -d
 
 ```shell
 # From the connector root directory (internal-enrichment/xposedornot):
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cp config.yml.sample config.yml   # then edit config.yml
 python3 -m src
 ```

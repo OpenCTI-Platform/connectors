@@ -53,8 +53,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ```bash
 # Build
-docker build -t opencti/connector-threatmatch:latest .
-
+./build.sh external-import/threatmatch latest
 # Or pull (when published)
 # docker pull opencti/connector-threatmatch:latest
 ```
@@ -66,7 +65,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 # Minimal runtime deps
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 # For tests
 # pip install -r tests/test-requirements.txt
 

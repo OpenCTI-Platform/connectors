@@ -2,5 +2,5 @@
 # mirrors production (run_test.sh then swaps in local connectors-sdk / latest pycti).
 # Do not re-declare connectors-sdk/pycti here: a second pin conflicts with the src
 # requirement when a release pins connectors-sdk to the release tag.
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest

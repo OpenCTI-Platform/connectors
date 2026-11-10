@@ -81,7 +81,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-cuckoo:latest .
+./build.sh external-import/cuckoo latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -75,7 +75,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-first-epss-bulk:latest .
+./build.sh external-import/first-epss-bulk latest
 ```
 
 Configure the connector in `docker-compose.yml`:

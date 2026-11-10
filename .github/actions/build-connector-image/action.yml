@@ -110,9 +110,9 @@ runs:
         find . -name pyproject.toml -exec sed -i "s|connectors-sdk.*$|${SDK_GIT}\",|" {} \;
 
         echo "✅ Dependency rewrite complete"
-        if [ -f src/requirements.txt ]; then
-          echo "--- src/requirements.txt ---"
-          grep -E 'pycti|connectors-sdk' src/requirements.txt || echo "(no matches)"
+        if [ -f requirements.txt ]; then
+          echo "--- requirements.txt ---"
+          grep -E 'pycti|connectors-sdk' requirements.txt || echo "(no matches)"
         fi
 
     - name: Pin connectors-sdk for release
@@ -135,9 +135,9 @@ runs:
           sed -i -E "s|connectors-sdk @ git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#]+#subdirectory=connectors-sdk|${SDK_GIT}|g" {} +
 
         echo "✅ connectors-sdk pinned"
-        if [ -f src/requirements.txt ]; then
-          echo "--- src/requirements.txt ---"
-          grep -E 'connectors-sdk' src/requirements.txt || echo "(no connectors-sdk ref)"
+        if [ -f requirements.txt ]; then
+          echo "--- requirements.txt ---"
+          grep -E 'connectors-sdk' requirements.txt || echo "(no connectors-sdk ref)"
         fi
 
     - name: Write connector version stamp
@@ -222,15 +222,30 @@ runs:
         VARIANT="${{ inputs.variant }}"
         DOCKERFILE="${{ inputs.dockerfile }}"
 
-        # Dockerfile: use override or default to connector's own Dockerfile
+        # Dockerfile: use override, else the connector's own Dockerfile, else
+        # the shared Dockerfile_alpine or Dockerfile_debian
+        SHARED="false"
+        if [ -n "$VARIANT" ]; then
+          SHARED="true"
+        fi
         if [ -z "$DOCKERFILE" ]; then
-          DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
+          if [ -f "${CONNECTOR_PATH}/Dockerfile" ]; then
+            DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
+          else
+            # .build.env picks the Debian image with DISTRO="debian"
+            DISTRO=""
+            if [ -f "${CONNECTOR_PATH}/.build.env" ]; then
+              DISTRO="$(sed -n 's/^DISTRO="\{0,1\}\([a-z]*\)"\{0,1\}$/\1/p' "${CONNECTOR_PATH}/.build.env")"
+            fi
+            DOCKERFILE="Dockerfile_${DISTRO:-alpine}"
+            SHARED="true"
+          fi
         fi
         echo "dockerfile=$DOCKERFILE" >> "$GITHUB_OUTPUT"
 
-        # Build args: auto-generate for shared Dockerfiles (e.g. UBI9)
+        # Build args: auto-generate for shared Dockerfiles (Dockerfile_alpine, Dockerfile_debian, Dockerfile_ubi9)
         BUILD_ARGS=""
-        if [ -n "$VARIANT" ]; then
+        if [ "$SHARED" = "true" ]; then
           TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
           CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
           BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"

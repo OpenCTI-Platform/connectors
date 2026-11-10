@@ -1,6 +1,7 @@
 FROM filigran/alpine-python-fips:python3.12
 ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
 
+COPY requirements.txt /opt/opencti-connector-export-report-pdf/requirements.txt
 COPY src /opt/opencti-connector-export-report-pdf
 WORKDIR /opt/opencti-connector-export-report-pdf
 

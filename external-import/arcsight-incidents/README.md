@@ -79,10 +79,10 @@ environment variables.
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-arcsight-incidents:latest
+./build.sh external-import/arcsight-incidents latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
@@ -98,7 +98,7 @@ Copy `config.yml.sample` to `src/config.yml` and fill in the values, then:
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

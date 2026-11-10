@@ -1,18 +1,20 @@
 # syntax=docker/dockerfile:1.28
 FROM registry.access.redhat.com/ubi9/ubi-minimal
 
-# Runtime packages of the connector (set in .build.env).
-ARG EXTRA_PACKAGES=""
+# Runtime packages of the connector, under their UBI9 names (set in .build.env).
+ARG EXTRA_PACKAGES_UBI9=""
 
 RUN <<EOT
     set -euxo pipefail
 
     microdnf -y upgrade --refresh
-    microdnf -y --setopt=install_weak_deps=0 install python3.12 ${EXTRA_PACKAGES}
+    microdnf -y --setopt=install_weak_deps=0 install python3.12 ${EXTRA_PACKAGES_UBI9}
     microdnf clean all
 EOT
 
 ENV PYTHONDONTWRITEBYTECODE=1
+# Keeps Python from buffering stdout and stderr, so that a crash still shows its logs.
+ENV PYTHONUNBUFFERED=1
 
 # Provide a dedicated HOME so tools that build per-user caches/config under "~"
 # (e.g. POST_INSTALL steps) have a valid writable location at build time and a
@@ -27,9 +29,12 @@ ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
 ARG CONNECTOR_CMD="main.py"
 ARG CONNECTOR_WORKDIR="/opt/connector/src"
 ARG POST_INSTALL=""
+# Directories the connector writes to at runtime, made writable for any UID.
+ARG WRITABLE_DIRS=""
 
 ENV CONNECTOR_CMD=${CONNECTOR_CMD}
 
+COPY requirements.txt /opt/connector/requirements.txt
 COPY src /opt/connector/src
 
 RUN <<EOT
@@ -39,7 +44,7 @@ RUN <<EOT
     # package installed for the build is listed and removed at the end.
     rpm -qa --qf '%{NAME}\n' | sort > /tmp/packages-before
     microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core
-    pip3.12 install --no-cache-dir --requirement /opt/connector/src/requirements.txt
+    pip3.12 install --no-cache-dir --requirement /opt/connector/requirements.txt
     # Builds from source still leave caches under HOME (pip build isolation, cargo).
     rm -rf "$HOME/.cache/pip" "$HOME/.cargo"
     # POST_INSTALL is a shell command line, so it can chain commands (&&).
@@ -47,6 +52,7 @@ RUN <<EOT
     # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
     # world-readable so the connector can read it as an arbitrary non-root UID.
     chmod -R a+rX "$HOME"
+    if [ -n "${WRITABLE_DIRS}" ]; then mkdir -p ${WRITABLE_DIRS} && chmod -R a+rwX ${WRITABLE_DIRS}; fi
     rpm -qa --qf '%{NAME}\n' | sort | comm -13 /tmp/packages-before - | xargs microdnf -y remove
     rm /tmp/packages-before
     microdnf clean all

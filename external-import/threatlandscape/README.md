@@ -93,7 +93,7 @@ docker compose up -d
 cd external-import/threatlandscape
 python3 -m venv venv
 source venv/bin/activate
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 cp config.yml.sample config.yml
 # Edit config.yml with your credentials
 python src/main.py

@@ -53,7 +53,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 ### Docker
 
 ```shell
-docker build . -t opencti/connector-cybelangel:latest
+./build.sh external-import/cybelangel latest
 docker compose up -d
 ```
 
@@ -67,7 +67,7 @@ dependencies and start the connector:
 cp src/config.yml.sample src/config.yml
 # edit src/config.yml and fill in opencti.token, cybelangel.client_id,
 # cybelangel.client_secret, ...
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 python3 src/main.py
 ```
 
