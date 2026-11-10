@@ -271,6 +271,18 @@ The sandbox and hunt allowances shown are the account features `sandbox_request`
 - **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The connector then stops retrying that call and writes an error note on the artifact or URL that says the quota is exhausted, with the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so. The same applies to the report lookup that runs before an upload (`POLYSWARM_SANDBOX_REUSE_REPORT`): a quota error there ends the enrichment with this note and nothing is uploaded, since the upload would hit the same limit.
 - **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and carries on.
 
+## Screenshots
+
+Taken on OpenCTI 7.261103.0 with a test account.
+
+The sandbox note on a detonated URL
+
+![The sandbox note on a detonated URL](./__docs__/media/url-detonation-note.png)
+
+A detonated URL related to the domains and IPs its sandbox run contacted
+
+![A detonated URL related to the domains and IPs its sandbox run contacted](./__docs__/media/url-detonation.png)
+
 ## 🔧 Troubleshooting
 
 ### Common Issues
