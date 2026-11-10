@@ -127,7 +127,8 @@
     },
     "POLYSWARM_RESCAN_OLDER_THAN_DAYS": {
       "default": 0,
-      "description": "Ask PolySwarm to rescan a sample it already holds when its latest scan is older than this many days, or when it has no completed scan (0 = never rescan). Each rescan spends PolySwarm scan quota. Nothing is uploaded: PolySwarm rescans its own copy of the sample.",
+      "description": "Ask PolySwarm to rescan a sample it already holds when its latest scan is older than this many days, or when it has no completed scan (0 = never rescan, maximum 36500). Each rescan spends PolySwarm scan quota. Nothing is uploaded: PolySwarm rescans its own copy of the sample.",
+      "maximum": 36500,
       "minimum": 0,
       "type": "integer"
     },

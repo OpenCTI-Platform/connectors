@@ -22,7 +22,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | POLYSWARM_IOC_MAX_COUNT | `integer` |  | integer |  | `20` | Max network IOC observables per enrichment (global cap). |
 | POLYSWARM_IOC_SCORE | `integer` |  | integer |  | `20` | x_opencti_score for network IOC observables. |
 | POLYSWARM_IOC_TYPES | `array` |  | string |  | `["ip", "domain", "url"]` | Which IOC types to create (comma-separated: ip,domain,url). |
-| POLYSWARM_RESCAN_OLDER_THAN_DAYS | `integer` |  | `0 <= x ` |  | `0` | Ask PolySwarm to rescan a sample it already holds when its latest scan is older than this many days, or when it has no completed scan (0 = never rescan). Each rescan spends PolySwarm scan quota. Nothing is uploaded: PolySwarm rescans its own copy of the sample. |
+| POLYSWARM_RESCAN_OLDER_THAN_DAYS | `integer` |  | `0 <= x <= 36500` |  | `0` | Ask PolySwarm to rescan a sample it already holds when its latest scan is older than this many days, or when it has no completed scan (0 = never rescan, maximum 36500). Each rescan spends PolySwarm scan quota. Nothing is uploaded: PolySwarm rescans its own copy of the sample. |
 | POLYSWARM_RESCAN_TIMEOUT | `integer` |  | `1 <= x ` |  | `300` | Maximum seconds to wait for a rescan to finish. On timeout the enrichment uses the previous scan result and says so in the note. |
 | POLYSWARM_DOWNLOAD_SAMPLE | `boolean` |  | boolean |  | `false` | Download the sample for a File PolySwarm holds and store it as an Artifact in OpenCTI. This puts LIVE MALWARE in OpenCTI file storage and spends PolySwarm download quota. Off by default. |
 | POLYSWARM_DOWNLOAD_MAX_SIZE_MB | `integer` |  | `1 <= x ` |  | `20` | Largest sample, in MB, that will be downloaded. Larger samples are skipped and the note says so. |

@@ -114,7 +114,7 @@ Key features:
 | `polyswarm_network_url_send_query` | `POLYSWARM_NETWORK_URL_SEND_QUERY` | No | Send a URL's query string and fragment for lookup (default: `false`, only scheme, host and path are sent) |
 | `polyswarm_network_indicator_min_detections` | `POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS` | No | Malicious engine detections needed before a URL, domain or IP Indicator is created (default: `2`) |
 | `polyswarm_quota_warn_below` | `POLYSWARM_QUOTA_WARN_BELOW` | No | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (default: `100`, `0` turns warnings off). See [Quota](#quota) |
-| `polyswarm_rescan_older_than_days` | `POLYSWARM_RESCAN_OLDER_THAN_DAYS` | No | Rescan a sample PolySwarm already holds when its latest scan is older than this many days, or it has no completed scan (default: `0` = never). Each rescan spends PolySwarm scan quota |
+| `polyswarm_rescan_older_than_days` | `POLYSWARM_RESCAN_OLDER_THAN_DAYS` | No | Rescan a sample PolySwarm already holds when its latest scan is older than this many days, or it has no completed scan (default: `0` = never, maximum `36500`). Each rescan spends PolySwarm scan quota |
 | `polyswarm_rescan_timeout` | `POLYSWARM_RESCAN_TIMEOUT` | No | Seconds to wait for a rescan to finish (default: `300`). On timeout the previous result is used and the Note says so |
 | `polyswarm_download_sample` | `POLYSWARM_DOWNLOAD_SAMPLE` | No | **Stores LIVE MALWARE in OpenCTI.** Download the sample for a File PolySwarm holds and create an Artifact from it (default: `false`). Spends PolySwarm download quota |
 | `polyswarm_download_max_size_mb` | `POLYSWARM_DOWNLOAD_MAX_SIZE_MB` | No | Largest sample, in MB, that will be downloaded (default: `20`) |

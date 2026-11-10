@@ -74,10 +74,11 @@ class PolySwarmConfig(BaseConfigModel):
     rescan_older_than_days: int = Field(
         default=0,
         ge=0,
+        le=36500,
         description=(
             "Ask PolySwarm to rescan a sample it already holds when its latest scan "
             "is older than this many days, or when it has no completed scan "
-            "(0 = never rescan). Each rescan spends PolySwarm scan quota. Nothing is "
+            "(0 = never rescan, maximum 36500). Each rescan spends PolySwarm scan quota. Nothing is "
             "uploaded: PolySwarm rescans its own copy of the sample."
         ),
     )

@@ -967,6 +967,10 @@ class ConnectorClient:
         days = getattr(getattr(self, "config", None), "rescan_older_than_days", 0)
         if not days or days <= 0:
             return None
+        if days > timedelta.max.days:
+            # Too large to be a real threshold (and too large for timedelta):
+            # treat it as "never rescan" rather than crash the enrichment.
+            return None
         if data is None:
             # PolySwarm holds the sample but nothing usable finished scanning.
             # A scan that is still running is left to finish, never doubled.

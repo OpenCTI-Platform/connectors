@@ -104,6 +104,32 @@ class TestRescanOffByDefault:
         client.polyswarm.rescan.assert_not_called()
 
 
+class TestRescanThresholdLimits:
+    def test_huge_threshold_means_never_rescan(self):
+        client = _client(days=10**9, search=[_instance(days_old=400)])
+        data, error = _query(client)
+        assert error is None and data is not None
+        client.polyswarm.rescan.assert_not_called()
+        assert "rescan" not in data
+
+    def test_huge_threshold_with_no_completed_scan_does_not_crash(self):
+        client = _client(days=10**9, search=[_instance(assertions=False)])
+        _query(client)
+        client.polyswarm.rescan.assert_not_called()
+
+    def test_setting_is_capped(self):
+        from polyswarm_enrichment.settings import PolySwarmConfig
+
+        assert (
+            PolySwarmConfig(
+                api_key="k", rescan_older_than_days=36500
+            ).rescan_older_than_days
+            == 36500
+        )
+        with pytest.raises(Exception):
+            PolySwarmConfig(api_key="k", rescan_older_than_days=36501)
+
+
 class TestRescanTriggers:
     def test_fresh_scan_is_left_alone(self):
         client = _client(days=7, search=[_instance(days_old=2)])
