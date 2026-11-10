@@ -363,3 +363,5 @@ class TestRescanSkippedOnRequest:
         client.polyswarm.rescan.assert_not_called()
         assert "rescan" not in result["data"]
         assert "_held" not in result
+        for key in ("data", "primary", "secondary"):
+            assert "_source_result" not in (result.get(key) or {})

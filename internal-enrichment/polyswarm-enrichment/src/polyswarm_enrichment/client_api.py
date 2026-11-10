@@ -1038,9 +1038,9 @@ class ConnectorClient:
         """
         result = self._search_communities(hash_value)
         held = result.pop("_held", [])
-        if not allow_rescan:
-            return result
         try:
+            if not allow_rescan:
+                return result
             data = result.get("data")
             source = data.get("_source_result") if data else None
             if data:
