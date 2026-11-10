@@ -22,6 +22,7 @@ from polyswarm_enrichment.settings import PolySwarmConfig
 CONTENT = b"harmless test bytes, not malware"
 SHA256 = hashlib.sha256(CONTENT).hexdigest()
 MARKING = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
 FILE_ID = "file--0d6a4c5e-4a2b-5c3d-9e8f-123456789abc"
 
 
@@ -199,6 +200,23 @@ class TestConnectorWiring:
             observable, entity, {"data": _data()}
         )
         assert art["object_marking_refs"] == [MARKING]
+
+    def test_markings_are_union_of_stix_and_opencti_entity(self):
+        client = MagicMock()
+        client.download_sample.return_value = (CONTENT, None)
+        connector = _connector(client=client)
+        entity = {
+            "entity_type": "StixFile",
+            "objectMarking": [
+                {"standard_id": GREEN},
+                {"standard_id": MARKING},
+            ],
+        }
+        art, rel = connector._download_sample_objects(
+            _observable(), entity, {"data": _data()}
+        )
+        assert art["object_marking_refs"] == [MARKING, GREEN]
+        assert rel["object_marking_refs"] == [MARKING, GREEN]
 
     def test_existing_artifact_skips_download_and_is_linked(self):
         client = MagicMock()

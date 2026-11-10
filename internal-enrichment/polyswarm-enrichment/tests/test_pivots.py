@@ -38,6 +38,7 @@ IMPHASH = "68f013d7437aa653a8a98a05807afeb1"
 FILE_ID = "file--0d6a4c5e-4a2b-5c3d-9e8f-123456789abc"
 AP_ID = "attack-pattern--0d6a4c5e-4a2b-5c3d-9e8f-123456789abc"
 TLP_AMBER = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+TLP_GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
 
 
 def _ioc_results(*hashes):
@@ -454,6 +455,29 @@ class TestImphashHook:
             f["hashes"]["SHA-256"] for f in _by_type(sent, "file") if "hashes" in f
         ] == [SHA_A]
         assert len(_by_type(sent, "relationship")) == 1
+
+    def test_pivot_objects_carry_union_of_stix_and_opencti_markings(self):
+        connector = _connector(_make_client())
+        self._wire(connector, {"imphash": IMPHASH})
+        message = self._file_message()
+        message["stix_entity"] = {
+            **message["stix_entity"],
+            "object_marking_refs": [TLP_AMBER],
+        }
+        message["enrichment_entity"]["objectMarking"] = [
+            {"definition": "TLP:GREEN", "standard_id": TLP_GREEN},
+            {"definition": "TLP:AMBER", "standard_id": TLP_AMBER},
+        ]
+        connector.process_message(message)
+        sent = connector._send_bundle.call_args[0][0]
+        pivots = [
+            o
+            for o in sent
+            if (o["type"] == "file" and "hashes" in o) or o["type"] == "relationship"
+        ]
+        assert len(pivots) == 2
+        for obj in pivots:
+            assert obj["object_marking_refs"] == [TLP_AMBER, TLP_GREEN]
 
     def test_reuses_the_imphash_the_ioc_step_already_read(self):
         connector = _connector(_make_client())

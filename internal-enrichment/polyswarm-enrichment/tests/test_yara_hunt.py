@@ -35,6 +35,7 @@ SHA_B = "b" * 64
 SHA_C = "c" * 64
 IND_ID = "indicator--0d6a4c5e-4a2b-4c3d-9e8f-123456789abc"
 TLP_CLEAR = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+TLP_GREEN = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
 
 
 class FakeHelper(StubHelper):
@@ -648,6 +649,24 @@ class TestConnector:
         assert derived
         for obj in derived:
             assert obj["object_marking_refs"] == [TLP_CLEAR]
+
+    def test_derived_objects_carry_union_of_stix_and_opencti_markings(self):
+        connector = _connector()
+        message = _message()
+        message["stix_entity"]["object_marking_refs"] = [TLP_CLEAR]
+        message["enrichment_entity"]["objectMarking"] = [
+            {"definition": "TLP:GREEN", "standard_id": TLP_GREEN},
+            {"definition": "TLP:CLEAR", "standard_id": TLP_CLEAR},
+        ]
+        with patch("polyswarm_enrichment.connector.YaraHunter") as hunter_cls:
+            hunter_cls.return_value.run.return_value = _outcome()
+            hunter_cls.return_value.window_days = 30
+            connector.process_message(message)
+        sent = connector._send_bundle.call_args[0][0]
+        derived = [o for o in sent if o["type"] in ("note", "file", "relationship")]
+        assert derived
+        for obj in derived:
+            assert obj["object_marking_refs"] == [TLP_CLEAR, TLP_GREEN]
 
 
 # ===========================================================================

@@ -1501,15 +1501,19 @@ class ConnectorTemplate:
 
     @staticmethod
     def _source_marking_refs(stix_entity: dict, opencti_entity: dict) -> list[str]:
-        """Marking refs of the source observable, copied to every derived object."""
+        """Marking refs of the source, copied to every derived object.
+
+        Union of the STIX object_marking_refs and the OpenCTI entity's
+        objectMarking standard ids (both are used to authorize), deduplicated,
+        STIX refs first.
+        """
         refs = list(stix_entity.get("object_marking_refs") or [])
-        if not refs:
-            refs = [
-                marking["standard_id"]
-                for marking in opencti_entity.get("objectMarking") or []
-                if marking.get("standard_id")
-            ]
-        return refs
+        refs += [
+            marking["standard_id"]
+            for marking in (opencti_entity or {}).get("objectMarking") or []
+            if marking.get("standard_id")
+        ]
+        return list(dict.fromkeys(refs))
 
     def _existing_artifact_id(self, sha256: str | None) -> str | None:
         """STIX id of an Artifact with this SHA-256 already in OpenCTI, if any.
