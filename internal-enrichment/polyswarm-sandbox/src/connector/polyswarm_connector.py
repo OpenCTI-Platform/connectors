@@ -58,7 +58,10 @@ class PolySwarmConnector:
             community=ps.community,
             timeout=ps.timeout,
             helper=helper,
+            quota_warn_below=ps.quota_warn_below,
         )
+        # Log the account plan and quota at startup (read-only, never raises)
+        self.polyswarm_client.quota.refresh()
         self.artifact_handler = ArtifactHandler(
             helper=helper,
             max_file_size=ps.max_file_size,
@@ -186,6 +189,8 @@ class PolySwarmConnector:
         3. Perform enrichment
         4. On error/out-of-scope: return original bundle for playbook compat
         """
+        # At most one account read an hour; never raises
+        self.polyswarm_client.quota.refresh()
         opencti_entity = data.get("enrichment_entity")
         stix_entity = data.get("stix_entity")
         stix_objects = data["stix_objects"] if "stix_objects" in data else []

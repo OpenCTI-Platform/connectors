@@ -43,6 +43,7 @@ The connector sends data to PolySwarm only when it enriches an artifact or a URL
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements
@@ -139,6 +140,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_CREATE_INDICATORS` | `true` | Create indicator objects |
 | `POLYSWARM_CREATE_OBSERVABLES` | `true` | Create network IOCs |
 | `POLYKG_API_URL` | *(empty)* | polykg REST API URL for malware profile enrichment (optional) |
+| `POLYSWARM_QUOTA_WARN_BELOW` | `100` | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, is below this number (`0` turns warnings off). See [Quota](#quota) |
 
 ## 📊 STIX Objects Generated
 
@@ -218,6 +220,23 @@ The connector checks these fields in order:
 ### Malware Profile Enrichment (Optional)
 
 When `POLYKG_API_URL` is configured, the connector fetches live malware family profiles from the polykg REST API. This provides enhanced intelligence including threat actors, target locations, exploited CVEs, and related malware. The connector works fully without polykg — it just produces basic scan/sandbox enrichment without the extended threat intel.
+
+### Quota
+
+The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at startup, and about once an hour after that, it makes one read-only request to the account endpoint (`GET /public/accounts`, through the SDK's `account_features()`), plus at most one more per minute after a quota error. The logic is in `src/connector/quota.py`. The account number in the response is never read or logged.
+
+What is logged, at info level:
+
+```
+[QUOTA] plan Example Plan; daily API calls remaining 640 of 1000; sandbox_request: 300 of 500 remaining; usage window ends 2026-12-01T00:00:00+00:00
+```
+
+The sandbox and hunt allowances shown are the account features `sandbox_request`, `historical_hunt`, `live_hunt` and `manual_analysis`.
+
+- **Warning.** When the remaining daily API quota, or one of those allowances, is below `POLYSWARM_QUOTA_WARN_BELOW` (default `100`), the connector logs a warning. Set it to `0` to turn warnings off.
+- **Unlimited or exhausted.** A daily limit of `0` means the account has no cap: `daily_api_limit` and `daily_api_remaining` are both `0` on an uncapped plan (measured on an internal plan, where every feature also reports `base_uses` of `0`). Such an account is shown as unlimited and never warned about. A limit above `0` with nothing remaining means the quota is exhausted. A feature the plan does not include is reported as not on this plan. Reading `0` as "no cap" is inferred from the SDK and from that one measurement.
+- **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The connector then stops retrying that call and writes an error note on the artifact or URL that says the quota is exhausted, with the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so.
+- **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and carries on.
 
 ## 🔧 Troubleshooting
 

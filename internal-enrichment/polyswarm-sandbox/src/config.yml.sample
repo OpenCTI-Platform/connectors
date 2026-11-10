@@ -43,6 +43,9 @@ polyswarm:
   create_indicators: true
   create_observables: true
 
+  # Account quota (read-only): warn when remaining quota is below this, 0 = no warnings
+  # quota_warn_below: 100
+
   # File handling
   max_file_size: 33554432               # 32MB
   download_artifacts: true

@@ -13,7 +13,12 @@ from typing import Any
 
 import requests
 from connector.polyswarm import PolyswarmAPI
-from polyswarm_api.exceptions import NotFoundException, PolyswarmException
+from connector.quota import QuotaMonitor
+from polyswarm_api.exceptions import (
+    NotFoundException,
+    PolyswarmException,
+    UsageLimitsExceededException,
+)
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -197,7 +202,13 @@ class PolySwarmClient:
         ) or PolySwarmClient.is_sandbox_failure(status)
 
     def __init__(
-        self, api_key: str, api_url: str, community: str, timeout: int, helper: object
+        self,
+        api_key: str,
+        api_url: str,
+        community: str,
+        timeout: int,
+        helper: object,
+        quota_warn_below: int = 100,
     ) -> None:
         """Initialise client with SDK, retry session, and circuit breaker.
 
@@ -207,6 +218,8 @@ class PolySwarmClient:
             community: PolySwarm community slug (``default`` or ``private``).
             timeout: HTTP timeout in seconds for SDK calls.
             helper: OpenCTI connector helper for logging.
+            quota_warn_below: Warn in the log when remaining quota is below this
+                (0 turns warnings off).
         """
         self.helper = helper
         # The SDK logs request parameters at debug level, and they carry a
@@ -221,6 +234,11 @@ class PolySwarmClient:
             api_url = f"{api_url.rstrip('/')}/v3"
         self.api = PolyswarmAPI(
             key=api_key, uri=api_url, community=community, timeout=timeout
+        )
+
+        # Read-only account plan and quota visibility; never raises
+        self.quota = QuotaMonitor(
+            self.api, helper.connector_logger, warn_below=quota_warn_below
         )
 
         # PROD-01 + PROD-09: Shared session with retry and connection pooling.
@@ -316,6 +334,10 @@ class PolySwarmClient:
                         f"{type(e).__name__}: {e} — retrying in {wait:.0f}s"
                     )
                     time.sleep(wait)
+            except UsageLimitsExceededException as e:
+                # HTTP 429 from the SDK: the account's usage limits are exceeded.
+                # Retrying will not help, and the SDK message is not echoed here.
+                raise self._quota_exhausted_error(operation) from e
             except Exception as e:
                 # Some SDK wrappers stringify status codes instead of raising HTTPError;
                 # scan the message for known codes so we can still surface actionable errors.
@@ -343,6 +365,22 @@ class PolySwarmClient:
         )
         self._breaker.record_failure()
         return None
+
+    def _quota_exhausted_error(self, operation: str) -> PolySwarmAPIError:
+        """Error for an exhausted quota, with the remaining quota and reset time."""
+        quota_lines = self.quota.exhausted_note_lines()
+        return PolySwarmAPIError(
+            category=f"API Quota Exhausted ({operation})",
+            detail=(
+                "PolySwarm reported that the account's usage limits are exceeded "
+                f"(HTTP 429 during {operation}).\n\n**Account quota**\n"
+                + "\n".join(quota_lines)
+            ),
+            recommendations=[
+                "Wait for your quota to reset (see the usage window above).",
+                "Contact sales@polyswarm.io to increase your quota or upgrade your plan.",
+            ],
+        )
 
     @staticmethod
     def _create_retry_session(
@@ -464,6 +502,11 @@ class PolySwarmClient:
                     vm_slug=vm_slug,
                     browser=browser,
                 )
+            except UsageLimitsExceededException:
+                # Keep the type, so quota exhaustion is reported as such
+                raise UsageLimitsExceededException(
+                    None, "URL sandbox submission: HTTP 429"
+                ) from None
             except PolyswarmException as e:
                 request = getattr(e, "request", None)
                 status_code = getattr(request, "status_code", None)
@@ -513,6 +556,8 @@ class PolySwarmClient:
                 if (result and (result.failed or result.window_closed))
                 else None
             )
+        except UsageLimitsExceededException as e:
+            raise self._quota_exhausted_error("scan poll") from e
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] Get scan results error: {str(e)}"
@@ -541,6 +586,8 @@ class PolySwarmClient:
                 if (task and self.is_sandbox_terminal(str(task.status)))
                 else None
             )
+        except UsageLimitsExceededException as e:
+            raise self._quota_exhausted_error("sandbox poll") from e
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] Get sandbox results error: {str(e)}"

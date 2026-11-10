@@ -89,6 +89,8 @@ services:
       - POLYSWARM_CREATE_INDICATORS=true
       # Create observable objects (domains, IPs) from sandbox network data
       - POLYSWARM_CREATE_OBSERVABLES=true
+      # Warn in the log when remaining quota is below this (0 = no warnings)
+      # - POLYSWARM_QUOTA_WARN_BELOW=100
       
     restart: always
     depends_on:
