@@ -57,6 +57,11 @@ Key features:
 - **Error reporting**: API errors surfaced as STIX Notes visible in OpenCTI
 - **URL, domain and IP lookups**: latest PolySwarm URL scan verdict, scored from
   engine detections, plus files PolySwarm links to an IP or domain
+- **Account quota**: plan and remaining quota logged, and listed in error notes
+  after a quota error
+- **Rescan and sample download** (optional, off by default): rescan stale scans
+  of samples PolySwarm holds, and store a held sample as an Artifact (live
+  malware)
 - **Pivots** (optional, off by default): other files with the same imphash, and
   files PolySwarm sandbox reports associate with an ATT&CK technique
 - **YARA hunting** (optional, off by default): run a PolySwarm historical hunt
@@ -252,6 +257,11 @@ unless `CONNECTOR_MAX_TLP` is `TLP:RED`.
 Notes, Indicators, relationships and related file observables created for a
 URL, domain or IP carry the same markings as the source observable.
 
+Trigger enrichment:
+- Manually via the OpenCTI UI observable detail page
+- Automatically if `CONNECTOR_AUTO=true`
+- Via OpenCTI playbooks
+
 #### Rescanning stale hashes (off by default)
 
 By default the connector reads the latest scan PolySwarm already has. Set
@@ -266,8 +276,8 @@ when either:
 The connector then waits up to `POLYSWARM_RESCAN_TIMEOUT` seconds (default
 `300`) and enriches from the new result. If the rescan does not finish in time,
 or fails, it enriches from the previous result and the Note has a "Rescan"
-section saying so (after a quota error it also lists the account quota). Nothing is uploaded: the
-rescan is of the copy PolySwarm already holds, and a hash PolySwarm does not
+section saying so (after a quota error it also lists the account quota).
+Nothing is uploaded: the rescan is of the copy PolySwarm already holds, and a hash PolySwarm does not
 know is never rescanned. At most one rescan runs per enrichment, after the
 result to use is chosen, in the community that result came from. With
 `POLYSWARM_COMMUNITY=private` both communities are searched first, so a stale
@@ -319,7 +329,8 @@ connector.
   file.
 - The sample is held in the connector's memory while it is processed. No file
   is written inside the connector container.
-### YARA hunting (off by default)
+
+#### YARA hunting (off by default)
 
 > **Warning.** With `POLYSWARM_YARA_HUNT_ENABLED=true`, enriching a YARA
 > Indicator **creates a historical hunt in the PolySwarm account of the API key
@@ -354,18 +365,13 @@ matches of a slow hunt: the connector finds the hunt it already made for that
 rule (in its saved state, then in the hunts of the account, which it names
 `OpenCTI <rule name> <rule digest>`), and reads its results instead of starting
 another hunt. A hunt that already finished is reused the same way, so enriching
-the same rule again never creates a second hunt. Once the earlier hunt is older than its window
-(30 days for a 30 day window), the next enrichment starts a fresh hunt and the
-Note says so. To hunt sooner, delete the earlier hunt in PolySwarm first. A hunt that failed or
-was cancelled is not reused. A hunt PolySwarm ends at its result cap (status
+the same rule again never creates a second hunt. Once the earlier hunt is older
+than its window (30 days for a 30 day window), the next enrichment starts a
+fresh hunt and the Note says so. To hunt sooner, delete the earlier hunt in
+PolySwarm first. A hunt that failed or was cancelled is not reused. A hunt PolySwarm ends at its result cap (status
 `LIMITED`) is imported like a finished one, and the Note says the match count
 is a lower bound. Syncing YARA Indicators to a live ruleset is not part of this
 feature.
-
-Trigger enrichment:
-- Manually via the OpenCTI UI observable detail page
-- Automatically if `CONNECTOR_AUTO=true`
-- Via OpenCTI playbooks
 
 ---
 
@@ -403,6 +409,7 @@ flowchart LR
 | Url               | Latest URL scan: engine detections, score, scan date, Note, Indicator (threshold) |
 | Domain-Name, IPv4-Addr, IPv6-Addr | Latest URL scan as above, plus related file hashes          |
 | Attack-Pattern (only when `POLYSWARM_PIVOT_TTP_MAX` > 0) | Files whose sandbox reports list the technique, Note |
+| Indicator (only when `POLYSWARM_YARA_HUNT_ENABLED` is true) | YARA Indicators only: historical hunt, matched files, Note |
 
 ### Generated STIX Objects
 
@@ -575,28 +582,32 @@ During cooldown, enrichment continues with reduced data rather than blocking.
 
 ```
 polyswarm-enrichment/
-├── Dockerfile
-├── docker-compose.yml
-├── config.yml.sample
-├── README.md
-├── src/
-│   ├── main.py                          # Entry point
-│   ├── requirements.txt
-│   └── polyswarm_enrichment/
-│       ├── __init__.py
-│       ├── connector.py                 # Orchestrator: message → enrichment → STIX bundle
-│       ├── client_api.py                # PolySwarm API client + circuit breaker
-│       ├── converter_to_stix.py         # PolySwarm data → STIX 2.1 objects
-│       ├── attack_pattern_handler.py    # MITRE ATT&CK patterns from polykg
-│       ├── malware_profile_loader.py    # Family profiles from polykg
-│       ├── polyswarm_client.py          # Thin wrapper over polyswarm-api PyPI SDK
-│       ├── settings.py                  # Pydantic configuration (connectors-sdk)
-│       └── utils.py                     # Shared utilities
-└── tests/
-    ├── conftest.py
-    ├── test-requirements.txt
-    ├── cassettes/                       # VCR recorded API responses (auth scrubbed)
-    └── test_*.py                        # Unit + integration tests
+|-- Dockerfile
+|-- docker-compose.yml
+|-- config.yml.sample
+|-- README.md
+|-- src/
+|   |-- main.py                          # Entry point
+|   |-- requirements.txt
+|   `-- polyswarm_enrichment/
+|       |-- __init__.py
+|       |-- connector.py                 # Orchestrator: message -> enrichment -> STIX bundle
+|       |-- client_api.py                # PolySwarm API client + circuit breaker
+|       |-- converter_to_stix.py         # PolySwarm data -> STIX 2.1 objects
+|       |-- quota.py                     # Account plan and quota reader (read-only)
+|       |-- pivots.py                    # Optional imphash and technique pivots
+|       |-- sample_artifact.py           # Optional sample download to an Artifact
+|       |-- yara_hunt.py                 # Optional YARA historical hunts
+|       |-- attack_pattern_handler.py    # MITRE ATT&CK patterns from polykg
+|       |-- malware_profile_loader.py    # Family profiles from polykg
+|       |-- polyswarm_client.py          # Thin wrapper over polyswarm-api PyPI SDK
+|       |-- settings.py                  # Pydantic configuration (connectors-sdk)
+|       `-- utils.py                     # Shared utilities
+`-- tests/
+    |-- conftest.py
+    |-- test-requirements.txt
+    |-- cassettes/                       # VCR recorded API responses (auth scrubbed)
+    `-- test_*.py                        # Unit + integration tests
 ```
 
 ## License
