@@ -25,6 +25,7 @@ REAL = [
     "Mimikatz",
     "Emotet",
     "Qakbot",
+    "Eldorado",
     "Cl0p",
     "Gh0stRAT",
     "MacStealer",

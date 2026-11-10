@@ -194,7 +194,6 @@ _ENGINE_GENERIC_NAMES = frozenset(
         "vilsel",
         "scarsi",
         "occamy",
-        "eldorado",
         "trickler",
         "zpevdo",
         "filerepmalware",
