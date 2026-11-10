@@ -27533,11 +27533,189 @@
       "max_confidence_level": 50,
       "support_version": ">=5.5.4",
       "subscription_link": null,
-      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/orange-cyberdefense-enrichment-v3",
-      "manager_supported": false,
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/orange-cyberdefense-enrichment-v3",
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-orange-cyberdefense-enrichment-v3",
-      "container_type": "INTERNAL_ENRICHMENT"
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/orange-cyberdefense-enrichment-v3_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "Orange Cyberdefense CTI Enrichment",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "IPv4-Addr",
+              "IPv6-Addr",
+              "Domain-Name",
+              "URL",
+              "Email-Addr",
+              "Autonomous-System",
+              "X509-Certificate",
+              "Cryptocurrency-Wallet",
+              "StixFile",
+              "Phone-Number"
+            ],
+            "description": "OpenCTI observable types for which to enable the enrichment.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "info",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "CONNECTOR_MAX_TLP": {
+            "description": "Only perform enrichment for observables with this TLP level or less restrictive.",
+            "enum": [
+              "clear",
+              "white",
+              "green",
+              "amber",
+              "amber+strict",
+              "red"
+            ],
+            "type": "string",
+            "default": "green"
+          },
+          "OCD_ENRICH_DATALAKE_TOKEN": {
+            "description": "Long Term Token used to access Orange Cyberdefense Datalake API.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "OCD_ENRICH_DATALAKE_ENV": {
+            "default": "prod",
+            "description": "Datalake environment to use: `prod` or `preprod`.",
+            "enum": [
+              "prod",
+              "preprod"
+            ],
+            "type": "string"
+          },
+          "OCD_ENRICH_IGNORE_UNSCORED_INDICATORS": {
+            "default": true,
+            "description": "If `true`, Datalake indicators that do not have any score will be ignored.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_IGNORE_WHITELISTED_INDICATORS": {
+            "default": true,
+            "description": "If `true`, Datalake indicators that are whitelisted will be ignored.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_FALLBACK_SCORE": {
+            "default": 0,
+            "description": "If `OCD_ENRICH_IGNORE_UNSCORED_INDICATORS` is set to `false`, this value will be used as a default for Datalake indicators without any score.",
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "OCD_ENRICH_ADD_TAGS_AS_LABELS": {
+            "default": true,
+            "description": "Whether to add Datalake tags as labels to the enriched observable.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_SCORES_AS_LABELS": {
+            "default": true,
+            "description": "Whether to add Datalake threat scores as labels to the enriched observable.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_TLP": {
+            "default": true,
+            "description": "Whether to add a TLP marking to the enriched observable (overwrite existing).",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_THREAT_ACTOR_AS_INTRUSION_SET": {
+            "default": true,
+            "description": "Whether to transform Datalake 'Threat Actor' objects into 'Intrusion Set' objects.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_SCORE": {
+            "default": true,
+            "description": "Whether to add score to the enriched observable (overwrite existing).",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_EXTREF": {
+            "default": true,
+            "description": "Whether to add external references to the enriched observable.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_SUMMARY": {
+            "default": true,
+            "description": "Whether to add a threat summary as a note to the enriched observable.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_RELATED": {
+            "default": true,
+            "description": "Whether to import objects from the Threat Library related to this observable, such as indicators, malwares, etc.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_SIGHTINGS": {
+            "default": true,
+            "description": "Whether to import positive sightings from Datalake.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_ADD_CREATEDBY": {
+            "default": true,
+            "description": "Whether to add a reference to 'Orange Cyberdefense' organization as author of OpenCTI objects.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_CURATE_LABELS": {
+            "default": true,
+            "description": "Adapt Datalake CTI tags as STIX labels.",
+            "type": "boolean"
+          },
+          "OCD_ENRICH_MAX_TLP": {
+            "default": null,
+            "deprecated": true,
+            "description": "Use CONNECTOR_MAX_TLP instead.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "OCD_ENRICH_DATALAKE_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Import External Reference",
