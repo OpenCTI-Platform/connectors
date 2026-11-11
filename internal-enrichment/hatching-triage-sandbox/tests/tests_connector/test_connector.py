@@ -2,6 +2,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from connector.connector import HatchingTriageSandboxConnector
 from connectors_sdk.models.enums import TLPLevel
 from requests import RequestException
@@ -313,6 +314,36 @@ class TestRetries:
 
         assert connector.triage_client.overview_report.call_count == 1
         mock_sleep.assert_not_called()
+
+    def test_overview_report_retries_on_html_bad_gateway(self, mock_sleep, connector):
+        response = requests.Response()
+        response.status_code = 502
+        response._content = b"<html><body><h1>502 Bad Gateway</h1></body></html>"
+        calls = iter([requests.HTTPError(response=response), None])
+
+        def overview_report(_sample_id):
+            http_error = next(calls)
+            if http_error is None:
+                return {"analysis": {}}
+            raise ServerError(http_error)
+
+        connector.triage_client.overview_report.side_effect = overview_report
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        mock_sleep.assert_called_once()
+
+    def test_overview_report_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = [
+            requests.ConnectionError("connection dropped"),
+            {"analysis": {}},
+        ]
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        assert connector.triage_client.overview_report.call_count == 2
 
     def test_task_file_retries_until_available(self, mock_sleep, connector):
         connector.triage_client.sample_task_file.side_effect = [

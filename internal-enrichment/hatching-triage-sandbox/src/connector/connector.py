@@ -494,14 +494,16 @@ class HatchingTriageSandboxConnector:
         for attempt in range(1, self.max_attempts + 1):
             try:
                 return self.triage_client.overview_report(sample_id)
-            except ServerError as err:
-                if err.status < 500 or attempt == self.max_attempts:
+            # An HTML 5xx body makes ServerError() raise requests' JSONDecodeError
+            except (ServerError, RequestException) as err:
+                status = getattr(err, "status", None)
+                if (status is not None and status < 500) or attempt == self.max_attempts:
                     raise
                 self.helper.connector_logger.warning(
                     "Overview report request failed, retrying...",
                     meta={
                         "sample_id": sample_id,
-                        "status": err.status,
+                        "status": status,
                         "attempt": attempt,
                         "max_attempts": self.max_attempts,
                     },
