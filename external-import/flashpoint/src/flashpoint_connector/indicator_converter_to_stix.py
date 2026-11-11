@@ -40,6 +40,9 @@ from flashpoint_connector.extracted_config import (
 from flashpoint_connector.utils import is_domain
 from pycti import OpenCTIConnectorHelper
 
+# Placeholders Flashpoint uses instead of a real malware description.
+MISSING_DESCRIPTION_VALUES = frozenset({"N/A", "NA", "NONE", "NULL"})
+
 
 class IndicatorConverterToStix:
     """Convert Flashpoint indicators into STIX/OpenCTI objects.
@@ -53,6 +56,7 @@ class IndicatorConverterToStix:
         helper: OpenCTIConnectorHelper,
         tlp_definition: str = "TLP:GREEN",
         import_extracted_config_domains_urls: bool = False,
+        import_attack_patterns: bool = True,
     ):
         """Initialize converter dependencies and default marking.
 
@@ -62,9 +66,12 @@ class IndicatorConverterToStix:
             import_extracted_config_domains_urls: Whether domains and URLs found in
                 extracted malware configs become observables. Disabled by default
                 because those lists can mix real C2s with legitimate domains.
+            import_attack_patterns: Whether the MITRE ATT&CK techniques of the
+                indicator family or actor are imported.
         """
         self.helper = helper
         self.import_extracted_config_domains_urls = import_extracted_config_domains_urls
+        self.import_attack_patterns = import_attack_patterns
         self.author = self._create_author()
         tlp_level_mapping = {
             "TLP:CLEAR": TLPLevel.CLEAR,
@@ -504,10 +511,27 @@ class IndicatorConverterToStix:
     def _build_attack_pattern_objects(
         self,
         indicator: dict,
-        octi_indicator: Indicator,
-        labels: list[str],
+        owners: list[Malware] | list[IntrusionSet],
     ) -> list:
-        """Create attack-pattern entities and indicates relationships."""
+        """Create attack patterns and `uses` relationships from their owners.
+
+        Flashpoint fills `mitre_attack_ids` with the technique profile of the
+        malware family or actor of the indicator, identical for every indicator
+        of that family or actor. The techniques describe the family or actor,
+        so they are linked to it and never to the indicator. They are dropped
+        when the indicator has no family or actor to carry them.
+
+        Args:
+            indicator: Raw Flashpoint indicator payload.
+            owners: Malware families, or intrusion sets when the indicator has
+                no malware family, that use the techniques.
+
+        Returns:
+            list: Attack patterns and `uses` relationships.
+        """
+        if not self.import_attack_patterns or not owners:
+            return []
+
         octi_objects = []
 
         for attack_pattern_data in self._extract_attack_patterns(indicator):
@@ -531,10 +555,13 @@ class IndicatorConverterToStix:
                 if not kill_chain_phases:
                     kill_chain_phases = None
 
+            # No labels on purpose: the ID only depends on the MITRE ID, so this
+            # technique is merged with the one created by other sources.
+            # OpenCTI never removes labels, so any label set here would stay
+            # on that shared object for every source.
             attack_pattern = AttackPattern(
                 name=attack_pattern_data["name"],
                 description=attack_pattern_data.get("description"),
-                labels=labels,
                 mitre_id=attack_pattern_data.get("mitre_id"),
                 kill_chain_phases=kill_chain_phases,
                 author=self.author,
@@ -542,14 +569,15 @@ class IndicatorConverterToStix:
             )
             octi_objects.append(attack_pattern)
 
-            octi_objects.append(
+            octi_objects.extend(
                 Relationship(
-                    type=RelationshipType.INDICATES,
-                    source=octi_indicator,
+                    type=RelationshipType.USES,
+                    source=owner,
                     target=attack_pattern,
                     author=self.author,
                     markings=[self.marking],
                 )
+                for owner in owners
             )
 
         return octi_objects
@@ -625,59 +653,66 @@ class IndicatorConverterToStix:
 
     @classmethod
     def _resolve_malware_description(cls, indicator: dict) -> str | None:
-        """Return the malware description without HTML, if any."""
+        """Return the malware description without HTML, if any.
+
+        Flashpoint sends the literal placeholder "N/A" when it has no
+        description. It is treated as no description, so that it never
+        overwrites the description of a Malware that already exists in the
+        platform (the Malware id only depends on its name).
+        """
         raw_description = indicator.get("malware_description")
-        if raw_description and raw_description.strip():
-            return cls._strip_html(raw_description) or None
-        return None
+        if not raw_description or not raw_description.strip():
+            return None
+        description = cls._strip_html(raw_description)
+        if not description or description.upper() in MISSING_DESCRIPTION_VALUES:
+            return None
+        return description
 
-    def _build_tag_entities_objects(
-        self,
-        indicator: dict,
-        octi_indicator: Indicator,
-    ) -> list:
-        """Create IntrusionSet / Malware entities and indicates relationships from tags."""
-        octi_objects = []
+    def _build_tag_entities(
+        self, indicator: dict
+    ) -> tuple[list[IntrusionSet], list[Malware]]:
+        """Create IntrusionSet / Malware entities from sighting tags."""
         actor_names, malware_names = self._extract_entities_from_tags(indicator)
-
         malware_description = self._resolve_malware_description(indicator)
 
-        for name in actor_names:
-            intrusion_set = IntrusionSet(
+        intrusion_sets = [
+            IntrusionSet(
                 name=name,
                 author=self.author,
                 markings=[self.marking],
             )
-            octi_objects.append(intrusion_set)
-            octi_objects.append(
-                Relationship(
-                    type=RelationshipType.INDICATES,
-                    source=octi_indicator,
-                    target=intrusion_set,
-                    author=self.author,
-                    markings=[self.marking],
-                )
-            )
-
-        for name in malware_names:
-            malware = Malware(
+            for name in sorted(actor_names)
+        ]
+        malwares = [
+            Malware(
                 name=name,
                 is_family=True,
                 description=malware_description,
                 author=self.author,
                 markings=[self.marking],
             )
-            octi_objects.append(malware)
+            for name in sorted(malware_names)
+        ]
+        return intrusion_sets, malwares
+
+    def _build_tag_entities_objects(
+        self,
+        octi_indicator: Indicator,
+        tag_entities: list[IntrusionSet | Malware],
+    ) -> list:
+        """Add tag entities and their indicates relationships from the indicator."""
+        octi_objects = []
+        for entity in tag_entities:
+            octi_objects.append(entity)
             octi_objects.append(
                 Relationship(
                     type=RelationshipType.INDICATES,
                     source=octi_indicator,
-                    target=malware,
+                    target=entity,
                     author=self.author,
                     markings=[self.marking],
                 )
             )
-
         return octi_objects
 
     def _build_sighting_objects(
@@ -841,15 +876,26 @@ class IndicatorConverterToStix:
         return external_references
 
     def _build_enrichment_objects(
-        self, indicator: dict, octi_indicator: Indicator, labels: list[str]
+        self, indicator: dict, octi_indicator: Indicator
     ) -> list:
-        """Build attack patterns, sightings, tag entities and related IoCs."""
+        """Build tag entities, attack patterns, sightings and related IoCs."""
+        intrusion_sets, malwares = self._build_tag_entities(indicator)
+
         octi_objects = []
+        octi_objects.extend(
+            self._build_tag_entities_objects(
+                octi_indicator=octi_indicator,
+                tag_entities=[*intrusion_sets, *malwares],
+            )
+        )
+        # With several families or actors, the payload does not say which one
+        # the techniques belong to (they are the profile of only one of them),
+        # so they are only attached when the owner is unambiguous.
+        owners = malwares or intrusion_sets
         octi_objects.extend(
             self._build_attack_pattern_objects(
                 indicator=indicator,
-                octi_indicator=octi_indicator,
-                labels=labels,
+                owners=owners if len(owners) == 1 else [],
             )
         )
         # Sightings are disabled: the sighting sources from Flashpoint
@@ -861,12 +907,6 @@ class IndicatorConverterToStix:
         #         octi_indicator=octi_indicator,
         #     )
         # )
-        octi_objects.extend(
-            self._build_tag_entities_objects(
-                indicator=indicator,
-                octi_indicator=octi_indicator,
-            )
-        )
         octi_objects.extend(
             self._build_related_iocs_objects(
                 indicator=indicator,
@@ -1084,8 +1124,6 @@ class IndicatorConverterToStix:
                 )
             )
 
-        octi_objects.extend(
-            self._build_enrichment_objects(indicator, octi_indicator, labels)
-        )
+        octi_objects.extend(self._build_enrichment_objects(indicator, octi_indicator))
 
         return octi_objects

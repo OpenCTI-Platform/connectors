@@ -18,6 +18,7 @@ class ActorsAPI(BaseCrowdstrikeClient):
         sort: str | None = None,
         fql_filter: str | None = None,
         fields: str | list[str] | None = "__basic__",
+        raise_on_error: bool = False,
     ) -> Optional[dict]:
         """
         Get info about actors that match provided FQL filters.
@@ -43,7 +44,9 @@ class ActorsAPI(BaseCrowdstrikeClient):
 
         response = self.cs_intel.query_actor_entities(parameters=kwargs)
 
-        self.handle_api_error(cast(dict[str, Any], response))
+        self.handle_api_error(
+            cast(dict[str, Any], response), raise_on_error=raise_on_error
+        )
         self.helper.connector_logger.debug(
             "ActorsAPI.get_combined_actor_entities",
             {

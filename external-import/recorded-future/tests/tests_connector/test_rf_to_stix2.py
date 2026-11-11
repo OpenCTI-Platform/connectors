@@ -4,7 +4,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from pycti import Identity as PyctiIdentity
-from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
+from pycti import Indicator as PyctiIndicator
+from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER, ConversionError
 from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
 from rflib.rf_to_stix2 import StixNote
@@ -28,6 +29,12 @@ from stix2 import (
     ThreatActor,
     Vulnerability,
 )
+
+SHA512_HASH = (
+    "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce"
+    "47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+)
+UNSUPPORTED_HASH = "a" * 96
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -621,6 +628,101 @@ def test_analyst_note_raises_on_risk_api_error_other_than_not_found():
     # Then the error is raised
     with pytest.raises(requests.exceptions.HTTPError):
         _when_note_converted_from_json(note, _given_analyst_note_json_with_domains())
+
+
+@pytest.mark.parametrize(
+    "file_hash, expected_pattern",
+    [
+        (
+            "e1d9c90de2568f34ad689c71dac09c62",
+            "[file:hashes.MD5 = 'e1d9c90de2568f34ad689c71dac09c62']",
+        ),
+        (
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "[file:hashes.'SHA-1' = 'da39a3ee5e6b4b0d3255bfef95601890afd80709']",
+        ),
+        (
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "[file:hashes.'SHA-256' = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08']",
+        ),
+        (
+            SHA512_HASH,
+            f"[file:hashes.'SHA-512' = '{SHA512_HASH}']",
+        ),
+    ],
+)
+# Scenario: File hash patterns only quote the hash key when it requires it (issue #7671)
+def test_file_hash_pattern_quotes_hash_key_only_when_required(
+    file_hash, expected_pattern
+):
+    # Given a file hash indicator
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_rf_entity("Hash", file_hash, author, tlp)
+
+    # When the indicator is created
+    stix_indicator = indicator._create_indicator()
+
+    # Then the pattern matches the form OpenCTI normalizes patterns to
+    assert stix_indicator.pattern == expected_pattern
+    # And the indicator id is derived from that pattern
+    assert stix_indicator.id == PyctiIndicator.generate_id(expected_pattern)
+
+
+# Scenario: A SHA-512 file hash is converted to a File observable (issue #7343)
+def test_file_hash_maps_sha512_to_file_observable():
+    # Given a SHA-512 file hash indicator
+    indicator = _given_rf_entity("Hash", SHA512_HASH, _given_author(), _given_tlp())
+
+    # When it is converted to STIX objects
+    stix_objects = _when_to_stix_objects(indicator)
+
+    # Then the observable carries the hash under the SHA-512 key
+    files = [obj for obj in stix_objects if isinstance(obj, File)]
+    assert len(files) == 1
+    assert files[0].hashes == {"SHA-512": SHA512_HASH}
+
+
+# Scenario: A hash of unsupported length raises a feed-neutral conversion error
+def test_file_hash_with_unsupported_length_raises_conversion_error():
+    # Given a hash whose length matches no supported algorithm
+    # When the indicator is built
+    # Then a ConversionError names the hash without claiming a feed
+    with pytest.raises(ConversionError) as exc_info:
+        _given_rf_entity("Hash", UNSUPPORTED_HASH, _given_author(), _given_tlp())
+    assert UNSUPPORTED_HASH in str(exc_info.value)
+    assert "[ANALYST NOTES]" not in str(exc_info.value)
+
+
+# Scenario: An unsupported hash skips only its entity, not the whole note (issue #7343)
+def test_analyst_note_skips_unconvertible_entity_and_keeps_the_others():
+    # Given a note mentioning a malware and a hash of unsupported length
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+        {"id": "entity-2", "type": "Hash", "name": UNSUPPORTED_HASH},
+    ]
+
+    # When the note is converted to STIX objects
+    _when_note_converted_from_json(note, note_json)
+    stix_objects = note.to_stix_objects()
+
+    # Then the malware is kept
+    assert [obj.name for obj in stix_objects if isinstance(obj, Malware)] == [
+        "Test malware"
+    ]
+    # And no file observable is created for the hash
+    assert not [obj for obj in stix_objects if isinstance(obj, File)]
+    # And the skip is logged as a warning with its context
+    warning_calls = note.helper.connector_logger.warning.call_args_list
+    assert len(warning_calls) == 1
+    assert warning_calls[0].args == (
+        "[ANALYST NOTES] Skipping entity that could not be converted",
+    )
+    assert warning_calls[0].kwargs["meta"]["note_id"] == "note-id"
+    assert warning_calls[0].kwargs["meta"]["entity"] == UNSUPPORTED_HASH
+    assert warning_calls[0].kwargs["meta"]["type"] == "Hash"
 
 
 # Scenario: An indicator with a risk score of 0 keeps its score
