@@ -60,6 +60,10 @@ class CrtshConnector(ExternalImportConnector):
         )
         if stix_objects:
             stix_objects.append(self.api.author)
+            # The objects reference the marking definition, so it must be in the
+            # bundle too, or cleanup_inconsistent_bundle drops the reference.
+            if self.api.marking_refs:
+                stix_objects.append(self.api.marking_refs)
         self._next_last_cert_id = next_last_cert_id
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
