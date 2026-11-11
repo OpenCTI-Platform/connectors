@@ -267,8 +267,10 @@ class CrtSHClient:
             if highest_cert_id is None or cert_id > highest_cert_id:
                 highest_cert_id = cert_id
 
-            # Skip only this certificate if it cannot be converted, so one bad
-            # entry does not block every run (its id is still recorded above).
+            # Skip only this certificate if it cannot be converted. Its id is
+            # still recorded above on purpose: conversion errors depend on the
+            # certificate data, so retrying would fail again and stop the cursor
+            # from ever moving past it. It is logged as an error with its id.
             # Objects are collected per certificate and kept only on success.
             item_objects = []
             try:
@@ -281,7 +283,11 @@ class CrtSHClient:
                     LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
                     self.process_name_value(item, item_objects, certificate_id)
             except Exception as e:
-                LOGGER.warning("Skipping crt.sh certificate %s: %s", cert_id, e)
+                LOGGER.error(
+                    "Skipping crt.sh certificate %s that could not be converted: %s",
+                    cert_id,
+                    e,
+                )
                 continue
             stix_objects.extend(item_objects)
 

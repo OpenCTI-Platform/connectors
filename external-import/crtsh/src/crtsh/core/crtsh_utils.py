@@ -83,7 +83,10 @@ def parse_cert_id(value) -> int | None:
         return None
     if isinstance(value, int):
         return value if value > 0 else None
-    if isinstance(value, str) and value.strip().isdigit():
-        cert_id = int(value.strip())
+    if isinstance(value, str) and value.strip().isdecimal():
+        try:
+            cert_id = int(value.strip())
+        except ValueError:
+            return None
         return cert_id if cert_id > 0 else None
     return None

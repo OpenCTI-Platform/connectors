@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from crtsh import CrtSHClient
+from lib.external_import import ExternalImportConnector
 from main import CrtshConnector
 from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
@@ -149,7 +150,7 @@ def test_connector_should_not_mark_objects_when_marking_refs_is_unset(
 # ── last_cert_id state handling ──────────────────────────────────────────────
 
 
-def _run_once(monkeypatch, state, send_error=None):
+def _run_once(monkeypatch, state, send_error=None, crtsh_result=([MagicMock()], 200)):
     """Run one connector cycle with a mocked helper and crt.sh client."""
     monkeypatch.setattr("lib.external_import.ConnectorSettings", StubConnectorSettings)
     monkeypatch.setattr("lib.external_import.OpenCTIConnectorHelper", MagicMock())
@@ -159,7 +160,7 @@ def _run_once(monkeypatch, state, send_error=None):
     if send_error:
         connector.helper.send_stix2_bundle.side_effect = send_error
     connector.api = MagicMock()
-    connector.api.get_stix_objects.return_value = ([MagicMock()], 200)
+    connector.api.get_stix_objects.return_value = crtsh_result
 
     with pytest.raises(SystemExit):
         connector.run()
@@ -193,3 +194,14 @@ def test_run_does_not_advance_last_cert_id_when_sending_fails(monkeypatch):
     )
 
     assert connector.helper.set_state.call_args.args[0]["last_cert_id"] == 100
+
+
+def test_run_without_any_certificate_id_does_not_store_last_cert_id(monkeypatch):
+    """If crt.sh returns nothing usable on a first run, no last_cert_id is stored."""
+    connector = _run_once(monkeypatch, state={"last_run": 1}, crtsh_result=([], None))
+
+    assert "last_cert_id" not in connector.helper.set_state.call_args.args[0]
+
+
+def test_base_connector_has_no_extra_state_updates_by_default():
+    assert ExternalImportConnector._get_state_updates(MagicMock()) == {}

@@ -119,6 +119,9 @@ def test_is_valid_stix_id_9():
         (None, None),
         (True, None),
         (1.5, None),
+        ("\u00b2", None),  # superscript two: isdigit() is True but int() fails
+        ("1_000", None),
+        ("+5", None),
     ],
 )
 def test_parse_cert_id(value, expected):
