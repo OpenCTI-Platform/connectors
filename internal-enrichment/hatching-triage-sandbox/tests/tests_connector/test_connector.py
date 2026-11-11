@@ -379,9 +379,18 @@ class TestRetries:
         assert connector.triage_client.sample_task_file.call_count == 3
         assert mock_sleep.call_count == 2
 
-    def test_task_file_retries_on_any_triage_error_body(self, mock_sleep, connector):
-        connector.triage_client.sample_task_file.side_effect = [
+    @pytest.mark.parametrize(
+        "error_body",
+        [
             b'{"error": "BAD_GATEWAY", "message": "upstream timeout"}',
+            b"NOT_AVAILABLE",
+        ],
+    )
+    def test_task_file_retries_on_any_triage_error_body(
+        self, mock_sleep, connector, error_body
+    ):
+        connector.triage_client.sample_task_file.side_effect = [
+            error_body,
             b"file-content",
         ]
 

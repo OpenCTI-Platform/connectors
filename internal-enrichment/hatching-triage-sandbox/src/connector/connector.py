@@ -28,6 +28,8 @@ TRIAGE_ERROR_KEYS = {"error", "message"}
 
 def _is_triage_error_body(content):
     """Return True if a file download body is a Triage API error, e.g. NOT_AVAILABLE."""
+    if b"NOT_AVAILABLE" in content[:30]:
+        return True
     # Error payloads are tiny; skip parsing real (possibly large) files
     if len(content) > 4096 or not content.lstrip().startswith(b"{"):
         return False
