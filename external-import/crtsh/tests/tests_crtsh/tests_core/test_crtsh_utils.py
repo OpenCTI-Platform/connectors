@@ -1,6 +1,7 @@
 import datetime
 
 import crtsh.core.crtsh_utils
+import pytest
 
 
 def test_configure_logger():
@@ -102,3 +103,26 @@ def test_is_valid_stix_id_9():
     assert not crtsh.core.crtsh_utils.is_valid_stix_id(
         "indicator--c9bf9e57-1685-4c89-bafb-ff5af830be8a--c9bf9e57-1685-4c89-bafb-ff5af830be8a"
     )
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (8913351873, 8913351873),
+        ("8913351873", 8913351873),
+        (" 42 ", 42),
+        (0, None),
+        (-5, None),
+        ("0", None),
+        ("abc", None),
+        ("", None),
+        (None, None),
+        (True, None),
+        (1.5, None),
+        ("\u00b2", None),  # superscript two: isdigit() is True but int() fails
+        ("1_000", None),
+        ("+5", None),
+    ],
+)
+def test_parse_cert_id(value, expected):
+    assert crtsh.core.crtsh_utils.parse_cert_id(value) == expected
