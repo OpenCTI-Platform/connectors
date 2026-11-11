@@ -485,6 +485,26 @@ class TestRetries:
         assert connector.triage_client.sample_events.call_count == 2
         mock_sleep.assert_called_once()
 
+    def test_wait_for_analysis_retries_on_server_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            _server_error(503),
+            iter([{"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_does_not_retry_client_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = _server_error(404)
+
+        with pytest.raises(ServerError):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 1
+        mock_sleep.assert_not_called()
+
     def test_wait_for_analysis_raises_when_stream_never_reports(
         self, mock_sleep, connector
     ):

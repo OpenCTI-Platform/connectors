@@ -686,6 +686,10 @@ class HatchingTriageSandboxConnector:
                         raise ValueError(f"Analysis {sample_id} failed.")
                 else:
                     reason = "Event stream ended before the analysis was reported"
+            except ServerError as err:
+                if err.status < 500:
+                    raise
+                reason = str(err)
             # A proxy error page (e.g. 502) is not JSON
             except (json.JSONDecodeError, RequestException) as err:
                 reason = str(err)
