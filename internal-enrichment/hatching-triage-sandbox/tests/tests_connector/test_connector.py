@@ -383,7 +383,8 @@ class TestRetries:
         "error_body",
         [
             b'{"error": "BAD_GATEWAY", "message": "upstream timeout"}',
-            b"NOT_AVAILABLE",
+            b'{"error":"NOT_AVAILABLE"}',
+            b"NOT_AVAILABLE\n",
         ],
     )
     def test_task_file_retries_on_any_triage_error_body(
@@ -403,6 +404,11 @@ class TestRetries:
         "content",
         [
             b'{"error": "x", "data": [1, 2]}',
+            b'{"error": "Login failed", "message": "bad password"}',
+            b'{"error": true}',
+            b'{"error": "CODE", "message": 42}',
+            b'{"message": "hello"}',
+            b"NOT_AVAILABLE is the first line of this real file",
             b'{"config": {"c2": "1.2.3.4"}}',
             b"<html><body>dropped phishing page</body></html>",
             b"{" + b" " * 5000 + b'"error": "x"}',

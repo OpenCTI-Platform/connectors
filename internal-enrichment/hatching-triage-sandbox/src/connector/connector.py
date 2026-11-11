@@ -24,11 +24,12 @@ from triage.client import ServerError
 
 RETRY_DELAY_SECONDS = 10
 TRIAGE_ERROR_KEYS = {"error", "message"}
+TRIAGE_ERROR_CODE = re.compile(r"[A-Z][A-Z0-9_]*")
 
 
 def _is_triage_error_body(content):
     """Return True if a file download body is a Triage API error, e.g. NOT_AVAILABLE."""
-    if b"NOT_AVAILABLE" in content[:30]:
+    if content.strip() == b"NOT_AVAILABLE":
         return True
     # Error payloads are tiny; skip parsing real (possibly large) files
     if len(content) > 4096 or not content.lstrip().startswith(b"{"):
@@ -37,8 +38,13 @@ def _is_triage_error_body(content):
         body = json.loads(content)
     except ValueError:
         return False
+    # Same envelope the triage client's ServerError reads: an error code and a message
     return (
-        isinstance(body, dict) and "error" in body and body.keys() <= TRIAGE_ERROR_KEYS
+        isinstance(body, dict)
+        and body.keys() <= TRIAGE_ERROR_KEYS
+        and isinstance(body.get("error"), str)
+        and TRIAGE_ERROR_CODE.fullmatch(body["error"]) is not None
+        and isinstance(body.get("message", ""), str)
     )
 
 
