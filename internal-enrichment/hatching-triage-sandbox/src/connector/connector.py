@@ -5,6 +5,7 @@ import re
 import time
 from hashlib import sha256
 from typing import Dict
+from urllib.parse import urlsplit
 
 import magic
 import pycti
@@ -49,17 +50,29 @@ class HatchingTriageSandboxConnector:
         self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
         self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
+    def _build_report_url(self, sample_id: str) -> str:
+        """Build the link to an analysis on the sandbox web UI.
+
+        The web UI is served from the same host as the configured API, e.g.
+        https://tria.ge/api -> https://tria.ge/<sample_id>/ and
+        https://private.tria.ge/api -> https://private.tria.ge/<sample_id>/.
+        """
+        parsed = urlsplit(self.base_url)
+        # Use hostname and port, not netloc, so credentials that may be set in
+        # the base URL (user:password@) never end up in the OpenCTI link.
+        host = parsed.hostname or ""
+        if ":" in host:  # IPv6 literal
+            host = f"[{host}]"
+        if parsed.port is not None:
+            host += f":{parsed.port}"
+        return f"{parsed.scheme}://{host}/{sample_id}/"
+
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type
     ):
         bundle_objects = []
 
-        if "us-sandbox.recordedfuture.com" in self.base_url:
-            report_url = f"https://us-sandbox.recordedfuture.com/{sample_id}/"
-        elif "sandbox.recordedfuture.com" in self.base_url:
-            report_url = f"https://sandbox.recordedfuture.com/{sample_id}/"
-        else:
-            report_url = f"https://triage.ge/{sample_id}/"
+        report_url = self._build_report_url(sample_id)
 
         # Create external reference
         external_reference = self.helper.api.external_reference.create(

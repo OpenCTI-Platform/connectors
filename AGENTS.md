@@ -274,6 +274,11 @@ Things to know about `run_test.sh`:
   subdirectory) at `RELEASE_REF` (default `master`), and installs the local
   `connectors-sdk` when the connector depends on it. A test that passes with
   the pinned pycti can still fail here.
+- It blocks network access with `pytest-socket`: only localhost and Unix
+  sockets are allowed, and any other connection raises
+  `SocketConnectBlockedError`. Mock every external API call (constructors and
+  startup checks included). A test that really needs a host opts in with
+  `@pytest.mark.allow_hosts([...])`.
 - Coverage and JUnit output go to `test_outputs/`.
 
 Changes to `connectors-sdk/` must keep 100% test coverage
@@ -291,20 +296,26 @@ mise run gs external-import/myconnector
 ```
 
 `gs` is the `generate_config_schema` mise task (`.mise/tasks/`); it takes the
-connector path and does not prompt. The equivalent `make` targets
+connector path and does not prompt. The `make` targets
 (`connector_config_schema`, `connectors_config_schemas`, `connector_manifest`,
 `connectors_manifests`, `global_manifest`) prompt for the connector folder
 name, so they need piped answers: `printf 'myconnector\ny\n' | make connector_config_schema`.
+The schema targets always install `connectors-sdk` from GitHub (`master`, or
+`RELEASE_REF` for `connectors_config_schemas`), so use `gs` when the change
+also touches `connectors-sdk/`.
 
-The generator installs `connectors-sdk` from GitHub `master`, which pins an
-exact pycti version. If the connector's `requirements.txt` pins an older
-pycti, dependency resolution fails and generation stops. Rebase on the latest
-`master` before regenerating.
+`gs` installs this checkout's `connectors-sdk/` (`SDK_SOURCE=local`,
+the default), so schemas pick up SDK changes that are not merged yet
+(for example the JSON schema of a settings type). CI does the same everywhere:
+the Config Schema check of pull requests and the merge queue, and the full
+regeneration of `build-manifest.yml`, which uses the SDK of the branch or tag
+commit it builds. To generate against the SDK published on GitHub instead
+(`master`, or the branch or tag set in `RELEASE_REF`), run
+`SDK_SOURCE=git mise run gs external-import/myconnector`.
 
-When the change also touches `connectors-sdk/` (for example the JSON schema of a
-settings type), set `SDK_SOURCE=local` so the generator installs this checkout's
-SDK instead of GitHub `master`, otherwise the schemas miss the SDK change:
-`SDK_SOURCE=local mise run gs external-import/myconnector`.
+The SDK pins an exact pycti version. If the connector's `requirements.txt`
+pins an older pycti, dependency resolution fails and generation stops. Rebase
+on the latest `master` before regenerating.
 
 ## CI overview
 
