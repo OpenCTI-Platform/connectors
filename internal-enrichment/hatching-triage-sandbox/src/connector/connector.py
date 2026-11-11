@@ -497,7 +497,9 @@ class HatchingTriageSandboxConnector:
             # An HTML 5xx body makes ServerError() raise requests' JSONDecodeError
             except (ServerError, RequestException) as err:
                 status = getattr(err, "status", None)
-                if (status is not None and status < 500) or attempt == self.max_attempts:
+                if (
+                    status is not None and status < 500
+                ) or attempt == self.max_attempts:
                     raise
                 self.helper.connector_logger.warning(
                     "Overview report request failed, retrying...",
