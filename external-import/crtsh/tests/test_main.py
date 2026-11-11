@@ -144,3 +144,52 @@ def test_connector_should_not_mark_objects_when_marking_refs_is_unset(
 
     assert connector.marking_refs is None
     assert connector.api.marking_refs is None
+
+
+# ── last_cert_id state handling ──────────────────────────────────────────────
+
+
+def _run_once(monkeypatch, state, send_error=None):
+    """Run one connector cycle with a mocked helper and crt.sh client."""
+    monkeypatch.setattr("lib.external_import.ConnectorSettings", StubConnectorSettings)
+    monkeypatch.setattr("lib.external_import.OpenCTIConnectorHelper", MagicMock())
+    connector = CrtshConnector()
+    connector.helper.connect_run_and_terminate = True
+    connector.helper.get_state.return_value = state
+    if send_error:
+        connector.helper.send_stix2_bundle.side_effect = send_error
+    connector.api = MagicMock()
+    connector.api.get_stix_objects.return_value = ([MagicMock()], 200)
+
+    with pytest.raises(SystemExit):
+        connector.run()
+
+    return connector
+
+
+def test_run_imports_after_last_cert_id_and_stores_the_new_one(monkeypatch):
+    connector = _run_once(monkeypatch, state={"last_run": 1, "last_cert_id": 100})
+
+    connector.api.get_stix_objects.assert_called_once_with(last_cert_id=100)
+    saved_state = connector.helper.set_state.call_args.args[0]
+    assert saved_state["last_cert_id"] == 200
+    assert saved_state["last_run"] > 1
+
+
+def test_run_without_last_cert_id_imports_everything(monkeypatch):
+    """Upgrading from a state that only has last_run behaves like a first run."""
+    connector = _run_once(monkeypatch, state={"last_run": 1})
+
+    connector.api.get_stix_objects.assert_called_once_with(last_cert_id=None)
+    assert connector.helper.set_state.call_args.args[0]["last_cert_id"] == 200
+
+
+def test_run_does_not_advance_last_cert_id_when_sending_fails(monkeypatch):
+    """If the bundle is not sent, the same certificates are imported next run."""
+    connector = _run_once(
+        monkeypatch,
+        state={"last_run": 1, "last_cert_id": 100},
+        send_error=RuntimeError("OpenCTI unavailable"),
+    )
+
+    assert connector.helper.set_state.call_args.args[0]["last_cert_id"] == 100

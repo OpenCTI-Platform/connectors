@@ -1,6 +1,4 @@
 # crt_sh/api.py
-from datetime import datetime
-
 import requests
 import stix2
 from pycti import Identity, StixCoreRelationship
@@ -13,8 +11,8 @@ from .crtsh_utils import (
     TLP_MAP,
     configure_logger,
     convert_to_datetime,
-    is_valid_entry_timestamp,
     is_valid_stix_id,
+    parse_cert_id,
 )
 
 LOGGER = configure_logger(__name__)
@@ -225,31 +223,74 @@ class CrtSHClient:
                 },
             )
 
-    def get_stix_objects(self, since: datetime = None):
-        """Return a list of STIX objects."""
+    def get_stix_objects(
+        self, last_cert_id: int | str | None = None
+    ) -> tuple[list, int | None]:
+        """Return the STIX objects for certificates newer than ``last_cert_id``.
+
+        crt.sh no longer returns ``entry_timestamp`` in search results, so new
+        certificates are found by their crt.sh id, which increases as crt.sh
+        ingests them. With no ``last_cert_id`` (first run), every certificate
+        returned by the search is imported.
+
+        Returns:
+            A tuple of the STIX objects and the highest certificate id seen, to be
+            stored as the next ``last_cert_id``. When the request fails, the
+            given ``last_cert_id`` is returned unchanged.
+        """
         stix_objects = []
+        if last_cert_id is not None and parse_cert_id(last_cert_id) is None:
+            LOGGER.warning(
+                "Ignoring invalid last_cert_id %r, importing every certificate",
+                last_cert_id,
+            )
+        last_cert_id = parse_cert_id(last_cert_id)
 
         data = self._request_data()
         if data is None:
-            return stix_objects
+            return stix_objects, last_cert_id
+        if not isinstance(data, list):
+            LOGGER.error(
+                "Unexpected crt.sh response, expected a list but got %s",
+                type(data).__name__,
+            )
+            return stix_objects, last_cert_id
 
+        highest_cert_id = last_cert_id
         for item in data:
-            if is_valid_entry_timestamp(item["entry_timestamp"], since):
+            cert_id = parse_cert_id(item.get("id")) if isinstance(item, dict) else None
+            if cert_id is None:
+                LOGGER.warning("Skipping crt.sh entry without a valid id: %s", item)
+                continue
+            if last_cert_id is not None and cert_id <= last_cert_id:
+                continue
+            if highest_cert_id is None or cert_id > highest_cert_id:
+                highest_cert_id = cert_id
+
+            # Skip only this certificate if it cannot be converted, so one bad
+            # entry does not block every run (its id is still recorded above).
+            # Objects are collected per certificate and kept only on success.
+            item_objects = []
+            try:
                 LOGGER.debug(f"Processing item: {item}")
-                certificate_id = self.process_certificate(item, stix_objects)
+                certificate_id = self.process_certificate(item, item_objects)
                 if "common_name" in item:
                     LOGGER.debug(f"Processing common_name: {item.get('common_name')}")
-                    self.process_common_name(item, stix_objects, certificate_id)
+                    self.process_common_name(item, item_objects, certificate_id)
                 if "name_value" in item:
                     LOGGER.debug(f"Processing name_value: {item.get('name_value')}")
-                    self.process_name_value(item, stix_objects, certificate_id)
+                    self.process_name_value(item, item_objects, certificate_id)
+            except Exception as e:
+                LOGGER.warning("Skipping crt.sh certificate %s: %s", cert_id, e)
+                continue
+            stix_objects.extend(item_objects)
 
         uniq_stix_objects = []
         for item in stix_objects:
             if item not in uniq_stix_objects:
                 uniq_stix_objects.append(item)
 
-        return uniq_stix_objects
+        return uniq_stix_objects, highest_cert_id
 
     @staticmethod
     def _create_author(name: str = None):

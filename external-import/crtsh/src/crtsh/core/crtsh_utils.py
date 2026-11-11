@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
@@ -73,14 +73,17 @@ def is_valid_stix_id(stix_id):
     return False
 
 
-def is_valid_entry_timestamp(entry_timestamp: str, min_datetime: datetime = None):
-    """Check to see if entry timestamp is an accepted datetime"""
-    if not entry_timestamp:
-        return False
-    if entry_timestamp and min_datetime is None:
-        return True
+def parse_cert_id(value) -> int | None:
+    """Return a crt.sh certificate id as a positive int, or None if it is not one.
 
-    entry_datetime = datetime.fromisoformat(entry_timestamp).replace(
-        tzinfo=timezone.utc
-    )
-    return entry_datetime > min_datetime
+    crt.sh assigns ids in increasing order as it ingests certificates, so the
+    highest id seen so far is used to import only newer certificates.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if isinstance(value, str) and value.strip().isdigit():
+        cert_id = int(value.strip())
+        return cert_id if cert_id > 0 else None
+    return None
