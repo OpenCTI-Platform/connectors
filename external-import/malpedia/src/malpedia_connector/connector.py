@@ -82,6 +82,7 @@ class MalpediaConnector:
     def start(self):
         """Malpedia Connector execution"""
         self.helper.connector_logger.info("[CONNECTOR] Starting Malpedia connector...")
+        self.work_id = None
         try:
             current_malpedia_version = self.api_client.current_version()
             self.helper.connector_logger.info(
@@ -123,6 +124,7 @@ class MalpediaConnector:
                 msg = "[CONNECTOR] Connector successfully run, storing the new state..."
                 self.helper.connector_logger.info(msg, {"new_state": new_state})
                 self.helper.api.work.to_processed(self.work_id, msg)
+                self.work_id = None
                 self.helper.set_state(new_state)
                 new_interval_in_hours = round(self.interval_sec / 60 / 60, 2)
                 self.helper.connector_logger.info(
@@ -151,6 +153,16 @@ class MalpediaConnector:
                 "[CONNECTOR] Error while processing data, retrying next run:",
                 {"error": str(e)},
             )
+            if self.work_id is not None:
+                try:
+                    self.helper.api.work.to_processed(
+                        self.work_id, str(e), in_error=True
+                    )
+                except Exception as close_err:
+                    self.helper.connector_logger.error(
+                        "[CONNECTOR] Failed to mark work as in error",
+                        {"work_id": self.work_id, "error": str(close_err)},
+                    )
             self.helper.metric.state("stopped")
             return
         self.helper.metric.state("idle")
