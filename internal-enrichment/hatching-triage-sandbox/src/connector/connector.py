@@ -429,9 +429,7 @@ class HatchingTriageSandboxConnector:
 
     def _send_bundle(self, bundle_objects):
         bundle = self.helper.stix2_create_bundle(bundle_objects)
-        bundles_sent = self.helper.send_stix2_bundle(
-            bundle, cleanup_inconsistent_bundle=True
-        )
+        bundles_sent = self.helper.send_stix2_bundle(bundle)
         return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
 
     def _process_file(self, observable, entity_type):

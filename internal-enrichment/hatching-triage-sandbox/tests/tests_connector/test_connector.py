@@ -421,16 +421,14 @@ def _raise_json_error():
 
 
 class TestSendBundle:
-    def test_sends_bundle_with_cleanup_of_inconsistent_objects(self, connector):
+    def test_sends_bundle_without_cleanup_of_inconsistent_objects(self, connector):
         connector.helper.stix2_create_bundle.return_value = "bundle"
         connector.helper.send_stix2_bundle.return_value = ["bundle"]
 
         result = connector._send_bundle(["stix-object"])
 
         connector.helper.stix2_create_bundle.assert_called_once_with(["stix-object"])
-        connector.helper.send_stix2_bundle.assert_called_once_with(
-            "bundle", cleanup_inconsistent_bundle=True
-        )
+        connector.helper.send_stix2_bundle.assert_called_once_with("bundle")
         assert result == "Sent 1 stix bundle(s) for worker import"
 
 
