@@ -23,6 +23,21 @@ from triage import Client
 from triage.client import ServerError
 
 RETRY_DELAY_SECONDS = 10
+TRIAGE_ERROR_KEYS = {"error", "message"}
+
+
+def _is_triage_error_body(content):
+    """Return True if a file download body is a Triage API error, e.g. NOT_AVAILABLE."""
+    # Error payloads are tiny; skip parsing real (possibly large) files
+    if len(content) > 4096 or not content.lstrip().startswith(b"{"):
+        return False
+    try:
+        body = json.loads(content)
+    except ValueError:
+        return False
+    return (
+        isinstance(body, dict) and "error" in body and body.keys() <= TRIAGE_ERROR_KEYS
+    )
 
 
 class TriageClient(Client):
@@ -552,7 +567,7 @@ class HatchingTriageSandboxConnector:
                     )
                     return None
             else:
-                if b"NOT_AVAILABLE" not in file_contents[:30]:
+                if not _is_triage_error_body(file_contents):
                     return file_contents
             self.helper.connector_logger.warning(
                 "Extracted file not available, retrying...",

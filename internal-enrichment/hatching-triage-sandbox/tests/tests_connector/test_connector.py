@@ -379,6 +379,35 @@ class TestRetries:
         assert connector.triage_client.sample_task_file.call_count == 3
         assert mock_sleep.call_count == 2
 
+    def test_task_file_retries_on_any_triage_error_body(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            b'{"error": "BAD_GATEWAY", "message": "upstream timeout"}',
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            b'{"error": "x", "data": [1, 2]}',
+            b'{"config": {"c2": "1.2.3.4"}}',
+            b"<html><body>dropped phishing page</body></html>",
+            b"{" + b" " * 5000 + b'"error": "x"}',
+            b"{\xff not json",
+        ],
+    )
+    def test_task_file_keeps_real_file_content(self, mock_sleep, connector, content):
+        connector.triage_client.sample_task_file.return_value = content
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == content
+        mock_sleep.assert_not_called()
+
     def test_task_file_retries_on_bad_gateway(self, mock_sleep, connector):
         connector.triage_client.sample_task_file.side_effect = [
             _http_error(502),
