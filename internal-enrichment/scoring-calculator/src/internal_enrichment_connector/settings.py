@@ -19,6 +19,8 @@ def _list_to_json_string(value: Any) -> Any:
     native YAML list. Serializing the YAML list back to JSON lets the legacy
     `normalize_list_param` parse both sources the same way.
     """
+    if value is None:
+        return "[]"
     if isinstance(value, list):
         return json.dumps(value)
     return value
