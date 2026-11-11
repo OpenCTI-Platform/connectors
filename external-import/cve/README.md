@@ -78,6 +78,31 @@ There are a number of configuration options, which are set either in `docker-com
 | CPE Max Concurrency | cve.cpe_max_concurrency | `CVE_CPE_MAX_CONCURRENCY` | 10                                         | No        | Maximum number of concurrent CPE resolution tasks when `import_software=true`. |
 | CVE Max Concurrency | cve.cve_max_concurrency | `CVE_CVE_MAX_CONCURRENCY` | 50                                         | No        | Maximum number of concurrent CVE processing workers. This bounds pending tasks and bundle sends during large imports. |
 
+### History import (`pull_history`)
+
+With `pull_history=true` the connector walks from `history_start_year` to now, paging NVD by
+**publication date** in windows of at most `max_date_range` days (capped at 120). It keeps its
+position in the connector state, so the import is resumable:
+
+| state key | meaning |
+|---|---|
+| `last_run` | normal operation: the scheduled incremental run continues from here |
+| `history_cursor` | a history import is in progress; the next run resumes at this instant |
+| `history_done` | the history import completed once and will not run again |
+
+The cursor is written after every completed window, so an interrupted run (NVD error, network
+failure, restart) continues at the last window that finished instead of starting over. Enabling
+`pull_history` on a connector that has already run therefore starts the history import; it does not
+require a fresh connector.
+
+Because the import can run for a long time, the connector stores the run's start time as `last_run`
+when it finishes: the first incremental pass afterwards re-covers the period spent importing, so
+modifications made to already-imported CVEs during the backfill are not missed.
+
+NVD `Rejected` records carry no CVSS metrics and are dropped by design; the filter log reports how
+many records were kept out of the total and how many were skipped.
+
+
 ## Deployment
 
 ### Docker Deployment
