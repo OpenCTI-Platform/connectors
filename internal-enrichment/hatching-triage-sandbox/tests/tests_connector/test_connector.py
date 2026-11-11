@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from connector.connector import HatchingTriageSandboxConnector
+from connector.connector import HatchingTriageSandboxConnector, TriageClient
 from connectors_sdk.models.enums import TLPLevel
 from requests import RequestException
 from triage.client import ServerError
@@ -26,7 +26,7 @@ def connector(mock_opencti_connector_helper):
     helper = MagicMock()
     helper.api.identity.create.return_value = {"standard_id": "identity--fake"}
 
-    with patch("connector.connector.Client"):
+    with patch("connector.connector.TriageClient"):
         instance = HatchingTriageSandboxConnector(config, helper)
 
     return instance
@@ -284,6 +284,17 @@ def _server_error(status_code):
     return ServerError(http_error)
 
 
+def _html_response(status_code):
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = b"<html><h1>Bad Gateway</h1></html>"
+    return response
+
+
+def _http_error(status_code):
+    return requests.HTTPError(response=_html_response(status_code))
+
+
 @patch("connector.connector.time.sleep")
 class TestRetries:
     def test_overview_report_retries_on_server_error(self, mock_sleep, connector):
@@ -368,6 +379,49 @@ class TestRetries:
         assert connector.triage_client.sample_task_file.call_count == 3
         assert mock_sleep.call_count == 2
 
+    def test_task_file_retries_on_bad_gateway(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            _http_error(502),
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_task_file_returns_none_after_max_attempts_on_server_error(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_task_file.side_effect = _http_error(502)
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    def test_task_file_skips_without_retry_on_client_error(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = _http_error(404)
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_task_file_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            requests.ConnectionError("connection dropped"),
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+
     def test_wait_for_analysis_retries_on_invalid_json(self, mock_sleep, connector):
         connector.triage_client.sample_events.side_effect = [
             _raise_json_error(),
@@ -413,6 +467,38 @@ class TestRetries:
 
         assert connector.triage_client.sample_events.call_count == 1
         mock_sleep.assert_not_called()
+
+
+class TestTriageClient:
+    @pytest.mark.parametrize("status_code", [404, 502])
+    def test_file_download_raises_on_http_error(self, status_code):
+        response = _html_response(status_code)
+
+        with patch("connector.connector.Session") as session_cls:
+            session = session_cls.return_value.__enter__.return_value
+            session.merge_environment_settings.return_value = {}
+            session.send.return_value = response
+
+            with pytest.raises(requests.HTTPError):
+                TriageClient("token", root_url="https://tria.ge/api").sample_task_file(
+                    "sample-123", "task-1", "file.bin"
+                )
+
+    def test_file_download_returns_content_on_success(self):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = b"file-content"
+
+        with patch("connector.connector.Session") as session_cls:
+            session = session_cls.return_value.__enter__.return_value
+            session.merge_environment_settings.return_value = {}
+            session.send.return_value = response
+
+            result = TriageClient(
+                "token", root_url="https://tria.ge/api"
+            ).sample_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
 
 
 def _raise_json_error():

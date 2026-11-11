@@ -17,12 +17,27 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from requests import RequestException
+from requests import RequestException, Session
 from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
 from triage.client import ServerError
 
 RETRY_DELAY_SECONDS = 10
+
+
+class TriageClient(Client):
+    """Triage client whose file downloads raise on HTTP errors."""
+
+    def _req_file(self, method, path):
+        # The upstream implementation returns the body of an error page as file content
+        request = self._new_request(method, path)
+        with Session() as session:
+            settings = session.merge_environment_settings(
+                request.url, {}, None, False, None
+            )
+            response = session.send(request.prepare(), **settings)
+            response.raise_for_status()
+            return response.content
 
 
 class HatchingTriageSandboxConnector:
@@ -41,7 +56,7 @@ class HatchingTriageSandboxConnector:
         # Instantiate the Triage Client
         self.base_url = self.config.hatching_triage_sandbox.base_url
         token = self.config.hatching_triage_sandbox.token.get_secret_value()
-        self.triage_client = Client(token, root_url=self.base_url)
+        self.triage_client = TriageClient(token, root_url=self.base_url)
 
         # Get other config values
         self.use_existing_analysis = (
@@ -511,19 +526,41 @@ class HatchingTriageSandboxConnector:
                 time.sleep(RETRY_DELAY_SECONDS)
 
     def _get_task_file(self, sample_id, task_id, filename):
-        """Download a task file, retrying while unavailable. Return None if all attempts fail."""
+        """Download a task file, retrying while unavailable or on server errors (5xx).
+
+        Return None if the file cannot be retrieved.
+        """
         for attempt in range(1, self.max_attempts + 1):
-            file_contents = self.triage_client.sample_task_file(
-                sample_id, task_id, filename
-            )
-            if b"NOT_AVAILABLE" not in file_contents[:30]:
-                return file_contents
+            status = None
+            try:
+                file_contents = self.triage_client.sample_task_file(
+                    sample_id, task_id, filename
+                )
+            except RequestException as err:
+                response = getattr(err, "response", None)
+                if response is not None:
+                    status = response.status_code
+                if status is not None and status < 500:
+                    self.helper.connector_logger.warning(
+                        "Extracted file request rejected, skipping file",
+                        meta={
+                            "sample_id": sample_id,
+                            "task_id": task_id,
+                            "filename": filename,
+                            "status": status,
+                        },
+                    )
+                    return None
+            else:
+                if b"NOT_AVAILABLE" not in file_contents[:30]:
+                    return file_contents
             self.helper.connector_logger.warning(
                 "Extracted file not available, retrying...",
                 meta={
                     "sample_id": sample_id,
                     "task_id": task_id,
                     "filename": filename,
+                    "status": status,
                     "attempt": attempt,
                     "max_attempts": self.max_attempts,
                 },
