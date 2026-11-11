@@ -443,6 +443,19 @@ class TestRetries:
 
         assert connector.triage_client.sample_events.call_count == 2
 
+    def test_wait_for_analysis_retries_on_event_without_status(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = [
+            iter([{"error": "BAD_GATEWAY", "message": "upstream timeout"}]),
+            iter([{"status": "pending"}, {"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
     def test_wait_for_analysis_raises_when_stream_never_reports(
         self, mock_sleep, connector
     ):

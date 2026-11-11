@@ -653,18 +653,24 @@ class HatchingTriageSandboxConnector:
         for attempt in range(1, self.max_attempts + 1):
             try:
                 for events in self.triage_client.sample_events(sample_id):
-                    if events["status"] == "pending":
+                    status = events.get("status")
+                    if status is None:
+                        # An error body (e.g. a JSON 502) has no status
+                        reason = f"Event without a status: {events}"
+                        break
+                    if status == "pending":
                         self.helper.connector_logger.info(
-                            f"Analysis {sample_id} has status \"{events['status']}\"."
+                            f'Analysis {sample_id} has status "{status}".'
                         )
-                    elif events["status"] == "reported":
+                    elif status == "reported":
                         self.helper.connector_logger.info(
                             f"Analysis {sample_id} has finished."
                         )
                         return
-                    elif events["status"] == "failed":
+                    elif status == "failed":
                         raise ValueError(f"Analysis {sample_id} failed.")
-                reason = "Event stream ended before the analysis was reported"
+                else:
+                    reason = "Event stream ended before the analysis was reported"
             # A proxy error page (e.g. 502) is not JSON
             except (json.JSONDecodeError, RequestException) as err:
                 reason = str(err)
