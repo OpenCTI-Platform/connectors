@@ -1,11 +1,12 @@
 opencti:
   url: http://localhost
-  token: CHANGEME
+  token: ChangeMe
 
 connector:
-  id: CHANGEME
+  id: ChangeMe
   name: Checkfirst Import Connector
   scope: checkfirst
+  # info also prints operational logs and [BENCH] timings; error = errors only.
   log_level: info
   duration_period: P7D
 
@@ -16,3 +17,10 @@ checkfirst:
   since: P365D
   force_reprocess: false
   tlp_level: clear
+  # Parallel Row → STIX (1 = sequential in main process)
+  convert_workers: 1
+  convert_batch_size: 32
+  # Max unique objects per OpenCTI send
+  bundle_size: 10000
+  # Optional: also write JSON logs to a file (mount parent dir in Docker)
+  # log_file: /var/log/checkfirst-connector/connector.log
