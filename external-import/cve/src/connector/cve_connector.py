@@ -314,78 +314,103 @@ class CVEConnector:
             the history branch was only reachable while last_run was absent.
             ================================================================
             """
-            # A pending cursor must survive while history is switched off, or
-            # re-enabling it would silently restart the import from the start
-            # year. set_state replaces the whole dict, so it has to be carried
-            # through the incremental state writes explicitly.
-            paused_history = None
+            # set_state REPLACES the whole state dict, so every branch that writes
+            # it has to carry the history keys explicitly. Dropping history_done
+            # re-runs a finished import on the next tick; dropping the cursor
+            # restarts an interrupted one from history_start_year.
+            retained = {}
+            if history_cursor and not history_done:
+                retained["history_cursor"] = history_cursor
+            if history_done:
+                retained["history_done"] = True
+
             if history_cursor and not self.config.cve.pull_history:
-                paused_history = {"history_cursor": history_cursor}
                 msg = (
                     "[CONNECTOR] History import is paused (CVE_PULL_HISTORY=false); "
                     f"keeping cursor {history_cursor} so it resumes when re-enabled"
                 )
                 self.helper.connector_logger.warning(msg)
 
-            if self.config.cve.pull_history and (history_cursor or not history_done):
-                start_year = self.config.cve.history_start_year
-                if start_year > now.year:
-                    # A typo here must not become sticky state: fall back to the
-                    # recent window and leave history_done unset so the next run
-                    # retries once the configuration is corrected.
-                    msg = (
-                        f"[CONNECTOR] history_start_year {start_year} is in the "
-                        f"future (now is {now.year}); importing the recent window "
-                        "instead and leaving the history import pending"
-                    )
-                    self.helper.connector_logger.error(msg)
-                    self._import_recent(now)
-                    self.update_connector_state(current_time)
-                else:
-                    start_date = datetime(start_year, 1, 1, tzinfo=timezone.utc)
-                    if history_cursor:
-                        try:
-                            resume_from = self._parse_history_bound(history_cursor)
-                        except (TypeError, ValueError):
-                            # Unparseable state must self-heal, not wedge the
-                            # connector into re-importing nothing forever.
+            wants_history = self.config.cve.pull_history and (
+                bool(history_cursor) or not history_done
+            )
+
+            if wants_history and self.config.cve.history_start_year > now.year:
+                # A typo must neither become sticky state nor re-import the recent
+                # window on every 60-second tick: leave history pending and let the
+                # interval-gated run handle the connector until it is corrected.
+                msg = (
+                    f"[CONNECTOR] history_start_year "
+                    f"{self.config.cve.history_start_year} is in the future (now is "
+                    f"{now.year}); skipping the history import until it is corrected"
+                )
+                self.helper.connector_logger.error(msg)
+                wants_history = False
+
+            if wants_history:
+                start_date = datetime(
+                    self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
+                )
+
+                if history_cursor:
+                    try:
+                        resume_from = self._parse_history_bound(history_cursor)
+                    except (TypeError, ValueError):
+                        # Unparseable state must self-heal, not wedge the connector
+                        # into importing nothing forever.
+                        msg = (
+                            "[CONNECTOR] Stored history cursor "
+                            f"{history_cursor!r} cannot be parsed; restarting the "
+                            "history import from history_start_year"
+                        )
+                        self.helper.connector_logger.error(msg)
+                        resume_from = None
+
+                    if resume_from is not None:
+                        ahead = resume_from - now
+                        if ahead > timedelta(minutes=5):
+                            # Implausible state. Treat it like corrupt state rather
+                            # than clamping it, which would declare the history
+                            # complete without importing anything.
                             msg = (
                                 "[CONNECTOR] Stored history cursor "
-                                f"{history_cursor!r} cannot be parsed; restarting "
-                                "the history import from history_start_year"
+                                f"{history_cursor} is more than 5 minutes in the "
+                                "future; "
+                                "restarting the history import from "
+                                "history_start_year"
                             )
                             self.helper.connector_logger.error(msg)
                             resume_from = None
+                        elif ahead > timedelta(0):
+                            # A few seconds of clock skew: everything up to now is
+                            # already imported, so clamp instead of re-crawling.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor} is ahead of the clock; clamping "
+                                "it to now"
+                            )
+                            self.helper.connector_logger.warning(msg)
+                            resume_from = now
                         if resume_from is not None:
-                            if resume_from > now:
-                                # Everything up to now is already imported, so
-                                # clamp: restarting would re-crawl the corpus.
-                                msg = (
-                                    "[CONNECTOR] Stored history cursor "
-                                    f"{history_cursor} is ahead of the clock; "
-                                    "clamping it to now"
-                                )
-                                self.helper.connector_logger.warning(msg)
-                                resume_from = now
                             start_date = max(start_date, resume_from)
 
-                    # Keep the oldest checkpoint so the incremental pass after
-                    # the import also re-covers the period spent importing.
-                    completion_ts = (
-                        min(last_run, current_time)
-                        if last_run is not None
-                        else current_time
-                    )
+                # Keep the oldest checkpoint so the incremental pass after the
+                # import also re-covers the period spent importing.
+                completion_ts = (
+                    min(last_run, current_time)
+                    if last_run is not None
+                    else current_time
+                )
 
-                    if start_date >= now:
-                        msg = (
-                            "[CONNECTOR] History is already complete up to "
-                            f"{now:%Y-%m-%d %H:%M:%S} UTC"
-                        )
-                        self.helper.connector_logger.info(msg)
-                    else:
-                        self._import_history(start_date, now, last_run_ts=completion_ts)
-                    self.update_connector_state(completion_ts, {"history_done": True})
+                if start_date >= now:
+                    msg = (
+                        "[CONNECTOR] History is already complete up to "
+                        f"{now:%Y-%m-%d %H:%M:%S} UTC"
+                    )
+                    self.helper.connector_logger.info(msg)
+                else:
+                    self._import_history(start_date, now, last_run_ts=completion_ts)
+                self.update_connector_state(completion_ts, {"history_done": True})
 
                 """
                 ===================================================================
@@ -395,13 +420,13 @@ class CVEConnector:
                 """
             elif last_run is None:
                 self._import_recent(now)
-                self.update_connector_state(current_time, paused_history)
+                self.update_connector_state(current_time, retained or None)
 
             elif self.config.cve.maintain_data and (current_time - last_run) >= int(
                 self.interval
             ):
                 self._maintain_data(now, last_run)
-                self.update_connector_state(current_time, paused_history)
+                self.update_connector_state(current_time, retained or None)
 
             else:
                 new_interval = self.interval - (current_time - last_run)

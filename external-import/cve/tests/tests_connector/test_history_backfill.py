@@ -288,10 +288,13 @@ def test_history_rejects_an_inverted_range():
 
 
 def test_cursor_ahead_of_the_clock_is_clamped_not_restarted():
-    """Everything up to now is already imported, so re-crawling the corpus from
-    history_start_year would burn days of API quota for nothing."""
+    """A few seconds of clock skew: everything up to now is already imported, so
+    re-crawling the corpus from history_start_year would burn days of quota."""
+    skewed = (datetime.now(timezone.utc) + timedelta(seconds=5)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     connector = _processing_connector(
-        {"last_run": 1794392878, "history_cursor": "2030-01-01T00:00:00Z"}
+        {"last_run": 1794392878, "history_cursor": skewed}
     )
 
     with patch("time.sleep"):
@@ -339,17 +342,18 @@ def test_numeric_cursor_self_heals():
 
 
 def test_future_history_start_year_does_not_become_sticky_state():
-    """A typo must stay recoverable: import the recent window, leave history
-    pending, and retry once the configuration is fixed."""
-    connector = _processing_connector({"last_run": 1794392878})
+    """A typo must stay recoverable: leave history pending so a corrected value
+    runs, and do not re-import the recent window on every 60-second tick."""
+    connector = _processing_connector({"last_run": int(time.time()) - 10**6})
     connector.config.cve.history_start_year = 2030
 
     with patch("time.sleep"):
         connector.process_data()
 
     connector._import_history.assert_not_called()
-    connector._import_recent.assert_called_once()
-    assert connector.update_connector_state.call_args.args[1:] == ()
+    connector._import_recent.assert_not_called()
+    connector._maintain_data.assert_called_once()
+    assert connector.update_connector_state.call_args.args[1] is None
 
 
 def test_disabling_pull_history_stops_the_import_and_keeps_the_cursor():
@@ -419,3 +423,100 @@ def test_disabling_pull_history_keeps_the_cursor_for_a_later_resume():
     assert connector.update_connector_state.call_args.args[1] == {
         "history_cursor": "2018-05-01T00:00:00Z"
     }
+
+
+# ------------------------------------------------------ state retention (blocker)
+
+
+def test_completed_history_survives_the_incremental_state_write():
+    """set_state replaces the dict, so a routine incremental write used to erase
+    history_done and the next tick re-imported the whole history - forever."""
+    connector = _processing_connector(
+        {"last_run": int(time.time()) - 7200, "history_done": True}
+    )
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    connector._import_history.assert_not_called()
+    connector._maintain_data.assert_called_once()
+    assert connector.update_connector_state.call_args.args[1] == {"history_done": True}
+
+
+def test_future_start_year_preserves_a_pending_cursor():
+    connector = _processing_connector(
+        {
+            "last_run": int(time.time()) - 10**6,
+            "history_cursor": "2024-06-01T00:00:00Z",
+        }
+    )
+    connector.config.cve.history_start_year = 2030
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    assert connector.update_connector_state.call_args.args[1] == {
+        "history_cursor": "2024-06-01T00:00:00Z"
+    }
+
+
+def test_implausible_future_cursor_restarts_instead_of_completing():
+    """A hand-edited or corrupt cursor years ahead must not be clamped: clamping
+    would write history_done with zero imports and lose the gap silently."""
+    connector = _processing_connector({"history_cursor": "9999-01-01T00:00:00Z"})
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2016, 1, 1)
+
+
+def test_disabled_pull_history_preserves_history_done():
+    """Sibling of the retention blocker: with the flag off, an incremental write
+    used to drop history_done, so re-enabling the flag re-crawled everything."""
+    connector = _processing_connector(
+        {"last_run": int(time.time()) - 10**6, "history_done": True}
+    )
+    connector.config.cve.pull_history = False
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    assert connector.update_connector_state.call_args.args[1] == {"history_done": True}
+
+
+def test_cursor_wins_over_history_done_then_clears():
+    """A contradictory pair left by hand-edited state must resolve, not persist."""
+    connector = _processing_connector(
+        {
+            "last_run": 1794392878,
+            "history_done": True,
+            "history_cursor": "2020-01-01T00:00:00Z",
+        }
+    )
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2020, 1, 1)
+    assert connector.update_connector_state.call_args.args[1] == {"history_done": True}
+
+
+def test_cursor_hours_ahead_is_bad_data_not_skew():
+    """Accepting hours of skew would silently write history_done over a real gap."""
+    connector = _processing_connector(
+        {
+            "last_run": 1794392878,
+            "history_cursor": (
+                datetime.now(timezone.utc) + timedelta(hours=2)
+            ).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+    )
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2016, 1, 1)

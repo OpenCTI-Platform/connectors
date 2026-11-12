@@ -109,6 +109,12 @@ many records were kept out of the total and how many were skipped.
 To re-run a completed import, clear the connector state (remove `history_done`, and `history_cursor`
 if present). Re-enabling `pull_history` after it has completed does nothing on its own.
 
+Bad state is recovered rather than retried forever: a `history_cursor` that cannot be parsed, or that
+is more than five minutes ahead of the clock, is discarded and the import restarts from
+`history_start_year`. A `history_start_year` in the future skips the history import — leaving it
+pending, so correcting the value resumes it — while the scheduled incremental run continues
+normally.
+
 
 ## Deployment
 
