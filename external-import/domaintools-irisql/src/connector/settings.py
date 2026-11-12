@@ -39,9 +39,14 @@ class DomainToolsConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `DomainToolsIrisQLConnector`.
     """
 
-    api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: SecretStr = Field(description="API key for authentication.")
-    iris_ql: str = Field(description="The query search string.")
+    api_base_url: HttpUrl = Field(
+        description="DomainTools Iris Investigate API endpoint URL.",
+        default=HttpUrl("https://api.domaintools.com/v1/iris-investigate/"),
+    )
+    api_key: SecretStr = Field(description="DomainTools API key for authentication.")
+    iris_ql: str = Field(
+        description="IrisQL-1.0 query string run against the Iris Investigate API.",
+    )
     store_iris_data: bool | None = Field(
         description="Store DomainTools Iris data as note object.", default=False
     )
