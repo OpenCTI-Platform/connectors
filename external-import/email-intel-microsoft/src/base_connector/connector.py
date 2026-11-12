@@ -96,8 +96,16 @@ class BaseConnector(abc.ABC):
 
     def process_message(self) -> None:
         work_id = self.initiate_work()
-        stix_objects = self.process_data()
-        self.create_and_send_bundles(work_id, stix_objects)
+        try:
+            stix_objects = self.process_data()
+            self.create_and_send_bundles(work_id, stix_objects)
+        except Exception as e:
+            # Close the Work in error so it does not stay "In Progress" forever.
+            # finalize_work() is skipped on purpose: subclasses advance their state there.
+            self.helper.api.work.to_processed(
+                work_id=work_id, message=f"Connector run failed: {e}", in_error=True
+            )
+            raise
         self.finalize_work(work_id, "Connector successfully run")
 
     def process(self) -> str | None:

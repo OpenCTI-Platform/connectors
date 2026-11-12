@@ -1,17 +1,25 @@
+import asyncio
 import datetime
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from email_intel_microsoft.client import ConnectorClient, _suspend_backed_model_lambdas
+from email_intel_microsoft.client import (
+    MAX_CONCURRENT_ATTACHMENT_DOWNLOADS,
+    ConnectorClient,
+    _suspend_backed_model_lambdas,
+)
 from kiota_abstractions.store.backed_model import BackedModel
 from kiota_abstractions.store.in_memory_backing_store import InMemoryBackingStore
 from msgraph.generated.models.file_attachment import (
     FileAttachment,
 )
+from msgraph.generated.models.o_data_errors.main_error import MainError
+from msgraph.generated.models.o_data_errors.o_data_error import ODataError
 
 
 def test_sync_fetch_two_messages_mixed_attachments(
@@ -176,6 +184,102 @@ def test_mime_type_filter(
     )
     assert result_msg.attachments[0].content_bytes == b"PRE"
     assert result_msg.attachments[1].content_bytes is None
+
+
+def test_attachment_downloads_should_never_exceed_mailbox_concurrency_limit(
+    patch_graph_and_identity: tuple[MagicMock, MagicMock],
+    message: Callable[..., Any],
+    attachment: Callable[..., FileAttachment],
+    messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
+) -> None:
+    """Graph throttles (429 MailboxConcurrency) beyond 4 concurrent requests per mailbox."""
+    graph_mock, _ = patch_graph_and_identity
+    attachments = [attachment(f"a{i}") for i in range(10)]
+    page = SimpleNamespace(value=[message("msg", attachments)], odata_next_link=None)
+    messages = messages_builder([page])
+    in_flight = 0
+    max_in_flight = 0
+
+    async def _tracked_get() -> FileAttachment:
+        nonlocal in_flight, max_in_flight
+        in_flight += 1
+        max_in_flight = max(max_in_flight, in_flight)
+        await asyncio.sleep(0)  # yield so that every started download overlaps
+        in_flight -= 1
+        return attachment(with_bytes=True)
+
+    messages.by_message_id.return_value.attachments.by_attachment_id.return_value.get = AsyncMock(
+        side_effect=_tracked_get
+    )
+    graph_mock.return_value.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
+    )
+    client = ConnectorClient(
+        tenant_id="tenant-id",
+        client_id="client-id",
+        client_secret="client-secret",
+        email="user@test",
+        mailbox="INBOX",
+        attachments_mime_types=["image/png"],
+    )
+
+    [result_msg] = client.fetch_from_relative_import_start_date(
+        datetime.datetime.now(tz=datetime.UTC)
+    )
+
+    assert max_in_flight == MAX_CONCURRENT_ATTACHMENT_DOWNLOADS == 4
+    assert [a.content_bytes for a in result_msg.attachments] == [b"PRE"] * 10
+
+
+def test_attachment_should_be_skipped_when_its_download_raises_odata_error(
+    patch_graph_and_identity: tuple[MagicMock, MagicMock],
+    message: Callable[..., Any],
+    attachment: Callable[..., FileAttachment],
+    messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A throttled attachment (retries exhausted) must not abort the whole run."""
+    graph_mock, _ = patch_graph_and_identity
+    page = SimpleNamespace(
+        value=[message("msg", [attachment("ok"), attachment("throttled")])],
+        odata_next_link=None,
+    )
+    messages = messages_builder([page])
+    throttled = ODataError(
+        error=MainError(
+            code="ApplicationThrottled",
+            message="Application is over its MailboxConcurrency limit.",
+        )
+    )
+    builders = {
+        "ok": MagicMock(get=AsyncMock(return_value=attachment(with_bytes=True))),
+        "throttled": MagicMock(get=AsyncMock(side_effect=throttled)),
+    }
+    messages.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
+        builders.get
+    )
+    graph_mock.return_value.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
+    )
+    client = ConnectorClient(
+        tenant_id="tenant-id",
+        client_id="client-id",
+        client_secret="client-secret",
+        email="user@test",
+        mailbox="INBOX",
+        attachments_mime_types=["image/png"],
+    )
+
+    with caplog.at_level(logging.WARNING, logger="email_intel_microsoft.client"):
+        [result_msg] = client.fetch_from_relative_import_start_date(
+            datetime.datetime.now(tz=datetime.UTC)
+        )
+
+    assert result_msg.id == "msg"
+    assert result_msg.attachments[0].content_bytes == b"PRE"
+    assert result_msg.attachments[1].content_bytes is None
+    assert "ApplicationThrottled" in caplog.text
+    assert "att fthrottled" in caplog.text
 
 
 @dataclass

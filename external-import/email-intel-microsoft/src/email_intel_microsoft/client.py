@@ -21,6 +21,7 @@ from msgraph.generated.models.message import (
 from msgraph.generated.models.message_collection_response import (
     MessageCollectionResponse,
 )
+from msgraph.generated.models.o_data_errors.o_data_error import ODataError
 from msgraph.generated.users.item.mail_folders.item.messages.messages_request_builder import (
     MessagesRequestBuilder,
 )
@@ -29,6 +30,10 @@ from msgraph.generated.users.item.mail_folders.mail_folders_request_builder impo
 )
 
 logger = logging.getLogger(__name__)
+
+# Graph allows at most 4 concurrent requests per application and mailbox
+# (MailboxConcurrency); beyond that it answers 429 ApplicationThrottled.
+MAX_CONCURRENT_ATTACHMENT_DOWNLOADS = 4
 
 
 @contextmanager
@@ -138,7 +143,10 @@ class ConnectorClient(BaseClient):
         raise ConnectorError(f"Folder '{mailbox}' not found for user '{self._email}'.")
 
     async def _load_file_attachments(self, message: Message) -> None:
-        """Download *FileAttachment* concurrently via `asyncio.gather`."""
+        """
+        Download *FileAttachment* concurrently via `asyncio.gather`, at most
+        MAX_CONCURRENT_ATTACHMENT_DOWNLOADS at a time.
+        """
 
         def _is_supported(content_type: str | None) -> bool:
             if content_type not in self._attachments_mime_types:
@@ -153,14 +161,28 @@ class ConnectorClient(BaseClient):
         if not message.attachments:
             return
 
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_ATTACHMENT_DOWNLOADS)
+
         async def _download(file_attachment: FileAttachment) -> None:
-            attachment: Attachment = await (
-                self._client.users.by_user_id(self._email)
-                .mail_folders.by_mail_folder_id(self._folder_id)
-                .messages.by_message_id(message.id)
-                .attachments.by_attachment_id(file_attachment.id)
-                .get()
-            )
+            async with semaphore:
+                try:
+                    attachment: Attachment = await (
+                        self._client.users.by_user_id(self._email)
+                        .mail_folders.by_mail_folder_id(self._folder_id)
+                        .messages.by_message_id(message.id)
+                        .attachments.by_attachment_id(file_attachment.id)
+                        .get()
+                    )
+                except ODataError as e:
+                    # Raised once the Graph client retries are exhausted (e.g. 429).
+                    # Skip this attachment rather than failing the whole run.
+                    logger.warning(
+                        "Could not download attachment %s of message %s, skipping it: %s",
+                        file_attachment.name,
+                        message.id,
+                        e.error.code if e.error else e,
+                    )
+                    return
             if isinstance(attachment, FileAttachment):
                 with _suspend_backed_model_lambdas(file_attachment):
                     file_attachment.content_bytes = attachment.content_bytes or b""
