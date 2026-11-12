@@ -69,6 +69,17 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.domaintools, BaseConfigModel) is True
 
+    if settings_dict == MINIMAL_VALID_SETTINGS_DICT:
+        assert settings.connector.name == "DomainToolsIrisDetectConnector"
+        assert settings.connector.scope == ["stix2"]
+        assert settings.to_helper_config()["connector"]["scope"] == "stix2"
+        assert settings.connector.log_level == "error"
+        assert settings.connector.duration_period.total_seconds() == 3600
+        assert settings.domaintools.monitor_id is None
+        assert settings.domaintools.store_iris_data is False
+        assert settings.domaintools.preview is False
+        assert settings.domaintools.tlp_level == "clear"
+
 
 @pytest.mark.parametrize(
     "settings_dict",
