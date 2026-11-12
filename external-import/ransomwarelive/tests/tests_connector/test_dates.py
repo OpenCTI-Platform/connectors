@@ -87,3 +87,34 @@ def test_create_bundle_list_keeps_attack_date_when_present():
     assert _report(bundle_objects)["published"] == datetime(
         2026, 9, 30, tzinfo=timezone.utc
     )
+
+
+# ---------------------------------------------------------------------------
+# RansomwareAPIConnector.collect_intelligence
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("discovered", ["", None, "invalid-date"])
+def test_collect_intelligence_skips_victim_with_invalid_discovered_date(discovered):
+    connector = _make_connector()
+    connector.last_run = None
+    connector.last_run_datetime_with_ingested_data = None
+    connector.api_client = MagicMock()
+    connector.api_client.get_groups.return_value = [{"name": "acme-ransomware"}]
+    connector.api_client.get_recent_victims.return_value = [
+        {"victim": "Broken Corp", "discovered": discovered},
+        {"victim": "Acme Corp", "discovered": "2026-10-02T08:00:00+00:00"},
+    ]
+    connector.create_bundle_list = MagicMock(return_value=[])
+
+    connector.collect_intelligence()
+
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "Invalid discovered date, victim skipped",
+        {"discovered": discovered, "victim": "Broken Corp"},
+    )
+    # Only the victim with a valid date is converted
+    connector.create_bundle_list.assert_called_once()
+    assert (
+        connector.create_bundle_list.call_args.kwargs["item"]["victim"] == "Acme Corp"
+    )
