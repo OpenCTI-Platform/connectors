@@ -3,20 +3,69 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import requests
+from connectors_sdk import (
+    ProviderApiAuthenticationError,
+    ProviderApiAuthorizationError,
+    ProviderApiConnectionError,
+    ProviderApiError,
+    ProviderApiInvalidResponseError,
+    ProviderApiNotFoundError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
+    ProviderApiUnknownError,
+)
+
+# The standardized error raised for each HTTP status the TeamT5 API answers with
+HTTP_STATUS_ERRORS: dict[int, type[ProviderApiError]] = {
+    401: ProviderApiAuthenticationError,
+    403: ProviderApiAuthorizationError,
+    404: ProviderApiNotFoundError,
+    429: ProviderApiRateLimitError,
+}
 
 
-class Teamt5AuthError(Exception):
-    """Raised when the OAuth token exchange against TeamT5 fails.
+def _request_error_class(
+    err: requests.exceptions.RequestException,
+) -> type[ProviderApiError]:
+    """Return the standardized error matching a failed request to the TeamT5 API."""
+    if isinstance(err, requests.exceptions.HTTPError):
+        status_code = err.response.status_code if err.response is not None else None
+        if status_code in HTTP_STATUS_ERRORS:
+            return HTTP_STATUS_ERRORS[status_code]
+        if status_code is not None and status_code >= 500:
+            return ProviderApiServerError
+        return ProviderApiUnknownError
+    # Before ConnectionError: ConnectTimeout is both a ConnectionError and a Timeout
+    if isinstance(err, requests.exceptions.Timeout):
+        return ProviderApiTimeoutError
+    if isinstance(err, requests.exceptions.ConnectionError):
+        return ProviderApiConnectionError
+    # response.json() raises it on a body that is not JSON: it is a RequestException
+    if isinstance(err, requests.exceptions.JSONDecodeError):
+        return ProviderApiInvalidResponseError
+    return ProviderApiUnknownError
 
-    Surfaced as a dedicated exception (rather than a bare ``Exception``
-    or the underlying ``RequestException`` / ``ValueError``) so callers
-    — and the operator reading the connector log — can tell an auth-
-    setup failure apart from a transient transport hiccup on a
-    subsequent data call. ``Teamt5Client.__init__`` invokes
-    ``_refresh_token()`` synchronously, so this also propagates as the
-    visible startup failure when ``OAuth`` credentials are misconfigured
-    or the token endpoint is unreachable.
+
+def _token_error_class(
+    err: requests.exceptions.RequestException | ValueError | KeyError,
+) -> type[ProviderApiError]:
+    """Return the standardized error matching a failed OAuth token exchange.
+
+    The token endpoint answers rejected credentials (``invalid_client``) with a 400 as
+    often as with a 401, so a 400 is an authentication failure here only. A body that
+    is not JSON, or JSON without ``access_token`` or with an invalid ``expires_in``, is
+    an invalid response.
     """
+    if isinstance(err, requests.exceptions.RequestException):
+        if (
+            isinstance(err, requests.exceptions.HTTPError)
+            and err.response is not None
+            and err.response.status_code == 400
+        ):
+            return ProviderApiAuthenticationError
+        return _request_error_class(err)
+    return ProviderApiInvalidResponseError
 
 
 class Teamt5Client:
@@ -70,8 +119,9 @@ class Teamt5Client:
         """Exchange OAuth client credentials for a fresh Bearer token.
 
         Wraps the token POST + ``response.json()`` decode in a single
-        try/except so a failed exchange surfaces as a dedicated
-        :class:`Teamt5AuthError` with the underlying cause logged
+        try/except so a failed exchange surfaces as the standardized
+        :class:`ProviderApiError` matching its cause (see
+        ``_token_error_class``), with the underlying cause logged
         in a structured ``meta`` dict instead of crashing the
         connector with an opaque ``requests.exceptions.*`` or
         ``ValueError`` traceback. The narrower categories we already
@@ -100,16 +150,14 @@ class Teamt5Client:
             expires_in = int(data.get("expires_in", 3600))
         except (requests.RequestException, ValueError, KeyError) as err:
             # Log the failure context with the structured meta the
-            # rest of this connector uses, then re-raise as
-            # ``Teamt5AuthError`` so the operator sees a clear
-            # auth-startup failure (rather than the raw
-            # ``RequestException`` / ``ValueError`` traceback) and
-            # the scheduler can apply its standard retry policy.
+            # rest of this connector uses, then re-raise as the
+            # standardized error matching the cause, so the run reports
+            # it to OpenCTI with its code and criticity.
             self.helper.connector_logger.error(
                 "TeamT5 OAuth token exchange failed",
                 meta={"token_url": token_url, "error": str(err)},
             )
-            raise Teamt5AuthError(
+            raise _token_error_class(err)(
                 f"Failed to obtain OAuth token from TeamT5: {err}"
             ) from err
         self._token_expires_at = datetime.now(timezone.utc) + timedelta(
