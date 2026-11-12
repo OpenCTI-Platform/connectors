@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -70,16 +71,15 @@ def test_settings_should_accept_valid_input(settings_dict):
 
 
 @pytest.mark.parametrize(
-    "settings_dict, field_name",
+    "settings_dict",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
+        pytest.param({}, id="empty_settings_dict"),
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080"},
                 "connector": {},
                 "domaintools": MINIMAL_VALID_SETTINGS_DICT["domaintools"],
             },
-            "opencti.token",
             id="missing_opencti_token",
         ),
         pytest.param(
@@ -88,7 +88,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "connector": {"id": 123456},
                 "domaintools": MINIMAL_VALID_SETTINGS_DICT["domaintools"],
             },
-            "connector.id",
             id="invalid_connector_id",
         ),
         pytest.param(
@@ -100,12 +99,39 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "feed_type": "unknown",
                 },
             },
-            "domaintools.feed_type",
             id="invalid_feed_type",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "domaintools": {
+                    **MINIMAL_VALID_SETTINGS_DICT["domaintools"],
+                    "top": 0,
+                },
+            },
+            id="invalid_top",
+        ),
+        *[
+            pytest.param(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "domaintools": {
+                        key: value
+                        for key, value in MINIMAL_VALID_SETTINGS_DICT[
+                            "domaintools"
+                        ].items()
+                        if key != missing_key
+                    },
+                },
+                id=f"missing_domaintools_{missing_key}",
+            )
+            for missing_key in ("api_key", "feed_type")
+        ],
     ],
 )
-def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+def test_settings_should_raise_when_invalid_input(settings_dict):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
     For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return
@@ -126,7 +152,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
 
 
 def test_settings_should_default_connector_id():
@@ -141,3 +167,34 @@ def test_settings_should_default_connector_id():
 
     assert settings.connector.id == "7eae6a8d-4c09-424f-822d-bc2529680596"
     assert UUID(settings.connector.id).version == 4
+
+
+def test_settings_should_apply_defaults():
+    """Optional settings MUST fall back on their documented defaults."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "domaintools": {
+                        key: value
+                        for key, value in MINIMAL_VALID_SETTINGS_DICT[
+                            "domaintools"
+                        ].items()
+                        if key != "api_base_url"
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.name == "DomainToolsFeedsConnector"
+    assert settings.connector.scope == ["domaintools-feeds"]
+    assert settings.connector.duration_period == timedelta(hours=1)
+    assert str(settings.domaintools.api_base_url) == "https://api.domaintools.com/"
+    assert settings.domaintools.session_id == "OpenCTI-DomainTools-Feeds"
+    assert settings.domaintools.domain is None
+    assert settings.domaintools.top is None
+    assert settings.domaintools.tlp_level == "clear"
