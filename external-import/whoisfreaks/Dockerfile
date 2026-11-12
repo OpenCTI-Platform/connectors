@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev ca-certificates
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev ca-certificates
 
 # Install the connector as a proper package (src/ layout: connector/,
 # whoisfreaks_client/). Then drop build inputs so the source tree does not
@@ -21,7 +21,7 @@ COPY pyproject.toml ./pyproject.toml
 RUN git config --global http.postBuffer 524288000 && \
     python -m pip install --no-cache-dir --upgrade pip && \
     python -m pip install --no-cache-dir . && \
-    apk del git build-base && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev && \
     rm -rf ./src ./pyproject.toml ./build
 
 # main.py is a top-level entry script (not part of an installed package).

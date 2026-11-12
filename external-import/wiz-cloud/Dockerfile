@@ -7,7 +7,8 @@ RUN apk --no-cache upgrade && \
     apk add --no-cache git
 
 COPY requirements.txt /opt/wiz-cloud/requirements.txt
-RUN pip install --no-cache-dir -r /opt/wiz-cloud/requirements.txt
+RUN pip install --no-cache-dir -r /opt/wiz-cloud/requirements.txt && \
+    apk del git
 
 COPY src /opt/wiz-cloud
 WORKDIR /opt/wiz-cloud

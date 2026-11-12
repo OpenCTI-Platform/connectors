@@ -10,11 +10,9 @@ COPY src /opt/opencti-connector-intel471-darknet
 # build-only files — ``build-base``, ``git``, ``libffi-dev``,
 # ``libxml2-dev``, ``libxslt-dev`` and the transitively-pulled headers —
 # is removed with a single ``apk del .build-deps`` in the same RUN
-# layer. Runtime-only libraries (``libmagic``) are installed
-# unconditionally and stay in the published image.
+# layer.
 # hadolint ignore=DL3018,DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic && \
     apk add --no-cache --virtual .build-deps \
         build-base \
         git \

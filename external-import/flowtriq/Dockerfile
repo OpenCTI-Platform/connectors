@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 ENV CONNECTOR_DURATION_PERIOD=PT1H
 
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic libffi libxml2 libxslt
+    apk --no-cache add libffi
 
 # Copy the connector
 COPY src /opt/flowtriq
