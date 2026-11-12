@@ -39,11 +39,28 @@ class DomainToolsConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `DomainToolsFeedsConnector`.
     """
 
-    api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: SecretStr = Field(description="API key for authentication.")
+    api_base_url: HttpUrl = Field(
+        description="Base URL of the DomainTools API.",
+        default=HttpUrl("https://api.domaintools.com"),
+    )
+    api_key: SecretStr = Field(
+        description="DomainTools API key used to authenticate to the Real-time Feed API.",
+    )
     feed_type: Literal[
         "domainhotlist", "domainrisk", "nod", "nad", "noh", "domaindiscovery"
-    ] = Field(description="Name of the feed.")
+    ] = Field(
+        description=(
+            "DomainTools feed to ingest. "
+            "Risk feeds, imported as Indicators: "
+            "`domainhotlist` (Domain Hotlist, active domains with a high risk score), "
+            "`domainrisk` (Domain Risk, domains with their DomainTools risk scores). "
+            "Observation feeds, imported as Domain-Name observables: "
+            "`nod` (Newly Observed Domains), "
+            "`nad` (Newly Active Domains), "
+            "`noh` (Newly Observed Hosts), "
+            "`domaindiscovery` (Domain Discovery, newly discovered domains)."
+        ),
+    )
     session_id: str | None = Field(
         description="A unique identifier for the session, used for resuming data retrieval from the last point.",
         default="OpenCTI-DomainTools-Feeds",
@@ -55,6 +72,7 @@ class DomainToolsConfig(BaseConfigModel):
     top: int | None = Field(
         description="Limits the number of results in the response payload. Primarily intended for testing.",
         default=None,
+        ge=1,
     )
     tlp_level: Literal[
         "clear",

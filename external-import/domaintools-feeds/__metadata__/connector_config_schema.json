@@ -55,20 +55,21 @@
       "type": "string"
     },
     "DOMAINTOOLS_API_BASE_URL": {
-      "description": "API base URL.",
+      "default": "https://api.domaintools.com/",
+      "description": "Base URL of the DomainTools API.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "DOMAINTOOLS_API_KEY": {
-      "description": "API key for authentication.",
+      "description": "DomainTools API key used to authenticate to the Real-time Feed API.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "DOMAINTOOLS_FEED_TYPE": {
-      "description": "Name of the feed.",
+      "description": "DomainTools feed to ingest. Risk feeds, imported as Indicators: `domainhotlist` (Domain Hotlist, active domains with a high risk score), `domainrisk` (Domain Risk, domains with their DomainTools risk scores). Observation feeds, imported as Domain-Name observables: `nod` (Newly Observed Domains), `nad` (Newly Active Domains), `noh` (Newly Observed Hosts), `domaindiscovery` (Domain Discovery, newly discovered domains).",
       "enum": [
         "domainhotlist",
         "domainrisk",
@@ -92,6 +93,7 @@
     "DOMAINTOOLS_TOP": {
       "default": null,
       "description": "Limits the number of results in the response payload. Primarily intended for testing.",
+      "minimum": 1,
       "type": "integer"
     },
     "DOMAINTOOLS_TLP_LEVEL": {
@@ -111,7 +113,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "DOMAINTOOLS_API_BASE_URL",
     "DOMAINTOOLS_API_KEY",
     "DOMAINTOOLS_FEED_TYPE"
   ],

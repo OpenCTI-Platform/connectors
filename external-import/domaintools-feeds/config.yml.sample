@@ -10,7 +10,7 @@ connector:
   # duration_period: 'PT1H' # ISO-8601 format, interval between two runs of the connector
 
 domaintools:
-  api_base_url: 'https://api.domaintools.com'
+  # api_base_url: 'https://api.domaintools.com'
   api_key: 'ChangeMe'
   feed_type: 'ChangeMe' # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
   # session_id: 'OpenCTI-DomainTools-Feeds'

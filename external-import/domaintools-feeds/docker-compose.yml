@@ -13,7 +13,7 @@ services:
       # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_DURATION_PERIOD=PT1H # ISO-8601 format, interval between two runs of the connector
       # Connector's custom parameters
-      - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com
+      # - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com
       - DOMAINTOOLS_API_KEY=ChangeMe
       - DOMAINTOOLS_FEED_TYPE=ChangeMe # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
       # - DOMAINTOOLS_SESSION_ID=OpenCTI-DomainTools-Feeds
