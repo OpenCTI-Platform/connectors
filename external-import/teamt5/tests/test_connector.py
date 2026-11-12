@@ -17,6 +17,15 @@ Pins the cursor-advance / log-branch contract on
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+from connectors_sdk import (
+    Criticity,
+    ErrorStore,
+    ProviderApiAuthenticationError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
+)
 from teamt5_connector.connector import TeamT5Connector
 
 
@@ -215,3 +224,176 @@ class TestProcessMessageCursorAdvance:
         helper.set_state.assert_called_once()
         new_state = helper.set_state.call_args.args[0]
         assert new_state["last_run"] == "2026-05-22T11:00:00"
+
+
+def _run(connector):
+    """Run ``process_message`` with the same frozen clock as the tests above."""
+    with patch("teamt5_connector.connector.datetime") as fake_datetime:
+        fake_datetime.now.return_value = SimpleNamespace(
+            isoformat=lambda timespec=None: "2026-05-22T11:00:00"
+        )
+        fake_datetime.fromisoformat = lambda s: SimpleNamespace(
+            timestamp=lambda: 1700000000.0
+        )
+        fake_datetime.fromtimestamp = lambda ts: f"<{ts}>"
+        return connector.process_message()
+
+
+class TestReturnRunErrorList:
+    def test_no_error_returns_empty_list(self):
+        assert TeamT5Connector._return_run_error_list() == []
+
+    def test_run_error_comes_first_then_recorded_errors(self, empty_error_store):
+        empty_error_store.record_error(ProviderApiServerError("page 1"))
+        empty_error_store.record_error(ProviderApiTimeoutError("page 2"))
+
+        errors = TeamT5Connector._return_run_error_list(
+            ProviderApiAuthenticationError("token")
+        )
+
+        assert errors == [
+            {
+                "code": "api.authentication",
+                "message": "token",
+                "criticity": int(Criticity.CRITICAL),
+            },
+            {
+                "code": "api.server",
+                "message": "page 1",
+                "criticity": int(Criticity.ERROR),
+            },
+            {
+                "code": "api.timeout",
+                "message": "page 2",
+                "criticity": int(Criticity.ERROR),
+            },
+        ]
+
+
+class TestCloseWorkInError:
+    def test_no_open_work_is_a_noop(self, empty_error_store):
+        connector, helper, _, _ = _make_connector()
+
+        connector._close_work_in_error(None, RuntimeError("boom"))
+
+        helper.api.work.to_processed.assert_not_called()
+        assert empty_error_store.get_errors() == []
+
+    def test_open_work_is_closed_in_error(self, empty_error_store):
+        connector, helper, _, _ = _make_connector()
+
+        connector._close_work_in_error("work--abc", RuntimeError("boom"))
+
+        helper.api.work.to_processed.assert_called_once_with(
+            "work--abc", "Unhandled exception: boom", in_error=True
+        )
+        assert empty_error_store.get_errors() == []
+
+    def test_failure_to_close_is_recorded_as_octi_unreachable(self, empty_error_store):
+        connector, helper, _, _ = _make_connector()
+        helper.api.work.to_processed.side_effect = ConnectionError("platform down")
+
+        connector._close_work_in_error("work--abc", RuntimeError("boom"))
+
+        errors = empty_error_store.get_errors()
+        assert [type(error).code for error in errors] == ["octi.unreachable"]
+        assert "work--abc" in str(errors[0])
+        assert "platform down" in str(errors[0])
+        helper.connector_logger.error.assert_called_once()
+
+
+class TestProcessMessageReturnsErrors:
+    """``process_message`` returns the errors of the run to pycti."""
+
+    def test_clean_run_returns_empty_list(self):
+        connector, _, _, _ = _make_connector()
+
+        assert _run(connector) == []
+
+    def test_errors_recorded_during_the_run_are_returned(self):
+        connector, helper, report_handler, _ = _make_connector()
+
+        def failed_listing(last_run_timestamp):
+            ErrorStore().record_error(ProviderApiRateLimitError("throttled"))
+            return []
+
+        report_handler.retrieve_bundle_references.side_effect = failed_listing
+
+        errors = _run(connector)
+
+        assert [error["code"] for error in errors] == ["api.rate_limit"]
+        # The flow is unchanged: a clean listing still advances the cursor
+        helper.set_state.assert_called_once()
+
+    def test_standard_error_stopping_the_run_is_returned_first(self):
+        connector, helper, report_handler, _ = _make_connector()
+
+        def failed_run(last_run_timestamp):
+            ErrorStore().record_error(ProviderApiServerError("page 1"))
+            raise ProviderApiAuthenticationError("token rejected")
+
+        report_handler.retrieve_bundle_references.side_effect = failed_run
+
+        errors = _run(connector)
+
+        assert errors == [
+            {
+                "code": "api.authentication",
+                "message": "token rejected",
+                "criticity": int(Criticity.CRITICAL),
+            },
+            {
+                "code": "api.server",
+                "message": "page 1",
+                "criticity": int(Criticity.ERROR),
+            },
+        ]
+        helper.set_state.assert_not_called()
+        helper.connector_logger.error.assert_called_once()
+
+    def test_unexpected_exception_is_returned_as_unknown(self):
+        connector, helper, report_handler, _ = _make_connector()
+        report_handler.retrieve_bundle_references.side_effect = RuntimeError("boom")
+
+        errors = _run(connector)
+
+        assert errors == [
+            {
+                "code": "other.unknown",
+                "message": "boom",
+                "criticity": int(Criticity.CRITICAL),
+            }
+        ]
+        helper.set_state.assert_not_called()
+
+    def test_errors_of_the_previous_run_are_not_returned_again(self, empty_error_store):
+        connector, _, _, _ = _make_connector()
+        empty_error_store.record_error(ProviderApiServerError("previous run"))
+
+        assert _run(connector) == []
+
+    def test_failure_to_close_work_is_returned_after_the_run_error(self):
+        connector, helper, report_handler, _ = _make_connector(
+            retrieved_refs=[{"stix_url": "https://example.com/bundle"}]
+        )
+        report_handler.push_objects.side_effect = RuntimeError("push failed")
+        helper.api.work.to_processed.side_effect = ConnectionError("platform down")
+
+        errors = _run(connector)
+
+        assert [error["code"] for error in errors] == [
+            "other.unknown",
+            "octi.unreachable",
+        ]
+        helper.api.work.to_processed.assert_called_once_with(
+            "work--abc", "Unhandled exception: push failed", in_error=True
+        )
+
+    def test_stopping_the_connector_reports_nothing(self):
+        connector, _, report_handler, _ = _make_connector()
+        report_handler.retrieve_bundle_references.side_effect = KeyboardInterrupt
+
+        with pytest.raises(SystemExit) as info:
+            _run(connector)
+
+        assert info.value.code == 0
