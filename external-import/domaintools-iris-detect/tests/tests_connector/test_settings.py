@@ -84,7 +84,7 @@ def test_settings_should_accept_valid_input(settings_dict):
 @pytest.mark.parametrize(
     "settings_dict",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
+        pytest.param({}, id="empty_settings_dict"),
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080"},
@@ -94,7 +94,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "api_key": "test-api-key",
                 },
             },
-            "opencti.token",
             id="missing_opencti_token",
         ),
         pytest.param(
@@ -106,7 +105,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "api_key": "test-api-key",
                 },
             },
-            "connector.id",
             id="invalid_connector_id",
         ),
         pytest.param(
@@ -117,12 +115,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "api_base_url": "https://api.domaintools.com/v1/iris-detect/"
                 },
             },
-            "domaintools.api_key",
             id="missing_domaintools_api_key",
         ),
     ],
 )
-def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+def test_settings_should_raise_when_invalid_input(settings_dict):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
     For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return
@@ -143,7 +140,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
 
 
 def test_settings_should_default_connector_id():
