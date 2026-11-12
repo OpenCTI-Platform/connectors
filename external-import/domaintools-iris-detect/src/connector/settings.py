@@ -39,7 +39,10 @@ class DomainToolsConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `DomainToolsIrisDetectConnector`.
     """
 
-    api_base_url: HttpUrl = Field(description="API base URL.")
+    api_base_url: HttpUrl = Field(
+        description="API base URL.",
+        default=HttpUrl("https://api.domaintools.com/v1/iris-detect/"),
+    )
     api_key: SecretStr = Field(description="API key for authentication.")
 
     monitor_id: str | None = Field(
@@ -50,7 +53,7 @@ class DomainToolsConfig(BaseConfigModel):
         description="Store DomainTools Iris data as note object.", default=False
     )
     preview: bool = Field(
-        description="Use during API implementation and testing. Including with value = 1 will limit results to 2 but not be limited by hourly restrictions.",
+        description="Use during API implementation and testing. True will limit results to 2 but not be limited by hourly restrictions.",
         default=False,
     )
     tlp_level: Literal[

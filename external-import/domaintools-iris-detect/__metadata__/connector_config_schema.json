@@ -55,6 +55,7 @@
       "type": "string"
     },
     "DOMAINTOOLS_API_BASE_URL": {
+      "default": "https://api.domaintools.com/v1/iris-detect/",
       "description": "API base URL.",
       "format": "uri",
       "maxLength": 2083,
@@ -79,7 +80,7 @@
     },
     "DOMAINTOOLS_PREVIEW": {
       "default": false,
-      "description": "Use during API implementation and testing. Including with value = 1 will limit results to 2 but not be limited by hourly restrictions.",
+      "description": "Use during API implementation and testing. True will limit results to 2 but not be limited by hourly restrictions.",
       "type": "boolean"
     },
     "DOMAINTOOLS_TLP_LEVEL": {
@@ -99,7 +100,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "DOMAINTOOLS_API_BASE_URL",
     "DOMAINTOOLS_API_KEY"
   ],
   "additionalProperties": true
