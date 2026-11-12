@@ -231,29 +231,30 @@ def test_attachment_downloads_should_never_exceed_mailbox_concurrency_limit(
     assert [a.content_bytes for a in result_msg.attachments] == [b"PRE"] * 10
 
 
-def test_attachment_should_be_skipped_when_its_download_raises_odata_error(
+def test_attachment_should_be_skipped_when_its_download_fails_permanently(
     patch_graph_and_identity: tuple[MagicMock, MagicMock],
     message: Callable[..., Any],
     attachment: Callable[..., FileAttachment],
     messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A throttled attachment (retries exhausted) must not abort the whole run."""
+    """An attachment gone from the mailbox (404) must not abort the whole run."""
     graph_mock, _ = patch_graph_and_identity
     page = SimpleNamespace(
-        value=[message("msg", [attachment("ok"), attachment("throttled")])],
+        value=[message("msg", [attachment("ok"), attachment("gone")])],
         odata_next_link=None,
     )
     messages = messages_builder([page])
-    throttled = ODataError(
+    not_found = ODataError(
         error=MainError(
-            code="ApplicationThrottled",
-            message="Application is over its MailboxConcurrency limit.",
-        )
+            code="ErrorItemNotFound",
+            message="The specified object was not found in the store.",
+        ),
+        response_status_code=404,
     )
     builders = {
         "ok": MagicMock(get=AsyncMock(return_value=attachment(with_bytes=True))),
-        "throttled": MagicMock(get=AsyncMock(side_effect=throttled)),
+        "gone": MagicMock(get=AsyncMock(side_effect=not_found)),
     }
     messages.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
         builders.get
@@ -278,8 +279,58 @@ def test_attachment_should_be_skipped_when_its_download_raises_odata_error(
     assert result_msg.id == "msg"
     assert result_msg.attachments[0].content_bytes == b"PRE"
     assert result_msg.attachments[1].content_bytes is None
-    assert "ApplicationThrottled" in caplog.text
-    assert "att fthrottled" in caplog.text
+    assert "ErrorItemNotFound" in caplog.text
+    assert "att fgone" in caplog.text
+
+
+def test_transient_attachment_download_error_should_propagate(
+    patch_graph_and_identity: tuple[MagicMock, MagicMock],
+    message: Callable[..., Any],
+    attachment: Callable[..., FileAttachment],
+    messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
+) -> None:
+    """
+    A throttled download (429 once the Graph client retries are exhausted) must fail
+    the run, so the state is not advanced and the next run retries the email.
+    """
+    graph_mock, _ = patch_graph_and_identity
+    page = SimpleNamespace(
+        value=[message("msg", [attachment("ok"), attachment("throttled")])],
+        odata_next_link=None,
+    )
+    messages = messages_builder([page])
+    throttled = ODataError(
+        error=MainError(
+            code="ApplicationThrottled",
+            message="Application is over its MailboxConcurrency limit.",
+        ),
+        response_status_code=429,
+    )
+    builders = {
+        "ok": MagicMock(get=AsyncMock(return_value=attachment(with_bytes=True))),
+        "throttled": MagicMock(get=AsyncMock(side_effect=throttled)),
+    }
+    messages.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
+        builders.get
+    )
+    graph_mock.return_value.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
+    )
+    client = ConnectorClient(
+        tenant_id="tenant-id",
+        client_id="client-id",
+        client_secret="client-secret",
+        email="user@test",
+        mailbox="INBOX",
+        attachments_mime_types=["image/png"],
+    )
+
+    with pytest.raises(ODataError) as exc_info:
+        client.fetch_from_relative_import_start_date(
+            datetime.datetime.now(tz=datetime.UTC)
+        )
+
+    assert exc_info.value.response_status_code == 429
 
 
 @dataclass

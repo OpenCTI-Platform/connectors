@@ -35,6 +35,9 @@ logger = logging.getLogger(__name__)
 # (MailboxConcurrency); beyond that it answers 429 ApplicationThrottled.
 MAX_CONCURRENT_ATTACHMENT_DOWNLOADS = 4
 
+# Transient Graph errors, the same codes the kiota RetryHandler retries.
+TRANSIENT_STATUS_CODES = frozenset({429, 503, 504})
+
 
 @contextmanager
 def _suspend_backed_model_lambdas(backed_item: Any) -> Iterator[None]:
@@ -174,8 +177,12 @@ class ConnectorClient(BaseClient):
                         .get()
                     )
                 except ODataError as e:
-                    # Raised once the Graph client retries are exhausted (e.g. 429).
-                    # Skip this attachment rather than failing the whole run.
+                    if e.response_status_code in TRANSIENT_STATUS_CODES:
+                        # Retries exhausted on a transient error: fail the run so the
+                        # state is not advanced and the next run retries this email.
+                        raise
+                    # Permanent error (e.g. 404, attachment deleted meanwhile): skip
+                    # this attachment rather than failing every future run on it.
                     logger.warning(
                         "Could not download attachment %s of message %s, skipping it: %s",
                         file_attachment.name,
@@ -189,14 +196,20 @@ class ConnectorClient(BaseClient):
 
         # * unpacks the generator so every coroutine becomes
         # a separate positional arg to asyncio.gather()
-        await asyncio.gather(
+        results = await asyncio.gather(
             *(
                 _download(attachment)
                 for attachment in message.attachments
                 if isinstance(attachment, FileAttachment)
                 and _is_supported(attachment.content_type)
-            )
+            ),
+            # Let every download finish before re-raising, so no task is left
+            # pending on the event loop that the next run reuses.
+            return_exceptions=True,
         )
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
 
     async def _fetch_from_relative_import_start_date(
         self,
