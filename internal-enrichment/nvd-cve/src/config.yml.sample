@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'NIST NVD CVE Enrichment'
+  scope: 'Report,Grouping,Note,Observed-Data,Opinion,Case-Incident,Case-Rfi,Case-Rft,Task,Feedback,Incident,Vulnerability'
+  auto: true
+  max_tlp: 'TLP:AMBER'
+  log_level: 'info'
+
+cve:
+#  base_url: 'https://services.nvd.nist.gov/rest/json/cves' # Optional
+  api_key: 'ChangeMe' # Required
+#  create_unmatched_cve: True # Optional, create placeholder Vulnerability if NVD has not published data for the CVE ID yet
+#  create_relationships: True # Optional, create 'related-to' relationships linking extracted CVEs to the container/entity
+#  import_software: False # Optional, if True, resolve CPEs and import as Software objects
+#  cpe_history_interval: P120D # The interval specifies how far back in time to search for CPEs that were modified within that period.
+#  cpe_max_concurrency: 10 # max number of concurrent CPE resolution tasks when import_software is True
+#  cve_max_concurrency: 50 # max number of concurrent CVE processing workers
