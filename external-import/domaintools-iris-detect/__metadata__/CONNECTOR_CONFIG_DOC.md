@@ -14,7 +14,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
-| DOMAINTOOLS_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.domaintools.com/v1/iris-detect/"` | API base URL. |
+| DOMAINTOOLS_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.domaintools.com/v1/iris-detect/"` | Base URL of the DomainTools Iris Detect API (v1 endpoint). |
 | DOMAINTOOLS_MONITOR_ID | `string` |  | string | `null` | Monitor ID from the monitors response – only used when requesting domains for specific monitors. |
 | DOMAINTOOLS_STORE_IRIS_DATA | `boolean` |  | boolean | `false` | Store DomainTools Iris data as note object. |
 | DOMAINTOOLS_PREVIEW | `boolean` |  | boolean | `false` | Use during API implementation and testing. True will limit results to 2 but not be limited by hourly restrictions. |

@@ -56,7 +56,7 @@
     },
     "DOMAINTOOLS_API_BASE_URL": {
       "default": "https://api.domaintools.com/v1/iris-detect/",
-      "description": "API base URL.",
+      "description": "Base URL of the DomainTools Iris Detect API (v1 endpoint).",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,

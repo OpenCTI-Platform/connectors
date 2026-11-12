@@ -40,7 +40,7 @@ class DomainToolsConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(
-        description="API base URL.",
+        description="Base URL of the DomainTools Iris Detect API (v1 endpoint).",
         default=HttpUrl("https://api.domaintools.com/v1/iris-detect/"),
     )
     api_key: SecretStr = Field(description="API key for authentication.")
