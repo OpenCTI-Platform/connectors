@@ -24,14 +24,14 @@ ALLOWED_ORIGINS = [
 class GTISoftwareToolkitConfig(GTIBaseConfig):
     """Configuration for GTI software toolkit imports."""
 
-    software_toolkit_import_start_date: timedelta = Field(
-        default=timedelta(days=1),
-        description="ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
-    )
-
     import_software_toolkits: bool = Field(
         default=False,
         description="Whether to enable importing software toolkit data from GTI",
+    )
+
+    software_toolkit_import_start_date: timedelta = Field(
+        default=timedelta(days=1),
+        description="ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
     )
 
     software_toolkit_origins: ListFromString = Field(
