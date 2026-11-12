@@ -10,6 +10,7 @@ from ransomwarelive.utils import (
     domain_extractor,
     get_group_entry,
     is_domain,
+    normalize_country_code,
     safe_datetime,
 )
 from ransomwarelive_client import (
@@ -286,11 +287,13 @@ class RansomwareAPIConnector:
         victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
-        attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date)
-
         discovered = item.get("discovered")
         discovered_iso = safe_datetime(discovered)
+
+        # The attack date is sometimes empty in the API: fall back to the
+        # disclosure date, which the Report needs as its ``published`` date.
+        attack_date = item.get("attackdate")
+        attack_date_iso = safe_datetime(attack_date) or discovered_iso
 
         # Build the canonical external-reference list ONCE up-front so
         # every emitted SDO (Threat Actor, Campaign, Report, …) sees the
@@ -549,9 +552,15 @@ class RansomwareAPIConnector:
         # ``create_intrusion_set``, so the call site has to forward the
         # flag (without it the relationship always came back ``None``
         # even when the user had explicitly opted into intrusion sets).
-        if item.get("country"):
-            country_name = item["country"]
-            location = self.location_fetcher(country_name)
+        raw_country = item.get("country")
+        country_code = normalize_country_code(raw_country)
+        if raw_country and not country_code:
+            self.helper.connector_logger.warning(
+                "Invalid country code, location skipped",
+                {"country": raw_country, "victim": victim_name},
+            )
+        if country_code:
+            location = self.location_fetcher(country_code)
 
             if location:
                 (
@@ -820,6 +829,12 @@ class RansomwareAPIConnector:
         for item in response_json:
             discovered_raw = item.get("discovered")
             created = safe_datetime(discovered_raw)
+            if created is None:
+                self.helper.connector_logger.warning(
+                    "Invalid discovered date, victim skipped",
+                    {"discovered": discovered_raw, "victim": item.get("victim")},
+                )
+                continue
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 

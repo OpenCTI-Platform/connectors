@@ -1,8 +1,36 @@
 from datetime import datetime
 
+import pycountry
 import tldextract
 import validators
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
+
+# Codes accepted on top of pycountry: user-assigned codes that pycountry does
+# not know but that identify a real country.
+EXTRA_COUNTRY_CODES = {"XK"}  # Kosovo
+
+
+def normalize_country_code(value: str | None) -> str | None:
+    """
+    Return the ISO 3166-1 alpha-2 country code, or None if the value is not one.
+
+    The ransomware.live ``country`` field sometimes holds values that are not
+    country codes (for example "NY", "EU", "QC"). They must not be ingested as
+    Country entities.
+
+    Params:
+        value: raw ``country`` value from the API
+    Return:
+        upper-case alpha-2 code, or None if the value is empty or invalid
+    """
+    if not isinstance(value, str):
+        return None
+    code = value.strip().upper()
+    if len(code) != 2:
+        return None
+    if code in EXTRA_COUNTRY_CODES or pycountry.countries.get(alpha_2=code):
+        return code
+    return None
 
 
 def get_group_entry(group_name: str, group_data: list[dict]) -> dict | None:
@@ -67,7 +95,12 @@ def safe_datetime(value: str | None) -> datetime | None:
         self.safe_datetime("invalid-date", "attack_date")
         > None
     """
-    return TypeAdapter(datetime).validate_python(value)
+    if not value:
+        return None
+    try:
+        return TypeAdapter(datetime).validate_python(value)
+    except ValidationError:
+        return None
 
 
 def is_domain(value: str) -> bool:

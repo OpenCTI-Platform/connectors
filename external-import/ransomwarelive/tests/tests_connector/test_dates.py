@@ -1,0 +1,89 @@
+"""Unit tests for the handling of missing or invalid ransomware.live dates."""
+
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
+
+import pytest
+from ransomwarelive.converter_to_stix import ConverterToStix
+from ransomwarelive.ransom_conn import RansomwareAPIConnector
+from ransomwarelive.utils import safe_datetime
+
+# ---------------------------------------------------------------------------
+# utils.safe_datetime
+# ---------------------------------------------------------------------------
+
+
+def test_safe_datetime_parses_valid_value():
+    assert safe_datetime("2026-10-01T12:30:00+00:00") == datetime(
+        2026, 10, 1, 12, 30, tzinfo=timezone.utc
+    )
+
+
+@pytest.mark.parametrize("value", [None, "", "invalid-date"])
+def test_safe_datetime_returns_none_for_missing_or_invalid_value(value):
+    assert safe_datetime(value) is None
+
+
+# ---------------------------------------------------------------------------
+# RansomwareAPIConnector.create_bundle_list
+# ---------------------------------------------------------------------------
+
+
+def _make_connector() -> RansomwareAPIConnector:
+    """Build a connector that only creates the victim and the Report."""
+    connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
+    connector.helper = MagicMock()
+    connector.config = MagicMock()
+    connector.config.ransomwarelive.create_threat_actor = False
+    connector.config.ransomwarelive.create_intrusion_set = False
+    connector.config.ransomwarelive.create_campaign = False
+    connector.config.ransomwarelive.create_report = True
+    connector.config.ransomwarelive.create_leak_post_refs = False
+    connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
+    connector.author = connector.converter_to_stix.author
+    connector.processed_groups = set()
+    return connector
+
+
+def _report(bundle_objects: list) -> dict:
+    reports = [obj for obj in bundle_objects if obj and obj.get("type") == "report"]
+    assert len(reports) == 1
+    return reports[0]
+
+
+def test_create_bundle_list_uses_discovered_date_when_attack_date_is_empty():
+    connector = _make_connector()
+    item = {
+        "victim": "Acme Corp",
+        "group": "acme-ransomware",
+        "country": "",
+        "activity": "",
+        "domain": "",
+        "attackdate": "",
+        "discovered": "2026-10-02T08:00:00+00:00",
+    }
+
+    bundle_objects = connector.create_bundle_list(item, group_data=[])
+
+    assert _report(bundle_objects)["published"] == datetime(
+        2026, 10, 2, 8, 0, tzinfo=timezone.utc
+    )
+
+
+def test_create_bundle_list_keeps_attack_date_when_present():
+    connector = _make_connector()
+    item = {
+        "victim": "Acme Corp",
+        "group": "acme-ransomware",
+        "country": "",
+        "activity": "",
+        "domain": "",
+        "attackdate": "2026-09-30T00:00:00+00:00",
+        "discovered": "2026-10-02T08:00:00+00:00",
+    }
+
+    bundle_objects = connector.create_bundle_list(item, group_data=[])
+
+    assert _report(bundle_objects)["published"] == datetime(
+        2026, 9, 30, tzinfo=timezone.utc
+    )
