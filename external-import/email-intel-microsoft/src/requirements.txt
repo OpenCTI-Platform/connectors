@@ -1,6 +1,8 @@
 -r ./base_connector/requirements.txt
 azure-identity==1.27.0
 email_validator==2.3.0
+# >= 1.12 base64-decodes Graph contentBytes, which converter.py relies on
+microsoft-kiota-serialization-json>=1.12.0
 msgraph-sdk==1.65.0
 pycti==7.261109.0
 pydantic==2.14.0

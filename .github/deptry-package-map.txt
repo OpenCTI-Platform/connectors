@@ -19,6 +19,7 @@ ignore=stix-shifter-modules-splunk    # loaded by stix-shifter-utils as a runtim
 ignore=email_validator                # required by pydantic for EmailStr; never imported directly
 ignore=google-auth-oauthlib           # optional HTTP transport for google-auth; alters behaviour without import
 ignore=google-auth-httplib2           # optional HTTP transport for google-auth; alters behaviour without import
+ignore=microsoft-kiota-serialization-json  # pinned for its contentBytes decoding (used by msgraph-sdk); never imported directly
 
 # -------------------------------------------------------------------
 # SECTION: map (PyPI name -> Python import module name)
