@@ -1,7 +1,7 @@
 """Names of the connectors-sdk base classes recognised by several checks.
 
-Kept in one place so VC104, VC303 and VC305 stay in sync when the SDK adds a
-connector type.
+Kept in one place so VC104, VC303, VC305 and VC327 stay in sync when the SDK
+adds a connector type.
 """
 
 # ---------------------------------------------------------------------------

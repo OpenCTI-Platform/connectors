@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 import pytest
+from connector_linter.checks._sdk_bases import SDK_CONNECTOR_SETTINGS_BASE_NAMES
 from connector_linter.checks.vc3xx_code.vc327_log_meta import _SDK_LOGGER_CLASSES
 from connector_linter.models import Severity
 from connector_linter.runner import run_checks
@@ -271,6 +272,13 @@ class TestVC327LogMeta:
         path = connector_src(("src/main.py", source))
         results = run_checks(path, select=["VC327"])
         assert [r.line for r in results if r.severity == Severity.WARNING] == [line]
+
+    @pytest.mark.parametrize("base", SDK_CONNECTOR_SETTINGS_BASE_NAMES)
+    def test_resolves_per_type_settings_loggers(self, connector_src, base):
+        source = _SETTINGS_VALIDATOR.replace("BaseConnectorSettings", base)
+        path = connector_src(("src/main.py", source))
+        results = run_checks(path, select=["VC327"])
+        assert [r.line for r in results if r.severity == Severity.WARNING] == [7]
 
     @pytest.mark.parametrize(
         "source",
