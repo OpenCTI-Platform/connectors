@@ -155,3 +155,24 @@ def test_settings_should_default_connector_id():
 
     assert settings.connector.id == "76db5e8d-8633-4e32-9a4c-53c4e5eb56ef"
     assert UUID(settings.connector.id).version == 4
+
+
+def test_settings_should_default_api_base_url_when_not_set():
+    """The DomainTools API base URL MUST fall back on the Iris Detect v1 endpoint."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "domaintools": {"api_key": "test-api-key"},
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert (
+        str(settings.domaintools.api_base_url)
+        == "https://api.domaintools.com/v1/iris-detect/"
+    )
