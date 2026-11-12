@@ -6,11 +6,10 @@ from typing import Any, Dict, Mapping, Optional
 
 from pycti import OpenCTIConnectorHelper
 from stix2 import TLP_AMBER, TLP_WHITE
+from valhalla.knowledge import KnowledgeImporter
+from valhalla.models import Status
 from valhalla.settings import ConnectorSettings
 from valhallaAPI.valhalla import ValhallaAPI
-
-from .knowledge import KnowledgeImporter
-from .models import Status
 
 
 class Valhalla:
@@ -60,19 +59,19 @@ class Valhalla:
         )
 
     def process_data(self) -> None:
-        self.helper.log_info("starting valhalla connector...")
+        self.helper.connector_logger.info("starting valhalla connector...")
         self.helper.metric.state("idle")
         try:
             status_data = self.valhalla_client.get_status()
             api_status = Status.parse_obj(status_data)
-            self.helper.log_info(f"current valhalla status: {api_status}")
+            self.helper.connector_logger.info(f"current valhalla status: {api_status}")
             current_state = self._load_state()
-            self.helper.log_info(f"loaded state: {current_state}")
+            self.helper.connector_logger.info(f"loaded state: {current_state}")
             last_valhalla_version = self._get_state_value(
                 current_state, self._VALHALLA_LAST_VERSION
             )
             if self._check_version(last_valhalla_version, api_status.version):
-                self.helper.log_info("running valhalla importer")
+                self.helper.connector_logger.info("running valhalla importer")
                 self.helper.metric.inc("run_count")
                 self.helper.metric.state("running")
                 now = datetime.now(timezone.utc)
@@ -84,29 +83,29 @@ class Valhalla:
                     self.helper.connect_id, friendly_name
                 )
                 knowledge_importer_state = self.knowledge_importer.run(work_id)
-                self.helper.log_info("done with running valhalla importer")
+                self.helper.connector_logger.info("done with running valhalla importer")
                 new_state = current_state.copy()
                 new_state.update(knowledge_importer_state)
                 new_state[self._STATE_LAST_RUN] = int(now.timestamp())
                 new_state[self._VALHALLA_LAST_VERSION] = api_status.version
-                self.helper.log_info(f"storing new state: {new_state}")
+                self.helper.connector_logger.info(f"storing new state: {new_state}")
                 self.helper.set_state(new_state)
 
                 self.helper.api.work.to_processed(work_id, "Valhalla importer finished")
                 self.helper.metric.state("idle")
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("connector stop")
+            self.helper.connector_logger.info("connector stop")
             self.helper.metric.state("stopped")
             sys.exit(0)
 
         except Exception as e:
-            self.helper.log_error(str(e))
+            self.helper.connector_logger.error(str(e))
             self.helper.metric.state("stopped")
             sys.exit(0)
 
         if self.helper.connect_run_and_terminate:
-            self.helper.log_info("Connector stop")
+            self.helper.connector_logger.info("Connector stop")
             self.helper.metric.state("stopped")
             self.helper.force_ping()
             sys.exit(0)

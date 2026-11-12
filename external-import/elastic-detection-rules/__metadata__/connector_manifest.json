@@ -1,0 +1,26 @@
+{
+  "title": "Elastic Security Detection Rules",
+  "slug": "elastic-detection-rules",
+  "description": "Imports the detection rules deployed in Elastic Security (Kibana detection engine) into OpenCTI, read-only. Each rule becomes an Indicator whose pattern is the rule query (KQL, Lucene, EQL or ES|QL), with its severity, platforms and a link to the rule in Kibana. The rule is linked with `indicates` relationships to the MITRE ATT&CK techniques and sub-techniques of its threat mapping, and recorded as deployed on the Elastic Security platform with its status (active when enabled, deployed when disabled, removed when deleted since the previous run).\n\nThese deployments feed the detection layer of the OpenCTI Threat-Informed Defense Matrix: which techniques used by your threats are actually detected, and where. The connector never creates, modifies or enables a rule in Kibana.",
+  "short_description": "Imports the detection rules deployed in Elastic Security as Indicators linked to the ATT&CK techniques they detect and to the Elastic Security platform they run on.",
+  "logo": "external-import/elastic-detection-rules/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.elastic.co/security",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/elastic-detection-rules",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-elastic-detection-rules",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/splunk-saved-searches_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Splunk Saved Searches",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Indicator",
+        "Attack-Pattern",
+        "SecurityPlatform"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT6H` for six hours). Every run reads the full rule set.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_API_URL": {
+      "description": "Base URL of the Splunk REST API (management port), e.g. `https://splunk.example.com:8089`.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_TOKEN": {
+      "description": "Splunk authentication token, sent as `Authorization: Bearer <token>`. Its user needs read access to the saved searches of the selected apps.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPLUNK_SAVED_SEARCHES_APP": {
+      "default": "-",
+      "description": "App namespace to read saved searches from. `-` reads every app.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_OWNER": {
+      "default": "-",
+      "description": "Owner namespace to read saved searches from. `-` reads every owner.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_SEARCH_SCOPE": {
+      "default": "alerts",
+      "description": "Saved searches to import: `correlation_searches` (Enterprise Security correlation searches only), `alerts` (correlation searches, scheduled searches that trigger alert actions, and saved searches annotated with ATT&CK techniques in `action.correlationsearch.annotations`) or `all`.",
+      "enum": [
+        "correlation_searches",
+        "alerts",
+        "all"
+      ],
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_WEB_URL": {
+      "default": null,
+      "description": "Base URL of Splunk Web, e.g. `https://splunk.example.com:8000`. When set, each Indicator links to its saved search.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_IMPORT_DISABLED_RULES": {
+      "default": true,
+      "description": "Import saved searches that do not run (disabled or not scheduled) too, with the deployment status `deployed` (enabled and scheduled ones get `active`). When false, they are left out and count as removed.",
+      "type": "boolean"
+    },
+    "SPLUNK_SAVED_SEARCHES_PAGE_SIZE": {
+      "default": 100,
+      "description": "Saved searches requested per page (`count`).",
+      "maximum": 10000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "SPLUNK_SAVED_SEARCHES_REQUEST_TIMEOUT": {
+      "default": 60,
+      "description": "Timeout of each HTTP request, in seconds.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "SPLUNK_SAVED_SEARCHES_MAX_RETRIES": {
+      "default": 5,
+      "description": "Retries of a request failing with a rate limit (429), a server error (5xx) or a network error, with exponential backoff.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "SPLUNK_SAVED_SEARCHES_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify the TLS certificate of the Splunk REST API.",
+      "type": "boolean"
+    },
+    "SPLUNK_SAVED_SEARCHES_PLATFORM_NAME": {
+      "default": "Splunk",
+      "description": "Name of the Security Platform the rules are deployed on in OpenCTI.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_PLATFORM_ID": {
+      "default": null,
+      "description": "Id (internal or STIX) of an existing Security Platform in OpenCTI the rules are deployed on, for example the one created by the OpenCTI app for Splunk. Takes precedence over `platform_name` and `platform_type`: the connector references that platform and never rewrites it.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_PLATFORM_TYPE": {
+      "default": "SIEM",
+      "description": "Type of that Security Platform (`security_platform_type`).",
+      "enum": [
+        "SIEM",
+        "EDR",
+        "XDR",
+        "SOAR",
+        "NDR",
+        "ISPM"
+      ],
+      "type": "string"
+    },
+    "SPLUNK_SAVED_SEARCHES_TLP_LEVEL": {
+      "description": "TLP marking applied to every object this connector creates.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SPLUNK_SAVED_SEARCHES_API_URL",
+    "SPLUNK_SAVED_SEARCHES_TOKEN"
+  ],
+  "additionalProperties": true
+}

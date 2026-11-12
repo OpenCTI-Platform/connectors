@@ -28,6 +28,7 @@ from unittest.mock import MagicMock
 import pytest
 import stix2
 from connector.converter_to_stix import ConverterToStix
+from pycti import AttackPattern
 
 
 def _make_converter(tlp_level: str = "clear") -> ConverterToStix:
@@ -403,6 +404,107 @@ class TestPerBundleDedupReset:
         assert len(with_reset_vulns) == 1
         assert len(with_reset_relationships) == 1
         assert with_reset_relationships[0].target_ref == with_reset_vulns[0].id
+
+
+_RULE_WITHOUT_METADATA = """\
+title: Rule without lifecycle metadata
+id: 00000000-0000-0000-0000-000000000009
+logsource:
+  service: Sysmon
+detection:
+  selection:
+    Image|endswith: '\\\\proc.exe'
+  condition: selection
+tags:
+  - attack.execution
+"""
+
+
+class TestRuleMetadata:
+    """Sigma ``status`` / ``level`` / ``logsource`` land on the Indicator."""
+
+    def test_indicator_carries_status_level_and_logsource(self):
+        converter = _make_converter("clear")
+        rule_yaml = _RULE_WITH_TECHNIQUE.replace("product: windows", "product: Windows")
+        stix_objects = converter.convert_sigma_rule(_build_rule(rule_yaml))
+        indicator = next(o for o in stix_objects if o.type == "indicator")
+        assert indicator.x_opencti_rule_status == "stable"
+        assert indicator.x_opencti_rule_level == "high"
+        # Only the keys present in the rule, lowercased.
+        assert indicator.x_opencti_rule_logsource == {
+            "category": "process_creation",
+            "product": "windows",
+        }
+
+    def test_missing_metadata_is_omitted(self):
+        converter = _make_converter("clear")
+        stix_objects = converter.convert_sigma_rule(_build_rule(_RULE_WITHOUT_METADATA))
+        indicator = next(o for o in stix_objects if o.type == "indicator")
+        assert "x_opencti_rule_status" not in indicator
+        assert "x_opencti_rule_level" not in indicator
+        assert indicator.x_opencti_rule_logsource == {"service": "sysmon"}
+
+    def test_tactic_only_tags_create_no_relationship(self):
+        converter = _make_converter("clear")
+        stix_objects = converter.convert_sigma_rule(_build_rule(_RULE_WITHOUT_METADATA))
+        assert [o for o in stix_objects if o.type == "relationship"] == []
+        assert [o for o in stix_objects if o.type == "attack-pattern"] == []
+
+
+class TestPlatformKnownTechniques:
+    """Techniques already in the platform are never renamed."""
+
+    def _converter_with_known(self, known: dict[str, str]) -> ConverterToStix:
+        helper = MagicMock()
+        helper.api.attack_pattern.list.return_value = [
+            {
+                "standard_id": AttackPattern.generate_id(mitre_id, mitre_id),
+                "x_opencti_stix_ids": [],
+                "name": name,
+            }
+            for mitre_id, name in known.items()
+        ]
+        return ConverterToStix(helper=helper, tlp_level="clear")
+
+    def test_known_technique_is_sent_under_its_platform_name(self):
+        converter = self._converter_with_known(
+            {"T1059": "Command and Scripting Interpreter"}
+        )
+        rule = _build_rule(_RULE_WITH_TECHNIQUE)
+        converter.prepare_attack_patterns([rule, _build_rule("not: a sigma rule")])
+
+        stix_objects = converter.convert_sigma_rule(rule)
+        pattern = next(o for o in stix_objects if o.type == "attack-pattern")
+        relationship = next(o for o in stix_objects if o.type == "relationship")
+        assert pattern.name == "Command and Scripting Interpreter"
+        assert pattern.x_mitre_id == "T1059"
+        # Its own author and markings stay untouched on upsert.
+        assert "created_by_ref" not in pattern
+        assert "object_marking_refs" not in pattern
+        assert relationship.target_ref == AttackPattern.generate_id("T1059", "T1059")
+        assert relationship.relationship_type == "indicates"
+
+    def test_lookup_covers_every_tagged_technique_once(self):
+        converter = self._converter_with_known({})
+        converter.prepare_attack_patterns(
+            [_build_rule(_RULE_WITH_TECHNIQUE), _build_rule(_RULE_WITH_BOTH)]
+        )
+        call = converter.helper.api.attack_pattern.list.call_args
+        assert sorted(call.kwargs["filters"]["filters"][0]["values"]) == sorted(
+            [
+                AttackPattern.generate_id("T1059", "T1059"),
+                AttackPattern.generate_id("T1059.001", "T1059.001"),
+            ]
+        )
+
+    def test_unknown_technique_is_created_under_its_mitre_id(self):
+        converter = self._converter_with_known({})
+        rule = _build_rule(_RULE_WITH_BOTH)
+        converter.prepare_attack_patterns([rule])
+        stix_objects = converter.convert_sigma_rule(rule)
+        pattern = next(o for o in stix_objects if o.type == "attack-pattern")
+        assert pattern.name == "T1059.001"
+        assert pattern.created_by_ref == converter.author.id
 
 
 @pytest.mark.parametrize("tlp_level", ["clear", "white", "green", "amber", "red"])

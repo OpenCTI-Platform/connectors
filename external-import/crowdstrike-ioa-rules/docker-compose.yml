@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-crowdstrike-ioa-rules:
+    image: opencti/connector-crowdstrike-ioa-rules:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=CrowdStrike Falcon Custom IOA Rules
+      # - CONNECTOR_SCOPE=Indicator,Attack-Pattern,SecurityPlatform
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT6H
+      - CROWDSTRIKE_IOA_RULES_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_IOA_RULES_CLIENT_SECRET=ChangeMe
+      # - CROWDSTRIKE_IOA_RULES_BASE_URL=https://api.crowdstrike.com
+      # - CROWDSTRIKE_IOA_RULES_MEMBER_CID=
+      # - CROWDSTRIKE_IOA_RULES_RULE_GROUP_FILTER=
+      # - CROWDSTRIKE_IOA_RULES_CHECK_PREVENTION_POLICIES=true
+      # - CROWDSTRIKE_IOA_RULES_IMPORT_DISABLED_RULES=true
+      # - CROWDSTRIKE_IOA_RULES_PAGE_SIZE=100
+      # - CROWDSTRIKE_IOA_RULES_REQUEST_TIMEOUT=60
+      # - CROWDSTRIKE_IOA_RULES_MAX_RETRIES=5
+      # - CROWDSTRIKE_IOA_RULES_PLATFORM_NAME=CrowdStrike Falcon
+      # - CROWDSTRIKE_IOA_RULES_PLATFORM_ID=ChangeMe
+      # - CROWDSTRIKE_IOA_RULES_PLATFORM_TYPE=EDR
+      # - CROWDSTRIKE_IOA_RULES_TLP_LEVEL=amber
+    restart: always
