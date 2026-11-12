@@ -460,6 +460,7 @@ class GTISoftwareToolkitData(BaseModel):
     links: Links | None = None
     attributes: SoftwareToolkitModel | None = None
     context_attributes: dict[str, Any] | None = None
+    relationships: dict[str, Any] | None = None
 
 
 class GTISoftwareToolkitResponse(BaseModel):

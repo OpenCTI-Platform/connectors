@@ -334,6 +334,7 @@ class GTIThreatActorData(BaseModel):
     links: Links | None = None
     attributes: ThreatActorModel | None = None
     context_attributes: dict[str, Any] | None = None
+    relationships: dict[str, Any] | None = None
 
 
 class GTIThreatActorResponse(BaseModel):
