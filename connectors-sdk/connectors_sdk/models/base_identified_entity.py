@@ -153,7 +153,7 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
         return {f"x_opencti_{key}": value for key, value in properties.items()}
 
     @staticmethod
-    def _merge_stix2_properties(*properties: dict[str, Any]) -> dict[str, Any]:
+    def _merge_stix2_properties(*properties_args: dict[str, Any]) -> dict[str, Any]:
         """Merge STIX2 properties, so that "extensions" is given only once.
 
         The entries of the same extension are merged. A property given twice
@@ -164,35 +164,29 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
                 given twice with different values.
 
         """
+
+        def merge_into(target: dict[str, Any], source: dict[str, Any]) -> None:
+            """Add the properties of `source` to `target`, refusing a different value."""
+            for name, value in source.items():
+                if name in target and target[name] != value:
+                    raise ValueError(f"'{name}' is given twice with different values.")
+                target[name] = value
+
         merged_properties: dict[str, Any] = {}
         merged_extensions: dict[str, dict[str, Any]] = {}
 
-        for properties_dict in properties:
-            for property_name, property_value in properties_dict.items():
-                if property_name == "extensions":
-                    for extension_id, extension_dict in property_value.items():
-                        merged_extension = merged_extensions.setdefault(
-                            extension_id, {}
-                        )
-                        for extension_key, extension_value in extension_dict.items():
-                            if (
-                                extension_key in merged_extension
-                                and merged_extension[extension_key] != extension_value
-                            ):
-                                raise ValueError(
-                                    f"Extension property '{extension_key}' of '{extension_id}' "
-                                    "is given twice with different values."
-                                )
-                            merged_extension[extension_key] = extension_value
-                elif (
-                    property_name in merged_properties
-                    and merged_properties[property_name] != property_value
-                ):
-                    raise ValueError(
-                        f"STIX2 property '{property_name}' is given twice with different values."
+        for properties_arg in properties_args:
+            top_level_properties = {
+                name: value
+                for name, value in properties_arg.items()
+                if name != "extensions"
+            }
+            merge_into(merged_properties, top_level_properties)
+            if "extensions" in properties_arg:
+                for extension_id, extension in properties_arg["extensions"].items():
+                    merge_into(
+                        merged_extensions.setdefault(extension_id, {}), extension
                     )
-                else:
-                    merged_properties[property_name] = property_value
 
         if merged_extensions:
             merged_properties["extensions"] = merged_extensions
