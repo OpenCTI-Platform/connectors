@@ -101,6 +101,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+    assert connector.client.session.headers["x-api-key"] == "test-api-key"
     assert connector.params == {
         "sessionID": "OpenCTI-DomainTools-Feeds",
         "domain": "*bank*",
