@@ -46,6 +46,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "api_key": "test-api-key",
                     "api_endpoint": "/v1/articles",
                     "since": "2025-01-01T00:00:00Z",
+                    "until": "2025-01-31T23:59:59Z",
                     "force_reprocess": False,
                     "tlp_level": "clear",
                     "max_row_bytes": 1048576,
@@ -101,3 +102,23 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_connector_should_pass_date_window_to_api_client(mock_opencti_connector_helper):
+    """
+    Test that the connector forwards both bounds of the configured window to the API client.
+
+    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    connector = CheckfirstImportConnector(config=settings, helper=helper)
+    connector.api_client = MagicMock()
+    connector.api_client.iter_api_rows.return_value = iter([])
+    connector.api_client.last_seen_id = None
+
+    connector._send_rows_bundles(after=None)
+
+    call_kwargs = connector.api_client.iter_api_rows.call_args.kwargs
+    assert call_kwargs["since"] == settings.checkfirst.since
+    assert call_kwargs["until"] == settings.checkfirst.until
