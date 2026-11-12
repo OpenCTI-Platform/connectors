@@ -13,9 +13,11 @@ Covers the pagination / failure-handling contract of
 """
 
 from types import SimpleNamespace
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+import requests
 from teamt5_connector.base_handler import _MAX_PAGE_FAILURES, BaseHandler
+from teamt5_services import Teamt5Client
 
 
 class _StubHandler(BaseHandler):
@@ -510,3 +512,31 @@ class TestPushObjectsPartialPushFlag:
         # Of the two pushable refs only one made it through —
         # partial failure, hold the cursor.
         assert handler.partial_push is True
+
+
+class TestRetrieveBundleReferencesRecordsErrors:
+    """Reporting errors leaves the retry flow unchanged.
+
+    Uses a real ``Teamt5Client`` whose session fails, so the errors recorded by
+    ``request_data`` are the ones the run will report.
+    """
+
+    def test_each_failed_page_attempt_is_recorded_and_flow_is_unchanged(
+        self, mock_helper, mock_config_api_key, empty_error_store
+    ):
+        with patch("teamt5_services.client.requests.Session"):
+            client = Teamt5Client(mock_helper, mock_config_api_key)
+        client.session = Mock()
+        client.session.get.side_effect = requests.HTTPError(
+            "503 Service Unavailable", response=Mock(status_code=503)
+        )
+        handler = _make_handler(client)
+
+        refs = handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert refs == []
+        assert handler.aborted is True
+        assert client.session.get.call_count == _MAX_PAGE_FAILURES
+        assert [type(e).code for e in empty_error_store.get_errors()] == [
+            "api.server"
+        ] * _MAX_PAGE_FAILURES

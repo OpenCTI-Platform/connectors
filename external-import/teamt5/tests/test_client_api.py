@@ -378,6 +378,20 @@ class TestRequestData:
 
         assert result == {"success": True, "reports": []}
 
+    def test_request_data_success_records_nothing(
+        self, mock_helper, mock_config_api_key, empty_error_store
+    ):
+        client = self._make_client(mock_helper, mock_config_api_key)
+
+        mock_resp = Mock()
+        mock_resp.raise_for_status = Mock()
+        mock_resp.json.return_value = {"success": True}
+        client.session.get.return_value = mock_resp
+
+        client.request_data("https://api.threatvision.org/test")
+
+        assert empty_error_store.get_errors() == []
+
     def test_request_data_http_error_returns_none_and_logs(
         self, mock_helper, mock_config_api_key
     ):
@@ -391,8 +405,56 @@ class TestRequestData:
         assert result is None
         mock_helper.connector_logger.warning.assert_called_once()
 
+    @pytest.mark.parametrize(
+        ("err", "code"),
+        [
+            (_http_error(401), "api.authentication"),
+            (_http_error(403), "api.authorization"),
+            (_http_error(404), "api.not_found"),
+            (_http_error(429), "api.rate_limit"),
+            (_http_error(500), "api.server"),
+            (requests.exceptions.ReadTimeout("read"), "api.timeout"),
+            (requests.exceptions.ConnectionError("dns"), "api.connection"),
+            (requests.exceptions.TooManyRedirects("loop"), "api.unknown"),
+        ],
+    )
+    def test_request_data_records_failed_request(
+        self, mock_helper, mock_config_api_key, empty_error_store, err, code
+    ):
+        """A failed request is recorded once as the matching error, and None is returned."""
+        client = self._make_client(mock_helper, mock_config_api_key)
+        client.session.get.side_effect = err
+
+        result = client.request_data("https://api.threatvision.org/test")
+
+        assert result is None
+        errors = empty_error_store.get_errors()
+        assert [type(error).code for error in errors] == [code]
+        assert "https://api.threatvision.org/test" in str(errors[0])
+        mock_helper.connector_logger.warning.assert_called_once_with(str(errors[0]))
+
+    def test_request_data_records_requests_json_decode_error(
+        self, mock_helper, mock_config_api_key, empty_error_store
+    ):
+        """``requests``' JSONDecodeError is a RequestException: S1 records it."""
+        client = self._make_client(mock_helper, mock_config_api_key)
+
+        mock_resp = Mock()
+        mock_resp.raise_for_status = Mock()
+        mock_resp.json.side_effect = requests.exceptions.JSONDecodeError(
+            "Expecting value", "<html>", 0
+        )
+        client.session.get.return_value = mock_resp
+
+        result = client.request_data("https://api.threatvision.org/test")
+
+        assert result is None
+        assert [type(e).code for e in empty_error_store.get_errors()] == [
+            "api.invalid_response"
+        ]
+
     def test_request_data_invalid_json_returns_none(
-        self, mock_helper, mock_config_api_key
+        self, mock_helper, mock_config_api_key, empty_error_store
     ):
         """request_data() returns None on JSON decode failure (e.g. HTML error page)."""
         client = self._make_client(mock_helper, mock_config_api_key)
@@ -407,6 +469,9 @@ class TestRequestData:
 
         assert result is None
         mock_helper.connector_logger.warning.assert_called_once()
+        errors = empty_error_store.get_errors()
+        assert [type(error).code for error in errors] == ["api.invalid_response"]
+        assert "Expecting value" in str(errors[0])
 
     def test_request_data_calls_ensure_valid_token(
         self, mock_helper, mock_config_api_key

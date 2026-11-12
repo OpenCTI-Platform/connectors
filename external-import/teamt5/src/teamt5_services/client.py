@@ -4,6 +4,7 @@ from typing import Optional
 
 import requests
 from connectors_sdk import (
+    ErrorStore,
     ProviderApiAuthenticationError,
     ProviderApiAuthorizationError,
     ProviderApiConnectionError,
@@ -193,7 +194,7 @@ class Teamt5Client:
             on a run with many bundles, an unconditional one-second
             sleep after every GET would silently add minutes to the
             wall-clock time of every cycle.
-        :return: The decoded JSON body of the response on success, or ``None`` on failure (HTTP error, network error, or invalid JSON).
+        :return: The decoded JSON body of the response on success, or ``None`` on failure (HTTP error, network error, or invalid JSON), recorded in the ``ErrorStore`` as the matching standardized error.
         """
         timeout = 15
 
@@ -219,13 +220,20 @@ class Teamt5Client:
         # root keeps the contract — "transport errors return ``None``,
         # callers handle the failure" — consistent across every
         # ``requests`` exception class current and future.
+        #
+        # The failure is recorded in the ``ErrorStore`` as the matching
+        # standardized error, without being raised, so the run reports it.
+        # A body that is not JSON lands here too: ``requests``'
+        # ``JSONDecodeError`` is a ``RequestException``.
         except requests.RequestException as err:
-            self.helper.connector_logger.warning(f"Failed request to: {url} {err}")
+            error_msg = f"Failed request to: {url} {err}"
+            ErrorStore().record_error(_request_error_class(err)(error_msg))
+            self.helper.connector_logger.warning(error_msg)
         except ValueError as err:
             # ``response.json()`` raises ValueError (a JSONDecodeError) when
             # the body is not valid JSON; treat it like any other transport
             # failure rather than crashing the connector run.
-            self.helper.connector_logger.warning(
-                f"Failed to decode JSON response from {url}: {err}"
-            )
+            error_msg = f"Failed to decode JSON response from {url}: {err}"
+            ErrorStore().record_error(ProviderApiInvalidResponseError(error_msg))
+            self.helper.connector_logger.warning(error_msg)
         return None
