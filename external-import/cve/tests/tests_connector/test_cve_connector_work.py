@@ -2,8 +2,8 @@
 
 Validates that:
 - Each run sends its bundles with its own work, never with a previous run's work.
-- A successful run marks its work as processed and releases it.
-- A failed run closes its work in error and does not carry it over to the next run.
+- A successful run marks its work as processed.
+- A failed run closes its work in error, and the next run still starts its own.
 - A run that sends no bundle starts no work.
 
 A work kept across runs stops being alive once it is deleted ("Clear all
@@ -101,17 +101,17 @@ def _sent_work_ids(connector: CVEConnector) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def test_update_connector_state_releases_the_work():
-    """A successful run marks its work as processed and releases it."""
-    connector = _make_connector(runs=[], work_ids=[])
-    connector.converter.work_id = "work_1"
+def test_run_does_not_reuse_a_work_left_by_a_previous_run():
+    """A run starts its own work even if the converter still holds an old one."""
+    connector = _make_connector(runs=[[["CVE-2024-0001"]]], work_ids=["work_1"])
+    connector.converter.work_id = "old_work"
 
-    connector.update_connector_state(1700000000)
+    _run(connector)
 
+    assert _sent_work_ids(connector) == ["work_1"]
     connector.helper.api.work.to_processed.assert_called_once()
     assert connector.helper.api.work.to_processed.call_args.args[0] == "work_1"
-    assert connector.converter.work_id is None
-    connector.helper.set_state.assert_called_once_with({"last_run": 1700000000})
+    connector.helper.set_state.assert_called_once()
 
 
 def test_each_run_sends_its_bundles_with_its_own_work():
@@ -130,7 +130,6 @@ def test_each_run_sends_its_bundles_with_its_own_work():
         call.args[0] for call in connector.helper.api.work.to_processed.call_args_list
     ]
     assert processed == ["work_1", "work_2"]
-    assert connector.converter.work_id is None
 
 
 def test_failed_run_closes_its_work_in_error():
@@ -150,7 +149,6 @@ def test_failed_run_closes_its_work_in_error():
     assert call.args[0] == "work_1"
     assert "NVD unavailable" in call.args[1]
     assert call.kwargs == {"in_error": True}
-    assert connector.converter.work_id is None
     connector.helper.set_state.assert_not_called()
 
     _run(connector)
@@ -176,17 +174,26 @@ def test_run_failing_before_any_bundle_has_no_work_to_close():
 def test_failure_to_close_the_work_does_not_hide_the_run_error():
     """If closing the failed run's work fails, the run's error is still logged."""
     connector = _make_connector(
-        runs=[[["CVE-2024-0001"], RuntimeError("NVD unavailable")]],
-        work_ids=["work_1"],
+        runs=[
+            [["CVE-2024-0001"], RuntimeError("NVD unavailable")],
+            [["CVE-2024-0002"]],
+        ],
+        work_ids=["work_1", "work_2"],
     )
-    connector.helper.api.work.to_processed.side_effect = RuntimeError("API down")
+    connector.helper.api.work.to_processed.side_effect = [
+        RuntimeError("API down"),
+        None,
+    ]
 
     _run(connector)
 
     error_message = connector.helper.connector_logger.error.call_args.args[0]
     assert "NVD unavailable" in error_message
     connector.helper.connector_logger.warning.assert_called_once()
-    assert connector.converter.work_id is None
+
+    _run(connector)
+
+    assert _sent_work_ids(connector) == ["work_1", "work_2"]
 
 
 def test_run_without_vulnerabilities_starts_no_work():

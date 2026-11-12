@@ -53,8 +53,6 @@ class CVEConnector:
         self.helper.connector_logger.info(msg)
         if self.converter.work_id is not None:
             self.helper.api.work.to_processed(self.converter.work_id, msg)
-            # Each run must start its own work.
-            self.converter.work_id = None
         self.helper.set_state({"last_run": current_time})
 
         interval_in_hours = round(self.interval / 60 / 60, 2)
@@ -226,6 +224,9 @@ class CVEConnector:
         }
 
     def process_data(self) -> None:
+        # Each run starts with no work: the converter creates one with the
+        # first bundle the run sends, so a work never outlives its run.
+        self.converter.work_id = None
         try:
             """
             Get the current state and check if connector already runs
@@ -311,11 +312,10 @@ class CVEConnector:
             self._close_work_in_error(error_msg)
 
     def _close_work_in_error(self, message: str) -> None:
-        """Close the work of a failed run, so that the next run starts its own."""
+        """Close the work of a failed run in error."""
         work_id = self.converter.work_id
         if work_id is None:
             return
-        self.converter.work_id = None
         try:
             self.helper.api.work.to_processed(work_id, message, in_error=True)
         except Exception as err:  # pylint: disable=broad-except
