@@ -3,10 +3,19 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from connectors_sdk import ErrorStore
 
 src_dir = str(Path(__file__).parent.parent.joinpath("src").absolute())
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
+
+
+@pytest.fixture(autouse=True)
+def empty_error_store():
+    """Give each test an empty ``ErrorStore``: it is shared by the whole process."""
+    ErrorStore().clear()
+    yield ErrorStore()
+    ErrorStore().clear()
 
 
 def _secret(value):
