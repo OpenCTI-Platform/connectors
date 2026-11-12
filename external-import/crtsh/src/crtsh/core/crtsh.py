@@ -67,12 +67,13 @@ class CrtSHClient:
 
     def process_certificate(self, item, stix_objects):
         """Return a STIX X509Certificate object."""
-        x509_v3_extensions = None
-        if hasattr(item, "name_value") and item.get("name_value"):
-            x509_v3_extensions = stix2.X509V3ExtensionsType(
-                subject_alternative_name=item.get("name_value"),
-            )
         try:
+            # item is a dict, so check its keys: hasattr() is always False here
+            x509_v3_extensions = None
+            if item.get("name_value"):
+                x509_v3_extensions = stix2.X509V3ExtensionsType(
+                    subject_alternative_name=item.get("name_value"),
+                )
             cert = stix2.X509Certificate(
                 type="x509-certificate",
                 issuer=item.get("issuer_name"),
@@ -142,10 +143,13 @@ class CrtSHClient:
                     try:
                         if email_validator(name):
                             stix_obj = self.process_email_address(name)
-                            stix_objects.append(stix_obj)
                         else:
                             stix_obj = self.process_domain_name(name)
-                            stix_objects.append(stix_obj)
+                        # Names that are neither an email nor a domain (e.g. an
+                        # organization name) give None, which must not be sent
+                        if stix_obj is None:
+                            continue
+                        stix_objects.append(stix_obj)
                         if hasattr(stix_obj, "id"):
                             relationship = self.stix_relationship(
                                 certificate_id, stix_obj.id
@@ -192,13 +196,26 @@ class CrtSHClient:
             raise ValueError(f"Failed to process name_value ({email}): {e}")
 
     def process_common_name(self, item, stix_objects, certificate_id):
-        """Return a STIX DomainName object."""
-        if hasattr(item, "common_name"):
-            domain = self.process_domain_name(item.get("common_name"))
-            relationship = self.stix_relationship(certificate_id, domain.id)
-            if relationship:
-                stix_objects.append(relationship)
-            stix_objects.append(domain)
+        """Add the common name as a STIX DomainName related to the certificate.
+
+        Common names are not always domain names (e.g. "Example Corp Root CA"),
+        so they are skipped when they are not a valid domain.
+        """
+        if not isinstance(item, dict) or not isinstance(stix_objects, list):
+            return
+        if not isinstance(item.get("common_name"), str) or not item["common_name"]:
+            return
+        if not is_valid_stix_id(certificate_id):
+            return
+        common_name = item["common_name"]
+        domain = self.process_domain_name(common_name)
+        if domain is None:
+            LOGGER.debug("Common name is not a domain name, skipping: %s", common_name)
+            return
+        stix_objects.append(domain)
+        relationship = self.stix_relationship(certificate_id, domain.id)
+        if relationship:
+            stix_objects.append(relationship)
 
     def stix_relationship(self, source_ref, target_ref):
         """Return a STIX Relationship object."""
