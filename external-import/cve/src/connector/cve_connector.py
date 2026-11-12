@@ -2,6 +2,7 @@ import asyncio
 import sys
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Literal
 
 from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
@@ -39,10 +40,14 @@ class CVEConnector:
                 self.process_data()
                 time.sleep(60)
 
-    def update_connector_state(self, current_time: int) -> None:
+    def update_connector_state(
+        self, current_time: int, extra_state: dict | None = None
+    ) -> None:
         """
         Update the connector state
         :param current_time: Time in int
+        :param extra_state: additional keys to persist with last_run, such as the
+            history_done marker that stops the history import from running again
         """
         last_run_dt = datetime.fromtimestamp(current_time, tz=timezone.utc).strftime(
             "%Y-%m-%d %H:%M:%S"
@@ -53,7 +58,10 @@ class CVEConnector:
         self.helper.connector_logger.info(msg)
         if self.converter.work_id is not None:
             self.helper.api.work.to_processed(self.converter.work_id, msg)
-        self.helper.set_state({"last_run": current_time})
+        state = {"last_run": current_time}
+        if extra_state:
+            state.update(extra_state)
+        self.helper.set_state(state)
 
         interval_in_hours = round(self.interval / 60 / 60, 2)
         self.helper.connector_logger.info(
@@ -96,75 +104,87 @@ class CVEConnector:
 
         asyncio.run(self._async_ingest(cve_params))
 
-    def _import_history(self, start_date: datetime, end_date: datetime) -> None:
+    def _import_history(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        last_run_ts: int | None = None,
+    ) -> None:
         """
         Import CVEs history if pull_history config is True
-        :param start_date: Start date in datetime
-        :param end_date: End date in datetime
+        :param start_date: Start date in datetime (inclusive)
+        :param end_date: End date in datetime (inclusive)
+        :param last_run_ts: checkpoint to persist alongside the resume cursor, so
+            the incremental pass after the import also covers the period spent
+            importing rather than only what follows the final window
         """
+        if end_date < start_date:
+            msg = (
+                "[CONNECTOR] Invalid history range: start "
+                f"{start_date:%Y-%m-%d %H:%M:%S} is after end "
+                f"{end_date:%Y-%m-%d %H:%M:%S}; nothing to import"
+            )
+            self.helper.connector_logger.warning(msg)
+            return
+
         years = range(start_date.year, end_date.year + 1)
-        start, end = start_date, end_date + timedelta(1)
+        one_second = timedelta(seconds=1)
 
         for year in years:
             year_start = datetime(year, 1, 1, 0, 0, tzinfo=timezone.utc)
-            year_end = datetime(year + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+            # Both NVD bounds are inclusive, so the last second of the year is
+            # 23:59:59 - not the next midnight, which would leak a row into two
+            # windows.
+            year_limit = min(
+                end_date,
+                datetime(year + 1, 1, 1, 0, 0, tzinfo=timezone.utc) - one_second,
+            )
 
-            date_range = min(end, year_end) - max(start, year_start)
-            days_in_year = date_range.days
+            # Honour the requested start date inside the first year, not January 1
+            cursor = max(start_date, year_start)
+            if cursor > year_limit:
+                continue
 
-            # If the year is the current year, get all days from start year to now
-            if year == end_date.year:
-                date_range = end_date - year_start
-                days_in_year = date_range.days
-
-            start_date_current_year = year_start
-
-            while days_in_year > 0:
-                end_date_current_year = start_date_current_year + timedelta(
-                    days=MAX_AUTHORIZED
+            while cursor <= year_limit:
+                # Step back one second from the next window's start so adjacent
+                # requests are disjoint: an instant sitting on the boundary would
+                # otherwise be returned twice and queued as a duplicate bundle.
+                # The final window ends on the requested timestamp, not on a
+                # midnight, so a run ending mid-day still covers that day.
+                window_end = min(
+                    cursor + timedelta(days=MAX_AUTHORIZED) - one_second, year_limit
                 )
+                if window_end < cursor:
+                    # MAX_AUTHORIZED <= 0 would otherwise spin forever on the
+                    # same cursor instead of failing.
+                    raise ValueError(
+                        f"MAX_AUTHORIZED={MAX_AUTHORIZED} does not advance the "
+                        f"window at {cursor}"
+                    )
                 info_msg = (
-                    f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
-                    f"{days_in_year} days left"
+                    f"[CONNECTOR] Connector retrieve CVE history: "
+                    f"{cursor:%Y-%m-%d %H:%M:%S} -> {window_end:%Y-%m-%d %H:%M:%S}"
                 )
                 self.helper.connector_logger.info(info_msg)
 
-                """
-                If retrieve history for this year and days_in_year left are less than 120 days
-                Retrieve CVEs from the rest of days
-                """
-                if year == end_date.year and days_in_year < MAX_AUTHORIZED:
-                    end_date_current_year = start_date_current_year + timedelta(
-                        days=days_in_year
-                    )
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
+                cve_params = self._update_cve_params(
+                    cursor, window_end, date_field="pub"
+                )
+                asyncio.run(self._async_ingest(cve_params))
 
-                    asyncio.run(self._async_ingest(cve_params))
-                    days_in_year = 0
-
-                """
-                Retrieving for each year MAX_AUTHORIZED = 120 days
-                1 year % 120 days => 5 or 6 (depends if it is a leap year or not)
-                """
-                if days_in_year > 6:
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
-
-                    asyncio.run(self._async_ingest(cve_params))
-                    start_date_current_year += timedelta(days=MAX_AUTHORIZED)
-                    days_in_year -= MAX_AUTHORIZED
-                else:
-                    end_date_current_year = start_date_current_year + timedelta(
-                        days=days_in_year
-                    )
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
-                    asyncio.run(self._async_ingest(cve_params))
-                    days_in_year = 0
+                # Persist progress after every window. If the run dies mid-import
+                # (NVD error, DNS failure, pod restart) the next one resumes at
+                # the first instant that was not imported instead of re-walking
+                # the years that already landed. A production run lost four
+                # months of 2018 to this and left no record of where it stopped.
+                # last_run is preserved in the same write: set_state replaces the
+                # whole state dict, so without it an interrupted import would
+                # erase the checkpoint the incremental path needs.
+                cursor = window_end + one_second
+                new_state = {"history_cursor": cursor.strftime("%Y-%m-%dT%H:%M:%SZ")}
+                if last_run_ts is not None:
+                    new_state["last_run"] = last_run_ts
+                self.helper.set_state(new_state)
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
             self.helper.connector_logger.info(info_msg)
@@ -182,6 +202,9 @@ class CVEConnector:
         start_date = datetime.fromtimestamp(last_run, tz=timezone.utc)
         max_date_range = timedelta(days=MAX_AUTHORIZED)
 
+        # Windows here share a boundary with the next one, unlike the history
+        # path: an overlapping lastMod row is merely re-upserted, while an
+        # overlapping pub row would re-run CPE resolution for the same CVE.
         # The NVD API rejects any date range longer than MAX_AUTHORIZED days,
         # so split the last_run-to-now range into consecutive windows of at
         # most MAX_AUTHORIZED days each.
@@ -211,37 +234,89 @@ class CVEConnector:
         return str(err)
 
     @staticmethod
-    def _update_cve_params(start_date: datetime, end_date: datetime) -> dict:
+    def _parse_history_bound(value: str) -> datetime:
+        """Parse a configured history bound as an absolute UTC instant.
+
+        `replace(tzinfo=utc)` relabels an offset-bearing timestamp instead of
+        converting it: "2026-03-01T00:00:00+05:00" is 2026-02-28T19:00Z, not
+        midnight UTC, and treating it as midnight would import past the bound.
+        """
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    @staticmethod
+    def _update_cve_params(
+        start_date: datetime,
+        end_date: datetime,
+        date_field: Literal["lastMod", "pub"] = "lastMod",
+    ) -> dict:
         """
         Update CVE params to handle date range
         :param start_date: Start date in datetime
         :param end_date: End date in datetime
+        :param date_field: which NVD date dimension to query. "lastMod" is the
+            incremental one and is correct for scheduled runs. "pub" must be used
+            for historical imports: the modification index does not retain
+            history, so a lastMod-based history import silently returns nothing.
         :return: Dict of CVE params
         """
+        if date_field not in ("lastMod", "pub"):
+            # Coercing an unknown value to lastMod is exactly the silent-empty-
+            # history failure this change exists to fix, so refuse it loudly.
+            raise ValueError(
+                f"date_field must be 'lastMod' or 'pub', got {date_field!r}"
+            )
+        prefix = date_field
+        if prefix == "pub":
+            # NVD accepts ISO-8601 instants only - there are no comparison
+            # operators (<, >=) or range syntax on its date parameters, and a
+            # second-precision bound is read as exactly .000. A half-open window
+            # [start, end) is therefore expressed as start == .000 and end ==
+            # .999 of the last included second, which is end - 1ms at the API's
+            # resolution. Without the .999 the window loses every publication in
+            # the fractional part of its final second, because the next window
+            # starts on the following second and claims none of it either.
+            return {
+                "pubStartDate": CVEConnector._format_bound(start_date, 0),
+                "pubEndDate": CVEConnector._format_bound(end_date, 999),
+            }
         return {
-            "lastModStartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "lastModEndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            f"{prefix}StartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            f"{prefix}EndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+
+    @staticmethod
+    def _format_bound(value: datetime, millisecond: int) -> str:
+        """Render an NVD instant at millisecond precision.
+
+        NVD's date parameters take ISO-8601 instants only: no <, >=, or range
+        syntax. Half-open intervals are encoded with .999 on the closing bound.
+        """
+        return value.strftime("%Y-%m-%dT%H:%M:%S.") + f"{millisecond:03d}Z"
 
     def process_data(self) -> None:
         try:
             """
             Get the current state and check if connector already runs
             """
-            now = datetime.now(tz=timezone.utc)
+            now = datetime.now(tz=timezone.utc).replace(microsecond=0)
             current_time = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
+            state = current_state or {}
+            last_run = state.get("last_run")
+            history_cursor = state.get("history_cursor")
+            history_done = bool(state.get("history_done"))
 
+            if last_run is not None:
                 last_run_dt = datetime.fromtimestamp(
                     last_run, tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 msg = f"[CONNECTOR] Connector last run: {last_run_dt}"
                 self.helper.connector_logger.info(msg)
             else:
-                last_run = None
                 msg = "[CONNECTOR] Connector has never run..."
                 self.helper.connector_logger.info(msg)
 
@@ -253,26 +328,124 @@ class CVEConnector:
 
             """
             ================================================================
-            If the connector never runs, import the most recent CVEs
-            from the last max_date_range (can be configured) to now
+            History takes precedence over the incremental run. It is pending
+            when a previous run was interrupted (a cursor is stored), when the
+            connector has never run, or when pull_history was enabled on a
+            connector that has already been running. That last case is why
+            turning pull_history on for an existing deployment imported nothing:
+            the history branch was only reachable while last_run was absent.
             ================================================================
             """
-            if last_run is None:
-                """
-                =================================================================
-                If the connector never runs and user wants to pull CVE history
-                =================================================================
-                """
-                if self.config.cve.pull_history:
-                    start_date = datetime(
-                        self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
-                    )
-                    end_date = now
-                    self._import_history(start_date, end_date)
-                else:
-                    self._import_recent(now)
+            # set_state REPLACES the whole state dict, so every branch that writes
+            # it has to carry the history keys explicitly. Dropping history_done
+            # re-runs a finished import on the next tick; dropping the cursor
+            # restarts an interrupted one from history_start_year.
+            retained = {}
+            if history_cursor and not history_done:
+                retained["history_cursor"] = history_cursor
+            if history_done:
+                retained["history_done"] = True
 
-                self.update_connector_state(current_time)
+            if history_cursor and not self.config.cve.pull_history:
+                msg = (
+                    "[CONNECTOR] History import is paused (CVE_PULL_HISTORY=false); "
+                    f"keeping cursor {history_cursor} so it resumes when re-enabled"
+                )
+                self.helper.connector_logger.warning(msg)
+
+            wants_history = self.config.cve.pull_history and (
+                bool(history_cursor) or not history_done
+            )
+
+            if wants_history and self.config.cve.history_start_year > now.year:
+                # A typo must neither become sticky state nor re-import the recent
+                # window on every 60-second tick: leave history pending and let the
+                # interval-gated run handle the connector until it is corrected.
+                msg = (
+                    f"[CONNECTOR] history_start_year "
+                    f"{self.config.cve.history_start_year} is in the future (now is "
+                    f"{now.year}); skipping the history import until it is corrected"
+                )
+                self.helper.connector_logger.error(msg)
+                wants_history = False
+
+            if wants_history:
+                start_date = datetime(
+                    self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
+                )
+
+                if history_cursor:
+                    try:
+                        resume_from = self._parse_history_bound(history_cursor)
+                    except (TypeError, ValueError):
+                        # Unparseable state must self-heal, not wedge the connector
+                        # into importing nothing forever.
+                        msg = (
+                            "[CONNECTOR] Stored history cursor "
+                            f"{history_cursor!r} cannot be parsed; restarting the "
+                            "history import from history_start_year"
+                        )
+                        self.helper.connector_logger.error(msg)
+                        resume_from = None
+
+                    if resume_from is not None:
+                        ahead = resume_from - now
+                        if ahead > timedelta(minutes=5):
+                            # Implausible state. Treat it like corrupt state rather
+                            # than clamping it, which would declare the history
+                            # complete without importing anything.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor} is more than 5 minutes in the "
+                                "future; "
+                                "restarting the history import from "
+                                "history_start_year"
+                            )
+                            self.helper.connector_logger.error(msg)
+                            resume_from = None
+                        elif ahead > timedelta(0) and self.config.cve.maintain_data:
+                            # Clock skew, and the incremental pass will re-cover the
+                            # skipped seconds from last_run, so clamp rather than
+                            # re-crawling the corpus.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor} is ahead of the clock; clamping "
+                                "it to now (the incremental pass covers the gap)"
+                            )
+                            self.helper.connector_logger.warning(msg)
+                            resume_from = now
+                        elif ahead > timedelta(0):
+                            # Same skew, but maintain_data is off: nothing would ever
+                            # fetch the skipped interval, so restart instead of
+                            # declaring the history complete.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor} is ahead of the clock and "
+                                "maintain_data is disabled; restarting the history "
+                                "import from history_start_year"
+                            )
+                            self.helper.connector_logger.warning(msg)
+                            resume_from = None
+                        if resume_from is not None:
+                            start_date = max(start_date, resume_from)
+
+                # Keep the oldest checkpoint so the incremental pass after the
+                # import also re-covers the period spent importing.
+                completion_ts = (
+                    min(last_run, current_time)
+                    if last_run is not None
+                    else current_time
+                )
+
+                if start_date >= now:
+                    msg = (
+                        "[CONNECTOR] History is already complete up to "
+                        f"{now:%Y-%m-%d %H:%M:%S} UTC"
+                    )
+                    self.helper.connector_logger.info(msg)
+                else:
+                    self._import_history(start_date, now, last_run_ts=completion_ts)
+                self.update_connector_state(completion_ts, {"history_done": True})
 
                 """
                 ===================================================================
@@ -280,13 +453,15 @@ class CVEConnector:
                 If the connector runs, and last run is more than current interval
                 ===================================================================
                 """
-            elif (
-                last_run is not None
-                and self.config.cve.maintain_data
-                and (current_time - last_run) >= int(self.interval)
+            elif last_run is None:
+                self._import_recent(now)
+                self.update_connector_state(current_time, retained or None)
+
+            elif self.config.cve.maintain_data and (current_time - last_run) >= int(
+                self.interval
             ):
                 self._maintain_data(now, last_run)
-                self.update_connector_state(current_time)
+                self.update_connector_state(current_time, retained or None)
 
             else:
                 new_interval = self.interval - (current_time - last_run)

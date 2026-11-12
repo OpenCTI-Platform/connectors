@@ -78,6 +78,44 @@ There are a number of configuration options, which are set either in `docker-com
 | CPE Max Concurrency | cve.cpe_max_concurrency | `CVE_CPE_MAX_CONCURRENCY` | 10                                         | No        | Maximum number of concurrent CPE resolution tasks when `import_software=true`. |
 | CVE Max Concurrency | cve.cve_max_concurrency | `CVE_CVE_MAX_CONCURRENCY` | 50                                         | No        | Maximum number of concurrent CVE processing workers. This bounds pending tasks and bundle sends during large imports. |
 
+### History import (`pull_history`)
+
+With `pull_history=true` the connector walks from `history_start_year` to now, paging NVD by
+**publication date** in windows of at most 120 days (the NVD API limit; `max_date_range` only
+governs the recent window). It keeps its position in the connector state, so the import is
+resumable:
+
+| state key | meaning |
+|---|---|
+| `last_run` | normal operation: the scheduled incremental run continues from here |
+| `history_cursor` | a history import is in progress; the next run resumes at this instant |
+| `history_done` | the history import completed once and will not run again |
+
+The cursor is written after every completed window, so an interrupted run (NVD error, network
+failure, restart) continues at the first instant that was not imported. A window that was in flight
+when the run died is fetched again in full — harmless, because objects are upserted. Enabling
+`pull_history` on a connector that has already run therefore starts the history import; it does not
+require a fresh connector. Setting `pull_history=false` stops an import in progress and keeps the
+cursor, so re-enabling it resumes instead of restarting.
+
+Because the import can run for a long time, `last_run` is kept at the **older** of the two
+checkpoints when it finishes: the first incremental pass afterwards re-covers the whole period spent
+importing, so modifications made to already-imported CVEs during the backfill are not missed. The
+same pair is written if the run is interrupted.
+
+NVD `Rejected` records carry no CVSS metrics and are dropped by design; the filter log reports how
+many records were kept out of the total and how many were skipped.
+
+To re-run a completed import, clear the connector state (remove `history_done`, and `history_cursor`
+if present). Re-enabling `pull_history` after it has completed does nothing on its own.
+
+Bad state is recovered rather than retried forever: a `history_cursor` that cannot be parsed, or that
+is more than five minutes ahead of the clock, is discarded and the import restarts from
+`history_start_year`. A `history_start_year` in the future skips the history import — leaving it
+pending, so correcting the value resumes it — while the scheduled incremental run continues
+normally.
+
+
 ## Deployment
 
 ### Docker Deployment
