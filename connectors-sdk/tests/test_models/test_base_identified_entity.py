@@ -350,7 +350,7 @@ def test_merge_stix2_properties_without_extension(implemented_base_identified_en
         pytest.param(
             {"extensions": {STIX_EXT_OCTI: {"score": 1}}},
             {"extensions": {STIX_EXT_OCTI: {"score": 2}}},
-            "'score' of .* different values",
+            "'score' is given twice with different values",
             id="extension_conflict",
         ),
     ],
