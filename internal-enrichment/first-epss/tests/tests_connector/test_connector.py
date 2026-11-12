@@ -78,3 +78,24 @@ def test_process_message_should_raise_when_api_fails(connector, helper, message)
         connector.process_message(message)
 
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_process_message_should_not_reuse_tlp_of_previous_message(
+    connector, helper, message
+):
+    connector.api.get_epss_scores.return_value = []
+    helper.check_max_tlp.side_effect = lambda tlp, max_tlp: tlp != "TLP:RED"
+    red_message = {
+        **message,
+        "enrichment_entity": {
+            "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}]
+        },
+    }
+
+    with pytest.raises(ValueError, match="greater than MAX TLP"):
+        connector.process_message(red_message)
+
+    # A following vulnerability without any marking must not inherit TLP:RED
+    result = connector.process_message(message)
+
+    assert result == "[CONNECTOR] No information found"
