@@ -35,7 +35,12 @@ def _dt(*args) -> datetime:
 
 
 def _parse(value: str) -> datetime:
-    return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    """Parse an emitted bound, floored to whole seconds.
+
+    Window arithmetic is reasoned about in seconds; the millisecond end is pinned
+    separately by test_history_bounds_cover_the_fractional_part_of_each_boundary.
+    """
+    return datetime.fromisoformat(value).replace(microsecond=0)
 
 
 def _captured(connector, start, end):
@@ -514,6 +519,41 @@ def test_cursor_hours_ahead_is_bad_data_not_skew():
             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     )
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2016, 1, 1)
+
+
+def test_history_bounds_cover_the_fractional_part_of_each_boundary():
+    """NVD reads a second-precision bound as .000 and stamps carry milliseconds,
+    so a window ending at 23:59:59 and the next starting at 00:00:00 both miss a
+    CVE published at 23:59:59.153. Ends are rendered .999 to close that hole."""
+    connector = _bare_connector()
+    params = _captured(connector, _dt(2016, 1, 1), _dt(2016, 12, 31))
+
+    for single in params:
+        assert single["pubStartDate"].endswith(".000Z")
+        assert single["pubEndDate"].endswith(".999Z")
+
+    for previous, current in zip(params, params[1:]):
+        end = datetime.fromisoformat(previous["pubEndDate"])
+        start = datetime.fromisoformat(current["pubStartDate"])
+        assert start - end == timedelta(milliseconds=1)
+
+
+def test_future_cursor_restarts_when_incremental_is_disabled():
+    """With maintain_data off nothing re-covers the skipped interval, so clamping
+    would abandon it permanently."""
+    skewed = (datetime.now(timezone.utc) + timedelta(seconds=30)).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
+    connector = _processing_connector(
+        {"last_run": 1794392878, "history_cursor": skewed}
+    )
+    connector.config.cve.maintain_data = False
 
     with patch("time.sleep"):
         connector.process_data()

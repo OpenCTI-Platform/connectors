@@ -269,10 +269,32 @@ class CVEConnector:
                 f"date_field must be 'lastMod' or 'pub', got {date_field!r}"
             )
         prefix = date_field
+        if prefix == "pub":
+            # NVD accepts ISO-8601 instants only - there are no comparison
+            # operators (<, >=) or range syntax on its date parameters, and a
+            # second-precision bound is read as exactly .000. A half-open window
+            # [start, end) is therefore expressed as start == .000 and end ==
+            # .999 of the last included second, which is end - 1ms at the API's
+            # resolution. Without the .999 the window loses every publication in
+            # the fractional part of its final second, because the next window
+            # starts on the following second and claims none of it either.
+            return {
+                "pubStartDate": CVEConnector._format_bound(start_date, 0),
+                "pubEndDate": CVEConnector._format_bound(end_date, 999),
+            }
         return {
             f"{prefix}StartDate": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
             f"{prefix}EndDate": end_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
+
+    @staticmethod
+    def _format_bound(value: datetime, millisecond: int) -> str:
+        """Render an NVD instant at millisecond precision.
+
+        NVD's date parameters take ISO-8601 instants only: no <, >=, or range
+        syntax. Half-open intervals are encoded with .999 on the closing bound.
+        """
+        return value.strftime("%Y-%m-%dT%H:%M:%S.") + f"{millisecond:03d}Z"
 
     def process_data(self) -> None:
         try:
@@ -381,16 +403,29 @@ class CVEConnector:
                             )
                             self.helper.connector_logger.error(msg)
                             resume_from = None
-                        elif ahead > timedelta(0):
-                            # A few seconds of clock skew: everything up to now is
-                            # already imported, so clamp instead of re-crawling.
+                        elif ahead > timedelta(0) and self.config.cve.maintain_data:
+                            # Clock skew, and the incremental pass will re-cover the
+                            # skipped seconds from last_run, so clamp rather than
+                            # re-crawling the corpus.
                             msg = (
                                 "[CONNECTOR] Stored history cursor "
                                 f"{history_cursor} is ahead of the clock; clamping "
-                                "it to now"
+                                "it to now (the incremental pass covers the gap)"
                             )
                             self.helper.connector_logger.warning(msg)
                             resume_from = now
+                        elif ahead > timedelta(0):
+                            # Same skew, but maintain_data is off: nothing would ever
+                            # fetch the skipped interval, so restart instead of
+                            # declaring the history complete.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor} is ahead of the clock and "
+                                "maintain_data is disabled; restarting the history "
+                                "import from history_start_year"
+                            )
+                            self.helper.connector_logger.warning(msg)
+                            resume_from = None
                         if resume_from is not None:
                             start_date = max(start_date, resume_from)
 
