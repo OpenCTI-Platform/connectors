@@ -104,11 +104,19 @@ class CVEConnector:
 
         asyncio.run(self._async_ingest(cve_params))
 
-    def _import_history(self, start_date: datetime, end_date: datetime) -> None:
+    def _import_history(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        last_run_ts: int | None = None,
+    ) -> None:
         """
         Import CVEs history if pull_history config is True
-        :param start_date: Start date in datetime
-        :param end_date: End date in datetime
+        :param start_date: Start date in datetime (inclusive)
+        :param end_date: End date in datetime (inclusive)
+        :param last_run_ts: checkpoint to persist alongside the resume cursor, so
+            the incremental pass after the import also covers the period spent
+            importing rather than only what follows the final window
         """
         if end_date < start_date:
             msg = (
@@ -166,14 +174,17 @@ class CVEConnector:
 
                 # Persist progress after every window. If the run dies mid-import
                 # (NVD error, DNS failure, pod restart) the next one resumes at
-                # the last completed window instead of re-walking the years that
-                # already landed. A production run lost four months of 2018 to
-                # this and left no record of where it had stopped.
-                self.helper.set_state(
-                    {"history_cursor": window_end.strftime("%Y-%m-%dT%H:%M:%SZ")}
-                )
-
+                # the first instant that was not imported instead of re-walking
+                # the years that already landed. A production run lost four
+                # months of 2018 to this and left no record of where it stopped.
+                # last_run is preserved in the same write: set_state replaces the
+                # whole state dict, so without it an interrupted import would
+                # erase the checkpoint the incremental path needs.
                 cursor = window_end + one_second
+                new_state = {"history_cursor": cursor.strftime("%Y-%m-%dT%H:%M:%SZ")}
+                if last_run_ts is not None:
+                    new_state["last_run"] = last_run_ts
+                self.helper.set_state(new_state)
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
             self.helper.connector_logger.info(info_msg)
@@ -303,25 +314,78 @@ class CVEConnector:
             the history branch was only reachable while last_run was absent.
             ================================================================
             """
-            if history_cursor or (self.config.cve.pull_history and not history_done):
-                start_date = datetime(
-                    self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
+            # A pending cursor must survive while history is switched off, or
+            # re-enabling it would silently restart the import from the start
+            # year. set_state replaces the whole dict, so it has to be carried
+            # through the incremental state writes explicitly.
+            paused_history = None
+            if history_cursor and not self.config.cve.pull_history:
+                paused_history = {"history_cursor": history_cursor}
+                msg = (
+                    "[CONNECTOR] History import is paused (CVE_PULL_HISTORY=false); "
+                    f"keeping cursor {history_cursor} so it resumes when re-enabled"
                 )
-                # Resume after an interrupted run instead of starting over.
-                if history_cursor:
-                    resume_from = self._parse_history_bound(history_cursor)
-                    if resume_from > now:
-                        msg = (
-                            "[CONNECTOR] Stored history cursor "
-                            f"{history_cursor} is in the future; restarting the "
-                            "history import from history_start_year"
-                        )
-                        self.helper.connector_logger.warning(msg)
-                        resume_from = start_date
-                    start_date = max(start_date, resume_from)
+                self.helper.connector_logger.warning(msg)
 
-                self._import_history(start_date, now)
-                self.update_connector_state(current_time, {"history_done": True})
+            if self.config.cve.pull_history and (history_cursor or not history_done):
+                start_year = self.config.cve.history_start_year
+                if start_year > now.year:
+                    # A typo here must not become sticky state: fall back to the
+                    # recent window and leave history_done unset so the next run
+                    # retries once the configuration is corrected.
+                    msg = (
+                        f"[CONNECTOR] history_start_year {start_year} is in the "
+                        f"future (now is {now.year}); importing the recent window "
+                        "instead and leaving the history import pending"
+                    )
+                    self.helper.connector_logger.error(msg)
+                    self._import_recent(now)
+                    self.update_connector_state(current_time)
+                else:
+                    start_date = datetime(start_year, 1, 1, tzinfo=timezone.utc)
+                    if history_cursor:
+                        try:
+                            resume_from = self._parse_history_bound(history_cursor)
+                        except (TypeError, ValueError):
+                            # Unparseable state must self-heal, not wedge the
+                            # connector into re-importing nothing forever.
+                            msg = (
+                                "[CONNECTOR] Stored history cursor "
+                                f"{history_cursor!r} cannot be parsed; restarting "
+                                "the history import from history_start_year"
+                            )
+                            self.helper.connector_logger.error(msg)
+                            resume_from = None
+                        if resume_from is not None:
+                            if resume_from > now:
+                                # Everything up to now is already imported, so
+                                # clamp: restarting would re-crawl the corpus.
+                                msg = (
+                                    "[CONNECTOR] Stored history cursor "
+                                    f"{history_cursor} is ahead of the clock; "
+                                    "clamping it to now"
+                                )
+                                self.helper.connector_logger.warning(msg)
+                                resume_from = now
+                            start_date = max(start_date, resume_from)
+
+                    # Keep the oldest checkpoint so the incremental pass after
+                    # the import also re-covers the period spent importing.
+                    completion_ts = (
+                        min(last_run, current_time)
+                        if last_run is not None
+                        else current_time
+                    )
+
+                    if start_date >= now:
+                        msg = (
+                            "[CONNECTOR] History is already complete up to "
+                            f"{now:%Y-%m-%d %H:%M:%S} UTC"
+                        )
+                        self.helper.connector_logger.info(msg)
+                    else:
+                        self._import_history(start_date, now, last_run_ts=completion_ts)
+                    self.update_connector_state(completion_ts, {"history_done": True})
 
                 """
                 ===================================================================
@@ -331,13 +395,13 @@ class CVEConnector:
                 """
             elif last_run is None:
                 self._import_recent(now)
-                self.update_connector_state(current_time)
+                self.update_connector_state(current_time, paused_history)
 
             elif self.config.cve.maintain_data and (current_time - last_run) >= int(
                 self.interval
             ):
                 self._maintain_data(now, last_run)
-                self.update_connector_state(current_time)
+                self.update_connector_state(current_time, paused_history)
 
             else:
                 new_interval = self.interval - (current_time - last_run)

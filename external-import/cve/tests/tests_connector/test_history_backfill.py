@@ -145,7 +145,12 @@ def test_history_persists_a_cursor_after_every_window():
         call.args[0]["history_cursor"]
         for call in connector.helper.set_state.call_args_list
     ]
-    assert cursors == [end.strftime("%Y-%m-%dT%H:%M:%SZ") for end in window_ends]
+    # the cursor is the first instant that was NOT imported, so a resume cannot
+    # re-query the boundary second
+    assert cursors == [
+        (end + timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for end in window_ends
+    ]
 
 
 def test_history_final_window_ends_on_the_actual_timestamp():
@@ -282,7 +287,9 @@ def test_history_rejects_an_inverted_range():
     assert _captured(connector, _dt(2027, 1, 1), _dt(2026, 1, 1)) == []
 
 
-def test_process_data_restarts_history_when_the_cursor_is_ahead_of_the_clock():
+def test_cursor_ahead_of_the_clock_is_clamped_not_restarted():
+    """Everything up to now is already imported, so re-crawling the corpus from
+    history_start_year would burn days of API quota for nothing."""
     connector = _processing_connector(
         {"last_run": 1794392878, "history_cursor": "2030-01-01T00:00:00Z"}
     )
@@ -290,8 +297,8 @@ def test_process_data_restarts_history_when_the_cursor_is_ahead_of_the_clock():
     with patch("time.sleep"):
         connector.process_data()
 
-    start, _ = connector._import_history.call_args.args
-    assert start == _dt(2016, 1, 1)
+    connector._import_history.assert_not_called()
+    assert connector.update_connector_state.call_args.args[1] == {"history_done": True}
 
 
 def test_unknown_date_field_is_rejected():
@@ -301,3 +308,114 @@ def test_unknown_date_field_is_rejected():
         CVEConnector._update_cve_params(
             _dt(2016, 1, 1), _dt(2016, 2, 1), date_field="publication"
         )
+
+
+# ------------------------------------------------- state recovery & checkpoints
+
+
+def test_unparseable_cursor_self_heals_instead_of_wedging():
+    """A corrupt state value used to raise into the generic handler, which only
+    logs: no history, no incremental, no last_run - the connector retried every
+    minute forever."""
+    connector = _processing_connector(
+        {"last_run": 1794392878, "history_cursor": "not-a-date"}
+    )
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2016, 1, 1)
+
+
+def test_numeric_cursor_self_heals():
+    connector = _processing_connector({"history_cursor": 12345})
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    start, _ = connector._import_history.call_args.args
+    assert start == _dt(2016, 1, 1)
+
+
+def test_future_history_start_year_does_not_become_sticky_state():
+    """A typo must stay recoverable: import the recent window, leave history
+    pending, and retry once the configuration is fixed."""
+    connector = _processing_connector({"last_run": 1794392878})
+    connector.config.cve.history_start_year = 2030
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    connector._import_history.assert_not_called()
+    connector._import_recent.assert_called_once()
+    assert connector.update_connector_state.call_args.args[1:] == ()
+
+
+def test_disabling_pull_history_stops_the_import_and_keeps_the_cursor():
+    """The config flag must be the operator's off switch for an expensive crawl."""
+    connector = _processing_connector(
+        {
+            "last_run": int(time.time()) - 10**6,
+            "history_cursor": "2018-05-01T00:00:00Z",
+        }
+    )
+    connector.config.cve.pull_history = False
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    connector._import_history.assert_not_called()
+    connector._maintain_data.assert_called_once()
+
+
+def test_interrupted_history_keeps_last_run_beside_the_cursor():
+    """set_state replaces the whole dict, so a bare cursor write would erase the
+    incremental checkpoint and silently skip every lastMod change before it."""
+    connector = _bare_connector()
+    calls = {"n": 0}
+
+    async def flaky(params):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise RuntimeError("NVD 503")
+
+    with patch.object(connector, "_async_ingest", new=flaky):
+        with pytest.raises(RuntimeError):
+            connector._import_history(
+                _dt(2016, 1, 1), _dt(2016, 12, 31), last_run_ts=1700000000
+            )
+
+    state = connector.helper.set_state.call_args.args[0]
+    assert state["last_run"] == 1700000000
+    assert state["history_cursor"].endswith("Z")
+
+
+def test_completion_stamps_the_oldest_checkpoint():
+    """The first incremental pass after a multi-day import must still cover the
+    period spent importing, so last_run is the earlier of the two checkpoints."""
+    connector = _processing_connector({"last_run": 1700000000})
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    assert connector.update_connector_state.call_args.args[0] == 1700000000
+
+
+def test_disabling_pull_history_keeps_the_cursor_for_a_later_resume():
+    """set_state replaces the dict, so unless the cursor is carried through the
+    incremental write, re-enabling pull_history restarts the whole import."""
+    connector = _processing_connector(
+        {
+            "last_run": int(time.time()) - 10**6,
+            "history_cursor": "2018-05-01T00:00:00Z",
+        }
+    )
+    connector.config.cve.pull_history = False
+
+    with patch("time.sleep"):
+        connector.process_data()
+
+    assert connector.update_connector_state.call_args.args[1] == {
+        "history_cursor": "2018-05-01T00:00:00Z"
+    }
