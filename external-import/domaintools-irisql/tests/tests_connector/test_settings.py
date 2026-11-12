@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -121,8 +122,8 @@ def test_settings_should_raise_when_invalid_input(settings_dict):
     assert "Error validating configuration" in str(err.value)
 
 
-def test_settings_should_default_connector_id():
-    """The connector id MUST fall back on its unique default UUID v4."""
+def test_settings_should_apply_defaults_when_optional_fields_are_omitted():
+    """Optional settings MUST fall back on their documented defaults."""
 
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
@@ -132,7 +133,6 @@ def test_settings_should_default_connector_id():
                     "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                     "connector": {},
                     "domaintools": {
-                        "api_base_url": "https://api.domaintools.com/v1/iris-investigate/",
                         "api_key": "test-api-key",
                         "iris_ql": "query",
                     },
@@ -143,4 +143,11 @@ def test_settings_should_default_connector_id():
 
     assert settings.connector.id == "b36f3005-427d-443b-bb34-e8534d0cf8a0"
     assert UUID(settings.connector.id).version == 4
+    assert settings.connector.name == "DomainToolsIrisQLConnector"
     assert settings.connector.scope == ["stix2"]
+    assert settings.connector.duration_period == timedelta(hours=1)
+    assert str(settings.domaintools.api_base_url) == (
+        "https://api.domaintools.com/v1/iris-investigate/"
+    )
+    assert settings.domaintools.store_iris_data is False
+    assert settings.domaintools.tlp_level == "clear"
