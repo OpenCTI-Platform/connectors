@@ -11,6 +11,12 @@ from pydantic import (
     WithJsonSchema,
 )
 
+# Tokens meaning "no item". Settings are loaded with `enable_decoding=False`, so quotes
+# typed in the catalog connector form or in a docker-compose list item (`- VAR=""`)
+# reach the parser literally: an empty pair of quotes is the only way to ask for an
+# empty list there.
+_EMPTY_QUOTED_TOKENS = frozenset({'""', "''"})
+
 
 def parse_comma_separated_list(value: str | list[str]) -> list[str]:
     """Coerce a comma-separated string into a list[str], trimming surrounding
@@ -25,16 +31,21 @@ def parse_comma_separated_list(value: str | list[str]) -> list[str]:
 
     Returns:
     - A list of strings. For string inputs, the string is split on commas, each
-      token is stripped of leading/trailing whitespace, and empty tokens are
-      discarded.
+      token is stripped of leading/trailing whitespace, and empty tokens or tokens
+      made of an empty pair of quotes (`""` or `''`) are discarded.
 
     Examples:
     - "a, b ,c" -> ["a", "b", "c"]
     - "a, ,c" -> ["a", "c"]
+    - '""' -> []
     - ["a", "b"] -> ["a", "b"]
     """
     if isinstance(value, str):
-        return [stripped for string in value.split(",") if (stripped := string.strip())]
+        return [
+            stripped
+            for string in value.split(",")
+            if (stripped := string.strip()) and stripped not in _EMPTY_QUOTED_TOKENS
+        ]
     return value
 
 
@@ -44,7 +55,8 @@ ListFromString = Annotated[
     """Annotated list[str] that:
 - Validates: Accepts a comma-separated string (e.g., "a,b,c") or a list[str].
   If a string is provided, it is split on commas, whitespace is trimmed for
-  each item, and empty items are discarded.
+  each item, and empty items are discarded. An empty pair of quotes (`""` or
+  `''`) counts as an empty item, so it gives an empty list.
 
 Components
 - BeforeValidator(parse_comma_separated_list): Converts input strings to list[str]
