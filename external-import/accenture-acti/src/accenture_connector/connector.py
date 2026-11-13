@@ -9,6 +9,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
 from botocore.exceptions import ClientError
+from connectors_sdk import (
+    ConnectorError,
+    DataConversionError,
+    DataNotFoundError,
+    ErrorStore,
+    UnknownError,
+)
 from html_to_markdown import convert_to_markdown
 from pycti import OpenCTIConnectorHelper
 
@@ -79,7 +86,11 @@ class ConnectorAccenture:
     def _process_base64_image(
         self, mime_type: str, base64_data: str
     ) -> Optional[Dict[str, Any]]:
-        """Convert base64 data to file object."""
+        """Convert base64 data to file object.
+
+        A failure is recorded in the ErrorStore as a DataConversionError, and the
+        image is skipped: None is returned.
+        """
         try:
             image_data = base64.b64decode(base64_data)
 
@@ -95,13 +106,18 @@ class ConnectorAccenture:
                 "embedded": True,
             }
         except Exception as e:
-            self.helper.connector_logger.warning(
-                f"[PROCESS] Failed to process base64 image: {e}"
-            )
+            error_msg = f"Failed to process base64 {mime_type} image: {e}"
+            ErrorStore().record_error(DataConversionError(error_msg))
+            self.helper.connector_logger.warning(f"[PROCESS] {error_msg}")
             return None
 
     def _download_image_from_s3(self, hash_value: str) -> Optional[Dict[str, Any]]:
-        """Download image from S3 bucket using hash value."""
+        """Download image from S3 bucket using hash value.
+
+        A DataNotFoundError is recorded in the ErrorStore for each S3 error other than
+        NoSuchKey (e.g. AccessDenied), and when no extension matches. The image is
+        then skipped: None is returned.
+        """
         for ext in IMAGE_EXTENSIONS:
             file_key = f"document-images/{hash_value}{ext}"
             try:
@@ -122,14 +138,14 @@ class ConnectorAccenture:
             except ClientError as e:
                 error_code = e.response["Error"]["Code"]
                 if error_code != "NoSuchKey":
-                    self.helper.connector_logger.warning(
-                        f"[S3] Error accessing {file_key}: {error_code}"
-                    )
+                    error_msg = f"Error accessing {file_key}: {error_code}"
+                    ErrorStore().record_error(DataNotFoundError(error_msg))
+                    self.helper.connector_logger.warning(f"[S3] {error_msg}")
                 continue
 
-        self.helper.connector_logger.warning(
-            f"[S3] Image not found in S3 for any extension. Hash: {hash_value}"
-        )
+        error_msg = f"Image not found in S3 for any extension. Hash: {hash_value}"
+        ErrorStore().record_error(DataNotFoundError(error_msg))
+        self.helper.connector_logger.warning(f"[S3] {error_msg}")
         return None
 
     def _process_description(
@@ -415,11 +431,31 @@ class ConnectorAccenture:
             self.helper.api.work.to_processed(work_id, message)
         return bundles_sent
 
-    def process_message(self) -> None:
+    @staticmethod
+    def _return_run_error_list(
+        run_error: Optional[ConnectorError] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return the errors of the run in the pycti format.
+
+        :param run_error: The error that stopped the run, if any
+        :return: The error that stopped the run, if any, then the errors recorded in
+            the ErrorStore (items skipped during the run)
+        """
+        errors = [run_error] if run_error is not None else []
+        errors.extend(ErrorStore().get_errors())
+        return [error.convert_to_pycti_format() for error in errors]
+
+    def process_message(self) -> List[Dict[str, Any]]:
         """
         Connector main process to collect intelligence
-        :return: None
+        :return: The errors of the run, in the pycti format, reported to OpenCTI
+            with the connector's ping: the error that stopped the run, if any, then
+            the items skipped during the run. Empty when nothing failed.
         """
+        # A run starts with an empty store: the errors of the previous run are not
+        # reported again
+        ErrorStore().clear()
+
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
@@ -508,6 +544,7 @@ class ConnectorAccenture:
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name} connector successfully run, storing last_run as {current_state_datetime}"
             )
+            return self._return_run_error_list()
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -515,10 +552,14 @@ class ConnectorAccenture:
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
-        except Exception as err:
+        except ConnectorError as connector_err:
             self.helper.connector_logger.error(
-                f"[ERROR] Connector failed: {err}", exc_info=True
+                f"[ERROR] Connector failed: {connector_err}"
             )
+            return self._return_run_error_list(connector_err)
+        except Exception as err:
+            self.helper.connector_logger.error(f"[ERROR] Connector failed: {err}")
+            return self._return_run_error_list(UnknownError(str(err)))
 
     def run(self) -> None:
         """
