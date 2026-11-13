@@ -49,9 +49,18 @@ class DummyEventThreatAdapter(EventThreatPort):
 class DummyClickEventAdapter(ClickEventPort):
     """Dummy click event adapter."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        sender_address: str = "sender@example.com",
+        recipients: Optional[list[str]] = None,
+    ):
         """Initialize the adapter."""
-        pass
+        self._sender_address = sender_address
+        self._recipients = (
+            ["recipient1@example.com", "recipient2@example.com"]
+            if recipients is None
+            else recipients
+        )
 
     @property
     def id(self) -> Optional[str]:
@@ -85,12 +94,12 @@ class DummyClickEventAdapter(ClickEventPort):
     @property
     def sender_address(self) -> str:
         """Get the message sender address."""
-        return "sender@example.com"
+        return self._sender_address
 
     @property
     def recipients(self) -> Optional[list[str]]:
         """Get the message recipients."""
-        return ["recipient1@example.com", "recipient2@example.com"]
+        return self._recipients
 
     @property
     def click_ip(self) -> str:
@@ -434,6 +443,27 @@ def test_incident_processor_can_prcoess_click_event():
     assert all(  # noqa: S101
         isinstance(entity.to_stix2_object(), _STIXBase21) for entity in entities
     )
+
+
+@pytest.mark.parametrize("invalid_value", _INVALID_ADDRESS_VALUES)
+def test_invalid_click_address_is_omitted(invalid_value: str):
+    """Omit invalid click sender and recipient addresses without failing the event."""
+    # Given a click event whose sender and one recipient are invalid
+    adapter = DummyClickEventAdapter(
+        sender_address=invalid_value,
+        recipients=[invalid_value, "recipient2@example.com"],
+    )
+    # When running the processor on the adapter
+    processor = IncidentProcessor(tlp_marking_name="white")
+    entities = processor.run_on_event(adapter)
+    # Then only the valid recipient is kept, with its incident relationship
+    assert (  # noqa: S101
+        len([entity for entity in entities if isinstance(entity, Incident)]) == 1
+    )
+    _assert_address_values_and_relationship_sources(
+        entities, ["recipient2@example.com"]
+    )
+    _assert_entities_serialize_without_dangling_references(entities)
 
 
 def test_incident_processor_can_prcoess_message_event():

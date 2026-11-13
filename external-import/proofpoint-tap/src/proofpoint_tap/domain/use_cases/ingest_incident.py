@@ -38,32 +38,9 @@ class IncidentProcessor(BaseUseCase):
         self, click_event: ClickEventPort
     ) -> list[EmailAddress]:
         """Make email addresses from event."""
-        sender = EmailAddress(
-            score=None,
-            description=None,
-            labels=None,
-            external_references=None,
-            markings=None,
-            author=self.author,
-            value=click_event.sender_address,
-            display_name=None,
+        return self._make_email_addresses(
+            [click_event.sender_address, *(click_event.recipients or [])]
         )
-
-        recipients = [
-            EmailAddress(
-                score=None,
-                description=None,
-                labels=None,
-                external_references=None,
-                markings=None,
-                author=self.author,
-                value=recipient,
-                display_name=None,
-            )
-            for recipient in (click_event.recipients or [])
-        ]
-
-        return [sender] + recipients
 
     def _make_email_address(self, value: Optional[str]) -> Optional[EmailAddress]:
         """Return an email address, or None when the value is empty or invalid.
