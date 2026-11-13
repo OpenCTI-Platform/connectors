@@ -310,20 +310,32 @@ class HashLookupMixin:
             return {}, "not_held"
 
         tasks: dict[str, str] = {}
+        errors: dict[str, PolySwarmAPIError] = {}
         for provider in missing:
             vm_slug = self._get_vm_for_provider(provider)
-            task_id = self.polyswarm_client.submit_sandbox_by_instance_async(
-                str(instance["id"]),
-                provider,
-                vm_slug,
-                self.config.polyswarm.sandbox_network_enabled,
-            )
+            try:
+                task_id = self.polyswarm_client.submit_sandbox_by_instance_async(
+                    str(instance["id"]),
+                    provider,
+                    vm_slug,
+                    self.config.polyswarm.sandbox_network_enabled,
+                )
+            except PolySwarmAPIError as e:
+                # Keep going: a task another provider already started is
+                # billed and must still be polled and delivered.
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Failed to start {provider} sandbox for the held "
+                    f"sample: {e.category}"
+                )
+                errors[provider] = e
+                continue
             if task_id:
                 tasks[provider] = task_id
             else:
                 self.helper.connector_logger.warning(
                     f"[CONNECTOR] Failed to start {provider} sandbox for the held sample"
                 )
+        self._settle_submit_errors(entity, tasks, errors)
         return tasks, "started" if tasks else "submit_failed"
 
     def _enrich_stixfile(

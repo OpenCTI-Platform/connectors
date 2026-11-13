@@ -1569,13 +1569,42 @@ class PolySwarmConnector(HashLookupMixin):
         self._send_error_note(entity, category, detail, recommendations)
         return {"status": "error", "error": error}
 
-    def _submit_url_sandboxes(self, url: str) -> dict[str, str]:
+    def _settle_submit_errors(
+        self,
+        entity: dict[str, Any],
+        started: dict[str, str],
+        errors: dict[str, PolySwarmAPIError],
+    ) -> None:
+        """Handle API errors from a per-provider submit loop.
+
+        When no provider started, the first error is raised so the caller's
+        API error note (quota, authentication ...) is attached. When another
+        provider did start, its task is kept: each failed provider gets its
+        own note and the enrichment goes on with the tasks that started.
+        """
+        if not errors:
+            return
+        if not started:
+            raise next(iter(errors.values()))
+        for provider, err in errors.items():
+            self._send_error_note(
+                entity,
+                err.category,
+                f"The {provider.upper()} sandbox was not started. The analysis on "
+                f"{', '.join(p.upper() for p in started)} continues.\n\n{err.detail}",
+                err.recommendations,
+            )
+
+    def _submit_url_sandboxes(self, url: str, entity: dict[str, Any]) -> dict[str, str]:
         """Submit a URL to each configured sandbox provider.
 
         Returns a dict mapping provider name to task ID for successful
-        submissions. Providers with no VM that accepts URLs are skipped.
+        submissions. Providers with no VM that accepts URLs are skipped. An
+        API error on one provider does not drop a task another provider
+        already started (see ``_settle_submit_errors``).
         """
         sandbox_tasks: dict[str, str] = {}
+        errors: dict[str, PolySwarmAPIError] = {}
         for provider in self._get_sandbox_providers():
             vm_slug = self.polyswarm_client.get_url_vm_for_provider(
                 provider, preferred=self.config.polyswarm.sandbox_vm
@@ -1585,15 +1614,23 @@ class PolySwarmConnector(HashLookupMixin):
                     f"[CONNECTOR] {provider} lists no VM that accepts URLs, skipped"
                 )
                 continue
-            task_id = self.polyswarm_client.submit_sandbox_url_async(
-                url, provider=provider, vm_slug=vm_slug
-            )
+            try:
+                task_id = self.polyswarm_client.submit_sandbox_url_async(
+                    url, provider=provider, vm_slug=vm_slug
+                )
+            except PolySwarmAPIError as e:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] URL submit to {provider} sandbox failed: {e.category}"
+                )
+                errors[provider] = e
+                continue
             if task_id:
                 sandbox_tasks[provider] = task_id
             else:
                 self.helper.connector_logger.warning(
                     f"[CONNECTOR] Failed to submit URL to {provider} sandbox"
                 )
+        self._settle_submit_errors(entity, sandbox_tasks, errors)
         return sandbox_tasks
 
     def _enrich_url(
@@ -1706,7 +1743,7 @@ class PolySwarmConnector(HashLookupMixin):
             # The sandbox task's sha256 is the SHA-256 of the submitted URL
             url_sha256 = hashlib.sha256(submit_url.encode("utf-8")).hexdigest()
 
-            sandbox_tasks = self._submit_url_sandboxes(submit_url)
+            sandbox_tasks = self._submit_url_sandboxes(submit_url, entity)
             if not sandbox_tasks:
                 providers = self._get_sandbox_providers()
                 self._send_error_note(

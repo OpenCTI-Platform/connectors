@@ -343,6 +343,53 @@ class TestUrlSubmission:
             "cape", preferred="windows11-21h2-x64"
         )
 
+    def test_second_provider_error_keeps_first_task(self):
+        """A failure on Triage must not drop the CAPE task already started."""
+        c = _url_connector(sandbox_provider="both")
+        quota = PolySwarmAPIError(
+            f"{PolySwarmAPIError.QUOTA_CATEGORY} (URL sandbox submit (triage))",
+            "quota detail",
+        )
+        c.polyswarm_client.submit_sandbox_url_async = MagicMock(
+            side_effect=lambda url, provider, vm_slug: (
+                "task-cape" if provider == "cape" else (_ for _ in ()).throw(quota)
+            )
+        )
+        c._phase_poll_sandboxes = MagicMock(return_value={"cape": None})
+        assert self._run(c) is None
+        assert c._phase_poll_sandboxes.call_args.args[1] == {"cape": "task-cape"}
+        categories = [
+            call.kwargs["error_category"]
+            for call in c.stix_builder.create_error_note.call_args_list
+        ]
+        assert categories[0] == quota.category
+        detail = c.stix_builder.create_error_note.call_args_list[0].kwargs[
+            "error_detail"
+        ]
+        assert "TRIAGE sandbox was not started" in detail
+        assert "quota detail" in detail
+
+    def test_first_provider_error_keeps_second_task(self):
+        c = _url_connector(sandbox_provider="both")
+        err = PolySwarmAPIError("API Access Denied (URL sandbox submit (cape))", "x")
+        c.polyswarm_client.submit_sandbox_url_async = MagicMock(
+            side_effect=[err, "task-triage"]
+        )
+        c._phase_poll_sandboxes = MagicMock(return_value={"triage": None})
+        assert self._run(c) is None
+        assert c._phase_poll_sandboxes.call_args.args[1] == {"triage": "task-triage"}
+
+    def test_all_providers_error_raises_first_error(self):
+        c = _url_connector(sandbox_provider="both")
+        first = PolySwarmAPIError(f"{PolySwarmAPIError.QUOTA_CATEGORY} (cape)", "x")
+        second = PolySwarmAPIError(f"{PolySwarmAPIError.QUOTA_CATEGORY} (triage)", "y")
+        c.polyswarm_client.submit_sandbox_url_async = MagicMock(
+            side_effect=[first, second]
+        )
+        with pytest.raises(PolySwarmAPIError) as excinfo:
+            self._run(c)
+        assert excinfo.value is first
+
     def test_polls_with_file_timeouts(self):
         c = _url_connector(poll_interval=7, sandbox_timeout=123)
         c._phase_poll_sandboxes = MagicMock(return_value={"cape": None})

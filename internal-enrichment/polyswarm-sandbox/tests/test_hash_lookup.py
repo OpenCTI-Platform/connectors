@@ -511,6 +511,39 @@ class TestDetonateByHash:
         assert _run(c) is None
         assert any("Triage Sandbox Analysis" in n["abstract"] for n in _notes(c))
 
+    def test_second_provider_error_keeps_first_task(self):
+        c = _connector(
+            latest={}, sandbox_provider="both", sandbox_detonate_by_hash=True
+        )
+        quota = PolySwarmAPIError(
+            f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox by hash (triage))", "q"
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=["task-cape", quota]
+        )
+        c._phase_poll_sandboxes = MagicMock(
+            return_value={"cape": _task(id="task-cape")}
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        assert c._phase_poll_sandboxes.call_args.args[1] == {"cape": "task-cape"}
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            quota.category
+        ]
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_all_providers_error_raises(self):
+        c = _connector(
+            latest={}, sandbox_provider="both", sandbox_detonate_by_hash=True
+        )
+        first = PolySwarmAPIError(f"{PolySwarmAPIError.QUOTA_CATEGORY} (cape)", "q")
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=[first, PolySwarmAPIError("API Access Denied", "x")]
+        )
+        with pytest.raises(PolySwarmAPIError) as excinfo:
+            _run(c)
+        assert excinfo.value is first
+
     def test_failed_detonation_gives_failure_note(self):
         c = _connector(latest={}, sandbox_detonate_by_hash=True)
         c.polyswarm_client.get_sandbox_results = MagicMock(
