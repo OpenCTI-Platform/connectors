@@ -28,7 +28,8 @@ Categories handled:
     hunt_*           with --anonymize-hunt: live-hunt hit ids, instance ids,
                      ruleset ids and rule names are replaced with stable
                      synthetic values (rule names can reveal what an account
-                     is monitoring)
+                     is monitoring), and the YARA source is replaced with a
+                     placeholder rule under the synthetic name
 
 Anything else that looks sensitive (long high entropy tokens outside hash
 fields, URLs with query strings, IPv4 addresses, unexpected long digit runs)
@@ -222,6 +223,15 @@ class Scrubber:
                 self._hunt_rules[rule] = f"example_rule_{len(self._hunt_rules) + 1}"
                 self.counts["hunt_rule_name"] += 1
             hit["rule_name"] = self._hunt_rules[rule]
+        # The YARA source names the rule and holds the strings it looks for,
+        # so it reveals as much as the rule name does.
+        yara = hit.get("yara")
+        if isinstance(yara, str) and yara:
+            name = hit.get("rule_name")
+            if not (isinstance(name, str) and name):
+                name = "example_rule"
+            hit["yara"] = f"rule {name} {{ condition: true }}"
+            self.counts["hunt_yara"] += 1
         return hit
 
     def scrub(self, value, field=None):

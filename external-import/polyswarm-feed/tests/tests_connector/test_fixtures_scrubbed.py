@@ -318,6 +318,32 @@ def test_anonymize_hunt_page():
     assert first["sha256"] == hit["sha256"]
 
 
+def test_anonymize_hunt_replaces_the_yara_source():
+    s = scrub.Scrubber(anonymize_hunt=True)
+    hit = {
+        "id": "11111111111111111",
+        "livescan_id": "33333333333333333",
+        "rule_name": "acme_secret",
+        "yara": 'rule acme_secret { strings: $a = "internal" condition: $a }',
+        "sha256": "0" * 64,
+    }
+    out = s.scrub({"result": [hit, dict(hit, id="44444444444444444", yara=None)]})
+    first, second = out["result"]
+    text = json.dumps(out)
+    assert "acme_secret" not in text
+    assert "internal" not in text
+    assert first["yara"] == "rule example_rule_1 { condition: true }"
+    assert second["yara"] is None
+    assert s.counts["hunt_yara"] == 1
+
+
+def test_yara_source_is_kept_without_anonymize():
+    yara = 'rule acme_secret { strings: $a = "internal" condition: $a }'
+    hit = {"id": "1", "livescan_id": "3", "rule_name": "acme_secret", "yara": yara}
+    out = scrub.Scrubber().scrub({"result": [hit]})
+    assert out["result"][0]["yara"] == yara
+
+
 def test_hashes_are_untouched(scrubber):
     stix = {
         "type": "file",

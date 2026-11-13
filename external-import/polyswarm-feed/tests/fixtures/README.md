@@ -56,6 +56,8 @@ an empty body.
 4. Live hunt `id`, `instance_id` and `livescan_id` values are replaced with
    synthetic numbers of the same length, and rule names with
    `example_rule_<n>`, since rule names can reveal what an account monitors.
+   A non-empty `yara` source is replaced with a placeholder rule under the
+   synthetic name, for the same reason.
 
 ## Notes for tests
 
