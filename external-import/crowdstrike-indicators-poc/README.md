@@ -140,8 +140,9 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   every indicator of that second again. This is harmless downstream, because
   the same indicator gets the same ID. If one second holds more indicators
   than `--max`, resuming returns the same rows every time and never moves
-  forward. A finer cursor (the full `_marker`) will be needed before
-  extraction runs in a loop.
+  forward. Keep `--max` well above the largest same-second burst: a month of
+  real data peaked at 445 indicators in one second, so a `--max` above 10000
+  always moves forward.
 - **The model is inferred, not verified.** Fields come from FalconPy's filter
   documentation and from the existing CrowdStrike connector. It is
   deliberately lenient. Use `--dump-raw` to see the real shape.
