@@ -19,7 +19,8 @@ contracts that do not depend on OpenCTI:
    - the whole turned into a standard STIX 2.1 bundle, ready for a STIX
      consumer;
 3. a loader: each STIX bundle delivered to a destination, for now a JSON file
-   per bundle.
+   per bundle;
+4. a generic connector assembling the three, running them on a schedule.
 
 ## Layout
 
@@ -30,6 +31,7 @@ src/
     transformer.py            AbstractTransformer[InputType, OutputType]
     loader.py                 AbstractLoader (loads stix2 Bundles)
     record_to_file.py         RecordToFile
+    connector.py              Connector, CycleResult
   crowdstrike_indicators/     CrowdStrike implementation
     models.py                 CrowdStrikeIndicator (Pydantic)
     extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
@@ -121,6 +123,66 @@ loader.load(stix_bundle)   # -> bundles/bundle--fe24cab3-d021-56f9-af58-867c5a0c
 - `stix2.parse(path.read_text(), allow_custom=True)` reads a bundle back.
 
 The command line does not run a loader yet.
+
+### The connector
+
+`Connector` assembles an extractor, a chain of transformers and a loader, and
+runs them on a schedule. It knows nothing of CrowdStrike.
+
+```
+   +------------------ wait run_frequency (unless draining) ------------------+
+   v                                                                          |
+extract(cursor, max) -> [(dt, item)] -> t1 -> t2 -> ... -> tn -> loader.load  |
+   |                                                                          |
+   +--> cursor = latest dt extracted  -----------------------------------------+
+```
+
+```python
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+from crowdstrike_indicators.bundle import MakeStixBundle
+from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
+from crowdstrike_indicators.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from shared.connector import Connector
+from shared.record_to_file import RecordToFile
+
+connector = Connector(
+    CrowdStrikeIndicatorExtractor(client),        # a FalconPy Intel client
+    [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware(), MakeStixBundle()],
+    RecordToFile(Path("bundles")),
+)
+connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
+```
+
+- **The chain is checked at construction.** The extractor's item type must be
+  the first transformer's input type, each output type the next input type,
+  and the last output type `stix2.v21.Bundle`, the loader's input. A
+  mismatch raises a `TypeError` naming both types, for example
+  `transformer 1 (CrowdStrikeAddMalware) expects CrowdStrikeStix2Indicator but
+  extractor (CrowdStrikeIndicatorExtractor) produces CrowdStrikeIndicator`.
+  A component that does not declare its type arguments is rejected too.
+- **`run_once(from_date, max_element_count)`** runs one cycle and returns a
+  `CycleResult(extracted, loaded, skipped, next_from_date)`. The next
+  `from_date` is the latest extracted datetime, or `from_date` when nothing
+  was extracted.
+- **`run(from_date, run_frequency, max_element_count)`** repeats cycles
+  forever from the returned `from_date`. After a full batch that moved the
+  cursor it starts again at once, to drain a backlog; otherwise it waits
+  `run_frequency` after the cycle ends. A full batch that does not move the
+  cursor (one second holding `max_element_count` items) logs a warning and
+  waits rather than looping. A non-positive `run_frequency`, a naive
+  `from_date` or a `max_element_count` below 1 are rejected before any
+  extraction.
+- **Errors.** An item whose transformation fails is logged and skipped; the
+  others go through and the cursor still moves past it. An extraction or
+  loading failure aborts the cycle without moving the cursor; `run` logs it,
+  waits `run_frequency` and retries from the same `from_date`. Ctrl+C stops
+  the connector.
+- The cursor lives in memory: a restarted process starts from the `from_date`
+  it is given. The waiting function can be injected (`sleep=`), which the
+  tests use to stop the endless loop.
 
 ### CrowdStrike indicators as STIX
 
