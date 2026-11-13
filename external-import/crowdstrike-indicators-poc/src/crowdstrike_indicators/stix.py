@@ -1,13 +1,14 @@
-"""STIX 2.1 representation of a CrowdStrike indicator."""
+"""STIX 2.1 representation of a CrowdStrike indicator and of its derived objects."""
 
 from collections import OrderedDict
+from dataclasses import dataclass
 
 from stix2.properties import (
     DictionaryProperty,
     ListProperty,
     StringProperty,
 )
-from stix2.v21 import Indicator
+from stix2.v21 import Indicator, Malware, Relationship
 
 
 def _string_list() -> ListProperty:
@@ -50,3 +51,16 @@ class CrowdStrikeStix2Indicator(Indicator):
             ("x_crowdstrike_extra", DictionaryProperty()),
         ]
     )
+
+
+@dataclass(frozen=True)
+class CrowdStrikeIndicatorBundle:
+    """An indicator with the STIX objects derived from it.
+
+    Fields cannot be reassigned. The indicator is the one the bundle was
+    built from, unchanged.
+    """
+
+    indicator: CrowdStrikeStix2Indicator
+    malware: list[Malware]
+    relationships: list[Relationship]

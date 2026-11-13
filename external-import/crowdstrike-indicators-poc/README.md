@@ -9,8 +9,11 @@ contracts that do not depend on OpenCTI:
 1. an extractor: typed, validated CrowdStrike Falcon Intelligence indicators,
    run from the command line against the real API, so the indicator model can
    be refined from actual data;
-2. a transformer: each indicator converted into one STIX 2.1 indicator that
-   loses nothing of the source data.
+2. transformers, chained:
+   - each indicator converted into one STIX 2.1 indicator that loses nothing
+     of the source data;
+   - that indicator bundled with one Malware per family it names, and the
+     `indicates` relationships linking them.
 
 ## Layout
 
@@ -22,8 +25,11 @@ src/
   crowdstrike_indicators/     CrowdStrike implementation
     models.py                 CrowdStrikeIndicator (Pydantic)
     extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
-    stix.py                   CrowdStrikeStix2Indicator (stix2 Indicator subclass)
+    stix.py                   CrowdStrikeStix2Indicator (stix2 Indicator subclass),
+                              CrowdStrikeIndicatorBundle
+    ids.py                    deterministic STIX ids in the CrowdStrike namespace
     transformer.py            CrowdStrikeIndicatorTransformer
+    malware.py                CrowdStrikeAddMalware
     errors.py                 CrowdStrikeAPIError, IndicatorValidationError,
                               IndicatorConversionError
     dotenv.py                 minimal .env reader
@@ -117,6 +123,45 @@ finds the CrowdStrike id in `external_references`.
 
 `stix2.parse` rebuilds a plain `Indicator`, which accepts the
 `x_crowdstrike_*` properties only with `allow_custom=True`.
+
+### Malware
+
+`CrowdStrikeAddMalware` is the second step of the chain: it takes the
+`CrowdStrikeStix2Indicator` the first step produces and returns a
+`CrowdStrikeIndicatorBundle`, an immutable dataclass:
+
+```python
+@dataclass(frozen=True)
+class CrowdStrikeIndicatorBundle:
+    indicator: CrowdStrikeStix2Indicator   # passed through unchanged
+    malware: list[Malware]
+    relationships: list[Relationship]
+```
+
+```
+CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> CrowdStrikeIndicatorBundle
+       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware
+```
+
+- One STIX 2.1 Malware per distinct name of `x_crowdstrike_malware_families`,
+  in source order: `name` unchanged (no CamelCase splitting), `is_family` true.
+- One `indicates` relationship from the indicator to each Malware.
+- The indicator is passed through as is, so the family names also stay in its
+  `x_crowdstrike_malware_families`. Each step only adds objects.
+- An indicator naming no family gives empty lists.
+
+Ids and dates depend on the input only, so the same input always gives the
+same output:
+
+| Object | `id` | `created`, `modified` |
+|---|---|---|
+| Malware | `malware--` + UUIDv5 of `malware:<name>` in the CrowdStrike namespace | the Unix epoch, `1970-01-01T00:00:00.000Z`: CrowdStrike gives no date for a family |
+| `indicates` relationship | `relationship--` + UUIDv5 of `indicates:<indicator id>:<malware id>` | the indicator's |
+
+Every copy of a Malware is therefore identical, id and content, whichever
+indicator names it, so a later stage can deduplicate them by id. The existing
+connector uses pycti ids and the clock time instead; converting to OpenCTI ids
+and dates belongs to the OpenCTI stage.
 
 ## Setup
 
