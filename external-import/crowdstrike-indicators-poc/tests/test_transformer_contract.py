@@ -2,6 +2,7 @@
 
 import copy
 import typing
+import uuid
 
 import pytest
 import stix2
@@ -29,7 +30,11 @@ class DomainToObjects(AbstractTransformer[stix2.DomainName, list[stix2.Note]]):
 
     def convert(self, item: stix2.DomainName) -> list[stix2.Note]:
         return [
-            stix2.Note(content=f"note {n} on {item.value}", object_refs=[item.id])
+            stix2.Note(
+                id=f"note--{uuid.uuid5(uuid.NAMESPACE_URL, f'{item.id}/{n}')}",
+                content=f"note {n} on {item.value}",
+                object_refs=[item.id],
+            )
             for n in range(3)
         ]
 
