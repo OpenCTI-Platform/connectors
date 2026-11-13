@@ -17,7 +17,9 @@ contracts that do not depend on OpenCTI:
    - the MITRE ATT&CK AttackPatterns its labels name added to the bundle, with
      their `indicates` relationships, from a local ATT&CK dataset;
    - the whole turned into a standard STIX 2.1 bundle, ready for a STIX
-     consumer.
+     consumer;
+3. a loader: each STIX bundle delivered to a destination, for now a JSON file
+   per bundle.
 
 ## Layout
 
@@ -26,6 +28,8 @@ src/
   shared/                     contracts, independent of any source
     extractor.py              AbstractExtractor[T: BaseModel]
     transformer.py            AbstractTransformer[InputType, OutputType]
+    loader.py                 AbstractLoader (loads stix2 Bundles)
+    record_to_file.py         RecordToFile
   crowdstrike_indicators/     CrowdStrike implementation
     models.py                 CrowdStrikeIndicator (Pydantic)
     extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
@@ -43,8 +47,8 @@ src/
 tests/                        pytest, no network
 ```
 
-Dependency rule: `shared/` depends only on the standard library and Pydantic,
-never on a source. `crowdstrike_indicators/` depends on `shared/`. Runtime
+Dependency rule: `shared/` depends only on the standard library, Pydantic and
+stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/` depends on `shared/`. Runtime
 dependencies are `crowdstrike-falconpy`, `pydantic` and `stix2`. There is no
 pycti and no connectors-sdk.
 
@@ -82,6 +86,41 @@ class AbstractTransformer[InputType, OutputType](ABC):
 - An item that cannot be converted raises an error naming it. No empty or
   placeholder value is returned.
 - The item is left unchanged.
+
+### The loading contract
+
+```python
+class AbstractLoader(ABC):
+    def load(self, bundle: stix2.v21.Bundle) -> None: ...
+```
+
+- A loader takes one standard STIX 2.1 bundle, the output of `MakeStixBundle`,
+  and returns nothing. A normal return means the whole bundle has been
+  delivered.
+- A bundle that cannot be delivered raises an error.
+- The bundle is left unchanged.
+
+`RecordToFile(directory)` is the first loader: it writes each bundle to
+`<directory>/<bundle id>.json`, as indented STIX JSON.
+
+```python
+from pathlib import Path
+from shared.record_to_file import RecordToFile
+
+loader = RecordToFile(Path("bundles"))
+loader.load(stix_bundle)   # -> bundles/bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23.json
+```
+
+- The directory is created when missing; building the loader creates nothing.
+- The same bundle always gives the same bytes. Bundle ids are deterministic,
+  so loading the same indicator again replaces its file with an identical one.
+- The file is written to a hidden temporary file, then renamed into place:
+  a reader never sees half a bundle, and a failure (full disk, missing
+  permission, a path that is a file) is raised, with the previous file, if
+  any, left as it was.
+- `stix2.parse(path.read_text(), allow_custom=True)` reads a bundle back.
+
+The command line does not run a loader yet.
 
 ### CrowdStrike indicators as STIX
 
