@@ -187,11 +187,14 @@ _HTTP_ERROR_MAP = {
 }
 
 
-# A status code stated as such in an error message ("HTTP 403",
-# "Return code: 402"), used only when the exception carries no status code.
-_STATUS_IN_MESSAGE = re.compile(
-    r"(?:\bHTTP|\bReturn code:|\bstatus code:?)\s*(\d{3})\b", re.IGNORECASE
-)
+# Status codes as the SDK and this client write them into a message, used
+# only when the exception carries no status code:
+# - polyswarm_api core.PolyswarmRequest._bad_status_message puts
+#   "Return code: <code>" on a line of its own, after the request parameters;
+# - submit_sandbox_url_async re-raises SDK errors as "...: HTTP <code>",
+#   at the end of the message.
+_RETURN_CODE_LINE = re.compile(r"^Return code: (\d{3})[ \t]*$", re.MULTILINE)
+_HTTP_CODE_AT_END = re.compile(r"\bHTTP (\d{3})\s*\Z")
 
 
 def _status_code_of(error: Exception) -> int | None:
@@ -199,23 +202,23 @@ def _status_code_of(error: Exception) -> int | None:
 
     The status code carried by the exception (the SDK's ``request`` or a
     requests ``response``) wins. Only when there is none is the message
-    read, and then only for a code stated as a status, never for any digits:
-    SDK messages include the request parameters (hashes, names), which can
-    contain "401" or "429" by chance.
+    read, and then only for the exact formats above (the last "Return code:"
+    line, or "HTTP <code>" ending the message). No digits or words found
+    elsewhere count: SDK messages include the request parameters (hashes,
+    names), which can contain "401" or "forbidden" by chance. Anything else
+    is None, a generic API error.
     """
     for holder in (getattr(error, "request", None), getattr(error, "response", None)):
         code = getattr(holder, "status_code", None)
         if isinstance(code, int) and not isinstance(code, bool):
             return code
     text = str(error)
-    match = _STATUS_IN_MESSAGE.search(text)
+    lines = _RETURN_CODE_LINE.findall(text)
+    if lines:
+        return int(lines[-1])
+    match = _HTTP_CODE_AT_END.search(text)
     if match:
         return int(match.group(1))
-    lowered = text.lower()
-    if "unauthorized" in lowered:
-        return 401
-    if "forbidden" in lowered:
-        return 403
     return None
 
 

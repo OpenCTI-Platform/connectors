@@ -253,8 +253,14 @@ class TestHTTPErrorMapping:
         [
             ("URL sandbox submission RequestException: HTTP 403", "API Access Denied"),
             ("Return code: 402", "API Quota Exceeded"),
-            ("401 Unauthorized", "API Authentication Failed"),
-            ("Forbidden", "API Access Denied"),
+            # The SDK's own layout: parameters, then the code, then the body
+            (
+                'Error when running the request:\n{"name": "Return code: 503"}\n'
+                "Return code: 401\nMessage: bad key",
+                "API Authentication Failed",
+            ),
+            # The last "Return code:" line wins
+            ("Return code: 500\nMessage: x\nReturn code: 403", "API Access Denied"),
         ],
     )
     def test_message_status_used_only_without_status_code(
@@ -266,7 +272,19 @@ class TestHTTPErrorMapping:
         assert exc_info.value.category.startswith(category)
 
     @pytest.mark.parametrize(
-        "message", ["sha256 401aaaa failed", "task 4290001 not ready", "boom 403"]
+        "message",
+        [
+            "sha256 401aaaa failed",
+            "task 4290001 not ready",
+            "boom 403",
+            # Words and loose formats are not a status code
+            "401 Unauthorized",
+            "Forbidden",
+            "unauthorized.exe was rejected",
+            "status code: 403",
+            '{"artifact_name": "HTTP 401 sample"} Return code: 503 inline',
+            "HTTP 403 then more text",
+        ],
     )
     def test_bare_digits_in_message_are_not_a_status(self, client, message):
         func = MagicMock(side_effect=Exception(message))
