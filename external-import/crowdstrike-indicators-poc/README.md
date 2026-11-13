@@ -13,7 +13,9 @@ contracts that do not depend on OpenCTI:
    - each indicator converted into one STIX 2.1 indicator that loses nothing
      of the source data;
    - that indicator bundled with one Malware per family it names, and the
-     `indicates` relationships linking them.
+     `indicates` relationships linking them;
+   - the MITRE ATT&CK AttackPatterns its labels name added to the bundle, with
+     their `indicates` relationships, from a local ATT&CK dataset.
 
 ## Layout
 
@@ -30,6 +32,7 @@ src/
     ids.py                    deterministic STIX ids in the CrowdStrike namespace
     transformer.py            CrowdStrikeIndicatorTransformer
     malware.py                CrowdStrikeAddMalware
+    attack.py                 AttackPatternCatalog, CrowdStrikeAddAttackPatterns
     errors.py                 CrowdStrikeAPIError, IndicatorValidationError,
                               IndicatorConversionError
     dotenv.py                 minimal .env reader
@@ -135,12 +138,13 @@ finds the CrowdStrike id in `external_references`.
 class CrowdStrikeIndicatorBundle:
     indicator: CrowdStrikeStix2Indicator   # passed through unchanged
     malware: list[Malware]
-    relationships: list[Relationship]
+    attack_patterns: list[AttackPattern]   # left empty by this step
+    relationships: list[Relationship]      # every indicates relationship
 ```
 
 ```
-CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> CrowdStrikeIndicatorBundle
-       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware
+CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle
+       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware  CrowdStrikeAddAttackPatterns
 ```
 
 - One STIX 2.1 Malware per distinct name of `x_crowdstrike_malware_families`,
@@ -162,6 +166,53 @@ Every copy of a Malware is therefore identical, id and content, whichever
 indicator names it, so a later stage can deduplicate them by id. The existing
 connector uses pycti ids and the clock time instead; converting to OpenCTI ids
 and dates belongs to the OpenCTI stage.
+
+### Attack patterns
+
+`CrowdStrikeAddAttackPatterns` is the third step: it takes a bundle and returns
+it with MITRE ATT&CK AttackPatterns added. It is constructed with an
+`AttackPatternCatalog`, loaded once from a local copy of the MITRE ATT&CK
+Enterprise STIX dataset. Nothing is downloaded: get the file from the
+[mitre-attack/attack-stix-data](https://github.com/mitre-attack/attack-stix-data)
+repository, for example `enterprise-attack/enterprise-attack-17.1.json`, the
+version the existing connector uses by default.
+
+```python
+catalog = AttackPatternCatalog.from_file(Path("enterprise-attack-17.1.json"))
+bundle = CrowdStrikeAddAttackPatterns(catalog).convert(bundle)
+```
+
+Each label `MitreATTCK/<tactic>/<technique>` of the indicator is resolved by
+the catalog:
+
+1. only live techniques count: revoked and deprecated AttackPatterns are left
+   out;
+2. the technique name matches on letters and digits, case-insensitively:
+   `PowerShell` finds `PowerShell` (T1059.001), and
+   `RegistryRunKeysStartupFolder` finds `Registry Run Keys / Startup Folder`
+   (T1547.001);
+3. when several techniques share the name, the tactic chooses:
+   `CommandAndControl/Steganography` is T1001.002, while
+   `DefenseEvasion/Steganography` is T1027.003;
+4. a single remaining technique is the result; none, or several, resolve to
+   nothing.
+
+For every distinct technique found, in label order, the step adds MITRE's
+AttackPattern object as is (MITRE's id, name, T-id, tactics and dates) and an
+`indicates` relationship from the indicator, with the same id rule and dates as
+the Malware relationships. Objects already in the bundle are kept.
+
+A label that resolves to nothing adds nothing and stays on the indicator. With
+ATT&CK 17.1, over a month of real data, 86 of the 106 distinct CrowdStrike
+ATT&CK labels resolve. 15 name techniques ATT&CK has renamed or retired (such as
+`RemoteFileCopy`, now `Ingress Tool Transfer`), and 5 stay ambiguous within
+their tactic (`ResourceDevelopment/Botnet`, `Malware`, `Server`, `Domains`,
+`WebServices`). The existing connector resolves 75, plus the 5 ambiguous ones
+picked arbitrarily.
+
+`tests/fixtures/attack_extract.json` holds AttackPatterns copied unchanged
+from MITRE ATT&CK Enterprise 17.1, © The MITRE Corporation, reproduced under
+the [ATT&CK terms of use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/).
 
 ## Setup
 

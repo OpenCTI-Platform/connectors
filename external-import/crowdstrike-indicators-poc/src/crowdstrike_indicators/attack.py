@@ -1,15 +1,27 @@
 """Resolve CrowdStrike ATT&CK labels to MITRE's own AttackPattern objects."""
 
+import dataclasses
 import json
+import logging
 import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 import stix2
-from stix2.v21 import AttackPattern
+from crowdstrike_indicators.errors import IndicatorConversionError
+from crowdstrike_indicators.ids import indicates_id
+from crowdstrike_indicators.malware import crowdstrike_id
+from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
+from stix2.exceptions import STIXError
+from stix2.v21 import AttackPattern, Relationship
+
+from shared.transformer import AbstractTransformer
+
+LOGGER = logging.getLogger(__name__)
 
 MITRE_KILL_CHAIN = "mitre-attack"
+ATTACK_LABEL_PREFIX = "MitreATTCK"
 
 
 def match_key(text: str) -> str:
@@ -91,3 +103,69 @@ class AttackPatternCatalog:
                 )
             ]
         return candidates[0] if len(candidates) == 1 else None
+
+
+class CrowdStrikeAddAttackPatterns(
+    AbstractTransformer[CrowdStrikeIndicatorBundle, CrowdStrikeIndicatorBundle]
+):
+    """Add the MITRE AttackPatterns an indicator's ATT&CK labels name.
+
+    Each label ``MitreATTCK/<tactic>/<technique>`` is resolved with the
+    catalog. Every distinct technique found adds MITRE's AttackPattern,
+    unchanged, and an ``indicates`` relationship from the indicator, dated
+    like the indicator. Unresolved labels add nothing and stay on the
+    indicator. Objects already in the bundle are kept. No network call is
+    made: the catalog is loaded beforehand.
+    """
+
+    def __init__(self, catalog: AttackPatternCatalog) -> None:
+        self.catalog = catalog
+
+    def _resolve_labels(
+        self, bundle: CrowdStrikeIndicatorBundle
+    ) -> list[AttackPattern]:
+        found: dict[str, AttackPattern] = {}
+        for label in bundle.indicator.get("labels", []):
+            parts = label.split("/")
+            if len(parts) != 3 or parts[0] != ATTACK_LABEL_PREFIX:
+                continue
+            pattern = self.catalog.resolve(parts[1], parts[2])
+            if pattern is None:
+                LOGGER.debug(
+                    "Indicator %s: no single ATT&CK technique for %r",
+                    crowdstrike_id(bundle.indicator),
+                    label,
+                )
+                continue
+            found.setdefault(pattern.id, pattern)
+        return list(found.values())
+
+    def convert(self, item: CrowdStrikeIndicatorBundle) -> CrowdStrikeIndicatorBundle:
+        """Return ``item`` with its AttackPatterns and their relationships added.
+
+        :raises IndicatorConversionError: if stix2 rejects a relationship.
+        """
+        indicator = item.indicator
+        known = {pattern.id for pattern in item.attack_patterns}
+        patterns = [p for p in self._resolve_labels(item) if p.id not in known]
+        try:
+            relationships = [
+                Relationship(
+                    id=indicates_id(indicator.id, pattern.id),
+                    relationship_type="indicates",
+                    source_ref=indicator.id,
+                    target_ref=pattern.id,
+                    created=indicator.created,
+                    modified=indicator.modified,
+                )
+                for pattern in patterns
+            ]
+        except STIXError as error:
+            raise IndicatorConversionError(
+                crowdstrike_id(indicator), str(error)
+            ) from error
+        return dataclasses.replace(
+            item,
+            attack_patterns=[*item.attack_patterns, *patterns],
+            relationships=[*item.relationships, *relationships],
+        )
