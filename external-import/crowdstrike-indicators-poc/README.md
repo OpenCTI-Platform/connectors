@@ -361,7 +361,11 @@ JSON:
    and its `indicates` relationships;
 3. with `--attack-data PATH` only, `CrowdStrikeAddAttackPatterns`: the same
    bundle with the MITRE ATT&CK AttackPatterns its labels name, resolved
-   against the local ATT&CK dataset in `PATH` (see [Attack patterns](#attack-patterns)).
+   against the local ATT&CK dataset in `PATH` (see [Attack patterns](#attack-patterns));
+4. always last, `MakeStixBundle`: the standard STIX 2.1 bundle of all those
+   objects, ready for a STIX consumer (see [STIX bundle](#stix-bundle)).
+
+The chain is therefore three steps without `--attack-data` and four with it.
 
 ```sh
 # Take a domain row of the committed sample as input
@@ -380,12 +384,12 @@ PYTHONPATH=src python -m crowdstrike_indicators transform indicator-attack.json 
     --attack-data tests/fixtures/attack_extract.json
 ```
 
-Without `--attack-data`, the chain stops after step 2 and the bundle's
+Without `--attack-data`, the attack pattern step is skipped and the bundle's
 `attack_patterns` is empty. A missing or invalid dataset file exits with status
 2 before any step runs; the dataset is never downloaded.
 
 Standard output is one JSON array, one entry per step, so it can be piped
-(`| jq '.[1].output.malware'`). STIX objects appear as their STIX JSON, with
+(`| jq '.[-1].output'` gives the STIX bundle alone). STIX objects appear as their STIX JSON, with
 the native properties first, then the CrowdStrike fields no native property
 holds, in `x_crowdstrike_*` properties:
 
@@ -415,6 +419,15 @@ holds, in `x_crowdstrike_*` properties:
       "relationships": [
         {"type": "relationship", "relationship_type": "indicates", "source_ref": "indicator--f975582d-...", "target_ref": "malware--06d31b08-...", "...": "..."}
       ]
+    }
+  },
+  {
+    "step": 3,
+    "transformer": "MakeStixBundle",
+    "output": {
+      "type": "bundle",
+      "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+      "objects": [{"type": "indicator", "...": "..."}, {"type": "malware", "...": "..."}, {"type": "relationship", "...": "..."}]
     }
   }
 ]

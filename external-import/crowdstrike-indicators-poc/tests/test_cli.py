@@ -448,7 +448,7 @@ def test_transform_prints_every_step(isolated, no_api, capsys):
 
     assert _run("transform", "indicator.json") == 0
 
-    first, second = _transform_steps(capsys)
+    first, second, third = _transform_steps(capsys)
     assert first["step"] == 1
     assert first["transformer"] == "CrowdStrikeIndicatorTransformer"
     _assert_stix_of_sample(first["output"])
@@ -464,6 +464,15 @@ def test_transform_prints_every_step(isolated, no_api, capsys):
     assert [r["target_ref"] for r in bundle["relationships"]] == [
         m["id"] for m in bundle["malware"]
     ]
+    assert third["step"] == 3
+    assert third["transformer"] == "MakeStixBundle"
+    stix_bundle = third["output"]
+    assert stix_bundle["type"] == "bundle"
+    assert [o["id"] for o in stix_bundle["objects"]] == [
+        bundle["indicator"]["id"],
+        *(m["id"] for m in bundle["malware"]),
+        *(r["id"] for r in bundle["relationships"]),
+    ]
 
 
 def test_transform_without_malware_prints_empty_lists(isolated, no_api, capsys):
@@ -472,9 +481,11 @@ def test_transform_without_malware_prints_empty_lists(isolated, no_api, capsys):
 
     assert _run("transform", "indicator.json") == 0
 
-    bundle = _transform_steps(capsys)[1]["output"]
+    steps = _transform_steps(capsys)
+    bundle = steps[1]["output"]
     assert bundle["malware"] == []
     assert bundle["relationships"] == []
+    assert [o["type"] for o in steps[-1]["output"]["objects"]] == ["indicator"]
 
 
 def test_transform_later_step_failure_prints_nothing(
@@ -501,7 +512,7 @@ ATTACK_FILE = FIXTURES_DIR / "attack_extract.json"
 ATTACK_ROW = load_fixture("indicators_sample.json")["resources"][0]
 
 
-def test_transform_with_attack_data_runs_three_steps(isolated, no_api, capsys):
+def test_transform_with_attack_data_runs_four_steps(isolated, no_api, capsys):
     (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
 
     code = _run("transform", "indicator.json", "--attack-data", str(ATTACK_FILE))
@@ -512,6 +523,7 @@ def test_transform_with_attack_data_runs_three_steps(isolated, no_api, capsys):
         "CrowdStrikeIndicatorTransformer",
         "CrowdStrikeAddMalware",
         "CrowdStrikeAddAttackPatterns",
+        "MakeStixBundle",
     ]
     third = steps[2]
     assert third["step"] == 3
@@ -527,14 +539,22 @@ def test_transform_with_attack_data_runs_three_steps(isolated, no_api, capsys):
     relationships = third["output"]["relationships"]
     assert relationships[-len(patterns) :][0]["target_ref"] == patterns[0]["id"]
     assert steps[1]["output"]["attack_patterns"] == []
+    fourth = steps[3]
+    assert fourth["step"] == 4
+    assert patterns[0]["id"] in [o["id"] for o in fourth["output"]["objects"]]
 
 
-def test_transform_without_attack_data_runs_two_steps(isolated, no_api, capsys):
+def test_transform_without_attack_data_runs_three_steps(isolated, no_api, capsys):
     (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
 
     assert _run("transform", "indicator.json") == 0
 
-    assert len(_transform_steps(capsys)) == 2
+    steps = _transform_steps(capsys)
+    assert [s["transformer"] for s in steps] == [
+        "CrowdStrikeIndicatorTransformer",
+        "CrowdStrikeAddMalware",
+        "MakeStixBundle",
+    ]
 
 
 def test_transform_missing_attack_data_exits_2(isolated, no_api, capsys):

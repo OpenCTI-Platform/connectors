@@ -24,6 +24,7 @@ from crowdstrike_indicators.attack import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
+from crowdstrike_indicators.bundle import MakeStixBundle
 from crowdstrike_indicators.dotenv import read_dotenv
 from crowdstrike_indicators.errors import (
     CrowdStrikeAPIError,
@@ -64,10 +65,10 @@ TRANSFORM_STEPS: tuple[AbstractTransformer[Any, Any], ...] = (
 def build_transform_steps(
     catalog: AttackPatternCatalog | None,
 ) -> tuple[AbstractTransformer[Any, Any], ...]:
-    """Return the steps of ``transform``, with attack patterns given a catalog."""
-    if catalog is None:
-        return TRANSFORM_STEPS
-    return (*TRANSFORM_STEPS, CrowdStrikeAddAttackPatterns(catalog))
+    """Return the steps of ``transform``: attack patterns given a catalog, then
+    always the STIX bundle."""
+    attack_steps = () if catalog is None else (CrowdStrikeAddAttackPatterns(catalog),)
+    return (*TRANSFORM_STEPS, *attack_steps, MakeStixBundle())
 
 
 def build_client(client_id: str, client_secret: str, base_url: str) -> IndicatorsClient:
