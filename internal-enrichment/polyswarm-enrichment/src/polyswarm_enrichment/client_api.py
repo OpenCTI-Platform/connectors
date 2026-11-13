@@ -1058,22 +1058,24 @@ class ConnectorClient:
                 return result
             data = result.get("data")
             source = data.get("_source_result") if data else None
+            if not data and not held:
+                return result
+            # Unfinished scans in every community: the held ones, and those
+            # listed ahead of the primary and secondary results
+            pending = [r for _, results in held for r in results]
+            for entry in (result.get("primary"), result.get("secondary")):
+                if entry:
+                    pending.extend(entry.get("_newer_results") or [])
+            if self._still_running(pending):
+                # A scan (e.g. an earlier rescan that timed out) is still
+                # running: let it finish instead of paying for another one
+                return result
             if data:
                 held_results = [source] if source is not None else []
                 community = data.get("community") or self.polyswarm_community
-            elif held:
-                if any(self._still_running(results) for _, results in held):
-                    # A scan still running in any community is left to finish
-                    return result
+            else:
                 community, held_results = held[0]
-            else:
-                return result
-            if data and self._still_running(data.get("_newer_results") or []):
-                # A newer scan (e.g. an earlier rescan that timed out) is still
-                # running: let it finish instead of paying for another one
-                reason = None
-            else:
-                reason = self._rescan_reason(held_results, data, source)
+            reason = self._rescan_reason(held_results, data, source)
             if reason:
                 sha256 = data["sha256"] if data else held_results[0].sha256
                 fresh, outcome = self._run_rescan(
