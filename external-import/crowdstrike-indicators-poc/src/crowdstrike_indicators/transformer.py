@@ -1,0 +1,185 @@
+"""Convert CrowdStrike indicators into STIX 2.1 indicators, losing nothing."""
+
+import ipaddress
+import logging
+import uuid
+from datetime import datetime
+from typing import Any
+
+from crowdstrike_indicators.errors import IndicatorConversionError
+from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
+from stix2 import (
+    EqualityComparisonExpression,
+    KillChainPhase,
+    ObjectPath,
+    ObservationExpression,
+    StringConstant,
+)
+from stix2.canonicalization.Canonicalize import canonicalize
+from stix2.exceptions import STIXError
+
+from shared.transformer import AbstractTransformer
+
+LOGGER = logging.getLogger(__name__)
+
+# CrowdStrike indicator type -> STIX object type and property path. IP
+# addresses are resolved separately, by version.
+PATTERN_PATHS: dict[str, tuple[str, list[str]]] = {
+    "domain": ("domain-name", ["value"]),
+    "url": ("url", ["value"]),
+    "hash_md5": ("file", ["hashes", "MD5"]),
+    "hash_sha1": ("file", ["hashes", "SHA-1"]),
+    "hash_sha256": ("file", ["hashes", "SHA-256"]),
+}
+IP_ADDRESS_TYPE = "ip_address"
+
+# STIX 2.1 None/Low/Med/High confidence scale. "unverified" is absent on
+# purpose: an indicator nobody assessed has no confidence, not a zero one.
+CONFIDENCE = {"high": 85, "medium": 50, "low": 15}
+
+KILL_CHAIN_NAME = "lockheed-martin-cyber-kill-chain"
+# Same phase names as the existing CrowdStrike connector, so phases match
+# those already in OpenCTI.
+KILL_CHAIN_PHASES = {
+    "Reconnaissance": "reconnaissance",
+    "Weaponization": "weaponization",
+    "Delivery": "delivery",
+    "Exploitation": "exploitation",
+    "Installation": "installation",
+    "C2": "command-and-control",
+    "ActionOnObjectives": "action-on-objectives",
+}
+
+SOURCE_NAME = "CrowdStrike"
+
+# Namespace of OpenCTI's deterministic indicator ids (pycti
+# ``Indicator.generate_id``).
+OPENCTI_INDICATOR_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
+
+X_PREFIX = "x_crowdstrike_"
+X_EXTRA = f"{X_PREFIX}extra"
+
+
+def build_pattern(item: CrowdStrikeIndicator) -> str:
+    """Return the STIX pattern of ``item``, quoted and escaped by stix2.
+
+    :raises IndicatorConversionError: if the type has no pattern mapping.
+    """
+    if item.type == IP_ADDRESS_TYPE:
+        try:
+            version = ipaddress.ip_address(item.indicator).version
+        except ValueError as error:
+            raise IndicatorConversionError(
+                item.id, f"not an IP address: {item.indicator!r}"
+            ) from error
+        object_type = "ipv6-addr" if version == 6 else "ipv4-addr"
+        path = ["value"]
+    elif item.type in PATTERN_PATHS:
+        object_type, path = PATTERN_PATHS[item.type]
+    else:
+        raise IndicatorConversionError(
+            item.id, f"unsupported indicator type {item.type!r}"
+        )
+    comparison = EqualityComparisonExpression(
+        ObjectPath(object_type, path), StringConstant(item.indicator)
+    )
+    return str(ObservationExpression(str(comparison)))
+
+
+def indicator_id(pattern: str) -> str:
+    """Return the deterministic STIX id OpenCTI (pycti) gives to ``pattern``."""
+    name = canonicalize({"pattern": pattern.strip()}, utf8=False)
+    return f"indicator--{uuid.uuid5(OPENCTI_INDICATOR_NAMESPACE, name)}"
+
+
+def x_property_name(field_name: str) -> str:
+    """Return the ``x_crowdstrike_`` property keeping an API field."""
+    return X_PREFIX + field_name.lstrip("_")
+
+
+def _x_properties(item: CrowdStrikeIndicator) -> dict[str, Any]:
+    """Keep every field of ``item``, named after its API field name."""
+    properties: dict[str, Any] = {}
+    for name, field in CrowdStrikeIndicator.model_fields.items():
+        value = getattr(item, name)
+        if value is None or value == []:
+            continue  # stix2 drops empty lists: absent and empty look the same
+        if name == "labels":
+            value = [
+                label.model_dump(mode="json", exclude_none=True) for label in value
+            ]
+        properties[x_property_name(field.alias or name)] = value
+    if item.model_extra:
+        properties[X_EXTRA] = item.model_extra
+    return properties
+
+
+def _kill_chain_phases(item: CrowdStrikeIndicator) -> list[KillChainPhase]:
+    phases = []
+    for kill_chain in item.kill_chains or []:
+        phase_name = KILL_CHAIN_PHASES.get(kill_chain)
+        if phase_name is None:
+            LOGGER.debug(
+                "Indicator %s: unknown kill chain %r skipped", item.id, kill_chain
+            )
+            continue
+        phases.append(
+            KillChainPhase(kill_chain_name=KILL_CHAIN_NAME, phase_name=phase_name)
+        )
+    return phases
+
+
+def _created(item: CrowdStrikeIndicator) -> datetime:
+    created = item.published_date or item.last_updated
+    if created > item.last_updated:
+        raise IndicatorConversionError(
+            item.id,
+            f"published_date {created.isoformat()} is after "
+            f"last_updated {item.last_updated.isoformat()}",
+        )
+    return created
+
+
+class CrowdStrikeIndicatorTransformer(
+    AbstractTransformer[CrowdStrikeIndicator, CrowdStrikeStix2Indicator]
+):
+    """Convert a CrowdStrike indicator into one STIX 2.1 indicator.
+
+    Every CrowdStrike field is kept in an ``x_crowdstrike_*`` property, and
+    the native STIX properties whose meaning matches are filled too. No
+    network call is made.
+    """
+
+    def convert(self, item: CrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
+        """Return the STIX indicator of ``item``.
+
+        :raises IndicatorConversionError: if the type has no pattern mapping,
+            if ``published_date`` is after ``last_updated``, or if stix2
+            rejects the object.
+        """
+        pattern = build_pattern(item)
+        created = _created(item)
+        native: dict[str, Any] = {
+            "pattern": pattern,
+            "pattern_type": "stix",
+            "name": item.indicator,
+            "valid_from": created,
+            "created": created,
+            "modified": item.last_updated,
+            "revoked": True if item.deleted else None,
+            "confidence": CONFIDENCE.get((item.malicious_confidence or "").lower()),
+            "kill_chain_phases": _kill_chain_phases(item) or None,
+            "labels": [label.name for label in item.labels or []] or None,
+            "external_references": [
+                {"source_name": SOURCE_NAME, "external_id": item.id}
+            ],
+        }
+        properties = {
+            name: value for name, value in native.items() if value is not None
+        }
+        properties.update(_x_properties(item))
+        try:
+            return CrowdStrikeStix2Indicator(id=indicator_id(pattern), **properties)
+        except STIXError as error:
+            raise IndicatorConversionError(item.id, str(error)) from error

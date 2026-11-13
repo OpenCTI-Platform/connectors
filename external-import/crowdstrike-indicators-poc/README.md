@@ -1,13 +1,17 @@
 # CrowdStrike indicators: proof of concept
 
 > **Status: proof of concept, command line only.** Not a connector: it does
-> not talk to OpenCTI, keeps no state between runs and builds no STIX yet.
+> not talk to OpenCTI and keeps no state between runs. The STIX transformer
+> exists but the command line does not run it yet.
 
 This folder tests a new organization for connectors, built from small
-contracts that do not depend on OpenCTI. It starts with the extraction side:
-a typed, validated extractor for CrowdStrike Falcon Intelligence indicators,
-run from the command line against the real API, so the indicator model can be
-refined from actual data.
+contracts that do not depend on OpenCTI:
+
+1. an extractor: typed, validated CrowdStrike Falcon Intelligence indicators,
+   run from the command line against the real API, so the indicator model can
+   be refined from actual data;
+2. a transformer: each indicator converted into one STIX 2.1 indicator that
+   loses nothing of the source data.
 
 ## Layout
 
@@ -15,10 +19,14 @@ refined from actual data.
 src/
   shared/                     contracts, independent of any source
     extractor.py              AbstractExtractor[T: BaseModel]
+    transformer.py            AbstractTransformer[InputType, OutputType]
   crowdstrike_indicators/     CrowdStrike implementation
     models.py                 CrowdStrikeIndicator (Pydantic)
     extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
-    errors.py                 CrowdStrikeAPIError, IndicatorValidationError
+    stix.py                   CrowdStrikeStix2Indicator (stix2 Indicator subclass)
+    transformer.py            CrowdStrikeIndicatorTransformer
+    errors.py                 CrowdStrikeAPIError, IndicatorValidationError,
+                              IndicatorConversionError
     dotenv.py                 minimal .env reader
     cli.py, __main__.py       command line
 tests/                        pytest, no network
@@ -26,8 +34,8 @@ tests/                        pytest, no network
 
 Dependency rule: `shared/` depends only on the standard library and Pydantic,
 never on a source. `crowdstrike_indicators/` depends on `shared/`. Runtime
-dependencies are `crowdstrike-falconpy`, `pydantic` and `stix2` (stix2 is
-reserved for the coming transformer).
+dependencies are `crowdstrike-falconpy`, `pydantic` and `stix2`. There is no
+pycti and no connectors-sdk.
 
 ### The extraction contract
 
@@ -45,6 +53,61 @@ class AbstractExtractor[T: BaseModel](ABC):
 
 For CrowdStrike, an indicator's datetime is the Unix second at the start of
 its `_marker`, the field the API paginates on.
+
+### The transformation contract
+
+```python
+class AbstractTransformer[InputType, OutputType](ABC):
+    def convert(self, item: InputType) -> OutputType: ...
+```
+
+- One input item gives one output value. A transformer that turns one item
+  into several objects declares a collection, such as `list[...]`, as its
+  `OutputType`.
+- Both types are unconstrained, so transformers can follow an extractor and
+  follow one another: two transformers chain when the first one's
+  `OutputType` is the second one's `InputType`. stix2 objects are not Pydantic
+  models, which is why `InputType` has no `BaseModel` bound.
+- An item that cannot be converted raises an error naming it. No empty or
+  placeholder value is returned.
+- The item is left unchanged.
+
+### CrowdStrike indicators as STIX
+
+`CrowdStrikeIndicatorTransformer` converts a `CrowdStrikeIndicator` into a
+`CrowdStrikeStix2Indicator`: a stix2 `Indicator` (STIX 2.1) that declares extra
+`x_crowdstrike_*` properties. Two rules apply:
+
+- **Nothing is lost.** Every CrowdStrike field is kept as is in
+  `x_crowdstrike_<field>`, named after the API field without its leading
+  underscore (`_marker` becomes `x_crowdstrike_marker`). Fields the model does
+  not declare (`reports`, `relations`, `scope`, ...) are kept together in
+  `x_crowdstrike_extra`.
+- **Native STIX is filled where the meaning matches:**
+
+| STIX property | From |
+|---|---|
+| `pattern` (`pattern_type` `stix`) | `type` and `indicator`, built with stix2's pattern classes, which quote and escape |
+| `name` | `indicator` |
+| `valid_from`, `created` | `published_date`, or `last_updated` when absent |
+| `modified` | `last_updated` |
+| `revoked` | `true` when `deleted` is true, absent otherwise |
+| `confidence` | `malicious_confidence` on the STIX 2.1 None/Low/Med/High scale: `high` 85, `medium` 50, `low` 15; `unverified` leaves it absent |
+| `kill_chain_phases` | `kill_chains`, on `lockheed-martin-cyber-kill-chain`: `C2` becomes `command-and-control`, `ActionOnObjectives` becomes `action-on-objectives`, the 5 others are lowercased; unknown values are skipped |
+| `labels` | label names, verbatim and in order |
+| `external_references` | `source_name` `CrowdStrike`, `external_id` the CrowdStrike `id` |
+
+Supported types: `domain`, `url`, `ip_address` (IPv4 and IPv6), `hash_md5`,
+`hash_sha1` and `hash_sha256`. Any other type raises `IndicatorConversionError`,
+and so does a `published_date` later than `last_updated`.
+
+The STIX `id` is the one pycti's `Indicator.generate_id(pattern)` gives, a
+UUIDv5 over the canonicalized pattern, reimplemented with stix2 alone. The
+existing CrowdStrike connector builds its patterns the same way, so an
+indicator gets the id it already has in OpenCTI.
+
+`stix2.parse` rebuilds a plain `Indicator`, which accepts the
+`x_crowdstrike_*` properties only with `allow_custom=True`.
 
 ## Setup
 
@@ -148,5 +211,9 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   deliberately lenient. Use `--dump-raw` to see the real shape.
 - **One invalid indicator stops the run**, with nothing printed on standard
   output. This is on purpose while the model is being refined.
-- **No state, no STIX, no OpenCTI.** Every run is independent, and the output
-  is the raw API data.
+- **No state, no OpenCTI.** Every run is independent, and the command line
+  prints the raw API data: it does not run the transformer yet.
+- **Empty list and absent field look the same in STIX.** stix2 drops empty
+  lists, so an empty CrowdStrike list gives no `x_crowdstrike_*` property, and
+  reads back as absent. In real data every list field is always present, so no
+  value is lost.

@@ -43,3 +43,20 @@ class IndicatorValidationError(Exception):
             f"Indicator {self.indicator_id or '<no id>'} failed validation "
             f"({len(self.errors)} error(s)): {details}"
         )
+
+
+class IndicatorConversionError(Exception):
+    """An indicator could not be converted into STIX.
+
+    ``indicator_id`` is the CrowdStrike id of the indicator and ``reason``
+    says why. When the failure comes from stix2, the original exception is
+    chained as ``__cause__``.
+    """
+
+    def __init__(self, indicator_id: str, reason: str) -> None:
+        super().__init__(indicator_id, reason)
+        self.indicator_id = indicator_id
+        self.reason = reason
+
+    def __str__(self) -> str:
+        return f"Indicator {self.indicator_id} could not be converted: {self.reason}"
