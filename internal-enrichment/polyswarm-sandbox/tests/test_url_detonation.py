@@ -22,7 +22,7 @@ from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.stix_builder import StixBuilder
 from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api import resources
-from pycti import OpenCTIConnectorHelper
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 from tests.test_connector import make_connector
 
@@ -326,6 +326,99 @@ class TestUrlRefusals:
             "type": "marking-definition",
             "id": "marking-definition--00000000-0000-4000-8000-000000000001",
             "name": "TLP:RED",
+        }
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        assert result["status"] == "skipped"
+        assert c.polyswarm_client.mock_calls == []
+
+    @pytest.mark.parametrize(
+        "marking, skipped",
+        [
+            # OpenCTI custom definition carrying only x_opencti_definition
+            (
+                {
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+                True,
+            ),
+            # Custom name, TLP in x_opencti_definition
+            (
+                {
+                    "name": "Restricted",
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:RED",
+                },
+                True,
+            ),
+            # STIX 2.1 TLP form with no name
+            ({"definition_type": "tlp", "definition": {"tlp": "red"}}, True),
+            ({"definition_type": "tlp", "definition": {"tlp": "green"}}, False),
+            ({"name": "TLP:GREEN"}, False),
+            ({"name": "PAP:RED"}, False),
+        ],
+    )
+    def test_tlp_check_resolves_bundled_marking_shapes(self, marking, skipped):
+        """TLP is read from x_opencti_definition, name or definition.tlp."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = dict(
+            marking,
+            type="marking-definition",
+            id="marking-definition--00000000-0000-4000-8000-000000000002",
+        )
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "tlp, skipped",
+        [
+            ("TLP:RED", True),
+            ("TLP:AMBER+STRICT", True),
+            ("TLP:AMBER", False),
+            ("TLP:CLEAR", False),
+        ],
+    )
+    def test_tlp_check_well_known_ref_without_definition(self, tlp, skipped):
+        """A well-known TLP id is enforced even when its object is absent."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        entity = _url_entity()
+        entity["object_marking_refs"] = [MarkingDefinition.generate_id("TLP", tlp)]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
+    def test_tlp_check_bundle_cannot_redefine_well_known_id(self):
+        """A bundled object reusing the TLP:RED id cannot relabel it."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = {
+            "type": "marking-definition",
+            "id": MarkingDefinition.generate_id("TLP", "TLP:RED"),
+            "name": "TLP:CLEAR",
         }
         entity = _url_entity()
         entity["object_marking_refs"] = [marking["id"]]

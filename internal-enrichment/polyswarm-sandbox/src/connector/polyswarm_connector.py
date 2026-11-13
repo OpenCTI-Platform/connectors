@@ -25,12 +25,40 @@ from connector.url_utils import (
     url_has_query_or_fragment,
     url_has_userinfo,
 )
-from pycti import OpenCTIConnectorHelper
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 # Names that all mean PolySwarm's public community: an account's community list
 # shows it as "public", the API's default is "default", and task records say
 # "mainnet1".
 PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
+# Fixed STIX ids of the TLP markings, so a ref is resolved even when the
+# bundle does not carry its marking-definition object. TLP:WHITE and
+# TLP:CLEAR share one id. A bundle cannot redefine these ids.
+WELL_KNOWN_TLP_IDS = {
+    MarkingDefinition.generate_id("TLP", tlp): tlp
+    for tlp in ("TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED")
+}
+
+
+def tlp_of_marking(marking: dict) -> str | None:
+    """TLP name of a STIX marking-definition, or None when it is not a TLP.
+
+    Read in order: OpenCTI's x_opencti_definition (when its type is TLP),
+    then a name starting with "TLP:", then the STIX 2.1 TLP form
+    (definition_type "tlp", definition {"tlp": "red"}).
+    """
+    if str(marking.get("x_opencti_definition_type") or "").upper() == "TLP":
+        if marking.get("x_opencti_definition"):
+            return str(marking["x_opencti_definition"]).upper()
+    name = str(marking.get("name") or "")
+    if name.upper().startswith("TLP:"):
+        return name.upper()
+    if str(marking.get("definition_type") or "").lower() == "tlp":
+        definition = marking.get("definition")
+        if isinstance(definition, dict) and definition.get("tlp"):
+            return f"TLP:{str(definition['tlp']).upper()}"
+    return None
 
 
 class PolySwarmConnector:
@@ -374,13 +402,12 @@ class PolySwarmConnector:
                 and m.get("definition_type") == "TLP"
                 and m.get("definition")
             ]
-            by_id = {
-                o.get("id"): o.get("name")
-                for o in stix_objects or []
-                if isinstance(o, dict)
-                and o.get("type") == "marking-definition"
-                and str(o.get("name") or "").upper().startswith("TLP:")
-            }
+            by_id = dict(WELL_KNOWN_TLP_IDS)
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("type") == "marking-definition":
+                    tlp = tlp_of_marking(o)
+                    if tlp:
+                        by_id.setdefault(o.get("id"), tlp)
             for o in stix_objects or []:
                 if isinstance(o, dict) and o.get("id") in (
                     opencti_entity.get("standard_id"),
