@@ -25,6 +25,7 @@
       "default": [
         "Domain-Name",
         "Hostname",
+        "IPv4-Addr",
         "Url"
       ],
       "description": "The observable types the connector enriches.",

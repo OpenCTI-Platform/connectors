@@ -5,6 +5,9 @@ Uses AST to verify:
 - ``in_error=`` is used as a keyword argument specifically in a
   ``to_processed()`` call (not just any ``in_error=`` assignment).
 
+Connectors built on connectors-sdk's ``ExternalImportConnector`` pass: the
+SDK closes each work with ``to_processed``, with ``in_error=True`` on failure.
+
 Scope: EXTERNAL_IMPORT only — other connector types have their work
 lifecycle managed by the platform or SDK.
 """
@@ -12,6 +15,9 @@ lifecycle managed by the platform or SDK.
 import ast
 from pathlib import Path
 
+from connector_linter.checks.vc3xx_code._helpers import (
+    find_sdk_external_import_connector,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -63,6 +69,19 @@ def check_work_closed(ctx: ConnectorContext) -> list[CheckFinding]:
         return [no_python_sources_finding()]
 
     trees = ctx.python_trees
+
+    # The SDK base connector closes the work itself, in_error=True included
+    sdk_import = find_sdk_external_import_connector(trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Work lifecycle delegated to connectors-sdk ExternalImportConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
+
     calls = _find_to_processed_calls(trees)
 
     # ---------------------------------------------------------------------------

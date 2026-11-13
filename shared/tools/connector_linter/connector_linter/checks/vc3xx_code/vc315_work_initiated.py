@@ -4,6 +4,9 @@ External-import connectors must call
 ``self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)``
 to properly track work lifecycle in the OpenCTI platform.
 
+Connectors built on connectors-sdk's ``ExternalImportConnector`` pass: the
+SDK initiates a work for each data processor run.
+
 Scope: EXTERNAL_IMPORT only.
 """
 
@@ -11,6 +14,7 @@ import re
 
 from connector_linter.checks.vc3xx_code._helpers import (
     find_pattern_locations,
+    find_sdk_external_import_connector,
 )
 from connector_linter.models import (
     CheckFinding,
@@ -51,6 +55,18 @@ def check_work_initiated(ctx: ConnectorContext) -> list[CheckFinding]:
 
     if not sources:
         return [no_python_sources_finding()]
+
+    # The SDK base connector initiates the work itself
+    sdk_import = find_sdk_external_import_connector(ctx.python_trees)
+    if sdk_import:
+        return [
+            CheckFinding(
+                message="Work lifecycle delegated to connectors-sdk ExternalImportConnector",
+                severity=Severity.INFO,
+                file_path=sdk_import.file_path,
+                line=sdk_import.line,
+            ),
+        ]
 
     # Simple presence check: scan all source files for .initiate_work( calls
     locations = find_pattern_locations(sources, [_INITIATE_WORK])

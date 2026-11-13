@@ -37,3 +37,30 @@ def test_settings_should_migrate_deprecated_reversinglabs_max_tlp(monkeypatch):
 
     # Then: The value is used as connector.max_tlp
     assert config.connector.max_tlp == TLPLevel.RED
+
+
+def test_settings_should_verify_ssl_by_default():
+    """
+    Test that the SSL certificate of the Spectra Analyze appliance is verified
+    when `REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY` is not set.
+    """
+    # Given: The SSL verification is not configured
+    # When: The settings are loaded
+    config = ConfigLoader()
+
+    # Then: The SSL certificate is verified
+    assert config.reversinglabs_spectra_analyze.ssl_verify is True
+
+
+def test_settings_should_allow_disabling_ssl_verification(monkeypatch):
+    """
+    Test that `REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY` disables the SSL verification.
+    """
+    # Given: The SSL verification is disabled
+    monkeypatch.setenv("REVERSINGLABS_SPECTRA_ANALYZE_SSL_VERIFY", "false")
+
+    # When: The settings are loaded
+    config = ConfigLoader()
+
+    # Then: The SSL certificate is not verified
+    assert config.reversinglabs_spectra_analyze.ssl_verify is False

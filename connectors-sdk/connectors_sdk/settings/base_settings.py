@@ -193,7 +193,7 @@ class BaseConnectorSettings(_ClassLoggerMixin, BaseConfigModel, ABC):
         >>> class ExampleAPISettings(BaseSettings):
         ...     api_key: str = Field(description="API key for authentication")
         ...
-        >>> class ExampleConnectorSettings(BaseConnectorSettings):
+        >>> class ExampleConnectorSettings(BaseExternalImportConnectorSettings):
         ...     connector: ConnectorSettings = Field(default_factory=ConnectorSettings)
         ...     connector_api: ExampleAPISettings = Field(default_factory=ExampleAPISettings)
         ...
@@ -565,4 +565,89 @@ class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
     auto: bool = Field(
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
+# Per-type settings classes.
+# `BaseConnectorSettings.connector` is typed `_BaseConnectorConfig`, so a type variable
+# bound to `BaseConnectorSettings` cannot see type-specific fields such as
+# `duration_period`. Each class below narrows `connector` to its connector type's config.
+
+
+class BaseExternalImportConnectorSettings(BaseConnectorSettings):
+    """Settings class for external import connectors.
+
+    Narrows `connector` to `BaseExternalImportConnectorConfig`, so that type-specific
+    fields (e.g. `duration_period`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseExternalImportConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseExternalImportConnectorConfig = Field(
+        default_factory=BaseExternalImportConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalEnrichmentConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal enrichment connectors.
+
+    Narrows `connector` to `BaseInternalEnrichmentConnectorConfig`, so that type-specific
+    fields (e.g. `max_tlp`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseInternalEnrichmentConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalEnrichmentConnectorConfig = Field(
+        default_factory=BaseInternalEnrichmentConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseStreamConnectorSettings(BaseConnectorSettings):
+    """Settings class for stream connectors.
+
+    Narrows `connector` to `BaseStreamConnectorConfig`, so that type-specific
+    fields (e.g. `live_stream_id`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseStreamConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseStreamConnectorConfig = Field(
+        default_factory=BaseStreamConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalExportFileConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal export file connectors.
+
+    Narrows `connector` to `BaseInternalExportFileConnectorConfig`.
+
+    Attributes:
+        connector (BaseInternalExportFileConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalExportFileConnectorConfig = Field(
+        default_factory=BaseInternalExportFileConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalImportFileConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal import file connectors.
+
+    Narrows `connector` to `BaseInternalImportFileConnectorConfig`, so that type-specific
+    fields (e.g. `auto`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseInternalImportFileConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalImportFileConnectorConfig = Field(
+        default_factory=BaseInternalImportFileConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
     )

@@ -19,14 +19,14 @@ from pydantic import Field, field_validator
 class GTICampaignConfig(GTIBaseConfig):
     """Configuration for GTI campaign imports."""
 
-    campaign_import_start_date: timedelta = Field(
-        default=timedelta(days=1),
-        description="ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
-    )
-
     import_campaigns: bool = Field(
         default=False,
         description="Whether to enable importing campaign data from GTI",
+    )
+
+    campaign_import_start_date: timedelta = Field(
+        default=timedelta(days=1),
+        description="ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
     )
 
     campaign_origins: ListFromString = Field(

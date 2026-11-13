@@ -4,7 +4,7 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev
+    apk --no-cache add git build-base libffi-dev
 
 COPY src/zetalytics_dns /opt/opencti-connector-zetalytics-dns/src/zetalytics_dns
 COPY pyproject.toml /opt/opencti-connector-zetalytics-dns/pyproject.toml
@@ -12,6 +12,6 @@ WORKDIR /opt/opencti-connector-zetalytics-dns
 
 # git is required to resolve the connectors-sdk VCS dependency declared in pyproject.toml
 RUN pip3 install --no-cache-dir . && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 CMD ["zetalytics-dns-connector"]

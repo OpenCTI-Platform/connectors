@@ -65,7 +65,7 @@ import requests
 from pydantic import Field, HttpUrl
 
 # OpenCTI/SDK imports
-from connectors_sdk import BaseConfigModel, BaseConnectorSettings
+from connectors_sdk import BaseConfigModel, BaseExternalImportConnectorSettings
 from connectors_sdk.models import Indicator, IPV4Address, TLPMarking
 from pycti import OpenCTIConnectorHelper
 

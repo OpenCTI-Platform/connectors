@@ -28,9 +28,6 @@ WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
 # Install runtime dependencies
 RUN apk --no-cache upgrade && \
     apk --no-cache add \
-    libmagic \
-    libxml2 \
-    libxslt \
     libffi
 
 # Create an unprivileged runtime user used by COPY --chown and final process.

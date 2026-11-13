@@ -1,4 +1,4 @@
-"""Answers of the NetAPI JSON API as returned on 2026-10-26."""
+"""Answers of the NetAPI JSON API as returned on 2026-10-26 (domains) and 2026-11-04 (IPs)."""
 
 import copy
 
@@ -7,7 +7,13 @@ LISTS_DOMAINS = {
     "current": "https://netapi.com/api2/?method=compromised&dataset_type=url",
     "all_time": "https://netapi.com/api2/?method=compromised&dataset_type=url-all",
 }
+LISTS_IPS = {
+    "page": "https://netapi.com/compromised-ips/",
+    "current": "https://netapi.com/api2/?method=compromised&dataset_type=ip",
+    "all_time": "https://netapi.com/api2/?method=compromised&dataset_type=ip-all",
+}
 SOURCE = "NetAPI compromised feed, updated daily (CC BY 4.0)"
+SOURCE_IPS = "NetAPI Nightwatch compromised IP feed, updated hourly (CC BY 4.0)"
 
 # compromised-check: a domain listed now
 CHECK_LISTED_NOW = {
@@ -36,6 +42,22 @@ CHECK_LISTED_VIA_DOMAIN = {
     "value": "www.000359.xyz",
 }
 
+# compromised-check: an IP that attacked the sensors within the last 48 hours
+CHECK_IP_LISTED_NOW = {
+    "value": "1.0.166.69",
+    "type": "ip",
+    "listed_now": True,
+    "listed_ever": True,
+    "matched_value": "1.0.166.69",
+    "first_seen": "2026-11-03",
+    "last_seen": "2026-11-03 08:55:42 UTC",
+    "block_reason": "NetAPI network sensors: service exploit",
+    "registrar": None,
+    "note": "Seen in the compromised feed within the last 48 hours.",
+    "lists": LISTS_IPS,
+    "source": SOURCE_IPS,
+}
+
 # compromised-check: a domain listed in the past only
 CHECK_LISTED_PAST = {
     "value": "0-07.ru",
@@ -53,6 +75,25 @@ CHECK_LISTED_PAST = {
     ),
     "lists": LISTS_DOMAINS,
     "source": SOURCE,
+}
+
+# compromised-check: an IP listed in the past only
+CHECK_IP_LISTED_PAST = {
+    "value": "1.0.140.8",
+    "type": "ip",
+    "listed_now": False,
+    "listed_ever": True,
+    "matched_value": "1.0.140.8",
+    "first_seen": "2026-10-30",
+    "last_seen": "2026-10-30 01:29:00 UTC",
+    "block_reason": "NetAPI network sensors: brute force",
+    "registrar": None,
+    "note": (
+        "Listed in the past but not seen in the last 48 hours; most such entries "
+        "reflect past incidents only."
+    ),
+    "lists": LISTS_IPS,
+    "source": SOURCE_IPS,
 }
 
 # compromised-check: never listed
@@ -99,6 +140,6 @@ RANK_NOT_IN_TOP_1M = {
 ERROR_INVALID_VALUE = {
     "error": {
         "code": "invalid_value",
-        "message": "value must be a domain name or a hostname",
+        "message": "value must be a domain name, a hostname or an IPv4 address",
     }
 }

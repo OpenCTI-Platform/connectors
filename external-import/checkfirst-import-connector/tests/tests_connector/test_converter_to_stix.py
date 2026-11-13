@@ -79,6 +79,33 @@ class TestArticleConversion:
     while allowing per-article objects (MediaContent and its relationships) to differ.
     """
 
+    def test_article_infrastructure_dedupes_across_dates(self, converter):
+        """Same domain must yield equal Infrastructure objects (no per-article first_seen)."""
+        campaign, _ = converter.get_campaign_for_year(2025)
+        article_1 = _make_article(
+            url="https://france.news-pravda.com/article-1",
+            published_date=datetime(2025, 1, 10, tzinfo=timezone.utc),
+            article_id="a1",
+        )
+        article_2 = _make_article(
+            url="https://france.news-pravda.com/article-2",
+            published_date=datetime(2025, 6, 20, tzinfo=timezone.utc),
+            article_id="a2",
+        )
+        infra_1 = [
+            o
+            for o in converter.convert_article(article_1, campaign)
+            if o.id.startswith("infrastructure--")
+        ]
+        infra_2 = [
+            o
+            for o in converter.convert_article(article_2, campaign)
+            if o.id.startswith("infrastructure--")
+        ]
+        assert len(infra_1) == 1 and len(infra_2) == 1
+        assert infra_1[0] == infra_2[0]
+        assert infra_1[0].first_seen is None
+
     def test_article_shared_objects_are_identical(self, converter):
         """Two same-domain articles should have an identical structural subset."""
         campaign, attributed_to = converter.get_campaign_for_year(2025)

@@ -17,6 +17,7 @@ import ast
 import re
 from pathlib import Path
 
+from connector_linter.checks._sdk_bases import SDK_SETTINGS_BASE_NAMES
 from connector_linter.checks.vc1xx_config._helpers import (
     extract_env_vars_from_docker_compose,
     find_bad_changeme_values,
@@ -86,7 +87,7 @@ def _find_hardcoded_python_config(ctx: ConnectorContext) -> list[tuple[Path, int
             kw in source
             for kw in (
                 "BaseSettings",
-                "BaseConnectorSettings",
+                *SDK_SETTINGS_BASE_NAMES,
                 "get_config_variable",
                 "os.environ",
                 "os.getenv",

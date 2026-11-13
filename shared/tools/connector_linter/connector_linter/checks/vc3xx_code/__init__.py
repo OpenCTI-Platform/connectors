@@ -13,9 +13,12 @@ VC310: External references must not be added by default to non-Identity objects.
 VC311: Connector should use TLP markings on entities with appropriate level.
 VC312: send_stix2_bundle must use cleanup_inconsistent_bundle=True.
 VC313: STIX SDO/SRO objects must use pycti.XXX.generate_id() for deterministic IDs.
-VC314: External-import connectors must use schedule_process or schedule_iso.
-VC315: Connector must call initiate_work before processing.
-VC316: Connector must close work with to_processed after processing.
+VC314: External-import connectors must use schedule_process or schedule_iso
+       (or connectors-sdk ExternalImportConnector).
+VC315: Connector must call initiate_work before processing
+       (or connectors-sdk ExternalImportConnector).
+VC316: Connector must close work with to_processed after processing
+       (or connectors-sdk ExternalImportConnector).
 VC317: initiate_work should only be called when data is available.
 VC318: Internal-enrichment connectors must use helper.listen().
 VC319: Enrichment connector must return original bundle when not in scope.
@@ -24,4 +27,7 @@ VC321: Enrichment connector must be playbook-compatible.
 VC322: Enrichment connector must read data['stix_objects'] (former bundle).
 VC323: Stream connectors must use helper.listen_stream().
 VC324: Relationship should not set both start_time and stop_time.
+VC325: Connector must have minimal settings tests covering valid and invalid inputs.
+VC326: ListFromString settings must define a default value.
+VC327: connectors-sdk log messages must be static, with variable data passed in meta.
 """

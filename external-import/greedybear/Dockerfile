@@ -4,11 +4,11 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 COPY src /opt/opencti-connector-greedybear
 
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev procps
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-greedybear && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

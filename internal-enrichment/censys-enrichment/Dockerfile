@@ -6,7 +6,6 @@ RUN apk --no-cache upgrade && \
       build-base  \
       git  \
       libffi-dev  \
-      libmagic  \
       libxml2-dev  \
       libxslt-dev
 
@@ -14,6 +13,7 @@ FROM base AS dependencies
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+    apk del build-base git libffi-dev libxml2-dev libxslt-dev && \
     rm /tmp/requirements.txt
 
 FROM dependencies AS connector
