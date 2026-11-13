@@ -2,11 +2,14 @@
 
 import ipaddress
 import logging
-import uuid
 from datetime import datetime
 from typing import Any
 
 from crowdstrike_indicators.errors import IndicatorConversionError
+from crowdstrike_indicators.ids import (
+    CROWDSTRIKE_NAMESPACE,
+    indicator_id,
+)
 from crowdstrike_indicators.models import CrowdStrikeIndicator
 from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
 from stix2 import (
@@ -19,6 +22,14 @@ from stix2 import (
 from stix2.exceptions import STIXError
 
 from shared.transformer import AbstractTransformer
+
+__all__ = [
+    "CROWDSTRIKE_NAMESPACE",
+    "CrowdStrikeIndicatorTransformer",
+    "build_pattern",
+    "indicator_id",
+    "x_property_name",
+]
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,9 +63,6 @@ KILL_CHAIN_PHASES = {
 
 SOURCE_NAME = "CrowdStrike"
 
-# Namespace of the STIX ids derived from CrowdStrike ids. Derived from
-# CrowdStrike's domain so anyone can recompute it; independent of OpenCTI.
-CROWDSTRIKE_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_DNS, "crowdstrike.com")
 
 X_PREFIX = "x_crowdstrike_"
 X_EXTRA = f"{X_PREFIX}extra"
@@ -89,16 +97,6 @@ def build_pattern(item: CrowdStrikeIndicator) -> str:
         ObjectPath(object_type, path), StringConstant(item.indicator)
     )
     return str(ObservationExpression(str(comparison)))
-
-
-def indicator_id(crowdstrike_id: str) -> str:
-    """Return the deterministic STIX id of the CrowdStrike indicator ``crowdstrike_id``.
-
-    A STIX id must be ``indicator--<UUID>``, so the CrowdStrike id is turned
-    into a UUIDv5 in :data:`CROWDSTRIKE_NAMESPACE`. Converting it to an
-    OpenCTI id belongs to a later, OpenCTI-specific stage.
-    """
-    return f"indicator--{uuid.uuid5(CROWDSTRIKE_NAMESPACE, crowdstrike_id)}"
 
 
 def x_property_name(field_name: str) -> str:
