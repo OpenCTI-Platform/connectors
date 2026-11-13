@@ -78,85 +78,9 @@ new_score = 88
 
 ## Configuration
 
-### Generic Parameters
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter             | Required | Description                            | Default                                |
-|-----------------------|----------|----------------------------------------|----------------------------------------|
-| `OPENCTI_URL`         | ✅        | URL of your OpenCTI platform           |                                        |
-| `OPENCTI_TOKEN`       | ✅        | OpenCTI API token                      |                                        |
-| `CONNECTOR_ID`        | ❌        | Unique connector ID (UUIDv4)           | `1f5865dc-085a-4b71-98a5-58ad6f03acf5` |
-| `CONNECTOR_NAME`      | ❌        | Display name of the connector          | `Scoring calculator`                   |
-| `CONNECTOR_SCOPE`     | ❌        | Entity scope to enrich                 | `Indicator`                            |
-| `CONNECTOR_LOG_LEVEL` | ❌        | Log verbosity level                    | `error`                                |
-| `CONNECTOR_AUTO`      | ❌        | Auto-trigger on entity creation/update | `false`                                |
-
-### Scoring Parameters
-
-| Parameter                                     | Required | Description                                            | Default                                    |
-|-----------------------------------------------|----------|--------------------------------------------------------|--------------------------------------------|
-| `CONNECTOR_SCORING_HIGH_PRIORITY_LABELS`      | ❌        | JSON array of labels for high priority                 | `[]`                                       |
-| `CONNECTOR_SCORING_MEDIUM_PRIORITY_LABELS`    | ❌        | JSON array of labels for medium priority               | `[]`                                       |
-| `CONNECTOR_SCORING_LOW_PRIORITY_LABELS`       | ❌        | JSON array of labels for low priority                  | `[]`                                       |
-| `CONNECTOR_SCORING_INDICATOR_TYPE_ENRICHABLE` | ❌        | Comma-separated list of observable types to enrich     | `IPv4-Addr,IPv6-Addr,Domain-Name,StixFile` |
-| `CONNECTOR_SCORING_BROWSE_REPORT`             | ❌        | Whether to browse reports for additional relationships | `false`                                    |
-
-### Category-Specific Parameters
-
-Each category follows the same pattern. Set `*_IMPACT_SCORE` to `true` to enable the category, then configure the percentage impact for each priority level.
-
-#### Threat
-
-| Parameter                                  | Required | Description                | Default |
-|--------------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_THREAT_IMPACT_SCORE`    | ❌        | Enable threat category     | `false` |
-| `CONNECTOR_SCORING_THREAT_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_THREAT_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_THREAT_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
-
-#### Toolbox
-
-| Parameter                                   | Required | Description                | Default |
-|---------------------------------------------|----------|----------------------------|--------|
-| `CONNECTOR_SCORING_TOOLBOX_IMPACT_SCORE`    | ❌        | Enable toolbox category    | `false` |
-| `CONNECTOR_SCORING_TOOLBOX_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`    |
-| `CONNECTOR_SCORING_TOOLBOX_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`    |
-| `CONNECTOR_SCORING_TOOLBOX_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`    |
-
-#### Location
-
-| Parameter                                    | Required | Description                | Default |
-|----------------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_LOCATION_IMPACT_SCORE`    | ❌        | Enable location category   | `false` |
-| `CONNECTOR_SCORING_LOCATION_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_LOCATION_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_LOCATION_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
-
-#### Sector
-
-| Parameter                                  | Required | Description                | Default |
-|--------------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_SECTOR_IMPACT_SCORE`    | ❌        | Enable sector category     | `false` |
-| `CONNECTOR_SCORING_SECTOR_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_SECTOR_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_SECTOR_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
-
-#### TTP
-
-| Parameter                               | Required | Description                | Default |
-|-----------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_TTP_IMPACT_SCORE`    | ❌        | Enable TTP category        | `false` |
-| `CONNECTOR_SCORING_TTP_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_TTP_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_TTP_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
-
-#### Author
-
-| Parameter                                  | Required | Description                | Default |
-|--------------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_AUTHOR_IMPACT_SCORE`    | ❌        | Enable author category     | `false` |
-| `CONNECTOR_SCORING_AUTHOR_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_AUTHOR_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_AUTHOR_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
+> **Note:** `CONNECTOR_MAX_TLP` is listed there, but the connector does not check it yet.
 
 ## Usage Example
 
