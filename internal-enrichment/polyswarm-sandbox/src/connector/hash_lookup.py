@@ -17,6 +17,7 @@ for each report found (when PDF reports are on), and an LLM report is created
 when those are on. These may count against report quota.
 """
 
+from collections.abc import Mapping
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -126,14 +127,28 @@ class HashLookupMixin:
         title: str,
         detail: str,
         next_steps: list[str] | None = None,
+        stix_objects: list | None = None,
     ) -> None:
-        """Attach a plain (non-error) note to the observable."""
+        """Attach a plain (non-error) note to the observable.
+
+        The incoming ``stix_objects`` are sent in the same bundle, so a
+        playbook gets its original bundle back on this path too.
+        """
         try:
             note = self.stix_builder.create_info_note(
                 entity=entity, title=title, detail=detail, next_steps=next_steps
             )
             author = self.stix_builder._create_author()
-            bundle = self.helper.stix2_create_bundle([author, note])
+            objects: list = []
+            seen: set = set()
+            for obj in [author, note, *(stix_objects or [])]:
+                obj_id = obj.get("id") if isinstance(obj, Mapping) else None
+                if obj_id is not None and obj_id in seen:
+                    continue
+                if obj_id is not None:
+                    seen.add(obj_id)
+                objects.append(obj)
+            bundle = self.helper.stix2_create_bundle(objects)
             self.helper.send_stix2_bundle(
                 bundle, update=True, cleanup_inconsistent_bundle=True
             )
@@ -410,6 +425,7 @@ class HashLookupMixin:
                         "PolySwarm has no record of this hash in the community "
                         f"'{ps.community}', so there is no sandbox report to import.",
                         self._no_report_next_steps(),
+                        stix_objects=stix_objects,
                     )
                     return None
             self._enrich_ctx = f"[entity={short_id} hash={sha256[:16]}]"
@@ -526,7 +542,11 @@ class HashLookupMixin:
                     detail = self._no_report_detail()
                     steps = self._no_report_next_steps()
                 self._send_info_note(
-                    entity, "No PolySwarm Sandbox Report", detail, steps
+                    entity,
+                    "No PolySwarm Sandbox Report",
+                    detail,
+                    steps,
+                    stix_objects=stix_objects,
                 )
                 return None
 

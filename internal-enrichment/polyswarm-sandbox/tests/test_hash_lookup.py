@@ -332,6 +332,38 @@ class TestLookupMissing:
         assert "no record of this hash" in content
         assert "'acme-private'" in content
 
+    def _playbook_objects(self, entity):
+        other = {
+            "type": "identity",
+            "spec_version": "2.1",
+            "id": "identity--00000000-0000-0000-0000-0000000000b2",
+            "name": "From the playbook",
+        }
+        return [entity, other]
+
+    def test_no_report_forwards_the_original_bundle(self):
+        c = _connector(latest={})
+        entity = _stixfile()
+        incoming = self._playbook_objects(entity)
+        assert _run(c, entity, stix_objects=incoming) is None
+        sent = _bundle_objects(c)
+        ids = [o["id"] for o in sent]
+        assert FILE_ID in ids
+        assert incoming[1]["id"] in ids
+        assert len(ids) == len(set(ids))
+        assert len(_notes(c)) == 1
+        c.helper.send_stix2_bundle.assert_called_once()
+
+    def test_unknown_hash_forwards_the_original_bundle(self):
+        c = _connector(latest={})
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        entity = _stixfile({"MD5": "c" * 32})
+        incoming = self._playbook_objects(entity)
+        assert _run(c, entity, stix_objects=incoming) is None
+        ids = [o["id"] for o in _bundle_objects(c)]
+        assert FILE_ID in ids
+        assert incoming[1]["id"] in ids
+
     def test_no_hash_gives_error_note(self):
         c = _connector()
         c._send_error_note = MagicMock()
