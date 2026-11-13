@@ -43,7 +43,7 @@ def _make_connector() -> RansomwareAPIConnector:
     connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
     connector.helper = MagicMock()
     # No country already in OpenCTI: location_fetcher falls back to create_country
-    connector.helper.api.stix_domain_object.read.return_value = None
+    connector.helper.api.location.list.return_value = []
     connector.config = MagicMock()
     connector.config.ransomwarelive.create_threat_actor = False
     connector.config.ransomwarelive.create_intrusion_set = False
@@ -53,6 +53,7 @@ def _make_connector() -> RansomwareAPIConnector:
     connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
     connector.author = connector.converter_to_stix.author
     connector.processed_groups = set()
+    connector.country_cache = {}
     return connector
 
 

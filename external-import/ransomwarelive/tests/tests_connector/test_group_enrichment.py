@@ -371,6 +371,7 @@ class TestAttackPatternFetcher:
         connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
         connector.author = connector.converter_to_stix.author
         connector.processed_groups = set()
+        connector.country_cache = {}
         return connector
 
     def test_returns_stix_id_when_found(self):
@@ -420,6 +421,7 @@ class TestProcessGroupTtps:
         connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
         connector.author = connector.converter_to_stix.author
         connector.processed_groups = set()
+        connector.country_cache = {}
         return connector
 
     def _make_intrusion_set(self, connector):
@@ -491,6 +493,7 @@ class TestCollectGroupEnrichmentObjects:
         connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
         connector.author = connector.converter_to_stix.author
         connector.processed_groups = set()
+        connector.country_cache = {}
         connector.process_group_ttps = MagicMock(return_value=[])
         connector.converter_to_stix.process_group_leak_sites = MagicMock(
             return_value=[]
