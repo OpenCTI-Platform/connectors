@@ -365,6 +365,12 @@ class TestUrlRefusals:
             # STIX 2.1 TLP form with no name
             ({"definition_type": "tlp", "definition": {"tlp": "red"}}, True),
             ({"definition_type": "tlp", "definition": {"tlp": "green"}}, False),
+            # OpenCTI API shape: definition is the TLP name
+            ({"definition_type": "TLP", "definition": "TLP:RED"}, True),
+            ({"definition_type": "tlp", "definition": "TLP:AMBER+STRICT"}, True),
+            ({"definition_type": "TLP", "definition": "TLP:GREEN"}, False),
+            # Upper-case dict key
+            ({"definition_type": "TLP", "definition": {"TLP": "red"}}, True),
             ({"name": "TLP:GREEN"}, False),
             ({"name": "PAP:RED"}, False),
         ],

@@ -45,8 +45,9 @@ def tlp_of_marking(marking: dict) -> str | None:
     """TLP name of a STIX marking-definition, or None when it is not a TLP.
 
     Read in order: OpenCTI's x_opencti_definition (when its type is TLP),
-    then a name starting with "TLP:", then the STIX 2.1 TLP form
-    (definition_type "tlp", definition {"tlp": "red"}).
+    then a name starting with "TLP:", then the definition when
+    definition_type is TLP (any case): the STIX 2.1 form {"tlp": "red"}
+    (or key "TLP"), or the OpenCTI API string form "TLP:RED".
     """
     if str(marking.get("x_opencti_definition_type") or "").upper() == "TLP":
         if marking.get("x_opencti_definition"):
@@ -56,8 +57,11 @@ def tlp_of_marking(marking: dict) -> str | None:
         return name.upper()
     if str(marking.get("definition_type") or "").lower() == "tlp":
         definition = marking.get("definition")
-        if isinstance(definition, dict) and definition.get("tlp"):
-            return f"TLP:{str(definition['tlp']).upper()}"
+        if isinstance(definition, dict):
+            definition = definition.get("tlp") or definition.get("TLP")
+        if isinstance(definition, str) and definition.strip():
+            tlp = definition.strip().upper()
+            return tlp if tlp.startswith("TLP:") else f"TLP:{tlp}"
     return None
 
 
