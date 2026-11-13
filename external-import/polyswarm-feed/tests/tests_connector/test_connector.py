@@ -90,13 +90,18 @@ class RecordingHuntingSource:
         self.tlp_marking = tlp_marking
         self.client = client
         self.received_state = None
+        self.received_max_objects = None
         RecordingHuntingSource.instances.append(self)
 
-    def collect(self, state):
+    def collect_batches(self, state, max_objects=None):
         self.received_state = state
+        self.received_max_objects = max_objects
         if RecordingHuntingSource.error:
             raise RecordingHuntingSource.error
-        return RecordingHuntingSource.result
+        objects, new_state = RecordingHuntingSource.result
+        if objects and not isinstance(objects[0], list):
+            objects = [objects]
+        return objects, new_state
 
 
 @pytest.fixture(autouse=True)
@@ -419,6 +424,61 @@ def test_feed_failure_does_not_block_hunting(fake_logger, hunting_source):
     connector.process_message()
 
     assert helper.stored_state["hunting"] == {"since": "S2"}
+
+
+def test_hunting_gets_the_budget_left_after_the_feed(fake_logger, hunting_source):
+    one_page = _objects_in_one_sample_page(type(fake_logger)())
+    pages = {"trustgroup": [page(make_sample_bundle(1), last="T1")]}
+    connector, _, _ = build(
+        fake_logger, pages, hunting_enabled=True, max_objects_per_run=one_page + 50
+    )
+
+    connector.process_message()
+
+    assert hunting_source.instances[0].received_max_objects == 50
+
+
+def test_hunting_waits_when_the_feed_used_the_whole_budget(
+    fake_logger, hunting_source
+):
+    hunting_source.result = (
+        [{"type": "indicator", "id": "indicator--1"}],
+        {"since": "S2"},
+    )
+    stored = {"hunting": {"since": "S1"}}
+    pages = {"trustgroup": [page(make_sample_bundle(1), last="T1")]}
+    connector, helper, _ = build(
+        fake_logger,
+        pages,
+        stored_state=stored,
+        hunting_enabled=True,
+        max_objects_per_run=5,
+    )
+
+    connector.process_message()
+
+    assert hunting_source.instances == []
+    assert helper.stored_state["hunting"] == {"since": "S1"}
+    assert any("live hunting" in m for m in fake_logger.messages("info"))
+
+
+def test_hunting_batches_are_sent_as_separate_bundles_in_one_work(
+    fake_logger, hunting_source
+):
+    first = [{"type": "indicator", "id": "indicator--1"}]
+    second = [{"type": "indicator", "id": "indicator--2"}]
+    hunting_source.result = ([first, second], {"since": "S2"})
+    connector, helper, _ = build(fake_logger, {}, hunting_enabled=True)
+
+    connector.process_message()
+
+    assert [sent["bundle"]["objects"][-1]["id"] for sent in helper.bundles] == [
+        "indicator--1",
+        "indicator--2",
+    ]
+    assert {sent["work_id"] for sent in helper.bundles} == {"work-1"}
+    assert helper.stored_state["hunting"] == {"since": "S2"}
+    assert "2 objects" in helper.processed()[0][1]
 
 
 def test_run_schedules_process_message(fake_logger):

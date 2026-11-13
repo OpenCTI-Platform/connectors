@@ -633,6 +633,96 @@ def test_rerun_after_incomplete_paging_imports_only_unread_hits():
     assert state["last_run"] == NOW.isoformat()
 
 
+def _distinct_hits(count):
+    """Hits for ``count`` different files, newest (highest id) first."""
+    return [
+        make_hit(str(n), sha256=f"{n:064x}", md5=f"{n:032x}", sha1=f"{n:040x}")
+        for n in range(count, 0, -1)
+    ]
+
+
+def test_object_budget_stops_reading_and_keeps_the_checkpoint():
+    previous = NOW - timedelta(hours=1)
+    client = FakeClient(_distinct_hits(10))
+    source, _, logger = make_source(client=client)
+    # Each new file with a new rule can produce up to six objects.
+    objects, state = source.collect({"last_run": previous.isoformat()}, max_objects=12)
+
+    assert len(by_type(objects, "file")) == 2
+    assert len(objects) <= 12
+    assert state["seen_hit_ids"] == ["10", "9"]
+    assert abs(datetime.fromisoformat(state["last_run"]) - previous) <= timedelta(
+        seconds=1
+    )
+    # Reading stopped at the first hit over the budget, not at the end.
+    assert client.readers[0].yielded == 3
+    warnings = [m for level, _, m in logger.messages if level == "warning"]
+    assert any(meta and meta.get("reason") == "object budget" for meta in warnings)
+
+
+def test_object_budget_rerun_continues_after_the_hits_already_imported():
+    previous = NOW - timedelta(hours=1)
+    source, _, _ = make_source(client=FakeClient(_distinct_hits(5)))
+    _, state = source.collect({"last_run": previous.isoformat()}, max_objects=12)
+    objects, state = source.collect(state, max_objects=12)
+
+    hashes = [f["hashes"]["SHA-256"] for f in by_type(objects, "file")]
+    assert hashes == [f"{n:064x}" for n in (3, 2)]
+    assert state["seen_hit_ids"][:4] == ["3", "2", "5", "4"]
+
+    objects, state = source.collect(state, max_objects=12)
+    assert [f["hashes"]["SHA-256"] for f in by_type(objects, "file")] == [
+        f"{1:064x}"
+    ]
+    assert state["last_run"] == NOW.isoformat()
+
+
+def test_already_seen_hits_do_not_use_the_object_budget():
+    hits = _distinct_hits(3)
+    source, _, _ = make_source(hits)
+    objects, state = source.collect({"seen_hit_ids": ["3", "2"]}, max_objects=1)
+    assert [f["hashes"]["SHA-256"] for f in by_type(objects, "file")] == [
+        f"{1:064x}"
+    ]
+    assert state["last_run"] == NOW.isoformat()
+
+
+def test_collect_batches_splits_by_file_and_keeps_references_together():
+    hits = _distinct_hits(5) + [
+        make_hit(
+            "x",
+            sha256=f"{5:064x}",
+            md5=f"{5:032x}",
+            sha1=f"{5:040x}",
+            rule_name="other_rule",
+            malware_family="Emotet",
+        )
+    ]
+    source, _, _ = make_source(hits)
+    batches, state = source.collect_batches({}, batch_size=5)
+
+    assert len(batches) > 1
+    known = {AUTHOR["id"], TLP["id"]}
+    files = []
+    for batch in batches:
+        ids = {o["id"] for o in batch} | known
+        for obj in batch:
+            for key in ("source_ref", "target_ref", "created_by_ref"):
+                if key in obj:
+                    assert obj[key] in ids
+            for ref in obj.get("object_refs", []) + obj.get("object_marking_refs", []):
+                assert ref in ids
+        files += [o["hashes"]["SHA-256"] for o in by_type(batch, "file")]
+    assert sorted(files) == sorted(f"{n:064x}" for n in range(1, 6))
+
+    # The flat result holds the same objects, once each.
+    flat, _ = make_source(hits)[0].collect({})
+    assert sorted(o["id"] for o in flat) == sorted(
+        {o["id"] for batch in batches for o in batch}
+    )
+    assert state["seen_hit_ids"][0] == "5"
+
+
 def test_client_error_propagates_and_state_is_not_returned():
     error = RuntimeError("boom")
     source, _, _ = make_source(client=FakeClient(error=error))

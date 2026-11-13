@@ -36,6 +36,15 @@ LAG_MARGIN_SECONDS = 10 * 60
 MAX_SINCE_SECONDS = 30 * 24 * 60 * 60
 # How many recent hit ids are remembered for deduplication.
 SEEN_IDS_LIMIT = 5000
+# Upper bound on the objects one hit can add: a File, an Indicator and a
+# based-on relationship for a new file, then a Note, a Malware and an
+# indicates relationship for a new (rule, file) pair. Used to stay within
+# the run's object budget before the hits are mapped.
+MAX_OBJECTS_PER_NEW_FILE = 3
+MAX_OBJECTS_PER_NEW_RULE_AND_FILE = 3
+# Target size of one bundle of hunting objects. Objects of one file are never
+# split across bundles, so a bundle can be somewhat larger.
+BUNDLE_OBJECTS = 1000
 
 MAX_RULE_NAME_LENGTH = 128
 MAX_FAMILY_NAME_LENGTH = 128
@@ -207,8 +216,33 @@ class HuntingSource:
     # Public entry point
     # ------------------------------------------------------------------
 
-    def collect(self, state: dict) -> tuple[list[dict], dict]:
+    def collect(
+        self, state: dict, max_objects: int | None = None
+    ) -> tuple[list[dict], dict]:
         """Return (STIX 2.1 objects as plain dicts, the updated hunting sub-state)."""
+        batches, new_state = self.collect_batches(state, max_objects=max_objects)
+        objects: dict[str, dict] = {}
+        for batch in batches:
+            for obj in batch:
+                objects.setdefault(obj["id"], obj)
+        return list(objects.values()), new_state
+
+    def collect_batches(
+        self,
+        state: dict,
+        max_objects: int | None = None,
+        batch_size: int = BUNDLE_OBJECTS,
+    ) -> tuple[list[list[dict]], dict]:
+        """Return (bundles of STIX 2.1 objects, the updated hunting sub-state).
+
+        Each bundle holds every object of the files in it, so its references
+        resolve within the bundle (plus the author and the TLP marking).
+
+        ``max_objects`` bounds the objects of this run. Reading stops at the
+        first new hit that would go over it; the checkpoint then stays at the
+        start of the window and the next run continues past the hits already
+        imported, which are skipped by id.
+        """
         state = state if isinstance(state, dict) else {}
         now = self._now()
         last_run = _parse_time(state.get(STATE_LAST_RUN))
@@ -226,6 +260,10 @@ class HuntingSource:
 
         new_hits: list[dict] = []
         new_ids: list[str] = []
+        new_files: set[str] = set()
+        new_pairs: set[tuple[str, str]] = set()
+        estimated_objects = 0
+        stopped_by_budget = False
         hits_returned = 0
         skipped_seen = 0
         skipped_invalid = 0
@@ -240,18 +278,30 @@ class HuntingSource:
                 continue
             # A hit that is unusable now may be complete in a later copy, so
             # it is counted as skipped but not remembered as seen.
-            if _clean_hash(hit.get("sha256"), "SHA-256") is None:
+            sha256 = _clean_hash(hit.get("sha256"), "SHA-256")
+            if sha256 is None:
                 skipped_invalid += 1
                 continue
-            if not _clean_text(hit.get("rule_name"), MAX_RULE_NAME_LENGTH):
+            rule = _clean_text(hit.get("rule_name"), MAX_RULE_NAME_LENGTH)
+            if not rule:
                 skipped_invalid += 1
                 continue
+            if max_objects is not None and estimated_objects >= max_objects:
+                stopped_by_budget = True
+                break
+            if sha256 not in new_files:
+                new_files.add(sha256)
+                estimated_objects += MAX_OBJECTS_PER_NEW_FILE
+            if (sha256, rule) not in new_pairs:
+                new_pairs.add((sha256, rule))
+                estimated_objects += MAX_OBJECTS_PER_NEW_RULE_AND_FILE
             if key is not None:
                 seen.add(key)
                 new_ids.append(key)
             new_hits.append(hit)
 
-        objects = self._map_hits(new_hits, now)
+        batches = self._map_in_batches(new_hits, now, batch_size)
+        object_count = sum(len(batch) for batch in batches)
         self.logger.info(
             "PolySwarm live hunting hits processed.",
             meta={
@@ -260,7 +310,8 @@ class HuntingSource:
                 "hits_new": len(new_hits),
                 "hits_already_seen": skipped_seen,
                 "hits_skipped_invalid": skipped_invalid,
-                "objects": len(objects),
+                "objects": object_count,
+                "bundles": len(batches),
             },
         )
 
@@ -268,7 +319,8 @@ class HuntingSource:
         new_id_set = set(new_ids)
         merged_ids = new_ids + [i for i in previous_ids if i not in new_id_set]
         checkpoint = now
-        if not reader.complete:
+        complete = reader.complete and not stopped_by_budget
+        if not complete:
             # Hits come newest first, so the ones not read are the oldest in
             # the window. Keep the checkpoint at the start of this window so
             # the next run asks for it again; hits already imported are then
@@ -278,7 +330,10 @@ class HuntingSource:
                 "Live hunting window not fully read; the checkpoint is kept at "
                 "the start of the window and the next run reads it again.",
                 meta={
-                    "reason": reader.stop_reason,
+                    "reason": (
+                        "object budget" if stopped_by_budget else reader.stop_reason
+                    ),
+                    "max_objects": max_objects,
                     "since_seconds": since,
                     "hits_read": hits_returned,
                 },
@@ -287,11 +342,32 @@ class HuntingSource:
             STATE_LAST_RUN: checkpoint.isoformat(),
             STATE_SEEN_IDS: merged_ids[:SEEN_IDS_LIMIT],
         }
-        return objects, new_state
+        return batches, new_state
 
     # ------------------------------------------------------------------
     # Mapping
     # ------------------------------------------------------------------
+
+    def _map_in_batches(
+        self, hits: list[dict], now: datetime, batch_size: int
+    ) -> list[list[dict]]:
+        """Map hits file by file and group the files into bundles."""
+        hits_by_file: dict[str, list[dict]] = {}
+        for hit in hits:
+            sha256 = _clean_hash(hit.get("sha256"), "SHA-256")
+            hits_by_file.setdefault(sha256, []).append(hit)
+
+        batches: list[list[dict]] = []
+        current: dict[str, dict] = {}
+        for file_hits in hits_by_file.values():
+            for obj in self._map_hits(file_hits, now):
+                current.setdefault(obj["id"], obj)
+            if len(current) >= batch_size:
+                batches.append(list(current.values()))
+                current = {}
+        if current:
+            batches.append(list(current.values()))
+        return batches
 
     def _common(self) -> dict:
         return {

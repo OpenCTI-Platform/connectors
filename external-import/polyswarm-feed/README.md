@@ -91,7 +91,7 @@ Configuration can be given in `config.yml` (copy `config.yml.sample`) or as envi
 | Hunting indicator valid days | `hunting_indicator_valid_days` | `POLYSWARM_HUNTING_INDICATOR_VALID_DAYS` | `30`                            | No        | Days from import time until hunting indicators expire.                                                                              |
 | TLP level                    | `tlp_level`                    | `POLYSWARM_TLP_LEVEL`                    | `clear`                         | No        | TLP marking applied to every object the connector sends. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.          |
 | Quota warning threshold      | `quota_warn_below`             | `POLYSWARM_QUOTA_WARN_BELOW`             | `100`                           | No        | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, falls below this number (`0` turns warnings off). See [Quota](#quota). |
-| Max objects per run          | `max_objects_per_run`          | `POLYSWARM_MAX_OBJECTS_PER_RUN`          | `20000`                         | No        | Stop paging once this many objects have been collected in a run. Checked after each page, so a run can exceed it by up to one page. Live hunting is bounded separately by its page limit. The next run resumes where this one stopped.                       |
+| Max objects per run          | `max_objects_per_run`          | `POLYSWARM_MAX_OBJECTS_PER_RUN`          | `20000`                         | No        | Stop paging once this many objects have been collected in a run. Checked after each page, so a run can exceed it by up to one page. Live hunting runs after the feed with what is left, can exceed that by at most one hit's objects, and waits for the next run when nothing is left. The next run resumes where this one stopped.                       |
 
 ## Deployment
 
@@ -182,7 +182,7 @@ Indicators are given a `valid_until` of the import time plus `POLYSWARM_FEED_IND
 
 ### State and resuming
 
-The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging (the cap is checked after each page, so a run can exceed it by up to one page; live hunting is bounded separately by its page limit), and the next run resumes from the recorded position.
+The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging (the feed checks the cap after each page, so it can exceed it by up to one page). Live hunting then gets what is left: it stops reading at the first hit that would go over it, so it can exceed it by at most one hit's objects, and when nothing is left it waits for the next run. Hunting objects are sent in bundles of about 1000 objects. The next run resumes from the recorded position; for hunting, the hits already imported are skipped by id.
 
 ### Volume
 

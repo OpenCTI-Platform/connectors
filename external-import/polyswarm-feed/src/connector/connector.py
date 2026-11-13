@@ -10,8 +10,9 @@ On each run, for every configured TAXII API root (collection):
        TAXII `next` token so the next run continues where this one stopped.
 
 When `POLYSWARM_HUNTING_ENABLED` is true, the live hunting source runs after
-the feed. Feed and hunting are isolated: a failure in one does not discard
-the other's progress.
+the feed with what is left of `POLYSWARM_MAX_OBJECTS_PER_RUN`, sending its
+objects in several bundles. Feed and hunting are isolated: a failure in one
+does not discard the other's progress.
 """
 
 from __future__ import annotations
@@ -203,9 +204,17 @@ class PolySwarmFeedConnector:
                 {"filtered_items": converter.filtered_items},
             )
 
-        if polyswarm.hunting_enabled:
+        hunting_sent = 0
+        hunting_budget = max_objects - self._feed_sent
+        if polyswarm.hunting_enabled and hunting_budget <= 0:
+            self.logger.info(
+                "Maximum objects per run reached by the feed, live hunting "
+                "resumes on the next run",
+                {"max_objects_per_run": max_objects},
+            )
+        elif polyswarm.hunting_enabled:
             try:
-                self._import_hunting(state)
+                hunting_sent = self._import_hunting(state, hunting_budget)
             except (KeyboardInterrupt, SystemExit):
                 raise
             except Exception as err:
@@ -218,7 +227,11 @@ class PolySwarmFeedConnector:
         state.save()
         self.logger.info(
             "Connector run completed",
-            {"objects_sent": self._feed_sent, "state": state.to_json()},
+            {
+                "objects_sent": self._feed_sent,
+                "hunting_objects_sent": hunting_sent,
+                "state": state.to_json(),
+            },
         )
 
     def _import_collection(
@@ -328,8 +341,13 @@ class PolySwarmFeedConnector:
             limit=self.PAGE_LIMIT,
         )
 
-    def _import_hunting(self, state: ConnectorState) -> None:
-        """Run the live hunting source and store its sub-state under `hunting`."""
+    def _import_hunting(self, state: ConnectorState, budget: int) -> int:
+        """Run the live hunting source and store its sub-state under `hunting`.
+
+        The source stops reading once ``budget`` objects are collected and
+        returns them in several bundles, all sent under one work. Return the
+        number of objects sent.
+        """
         source = HuntingSource(
             config=self.config.polyswarm,
             author=self.author,
@@ -337,11 +355,15 @@ class PolySwarmFeedConnector:
             logger=self.logger,
             client=self.hunting_client,
         )
-        objects, hunting_state = source.collect(dict(state.hunting or {}))
-        if objects:
+        batches, hunting_state = source.collect_batches(
+            dict(state.hunting or {}), max_objects=budget
+        )
+        sent = sum(len(batch) for batch in batches)
+        if batches:
             work_id = self._initiate_work("live hunting")
             try:
-                self._send(objects, work_id)
+                for batch in batches:
+                    self._send(batch, work_id)
             except Exception as err:
                 self.helper.api.work.to_processed(
                     work_id,
@@ -350,10 +372,11 @@ class PolySwarmFeedConnector:
                 )
                 raise
             self.helper.api.work.to_processed(
-                work_id, f"PolySwarm live hunting: {len(objects)} objects sent"
+                work_id, f"PolySwarm live hunting: {sent} objects sent"
             )
         state.hunting = hunting_state
         state.save()
+        return sent
 
     def _describe_error(self, err: Exception) -> str:
         """The error text; a quota failure also shows the remaining quota."""

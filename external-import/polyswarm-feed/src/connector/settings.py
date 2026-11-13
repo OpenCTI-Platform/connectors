@@ -143,7 +143,9 @@ class PolySwarmFeedConfig(BaseConfigModel):
     max_objects_per_run: int = Field(
         description="Stop paging once this many objects were sent in a run. "
         "The cap is checked after each page, so a run can exceed it by up to one "
-        "page. Live hunting is bounded separately by its page limit. The next "
+        "page. Live hunting runs after the feed with what is left, can exceed "
+        "that by at most one hit's objects, and waits for the next run when "
+        "nothing is left. The next "
         "run resumes where this one stopped.",
         default=20000,
         ge=1,
