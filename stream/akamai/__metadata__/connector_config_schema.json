@@ -104,7 +104,11 @@
       "writeOnly": true
     },
     "AKAMAI_CLIENT_LIST_ID": {
-      "description": "Target Client List ID",
+      "description": "Target IP Client List ID",
+      "type": "string"
+    },
+    "AKAMAI_ASN_CLIENT_LIST_ID": {
+      "description": "Optional target ASN Client List ID. If omitted, ASN indicators are ignored and IP synchronization continues.",
       "type": "string"
     }
   },
