@@ -88,6 +88,24 @@ def test_indicator_types_not_predicted():
         assert is_subentity_call_needed(subentity_type, _assoc()) is True
 
 
+LINKS_ONLY = {"links": {"self": "https://example.test/relationships"}}
+
+
+@pytest.mark.parametrize("block", [LINKS_ONLY, {**LINKS_ONLY, "data": None}])
+@pytest.mark.parametrize(
+    ("relationship", "subentity_type"),
+    [
+        ("associations", "malware_families"),
+        ("associations", "threat_actors"),
+        ("attack_techniques", "attack_techniques"),
+    ],
+)
+def test_block_without_data_list_keeps_the_call(block, relationship, subentity_type):
+    """Given a block with missing or null data, then the call is made."""
+    relationships = {relationship: block}
+    assert is_subentity_call_needed(subentity_type, relationships) is True
+
+
 # --- Scenario: attack techniques ---------------------------------------------
 
 

@@ -43,13 +43,20 @@ def _get_relationship(relationships: Any, name: str) -> Any:
 
 
 def _block_items(block: Any) -> tuple[list[Any], bool]:
-    """Return the descriptors of a relationship block and whether it is complete."""
+    """Return the descriptors of a relationship block and whether it is complete.
+
+    A block whose ``data`` is missing, null or not a list proves nothing, so it
+    is reported as incomplete and the call is kept. GTI sends ``"data": []``
+    for a relationship that is really empty.
+    """
     if isinstance(block, dict):
-        data = block.get("data") or []
+        data = block.get("data")
         meta = block.get("meta") or {}
     else:
-        data = getattr(block, "data", None) or []
+        data = getattr(block, "data", None)
         meta = getattr(block, "meta", None) or {}
+    if not isinstance(data, list):
+        return [], False
     cursor = meta.get("cursor") if isinstance(meta, dict) else None
     return list(data), not cursor
 
