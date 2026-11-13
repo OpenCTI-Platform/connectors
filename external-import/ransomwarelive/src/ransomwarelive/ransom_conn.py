@@ -609,7 +609,14 @@ class RansomwareAPIConnector:
         # makes the data flow much harder to follow. Building the full
         # ``object_refs`` list first and constructing the Report once
         # is the canonical stix2 idiom.
-        if self.config.ransomwarelive.create_report:
+        if self.config.ransomwarelive.create_report and attack_date_iso is None:
+            # A Report needs a ``published`` date: without an attack date or a
+            # discovered date, skip the Report but keep the other objects.
+            self.helper.connector_logger.warning(
+                "Missing attack and discovered dates, report skipped",
+                {"victim": victim_name},
+            )
+        elif self.config.ransomwarelive.create_report:
             report = self.converter_to_stix.process_report(
                 report_name=item.get("group"),
                 victim_name=victim_name,

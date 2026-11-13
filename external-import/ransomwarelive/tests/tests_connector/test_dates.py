@@ -118,3 +118,58 @@ def test_collect_intelligence_skips_victim_with_invalid_discovered_date(discover
     assert (
         connector.create_bundle_list.call_args.kwargs["item"]["victim"] == "Acme Corp"
     )
+
+
+@pytest.mark.parametrize("discovered", ["", None, "invalid-date"])
+def test_create_bundle_list_skips_report_when_no_date_is_available(discovered):
+    connector = _make_connector()
+    item = {
+        "victim": "Acme Corp",
+        "group": "acme-ransomware",
+        "country": "",
+        "activity": "",
+        "domain": "",
+        "attackdate": "",
+        "discovered": discovered,
+    }
+
+    bundle_objects = connector.create_bundle_list(item, group_data=[])
+
+    # The Report is skipped, the victim is still returned
+    assert not [obj for obj in bundle_objects if obj and obj.get("type") == "report"]
+    assert any(obj.get("name") == "Acme Corp" for obj in bundle_objects if obj)
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "Missing attack and discovered dates, report skipped",
+        {"victim": "Acme Corp"},
+    )
+
+
+def test_collect_historic_intelligence_sends_victim_without_dates():
+    connector = _make_connector()
+    connector.config.ransomwarelive.history_start_year = 202610
+    connector.api_client = MagicMock()
+    connector.api_client.get_groups.return_value = [{"name": "acme-ransomware"}]
+    connector.api_client.get_victims.return_value = [
+        {
+            "victim": "Acme Corp",
+            "group": "acme-ransomware",
+            "country": "",
+            "activity": "",
+            "domain": "",
+            "attackdate": "",
+            "discovered": "",
+        }
+    ]
+    connector.helper.stix2_deduplicate_objects.side_effect = lambda objects: objects
+
+    connector.collect_historic_intelligence()
+
+    # The victim bundle is still created and sent, without a Report
+    sent_objects = [
+        obj
+        for call in connector.helper.stix2_create_bundle.call_args_list
+        for obj in call.args[0]
+    ]
+    assert any(obj.get("name") == "Acme Corp" for obj in sent_objects)
+    assert not [obj for obj in sent_objects if obj.get("type") == "report"]
+    assert connector.helper.send_stix2_bundle.called
