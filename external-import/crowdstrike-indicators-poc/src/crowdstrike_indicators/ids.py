@@ -31,3 +31,8 @@ def indicates_id(source_id: str, target_id: str) -> str:
     """Return the STIX id of the ``indicates`` relationship between two ids."""
     name = f"indicates:{source_id}:{target_id}"
     return f"relationship--{uuid.uuid5(CROWDSTRIKE_NAMESPACE, name)}"
+
+
+def bundle_id(indicator_id: str) -> str:
+    """Return the STIX id of the bundle carrying the indicator ``indicator_id``."""
+    return f"bundle--{uuid.uuid5(CROWDSTRIKE_NAMESPACE, f'bundle:{indicator_id}')}"

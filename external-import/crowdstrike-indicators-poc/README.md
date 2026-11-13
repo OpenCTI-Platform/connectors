@@ -15,7 +15,9 @@ contracts that do not depend on OpenCTI:
    - that indicator bundled with one Malware per family it names, and the
      `indicates` relationships linking them;
    - the MITRE ATT&CK AttackPatterns its labels name added to the bundle, with
-     their `indicates` relationships, from a local ATT&CK dataset.
+     their `indicates` relationships, from a local ATT&CK dataset;
+   - the whole turned into a standard STIX 2.1 bundle, ready for a STIX
+     consumer.
 
 ## Layout
 
@@ -33,6 +35,7 @@ src/
     transformer.py            CrowdStrikeIndicatorTransformer
     malware.py                CrowdStrikeAddMalware
     attack.py                 AttackPatternCatalog, CrowdStrikeAddAttackPatterns
+    bundle.py                 MakeStixBundle
     errors.py                 CrowdStrikeAPIError, IndicatorValidationError,
                               IndicatorConversionError
     dotenv.py                 minimal .env reader
@@ -143,8 +146,10 @@ class CrowdStrikeIndicatorBundle:
 ```
 
 ```
-CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle
-       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware  CrowdStrikeAddAttackPatterns
+CrowdStrikeIndicator --> CrowdStrikeStix2Indicator --> Bundle --> Bundle --> stix2 Bundle
+       CrowdStrikeIndicatorTransformer    CrowdStrikeAddMalware  |      MakeStixBundle
+                                                CrowdStrikeAddAttackPatterns
+                                                (only with an ATT&CK dataset)
 ```
 
 - One STIX 2.1 Malware per distinct name of `x_crowdstrike_malware_families`,
@@ -238,6 +243,35 @@ picked arbitrarily.
 `tests/fixtures/attack_extract.json` holds AttackPatterns copied unchanged
 from MITRE ATT&CK Enterprise 17.1, © The MITRE Corporation, reproduced under
 the [ATT&CK terms of use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/).
+
+### STIX bundle
+
+`MakeStixBundle` is the last step: it turns a `CrowdStrikeIndicatorBundle`
+into a standard STIX 2.1 bundle (`stix2.v21.Bundle`), the form a STIX consumer
+such as OpenCTI takes.
+
+```json
+{
+  "type": "bundle",
+  "id": "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23",
+  "objects": [
+    {"type": "indicator", "...": "..."},
+    {"type": "malware", "...": "..."},
+    {"type": "attack-pattern", "...": "..."},
+    {"type": "relationship", "...": "..."}
+  ]
+}
+```
+
+- `objects` holds the indicator, then the Malware objects, the AttackPatterns
+  and the relationships, unchanged, `x_crowdstrike_*` properties included.
+  Read it back with `stix2.parse(..., allow_custom=True)`.
+- The `id` is `bundle--` followed by the UUIDv5 of `bundle:<indicator id>` in
+  the CrowdStrike namespace: the same input always gives the same bundle.
+- Every reference must resolve inside the bundle: a `*_ref` or `*_refs` value
+  naming an object the bundle does not hold makes the step raise
+  `IndicatorConversionError`, naming the indicator and the missing id. OpenCTI
+  rejects such bundles, so the gap is caught here.
 
 ## Setup
 

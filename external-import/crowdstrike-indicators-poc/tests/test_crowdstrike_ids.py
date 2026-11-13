@@ -5,6 +5,7 @@ import uuid
 from crowdstrike_indicators import transformer
 from crowdstrike_indicators.ids import (
     CROWDSTRIKE_NAMESPACE,
+    bundle_id,
     indicates_id,
     indicator_id,
     malware_id,
@@ -45,3 +46,7 @@ def test_prefixes_keep_object_kinds_apart():
 def test_moved_names_stay_importable_from_the_transformer():
     assert transformer.CROWDSTRIKE_NAMESPACE is CROWDSTRIKE_NAMESPACE
     assert transformer.indicator_id is indicator_id
+
+
+def test_bundle_id_is_pinned():
+    assert bundle_id(INDICATOR_ID) == "bundle--fe24cab3-d021-56f9-af58-867c5a0cdb23"
