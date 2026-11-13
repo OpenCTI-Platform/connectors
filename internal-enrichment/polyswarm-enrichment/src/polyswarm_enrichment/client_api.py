@@ -626,14 +626,18 @@ class ConnectorClient:
                 f"Searching PolySwarm ({community_name}) for hash: {hash_value}"
             )
 
-            results = list(polyswarm_instance.search(hash_value))
-
+            # Read lazily and stop at the first usable result; the full list is
+            # only read when nothing usable exists
+            results = []
             data = None
-            for result in results:
+            for result in polyswarm_instance.search(hash_value):
+                results.append(result)
                 data = self._parse_result(result, community_name)
                 if data:
-                    # Kept for the opt-in rescan decision, removed before returning
+                    # Kept for the opt-in rescan decision, removed before returning:
+                    # the scan used, and the unusable ones listed ahead of it
                     data["_source_result"] = result
+                    data["_newer_results"] = results[:-1]
                     break
 
             if data:
@@ -958,6 +962,14 @@ class ConnectorClient:
         )
         return _parse_scan_date(stamp)
 
+    @staticmethod
+    def _still_running(results) -> bool:
+        """True when any of these scan results has not finished yet."""
+        return any(
+            not getattr(r, "failed", False) and not getattr(r, "window_closed", True)
+            for r in results
+        )
+
     def _rescan_reason(self, held: list, data: dict | None, source=None) -> str | None:
         """Why a held sample should be rescanned, or None to leave it alone.
 
@@ -974,12 +986,7 @@ class ConnectorClient:
         if data is None:
             # PolySwarm holds the sample but nothing usable finished scanning.
             # A scan that is still running is left to finish, never doubled.
-            in_progress = any(
-                not getattr(r, "failed", False)
-                and not getattr(r, "window_closed", True)
-                for r in held
-            )
-            return None if in_progress else "no completed scan"
+            return None if self._still_running(held) else "no completed scan"
         scanned = (
             self._scan_time(source) if source is not None else None
         ) or _parse_scan_date(data.get("last_scanned_dt"))
@@ -1058,7 +1065,12 @@ class ConnectorClient:
                 community, held_results = held[0]
             else:
                 return result
-            reason = self._rescan_reason(held_results, data, source)
+            if data and self._still_running(data.get("_newer_results") or []):
+                # A newer scan (e.g. an earlier rescan that timed out) is still
+                # running: let it finish instead of paying for another one
+                reason = None
+            else:
+                reason = self._rescan_reason(held_results, data, source)
             if reason:
                 sha256 = data["sha256"] if data else held_results[0].sha256
                 fresh, outcome = self._run_rescan(
@@ -1082,6 +1094,7 @@ class ConnectorClient:
             ):
                 if entry:
                     entry.pop("_source_result", None)
+                    entry.pop("_newer_results", None)
         return result
 
     # ------------------------------------------------------------------

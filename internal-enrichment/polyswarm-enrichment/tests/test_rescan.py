@@ -274,6 +274,46 @@ class TestRescanFailureModes:
         _query(client)
         client.polyswarm.rescan.assert_not_called()
 
+    def test_running_scan_ahead_of_old_usable_scan_is_not_doubled(self):
+        # Re-enrichment after a rescan timed out: the rescan is still running
+        # and listed ahead of the old completed scan
+        client = _client(
+            days=30,
+            search=[
+                _instance(assertions=False, failed=False, window_closed=False),
+                _instance(days_old=400, polyscore=0.1),
+            ],
+        )
+        result = client.query_polyswarm(SHA256)
+        assert result["data"]["polyscore"] == 0.1
+        client.polyswarm.rescan.assert_not_called()
+        assert "_newer_results" not in result["data"]
+
+    def test_failed_scan_ahead_of_old_usable_scan_still_rescans(self):
+        client = _client(
+            days=30,
+            search=[
+                _instance(assertions=False, failed=True, window_closed=True),
+                _instance(days_old=400, polyscore=0.1),
+            ],
+            rescan=_instance(assertions=False, window_closed=False),
+            wait_for=lambda *_a, **_k: _instance(days_old=0, polyscore=0.9),
+        )
+        result = client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_called_once()
+        assert result["data"]["polyscore"] == 0.9
+
+    def test_search_is_read_lazily_up_to_the_first_usable_result(self):
+        def pages():
+            yield _instance(days_old=1)
+            raise AssertionError("search read past the first usable result")
+
+        client = _client(days=7)
+        client.polyswarm.search.return_value = pages()
+        data, error = _query(client)
+        assert error is None and data is not None
+        client.polyswarm.rescan.assert_not_called()
+
     def test_no_completed_scan_and_failed_rescan_is_reported(self):
         client = _client(days=7, search=[_instance(assertions=False)])
         client.polyswarm.rescan.side_effect = polyswarm_exceptions.RequestException(
