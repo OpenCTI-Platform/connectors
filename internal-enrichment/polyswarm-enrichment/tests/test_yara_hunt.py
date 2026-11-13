@@ -567,6 +567,31 @@ class TestNoSecondHunt:
         create.assert_not_called()
         assert outcome.reused and outcome.hunt_id == "71"
 
+    @pytest.mark.parametrize(
+        "saved",
+        [
+            ["not", "a", "dict"],
+            "junk",
+            {"other": "junk", "x" * 64: None},
+            {f"d{i}": {"hunt_id": str(i), "started": i} for i in range(60)},
+        ],
+        ids=["list", "string", "non-dict-entries", "non-string-started"],
+    )
+    def test_new_hunt_is_saved_over_malformed_state(self, saved):
+        helper = FakeHelper()
+        helper.state = {yara_hunt.STATE_KEY: saved, "other_key": 1}
+        api = _api()
+        api.historical_get.return_value = _hunt("9", "COMPLETED", 0)
+        api.historical_results.return_value = iter([])
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt", return_value=_hunt("9")):
+            outcome = hunter.run(RULE)
+        assert not outcome.failed
+        hunts = helper.state[yara_hunt.STATE_KEY]
+        assert hunts[rule_digest(RULE)]["hunt_id"] == "9"
+        assert all(isinstance(v, dict) for v in hunts.values())
+        assert len(hunts) <= 50 and helper.state["other_key"] == 1
+
     def test_new_hunt_is_remembered_in_state(self):
         helper = FakeHelper()
         api = _api()

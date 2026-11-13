@@ -170,18 +170,29 @@ class YaraHunter:
 
     # ------------------------------------------------------------------ state
     def _load_state(self, strict: bool = False) -> dict:
-        """The saved hunts; a read error gives {} unless ``strict`` (then raises)."""
+        """The saved hunts, keeping only well-formed entries.
+
+        A read error gives {} unless ``strict`` (then it raises). ``strict``
+        covers helpers whose get_state raises; pycti's helper catches its own
+        errors and returns None, which reads as "no saved hunts".
+        """
         try:
             state = self.helper.get_state() or {}
         except Exception:
             if strict:
                 raise
             state = {}
-        return state.get(STATE_KEY) or {}
+        hunts = state.get(STATE_KEY) if isinstance(state, dict) else None
+        if not isinstance(hunts, dict):
+            return {}
+        # Malformed entries are dropped, so saving a new hunt id never fails
+        return {k: v for k, v in hunts.items() if isinstance(v, dict)}
 
     def _save_state(self, hunts: dict) -> None:
         try:
             state = self.helper.get_state() or {}
+            if not isinstance(state, dict):
+                state = {}
             state[STATE_KEY] = hunts
             self.helper.set_state(state)
         except Exception as err:
@@ -197,7 +208,8 @@ class YaraHunter:
         }
         # Keep the state small: the newest 50 rules
         if len(hunts) > 50:
-            for key in sorted(hunts, key=lambda k: hunts[k].get("started", ""))[:-50]:
+            by_age = sorted(hunts, key=lambda k: str(hunts[k].get("started", "")))
+            for key in by_age[:-50]:
                 hunts.pop(key, None)
         self._save_state(hunts)
 
@@ -253,7 +265,8 @@ class YaraHunter:
         try:
             remembered = self._load_state(strict=True).get(digest)
         except Exception as err:
-            # The saved hunt could not be read: same as a failed hunt read
+            # Only for a helper whose get_state raises (pycti's returns None,
+            # read as no saved entry): same as a failed hunt read
             remembered = None
             remembered_failed = True
             self.helper.connector_logger.warning(
