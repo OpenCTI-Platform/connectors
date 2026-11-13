@@ -1,3 +1,4 @@
 .env
 *.raw.json
 raw-dumps/
+mitre/
