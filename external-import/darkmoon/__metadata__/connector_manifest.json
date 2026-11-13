@@ -1,0 +1,28 @@
+{
+  "title": "Darkmoon",
+  "slug": "darkmoon",
+  "description": "Imports findings produced by Darkmoon, an open-source (GPLv3) autonomous AI penetration-testing CLI by ASC-IT. The connector reads the JSON findings store that the Darkmoon OSS engine writes to its data directory during a campaign (the same files from which the OSS Markdown report is generated) and converts each campaign into OpenCTI objects: a Vulnerability per finding (with CVSS score/vector/severity, any CVE and detectable CWE, MITRE ATT&CK and ISO 27001 references), a Note carrying the finding's reproduction commands and raw request/response evidence, an optional Attack Pattern for the finding's ATT&CK technique, all grouped in a Report for the campaign. It reads local files only and never contacts the Darkmoon web dashboard or any API.",
+  "short_description": "Import Darkmoon OSS autonomous-pentest findings (vulnerabilities, evidence, ATT&CK) into OpenCTI.",
+  "logo": null,
+  "use_cases": [
+    "Vulnerability & Exploit Awareness",
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Vulnerability & Exposure Management",
+    "AI Security"
+  ],
+  "license_type": "Free",
+  "contact": "https://github.com/MBK-fr",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/darkmoon",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-darkmoon",
+  "container_type": "EXTERNAL_IMPORT"
+}
