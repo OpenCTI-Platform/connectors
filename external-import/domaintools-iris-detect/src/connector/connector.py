@@ -59,7 +59,7 @@ class DomainToolsIrisDetectConnector:
         self.client = DomainToolsClient(
             self.helper,
             base_url=self.config.domaintools.api_base_url,
-            api_key=self.config.domaintools.api_key,
+            api_key=self.config.domaintools.api_key.get_secret_value(),
             # Pass any arguments necessary to the client
         )
         self.converter_to_stix = ConverterToStix(
