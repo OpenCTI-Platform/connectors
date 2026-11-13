@@ -15,6 +15,10 @@ secops_siem:
   # project_region: 'us'
   project_id: 'ChangeMe'
   project_instance: 'ChangeMe'
+  # Authentication: 'service_account' (default) or 'adc' (Application Default
+  # Credentials / Workload Identity). The private_key*/client_* fields below are
+  # only required when auth_method is 'service_account'.
+  # auth_method: 'service_account'
   private_key_id: 'ChangeMe'
   private_key: 'ChangeMe'
   client_email: 'ChangeMe'
