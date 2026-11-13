@@ -1,3 +1,4 @@
+import base64
 from typing import Generator, Literal
 
 import stix2
@@ -56,7 +57,9 @@ class ConnectorConverter(BaseConverter):
                     OpenCTIFile(
                         name=attachment.name,
                         mime_type=attachment.content_type,
-                        data=attachment.content_bytes,
+                        # kiota (microsoft-kiota-serialization-json >= 1.12) already
+                        # base64-decodes `contentBytes`; OpenCTIFile.data expects base64.
+                        data=base64.b64encode(attachment.content_bytes),
                         object_marking_refs=[self.tlp_marking.id],
                     )
                     for attachment in attachments
