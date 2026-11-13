@@ -192,8 +192,10 @@ def _extract_dropped_files(raw: dict, report: dict) -> list[dict[str, Any]]:
 def _public_host(host: str) -> bool:
     """True for a public IP address or a plausible public domain name.
 
-    Private, loopback, link-local, reserved and unspecified addresses, and
-    internal names (no dot, or a local-only suffix) are rejected.
+    Any address that is not globally routable (private, loopback,
+    link-local, shared CGNAT 100.64.0.0/10, reserved, unspecified,
+    multicast), and internal names (no dot, or a local-only suffix) are
+    rejected.
     """
     try:
         ip = ipaddress.ip_address(host)
@@ -201,8 +203,12 @@ def _public_host(host: str) -> bool:
         if not _DOMAIN_RE.match(host):
             return False
         return not host.endswith(_INTERNAL_SUFFIXES)
+    mapped = getattr(ip, "ipv4_mapped", None)
+    if mapped is not None:
+        ip = mapped
     return not (
-        ip.is_private
+        not ip.is_global
+        or ip.is_private
         or ip.is_loopback
         or ip.is_link_local
         or ip.is_multicast

@@ -256,6 +256,40 @@ class TestExtractC2:
     def test_classify_rejects(self, text):
         assert _classify_c2(text) is None
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # Shared address space (CGNAT), 100.64.0.0/10
+            "100.64.0.1",
+            "100.64.1.1:443",
+            "http://100.64.0.1/x",
+            "http://100.127.255.254/",
+            "[::ffff:100.64.0.1]:80",
+            # Other non-global ranges
+            "192.0.0.8",
+            "198.18.0.1:8080",
+            "192.0.2.10",
+            "[2001:db8::1]:443",
+            "[::ffff:10.0.0.1]:80",
+        ],
+    )
+    def test_classify_rejects_non_global_addresses(self, text):
+        assert _classify_c2(text) is None
+
+    @pytest.mark.parametrize(
+        "text", ["8.8.8.8:53", "100.63.255.255", "100.128.0.1:443", "1.1.1.1"]
+    )
+    def test_classify_keeps_global_addresses(self, text):
+        assert _classify_c2(text)["type"] == "ipv4-addr"
+
+    def test_cgnat_c2_is_not_extracted(self):
+        """Only extracted C2 items become observables and indicators."""
+        task = _triage_task()
+        task["report"]["extracted"] = [
+            {"config": {"family": "x", "c2": ["100.64.1.1:443", "8.8.8.8:53"]}}
+        ]
+        assert [c["value"] for c in extract_report_depth(task)["c2"]] == ["8.8.8.8"]
+
     def test_pcap_selection(self):
         assert select_pcap_artifact(_cape_task())["instance_id"] == "111"
         assert select_pcap_artifact(_triage_task()) is None
