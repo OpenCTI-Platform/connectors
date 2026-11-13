@@ -21,6 +21,7 @@ from shared.transformer import AbstractTransformer
 LOGGER = logging.getLogger(__name__)
 
 MITRE_KILL_CHAIN = "mitre-attack"
+MITRE_SOURCE_NAME = "mitre-attack"
 ATTACK_LABEL_PREFIX = "MitreATTCK"
 
 
@@ -105,21 +106,53 @@ class AttackPatternCatalog:
         return candidates[0] if len(candidates) == 1 else None
 
 
+def light_attack_pattern(pattern: AttackPattern) -> AttackPattern:
+    """Return a light copy of a MITRE AttackPattern.
+
+    It keeps MITRE's ``id``, dates and ``name``, and in
+    ``external_references`` only the ``mitre-attack`` reference (T-id and
+    link). Everything else is left out: ``description``,
+    ``kill_chain_phases``, ``x_mitre_*`` properties, other references, and
+    ``created_by_ref`` and ``object_marking_refs``, whose targets (MITRE's
+    identity and marking) are not in the bundle.
+    """
+    references = [
+        dict(reference)
+        for reference in pattern.get("external_references", [])
+        if reference.get("source_name") == MITRE_SOURCE_NAME
+    ]
+    optional = {"external_references": references} if references else {}
+    return AttackPattern(
+        id=pattern.id,
+        created=pattern.created,
+        modified=pattern.modified,
+        name=pattern.name,
+        **optional,
+    )
+
+
 class CrowdStrikeAddAttackPatterns(
     AbstractTransformer[CrowdStrikeIndicatorBundle, CrowdStrikeIndicatorBundle]
 ):
     """Add the MITRE AttackPatterns an indicator's ATT&CK labels name.
 
     Each label ``MitreATTCK/<tactic>/<technique>`` is resolved with the
-    catalog. Every distinct technique found adds MITRE's AttackPattern,
-    unchanged, and an ``indicates`` relationship from the indicator, dated
-    like the indicator. Unresolved labels add nothing and stay on the
+    catalog. Every distinct technique found adds a light copy of MITRE's
+    AttackPattern (see :func:`light_attack_pattern`), shared by every bundle,
+    and an ``indicates`` relationship from the indicator, dated like the
+    indicator. Unresolved labels add nothing and stay on the
     indicator. Objects already in the bundle are kept. No network call is
     made: the catalog is loaded beforehand.
     """
 
     def __init__(self, catalog: AttackPatternCatalog) -> None:
         self.catalog = catalog
+        self._light: dict[str, AttackPattern] = {}
+
+    def _light_copy(self, pattern: AttackPattern) -> AttackPattern:
+        if pattern.id not in self._light:
+            self._light[pattern.id] = light_attack_pattern(pattern)
+        return self._light[pattern.id]
 
     def _resolve_labels(
         self, bundle: CrowdStrikeIndicatorBundle
@@ -137,7 +170,7 @@ class CrowdStrikeAddAttackPatterns(
                     label,
                 )
                 continue
-            found.setdefault(pattern.id, pattern)
+            found.setdefault(pattern.id, self._light_copy(pattern))
         return list(found.values())
 
     def convert(self, item: CrowdStrikeIndicatorBundle) -> CrowdStrikeIndicatorBundle:

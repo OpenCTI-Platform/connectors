@@ -17,6 +17,7 @@ from crowdstrike_indicators import attack as attack_module
 from crowdstrike_indicators.attack import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
+    light_attack_pattern,
     match_key,
 )
 from crowdstrike_indicators.errors import IndicatorConversionError
@@ -181,12 +182,77 @@ def test_resolved_techniques_in_label_order(catalog):
     )
 
 
-def test_attack_patterns_are_the_catalog_objects(catalog):
+LIGHT_KEYS = {"type", "spec_version", "id", "created", "modified", "name"}
+
+
+def test_attack_patterns_are_light_copies_of_the_catalog_objects(catalog):
     result = add_attack_patterns(bundle_of(FIRST_ROW), catalog)
 
-    assert result.attack_patterns[0] is catalog.resolve(
+    full = catalog.resolve("Collection", "DataFromLocalSystem")
+    light = result.attack_patterns[0]
+    assert light is not full
+    assert light.serialize() == light_attack_pattern(full).serialize()
+
+
+def test_light_copy_of_t1005():
+    original = next(
+        o
+        for o in ATTACK_DATA["objects"]
+        if o["id"] == "attack-pattern--3c4a2599-71ee-4405-ba1e-0e28414b4bc5"
+    )
+    full = AttackPatternCatalog(ATTACK_DATA).resolve(
         "Collection", "DataFromLocalSystem"
     )
+
+    light = json.loads(light_attack_pattern(full).serialize())
+
+    assert set(light) == LIGHT_KEYS | {"external_references"}
+    for key in LIGHT_KEYS:
+        assert light[key] == original[key], key
+    assert light["external_references"] == [
+        {
+            "source_name": "mitre-attack",
+            "url": "https://attack.mitre.org/techniques/T1005",
+            "external_id": "T1005",
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    "original",
+    [o for o in ATTACK_DATA["objects"] if not o.get("revoked")],
+    ids=lambda o: o["external_references"][0]["external_id"],
+)
+def test_light_copy_drops_everything_else(original):
+    light = json.loads(
+        light_attack_pattern(stix2.parse(original, allow_custom=True)).serialize()
+    )
+
+    assert set(light) <= LIGHT_KEYS | {"external_references"}
+    for dropped in (
+        "description",
+        "kill_chain_phases",
+        "created_by_ref",
+        "object_marking_refs",
+    ):
+        assert dropped not in light
+    assert not [key for key in light if key.startswith("x_")]
+    assert [ref["source_name"] for ref in light["external_references"]] == [
+        "mitre-attack"
+    ]
+
+
+def test_same_technique_gives_a_shared_identical_light_copy(catalog):
+    step = CrowdStrikeAddAttackPatterns(catalog)
+    label = [{"name": "MitreATTCK/Collection/DataFromLocalSystem"}]
+    first = step.convert(bundle_of(make_indicator(1, labels=label)))
+    second = step.convert(bundle_of(make_indicator(2, labels=label)))
+    other_step = CrowdStrikeAddAttackPatterns(catalog)
+    third = other_step.convert(bundle_of(make_indicator(3, labels=label)))
+
+    assert first.indicator.id != second.indicator.id
+    assert first.attack_patterns[0] is second.attack_patterns[0]
+    assert first.attack_patterns[0].serialize() == third.attack_patterns[0].serialize()
 
 
 def test_same_technique_under_two_tactics_is_added_once(catalog):

@@ -518,6 +518,12 @@ def test_transform_with_attack_data_runs_three_steps(isolated, no_api, capsys):
     patterns = third["output"]["attack_patterns"]
     assert patterns[0]["id"] == "attack-pattern--3c4a2599-71ee-4405-ba1e-0e28414b4bc5"
     assert patterns[0]["name"] == "Data from Local System"
+    assert all(
+        set(pattern)
+        <= {"type", "spec_version", "id", "created", "modified", "name"}
+        | {"external_references"}
+        for pattern in patterns
+    )
     relationships = third["output"]["relationships"]
     assert relationships[-len(patterns) :][0]["target_ref"] == patterns[0]["id"]
     assert steps[1]["output"]["attack_patterns"] == []

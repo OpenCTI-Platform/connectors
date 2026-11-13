@@ -197,10 +197,35 @@ the catalog:
 4. a single remaining technique is the result; none, or several, resolve to
    nothing.
 
-For every distinct technique found, in label order, the step adds MITRE's
-AttackPattern object as is (MITRE's id, name, T-id, tactics and dates) and an
-`indicates` relationship from the indicator, with the same id rule and dates as
-the Malware relationships. Objects already in the bundle are kept.
+For every distinct technique found, in label order, the step adds a light
+copy of MITRE's AttackPattern and an `indicates` relationship from the
+indicator, with the same id rule and dates as the Malware relationships.
+Objects already in the bundle are kept.
+
+The light copy keeps what identifies the technique, and nothing else:
+
+```json
+{
+  "type": "attack-pattern",
+  "spec_version": "2.1",
+  "id": "attack-pattern--3c4a2599-71ee-4405-ba1e-0e28414b4bc5",
+  "created": "2017-05-31T21:30:20.537Z",
+  "modified": "2025-04-15T19:58:24.318Z",
+  "name": "Data from Local System",
+  "external_references": [
+    {"source_name": "mitre-attack", "url": "https://attack.mitre.org/techniques/T1005", "external_id": "T1005"}
+  ]
+}
+```
+
+- MITRE's `id` and dates are kept, so the indicator `indicates` MITRE's own
+  technique, and a later stage can match it by id or T-id.
+- Left out: `description`, `kill_chain_phases`, every `x_mitre_*` property, the
+  other external references (citations), and `created_by_ref` and
+  `object_marking_refs`: they point to MITRE's identity and marking, which are
+  not in the bundle, and OpenCTI rejects references to objects a bundle does not
+  contain. The tactic stays readable in the CrowdStrike label on the indicator.
+- Each technique is copied once per step and shared by every bundle.
 
 A label that resolves to nothing adds nothing and stays on the indicator. With
 ATT&CK 17.1, over a month of real data, 86 of the 106 distinct CrowdStrike
