@@ -487,6 +487,10 @@ class PolySwarmClient:
                 )
                 return instance.id
             return None
+        except PolySwarmAPIError:
+            # Quota, authentication and access errors reach the caller's API
+            # error note instead of a generic "Scan Submission Failed"
+            raise
         except Exception as e:
             self.helper.connector_logger.error(
                 f"[POLYSWARM] Scan submit unexpected error: {type(e).__name__}: {str(e)}"
@@ -526,6 +530,8 @@ class PolySwarmClient:
                 )
                 return task.id
             return None
+        except PolySwarmAPIError:
+            raise
         except Exception as e:
             self.helper.connector_logger.error(
                 f"[POLYSWARM] Sandbox submit unexpected error: {type(e).__name__}: {str(e)}"
@@ -920,6 +926,14 @@ class PolySwarmClient:
             )
             return report_task.id
 
+        except PolySwarmAPIError as e:
+            if e.is_quota_or_rate_limited:
+                raise
+            # A plan without LLM reports stays a soft skip
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] LLM report creation failed: {e.category}"
+            )
+            return None
         except (OSError, requests.RequestException, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] LLM report creation failed: {str(e)}"
@@ -1138,6 +1152,13 @@ class PolySwarmClient:
 
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] PDF generation failed. State: {getattr(finished, 'state', 'Unknown')}"
+            )
+            return None
+        except PolySwarmAPIError as e:
+            if e.is_quota_or_rate_limited:
+                raise
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] PDF generation skipped: {e.category}"
             )
             return None
         except (OSError, requests.RequestException, AttributeError) as e:

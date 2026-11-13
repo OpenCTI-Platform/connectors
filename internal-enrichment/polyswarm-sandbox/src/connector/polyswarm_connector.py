@@ -88,6 +88,47 @@ class PolySwarmConnector(HashLookupMixin):
     def _enrich_ctx(self, value: str) -> None:
         self._local.enrich_ctx = value
 
+    def _report_quota_error(self) -> PolySwarmAPIError | None:
+        """Quota or rate error a report request hit in this enrichment, if any."""
+        err = getattr(self._local, "report_quota_error", None)
+        return err if isinstance(err, PolySwarmAPIError) else None
+
+    def _request_report(self, call: Any, *args: Any, **kwargs: Any) -> Any:
+        """Run a report request (LLM report, PDF report).
+
+        A quota or rate error does not end the enrichment (the analysis is
+        already done and is still delivered): it is kept for the quota note
+        that ``_phase_reports`` attaches, and no further report requests are
+        sent in this enrichment. Returns None in that case.
+        """
+        if self._report_quota_error() is not None:
+            return None
+        try:
+            return call(*args, **kwargs)
+        except PolySwarmAPIError as e:
+            if not e.is_quota_or_rate_limited:
+                raise
+            self.helper.connector_logger.warning(
+                f"[CONNECTOR] {self._enrich_ctx} Report request stopped: {e.category}"
+            )
+            self._local.report_quota_error = e
+            return None
+
+    def _send_report_quota_note(self, entity: dict[str, Any]) -> None:
+        """Attach the quota note for a report request, once per enrichment."""
+        err = self._report_quota_error()
+        if err is None or getattr(self._local, "report_quota_noted", None) is err:
+            return
+        # Keep the error (no further report requests), remember it was noted
+        self._local.report_quota_noted = err
+        self._send_error_note(
+            entity,
+            err.category,
+            "Some PDF or AI-generated reports were not created. The scan and "
+            f"sandbox results are still included.\n\n{err.detail}",
+            err.recommendations,
+        )
+
     def _get_vm_for_provider(self, provider: str) -> str:
         """Get the correct VM slug for a given sandbox provider.
 
@@ -456,14 +497,16 @@ class PolySwarmConnector(HashLookupMixin):
 
     def _submit_sandboxes(
         self, file_data: bytes, filename: str, password: str | None = None
-    ) -> dict[str, str]:
+    ) -> tuple[dict[str, str], dict[str, PolySwarmAPIError]]:
         """Submit file to all configured sandbox providers.
 
-        Returns a dict mapping provider name → task ID for successful submissions.
-        Failed submissions are logged but not raised — the caller decides whether
-        to abort or continue with scan-only results.
+        Returns (provider to task ID for successful submissions, provider to
+        API error). Failures are not raised: the scan is already submitted,
+        so the caller decides whether to continue with scan-only results.
+        After a quota or rate error the remaining providers are not tried.
         """
-        sandbox_tasks = {}
+        sandbox_tasks: dict[str, str] = {}
+        errors: dict[str, PolySwarmAPIError] = {}
         providers = self._get_sandbox_providers()
 
         self.helper.connector_logger.info(
@@ -476,14 +519,23 @@ class PolySwarmConnector(HashLookupMixin):
                 f"[CONNECTOR] Submitting to {provider} with VM: {vm_slug}"
             )
 
-            task_id = self.polyswarm_client.submit_sandbox_async(
-                file_data=file_data,
-                filename=filename,
-                provider=provider,
-                vm_slug=vm_slug,
-                network=self.config.polyswarm.sandbox_network_enabled,
-                password=password,
-            )
+            try:
+                task_id = self.polyswarm_client.submit_sandbox_async(
+                    file_data=file_data,
+                    filename=filename,
+                    provider=provider,
+                    vm_slug=vm_slug,
+                    network=self.config.polyswarm.sandbox_network_enabled,
+                    password=password,
+                )
+            except PolySwarmAPIError as e:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Failed to submit to {provider} sandbox: {e.category}"
+                )
+                errors[provider] = e
+                if e.is_quota_or_rate_limited:
+                    break
+                continue
 
             if task_id:
                 sandbox_tasks[provider] = task_id
@@ -495,7 +547,7 @@ class PolySwarmConnector(HashLookupMixin):
                     f"[CONNECTOR] Failed to submit to {provider} sandbox"
                 )
 
-        return sandbox_tasks
+        return sandbox_tasks, errors
 
     # Status classification is delegated to PolySwarmClient's static helpers
     # (is_sandbox_success, is_sandbox_failure) which use substring matching to
@@ -552,8 +604,10 @@ class PolySwarmConnector(HashLookupMixin):
                                 and llm_task_ids is not None
                                 and provider not in llm_task_ids
                             ):
-                                llm_id = self.polyswarm_client.create_llm_report(
-                                    sandbox_task_id=task_id, provider=provider
+                                llm_id = self._request_report(
+                                    self.polyswarm_client.create_llm_report,
+                                    sandbox_task_id=task_id,
+                                    provider=provider,
                                 )
                                 if llm_id:
                                     llm_task_ids[provider] = llm_id
@@ -926,8 +980,25 @@ class PolySwarmConnector(HashLookupMixin):
 
         sandbox_tasks: dict[str, str] = {}
         if self.config.polyswarm.sandbox_enabled:
-            sandbox_tasks = self._submit_sandboxes(file_data, filename, password)
-            if not sandbox_tasks:
+            sandbox_tasks, errors = self._submit_sandboxes(
+                file_data, filename, password
+            )
+            if errors:
+                # The scan is already submitted, so nothing is raised here: the
+                # API error (quota ...) gets its own note and the enrichment
+                # continues with the scan and any sandbox that started.
+                if sandbox_tasks:
+                    self._settle_submit_errors(entity, sandbox_tasks, errors)
+                else:
+                    err = next(iter(errors.values()))
+                    self._send_error_note(
+                        entity,
+                        err.category,
+                        "No sandbox was started. Scan results will still be "
+                        f"processed.\n\n{err.detail}",
+                        err.recommendations,
+                    )
+            elif not sandbox_tasks:
                 providers = self._get_sandbox_providers()
                 self._send_error_note(
                     entity,
@@ -1007,7 +1078,9 @@ class PolySwarmConnector(HashLookupMixin):
             and not scan_res.get("failed")
             and self.config.polyswarm.llm_report_enabled
         ):
-            llm_id = self.polyswarm_client.create_llm_report(instance_id=scan_id)
+            llm_id = self._request_report(
+                self.polyswarm_client.create_llm_report, instance_id=scan_id
+            )
             if llm_id:
                 llm_task_ids["scan"] = llm_id
                 self.helper.connector_logger.info(
@@ -1166,7 +1239,9 @@ class PolySwarmConnector(HashLookupMixin):
         if self.config.polyswarm.pdf_report_enabled:
             safe_filename = filename[:50] if len(filename) > 50 else filename
             if scan_mapped and scan_id:
-                pdf = self.polyswarm_client.generate_pdf(scan_id, "scan")
+                pdf = self._request_report(
+                    self.polyswarm_client.generate_pdf, scan_id, "scan"
+                )
                 if pdf:
                     pdf_filename = f"PolySwarm_Scan_{safe_filename}.pdf"
                     self.helper.connector_logger.info(
@@ -1189,7 +1264,9 @@ class PolySwarmConnector(HashLookupMixin):
                 if sb_res:
                     status = str(sb_res.get("status", "")).upper()
                     if PolySwarmClient.is_sandbox_success(status):
-                        pdf = self.polyswarm_client.generate_pdf(task_id, "sandbox")
+                        pdf = self._request_report(
+                            self.polyswarm_client.generate_pdf, task_id, "sandbox"
+                        )
                         if pdf:
                             pdf_filename = (
                                 f"PolySwarm_Sandbox_{provider}_{safe_filename}.pdf"
@@ -1241,6 +1318,7 @@ class PolySwarmConnector(HashLookupMixin):
                             " if reports are timing out.",
                         ],
                     )
+        self._send_report_quota_note(entity)
         return llm_reports
 
     def _phase_stix(
@@ -1398,6 +1476,9 @@ class PolySwarmConnector(HashLookupMixin):
         Returns:
             None on success, or dict with {"status": "error", "error": "..."} on failure.
         """
+        # A report quota error is tracked per enrichment
+        self._local.report_quota_error = None
+
         # Url observables have no file: they are detonated by _enrich_url
         if str(opencti_entity.get("entity_type", "")).lower() == "url":
             return self._enrich_url(entity_id, entity, opencti_entity, stix_objects)

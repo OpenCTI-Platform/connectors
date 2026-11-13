@@ -193,13 +193,17 @@ class HashLookupMixin:
         if self.config.polyswarm.llm_report_enabled is not True:
             return llm_task_ids
         for provider, task in found.items():
-            llm_id = self.polyswarm_client.create_llm_report(
-                sandbox_task_id=task.get("id"), provider=provider
+            llm_id = self._request_report(
+                self.polyswarm_client.create_llm_report,
+                sandbox_task_id=task.get("id"),
+                provider=provider,
             )
             if llm_id:
                 llm_task_ids[provider] = llm_id
         if scan_id and scan_res and not scan_res.get("failed"):
-            llm_id = self.polyswarm_client.create_llm_report(instance_id=scan_id)
+            llm_id = self._request_report(
+                self.polyswarm_client.create_llm_report, instance_id=scan_id
+            )
             if llm_id:
                 llm_task_ids["scan"] = llm_id
         return llm_task_ids
