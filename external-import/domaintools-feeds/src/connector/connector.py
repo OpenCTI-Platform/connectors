@@ -67,7 +67,7 @@ class DomainToolsFeedsConnector:
         self.client = DomainToolsClient(
             self.helper,
             base_url=self.config.domaintools.api_base_url,
-            api_key=self.config.domaintools.api_key,
+            api_key=self.config.domaintools.api_key.get_secret_value(),
             feed_type=self.config.domaintools.feed_type,
             # Pass any arguments necessary to the client
         )
