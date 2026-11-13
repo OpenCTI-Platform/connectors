@@ -130,42 +130,83 @@ class PolySwarmHuntingClient(BaseClientApi):
             )
         return body
 
+    def read_live_hits(self, since_seconds: int) -> "LiveHitsReader":
+        """A reader over the live hunting hits of the last ``since_seconds``.
+
+        Iterate it to get the hits (newest first); afterwards its ``complete``
+        attribute tells whether paging reached the end of the window.
+        """
+        return LiveHitsReader(self, since_seconds)
+
     def iter_live_hits(self, since_seconds: int) -> Generator[dict, None, None]:
         """Yield live hunting hits from the last ``since_seconds`` seconds.
 
         Hits are yielded in the order the API returns them (newest first).
         """
+        yield from self.read_live_hits(since_seconds)
+
+    def list_live_hits(self, since_seconds: int) -> list[dict]:
+        """Return the live hunting hits from the last ``since_seconds`` seconds.
+
+        Paging can stop early (missing or repeated cursor, page limit); use
+        ``read_live_hits`` when the caller needs to know.
+        """
+        return list(self.iter_live_hits(since_seconds))
+
+
+class LiveHitsReader:
+    """Iterate the live hunting hits of one window, page by page.
+
+    Pages are fetched lazily, so a caller that stops iterating fetches no
+    more pages. After iteration, ``complete`` is True only when the API said
+    there was nothing more; otherwise ``stop_reason`` says why paging stopped
+    ("missing cursor", "repeated cursor", "page limit"), or is None when the
+    caller stopped first. Hits not read are the oldest ones in the window.
+    """
+
+    def __init__(self, client: PolySwarmHuntingClient, since_seconds: int) -> None:
         if isinstance(since_seconds, bool) or not isinstance(since_seconds, int):
             raise ValueError("since_seconds must be an integer")
         if since_seconds < 1:
             # since=0 would disable the time filter and return everything.
             raise ValueError("since_seconds must be at least 1")
+        self._client = client
+        self._since_seconds = since_seconds
+        self.complete = False
+        self.stop_reason: str | None = None
 
-        params: dict[str, Any] = {"since": since_seconds, "limit": self._page_size}
+    def __iter__(self) -> Generator[dict, None, None]:
+        client = self._client
+        params: dict[str, Any] = {
+            "since": self._since_seconds,
+            "limit": client._page_size,
+        }
         seen_cursors: set[str] = set()
-        for _ in range(self._max_pages):
-            body = self._get_page(params)
+        for _ in range(client._max_pages):
+            body = client._get_page(params)
             if body is None:
+                self.complete = True
                 return
             for hit in body["result"]:
                 if isinstance(hit, dict):
                     yield hit
             if not body.get("has_more"):
+                self.complete = True
                 return
             cursor = body.get("offset")
-            if not cursor or not isinstance(cursor, str) or cursor in seen_cursors:
-                self.logger.warning(
-                    "Live hunting response said has_more without a new cursor; "
-                    "stopping paging."
-                )
+            if not cursor or not isinstance(cursor, str):
+                self._stop("missing cursor")
+                return
+            if cursor in seen_cursors:
+                self._stop("repeated cursor")
                 return
             seen_cursors.add(cursor)
             params = {**params, "offset": cursor}
-        self.logger.warning(
-            "Live hunting paging stopped at the page limit.",
-            meta={"max_pages": self._max_pages},
-        )
+        self._stop("page limit")
 
-    def list_live_hits(self, since_seconds: int) -> list[dict]:
-        """Return every live hunting hit from the last ``since_seconds`` seconds."""
-        return list(self.iter_live_hits(since_seconds))
+    def _stop(self, reason: str) -> None:
+        self.stop_reason = reason
+        self._client.logger.warning(
+            "Live hunting paging stopped before the end of the window.",
+            meta={"reason": reason, "max_pages": self._client._max_pages},
+        )

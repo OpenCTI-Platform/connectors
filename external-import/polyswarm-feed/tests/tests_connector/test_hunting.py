@@ -51,17 +51,39 @@ class FakeLogger:
         self._log("error", message, meta)
 
 
+class FakeReader:
+    """Stands in for the client's live hits reader."""
+
+    def __init__(self, hits, complete, stop_reason):
+        self.hits = hits
+        self.yielded = 0
+        self.complete = False
+        self._complete_at_end = complete
+        self.stop_reason = stop_reason
+
+    def __iter__(self):
+        for hit in self.hits:
+            self.yielded += 1
+            yield hit
+        self.complete = self._complete_at_end
+
+
 class FakeClient:
-    def __init__(self, hits=None, error=None):
+    def __init__(self, hits=None, error=None, complete=True, stop_reason=None):
         self.hits = hits or []
         self.error = error
+        self.complete = complete
+        self.stop_reason = stop_reason
         self.calls = []
+        self.readers = []
 
-    def list_live_hits(self, since_seconds):
+    def read_live_hits(self, since_seconds):
         self.calls.append(since_seconds)
         if self.error:
             raise self.error
-        return list(self.hits)
+        reader = FakeReader(list(self.hits), self.complete, self.stop_reason)
+        self.readers.append(reader)
+        return reader
 
 
 def make_config(**overrides):
@@ -560,6 +582,55 @@ def test_seen_ids_bounded_newest_first():
     assert len(ids) == SEEN_IDS_LIMIT
     assert ids[:10] == [f"new{i}" for i in range(10)]
     assert ids[-1] == f"old{SEEN_IDS_LIMIT - 11}"
+
+
+@pytest.mark.parametrize("reason", ["missing cursor", "repeated cursor", "page limit"])
+def test_incomplete_paging_keeps_the_checkpoint_and_records_read_hits(reason):
+    previous = NOW - timedelta(hours=1)
+    client = FakeClient(
+        [make_hit("2", sha256=SHA256_B), make_hit("1")],
+        complete=False,
+        stop_reason=reason,
+    )
+    source, _, logger = make_source(client=client)
+    objects, state = source.collect(
+        {"last_run": previous.isoformat(), "seen_hit_ids": ["0"]}
+    )
+
+    # The hits that were read are imported and remembered.
+    assert len(by_type(objects, "indicator")) == 2
+    assert state["seen_hit_ids"] == ["2", "1", "0"]
+    # The checkpoint does not move past the hits that were not read.
+    assert abs(datetime.fromisoformat(state["last_run"]) - previous) <= timedelta(
+        seconds=1
+    )
+    warnings = [m for level, _, m in logger.messages if level == "warning"]
+    assert any(meta and meta.get("reason") == reason for meta in warnings)
+
+
+def test_incomplete_first_run_keeps_the_backfill_window_start():
+    client = FakeClient([make_hit("1")], complete=False, stop_reason="page limit")
+    source, _, _ = make_source(client=client)
+    _, state = source.collect({})
+
+    # The next run asks for the same backfill window again, plus elapsed time.
+    source._now = lambda: NOW + timedelta(hours=1)
+    source.collect(state)
+    assert client.calls == [24 * 3600, 25 * 3600]
+
+
+def test_rerun_after_incomplete_paging_imports_only_unread_hits():
+    previous = NOW - timedelta(hours=1)
+    first = FakeClient([make_hit("2", sha256=SHA256_B)], complete=False)
+    source, _, _ = make_source(client=first)
+    _, state = source.collect({"last_run": previous.isoformat()})
+
+    second = FakeClient([make_hit("2", sha256=SHA256_B), make_hit("1")])
+    source.client = second
+    objects, state = source.collect(state)
+    files = by_type(objects, "file")
+    assert [f["hashes"]["SHA-256"] for f in files] == [SHA256_A]
+    assert state["last_run"] == NOW.isoformat()
 
 
 def test_client_error_propagates_and_state_is_not_returned():

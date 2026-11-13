@@ -174,6 +174,8 @@ Many hits report an antivirus style label in the family field (for example `Troj
 
 A hit that was already imported is not imported again. The connector remembers a bounded number of recent hit identifiers in its state.
 
+If reading the hunting results stops before the end of the period (the API gives no usable next-page cursor, or the page limit is reached), the connector imports what it read, logs a warning and does not move its hunting position forward. The next run reads the same period again and skips the hits it already imported.
+
 ### Indicator lifetime
 
 Indicators are given a `valid_until` of the import time plus `POLYSWARM_FEED_INDICATOR_VALID_DAYS` (feed) or `POLYSWARM_HUNTING_INDICATOR_VALID_DAYS` (hunting). `valid_until` is never earlier than `valid_from`, so an indicator is not expired when it is created.

@@ -146,6 +146,58 @@ def test_max_pages_bound(api):
     assert len(api.requests) == 3
 
 
+def test_reader_reports_a_window_read_to_the_end_as_complete(api):
+    api.reply(200, _page([1], has_more=True, offset="c1"))
+    api.reply(200, _page([2]))
+    reader = _client(api).read_live_hits(600)
+    assert [h["id"] for h in reader] == ["1", "2"]
+    assert reader.complete is True
+    assert reader.stop_reason is None
+
+
+def test_reader_reports_204_as_complete(api):
+    api.reply(204)
+    reader = _client(api).read_live_hits(600)
+    assert list(reader) == []
+    assert reader.complete is True
+
+
+def test_reader_reports_missing_cursor_as_incomplete(api):
+    api.reply(200, _page([1], has_more=True))
+    reader = _client(api).read_live_hits(600)
+    assert [h["id"] for h in reader] == ["1"]
+    assert reader.complete is False
+    assert reader.stop_reason == "missing cursor"
+
+
+def test_reader_reports_repeated_cursor_as_incomplete(api):
+    api.reply(200, _page([1], has_more=True, offset="same"))
+    api.reply(200, _page([2], has_more=True, offset="same"))
+    reader = _client(api).read_live_hits(600)
+    assert [h["id"] for h in reader] == ["1", "2"]
+    assert reader.complete is False
+    assert reader.stop_reason == "repeated cursor"
+
+
+def test_reader_reports_page_limit_as_incomplete(api):
+    for n in range(5):
+        api.reply(200, _page([n], has_more=True, offset=f"c{n}"))
+    reader = _client(api, max_pages=3).read_live_hits(600)
+    assert len(list(reader)) == 3
+    assert reader.complete is False
+    assert reader.stop_reason == "page limit"
+
+
+def test_reader_stopped_by_the_caller_is_incomplete_and_fetches_no_more(api):
+    api.reply(200, _page([1, 2], has_more=True, offset="c1"))
+    api.reply(200, _page([3]))
+    reader = _client(api).read_live_hits(600)
+    for _ in reader:
+        break
+    assert reader.complete is False
+    assert len(api.requests) == 1
+
+
 def test_non_dict_items_are_ignored(api):
     api.reply(200, {"has_more": False, "result": [{"id": "1"}, "junk", None]})
     assert _client(api).list_live_hits(600) == [{"id": "1"}]

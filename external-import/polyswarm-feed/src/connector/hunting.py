@@ -222,13 +222,15 @@ class HuntingSource:
             "Fetching PolySwarm live hunting hits.",
             meta={"since_seconds": since, "first_run": last_run is None},
         )
-        hits = self.client.list_live_hits(since)
+        reader = self.client.read_live_hits(since)
 
         new_hits: list[dict] = []
         new_ids: list[str] = []
+        hits_returned = 0
         skipped_seen = 0
         skipped_invalid = 0
-        for hit in hits:
+        for hit in reader:
+            hits_returned += 1
             if not isinstance(hit, dict):
                 skipped_invalid += 1
                 continue
@@ -253,7 +255,8 @@ class HuntingSource:
         self.logger.info(
             "PolySwarm live hunting hits processed.",
             meta={
-                "hits_returned": len(hits),
+                "hits_returned": hits_returned,
+                "window_complete": reader.complete,
                 "hits_new": len(new_hits),
                 "hits_already_seen": skipped_seen,
                 "hits_skipped_invalid": skipped_invalid,
@@ -264,8 +267,24 @@ class HuntingSource:
         # Newest ids first, so truncation drops the oldest ones.
         new_id_set = set(new_ids)
         merged_ids = new_ids + [i for i in previous_ids if i not in new_id_set]
+        checkpoint = now
+        if not reader.complete:
+            # Hits come newest first, so the ones not read are the oldest in
+            # the window. Keep the checkpoint at the start of this window so
+            # the next run asks for it again; hits already imported are then
+            # skipped by id.
+            checkpoint = now - timedelta(seconds=since - LAG_MARGIN_SECONDS)
+            self.logger.warning(
+                "Live hunting window not fully read; the checkpoint is kept at "
+                "the start of the window and the next run reads it again.",
+                meta={
+                    "reason": reader.stop_reason,
+                    "since_seconds": since,
+                    "hits_read": hits_returned,
+                },
+            )
         new_state = {
-            STATE_LAST_RUN: now.isoformat(),
+            STATE_LAST_RUN: checkpoint.isoformat(),
             STATE_SEEN_IDS: merged_ids[:SEEN_IDS_LIMIT],
         }
         return objects, new_state
