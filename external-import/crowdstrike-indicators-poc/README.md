@@ -299,7 +299,10 @@ JSON:
 
 1. `CrowdStrikeIndicatorTransformer`: the STIX 2.1 indicator;
 2. `CrowdStrikeAddMalware`: the bundle of that indicator, its Malware objects
-   and its `indicates` relationships.
+   and its `indicates` relationships;
+3. with `--attack-data PATH` only, `CrowdStrikeAddAttackPatterns`: the same
+   bundle with the MITRE ATT&CK AttackPatterns its labels name, resolved
+   against the local ATT&CK dataset in `PATH` (see [Attack patterns](#attack-patterns)).
 
 ```sh
 # Take a domain row of the committed sample as input
@@ -310,7 +313,17 @@ PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
 
 # From standard input
 PYTHONPATH=src python -m crowdstrike_indicators transform < indicator.json
+
+# With attack patterns: a row with ATT&CK labels, and a local ATT&CK dataset
+# (the test extract here, or a downloaded enterprise-attack-17.1.json)
+python -c "import json; print(json.dumps(json.load(open('tests/fixtures/indicators_sample.json'))['resources'][0]))" > indicator-attack.json
+PYTHONPATH=src python -m crowdstrike_indicators transform indicator-attack.json \
+    --attack-data tests/fixtures/attack_extract.json
 ```
+
+Without `--attack-data`, the chain stops after step 2 and the bundle's
+`attack_patterns` is empty. A missing or invalid dataset file exits with status
+2 before any step runs; the dataset is never downloaded.
 
 Standard output is one JSON array, one entry per step, so it can be piped
 (`| jq '.[1].output.malware'`). STIX objects appear as their STIX JSON, with
@@ -339,6 +352,7 @@ holds, in `x_crowdstrike_*` properties:
       "malware": [
         {"type": "malware", "id": "malware--06d31b08-d590-5298-8440-23b86775f679", "name": "ExampleFamily4", "is_family": true, "...": "..."}
       ],
+      "attack_patterns": [],
       "relationships": [
         {"type": "relationship", "relationship_type": "indicates", "source_ref": "indicator--f975582d-...", "target_ref": "malware--06d31b08-...", "...": "..."}
       ]
@@ -359,7 +373,7 @@ output, is rejected. It takes `--log-level` too.
 |---|---|
 | 0 | success, including an empty result (`[]`) for `extract` |
 | 1 | `extract`: API error (status and message on standard error), or an indicator that does not match the model (its `id`, the validation errors and the raw indicator on standard error). `transform`: input that is not valid JSON or not one JSON object, an indicator that does not match the model (reported as for `extract`), or an indicator that cannot be converted (unsupported type, `published_date` after `last_updated`) |
-| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing credential, missing `--env-file`, missing `transform` input file |
+| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing credential, missing `--env-file`, missing `transform` input file, missing or invalid `--attack-data` file |
 
 ## Tests
 

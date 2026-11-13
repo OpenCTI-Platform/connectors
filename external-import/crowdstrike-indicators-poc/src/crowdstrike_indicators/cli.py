@@ -20,6 +20,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from crowdstrike_indicators.attack import (
+    AttackPatternCatalog,
+    CrowdStrikeAddAttackPatterns,
+)
 from crowdstrike_indicators.dotenv import read_dotenv
 from crowdstrike_indicators.errors import (
     CrowdStrikeAPIError,
@@ -49,11 +53,21 @@ BASE_URL = "CROWDSTRIKE_BASE_URL"
 DEFAULT_BASE_URL = "https://api.crowdstrike.com"
 DEFAULT_ENV_FILE = Path(".env")
 
-# The steps ``transform`` runs, in order: each takes the previous one's output.
+# The steps ``transform`` always runs, in order: each takes the previous
+# one's output. ``build_transform_steps`` adds the ones needing a dataset.
 TRANSFORM_STEPS: tuple[AbstractTransformer[Any, Any], ...] = (
     CrowdStrikeIndicatorTransformer(),
     CrowdStrikeAddMalware(),
 )
+
+
+def build_transform_steps(
+    catalog: AttackPatternCatalog | None,
+) -> tuple[AbstractTransformer[Any, Any], ...]:
+    """Return the steps of ``transform``, with attack patterns given a catalog."""
+    if catalog is None:
+        return TRANSFORM_STEPS
+    return (*TRANSFORM_STEPS, CrowdStrikeAddAttackPatterns(catalog))
 
 
 def build_client(client_id: str, client_secret: str, base_url: str) -> IndicatorsClient:
@@ -147,7 +161,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="convert one indicator given as JSON into STIX JSON",
         description=(
             "Read one CrowdStrike indicator as a JSON object, in the API shape, "
-            "and print its STIX 2.1 indicator as JSON on standard output. "
+            "run it through the chain of transformers and print every step's "
+            "result as JSON on standard output. "
             "No credentials and no network are needed."
         ),
     )
@@ -157,6 +172,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="FILE",
         help="JSON file holding one indicator (default: standard input)",
+    )
+    transform.add_argument(
+        "--attack-data",
+        type=Path,
+        metavar="PATH",
+        help=(
+            "local MITRE ATT&CK Enterprise STIX bundle (enterprise-attack.json); "
+            "when given, a third step adds the AttackPatterns the labels name"
+        ),
     )
     return parser
 
@@ -256,9 +280,27 @@ def _to_json(value: Any) -> Any:
     return json.loads(value.serialize(pretty=True))
 
 
+def _load_catalog(
+    parser: argparse.ArgumentParser, path: Path | None
+) -> AttackPatternCatalog | None:
+    """Load the ATT&CK dataset given with ``--attack-data``, if any."""
+    if path is None:
+        return None
+    if not path.is_file():
+        parser.error(f"--attack-data: no such file: {path}")
+    catalog = AttackPatternCatalog.from_file(path)
+    LOGGER.info("Loaded %d ATT&CK technique(s) from %s", len(catalog), path)
+    return catalog
+
+
 def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     if args.file is not None and not args.file.is_file():
         parser.error(f"no such file: {args.file}")
+    try:
+        catalog = _load_catalog(parser, args.attack_data)
+    except ValueError as error:
+        print(f"error: --attack-data: {error}", file=sys.stderr)
+        return EXIT_USAGE_ERROR
     text = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
 
     try:
@@ -276,7 +318,7 @@ def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
     steps: list[dict[str, Any]] = []
     try:
         value: Any = validate_indicator(raw)
-        for number, step in enumerate(TRANSFORM_STEPS, start=1):
+        for number, step in enumerate(build_transform_steps(catalog), start=1):
             value = step.convert(value)
             steps.append(
                 {

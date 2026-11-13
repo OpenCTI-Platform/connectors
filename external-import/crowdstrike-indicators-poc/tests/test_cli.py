@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from conftest import (
+    FIXTURES_DIR,
     FakeIndicatorsAPI,
     ScriptedClient,
     load_fixture,
@@ -492,3 +493,62 @@ def test_transform_later_step_failure_prints_nothing(
     assert captured.out == ""
     assert "forced failure" in captured.err
     assert SAMPLE_DOMAIN["id"] in captured.err
+
+
+# --- transform --attack-data -------------------------------------------------
+
+ATTACK_FILE = FIXTURES_DIR / "attack_extract.json"
+ATTACK_ROW = load_fixture("indicators_sample.json")["resources"][0]
+
+
+def test_transform_with_attack_data_runs_three_steps(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+
+    code = _run("transform", "indicator.json", "--attack-data", str(ATTACK_FILE))
+
+    assert code == 0
+    steps = _transform_steps(capsys)
+    assert [s["transformer"] for s in steps] == [
+        "CrowdStrikeIndicatorTransformer",
+        "CrowdStrikeAddMalware",
+        "CrowdStrikeAddAttackPatterns",
+    ]
+    third = steps[2]
+    assert third["step"] == 3
+    patterns = third["output"]["attack_patterns"]
+    assert patterns[0]["id"] == "attack-pattern--3c4a2599-71ee-4405-ba1e-0e28414b4bc5"
+    assert patterns[0]["name"] == "Data from Local System"
+    relationships = third["output"]["relationships"]
+    assert relationships[-len(patterns) :][0]["target_ref"] == patterns[0]["id"]
+    assert steps[1]["output"]["attack_patterns"] == []
+
+
+def test_transform_without_attack_data_runs_two_steps(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+
+    assert _run("transform", "indicator.json") == 0
+
+    assert len(_transform_steps(capsys)) == 2
+
+
+def test_transform_missing_attack_data_exits_2(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+
+    with pytest.raises(SystemExit) as caught:
+        _run("transform", "indicator.json", "--attack-data", "missing.json")
+
+    assert caught.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "missing.json" in captured.err
+
+
+def test_transform_invalid_attack_data_exits_2(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(ATTACK_ROW))
+    (isolated / "attack.json").write_text("[]")
+
+    assert _run("transform", "indicator.json", "--attack-data", "attack.json") == 2
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "attack.json" in captured.err
