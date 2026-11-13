@@ -77,12 +77,19 @@ class AbstractTransformer[InputType, OutputType](ABC):
 `CrowdStrikeStix2Indicator`: a stix2 `Indicator` (STIX 2.1) that declares extra
 `x_crowdstrike_*` properties. Two rules apply:
 
-- **Nothing is lost.** Every CrowdStrike field is kept as is in
-  `x_crowdstrike_<field>`, named after the API field without its leading
-  underscore (`_marker` becomes `x_crowdstrike_marker`). Fields the model does
-  not declare (`reports`, `relations`, `scope`, ...) are kept together in
-  `x_crowdstrike_extra`.
-- **Native STIX is filled where the meaning matches:**
+- **Native STIX is filled where the meaning matches** (table below).
+- **Nothing is lost, nothing is repeated.** A CrowdStrike field goes into an
+  `x_crowdstrike_*` property only when no native property holds it:
+
+| Fields | Where they live |
+|---|---|
+| `id`, `indicator`, `type`, `last_updated`, `published_date`, `deleted` | only in native properties (see the table below); `type` is read back from the pattern's object path |
+| `malicious_confidence` | `confidence`; also `x_crowdstrike_malicious_confidence` when `confidence` cannot be set (`unverified`, an unknown value) |
+| `kill_chains` | `kill_chain_phases`; also `x_crowdstrike_kill_chains`, with the whole list, when a value has no phase |
+| `_marker`, `labels` (with their dates), `actors`, `malware_families`, `targets`, `vulnerabilities`, `threat_types`, `domain_types`, `ip_address_types` | `x_crowdstrike_<field>`, named after the API field without its leading underscore (`_marker` becomes `x_crowdstrike_marker`) |
+| fields the model does not declare (`reports`, `relations`, `scope`, ...) | together in `x_crowdstrike_extra` |
+
+Native properties:
 
 | STIX property | From |
 |---|---|
@@ -201,8 +208,9 @@ PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
 PYTHONPATH=src python -m crowdstrike_indicators transform < indicator.json
 ```
 
-The output is one STIX object, with the native properties first and every
-CrowdStrike field in `x_crowdstrike_*` properties:
+The output is one STIX object, with the native properties first, then the
+CrowdStrike fields that no native property holds, in `x_crowdstrike_*`
+properties:
 
 ```json
 {
@@ -212,7 +220,6 @@ CrowdStrike field in `x_crowdstrike_*` properties:
     "name": "malicious-7.example",
     "pattern": "[domain-name:value = 'malicious-7.example']",
     "...": "...",
-    "x_crowdstrike_id": "domain_malicious-7.example",
     "x_crowdstrike_marker": "...",
     "x_crowdstrike_labels": [{"name": "...", "created_on": "..."}]
 }
@@ -254,7 +261,9 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   output. This is on purpose while the model is being refined.
 - **No state, no OpenCTI.** Every run is independent. `extract` prints the raw
   API data, and `transform` converts one indicator at a time.
-- **Empty list and absent field look the same in STIX.** stix2 drops empty
-  lists, so an empty CrowdStrike list gives no `x_crowdstrike_*` property, and
-  reads back as absent. In real data every list field is always present, so no
-  value is lost.
+- **A few distinctions do not survive the conversion.** stix2 drops empty
+  lists, so an empty CrowdStrike list gives no `x_crowdstrike_*` property and
+  reads back as absent. A missing `published_date` reads back as equal to
+  `last_updated` (`created` falls back to it), a missing `deleted` as `false`,
+  and `malicious_confidence` in lowercase (`HIGH` and `high` both give 85). Real
+  data always has these fields, in lowercase, so no value is lost.

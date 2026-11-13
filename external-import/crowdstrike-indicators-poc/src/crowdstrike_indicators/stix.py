@@ -3,11 +3,9 @@
 from collections import OrderedDict
 
 from stix2.properties import (
-    BooleanProperty,
     DictionaryProperty,
     ListProperty,
     StringProperty,
-    TimestampProperty,
 )
 from stix2.v21 import Indicator
 
@@ -20,10 +18,15 @@ class CrowdStrikeStix2Indicator(Indicator):
     """A STIX 2.1 indicator that keeps every field of a CrowdStrike indicator.
 
     Native STIX properties are filled where their meaning matches a CrowdStrike
-    field. Every CrowdStrike field is also kept as is in an
+    field. The fields no native property holds are kept as is in an
     ``x_crowdstrike_<field>`` property, named after the API field without its
     leading underscore. Fields the record model does not declare are kept
     together in ``x_crowdstrike_extra``.
+
+    ``id``, ``indicator``, ``type``, ``last_updated``, ``published_date`` and
+    ``deleted`` are held natively and have no ``x_`` property.
+    ``malicious_confidence`` and ``kill_chains`` appear raw only when STIX
+    cannot express them.
 
     Only the properties declared here are accepted: an undeclared ``x_``
     property is rejected. ``stix2.parse`` rebuilds a plain ``Indicator``, which
@@ -33,13 +36,7 @@ class CrowdStrikeStix2Indicator(Indicator):
     _properties = OrderedDict(Indicator._properties)
     _properties.update(
         [
-            ("x_crowdstrike_id", StringProperty()),
-            ("x_crowdstrike_indicator", StringProperty()),
-            ("x_crowdstrike_type", StringProperty()),
             ("x_crowdstrike_marker", StringProperty()),
-            ("x_crowdstrike_last_updated", TimestampProperty()),
-            ("x_crowdstrike_published_date", TimestampProperty()),
-            ("x_crowdstrike_deleted", BooleanProperty()),
             ("x_crowdstrike_malicious_confidence", StringProperty()),
             ("x_crowdstrike_actors", _string_list()),
             ("x_crowdstrike_malware_families", _string_list()),

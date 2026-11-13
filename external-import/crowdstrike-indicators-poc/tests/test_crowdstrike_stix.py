@@ -14,13 +14,7 @@ NATIVE = {
 }
 
 EVERY_X_PROPERTY = {
-    "x_crowdstrike_id": "domain_malicious-1.example",
-    "x_crowdstrike_indicator": "malicious-1.example",
-    "x_crowdstrike_type": "domain",
     "x_crowdstrike_marker": "1793491203" + "0" * 32,
-    "x_crowdstrike_last_updated": "2026-11-01T00:00:03Z",
-    "x_crowdstrike_published_date": "2026-11-01T00:00:00Z",
-    "x_crowdstrike_deleted": False,
     "x_crowdstrike_malicious_confidence": "high",
     "x_crowdstrike_actors": ["EXAMPLEBEAR"],
     "x_crowdstrike_malware_families": ["ExampleFamily1"],
@@ -53,6 +47,22 @@ def test_every_x_crowdstrike_property_is_accepted():
     assert indicator.x_crowdstrike_extra == {"scope": ["s1"]}
 
 
+@pytest.mark.parametrize(
+    "name",
+    [
+        "x_crowdstrike_id",
+        "x_crowdstrike_indicator",
+        "x_crowdstrike_type",
+        "x_crowdstrike_last_updated",
+        "x_crowdstrike_published_date",
+        "x_crowdstrike_deleted",
+    ],
+)
+def test_natively_held_fields_have_no_x_property(name):
+    with pytest.raises(ExtraPropertiesError):
+        _build(**{name: "value"})
+
+
 def test_undeclared_x_property_is_rejected():
     with pytest.raises(ExtraPropertiesError):
         _build(x_crowdstrike_unknown="value")
@@ -81,4 +91,7 @@ def test_goes_into_a_bundle():
 
     bundle = stix2.Bundle(objects=[indicator])
 
-    assert bundle.objects[0].x_crowdstrike_type == "domain"
+    assert (
+        bundle.objects[0].x_crowdstrike_marker
+        == EVERY_X_PROPERTY["x_crowdstrike_marker"]
+    )

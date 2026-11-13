@@ -14,6 +14,7 @@ from crowdstrike_indicators.errors import IndicatorConversionError
 from crowdstrike_indicators.models import CrowdStrikeIndicator
 from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
 from crowdstrike_indicators.transformer import (
+    NATIVELY_HELD_FIELDS,
     X_EXTRA,
     CrowdStrikeIndicatorTransformer,
     x_property_name,
@@ -54,21 +55,72 @@ def convert(item: CrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
     return CrowdStrikeIndicatorTransformer().convert(item)
 
 
+# Reverse tables, written independently of the transformer's own tables.
+TYPE_BY_OBJECT_PATH = {
+    "domain-name:value": "domain",
+    "url:value": "url",
+    "ipv4-addr:value": "ip_address",
+    "ipv6-addr:value": "ip_address",
+    "file:hashes.MD5": "hash_md5",
+    "file:hashes.'SHA-1'": "hash_sha1",
+    "file:hashes.'SHA-256'": "hash_sha256",
+}
+CONFIDENCE_BY_SCORE = {85: "high", 50: "medium", 15: "low"}
+KILL_CHAIN_BY_PHASE = {
+    "reconnaissance": "Reconnaissance",
+    "weaponization": "Weaponization",
+    "delivery": "Delivery",
+    "exploitation": "Exploitation",
+    "installation": "Installation",
+    "command-and-control": "C2",
+    "action-on-objectives": "ActionOnObjectives",
+}
+NATIVELY_HELD = {"id", "indicator", "type", "last_updated", "published_date", "deleted"}
+
+
 def rebuild(indicator: CrowdStrikeStix2Indicator) -> CrowdStrikeIndicator:
-    """Rebuild the CrowdStrike record from the ``x_crowdstrike_*`` properties."""
-    data: dict[str, Any] = {}
+    """Recover the CrowdStrike record from native and ``x_crowdstrike_*`` data."""
+    (reference,) = [
+        ref for ref in indicator.external_references if ref.source_name == "CrowdStrike"
+    ]
+    object_path = indicator.pattern[1:].split(" = ", 1)[0]
+    data: dict[str, Any] = {
+        "id": reference.external_id,
+        "indicator": indicator.name,
+        "type": TYPE_BY_OBJECT_PATH[object_path],
+        "last_updated": indicator.modified,
+        "published_date": indicator.created,
+        "deleted": bool(indicator.get("revoked")),
+    }
+    if "confidence" in indicator:
+        data["malicious_confidence"] = CONFIDENCE_BY_SCORE[indicator.confidence]
+    if "kill_chain_phases" in indicator:
+        data["kill_chains"] = [
+            KILL_CHAIN_BY_PHASE[phase.phase_name]
+            for phase in indicator.kill_chain_phases
+        ]
     for name, field in CrowdStrikeIndicator.model_fields.items():
         api_name = field.alias or name
-        if x_property_name(api_name) in indicator:
+        if name not in NATIVELY_HELD and x_property_name(api_name) in indicator:
             data[api_name] = indicator[x_property_name(api_name)]
     data.update(indicator.get(X_EXTRA, {}))
     return CrowdStrikeIndicator.model_validate(data)
 
 
 def comparable(item: CrowdStrikeIndicator) -> dict[str, Any]:
-    """JSON form of a record where empty lists read as absent."""
+    """JSON form of a record, with the equivalences of the round trip.
+
+    Empty lists read as absent, a missing ``published_date`` as equal to
+    ``last_updated``, a missing ``deleted`` as false, and
+    ``malicious_confidence`` is compared case-insensitively.
+    """
     dumped = item.model_dump(mode="json", by_alias=True, exclude_none=True)
-    return {key: value for key, value in dumped.items() if value != []}
+    dumped = {key: value for key, value in dumped.items() if value != []}
+    dumped.setdefault("published_date", dumped["last_updated"])
+    dumped.setdefault("deleted", False)
+    if "malicious_confidence" in dumped:
+        dumped["malicious_confidence"] = dumped["malicious_confidence"].lower()
+    return dumped
 
 
 # --- Error -------------------------------------------------------------------
@@ -196,7 +248,10 @@ def test_confidence_on_the_stix_scale(level, confidence):
     assert convert(record(malicious_confidence=level)).confidence == confidence
 
 
-@pytest.mark.parametrize("fields", [{"malicious_confidence": "unverified"}, {}])
+@pytest.mark.parametrize(
+    "fields",
+    [{"malicious_confidence": "unverified"}, {"malicious_confidence": "critical"}, {}],
+)
 def test_no_confidence_when_not_assessed(fields):
     result = convert(record(**fields))
 
@@ -204,6 +259,13 @@ def test_no_confidence_when_not_assessed(fields):
     assert result.get("x_crowdstrike_malicious_confidence") == fields.get(
         "malicious_confidence"
     )
+
+
+def test_mapped_confidence_is_not_kept_raw():
+    result = convert(record(malicious_confidence="medium"))
+
+    assert result.confidence == 50
+    assert "x_crowdstrike_malicious_confidence" not in result
 
 
 def test_every_sample_confidence_level_maps():
@@ -218,6 +280,16 @@ def test_c2_kill_chain_phase():
 
     assert phase.kill_chain_name == "lockheed-martin-cyber-kill-chain"
     assert phase.phase_name == "command-and-control"
+
+
+def test_known_kill_chains_are_not_kept_raw():
+    result = convert(record(kill_chains=["Delivery", "C2"]))
+
+    assert [phase.phase_name for phase in result.kill_chain_phases] == [
+        "delivery",
+        "command-and-control",
+    ]
+    assert "x_crowdstrike_kill_chains" not in result
 
 
 def test_every_sample_kill_chain_maps():
@@ -287,10 +359,41 @@ def test_round_trip_survives_json_serialization():
     assert comparable(rebuild(parsed)) == comparable(item)
 
 
-def test_every_model_field_has_a_declared_x_property():
+def test_every_model_field_is_held_natively_or_declared():
     declared = set(CrowdStrikeStix2Indicator._properties)
     for name, field in CrowdStrikeIndicator.model_fields.items():
-        assert x_property_name(field.alias or name) in declared, name
+        x_name = x_property_name(field.alias or name)
+        if name in NATIVELY_HELD_FIELDS:
+            assert x_name not in declared, name
+        else:
+            assert x_name in declared, name
+
+
+def test_natively_held_fields_are_not_repeated():
+    result = convert(
+        record(
+            published_date=int(T1.timestamp()),
+            deleted=False,
+            malicious_confidence="high",
+            kill_chains=["C2"],
+        )
+    )
+
+    for name in NATIVELY_HELD_FIELDS | {"malicious_confidence", "kill_chains"}:
+        assert x_property_name(name) not in result, name
+
+
+def test_round_trip_with_the_equivalences():
+    item = record(malicious_confidence="HIGH", kill_chains=["C2", "Unknown"])
+    assert item.published_date is None and item.deleted is None
+
+    assert comparable(rebuild(convert(item))) == comparable(item)
+
+
+def test_round_trip_of_a_revoked_ipv6_record():
+    item = record(type="ip_address", indicator="2001:db8::1", deleted=True)
+
+    assert comparable(rebuild(convert(item))) == comparable(item)
 
 
 def test_marker_loses_its_leading_underscore():

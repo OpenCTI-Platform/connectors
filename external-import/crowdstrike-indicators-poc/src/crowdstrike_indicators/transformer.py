@@ -60,6 +60,11 @@ OPENCTI_INDICATOR_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 X_PREFIX = "x_crowdstrike_"
 X_EXTRA = f"{X_PREFIX}extra"
 
+# Fields a native STIX property holds: never repeated in an ``x_`` property.
+NATIVELY_HELD_FIELDS = frozenset(
+    {"id", "indicator", "type", "last_updated", "published_date", "deleted"}
+)
+
 
 def build_pattern(item: CrowdStrikeIndicator) -> str:
     """Return the STIX pattern of ``item``, quoted and escaped by stix2.
@@ -98,13 +103,23 @@ def x_property_name(field_name: str) -> str:
     return X_PREFIX + field_name.lstrip("_")
 
 
-def _x_properties(item: CrowdStrikeIndicator) -> dict[str, Any]:
-    """Keep every field of ``item``, named after its API field name."""
+def _x_properties(item: CrowdStrikeIndicator, confidence: int | None) -> dict[str, Any]:
+    """Keep the fields of ``item`` no native property holds.
+
+    ``malicious_confidence`` is kept only when ``confidence`` could not be
+    set, and ``kill_chains`` only when one of its values has no phase.
+    """
     properties: dict[str, Any] = {}
     for name, field in CrowdStrikeIndicator.model_fields.items():
         value = getattr(item, name)
         if value is None or value == []:
             continue  # stix2 drops empty lists: absent and empty look the same
+        if name in NATIVELY_HELD_FIELDS:
+            continue
+        if name == "malicious_confidence" and confidence is not None:
+            continue
+        if name == "kill_chains" and all(kc in KILL_CHAIN_PHASES for kc in value):
+            continue
         if name == "labels":
             value = [
                 label.model_dump(mode="json", exclude_none=True) for label in value
@@ -146,9 +161,9 @@ class CrowdStrikeIndicatorTransformer(
 ):
     """Convert a CrowdStrike indicator into one STIX 2.1 indicator.
 
-    Every CrowdStrike field is kept in an ``x_crowdstrike_*`` property, and
-    the native STIX properties whose meaning matches are filled too. No
-    network call is made.
+    The native STIX properties whose meaning matches are filled, and the
+    CrowdStrike fields they cannot hold are kept in ``x_crowdstrike_*``
+    properties, so nothing is lost. No network call is made.
     """
 
     def convert(self, item: CrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
@@ -160,6 +175,7 @@ class CrowdStrikeIndicatorTransformer(
         """
         pattern = build_pattern(item)
         created = _created(item)
+        confidence = CONFIDENCE.get((item.malicious_confidence or "").lower())
         native: dict[str, Any] = {
             "pattern": pattern,
             "pattern_type": "stix",
@@ -168,7 +184,7 @@ class CrowdStrikeIndicatorTransformer(
             "created": created,
             "modified": item.last_updated,
             "revoked": True if item.deleted else None,
-            "confidence": CONFIDENCE.get((item.malicious_confidence or "").lower()),
+            "confidence": confidence,
             "kill_chain_phases": _kill_chain_phases(item) or None,
             "labels": [label.name for label in item.labels or []] or None,
             "external_references": [
@@ -178,7 +194,7 @@ class CrowdStrikeIndicatorTransformer(
         properties = {
             name: value for name, value in native.items() if value is not None
         }
-        properties.update(_x_properties(item))
+        properties.update(_x_properties(item, confidence))
         try:
             return CrowdStrikeStix2Indicator(id=indicator_id(pattern), **properties)
         except STIXError as error:

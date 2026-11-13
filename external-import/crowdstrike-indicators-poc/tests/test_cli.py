@@ -342,7 +342,10 @@ def _transform_output(capsys) -> dict[str, Any]:
 def _assert_stix_of_sample(stix: dict[str, Any]) -> None:
     assert stix["type"] == "indicator"
     assert stix["name"] == SAMPLE_DOMAIN["indicator"]
-    assert stix["x_crowdstrike_id"] == SAMPLE_DOMAIN["id"]
+    assert stix["external_references"] == [
+        {"source_name": "CrowdStrike", "external_id": SAMPLE_DOMAIN["id"]}
+    ]
+    assert "x_crowdstrike_id" not in stix
     assert stix["x_crowdstrike_marker"] == SAMPLE_DOMAIN["_marker"]
 
 
