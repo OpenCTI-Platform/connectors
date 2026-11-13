@@ -47,8 +47,6 @@ class IncidentProcessor(BaseUseCase):
 
     def _make_email_address(self, value: Optional[str]) -> Optional[EmailAddress]:
         """Return an email address, or None when the value is empty or invalid."""
-        if value is None or value.strip() == "":
-            return None
         try:
             return EmailAddress(
                 score=None,
