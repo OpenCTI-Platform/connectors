@@ -123,7 +123,7 @@ class KnowledgeImporter:
 
                     if attack_pattern_id is None or attack_pattern_id == "":
                         self.helper.log_info(f"no attack_pattern found for {tag}")
-                        return None
+                        continue
 
                     ap_rel = Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -144,7 +144,7 @@ class KnowledgeImporter:
 
                     if intrusion_set_id == "" or intrusion_set_id is None:
                         self.helper.log_info(f"no intrusion_set found for {tag}")
-                        return None
+                        continue
 
                     is_rel = Relationship(
                         id=StixCoreRelationship.generate_id(
@@ -168,9 +168,50 @@ class KnowledgeImporter:
             self.helper.metric.inc("client_error_count")
             return None
 
+        # The MITRE ATT&CK connector does not import revoked objects, so a
+        # relationship to one fails with MISSING_REFERENCE_ERROR: point each
+        # ATT&CK ID at the object that replaced it, following `revoked-by` chains.
+        revoked_by = {
+            obj.source_ref: obj.target_ref
+            for obj in response.objects
+            if obj.type == "relationship"
+            and obj.relationship_type == "revoked-by"
+            and obj.source_ref
+            and obj.target_ref
+        }
+        revoked_ids = {obj.id for obj in response.objects if obj.id and obj.revoked}
+
         for obj in response.objects:
             if obj.type in {"attack-pattern", "intrusion-set"}:
-                if obj.external_references[0].external_id and obj.id:
-                    self._ATTACK_MAPPING[obj.external_references[0].external_id] = (
-                        obj.id
+                if not obj.external_references or not obj.id:
+                    continue
+                external_id = obj.external_references[0].external_id
+                if not external_id:
+                    continue
+                target_id = self._resolve_revoked(obj.id, revoked_by)
+                if target_id is None or target_id in revoked_ids:
+                    # Revoked with no replacement, a chain ending at a revoked
+                    # object, or a looping chain: no relationship can be
+                    # created to it.
+                    self.helper.log_info(
+                        f"{external_id} is revoked without a replacement, skipped"
                     )
+                    self._ATTACK_MAPPING.pop(external_id, None)
+                    continue
+                self._ATTACK_MAPPING[external_id] = target_id
+
+    @staticmethod
+    def _resolve_revoked(stix_id: str, revoked_by: Mapping[str, str]) -> str | None:
+        """Follow the `revoked-by` chain of an object to the object that replaced it.
+
+        Returns:
+            The ID at the end of the chain (the object itself when it is not
+            revoked), or None when the chain loops
+        """
+        seen = {stix_id}
+        while stix_id in revoked_by:
+            stix_id = revoked_by[stix_id]
+            if stix_id in seen:
+                return None
+            seen.add(stix_id)
+        return stix_id
