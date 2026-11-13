@@ -381,12 +381,17 @@ class PolySwarmConnector:
         return None
 
     def _tlp_skip(
-        self, opencti_entity: dict[str, Any], stix_objects: list
+        self,
+        opencti_entity: dict[str, Any],
+        stix_objects: list,
+        entity: dict[str, Any] | None = None,
     ) -> dict | None:
         """Return a "skipped" result when the entity's TLP exceeds max_tlp (#38).
 
         check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of marking
         ids, so each TLP marking on the entity is checked (the #7955 fix).
+        ``entity`` is the STIX entity being enriched; its own
+        object_marking_refs are checked too.
         """
         max_tlp = self.max_tlp
         if max_tlp:
@@ -408,16 +413,21 @@ class PolySwarmConnector:
                     tlp = tlp_of_marking(o)
                     if tlp:
                         by_id.setdefault(o.get("id"), tlp)
-            for o in stix_objects or []:
-                if isinstance(o, dict) and o.get("id") in (
+            entity = entity if isinstance(entity, dict) else {}
+            entity_ids = {
+                i
+                for i in (
                     opencti_entity.get("standard_id"),
                     opencti_entity.get("id"),
-                ):
-                    tlp_levels += [
-                        by_id[r]
-                        for r in o.get("object_marking_refs") or []
-                        if r in by_id
-                    ]
+                    entity.get("id"),
+                )
+                if i
+            }
+            refs = list(entity.get("object_marking_refs") or [])
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("id") in entity_ids:
+                    refs += o.get("object_marking_refs") or []
+            tlp_levels += [by_id[r] for r in refs if r in by_id]
             if any(not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels):
                 self.helper.connector_logger.info(
                     f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
@@ -1388,7 +1398,7 @@ class PolySwarmConnector:
                 )
 
             # ── TLP CHECK (#38)
-            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
             if tlp_skip:
                 return tlp_skip
 
@@ -1582,7 +1592,7 @@ class PolySwarmConnector:
             )
 
             # -- TLP CHECK (#38)
-            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
             if tlp_skip:
                 return tlp_skip
 

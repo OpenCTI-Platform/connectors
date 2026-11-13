@@ -166,6 +166,22 @@ class TestTlpCheck:
         assert result["status"] == "skipped"
         c.artifact_handler.download_artifact.assert_not_called()
 
+    def test_stix_entity_refs_are_checked(self):
+        """The STIX entity's refs count even when the OpenCTI ids differ."""
+        c = make_connector()
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000003",
+            "name": "TLP:RED",
+        }
+        entity = _entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        opencti_entity = _opencti_entity()
+        opencti_entity["standard_id"] = "artifact--00000000-0000-0000-0000-0000000000ff"
+        result = c._enrich_file(ENTITY_ID, entity, opencti_entity, [marking])
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
     def test_skipped_artifact_forwards_original_bundle(self):
         """A TLP skip must still forward the bundle so playbooks do not stall."""
         c = make_connector()

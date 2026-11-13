@@ -428,6 +428,26 @@ class TestUrlRefusals:
         assert result["status"] == "skipped"
         assert c.polyswarm_client.mock_calls == []
 
+    def test_tlp_check_reads_stix_entity_refs(self):
+        """The STIX entity's own refs count even when the OpenCTI ids differ."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000003",
+            "name": "TLP:RED",
+        }
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        opencti = _opencti_url()
+        opencti["standard_id"] = "url--00000000-0000-0000-0000-0000000000ff"
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, opencti, [marking])
+
+        assert result["status"] == "skipped"
+        assert c.polyswarm_client.mock_calls == []
+
 
 # -- Submission: query string, provider and VM
 
