@@ -139,6 +139,8 @@ class TestTlpCheck:
                 "x_opencti_definition": "TLP:AMBER+STRICT",
             },
             {"definition_type": "tlp", "definition": {"tlp": "red"}},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": {"TLP": "red"}},
             None,
         ],
     )
