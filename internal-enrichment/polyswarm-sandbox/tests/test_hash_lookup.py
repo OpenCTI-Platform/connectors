@@ -604,7 +604,9 @@ class TestDetonateByHash:
 
     def test_submit_error_keeps_running_task(self):
         c = _connector(
-            latest={"cape": _task(id="running-task", status="PENDING")},
+            latest={
+                "cape": _task(id="running-task", status="PENDING", created=_days_ago(0))
+            },
             sandbox_provider="both",
             sandbox_detonate_by_hash=True,
         )
@@ -826,7 +828,9 @@ class TestLookupFailureNeverDetonates:
     @pytest.mark.parametrize("status", ["PENDING", "RUNNING", "STARTED"])
     def test_running_task_is_polled_not_detonated_again(self, status):
         c = _connector(
-            latest={"cape": _task(id="running-task", status=status)},
+            latest={
+                "cape": _task(id="running-task", status=status, created=_days_ago(0))
+            },
             sandbox_detonate_by_hash=True,
         )
         c.polyswarm_client.get_sandbox_results = MagicMock(
@@ -840,7 +844,9 @@ class TestLookupFailureNeverDetonates:
 
     def test_running_plus_missing_polls_both(self):
         c = _connector(
-            latest={"cape": _task(id="running-task", status="PENDING")},
+            latest={
+                "cape": _task(id="running-task", status="PENDING", created=_days_ago(0))
+            },
             sandbox_provider="both",
             sandbox_detonate_by_hash=True,
         )
@@ -861,6 +867,57 @@ class TestLookupFailureNeverDetonates:
         )
         _run(c)
         c.polyswarm_client.submit_sandbox_by_instance_async.assert_called_once()
+
+    @pytest.mark.parametrize("max_age", [0, None])
+    def test_stuck_task_without_age_limit_is_missing(self, max_age):
+        """With no age limit, a task unfinished for longer than twice the
+        sandbox timeout is stuck and does not block detonation forever."""
+        old = (datetime.now(timezone.utc) - timedelta(seconds=1300)).isoformat()
+        c = _connector(
+            latest={"cape": _task(status="PENDING", created=old)},
+            sandbox_lookup_max_age_days=max_age,
+            sandbox_timeout=600,
+            sandbox_detonate_by_hash=True,
+        )
+        _run(c)
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_called_once()
+
+    def test_task_within_twice_the_timeout_is_running(self):
+        recent = (datetime.now(timezone.utc) - timedelta(seconds=1100)).isoformat()
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING", created=recent)},
+            sandbox_lookup_max_age_days=0,
+            sandbox_timeout=600,
+            sandbox_detonate_by_hash=True,
+        )
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        _run(c)
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+
+    def test_running_window_has_a_floor(self):
+        """A tiny sandbox timeout still gives a running task 10 minutes."""
+        recent = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING", created=recent)},
+            sandbox_timeout=5,
+            sandbox_detonate_by_hash=True,
+        )
+        c._phase_poll_sandboxes = MagicMock(return_value={})
+        _run(c)
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+
+    @pytest.mark.parametrize("created", [None, "", "not a date"])
+    def test_unfinished_task_without_created_is_a_failed_lookup(self, created):
+        task = _task(id="running-task", status="PENDING")
+        task["created"] = created
+        c = _connector(latest={"cape": task}, sandbox_detonate_by_hash=True)
+        c._send_error_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        assert c._send_error_note.call_args.args[1] == "Sandbox Lookup Failed"
 
     def test_running_task_with_detonation_off_gives_no_report_note(self):
         c = _connector(latest={"cape": _task(status="PENDING")})
@@ -1135,7 +1192,9 @@ class TestArtifactReuse:
 
     def test_running_task_is_polled_not_uploaded(self):
         c = _connector(
-            latest={"cape": _task(id="running-task", status="PENDING")},
+            latest={
+                "cape": _task(id="running-task", status="PENDING", created=_days_ago(0))
+            },
             sandbox_reuse_report=True,
         )
         c.polyswarm_client.get_scan_by_hash = MagicMock(
@@ -1153,7 +1212,9 @@ class TestArtifactReuse:
 
     def test_running_plus_missing_uploads_without_redetonating_running(self):
         c = _connector(
-            latest={"cape": _task(id="running-task", status="PENDING")},
+            latest={
+                "cape": _task(id="running-task", status="PENDING", created=_days_ago(0))
+            },
             sandbox_reuse_report=True,
             sandbox_provider="both",
         )

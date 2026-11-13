@@ -84,13 +84,40 @@ class HashLookupMixin:
             return False
         return self._within_max_age(task)
 
-    def _task_running(self, task: dict | None) -> bool:
-        """A task that has not finished yet and is not older than the age limit."""
+    def _running_window(self) -> timedelta:
+        """How long an unfinished task counts as running: twice
+        POLYSWARM_SANDBOX_TIMEOUT, and at least 10 minutes. An unfinished task
+        older than that is treated as stuck."""
+        timeout = self.config.polyswarm.sandbox_timeout
+        if not isinstance(timeout, int) or isinstance(timeout, bool):
+            timeout = 0
+        return timedelta(seconds=max(2 * timeout, 600))
+
+    def _unfinished_state(self, task: dict | None) -> str | None:
+        """State of a task that has not finished.
+
+        Returns None for no task or a finished one, "running" for a task
+        created within ``_running_window``, "stuck" for an older one (or one
+        older than the age limit), and "unknown" when its creation time is
+        missing or unparseable (never detonated over blindly).
+        """
         if not task or not task.get("id"):
-            return False
+            return None
         if PolySwarmClient.is_sandbox_terminal(str(task.get("status", ""))):
-            return False
-        return self._within_max_age(task)
+            return None
+        try:
+            created = datetime.fromisoformat(
+                str(task.get("created") or "").replace("Z", "+00:00")
+            )
+        except ValueError:
+            return "unknown"
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if not self._within_max_age(task):
+            return "stuck"
+        if datetime.now(timezone.utc) - created > self._running_window():
+            return "stuck"
+        return "running"
 
     def _lookup_reports(
         self, sha256: str, providers: list[str]
@@ -101,9 +128,11 @@ class HashLookupMixin:
         - found: provider to a usable report
         - missing: providers for which PolySwarm confirmed there is no
           usable report
-        - failed: providers whose lookup failed, so it is not known whether
-          a report exists (never treated as missing)
+        - failed: providers whose lookup failed, or whose unfinished task has
+          no usable creation time, so it is not known whether a report (or
+          a paid task in progress) exists (never treated as missing)
         - running: provider to the id of a task that is still in progress
+          (see ``_unfinished_state``; a stuck task counts as missing)
         """
         found: dict[str, dict] = {}
         missing: list[str] = []
@@ -113,10 +142,15 @@ class HashLookupMixin:
             task = self.polyswarm_client.get_latest_sandbox_task(sha256, provider)
             if task is None:
                 failed.append(provider)
-            elif self._report_usable(task):
+                continue
+            if self._report_usable(task):
                 found[provider] = task
-            elif self._task_running(task):
+                continue
+            state = self._unfinished_state(task)
+            if state == "running":
                 running[provider] = str(task["id"])
+            elif state == "unknown":
+                failed.append(provider)
             else:
                 missing.append(provider)
         return found, missing, failed, running
