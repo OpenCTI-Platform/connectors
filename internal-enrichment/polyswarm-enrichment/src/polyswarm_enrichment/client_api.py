@@ -997,8 +997,14 @@ class ConnectorClient:
         for r in results:
             if getattr(r, "failed", False) or getattr(r, "window_closed", True):
                 continue
-            scanned = self._scan_time(r)
-            if scanned is not None and now - scanned <= max_age:
+            # An in-flight rescan can carry the artifact's previous last_scanned,
+            # so take the later of its own creation time and last_scanned
+            stamps = [
+                _parse_scan_date(getattr(r, "created", None)),
+                _parse_scan_date(getattr(r, "last_scanned", None)),
+            ]
+            stamps = [t for t in stamps if t is not None]
+            if stamps and now - max(stamps) <= max_age:
                 return True
         return False
 

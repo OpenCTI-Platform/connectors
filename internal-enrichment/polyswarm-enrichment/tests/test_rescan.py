@@ -418,6 +418,17 @@ class TestRescanFailureModes:
         client.query_polyswarm(SHA256)
         client.polyswarm.rescan.assert_not_called()
 
+    def test_recent_rescan_with_old_last_scanned_counts_as_running(self):
+        # An in-flight rescan created now but carrying the old last_scanned
+        running = _instance(days_old=400, assertions=False, window_closed=False)
+        running.created = datetime.now(timezone.utc)
+        client = _client(
+            days=30, search=[running, _instance(days_old=400, polyscore=0.1)]
+        )
+        result = client.query_polyswarm(SHA256)
+        assert result["data"]["polyscore"] == 0.1
+        client.polyswarm.rescan.assert_not_called()
+
     def test_old_unfinished_only_scan_still_gets_a_rescan(self):
         client = _client(
             days=7,
