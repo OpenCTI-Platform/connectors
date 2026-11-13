@@ -133,13 +133,29 @@ class HashLookupMixin:
           a paid task in progress) exists (never treated as missing)
         - running: provider to the id of a task that is still in progress
           (see ``_unfinished_state``; a stuck task counts as missing)
+
+        An API error on one provider (authentication, access ...) makes that
+        provider failed and keeps what was looked up for the others. A quota
+        or rate error, or an API error on every provider, is raised.
         """
         found: dict[str, dict] = {}
         missing: list[str] = []
         failed: list[str] = []
         running: dict[str, str] = {}
+        errors: list[PolySwarmAPIError] = []
         for provider in providers:
-            task = self.polyswarm_client.get_latest_sandbox_task(sha256, provider)
+            try:
+                task = self.polyswarm_client.get_latest_sandbox_task(sha256, provider)
+            except PolySwarmAPIError as e:
+                if e.is_quota_or_rate_limited:
+                    raise
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] {self._enrich_ctx} Report lookup for {provider} "
+                    f"failed: {e.category}"
+                )
+                errors.append(e)
+                failed.append(provider)
+                continue
             if task is None:
                 failed.append(provider)
                 continue
@@ -153,6 +169,8 @@ class HashLookupMixin:
                 failed.append(provider)
             else:
                 missing.append(provider)
+        if errors and len(errors) == len(providers):
+            raise errors[0]
         return found, missing, failed, running
 
     def _send_info_note(
@@ -355,17 +373,12 @@ class HashLookupMixin:
             found, missing, failed, running = self._lookup_reports(
                 lookup_hash, providers
             )
-        except PolySwarmAPIError as e:
-            if e.is_quota_or_rate_limited:
-                # A second request (the upload) would hit the same quota or
-                # rate limit. End the enrichment so the quota note is
-                # attached instead.
-                raise
-            self.helper.connector_logger.warning(
-                f"[CONNECTOR] {self._enrich_ctx} Report lookup failed, uploading "
-                f"instead: {e.category}"
-            )
-            return False, None, {}
+        except PolySwarmAPIError:
+            # Quota or rate limited, or the lookup failed on every provider
+            # (authentication, access ...): end the enrichment with the API
+            # error note. Never upload: it is not known whether a report or
+            # a paid task in progress exists.
+            raise
 
         if failed:
             self._send_lookup_failed_note(entity, failed)

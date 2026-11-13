@@ -1067,14 +1067,61 @@ class TestArtifactReuse:
         self._run_artifact(c)
         c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
 
-    def test_lookup_error_falls_back_to_upload(self):
+    def test_lookup_api_error_on_every_provider_does_not_upload(self):
         c = _connector(sandbox_reuse_report=True)
         c.polyswarm_client.get_latest_sandbox_task = MagicMock(
             side_effect=PolySwarmAPIError("API Access Denied", "no plan")
         )
         c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
-        self._run_artifact(c)
-        c.artifact_handler.download_artifact.assert_called_once()
+        with pytest.raises(PolySwarmAPIError):
+            self._run_artifact(c)
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+
+    @pytest.mark.parametrize("cape_state", ["found", "running"])
+    def test_lookup_api_error_on_one_provider_keeps_the_other(self, cape_state):
+        """cape found or running + triage 403: cape is never paid again."""
+        cape = (
+            _task()
+            if cape_state == "found"
+            else _task(id="running-task", status="PENDING", created=_days_ago(0))
+        )
+
+        def latest(sha, provider):
+            if provider == "triage":
+                raise PolySwarmAPIError("API Access Denied (lookup)", "no plan")
+            return cape
+
+        c = _connector(sandbox_reuse_report=True, sandbox_provider="both")
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(side_effect=latest)
+        c.polyswarm_client.get_scan_by_hash = MagicMock(
+            return_value=(INSTANCE_ID, _scan())
+        )
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        c._send_error_note = MagicMock()
+        assert self._run_artifact(c) is None
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Sandbox Lookup Failed"
+        ]
+
+    def test_stixfile_api_error_on_one_provider_keeps_the_other(self):
+        def latest(sha, provider):
+            if provider == "triage":
+                raise PolySwarmAPIError("API Access Denied (lookup)", "no plan")
+            return _task()
+
+        c = _connector(sandbox_provider="both", sandbox_detonate_by_hash=True)
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(side_effect=latest)
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
 
     def test_artifact_without_sha256_uploads(self):
         c = _connector(sandbox_reuse_report=True)
