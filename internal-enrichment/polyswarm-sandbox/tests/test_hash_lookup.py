@@ -1155,6 +1155,57 @@ class TestArtifactReuse:
         assert _run(c) is None
         c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
         assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Sandbox Lookup Failed"
+        ]
+
+    @staticmethod
+    def _triage_403(sha, provider):
+        if provider == "triage":
+            raise PolySwarmAPIError("API Access Denied (lookup)", "no plan")
+        return {}
+
+    def test_stixfile_failed_plus_missing_detonates_only_missing(self):
+        c = _connector(sandbox_provider="both", sandbox_detonate_by_hash=True)
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(
+            side_effect=self._triage_403
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        calls = c.polyswarm_client.submit_sandbox_by_instance_async.call_args_list
+        assert [call.args[1] for call in calls] == ["cape"]
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Sandbox Lookup Failed"
+        ]
+
+    @pytest.mark.parametrize("failure", ["api_error", "transient"])
+    def test_artifact_failed_plus_missing_uploads_for_missing_only(self, failure):
+        """triage lookup keeps failing, cape confirmed missing: the file is
+        scanned and cape detonated; triage is never detonated."""
+
+        def latest(sha, provider):
+            if provider == "triage":
+                if failure == "api_error":
+                    raise PolySwarmAPIError("API Access Denied (lookup)", "no plan")
+                return None
+            return {}
+
+        c = _connector(sandbox_reuse_report=True, sandbox_provider="both")
+        c.polyswarm_client.get_latest_sandbox_task = MagicMock(side_effect=latest)
+        c._phase_download = MagicMock(
+            return_value=(b"data", "eicar.com", None, "application/octet-stream")
+        )
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")
+        c.polyswarm_client.submit_sandbox_async = MagicMock(return_value="new-cape")
+        c._phase_poll_scan = MagicMock(return_value=(None, {}))
+        c._send_error_note = MagicMock()
+        assert self._run_artifact(c) is None
+        c.polyswarm_client.submit_file_async.assert_called_once()
+        calls = c.polyswarm_client.submit_sandbox_async.call_args_list
+        assert [call.kwargs["provider"] for call in calls] == ["cape"]
+        c.polyswarm_client.get_sandbox_results.assert_called_with("new-cape")
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert titles[0] == "Sandbox Lookup Failed"
 
     def test_artifact_without_sha256_uploads(self):
         c = _connector(sandbox_reuse_report=True)

@@ -390,6 +390,11 @@ class HashLookupMixin:
 
         if failed:
             self._send_lookup_failed_note(entity, failed)
+        if failed and not missing:
+            # Nothing is confirmed missing: no upload, deliver what exists.
+            # With providers confirmed missing, the upload below detonates
+            # only those (never a failed-lookup provider), as on the
+            # StixFile path.
             if not found and not running:
                 return (
                     True,
