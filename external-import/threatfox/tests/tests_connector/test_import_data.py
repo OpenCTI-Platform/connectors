@@ -40,6 +40,29 @@ def test_failed_download_fails_work_and_keeps_last_run(connector, error):
     assert "my-secret-key" not in logged
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://threatfox-api.abuse.ch/v2/files/exports/my-secret key/recent.csv",
+        "threatfox-api.abuse.ch/v2/files/exports/my-secret-key/recent.csv",
+    ],
+    ids=["auth_key_with_space", "csv_url_without_scheme"],
+)
+def test_invalid_export_url_does_not_leak_auth_key(connector, url):
+    # urlopen rejects these URLs before connecting, with an error message
+    # that contains the URL. Block sockets to be sure no request leaves.
+    connector.threatfox_csv_url = url
+    now_dt = datetime.now(UTC)
+
+    with patch("socket.create_connection", side_effect=AssertionError("network")):
+        connector.import_data({"last_run": 1}, now_dt, now_dt.timestamp())
+
+    connector.helper.set_state.assert_not_called()
+    assert connector.helper.api.work.to_processed.call_args.kwargs == {"in_error": True}
+    logged = str(connector.helper.mock_calls)
+    assert "my-secret" not in logged
+
+
 def test_successful_download_stores_last_run(connector):
     now_dt = datetime.now(UTC)
     connector.download_csv = MagicMock(return_value=iter([]))

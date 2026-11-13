@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import csv
+import http.client
 import io
 import os
 import ssl
 import sys
 import time
 import traceback
+import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import dataclass
@@ -28,6 +30,10 @@ from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+
+
+class ThreatFoxDownloadError(Exception):
+    """Download of the ThreatFox export failed; the message never holds the URL."""
 
 
 # pylint:disable=too-many-instance-attributes
@@ -239,11 +245,33 @@ class ThreatFox:
         """
 
         self.helper.log_info("Fetching Threat Fox dataset")
-        with urllib.request.urlopen(
-            self.threatfox_csv_url,
-            context=ssl.create_default_context(),
-        ) as response:
-            data: bytes = response.read()
+        # The export URL contains the Auth-Key, and some urlopen errors
+        # (InvalidURL, unknown url type) quote it. Re-raise without the
+        # original message and context so the logged traceback stays clean.
+        try:
+            with urllib.request.urlopen(
+                self.threatfox_csv_url,
+                context=ssl.create_default_context(),
+            ) as response:
+                data: bytes = response.read()
+        except urllib.error.HTTPError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: HTTP {err.code} {err.reason}"
+            ) from None
+        except urllib.error.URLError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: {err.reason}"
+            ) from None
+        except (http.client.InvalidURL, ValueError) as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export URL is invalid ({type(err).__name__}): check "
+                "THREATFOX_AUTH_KEY or THREATFOX_CSV_URL for spaces or "
+                "unexpected characters"
+            ) from None
+        except Exception as err:  # pylint:disable=broad-exception-caught
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed ({type(err).__name__})"
+            ) from None
 
         try:
             zipped_file = io.BytesIO(data)
