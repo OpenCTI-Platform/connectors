@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -15,9 +16,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="8dd7bd2f-e08d-486e-8cce-74889327f7f6",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="DDoSIA",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["withaname"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -30,7 +39,10 @@ class WithanameConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `WithanameConnector`.
     """
 
-    api_base_url: HttpUrl = Field(description="API base URL.")
+    api_base_url: HttpUrl = Field(
+        description="API base URL.",
+        default=HttpUrl("https://witha.name"),
+    )
     tlp_level: Literal[
         "clear",
         "white",
