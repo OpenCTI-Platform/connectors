@@ -523,3 +523,34 @@ def test_inconsistent_source_lifecycle_is_preserved_without_invalid_stix_interva
 @pytest.mark.parametrize("value", [None, "", "   ", "bad\x00value", "x" * 4097])
 def test_invalid_location_identity_is_rejected(value):
     assert not converter().create_location_infrastructure("akira", {"slug": value})
+
+
+@pytest.mark.parametrize(
+    "link",
+    [
+        "archive.php?company=299",
+        "archive.php",
+        "index.html",
+        "post.aspx?id=7",
+        "archive.php?next=/company/299",
+        "archive.php#company/299",
+    ],
+)
+def test_bare_relative_file_links_are_dropped(link):
+    conv = converter()
+    assert conv.normalize_source_url(link) is None
+    assert not conv.create_website_observables(conv.normalize_source_url(link))
+
+
+@pytest.mark.parametrize(
+    "link, expected",
+    [
+        ("/post/abc", "https://www.ransomlook.io/post/abc"),
+        ("post/abc", "https://www.ransomlook.io/post/abc"),
+        ("https://example.com/leak", "https://example.com/leak"),
+        ("example.com", "https://example.com/"),
+        ("example.com/path", "https://example.com/path"),
+    ],
+)
+def test_existing_source_link_handling_is_unchanged(link, expected):
+    assert converter().normalize_source_url(link) == expected
