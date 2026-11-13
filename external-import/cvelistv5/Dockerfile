@@ -8,9 +8,9 @@ WORKDIR /opt/opencti-connector-cvelistv5
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev && \
+    apk --no-cache add git build-base libffi-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del build-base
+    apk del build-base libffi-dev
 
 # GitPython relies on `uname` being on $PATH (see GitPython issue 1979).
 RUN ln -sv "$(which uname)" /usr/bin/uname

@@ -7,10 +7,10 @@ COPY src /opt/opencti-connector-import-ttps-file-navigator
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev gfortran musl-dev g++ openblas openblas-dev && \
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev gfortran musl-dev g++ openblas-dev && \
     cd /opt/opencti-connector-import-ttps-file-navigator && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base gfortran musl-dev g++ openblas-dev
+    apk del git build-base gfortran musl-dev g++ openblas-dev libffi-dev libxml2-dev libxslt-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

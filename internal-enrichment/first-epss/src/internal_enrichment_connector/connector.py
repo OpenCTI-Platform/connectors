@@ -120,6 +120,8 @@ class FirstEPSSConnector:
         :param opencti_entity: Dict of vulnerability from OpenCTI
         :return: Boolean
         """
+        # Reset so the TLP of a previous message is never reused
+        self.tlp = None
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":

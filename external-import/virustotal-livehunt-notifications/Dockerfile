@@ -10,7 +10,7 @@ RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-virustotal-livehunt-notifications && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

@@ -26,8 +26,8 @@ from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     DatetimeFromIsoString,
     ListFromString,
 )
@@ -115,10 +115,10 @@ class TemplateConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseExternalImportConnectorSettings):
     """Aggregates all configuration objects the connector needs.
 
-    Overrides `BaseConnectorSettings` (from `connectors-sdk`) to plug in
+    Overrides `BaseExternalImportConnectorSettings` (from `connectors-sdk`) to plug in
     `ExternalImportConnectorConfig` and `TemplateConfig` defined above.
 
     TODO:

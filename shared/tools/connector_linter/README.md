@@ -181,7 +181,7 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC302 | ERROR | Common | `author-referenced-on-entities` | Author must be referenced on STIX entities via `created_by_ref` |
 | VC303 | ERROR | Common | `connector-type-hardcoded` | `CONNECTOR_TYPE` must be hardcoded in code, not read from env |
 | VC304 | ERROR | Enrichment | `markings-checked` | TLP markings must be checked via `check_max_tlp` before processing |
-| VC305 | ERROR | Common | `sdk-base-settings` | Connector must use `BaseConnectorSettings` from connectors-sdk |
+| VC305 | ERROR | Common | `sdk-base-settings` | Connector must use `BaseConnectorSettings` (or a `Base<Type>ConnectorSettings` subclass) from connectors-sdk |
 | VC306 | WARNING | Common | `log-level-default-error` | Log level should default to `error` |
 | VC307 | WARNING | Common | `except-logging-level` | Except blocks should use `error`/`warning` logging, not `debug`/`info` |
 | VC308 | ERROR | Common | `main-traceback` | `main.py` must use `traceback` for error handling |

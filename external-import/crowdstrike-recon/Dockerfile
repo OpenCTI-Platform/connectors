@@ -9,7 +9,7 @@ COPY src /opt/opencti-connector-crowdstrike-recon
 # headers do not persist in an earlier image layer.
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic libffi libxml2 libxslt && \
+    apk --no-cache add libffi && \
     apk --no-cache add --virtual .build-deps git build-base libffi-dev libxml2-dev libxslt-dev && \
     cd /opt/opencti-connector-crowdstrike-recon && \
     pip3 install --no-cache-dir -r requirements.txt && \

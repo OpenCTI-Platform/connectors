@@ -28,13 +28,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generator
 
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import OrganizationAuthor, TLPMarking, Vulnerability
 from template_client import TemplateClient
 
 if TYPE_CHECKING:
-    from connector.settings import ConnectorSettings
-    from connector.state import ConnectorState
     from connectors_sdk.models import BaseIdentifiedObject
     from template_client.models import CVE
 
@@ -45,7 +45,8 @@ class CVEConversionError(Exception):
     pass
 
 
-class VulnerabilitiesProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class VulnerabilitiesProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """EXAMPLE processor -- fetches and converts a large, paginated data type.
 
     "CVEs" is a stand-in entity type used only to illustrate the paginated
@@ -55,8 +56,8 @@ class VulnerabilitiesProcessor(BaseDataProcessor):
     match.
 
     Attributes:
-        settings: The connector's configuration, injected the same way as in `ReportsProcessor`.
-        state: The connector's persisted state, injected the same way as in `ReportsProcessor`.
+        settings: The connector's configuration, typed and injected the same way as in `ReportsProcessor`.
+        state: The connector's persisted state, typed and injected the same way as in `ReportsProcessor`.
 
     Notes:
         See `ReportsProcessor` for why this class only defines
@@ -71,9 +72,6 @@ class VulnerabilitiesProcessor(BaseDataProcessor):
         Rename this class (and this file) to match the entity type you
         import.
     """
-
-    settings: ConnectorSettings
-    state: ConnectorState
 
     work_name = "Vulnerabilities import"
 
