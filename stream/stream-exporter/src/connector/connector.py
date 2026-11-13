@@ -14,6 +14,7 @@ from minio import Minio
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from .metrics import Metrics
+from .s3_config import S3Settings
 
 
 class StreamExporterConnector:
@@ -51,28 +52,26 @@ class StreamExporterConnector:
 
         self.metrics = Metrics(self.helper.connect_name)
 
-        minio_endpoint = get_config_variable(
-            "MINIO_ENDPOINT", ["minio", "endpoint"], config
-        )
-        minio_port = get_config_variable(
-            "MINIO_PORT", ["minio", "port"], config, isNumber=True
-        )
-        self.minio_bucket = get_config_variable(
-            "MINIO_BUCKET", ["minio", "bucket"], config
-        )
-        self.minio_folder = get_config_variable(
-            "MINIO_FOLDER", ["minio", "folder"], config
-        )
-        minio_access_key = get_config_variable(
-            "MINIO_ACCESS_KEY", ["minio", "access_key"], config
-        )
-        minio_secret_key = get_config_variable(
-            "MINIO_SECRET_KEY", ["minio", "secret_key"], config
-        )
-        minio_secure = get_config_variable("MINIO_SECURE", ["minio", "secure"], config)
-        minio_cert_check = get_config_variable(
-            "MINIO_CERT_CHECK", ["minio", "cert_check"], config, default="true"
-        )
+        s3_settings = S3Settings(config)
+        if s3_settings.former_names_used:
+            self.helper.connector_logger.warning(
+                "Deprecated MinIO setting names, rename them to their "
+                "STREAM_EXPORTER_S3_* / stream_exporter.s3_* names",
+                meta={"names": s3_settings.former_names_used},
+            )
+        if s3_settings.names_ignored:
+            self.helper.connector_logger.warning(
+                "S3 setting names ignored, the setting is read from its other name",
+                meta={"names": s3_settings.names_ignored},
+            )
+        minio_endpoint = s3_settings.get("endpoint")
+        minio_port = s3_settings.get("port", isNumber=True)
+        self.minio_bucket = s3_settings.get("bucket")
+        self.minio_folder = s3_settings.get("folder")
+        minio_access_key = s3_settings.get("access_key")
+        minio_secret_key = s3_settings.get("secret_key")
+        minio_secure = s3_settings.get("secure")
+        minio_cert_check = s3_settings.get("cert_check", default="true")
 
         # Bulk config
         self.write_every = get_config_variable(
@@ -85,7 +84,7 @@ class StreamExporterConnector:
 
         self.helper.log_info(f"Queue size: {queue_size}")
 
-        self.helper.log_info(f"Minio endpoint: {minio_endpoint}:{minio_port}")
+        self.helper.log_info(f"S3 endpoint: {minio_endpoint}:{minio_port}")
         self.helper.log_info(f"Folder to save the stream: {self.minio_folder}")
 
         # Check if we have a `last_written_msg_id` saved, if so, set it as the `start_from`.
@@ -110,13 +109,13 @@ class StreamExporterConnector:
             secure=minio_secure,
             cert_check=minio_cert_check,
         )
-        self.helper.log_info(f"Minio: {self.minio_client._base_url}")
+        self.helper.log_info(f"S3: {self.minio_client._base_url}")
 
         # Create the bucket if it does not exist.
-        self.helper.log_info(f"Minio bucket to use: {self.minio_bucket}")
+        self.helper.log_info(f"S3 bucket to use: {self.minio_bucket}")
         if not self.minio_client.bucket_exists(self.minio_bucket):
             self.minio_client.make_bucket(self.minio_bucket)
-            self.helper.log_info(f"Minio bucket {self.minio_bucket} created")
+            self.helper.log_info(f"S3 bucket {self.minio_bucket} created")
         self.helper.log_info("Stream exporter connector initialized")
 
         self.helper.log_info(f"Writing events every {self.write_every} seconds")
@@ -291,12 +290,12 @@ class StreamExporterConnector:
 
                 self.metrics.write_error()
                 self.helper.log_error(
-                    f"MinIO upload failed for {object_path}, stopping connector: {exc}"
+                    f"S3 upload failed for {object_path}, stopping connector: {exc}"
                 )
                 traceback.print_exc()
                 os._exit(1)  # exit the current process, killing all threads
 
-            self.helper.log_debug(f"Result of minio: {res}")
+            self.helper.log_debug(f"Result of S3 upload: {res}")
             self.metrics.write()
 
             # Set `last_written_msg_id` with the current message id.

@@ -12,13 +12,13 @@ services:
       - CONNECTOR_NAME=StreamExporterConnector
       - CONNECTOR_SCOPE=stream
       - CONNECTOR_LOG_LEVEL=info
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
-      - MINIO_BUCKET=opencti-export
-      - MINIO_FOLDER=opencti-stream
-      - MINIO_ACCESS_KEY=opencti
-      - MINIO_SECRET_KEY=ChangeMe
-      - MINIO_SECURE=false
-      - MINIO_CERT_CHECK=false
+      - STREAM_EXPORTER_S3_ENDPOINT=minio
+      - STREAM_EXPORTER_S3_PORT=9000
+      - STREAM_EXPORTER_S3_BUCKET=opencti-export
+      - STREAM_EXPORTER_S3_FOLDER=opencti-stream
+      - STREAM_EXPORTER_S3_ACCESS_KEY=opencti
+      - STREAM_EXPORTER_S3_SECRET_KEY=ChangeMe
+      - STREAM_EXPORTER_S3_SECURE=false
+      - STREAM_EXPORTER_S3_CERT_CHECK=false
       - WRITE_EVERY_SEC=10
     restart: always
