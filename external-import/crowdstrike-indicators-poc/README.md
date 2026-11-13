@@ -69,7 +69,10 @@ class AbstractExtractor[T: BaseModel](ABC):
 - `from_date` must carry a timezone, and `max_element_count` must be 1 or more.
 
 For CrowdStrike, an indicator's datetime is the Unix second at the start of
-its `_marker`, the field the API paginates on.
+its `_marker`, the field the API paginates on. Any timezone-aware `from_date`
+works, including dates before 2001-09-09 and before 1970: the first cursor is
+always written with 10 digits (`0946684800` for 2000-01-01, `0000000000` before
+1970), since markers compare as strings.
 
 ### The transformation contract
 

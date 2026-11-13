@@ -46,11 +46,16 @@ def first_marker_cursor(from_date: datetime) -> str:
     second, so ``_marker:>='<ts>'`` includes the whole second ``ts``. A
     ``from_date`` with a fraction of a second is rounded up: markers of its
     own second pair with a datetime earlier than ``from_date``.
+
+    Markers compare as strings, so the cursor always has 10 digits: a date
+    before 2001-09-09T01:46:40Z, whose timestamp is shorter, is padded with
+    zeros (``0946684800`` for 2000-01-01), and a date before 1970 starts at
+    ``0000000000``. Unpadded, ``946684800`` would sort after every marker.
     """
     seconds = calendar.timegm(from_date.utctimetuple())
     if from_date.microsecond:
         seconds += 1
-    return str(seconds)
+    return f"{max(seconds, 0):010d}"
 
 
 def api_error_message(body: Any) -> str:

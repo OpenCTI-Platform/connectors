@@ -3,7 +3,13 @@
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
-from conftest import FakeIndicatorsAPI, ScriptedClient, make_indicator, ok
+from conftest import (
+    FakeIndicatorsAPI,
+    ScriptedClient,
+    load_fixture,
+    make_indicator,
+    ok,
+)
 from crowdstrike_indicators.errors import CrowdStrikeAPIError, IndicatorValidationError
 from crowdstrike_indicators.extractor import (
     NO_ERROR_MESSAGE,
@@ -51,6 +57,37 @@ def test_first_marker_cursor_uses_utc_whatever_the_timezone():
     # 23:13:25 at UTC+1 is 22:13:25 UTC, which is Unix second 1700000005.
     plus_one = datetime(2023, 11, 14, 23, 13, 25, tzinfo=timezone(timedelta(hours=1)))
     assert first_marker_cursor(plus_one) == "1700000005"
+
+
+@pytest.mark.parametrize(
+    ("from_date", "cursor"),
+    [
+        (datetime(2000, 1, 1, tzinfo=UTC), "0946684800"),
+        (datetime(2001, 9, 9, 1, 46, 39, tzinfo=UTC), "0999999999"),
+        (datetime(2001, 9, 9, 1, 46, 40, tzinfo=UTC), "1000000000"),
+        (datetime(2000, 1, 1, 0, 0, 0, 500_000, tzinfo=UTC), "0946684801"),
+        (datetime(1969, 12, 31, tzinfo=UTC), "0000000000"),
+        (datetime(1970, 1, 1, tzinfo=UTC), "0000000000"),
+        (datetime(2023, 11, 14, 22, 13, 25, tzinfo=UTC), "1700000005"),
+    ],
+)
+def test_first_marker_cursor_always_has_ten_digits(from_date, cursor):
+    assert first_marker_cursor(from_date) == cursor
+
+
+@pytest.mark.parametrize(
+    "from_date",
+    [datetime(2000, 1, 1, tzinfo=UTC), datetime(1969, 12, 31, tzinfo=UTC)],
+    ids=["from-2000", "before-1970"],
+)
+def test_early_from_date_returns_every_later_indicator(from_date):
+    rows = load_fixture("indicators_sample.json")["resources"]
+    api = FakeIndicatorsAPI(rows)
+
+    result = CrowdStrikeIndicatorExtractor(api).extract(from_date, 100)
+
+    assert len(result) == len(rows)
+    assert api.calls[0]["filter"] == f"_marker:>='{first_marker_cursor(from_date)}'"
 
 
 def test_same_second_as_from_date_is_included():
