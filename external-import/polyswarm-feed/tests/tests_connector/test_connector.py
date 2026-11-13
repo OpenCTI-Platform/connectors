@@ -438,9 +438,7 @@ def test_hunting_gets_the_budget_left_after_the_feed(fake_logger, hunting_source
     assert hunting_source.instances[0].received_max_objects == 50
 
 
-def test_hunting_waits_when_the_feed_used_the_whole_budget(
-    fake_logger, hunting_source
-):
+def test_hunting_waits_when_the_feed_used_the_whole_budget(fake_logger, hunting_source):
     hunting_source.result = (
         [{"type": "indicator", "id": "indicator--1"}],
         {"since": "S2"},
