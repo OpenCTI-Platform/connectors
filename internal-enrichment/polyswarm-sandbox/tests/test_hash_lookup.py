@@ -392,6 +392,20 @@ class TestLookupGuards:
         assert result["status"] == "skipped"
         c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
 
+    def test_tlp_skip_from_stix_entity_markings(self):
+        """The STIX entity's own markings count, as on the Artifact and Url paths."""
+        from stix2 import TLP_RED
+
+        c = _connector()
+        c.max_tlp = "TLP:AMBER"
+        entity = _stixfile()
+        entity["id"] = "file--00000000-0000-0000-0000-0000000000f9"
+        entity["object_marking_refs"] = [TLP_RED.id]
+        result = _run(c, entity, opencti=_opencti_file(), stix_objects=[])
+        assert result["status"] == "skipped"
+        c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
+        c.polyswarm_client.find_instance_by_hash.assert_not_called()
+
     def test_lookup_works_in_public_community(self):
         """A lookup sends only a hash, so the upload guard does not apply."""
         c = _connector(community="default", allow_public_community=False)

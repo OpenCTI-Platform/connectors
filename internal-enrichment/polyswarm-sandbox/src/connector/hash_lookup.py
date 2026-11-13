@@ -379,7 +379,7 @@ class HashLookupMixin:
         self._enrich_ctx = f"[entity={short_id}]"
         ps = self.config.polyswarm
         try:
-            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
             if tlp_skip:
                 return tlp_skip
 
