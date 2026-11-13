@@ -1,0 +1,199 @@
+"""Command-line entry point: extract CrowdStrike indicators and print them.
+
+Usage, from the proof of concept folder::
+
+    PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01T00:00:00Z --max 50
+
+Exit codes: 0 on success, 1 when the extraction fails (API or validation
+error), 2 on a usage or configuration error.
+"""
+
+import argparse
+import json
+import logging
+import os
+import sys
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from crowdstrike_indicators.dotenv import read_dotenv
+from crowdstrike_indicators.errors import CrowdStrikeAPIError, IndicatorValidationError
+from crowdstrike_indicators.extractor import (
+    CrowdStrikeIndicatorExtractor,
+    IndicatorsClient,
+)
+
+LOGGER = logging.getLogger("crowdstrike_indicators")
+
+EXIT_OK = 0
+EXIT_EXTRACTION_ERROR = 1
+EXIT_USAGE_ERROR = 2
+
+CLIENT_ID = "CROWDSTRIKE_CLIENT_ID"
+CLIENT_SECRET = "CROWDSTRIKE_CLIENT_SECRET"
+BASE_URL = "CROWDSTRIKE_BASE_URL"
+DEFAULT_BASE_URL = "https://api.crowdstrike.com"
+DEFAULT_ENV_FILE = Path(".env")
+
+
+def build_client(client_id: str, client_secret: str, base_url: str) -> IndicatorsClient:
+    """Build the FalconPy ``Intel`` service class."""
+    from falconpy import Intel
+
+    return Intel(client_id=client_id, client_secret=client_secret, base_url=base_url)
+
+
+def _parse_from_date(value: str) -> datetime:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(
+            f"not an ISO 8601 datetime: {value!r}"
+        ) from error
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+def _parse_max(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(f"not an integer: {value!r}") from error
+    if parsed < 1:
+        raise argparse.ArgumentTypeError(f"must be 1 or more, got {parsed}")
+    return parsed
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="python -m crowdstrike_indicators",
+        description=(
+            "Extract CrowdStrike Falcon Intelligence indicators and print them "
+            "as JSON on standard output."
+        ),
+    )
+    parser.add_argument(
+        "--from",
+        dest="from_date",
+        required=True,
+        type=_parse_from_date,
+        metavar="DATETIME",
+        help=(
+            "ISO 8601 datetime; indicators at or after it are returned. "
+            "Without a timezone, it is read as UTC."
+        ),
+    )
+    parser.add_argument(
+        "--max",
+        dest="max_element_count",
+        required=True,
+        type=_parse_max,
+        metavar="N",
+        help="maximum number of indicators to return (1 or more)",
+    )
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        metavar="PATH",
+        help=f"file holding the credentials (default: ./{DEFAULT_ENV_FILE})",
+    )
+    parser.add_argument(
+        "--dump-raw",
+        type=Path,
+        metavar="PATH",
+        help="also write every raw API page received, as a JSON array",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="log level on standard error (default: INFO)",
+    )
+    return parser
+
+
+def _load_config(env_file: Path) -> dict[str, str | None]:
+    """Read the configuration; the process environment wins over the file."""
+    file_values = read_dotenv(env_file)
+
+    def value(key: str) -> str | None:
+        if key in os.environ:
+            return os.environ[key]
+        return file_values.get(key)
+
+    return {
+        CLIENT_ID: value(CLIENT_ID),
+        CLIENT_SECRET: value(CLIENT_SECRET),
+        BASE_URL: value(BASE_URL) or DEFAULT_BASE_URL,
+    }
+
+
+def _write_dump(path: Path, pages: list[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(pages, indent=2) + "\n", encoding="utf-8")
+    LOGGER.info("Wrote %d raw page(s) to %s", len(pages), path)
+
+
+def _report_validation_error(error: IndicatorValidationError) -> None:
+    print(f"error: {error}", file=sys.stderr)
+    print("validation errors:", file=sys.stderr)
+    print(json.dumps(error.errors, indent=2, default=str), file=sys.stderr)
+    print("raw indicator:", file=sys.stderr)
+    print(json.dumps(error.raw, indent=2, default=str), file=sys.stderr)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=args.log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        force=True,
+    )
+
+    if args.env_file is not None and not args.env_file.is_file():
+        parser.error(f"--env-file: no such file: {args.env_file}")
+    config = _load_config(args.env_file or DEFAULT_ENV_FILE)
+
+    missing = [key for key in (CLIENT_ID, CLIENT_SECRET) if not config[key]]
+    if missing:
+        print(
+            f"error: missing configuration: {', '.join(missing)} "
+            f"(expected in the environment or in {args.env_file or DEFAULT_ENV_FILE})",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE_ERROR
+
+    pages: list[dict[str, Any]] = []
+    client = build_client(config[CLIENT_ID], config[CLIENT_SECRET], config[BASE_URL])
+    extractor = CrowdStrikeIndicatorExtractor(
+        client, on_raw_page=pages.append if args.dump_raw else None
+    )
+
+    try:
+        result = extractor.extract(args.from_date, args.max_element_count)
+    except CrowdStrikeAPIError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return EXIT_EXTRACTION_ERROR
+    except IndicatorValidationError as error:
+        _report_validation_error(error)
+        return EXIT_EXTRACTION_ERROR
+    finally:
+        if args.dump_raw:
+            _write_dump(args.dump_raw, pages)
+
+    output = [
+        {
+            "datetime": dt.isoformat(),
+            "indicator": indicator.model_dump(
+                mode="json", by_alias=True, exclude_unset=True
+            ),
+        }
+        for dt, indicator in result
+    ]
+    print(json.dumps(output, indent=2))
+    LOGGER.info("Extracted %d indicator(s)", len(result))
+    return EXIT_OK
