@@ -158,6 +158,8 @@ OILRIG = "intrusion-set--4ca1929c-7d64-4aab-b849-badbfc0c760d"
 APT29 = "intrusion-set--899ce53f-13a0-479b-a0e4-67d46e241542"
 UNC2452 = "intrusion-set--8b3b6a1b-3d0f-4b2a-9c5e-7c1b2d3e4f50"
 OLD_GROUP = "intrusion-set--0c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f"
+DEAD_END_GROUP = "intrusion-set--2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d"
+DEAD_END = "intrusion-set--3b4c5d6e-7f8a-4b9c-8d1e-2f3a4b5c6d7e"
 NETWORK_SCAN = "attack-pattern--e3a12395-188d-4051-9a16-ea8e14d07b88"
 
 
@@ -191,7 +193,8 @@ def attack_importer(monkeypatch: pytest.MonkeyPatch) -> KnowledgeImporter:
     """Importer whose ATT&CK download holds revoked groups and their replacements.
 
     G0057 APT34 is revoked by G0049 OilRig; G0118 UNC2452 is revoked by an object
-    itself revoked by G0016 APT29 (a chain); G0001 is revoked with no replacement.
+    itself revoked by G0016 APT29 (a chain); G0001 is revoked with no replacement;
+    G0002 is revoked by G0003, itself revoked with no replacement.
     """
     middle = "intrusion-set--11111111-2222-4333-8444-555555555555"
     attack_data = {
@@ -204,10 +207,13 @@ def attack_importer(monkeypatch: pytest.MonkeyPatch) -> KnowledgeImporter:
             attack_object("intrusion-set", middle, "G9999", revoked=True),
             attack_object("intrusion-set", APT29, "G0016"),
             attack_object("intrusion-set", OLD_GROUP, "G0001", revoked=True),
+            attack_object("intrusion-set", DEAD_END_GROUP, "G0002", revoked=True),
+            attack_object("intrusion-set", DEAD_END, "G0003", revoked=True),
             attack_object("attack-pattern", NETWORK_SCAN, "T1046"),
             revoked_by(APT34, OILRIG),
             revoked_by(UNC2452, middle),
             revoked_by(middle, APT29),
+            revoked_by(DEAD_END_GROUP, DEAD_END),
         ],
     }
     attack_response = MagicMock()
@@ -251,6 +257,18 @@ def test_revoked_group_without_replacement_creates_no_relationship(
 ):
     """A group revoked with no replacement gets no relationship, the rule stays."""
     objects = run_importer(attack_importer, make_rule("Old_Rule", tags=["G0001"]))
+
+    assert len(by_type(objects, "indicator")) == 1
+    assert indicates_targets(objects) == set()
+
+
+def test_revoked_chain_ending_at_a_revoked_object_creates_no_relationship(
+    attack_importer: KnowledgeImporter,
+):
+    """A chain whose last object is itself revoked gets no relationship."""
+    objects = run_importer(
+        attack_importer, make_rule("Dead_End_Rule", tags=["G0002", "G0003"])
+    )
 
     assert len(by_type(objects, "indicator")) == 1
     assert indicates_targets(objects) == set()

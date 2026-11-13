@@ -179,6 +179,7 @@ class KnowledgeImporter:
             and obj.source_ref
             and obj.target_ref
         }
+        revoked_ids = {obj.id for obj in response.objects if obj.id and obj.revoked}
 
         for obj in response.objects:
             if obj.type in {"attack-pattern", "intrusion-set"}:
@@ -188,9 +189,10 @@ class KnowledgeImporter:
                 if not external_id:
                     continue
                 target_id = self._resolve_revoked(obj.id, revoked_by)
-                if target_id is None or (obj.revoked and target_id == obj.id):
-                    # Revoked with no replacement (or a looping chain): no
-                    # relationship can be created to it.
+                if target_id is None or target_id in revoked_ids:
+                    # Revoked with no replacement, a chain ending at a revoked
+                    # object, or a looping chain: no relationship can be
+                    # created to it.
                     self.helper.log_info(
                         f"{external_id} is revoked without a replacement, skipped"
                     )
