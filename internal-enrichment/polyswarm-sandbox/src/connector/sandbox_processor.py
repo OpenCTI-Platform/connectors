@@ -3,7 +3,10 @@ SandboxProcessor - Processes raw PolySwarm sandbox results from Cape and Triage 
 Extracts scores, families, TTPs, IOCs, signatures, extracted configs, and network data
 """
 
+import ipaddress
 from typing import Any
+
+from connector.report_depth import extract_report_depth
 
 
 class SandboxProcessor:
@@ -76,11 +79,16 @@ class SandboxProcessor:
         provider = SandboxProcessor._detect_provider(result)
 
         if provider == "triage":
-            return SandboxProcessor._process_triage(result)
-        if provider == "cape":
-            return SandboxProcessor._process_cape(result)
-        # Try generic processing
-        return SandboxProcessor._process_generic(result)
+            processed = SandboxProcessor._process_triage(result)
+        elif provider == "cape":
+            processed = SandboxProcessor._process_cape(result)
+        else:
+            # Try generic processing
+            processed = SandboxProcessor._process_generic(result)
+        if isinstance(processed, dict):
+            # Dropped files and configured C2, consumed by the STIX builder.
+            processed["report_depth"] = extract_report_depth(result)
+        return processed
 
     @staticmethod
     def _detect_provider(result: dict) -> str:
@@ -544,6 +552,16 @@ class SandboxProcessor:
         return "\n".join(lines)
 
     @staticmethod
+    def _c2_host_is_ip(c2: str) -> bool:
+        """True when a configured C2 string is an IPv4 address, with or without port."""
+        host = c2.strip().rsplit(":", 1)[0] if c2.count(":") == 1 else c2.strip()
+        try:
+            ipaddress.IPv4Address(host)
+        except ValueError:
+            return False
+        return True
+
+    @staticmethod
     def _extract_c2_from_extracted(extracted_configs: list) -> list:
         """Extract C2 candidates from extracted configs."""
         c2_candidates = []
@@ -551,6 +569,12 @@ class SandboxProcessor:
         for cfg in extracted_configs:
             c2_list = cfg.get("c2", [])
             for c2 in c2_list:
+                if not isinstance(c2, str):
+                    continue
+                # Hostnames and URLs are not IPs: report_depth turns those into
+                # domain and url observables, so only IPs stay candidates here.
+                if not SandboxProcessor._c2_host_is_ip(c2):
+                    continue
                 # Parse host:port format
                 if ":" in c2:
                     parts = c2.rsplit(":", 1)

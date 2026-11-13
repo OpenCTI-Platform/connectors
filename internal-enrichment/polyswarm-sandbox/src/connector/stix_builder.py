@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
+from connector.report_depth import build_report_depth_objects
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
@@ -546,13 +547,49 @@ class StixBuilder:
                 )
                 objects.extend(ioc_objs)
 
+        # === REPORT DEPTH: dropped files and configured C2 ===
+        objects.extend(
+            build_report_depth_objects(
+                self,
+                entity,
+                malware_id,
+                [
+                    r["report_depth"]
+                    for r in sandbox_results.values()
+                    if r and r.get("report_depth")
+                ],
+                max_dropped_files=int(
+                    self._cfg(config, "sandbox_max_dropped_files", 25)
+                ),
+                create_observables=create_observables,
+                c2_indicators=self._to_bool(
+                    self._cfg(config, "sandbox_c2_indicators", True)
+                ),
+                create_indicators=self._to_bool(create_indicators),
+            )
+        )
+
         # Deduplicate
-        seen_ids = set()
+        # A duplicate id may carry markings the first copy lacks (for example
+        # a deterministic IP built unmarked and again with the source
+        # markings), so the marking refs are merged rather than dropped.
+        by_id: dict[str, dict] = {}
         unique_objects = []
         for obj in objects:
-            if obj.get("id") not in seen_ids:
-                seen_ids.add(obj["id"])
+            kept = by_id.get(obj.get("id"))
+            if kept is None:
+                by_id[obj["id"]] = obj
                 unique_objects.append(obj)
+                continue
+            extra = [
+                ref
+                for ref in obj.get("object_marking_refs") or []
+                if ref not in (kept.get("object_marking_refs") or [])
+            ]
+            if extra:
+                kept["object_marking_refs"] = (
+                    list(kept.get("object_marking_refs") or []) + extra
+                )
 
         # Sort: all entities/observables first, then relationships last.
         # OpenCTI worker imports in order — relationships fail with
@@ -734,6 +771,10 @@ class StixBuilder:
             update["hashes"] = entity["hashes"]
         if entity.get("name"):
             update["name"] = entity["name"]
+        # A url SCO needs its value: when the incoming bundle does not carry
+        # the observable, this update object is sent on its own (#8351)
+        if entity.get("value"):
+            update["value"] = entity["value"]
         # The entity being enriched here is a ``file`` SCO (or
         # equivalent ``entity.get("type", "file")`` SCO). Author goes
         # on ``x_opencti_created_by_ref``, not the SDO/SRO-only
@@ -1428,7 +1469,7 @@ class StixBuilder:
         content_parts.append("")
         content_parts.append("## Need Help?")
         content_parts.append(
-            "Contact **sales@polyswarm.io** for assistance with sandbox failures, "
+            "Contact **customersuccess@polyswarm.io** for assistance with sandbox failures, "
             "quota issues, or to upgrade your plan."
         )
         content_parts.append("")
@@ -1503,7 +1544,7 @@ class StixBuilder:
         content_parts.append(
             "For questions about API quotas, file size limits, feature access, or enterprise plans:"
         )
-        content_parts.append("- **Email:** sales@polyswarm.io")
+        content_parts.append("- **Email:** customersuccess@polyswarm.io")
         content_parts.append("- **Website:** https://polyswarm.io")
         content_parts.append("")
 
@@ -1523,9 +1564,41 @@ class StixBuilder:
                 {
                     "source_name": "PolySwarm Support",
                     "url": "https://polyswarm.io",
-                    "description": "Contact sales@polyswarm.io for assistance",
+                    "description": "Contact customersuccess@polyswarm.io for assistance",
                 }
             ],
+        }
+
+    def create_info_note(
+        self,
+        entity: dict,
+        title: str,
+        detail: str,
+        next_steps: list[str] | None = None,
+    ) -> dict:
+        """Create a STIX Note for an outcome that is not an error.
+
+        Used when a hash lookup finds no PolySwarm sandbox report: nothing
+        failed, there is just nothing to import. Same deterministic ID scheme
+        as error notes, so re-running the enrichment updates the note.
+        """
+        parts = ["# PolySwarm Sandbox\n", f"## {title}", detail, ""]
+        if next_steps:
+            parts.append("## Next Steps")
+            for i, step in enumerate(next_steps, 1):
+                parts.append(f"{i}. {step}")
+            parts.append("")
+        entity_id = entity.get("id", "") if isinstance(entity, dict) else str(entity)
+        return {
+            "type": "note",
+            "spec_version": "2.1",
+            "id": self._note_id(entity_id, f"info:{title}"),
+            "created": self._now,
+            "modified": self._now,
+            "created_by_ref": self.author_id,
+            "abstract": f"PolySwarm Sandbox - {title}",
+            "content": "\n".join(parts),
+            "object_refs": [entity_id],
         }
 
     def _create_threat_intel_note(
@@ -1908,7 +1981,9 @@ class StixBuilder:
             }
             objects.append(domain_obj)
             objects.append(
-                self._create_rel(entity["id"], "communicates-with", domain_id)
+                self._create_rel(
+                    entity["id"], self._contact_rel_type(entity), domain_id
+                )
             )
 
         # === IP OBSERVABLES ===
@@ -1943,7 +2018,9 @@ class StixBuilder:
                     ip_obj["x_polyswarm_reason"] = c2.get("reason")
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
@@ -1973,12 +2050,27 @@ class StixBuilder:
             }
 
             objects.append(ip_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", ip_id))
+            objects.append(
+                self._create_rel(entity["id"], self._contact_rel_type(entity), ip_id)
+            )
 
             if malware_id:
                 objects.append(self._create_rel(malware_id, "communicates-with", ip_id))
 
         return objects
+
+    @staticmethod
+    def _contact_rel_type(entity: dict) -> str:
+        """Relationship from the detonated observable to a host it contacted.
+
+        OpenCTI refuses ``communicates-with`` from a Url, so a detonated URL is
+        ``related-to`` the domains and IPs its sandbox run contacted.
+        """
+        return (
+            "related-to"
+            if str(entity.get("id", "")).startswith("url--")
+            else "communicates-with"
+        )
 
     # ============= HELPER OBJECTS =============
 

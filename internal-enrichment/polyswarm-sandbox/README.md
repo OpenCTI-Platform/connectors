@@ -23,6 +23,8 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 | **Malware** | Family objects with aliases, types, and relationships |
 | **Attack Patterns** | MITRE ATT&CK TTPs from sandbox behavioral analysis |
 | **Network IOCs** | Domains, IPs, URLs, C2 candidates from sandbox execution |
+| **Dropped files** | File observables (hashes, name, size, MIME type when reported) for files dropped during detonation, related to the detonated observable |
+| **Configured C2** | Observables, and optionally Indicators, for the C2 addresses in a malware configuration the sandbox extracted |
 | **Threat Actors** | Associated actors from malware profiles |
 | **Vulnerabilities** | Exploited CVEs from malware profiles |
 | **Notes** | Separate analysis notes (Scan, Triage, CAPE, Threat Intel, LLM AI Summary) |
@@ -32,6 +34,24 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 - **JSON Reports**: Raw scan and sandbox results attached to artifacts
 - **PDF Reports**: Professional PDF reports for scan and each sandbox provider
 - **AI LLM Reports**: AI-generated threat analysis summaries embedded in scan and sandbox notes
+- **Network capture (opt-in)**: with `POLYSWARM_SANDBOX_ATTACH_PCAP=true`, the sandbox pcap is attached too
+
+## 🔐 Data Handling: What Leaves Your Environment
+
+The connector sends data to PolySwarm only when it enriches an artifact or a URL, which is manual by default (`CONNECTOR_AUTO=false`).
+
+- **The file.** The artifact's file, its file name, and its archive password if one is set are uploaded to PolySwarm for a multi-engine scan. When `POLYSWARM_SANDBOX_ENABLED=true` (the default), the file is also detonated in the selected sandbox provider(s) (CAPE, Triage).
+- **The URL.** For a Url observable, the URL is sent to PolySwarm and opened in the selected sandbox provider(s). It is not scanned by the engines, and nothing is uploaded from OpenCTI. By default only the scheme, host and path are sent: the query string and fragment are removed first, so tokens in them never leave OpenCTI. Set `POLYSWARM_SANDBOX_URL_SEND_QUERY=true` to send the full URL. URLs containing a username or password, and URLs whose host is private, loopback, link-local, shared (`100.64.0.0/10`), reserved or internal, are never sent (see [URLs](#urls)). The sandbox always has internet access for a URL, since it has to load it, whatever `POLYSWARM_SANDBOX_NETWORK_ENABLED` says.
+- **Hash lookup (StixFile).** For a StixFile observable (a hash, no file), only the hash is sent to PolySwarm, to read the latest existing sandbox report. Nothing is uploaded, nothing is detonated and no sandbox credits are spent. The lookup itself is read-only, but turning a found report into attachments is not: with `POLYSWARM_PDF_REPORT_ENABLED=true` (the default), PolySwarm generates a PDF report in your account for each report found (one job per provider, polled for up to 5 minutes), and with `POLYSWARM_LLM_REPORT_ENABLED=true` it creates an LLM report task. These may count against your report quota. Set `POLYSWARM_PDF_REPORT_ENABLED=false` to avoid the PDF jobs. With `POLYSWARM_SANDBOX_REUSE_REPORT=true` (off by default), an Artifact whose reports already exist is looked up the same way and is not uploaded again.
+- **Detonate by hash (opt-in).** With `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true` (off by default), a StixFile with no usable report is detonated from the sample PolySwarm already holds for that hash. Nothing is uploaded from OpenCTI, but each detonation spends PolySwarm sandbox credits and runs in the community set in `POLYSWARM_COMMUNITY`. The same public-community rule as for uploads applies (see below).
+- **Where it goes.** Uploads (files and URLs) go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public community (`default`, also listed as `public`) become visible to the PolySwarm community, so the connector refuses to upload files, submit URLs or detonate by hash there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
+- **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
+- **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
+- **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
+- **Sandbox report depth.** Dropped files and extracted malware configuration are read from the sandbox report the connector already downloads. Nothing extra is requested or sent. Only the hashes and metadata of dropped files are used, the files themselves are not downloaded.
+- **Network capture (opt-in).** With `POLYSWARM_SANDBOX_ATTACH_PCAP=true`, the connector downloads the sandbox pcap from PolySwarm (one extra download per detonation, read only) and stores it as an attachment in OpenCTI. Captures larger than `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` are downloaded but not attached (the size is only known after the download). Nothing is sent from OpenCTI.
+- **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements
 
@@ -94,6 +114,12 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `CONNECTOR_ENRICHMENT_RESOLUTION` | Set to `AUTHORIZED_AUTHORITIES` (required for OpenCTI ≥6.8.9) |
 | `POLYSWARM_API_KEY` | PolySwarm API key |
 
+#### Community
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYSWARM_COMMUNITY` | `default` | Community to upload into: the public `default` community, or your private community name |
+| `POLYSWARM_ALLOW_PUBLIC_COMMUNITY` | `false` | Must be `true` to upload files to the public `default` community (see Data Handling) |
+
 #### Feature Toggles
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -111,6 +137,14 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_VM_TRIAGE` | `windows11-21h2-x64` | Triage VM slug |
 | `POLYSWARM_SANDBOX_NETWORK_ENABLED` | `true` | Allow internet access |
 | `POLYSWARM_SANDBOX_TIMEOUT` | `600` | Timeout in seconds |
+| `POLYSWARM_SANDBOX_URL_SEND_QUERY` | `false` | Url observables: also send the query string and fragment. By default only scheme, host and path are submitted |
+| `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` | `0` | StixFile lookup and Artifact reuse: a sandbox report older than this many days counts as missing. `0` means a report of any age is used |
+| `POLYSWARM_SANDBOX_REUSE_REPORT` | `false` | Artifacts: look for an existing sandbox report by SHA-256 before uploading. If every configured provider has one and a finished scan of the hash exists, they are used and the file is not uploaded again |
+| `POLYSWARM_SANDBOX_DETONATE_BY_HASH` | `false` | StixFile observables: when no usable report exists, detonate the sample PolySwarm already holds for the hash. Spends sandbox credits, nothing is uploaded from OpenCTI, runs in `POLYSWARM_COMMUNITY`. Refused in the public community unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true` |
+| `POLYSWARM_SANDBOX_MAX_DROPPED_FILES` | `25` | Most dropped files per provider report to create as File observables. `0` turns it off. Uses data already in the report |
+| `POLYSWARM_SANDBOX_C2_INDICATORS` | `true` | Create Indicators (valid 30 days) for C2 addresses in an extracted malware configuration. Observables are created either way. Also needs `POLYSWARM_CREATE_INDICATORS` |
+| `POLYSWARM_SANDBOX_ATTACH_PCAP` | `false` | Download the sandbox pcap and attach it to the observable. Off by default because it is an extra download |
+| `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` | `26214400` | Largest pcap to attach, in bytes (25 MB). Larger captures are downloaded but not attached |
 
 #### Enrichment Settings
 | Variable | Default | Description |
@@ -120,6 +154,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_CREATE_INDICATORS` | `true` | Create indicator objects |
 | `POLYSWARM_CREATE_OBSERVABLES` | `true` | Create network IOCs |
 | `POLYKG_API_URL` | *(empty)* | polykg REST API URL for malware profile enrichment (optional) |
+| `POLYSWARM_QUOTA_WARN_BELOW` | `100` | Log a warning when the remaining daily API quota, or a sandbox or hunt allowance, is below this number (`0` turns warnings off). See [Quota](#quota) |
 
 ## 📊 STIX Objects Generated
 
@@ -133,6 +168,8 @@ docker-compose logs -f connector-polyswarm-sandbox
 - **Domain Names**: DNS queries and contacted domains
 - **IPv4 Addresses**: Network connections and C2 candidates
 - **Note**: Provider-specific analysis (scores, TTPs, signatures, IOCs)
+- **Files**: dropped files with a valid SHA-256, up to `POLYSWARM_SANDBOX_MAX_DROPPED_FILES`. CAPE reports list them under `dropped`, Triage reports under `dumped`. Name, size and the other hashes are set when the report has them, the MIME type only when PolySwarm reports one. Not created when `POLYSWARM_CREATE_OBSERVABLES=false`
+- **C2 addresses**: the `c2` entries of a Triage extracted malware configuration become IPv4, IPv6, Domain-Name or Url observables (private and loopback addresses are skipped). With `POLYSWARM_SANDBOX_C2_INDICATORS` each also gets an Indicator with a STIX pattern, valid for 30 days, whose description says it came from the extracted configuration. Network contacts that the report does not label as configured C2 never become Indicators. No Indicator is created when the C2 is just the bare address of a well-known shared service used as a dead drop (Telegram, Discord, Pastebin, GitHub and GitHub content hosts, GitLab, Bitbucket, Google, Dropbox, OneDrive, SharePoint, transfer.sh, ngrok): the listed domain and its subdomains, or a Url with no path or query on those hosts. For ngrok only the apex domain counts, so a tunnel subdomain keeps its Indicator. A Url with a specific path (a webhook, a stored object, a bot endpoint) also keeps its Indicator. The observable is always kept. C2 hosts that are private, loopback, reserved or internal names, in a bare address or inside a URL, are skipped. All objects created from the report carry the detonated observable's markings. The extraction lives in `src/connector/report_depth.py`. The CAPE reports checked had no extracted-configuration field, so CAPE adds dropped files only
 
 ### From Malware Profiles
 - **Threat Actors**: Associated APT groups
@@ -151,6 +188,11 @@ Malware → targets → Location
 Malware → targets → Sector
 Malware → exploits → Vulnerability
 Malware → related-to → Related Malware
+Detonated observable -> related-to -> Dropped File
+Detonated observable -> related-to -> C2 observable
+Malware -> communicates-with -> C2 IP or domain
+Indicator (C2) -> based-on -> C2 observable
+Indicator (C2) -> indicates -> Malware
 Threat Actor → uses → Malware
 Threat Actor → targets → Location
 Threat Actor → targets → Sector
@@ -164,6 +206,32 @@ Malware → attributed-to → Threat Actor
 1. **Upload a file** to OpenCTI as an Artifact
 2. **Trigger enrichment** via the connector
 3. **View results** in the artifact's enrichment tab
+
+### File hashes (StixFile)
+
+`StixFile` is in the default `CONNECTOR_SCOPE` (`Artifact,StixFile,Url`). Trigger the enrichment on a StixFile observable that has a SHA-256 (an MD5 or SHA-1 is resolved to a SHA-256 through a PolySwarm hash search). For each provider in `POLYSWARM_SANDBOX_PROVIDER`, the connector reads the latest existing sandbox report for the hash, which costs no sandbox credits. Each report found produces what a detonation produces: the sandbox note per provider, the JSON and PDF reports attached to the observable, the sandbox score, the malware family, ATT&CK techniques, and contacted domains and IPs. Only reports that finished successfully are used, and a report older than `POLYSWARM_SANDBOX_LOOKUP_MAX_AGE_DAYS` (when above 0) counts as missing. The lookup runs in the community set in `POLYSWARM_COMMUNITY`. It needs `POLYSWARM_SANDBOX_ENABLED=true`.
+
+If no usable report exists, the connector adds a note saying so and what setting would detonate the sample. By default nothing else happens. To detonate, set `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`: the connector then finds the sample PolySwarm already holds for the hash and starts a sandbox run for each provider that has no usable report, polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, and processes the result the same way. If PolySwarm does not hold the sample, the note says so, and the way to analyse it is to upload the file as an Artifact. Detonation spends credits for every enrichment of a hash without a report.
+
+For an Artifact, `POLYSWARM_SANDBOX_REUSE_REPORT=true` (off by default) checks the same way before uploading. If every configured provider has a usable report and a finished scan of the hash exists, the file is not downloaded or uploaded, and the scan result is taken from that existing scan. Otherwise the Artifact is scanned and detonated as before.
+
+### URLs
+
+Keep `Url` in `CONNECTOR_SCOPE` (the default is `Artifact,StixFile,Url`) and trigger the enrichment on a Url observable. The connector detonates the URL in the sandbox provider(s) set in `POLYSWARM_SANDBOX_PROVIDER` (with `both`, the URL is detonated once per provider, and each detonation uses your PolySwarm sandbox quota). There is no multi-engine scan for a URL. It needs `POLYSWARM_SANDBOX_ENABLED=true`.
+
+The connector picks a VM that accepts URLs from the provider listing (`POLYSWARM_SANDBOX_VM` is used when it accepts URLs). It polls with the same `POLYSWARM_POLL_INTERVAL` and `POLYSWARM_SANDBOX_TIMEOUT` as for files, then adds the same results it adds for a file's sandbox run: the sandbox note per provider, the JSON report and PDF report attached to the Url observable (named from the URL's SHA-256, never the URL), the sandbox score on the observable, and the malware family, ATT&CK techniques and contacted domains and IPs, related to the Url observable.
+
+These URLs are refused, with a note on the observable explaining why, and nothing is sent to PolySwarm:
+- URLs containing a username or password (`user:pass@host`)
+- URLs whose host is private, loopback, link-local, multicast, shared (`100.64.0.0/10`), reserved or unspecified, including IPv4-mapped IPv6 forms and non-canonical IPv4 forms such as `127.1` or `2130706433`
+- URLs whose host is an internal name: a single label, or ending in `.local`, `.internal`, `.lan`, `.corp`, `.home.arpa` or `.localhost`
+- Any URL while `POLYSWARM_COMMUNITY` is the public `default` community and `POLYSWARM_ALLOW_PUBLIC_COMMUNITY` is not `true`
+
+The query string and fragment are removed before submission unless `POLYSWARM_SANDBOX_URL_SEND_QUERY=true`. Logs only show the URL's scheme and host.
+
+### Automatic enrichment
+
+Keep `CONNECTOR_AUTO=false` (the default). The default `CONNECTOR_SCOPE` is `Artifact,StixFile,Url`, and with automatic enrichment on, every new matching observable would be enriched, including those created by feed imports and by other enrichments. For an Artifact that is an upload, a scan and a detonation. For a Url it is a detonation. For a StixFile it is a hash lookup, with PDF report jobs in your PolySwarm account (and a detonation if `POLYSWARM_SANDBOX_DETONATE_BY_HASH=true`). If you want automatic enrichment, narrow `CONNECTOR_SCOPE` or use playbooks to choose what is enriched.
 
 ### Password-Protected Files
 
@@ -185,6 +253,43 @@ The connector checks these fields in order:
 ### Malware Profile Enrichment (Optional)
 
 When `POLYKG_API_URL` is configured, the connector fetches live malware family profiles from the polykg REST API. This provides enhanced intelligence including threat actors, target locations, exploited CVEs, and related malware. The connector works fully without polykg — it just produces basic scan/sandbox enrichment without the extended threat intel.
+
+### Quota
+
+The connector reads your PolySwarm account's plan and quotas so you can see them in its log. This is read-only and on by default: at startup, and about once an hour after that, it makes one read-only request to the account endpoint (`GET /public/accounts`, through the SDK's `account_features()`), plus at most one more per minute after a quota error. The logic is in `src/connector/quota.py`. The account number in the response is never read or logged.
+
+What is logged, at info level:
+
+```
+[QUOTA] plan Example Plan; daily API calls remaining 640 of 1000; sandbox_request: 300 of 500 remaining; usage window ends 2026-12-01T00:00:00+00:00
+```
+
+The sandbox and hunt allowances shown are the account features `sandbox_request`, `historical_hunt`, `live_hunt` and `manual_analysis`.
+
+- **Warning.** When the remaining daily API quota, or one of those allowances, is below `POLYSWARM_QUOTA_WARN_BELOW` (default `100`), the connector logs a warning. Set it to `0` to turn warnings off.
+- **Unlimited or exhausted.** A daily limit of `0` means the account has no cap: `daily_api_limit` and `daily_api_remaining` are both `0` on an uncapped plan (measured on an internal plan, where every feature also reports `base_uses` of `0`). Such an account is shown as unlimited and never warned about. A limit above `0` with nothing remaining means the quota is exhausted. A feature the plan does not include is reported as not on this plan. Reading `0` as "no cap" is inferred from the SDK and from that one measurement.
+- **When a call fails because of quota.** The SDK raises `UsageLimitsExceededException` on HTTP 429. The connector then stops retrying that call and writes an error note on the artifact or URL that says the quota is exhausted, with the plan, the remaining daily API calls and sandbox or hunt allowances, and when the usage window ends (the account record's `window_end`; the API does not publish a separate daily reset time). If the quota cannot be read at that moment, the note says so. The same applies to the report lookup that runs before an upload (`POLYSWARM_SANDBOX_REUSE_REPORT`): a quota error there ends the enrichment with this note and nothing is uploaded, since the upload would hit the same limit.
+- **Failures are harmless.** If the account cannot be read (network error, 5xx, a response in an unexpected shape), the connector logs a warning, tries again within a few minutes, and carries on.
+
+## Screenshots
+
+Taken on OpenCTI 7.261103.0 with a test account.
+
+The sandbox note on a detonated URL
+
+![The sandbox note on a detonated URL](./__docs__/media/url-detonation-note.png)
+
+A detonated URL related to the domains and IPs its sandbox run contacted
+
+![A detonated URL related to the domains and IPs its sandbox run contacted](./__docs__/media/url-detonation.png)
+
+A File known only by its hash, with the PolySwarm sandbox report fetched by hash (no upload)
+
+![A File known only by its hash, with the PolySwarm sandbox report fetched by hash (no upload)](./__docs__/media/hash-sandbox-report.png)
+
+The sandbox report attached to the File
+
+![The sandbox report attached to the File](./__docs__/media/hash-sandbox-report-data.png)
 
 ## 🔧 Troubleshooting
 
@@ -218,29 +323,32 @@ Set `CONNECTOR_LOG_LEVEL` to:
 
 ```
 polyswarm-sandbox/
-├── __metadata__/
-│   └── connector_manifest.json  # OpenCTI connector catalog metadata
-├── src/
-│   ├── main.py                  # Entry point (ConnectorSettings)
-│   ├── requirements.txt         # Python dependencies
-│   ├── config.yml.sample        # YAML config template
-│   ├── .env.sample              # Environment variable template
-│   └── connector/               # Main package
-│       ├── __init__.py
-│       ├── polyswarm_connector.py  # Orchestration (scan → sandbox → reports → STIX)
-│       ├── polyswarm_client.py     # PolySwarm API wrapper with retry
-│       ├── stix_builder.py         # STIX 2.1 object generation
-│       ├── scan_processor.py       # Scan result mapping
-│       ├── sandbox_processor.py    # Sandbox result mapping (Triage + Cape)
-│       ├── artifact_handler.py     # File download from OpenCTI
-│       ├── ttp_mapping.py          # MITRE ATT&CK TTP database
-│       └── models/configs/
-│           └── settings.py         # Pydantic config (connectors_sdk)
-├── tests/                       # 62+ unit tests
-├── .dockerignore
-├── Dockerfile
-├── docker-compose.yml
-└── README.md
+|-- __metadata__/
+|   `-- connector_manifest.json  # OpenCTI connector catalog metadata
+|-- src/
+|   |-- main.py                  # Entry point (ConnectorSettings)
+|   |-- requirements.txt         # Python dependencies
+|   |-- config.yml.sample        # YAML config template
+|   |-- .env.sample              # Environment variable template
+|   `-- connector/               # Main package
+|       |-- __init__.py
+|       |-- polyswarm_connector.py  # Orchestration (scan, sandbox, reports, STIX)
+|       |-- polyswarm_client.py     # PolySwarm API wrapper with retry
+|       |-- stix_builder.py         # STIX 2.1 object generation
+|       |-- scan_processor.py       # Scan result mapping
+|       |-- sandbox_processor.py    # Sandbox result mapping (Triage + Cape)
+|       |-- artifact_handler.py     # File download from OpenCTI
+|       |-- ttp_mapping.py          # MITRE ATT&CK TTP database
+|       |-- hash_lookup.py          # Report lookup by hash, detonate by hash
+|       |-- quota.py                # Account plan and quota visibility
+|       |-- report_depth.py         # Dropped files, configured C2, pcap selection
+|       `-- models/configs/
+|           `-- settings.py         # Pydantic config (connectors_sdk)
+|-- tests/                       # Unit tests
+|-- .dockerignore
+|-- Dockerfile
+|-- docker-compose.yml
+`-- README.md
 ```
 
 ## 📈 Performance
@@ -265,10 +373,10 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ## 🤝 Support
 
-- **Sales & Quotas**: [sales@polyswarm.io](mailto:sales@polyswarm.io)
+- **Support, plans and quotas**: [customersuccess@polyswarm.io](mailto:customersuccess@polyswarm.io)
 - **PolySwarm Docs**: [docs.polyswarm.io](https://docs.polyswarm.io)
 - **OpenCTI Docs**: [docs.opencti.io](https://docs.opencti.io)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+- **Issues**: [GitHub Issues](https://github.com/OpenCTI-Platform/connectors/issues)
 
 ## 🙏 Credits
 

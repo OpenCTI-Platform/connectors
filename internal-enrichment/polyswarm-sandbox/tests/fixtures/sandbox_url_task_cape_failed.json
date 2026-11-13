@@ -1,0 +1,47 @@
+{
+ "account_number": null,
+ "artifact": {
+  "extended_type": "ASCII text, with no line terminators",
+  "failed": false,
+  "filename": "https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe",
+  "mimetype": "text/plain",
+  "size": 77
+ },
+ "community": "mainnet1",
+ "config": {
+  "arguments": "",
+  "artifact_type": "URL",
+  "browser": null,
+  "errors": [
+   "Artifact submission failed after retries: HTTPConnectionPool(host='localhost', port=6666): Read timed out. (read timeout=10)"
+  ],
+  "network_enabled": true,
+  "provider": {
+   "id": "1",
+   "name": "cape",
+   "slug": "cape",
+   "tool": "cape_sandbox_v2"
+  },
+  "target": "https://github.com/indirect-syscall/test/releases/download/2134252/over32.exe",
+  "vm": {
+   "architecture": "x64",
+   "id": "100",
+   "language": "English (United States)",
+   "name": "Microsoft Windows 10 Pro Build 19041",
+   "os_name": "Microsoft Windows 10 Pro",
+   "os_version": "10.0.19041 Build 19041",
+   "slug": "win-10-build-19041"
+  }
+ },
+ "created": "2026-09-28T10:03:34.299025+00:00",
+ "expiration": "2026-09-28T13:03:34.280590+00:00",
+ "id": "65389544041265157",
+ "instance_id": "17552091584068724",
+ "report": null,
+ "sandbox": "cape",
+ "sandbox_artifacts": [],
+ "sha256": "dce84ea4a81e08eb5994ba0e7a702f52da0a253fce4a6d06d9a20e37b01d10c8",
+ "status": "FAILED_REIMBURSED",
+ "team_account_number": null,
+ "upload_url": null
+}

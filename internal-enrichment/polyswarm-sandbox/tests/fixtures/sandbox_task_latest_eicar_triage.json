@@ -1,0 +1,181 @@
+{
+  "account_number": "000000000000",
+  "artifact": {
+    "extended_type": "EICAR virus test files",
+    "failed": false,
+    "filename": "malicious.js",
+    "mimetype": "text/plain",
+    "size": 68
+  },
+  "community": "mainnet1",
+  "config": {
+    "arguments": "",
+    "artifact_type": "FILE",
+    "browser": null,
+    "network_enabled": true,
+    "provider": {
+      "id": "2",
+      "name": "triage",
+      "slug": "triage",
+      "tool": "triage_sandbox_v0"
+    },
+    "target": "malicious.js",
+    "traige_analysis_score": 3,
+    "triage_static_score": 1,
+    "vm": {
+      "Architecture": "x64",
+      "id": "200",
+      "language": "English (United States)",
+      "name": "windows11-21h2-x64",
+      "os_name": "Windows 11 21h2 x64",
+      "os_version": "21H2 Build 22000.493",
+      "profile": "poly",
+      "slug": "windows11-21h2-x64"
+    }
+  },
+  "created": "2026-06-21T12:56:40.728291+00:00",
+  "expiration": "2026-06-21T15:56:40.731236+00:00",
+  "id": "97661278269602552",
+  "instance_id": "28256872319285483",
+  "report": {
+    "analysis": {
+      "score": 3,
+      "tags": [
+        "execution"
+      ]
+    },
+    "dumped": [],
+    "extracted": null,
+    "extracted_c2_ip_port": [],
+    "extracted_c2_ips": [],
+    "malware_family": [],
+    "platform": {
+      "provider": "triage",
+      "vm": "windows11-21h2_x64"
+    },
+    "processes": [
+      {
+        "cmd": "wscript.exe C:\\Users\\Admin\\AppData\\Local\\Temp\\malicious.js",
+        "image": "C:\\Windows\\system32\\wscript.exe",
+        "orig": true,
+        "pid": 564,
+        "ppid": 2448,
+        "procid": 78,
+        "procid_parent": 52,
+        "started": 328,
+        "terminated": 9250
+      }
+    ],
+    "public_ip": "185.213.154.218",
+    "requests": [],
+    "sample_id": "260621-p6rlrsefhg",
+    "static": {
+      "score": 1,
+      "signatures": [
+        {
+          "indicators": [
+            {
+              "resource": "sample",
+              "yara_rule": "eicar_test_file"
+            }
+          ],
+          "name": "EICAR Anti-Malware test file",
+          "score": 1
+        }
+      ],
+      "tags": []
+    },
+    "targets": [
+      {
+        "md5": "44d88612fea8a8f36de82e1278abb02f",
+        "score": 3,
+        "sha1": "3395856ce81f2b7382dee72602f798b642f14140",
+        "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+        "sha512": "cc805d5fab1fd71a4ab352a9c533e65fb2d5b885518f4e565e68847223b8e6b85cb48f3afad842726d99239c9e36505c64b0dc9a061d9e507d833277ada336ab",
+        "signatures": [
+          {
+            "label": "javascript",
+            "name": "Command and Scripting Interpreter: JavaScript",
+            "score": 3,
+            "tags": [
+              "execution"
+            ],
+            "ttp": [
+              "T1059.007"
+            ]
+          }
+        ],
+        "size": 68,
+        "tags": [
+          "execution"
+        ],
+        "target": "malicious.js",
+        "tasks": [
+          "behavioral1"
+        ],
+        "tlsh": "T141A022003B0EEE2BA20B00200032E8B00808020E2CE00A3820A020B8C83308803EC228"
+      }
+    ],
+    "ttp": [
+      "T1059.007"
+    ],
+    "version": "0.3.1"
+  },
+  "sandbox": "triage",
+  "sandbox_artifacts": [
+    {
+      "created": "2026-06-21T12:59:05.559914+00:00",
+      "extended_type": "ISO Media, Apple iTunes Video (.M4V) Video",
+      "id": "4596496133",
+      "instance_id": "93806045419543046",
+      "mimetype": "",
+      "name": "behavioral_recording.m4v",
+      "sandbox_task_id": "97661278269602552",
+      "type": "recording"
+    },
+    {
+      "created": "2026-06-21T12:59:06.357895+00:00",
+      "extended_type": "JSON data",
+      "id": "4596496187",
+      "instance_id": "2826547757963917",
+      "mimetype": "",
+      "name": "triage_behavioral_report.json",
+      "sandbox_task_id": "97661278269602552",
+      "type": "raw_report"
+    },
+    {
+      "created": "2026-06-21T12:59:06.199300+00:00",
+      "extended_type": "JSON data",
+      "id": "4596496181",
+      "instance_id": "916614705022371",
+      "mimetype": "",
+      "name": "triage_static_report.json",
+      "sandbox_task_id": "97661278269602552",
+      "type": "raw_report"
+    },
+    {
+      "created": "2026-06-21T12:59:05.987957+00:00",
+      "extended_type": "JSON data",
+      "id": "4596496163",
+      "instance_id": "18194868761885996",
+      "mimetype": "",
+      "name": "triage_raw_report.json",
+      "sandbox_task_id": "97661278269602552",
+      "type": "raw_report"
+    },
+    {
+      "created": "2026-06-21T12:58:56.996487+00:00",
+      "extended_type": "JSON data",
+      "id": "4596495470",
+      "instance_id": "94914177968905639",
+      "mimetype": "",
+      "name": "triage_report.json",
+      "sandbox_task_id": "97661278269602552",
+      "type": "report"
+    }
+  ],
+  "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+  "status": "SUCCEEDED",
+  "team_account_number": "000000000000",
+  "upload_url": null
+}

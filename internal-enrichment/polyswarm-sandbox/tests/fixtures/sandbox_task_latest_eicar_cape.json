@@ -1,0 +1,5803 @@
+{
+  "account_number": "000000000000",
+  "artifact": {
+    "extended_type": "EICAR virus test files",
+    "failed": false,
+    "filename": "eicar_test.com",
+    "mimetype": "text/plain",
+    "size": 68
+  },
+  "community": "mainnet1",
+  "config": {
+    "arguments": "",
+    "artifact_type": "FILE",
+    "browser": null,
+    "cape_malscore": 0.25,
+    "network_enabled": true,
+    "provider": {
+      "id": "1",
+      "name": "cape",
+      "slug": "cape",
+      "tool": "cape_sandbox_v2"
+    },
+    "target": "eicar_test.com",
+    "vm": {
+      "architecture": "x64",
+      "id": "100",
+      "language": "English (United States)",
+      "name": "Microsoft Windows 10 Pro Build 19041",
+      "os_name": "Microsoft Windows 10 Pro",
+      "os_version": "10.0.19041 Build 19041",
+      "slug": "win-10-build-19041"
+    }
+  },
+  "created": "2026-06-23T14:39:36.670691+00:00",
+  "expiration": "2026-06-23T17:39:36.672256+00:00",
+  "id": "99782778795854353",
+  "instance_id": "74307206326508554",
+  "report": {
+    "behavior": {
+      "anomaly": [],
+      "encryptedbuffers": [],
+      "processes": [
+        {
+          "calls": [
+            {
+              "api": "NtTestAlert",
+              "arguments": [],
+              "caller": "0x77aea3b6",
+              "category": "threading",
+              "id": 0,
+              "parentcaller": "0x77aea2c1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,178"
+            },
+            {
+              "api": "NtWaitForSingleObject",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000007c"
+                },
+                {
+                  "name": "Milliseconds",
+                  "value": "18446744073709551615"
+                },
+                {
+                  "name": "Status",
+                  "value": "Infinite"
+                }
+              ],
+              "caller": "0x77ae47fc",
+              "category": "system",
+              "id": 1,
+              "parentcaller": "0x77acffa9",
+              "repeated": 3,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "1788",
+              "timestamp": "2026-06-23 21:39:59,178"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\n\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xf8\\xf0\\x16\\x06\\x00\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xf1\\x16\\x06\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x75a84004",
+              "category": "device",
+              "id": 2,
+              "parentcaller": "0x75a83f18",
+              "repeated": 0,
+              "return": "0xffffffffc00700bb",
+              "status": false,
+              "thread_id": "2412",
+              "timestamp": "2026-06-23 21:39:59,178"
+            },
+            {
+              "api": "NtTestAlert",
+              "arguments": [],
+              "caller": "0x77aea3b6",
+              "category": "threading",
+              "id": 3,
+              "parentcaller": "0x77aea2c1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "2412",
+              "timestamp": "2026-06-23 21:39:59,178"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\n\\x00\\x00\\x00\\x00\\x00\\x00\\x00x\\xf0\\x02\\x06\\x00\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\xfe\\xff\\xff\\xff\\x80\\xf0\\x02\\x06\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x75a84004",
+              "category": "device",
+              "id": 4,
+              "parentcaller": "0x75a83f18",
+              "repeated": 0,
+              "return": "0xffffffffc00700bb",
+              "status": false,
+              "thread_id": "1788",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtTestAlert",
+              "arguments": [],
+              "caller": "0x77aea3b6",
+              "category": "threading",
+              "id": 5,
+              "parentcaller": "0x77aea2c1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "1788",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtOpenThread",
+              "arguments": [
+                {
+                  "name": "ThreadHandle",
+                  "value": "0x00000234"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "THREAD_ALL_ACCESS",
+                  "value": "0x001fffff"
+                },
+                {
+                  "name": "ProcessId",
+                  "value": "6396"
+                },
+                {
+                  "name": "ThreadId",
+                  "value": "6456"
+                }
+              ],
+              "caller": "0x00da09de",
+              "category": "threading",
+              "id": 6,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                }
+              ],
+              "caller": "0x00d9e2df",
+              "category": "system",
+              "id": 7,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "SetThreadUILanguage"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x76654db0"
+                }
+              ],
+              "caller": "0x00d9e2ff",
+              "category": "system",
+              "id": 8,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\n\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x80\\xf6\\xee\\x05\\x00\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\xfe\\xff\\xff\\xff\\x88\\xf6\\xee\\x05\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x75a84004",
+              "category": "device",
+              "id": 9,
+              "parentcaller": "0x75a83f18",
+              "repeated": 0,
+              "return": "0xffffffffc00700bb",
+              "status": false,
+              "thread_id": "3572",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtTestAlert",
+              "arguments": [],
+              "caller": "0x77aea3b6",
+              "category": "threading",
+              "id": 10,
+              "parentcaller": "0x77aea2c1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "3572",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\x84\\xf4\\xaf\\x00P\\xf5\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00\\x00\\x00\\x00\\x00X\\xf5\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e2c8",
+              "category": "device",
+              "id": 11,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "RtlSetCurrentTransaction",
+              "arguments": [
+                {
+                  "name": "TransactionHandle",
+                  "value": "0x00000000"
+                }
+              ],
+              "caller": "0x00da0a10",
+              "category": "misc",
+              "id": 12,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtQueryInformationToken",
+              "arguments": [
+                {
+                  "name": "TokenInformationClass",
+                  "value": "1"
+                },
+                {
+                  "name": "TokenInformation",
+                  "value": "\\x84\\xf6\\xaf\\x00\\x00\\x00\\x00\\x00\\x01\\x05\\x00\\x00\\x00\\x00\\x00\\x05\\x15\\x00\\x00\\x00\\x1a\\xf4T\\xaf\\x033\\xea\\x10%\\xb5\\xf5\\xeb\\xea\\x03\\x00\\x00\\\\x05\\xf7s\\xfc\\x91\\xb1\\x04\\xc0\\x13\\xf2s(\\xf7\\xaf\\x00\\x00\\x00\\xb0\\x00p\\xf8\\xaf\\x00\\x98\\xf6\\xaf\\x00(,\\xf9\\x02\\xe6\\x18Gk\\x1c\\xf2\\xaf\\x00\\xf2\\xfa\\x19\\x18"
+                }
+              ],
+              "caller": "0x00da0a10",
+              "category": "process",
+              "id": 13,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000230"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "MAXIMUM_ALLOWED",
+                  "value": "0x02000000"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\REGISTRY\\USER\\S-1-5-21-2941580314-283783939-3958748453-1002"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_CURRENT_USER"
+                }
+              ],
+              "caller": "0x00da0a10",
+              "category": "registry",
+              "id": 14,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "RtlSetCurrentTransaction",
+              "arguments": [
+                {
+                  "name": "TransactionHandle",
+                  "value": "0x00000000"
+                }
+              ],
+              "caller": "0x00da0a10",
+              "category": "misc",
+              "id": 15,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtOpenKeyEx",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_READ",
+                  "value": "0x00020019"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000230"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "Software\\Policies\\Microsoft\\Windows\\System"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\System"
+                }
+              ],
+              "caller": "0x00da0a10",
+              "category": "registry",
+              "id": 16,
+              "parentcaller": "0x00da6a2a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\n\\x00\\x00\\x00\\x00\\x00\\x00\\x008\\xf5\\xda\\x05\\x00\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\xfe\\xff\\xff\\xff@\\xf5\\xda\\x05\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x75a84004",
+              "category": "device",
+              "id": 17,
+              "parentcaller": "0x75a83f18",
+              "repeated": 0,
+              "return": "0xffffffffc00700bb",
+              "status": false,
+              "thread_id": "3956",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtTestAlert",
+              "arguments": [],
+              "caller": "0x77aea3b6",
+              "category": "threading",
+              "id": 18,
+              "parentcaller": "0x77aea2c1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "3956",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x10\\x00\\x00\\x00V\\x00V\\x00\\xc8\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00x\\xf7\\xaf\\x00\\xd0\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00da1f20",
+              "category": "device",
+              "id": 19,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00X\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d98836",
+              "category": "device",
+              "id": 20,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x94\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00X\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9884a",
+              "category": "device",
+              "id": 21,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00H\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e328",
+              "category": "device",
+              "id": 22,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,209"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x01\\x00\\x00\\x00H\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e33f",
+              "category": "device",
+              "id": 23,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00H\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e3d7",
+              "category": "device",
+              "id": 24,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x94\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x01\\x00\\x00\\x00H\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e36e",
+              "category": "device",
+              "id": 25,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x94\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00H\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00P\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e3a0",
+              "category": "device",
+              "id": 26,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "RtlSetCurrentTransaction",
+              "arguments": [
+                {
+                  "name": "TransactionHandle",
+                  "value": "0x00000000"
+                }
+              ],
+              "caller": "0x00d982d9",
+              "category": "misc",
+              "id": 27,
+              "parentcaller": "0x00d9886a",
+              "repeated": 1,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtOpenKeyEx",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "MAXIMUM_ALLOWED",
+                  "value": "0x02000000"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x000000f0"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "Software\\Microsoft\\Command Processor"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Command Processor"
+                }
+              ],
+              "caller": "0x00d982d9",
+              "category": "registry",
+              "id": 28,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "DisableUNCCheck"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DisableUNCCheck"
+                }
+              ],
+              "caller": "0x00d98319",
+              "category": "registry",
+              "id": 29,
+              "parentcaller": "0x00d9886a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "EnableExtensions"
+                },
+                {
+                  "name": "Type",
+                  "pretty_value": "REG_DWORD",
+                  "value": "4"
+                },
+                {
+                  "name": "Information",
+                  "value": "1"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\EnableExtensions"
+                }
+              ],
+              "caller": "0x00d98353",
+              "category": "registry",
+              "id": 30,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "DelayedExpansion"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DelayedExpansion"
+                }
+              ],
+              "caller": "0x00d983a3",
+              "category": "registry",
+              "id": 31,
+              "parentcaller": "0x00d9886a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "DefaultColor"
+                },
+                {
+                  "name": "Type",
+                  "pretty_value": "REG_DWORD",
+                  "value": "4"
+                },
+                {
+                  "name": "Information",
+                  "value": "0"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DefaultColor"
+                }
+              ],
+              "caller": "0x00d983dd",
+              "category": "registry",
+              "id": 32,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "CompletionChar"
+                },
+                {
+                  "name": "Type",
+                  "pretty_value": "REG_DWORD",
+                  "value": "4"
+                },
+                {
+                  "name": "Information",
+                  "value": "9"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\CompletionChar"
+                }
+              ],
+              "caller": "0x00d9842d",
+              "category": "registry",
+              "id": 33,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "PathCompletionChar"
+                },
+                {
+                  "name": "Type",
+                  "pretty_value": "REG_DWORD",
+                  "value": "4"
+                },
+                {
+                  "name": "Information",
+                  "value": "9"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\PathCompletionChar"
+                }
+              ],
+              "caller": "0x00d9849e",
+              "category": "registry",
+              "id": 34,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000240"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "AutoRun"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\AutoRun"
+                }
+              ],
+              "caller": "0x00d9852c",
+              "category": "registry",
+              "id": 35,
+              "parentcaller": "0x00d9886a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00d98540",
+              "category": "system",
+              "id": 36,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "RtlSetCurrentTransaction",
+              "arguments": [
+                {
+                  "name": "TransactionHandle",
+                  "value": "0x00000000"
+                }
+              ],
+              "caller": "0x00d982d9",
+              "category": "misc",
+              "id": 37,
+              "parentcaller": "0x00d9886a",
+              "repeated": 1,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtOpenKeyEx",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "MAXIMUM_ALLOWED",
+                  "value": "0x02000000"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000230"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "Software\\Microsoft\\Command Processor"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_CURRENT_USER\\Software\\Microsoft\\Command Processor"
+                }
+              ],
+              "caller": "0x00d982d9",
+              "category": "registry",
+              "id": 38,
+              "parentcaller": "0x00d9886a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "GetSystemTimeAsFileTime",
+              "arguments": [],
+              "caller": "0x00d9855a",
+              "category": "system",
+              "id": 39,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "srand",
+              "arguments": [
+                {
+                  "name": "seed",
+                  "value": "0x6a3b2c0f"
+                }
+              ],
+              "caller": "0x00d98561",
+              "category": "misc",
+              "id": 40,
+              "parentcaller": "0x00d9886a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d3000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00005000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 41,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07060000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00100000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 42,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07060000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00011000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 43,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07071000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00010000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 44,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,225"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x02fb5000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00001000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d9aa00",
+              "category": "process",
+              "id": 45,
+              "parentcaller": "0x00d98901",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07081000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00010000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 46,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtQueryAttributesFile",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp"
+                }
+              ],
+              "caller": "0x00d98d99",
+              "category": "filesystem",
+              "id": 47,
+              "parentcaller": "0x00da01ce",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0x3a6eea36"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01d5acdd"
+                }
+              ],
+              "caller": "0x00da029d",
+              "category": "filesystem",
+              "id": 48,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x02fa6a88",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00da02b6",
+              "category": "system",
+              "id": 49,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0xef390c3a"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01d794f0"
+                }
+              ],
+              "caller": "0x00da029d",
+              "category": "filesystem",
+              "id": 50,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x02fa6348",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00da02b6",
+              "category": "system",
+              "id": 51,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0xef3b6c8d"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01d794f0"
+                }
+              ],
+              "caller": "0x00da029d",
+              "category": "filesystem",
+              "id": 52,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x02fa6ac8",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00da02b6",
+              "category": "system",
+              "id": 53,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0xef3dd011"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01d794f0"
+                }
+              ],
+              "caller": "0x00da029d",
+              "category": "filesystem",
+              "id": 54,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x02fa6808",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00da02b6",
+              "category": "system",
+              "id": 55,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0xcbfea368"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01dac424"
+                }
+              ],
+              "caller": "0x00da029d",
+              "category": "filesystem",
+              "id": 56,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x02fa6948",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00da02b6",
+              "category": "system",
+              "id": 57,
+              "parentcaller": "0x00d98dc1",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtQueryAttributesFile",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp"
+                }
+              ],
+              "caller": "0x00d98de6",
+              "category": "filesystem",
+              "id": 58,
+              "parentcaller": "0x00da01ce",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,240"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x02fb6000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00001000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d9aa00",
+              "category": "process",
+              "id": 59,
+              "parentcaller": "0x00da01ce",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,256"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x02fb7000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00005000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d9dcee",
+              "category": "process",
+              "id": 60,
+              "parentcaller": "0x00d98922",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,256"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\xa4Q\\xb1wX\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00\\x00\\x00\\x00\\x00`\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d989b1",
+              "category": "device",
+              "id": 61,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,256"
+            },
+            {
+              "api": "NtQueryInformationToken",
+              "arguments": [
+                {
+                  "name": "TokenInformationClass",
+                  "value": "10"
+                },
+                {
+                  "name": "TokenInformation",
+                  "value": "\\x0cj6\\x00\\x00\\x00\\x00\\x00\\x8c\\xa0\\x02\\x00\\x00\\x00\\x00\\x00\\xff\\xff\\xff\\xff\\xff\\xff\\xff\\x7f\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x10\\x00\\x00\\x94\\x0f\\x00\\x00\\x0e\\x00\\x00\\x00\\x18\\x00\\x00\\x00\\xeeI5\\x00\\x00\\x00\\x00\\x00"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "process",
+              "id": 62,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,256"
+            },
+            {
+              "api": "sysenter",
+              "arguments": [
+                {
+                  "name": "ThreadIdentifier",
+                  "value": "6456"
+                },
+                {
+                  "name": "Module",
+                  "value": "KERNELBASE.dll"
+                },
+                {
+                  "name": "Return Address",
+                  "value": "0x75aa00ac"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "__notification__",
+              "id": 63,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,287"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_READ",
+                  "value": "0x00020019"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\Registry\\Machine\\System\\CurrentControlSet\\Control\\Nls\\CustomLocale"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Nls\\CustomLocale"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "registry",
+              "id": 64,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "en-US"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\CustomLocale\\en-US"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "registry",
+              "id": 65,
+              "parentcaller": "0x00d989c7",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000022c"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "system",
+              "id": 66,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_READ",
+                  "value": "0x00020019"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\Registry\\Machine\\System\\CurrentControlSet\\Control\\Nls\\ExtendedLocale"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Nls\\ExtendedLocale"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "registry",
+              "id": 67,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "en-US"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\ExtendedLocale\\en-US"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "registry",
+              "id": 68,
+              "parentcaller": "0x00d989c7",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000022c"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "system",
+              "id": 69,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "GetUserDefaultLCID",
+              "arguments": [
+                {
+                  "name": "SystemDefaultLangID",
+                  "value": "0x00000409"
+                },
+                {
+                  "name": "LanguageName",
+                  "value": "English (United States)"
+                }
+              ],
+              "caller": "0x00d98797",
+              "category": "system",
+              "id": 70,
+              "parentcaller": "0x00d989c7",
+              "repeated": 1,
+              "return": "0x00000409",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07071000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001f000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "process",
+              "id": 71,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07071000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001f000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "process",
+              "id": 72,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS",
+                  "value": "0x00000009"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\Registry\\Machine\\SYSTEM\\CurrentControlSet\\Control\\Session Manager"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "registry",
+              "id": 73,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x0000022c"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "ResourcePolicies"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\ResourcePolicies"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "registry",
+              "id": 74,
+              "parentcaller": "0x00d989c7",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000022c"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "system",
+              "id": 75,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046b0000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00008000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "process",
+              "id": 76,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046b0000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00001000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d98776",
+              "category": "process",
+              "id": 77,
+              "parentcaller": "0x00d989c7",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xe0\\xf6\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00\\x95oSw\\xe8\\xf6\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x02\\x00\\x00\\x0b\\x01\\x00\\x00\\xc8\\xfa\\xfa\\x02\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d989ef",
+              "category": "device",
+              "id": 78,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                }
+              ],
+              "caller": "0x00d98ac6",
+              "category": "system",
+              "id": 79,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "CopyFileExW"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x76639690"
+                }
+              ],
+              "caller": "0x00d98ad7",
+              "category": "system",
+              "id": 80,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "IsDebuggerPresent"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x76642030"
+                }
+              ],
+              "caller": "0x00d98aed",
+              "category": "system",
+              "id": 81,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "KERNEL32.DLL"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x76620000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "SetConsoleInputExeNameW"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x75b18800"
+                }
+              ],
+              "caller": "0x00d98afe",
+              "category": "system",
+              "id": 82,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07074000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001c000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00d98b1e",
+              "category": "process",
+              "id": 83,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d3000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00003000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00d98b1e",
+              "category": "process",
+              "id": 84,
+              "parentcaller": "0x00da0a55",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x02\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\x17\\x00\\x16\\x00\\x90\\xf2\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00\\x00\\x00y\\x04\\x98\\xf2\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x02\\x00\\x00\\x00\\x00\\x00\\x00p\\xf5\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9adbc",
+              "category": "device",
+              "id": 85,
+              "parentcaller": "0x00d9e4f6",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07074000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001c000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 86,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07091000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00010000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 87,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d3000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00003000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 88,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d8000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00007000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 89,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a1000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00005000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 90,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a6000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00005000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 91,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070ab000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00010000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da745a",
+              "category": "process",
+              "id": 92,
+              "parentcaller": "0x00da6e68",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x02fbc000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00020000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d9dcee",
+              "category": "process",
+              "id": 93,
+              "parentcaller": "0x00da5d88",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,444"
+            },
+            {
+              "api": "NtSetInformationProcess",
+              "arguments": [
+                {
+                  "name": "ProcessInformationClass",
+                  "value": "12"
+                },
+                {
+                  "name": "ProcessInformation",
+                  "value": "\\x01\\x00\\x00\\x00"
+                }
+              ],
+              "caller": "0x00da1d40",
+              "category": "process",
+              "id": 94,
+              "parentcaller": "0x00d9f680",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtSetInformationProcess",
+              "arguments": [
+                {
+                  "name": "ProcessInformationClass",
+                  "value": "12"
+                },
+                {
+                  "name": "ProcessInformation",
+                  "value": "\\x00\\x00\\x00\\x00"
+                }
+              ],
+              "caller": "0x00da1d4a",
+              "category": "process",
+              "id": 95,
+              "parentcaller": "0x00d9f680",
+              "repeated": 1,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "FindFirstFileExW",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com"
+                },
+                {
+                  "name": "FirstCreateTimeLow",
+                  "value": "0xf3312344"
+                },
+                {
+                  "name": "FirstCreateTimeHigh",
+                  "value": "0x01dc0c8d"
+                }
+              ],
+              "caller": "0x00da58c1",
+              "category": "filesystem",
+              "id": 96,
+              "parentcaller": "0x00d99c30",
+              "repeated": 0,
+              "return": "0x02fa6808",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000240"
+                }
+              ],
+              "caller": "0x00d98b81",
+              "category": "system",
+              "id": 97,
+              "parentcaller": "0x00d9f9d3",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a8000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00012000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00d9fa3e",
+              "category": "process",
+              "id": 98,
+              "parentcaller": "0x00da5d88",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046dc000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00002000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00d9fa3e",
+              "category": "process",
+              "id": 99,
+              "parentcaller": "0x00da5d88",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtCreateUserProcess",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ThreadHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ProcessDesiredAccess",
+                  "value": "0x02000000"
+                },
+                {
+                  "name": "ThreadDesiredAccess",
+                  "value": "0x02000000"
+                },
+                {
+                  "name": "ProcessFileName",
+                  "value": ""
+                },
+                {
+                  "name": "ThreadName",
+                  "value": ""
+                },
+                {
+                  "name": "ImagePathName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com"
+                },
+                {
+                  "name": "CommandLine",
+                  "value": "\"C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com\" "
+                },
+                {
+                  "name": "ProcessId",
+                  "value": "0"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "process",
+              "id": 100,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0xffffffffc000012f",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "LdrLoadDll",
+              "arguments": [
+                {
+                  "name": "Flags",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "FileName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x77a90000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 101,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "DllLoadNotification",
+              "arguments": [
+                {
+                  "name": "NotificationReason",
+                  "value": "load"
+                },
+                {
+                  "name": "DllName",
+                  "value": "C:\\Windows\\SYSTEM32\\VERSION"
+                },
+                {
+                  "name": "DllBase",
+                  "value": "0x75310000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 102,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "DllLoadNotification",
+              "arguments": [
+                {
+                  "name": "NotificationReason",
+                  "value": "load"
+                },
+                {
+                  "name": "DllName",
+                  "value": "C:\\Windows\\SYSTEM32\\NtVdm64"
+                },
+                {
+                  "name": "DllBase",
+                  "value": "0x74d30000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 103,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "LdrLoadDll",
+              "arguments": [
+                {
+                  "name": "Flags",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "FileName",
+                  "value": "NtVdm64.Dll"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x74d30000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 104,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "DllLoadNotification",
+              "arguments": [
+                {
+                  "name": "NotificationReason",
+                  "value": "unload"
+                },
+                {
+                  "name": "DllName",
+                  "value": "C:\\Windows\\SYSTEM32\\NtVdm64"
+                },
+                {
+                  "name": "DllBase",
+                  "value": "0x74d30000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 105,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "DllLoadNotification",
+              "arguments": [
+                {
+                  "name": "NotificationReason",
+                  "value": "unload"
+                },
+                {
+                  "name": "DllName",
+                  "value": "C:\\Windows\\SYSTEM32\\VERSION"
+                },
+                {
+                  "name": "DllBase",
+                  "value": "0x75310000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 106,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "LdrLoadDll",
+              "arguments": [
+                {
+                  "name": "Flags",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "FileName",
+                  "value": "advapi32.dll"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x75d00000"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 107,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "NtQuerySystemTime",
+              "arguments": [],
+              "caller": "0x00da5f10",
+              "category": "system",
+              "id": 108,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,459"
+            },
+            {
+              "api": "CreateProcessW",
+              "arguments": [
+                {
+                  "name": "ApplicationName",
+                  "value": "C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com"
+                },
+                {
+                  "name": "CommandLine",
+                  "value": "\"C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com\" "
+                },
+                {
+                  "name": "CreationFlags",
+                  "value": "0x00080410"
+                },
+                {
+                  "name": "ProcessId",
+                  "value": "0"
+                },
+                {
+                  "name": "ThreadId",
+                  "value": "0"
+                },
+                {
+                  "name": "ParentHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "ProcessHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ThreadHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da5f10",
+              "category": "process",
+              "id": 109,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,475"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x9c\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x90\\xec\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x98\\xec\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d99a67",
+              "category": "device",
+              "id": 110,
+              "parentcaller": "0x00d9793a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x9c\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00d\\x00\\x00\\x00\\x00\\xa2\\xefs\\xe8\\xeb\\xaf\\x00\\x00\\x00\\x00\\x00\\\\x00\\x00\\x00 \\xa3\\xefs\\xf0\\xeb\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d97957",
+              "category": "device",
+              "id": 111,
+              "parentcaller": "0x00d97908",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_READ",
+                  "value": "0x00020019"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\Registry\\Machine\\Software\\Microsoft\\LanguageOverlay\\OverlayPackages\\en-US"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\LanguageOverlay\\OverlayPackages\\en-US"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "registry",
+              "id": 112,
+              "parentcaller": "0x00d9797e",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtOpenFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "FILE_READ_ACCESS|SYNCHRONIZE",
+                  "value": "0x00100001"
+                },
+                {
+                  "name": "FileName",
+                  "value": "C:\\Windows\\System32\\en-US\\KERNELBASE.dll.mui"
+                },
+                {
+                  "name": "ShareAccess",
+                  "pretty_value": "FILE_SHARE_READ|FILE_SHARE_DELETE",
+                  "value": "5"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "filesystem",
+              "id": 113,
+              "parentcaller": "0x00d9797e",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtOpenFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000248"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "FILE_READ_ACCESS|SYNCHRONIZE",
+                  "value": "0x00100001"
+                },
+                {
+                  "name": "FileName",
+                  "value": "C:\\Windows\\sysnative\\en-US\\KERNELBASE.dll.mui"
+                },
+                {
+                  "name": "ShareAccess",
+                  "pretty_value": "FILE_SHARE_READ|FILE_SHARE_DELETE",
+                  "value": "5"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "filesystem",
+              "id": 114,
+              "parentcaller": "0x00d9797e",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtCreateSection",
+              "arguments": [
+                {
+                  "name": "SectionHandle",
+                  "value": "0x0000024c"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "STANDARD_RIGHTS_REQUIRED|SECTION_QUERY|SECTION_MAP_READ",
+                  "value": "0x000f0005"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": ""
+                },
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000248"
+                },
+                {
+                  "name": "FileName",
+                  "value": "C:\\Windows\\sysnative\\en-US\\KernelBase.dll.mui"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "process",
+              "id": 115,
+              "parentcaller": "0x00d9797e",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtMapViewOfSection",
+              "arguments": [
+                {
+                  "name": "SectionHandle",
+                  "value": "0x0000024c"
+                },
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07160000"
+                },
+                {
+                  "name": "SectionOffset",
+                  "value": "0x00afdd70"
+                },
+                {
+                  "name": "ViewSize",
+                  "value": "0x0013f000"
+                },
+                {
+                  "name": "Win32Protect",
+                  "pretty_value": "PAGE_READONLY",
+                  "value": "0x00000002"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "process",
+              "id": 116,
+              "parentcaller": "0x00d9797e",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000024c"
+                }
+              ],
+              "caller": "0x00d97eda",
+              "category": "system",
+              "id": 117,
+              "parentcaller": "0x00d9797e",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,490"
+            },
+            {
+              "api": "WriteConsoleW",
+              "arguments": [
+                {
+                  "name": "ConsoleHandle",
+                  "value": "0x0000009c"
+                },
+                {
+                  "name": "Buffer",
+                  "value": "This version of C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com is not compatible with the version of Windows you're running. Check your compute"
+                }
+              ],
+              "caller": "0x00d979c4",
+              "category": "system",
+              "id": 118,
+              "parentcaller": "0x00d97908",
+              "repeated": 0,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "WriteConsoleW",
+              "arguments": [
+                {
+                  "name": "ConsoleHandle",
+                  "value": "0x0000009c"
+                },
+                {
+                  "name": "Buffer",
+                  "value": "r's system information and then contact the software publisher.\r\n"
+                }
+              ],
+              "caller": "0x00d979c4",
+              "category": "system",
+              "id": 119,
+              "parentcaller": "0x00d97908",
+              "repeated": 0,
+              "return": "0x00000001",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a8000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00012000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da5fac",
+              "category": "process",
+              "id": 120,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a0000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001a000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da5fbc",
+              "category": "process",
+              "id": 121,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046dc000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00002000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da5fbc",
+              "category": "process",
+              "id": 122,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046dc000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00002000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da5fcc",
+              "category": "process",
+              "id": 123,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x070a0000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001a000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da5fd8",
+              "category": "process",
+              "id": 124,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x0709c000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001e000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da5fd8",
+              "category": "process",
+              "id": 125,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d8000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00006000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da5fd8",
+              "category": "process",
+              "id": 126,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x0709c000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x0001e000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da5fe4",
+              "category": "process",
+              "id": 127,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07094000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00026000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da5ff4",
+              "category": "process",
+              "id": 128,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtFreeVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x046d3000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00003000"
+                },
+                {
+                  "name": "FreeType",
+                  "value": "0x00004000"
+                }
+              ],
+              "caller": "0x00da6004",
+              "category": "process",
+              "id": 129,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtAllocateVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x07094000"
+                },
+                {
+                  "name": "RegionSize",
+                  "value": "0x00026000"
+                },
+                {
+                  "name": "Protection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da6020",
+              "category": "process",
+              "id": 130,
+              "parentcaller": "0x00da5a80",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\n\\x00\\x00\\x00\\xc0\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\xcf\\x16Pw\\xc8\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e328",
+              "category": "device",
+              "id": 131,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x98\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\xc0\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xc8\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e33f",
+              "category": "device",
+              "id": 132,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x94\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x0c\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\xc0\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\xc8\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e36e",
+              "category": "device",
+              "id": 133,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x10\\x00\\x00\\x00.\\x19Gk\\xc8\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00J\\x00\\x00\\x00\\xd0\\xf7\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00da0aa9",
+              "category": "device",
+              "id": 134,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtDeviceIoControlFile",
+              "arguments": [
+                {
+                  "name": "FileHandle",
+                  "value": "0x00000088"
+                },
+                {
+                  "name": "IoControlCode",
+                  "value": "0x00500016"
+                },
+                {
+                  "name": "InputBuffer",
+                  "value": "\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x01\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\x84\\xf4\\xaf\\x00P\\xf5\\xaf\\x00\\x00\\x00\\x00\\x00\\x08\\x00\\x00\\x00\\x00\\x00\\x00\\x00X\\xf5\\xaf\\x00\\x00\\x00\\x00\\x00"
+                },
+                {
+                  "name": "OutputBuffer",
+                  "value": ""
+                }
+              ],
+              "caller": "0x00d9e2c8",
+              "category": "device",
+              "id": 135,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "mscoree.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x046d1bb0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 136,
+              "parentcaller": "0x00da6a2a",
+              "pretty_return": "DLL_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000135",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtTerminateProcess",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ExitCode",
+                  "value": "0x00000001"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "process",
+              "id": 137,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,506"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001e0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 138,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001e4"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 139,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001dc"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 140,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001c8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 141,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001a8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 142,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001ac"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 143,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,522"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001a4"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 144,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000018c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 145,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000190"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 146,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000194"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 147,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000198"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 148,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000019c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 149,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001a0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 150,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtProtectVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x77482000"
+                },
+                {
+                  "name": "ModuleName",
+                  "value": "ole32.dll"
+                },
+                {
+                  "name": "NumberOfBytesProtected",
+                  "value": "0x00001000"
+                },
+                {
+                  "name": "MemoryType",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "NewAccessProtection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "OldAccessProtection",
+                  "pretty_value": "PAGE_READONLY",
+                  "value": "0x00000002"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "process",
+              "id": 151,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtProtectVirtualMemory",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "BaseAddress",
+                  "value": "0x77482000"
+                },
+                {
+                  "name": "ModuleName",
+                  "value": "ole32.dll"
+                },
+                {
+                  "name": "NumberOfBytesProtected",
+                  "value": "0x00001000"
+                },
+                {
+                  "name": "MemoryType",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "NewAccessProtection",
+                  "pretty_value": "PAGE_READONLY",
+                  "value": "0x00000002"
+                },
+                {
+                  "name": "OldAccessProtection",
+                  "pretty_value": "PAGE_READWRITE",
+                  "value": "0x00000004"
+                },
+                {
+                  "name": "StackPivoted",
+                  "value": "no"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "process",
+              "id": 152,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000184"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 153,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000188"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 154,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000180"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 155,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 156,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "RtlDllShutdownInProgress"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x77af1c00"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 157,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000160"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 158,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000168"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 159,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000016c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 160,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000170"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 161,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000174"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 162,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000017c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 163,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000178"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 164,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000140"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 165,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000144"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 166,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000013c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 167,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000138"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 168,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000130"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 169,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000134"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 170,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000124"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 171,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000128"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 172,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x0000012c"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 173,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "RtlDllShutdownInProgress"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x77af1c00"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 174,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000110"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 175,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x00000114"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 176,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000e0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 177,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000e4"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 178,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000e8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 179,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtOpenKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x000000e8"
+                },
+                {
+                  "name": "DesiredAccess",
+                  "pretty_value": "KEY_READ",
+                  "value": "0x00020019"
+                },
+                {
+                  "name": "ObjectAttributesHandle",
+                  "value": "0x00000000"
+                },
+                {
+                  "name": "ObjectAttributesName",
+                  "value": "\\Registry\\Machine\\Software\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize"
+                },
+                {
+                  "name": "ObjectAttributes",
+                  "value": "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "registry",
+              "id": 180,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtQueryValueKey",
+              "arguments": [
+                {
+                  "name": "KeyHandle",
+                  "value": "0x000000e8"
+                },
+                {
+                  "name": "ValueName",
+                  "value": "DisableMetaFiles"
+                },
+                {
+                  "name": "FullName",
+                  "value": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize\\DisableMetaFiles"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "registry",
+              "id": 181,
+              "parentcaller": "0x00da6a2a",
+              "pretty_return": "OBJECT_NAME_NOT_FOUND",
+              "repeated": 0,
+              "return": "0xffffffffc0000034",
+              "status": false,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000e8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 182,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 183,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "RtlDllShutdownInProgress"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x77af1c00"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 184,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000dc"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 185,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000d8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 186,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000d4"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 187,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000001f0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 188,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000c8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 189,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetDllHandle",
+              "arguments": [
+                {
+                  "name": "FileName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 190,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "LdrGetProcedureAddressForCaller",
+              "arguments": [
+                {
+                  "name": "ModuleName",
+                  "value": "ntdll.dll"
+                },
+                {
+                  "name": "ModuleHandle",
+                  "value": "0x77a90000"
+                },
+                {
+                  "name": "FunctionName",
+                  "value": "RtlDllShutdownInProgress"
+                },
+                {
+                  "name": "Ordinal",
+                  "value": "0"
+                },
+                {
+                  "name": "FunctionAddress",
+                  "value": "0x77af1c00"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 191,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000a0"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 192,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000a4"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 193,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtClose",
+              "arguments": [
+                {
+                  "name": "Handle",
+                  "value": "0x000000a8"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "system",
+              "id": 194,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            },
+            {
+              "api": "NtTerminateProcess",
+              "arguments": [
+                {
+                  "name": "ProcessHandle",
+                  "value": "0xffffffff"
+                },
+                {
+                  "name": "ExitCode",
+                  "value": "0x00000001"
+                }
+              ],
+              "caller": "0x00da0ae0",
+              "category": "process",
+              "id": 195,
+              "parentcaller": "0x00da6a2a",
+              "repeated": 0,
+              "return": "0x00000000",
+              "status": true,
+              "thread_id": "6456",
+              "timestamp": "2026-06-23 21:39:59,537"
+            }
+          ],
+          "environ": {
+            "Bitness": "32-bit",
+            "CommandLine": "\"C:\\Windows\\system32\\cmd.exe\" /c start /wait \"\" \"C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com\"",
+            "ComputerName": "WIN10",
+            "MachineGUID": "",
+            "MainExeBase": "0x00d90000",
+            "MainExeSize": "0x00059000",
+            "ProductName": "",
+            "RegisteredOrganization": "",
+            "RegisteredOwner": "",
+            "SystemVolumeGUID": "c41b9245-0000-0000-0000-100000000000",
+            "SystemVolumeSerialNumber": "2206-9930",
+            "TempPath": "C:\\Users\\maxine\\AppData\\Local\\Temp\\",
+            "UserName": "maxine",
+            "WindowsPath": "C:\\Windows"
+          },
+          "file_activities": {
+            "delete_files": [],
+            "read_files": [],
+            "write_files": []
+          },
+          "first_seen": "2026-06-23 21:39:58,725",
+          "module_path": "C:\\Windows\\SysWOW64\\cmd.exe",
+          "parent_id": 1880,
+          "process_id": 6396,
+          "process_name": "cmd.exe",
+          "threads": [
+            "6456",
+            "1788",
+            "2412",
+            "3572",
+            "3956"
+          ]
+        }
+      ],
+      "processtree": [
+        {
+          "children": [],
+          "environ": {
+            "Bitness": "32-bit",
+            "CommandLine": "\"C:\\Windows\\system32\\cmd.exe\" /c start /wait \"\" \"C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com\"",
+            "ComputerName": "WIN10",
+            "MachineGUID": "",
+            "MainExeBase": "0x00d90000",
+            "MainExeSize": "0x00059000",
+            "ProductName": "",
+            "RegisteredOrganization": "",
+            "RegisteredOwner": "",
+            "SystemVolumeGUID": "c41b9245-0000-0000-0000-100000000000",
+            "SystemVolumeSerialNumber": "2206-9930",
+            "TempPath": "C:\\Users\\maxine\\AppData\\Local\\Temp\\",
+            "UserName": "maxine",
+            "WindowsPath": "C:\\Windows"
+          },
+          "module_path": "C:\\Windows\\SysWOW64\\cmd.exe",
+          "name": "cmd.exe",
+          "parent_id": 1880,
+          "pid": 6396,
+          "threads": [
+            "6456",
+            "1788",
+            "2412",
+            "3572",
+            "3956"
+          ]
+        }
+      ],
+      "summary": {
+        "created_services": [],
+        "delete_files": [],
+        "delete_keys": [],
+        "executed_commands": [
+          "\"C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com\""
+        ],
+        "files": [
+          "C:\\Users\\maxine\\AppData\\Local\\Temp",
+          "C:\\Users",
+          "C:\\Users\\maxine",
+          "C:\\Users\\maxine\\AppData",
+          "C:\\Users\\maxine\\AppData\\Local",
+          "C:\\Users\\maxine\\AppData\\Local\\Temp\\2DMZ8QPJ7K08D4eicar_test.com",
+          "C:\\Windows\\System32\\en-US\\KERNELBASE.dll.mui",
+          "C:\\Windows\\sysnative\\en-US\\KERNELBASE.dll.mui"
+        ],
+        "keys": [
+          "HKEY_CURRENT_USER",
+          "HKEY_CURRENT_USER\\Software\\Policies\\Microsoft\\Windows\\System",
+          "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Command Processor",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DisableUNCCheck",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\EnableExtensions",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DelayedExpansion",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DefaultColor",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\CompletionChar",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\PathCompletionChar",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\AutoRun",
+          "HKEY_CURRENT_USER\\Software\\Microsoft\\Command Processor",
+          "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Nls\\CustomLocale",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\CustomLocale\\en-US",
+          "HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Nls\\ExtendedLocale",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\ExtendedLocale\\en-US",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\ResourcePolicies",
+          "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\LanguageOverlay\\OverlayPackages\\en-US",
+          "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize\\DisableMetaFiles"
+        ],
+        "mutexes": [],
+        "read_files": [],
+        "read_keys": [
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DisableUNCCheck",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\EnableExtensions",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DelayedExpansion",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\DefaultColor",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\CompletionChar",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\PathCompletionChar",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Command Processor\\AutoRun",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\CustomLocale\\en-US",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\ExtendedLocale\\en-US",
+          "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Session Manager\\ResourcePolicies",
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\GRE_Initialize\\DisableMetaFiles"
+        ],
+        "resolved_apis": [],
+        "started_services": [],
+        "write_files": [],
+        "write_keys": []
+      }
+    },
+    "detections": [],
+    "dropped": [],
+    "jarm": {
+      "hosts": []
+    },
+    "malscore": 0.25,
+    "malware_family": [],
+    "network": {
+      "dead_hosts": [
+        "23.38.111.119:80"
+      ],
+      "dns": [],
+      "domains": [],
+      "hosts": [
+        {
+          "asn": "",
+          "asn_name": "",
+          "country_name": "unknown",
+          "hostname": "",
+          "inaddrarpa": "",
+          "ip": "74.178.76.44",
+          "ports": []
+        },
+        {
+          "asn": "",
+          "asn_name": "",
+          "country_name": "unknown",
+          "hostname": "",
+          "inaddrarpa": "",
+          "ip": "23.38.111.119",
+          "ports": []
+        }
+      ],
+      "http": [],
+      "icmp": [],
+      "irc": [],
+      "pcap_sha256": "62e15e497fdc3ca5802f94961db7e0a83a61aa490258c713dc8fb7f3cde7304e",
+      "smtp": [],
+      "tcp": [
+        {
+          "dport": 80,
+          "dst": "92.223.96.6",
+          "offset": 5383,
+          "sport": 49920,
+          "src": "192.168.144.131",
+          "time": 1.0481269359588623
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.232",
+          "offset": 58028,
+          "sport": 49922,
+          "src": "192.168.144.131",
+          "time": 2.1269869804382324
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.232",
+          "offset": 63247,
+          "sport": 49924,
+          "src": "192.168.144.131",
+          "time": 2.3879988193511963
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.232",
+          "offset": 118965,
+          "sport": 49927,
+          "src": "192.168.144.131",
+          "time": 3.2503318786621094
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.225",
+          "offset": 167620,
+          "sport": 49930,
+          "src": "192.168.144.131",
+          "time": 7.456109046936035
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.225",
+          "offset": 186299,
+          "sport": 49933,
+          "src": "192.168.144.131",
+          "time": 10.129158973693848
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.225",
+          "offset": 204915,
+          "sport": 49935,
+          "src": "192.168.144.131",
+          "time": 11.298678874969482
+        },
+        {
+          "dport": 443,
+          "dst": "48.211.4.16",
+          "offset": 235278,
+          "sport": 49938,
+          "src": "192.168.144.131",
+          "time": 14.499632835388184
+        },
+        {
+          "dport": 443,
+          "dst": "20.42.179.192",
+          "offset": 249495,
+          "sport": 49942,
+          "src": "192.168.144.131",
+          "time": 25.162871837615967
+        },
+        {
+          "dport": 443,
+          "dst": "20.42.179.192",
+          "offset": 266459,
+          "sport": 49944,
+          "src": "192.168.144.131",
+          "time": 30.64335298538208
+        },
+        {
+          "dport": 443,
+          "dst": "172.215.188.225",
+          "offset": 282268,
+          "sport": 49947,
+          "src": "192.168.144.131",
+          "time": 32.90949988365173
+        },
+        {
+          "dport": 443,
+          "dst": "74.178.76.44",
+          "offset": 287814,
+          "sport": 49948,
+          "src": "192.168.144.131",
+          "time": 33.4964439868927
+        },
+        {
+          "dport": 80,
+          "dst": "199.232.214.172",
+          "offset": 301328,
+          "sport": 49951,
+          "src": "192.168.144.131",
+          "time": 36.10981893539429
+        },
+        {
+          "dport": 443,
+          "dst": "150.171.22.17",
+          "offset": 2083679,
+          "sport": 49954,
+          "src": "192.168.144.131",
+          "time": 40.884039878845215
+        },
+        {
+          "dport": 80,
+          "dst": "199.232.214.172",
+          "offset": 2098542,
+          "sport": 49958,
+          "src": "192.168.144.131",
+          "time": 62.6970419883728
+        }
+      ],
+      "udp": [
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 24,
+          "sport": 59179,
+          "src": "192.168.144.131",
+          "time": 0.0
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 3762,
+          "sport": 56973,
+          "src": "192.168.144.131",
+          "time": 0.6731560230255127
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 4221,
+          "sport": 64487,
+          "src": "192.168.144.131",
+          "time": 0.8047618865966797
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 4650,
+          "sport": 62807,
+          "src": "192.168.144.131",
+          "time": 0.8124079704284668
+        },
+        {
+          "dport": 137,
+          "dst": "192.168.144.255",
+          "offset": 56633,
+          "sport": 137,
+          "src": "192.168.144.131",
+          "time": 1.8348619937896729
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 143462,
+          "sport": 63904,
+          "src": "192.168.144.131",
+          "time": 6.317831993103027
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 167264,
+          "sport": 54156,
+          "src": "192.168.144.131",
+          "time": 7.451992034912109
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 227779,
+          "sport": 63240,
+          "src": "192.168.144.131",
+          "time": 12.175683975219727
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 234694,
+          "sport": 62365,
+          "src": "192.168.144.131",
+          "time": 14.269012928009033
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 241865,
+          "sport": 55716,
+          "src": "192.168.144.131",
+          "time": 23.221253871917725
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 272452,
+          "sport": 50347,
+          "src": "192.168.144.131",
+          "time": 31.538377046585083
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 298883,
+          "sport": 50780,
+          "src": "192.168.144.131",
+          "time": 34.48565196990967
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 2068243,
+          "sport": 57766,
+          "src": "192.168.144.131",
+          "time": 37.976970911026
+        },
+        {
+          "dport": 53,
+          "dst": "192.168.144.1",
+          "offset": 2096944,
+          "sport": 59199,
+          "src": "192.168.144.131",
+          "time": 62.230132818222046
+        }
+      ]
+    },
+    "platform": {
+      "provider": "cape",
+      "vm": "windows"
+    },
+    "public_ip": "141.98.255.216",
+    "signature_names": [
+      "stealth_network",
+      "queries_locale_api",
+      "stealth_timeout",
+      "language_check_registry"
+    ],
+    "signatures": [
+      {
+        "alert": false,
+        "categories": [
+          "stealth"
+        ],
+        "confidence": 30,
+        "data": [
+          {
+            "ip": "74.178.76.44"
+          },
+          {
+            "ip": "23.38.111.119"
+          }
+        ],
+        "description": "Network activity detected but not expressed in monitor API logs",
+        "families": [],
+        "name": "stealth_network",
+        "severity": 1,
+        "weight": 1
+      },
+      {
+        "alert": false,
+        "categories": [
+          "location_discovery",
+          "geofence"
+        ],
+        "confidence": 100,
+        "data": [
+          {
+            "cid": 70,
+            "pid": 6396,
+            "type": "call"
+          }
+        ],
+        "description": "Queries the computer locale (possible geofencing)",
+        "families": [],
+        "name": "queries_locale_api",
+        "severity": 1,
+        "weight": 0
+      },
+      {
+        "alert": false,
+        "categories": [
+          "stealth"
+        ],
+        "confidence": 20,
+        "data": [
+          {
+            "process": "cmd.exe, PID 6396"
+          },
+          {
+            "cid": 137,
+            "pid": 6396,
+            "type": "call"
+          }
+        ],
+        "description": "Possible date expiration check, exits too soon after checking local time",
+        "families": [],
+        "name": "stealth_timeout",
+        "severity": 1,
+        "weight": 1
+      },
+      {
+        "alert": false,
+        "categories": [
+          "location_discovery",
+          "geofence"
+        ],
+        "confidence": 100,
+        "data": [
+          {
+            "regkey": "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\CustomLocale\\en-US"
+          },
+          {
+            "regkey": "HKEY_LOCAL_MACHINE\\SYSTEM\\ControlSet001\\Control\\Nls\\ExtendedLocale\\en-US"
+          }
+        ],
+        "description": "Checks system language via registry key (possible geofencing)",
+        "families": [],
+        "name": "language_check_registry",
+        "severity": 1,
+        "weight": 0
+      }
+    ],
+    "target": {
+      "file": {
+        "data": null
+      }
+    },
+    "ttp": [
+      "T1071"
+    ]
+  },
+  "sandbox": "cape",
+  "sandbox_artifacts": [
+    {
+      "created": "2026-06-23T14:43:04.335258+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087338",
+      "instance_id": "76659289017009813",
+      "mimetype": "",
+      "name": "0008.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:04.117629+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087307",
+      "instance_id": "37268387028038605",
+      "mimetype": "",
+      "name": "0006.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:03.461661+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087200",
+      "instance_id": "4937047726616653",
+      "mimetype": "",
+      "name": "0001.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:03.986905+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087286",
+      "instance_id": "48014619018560588",
+      "mimetype": "",
+      "name": "0007.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:02.990697+00:00",
+      "extended_type": "JSON data",
+      "id": "4610087127",
+      "instance_id": "84215005131931366",
+      "mimetype": "",
+      "name": "cape_report.json",
+      "sandbox_task_id": "99782778795854353",
+      "type": "report"
+    },
+    {
+      "created": "2026-06-23T14:43:03.616584+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087226",
+      "instance_id": "69479348052264463",
+      "mimetype": "",
+      "name": "0003.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:03.622206+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087228",
+      "instance_id": "17172514758487865",
+      "mimetype": "",
+      "name": "0002.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:03.788038+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087252",
+      "instance_id": "63823821761317020",
+      "mimetype": "",
+      "name": "0004.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:03.698852+00:00",
+      "extended_type": "JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, baseline, precision 8, 1024x768, components 3",
+      "id": "4610087243",
+      "instance_id": "62241235498975167",
+      "mimetype": "",
+      "name": "0005.jpg",
+      "sandbox_task_id": "99782778795854353",
+      "type": "screenshot"
+    },
+    {
+      "created": "2026-06-23T14:43:04.951474+00:00",
+      "extended_type": "ASCII text",
+      "id": "4610087434",
+      "instance_id": "28467129466359723",
+      "mimetype": "",
+      "name": "analysis.log",
+      "sandbox_task_id": "99782778795854353",
+      "type": "raw_report"
+    },
+    {
+      "created": "2026-06-23T14:43:04.618276+00:00",
+      "extended_type": "JSON data",
+      "id": "4610087383",
+      "instance_id": "1471071831247795",
+      "mimetype": "",
+      "name": "cape_raw_report.json",
+      "sandbox_task_id": "99782778795854353",
+      "type": "raw_report"
+    },
+    {
+      "created": "2026-06-23T14:43:05.342047+00:00",
+      "extended_type": "JSON data",
+      "id": "4610087494",
+      "instance_id": "57066603277815057",
+      "mimetype": "",
+      "name": "jarm.json",
+      "sandbox_task_id": "99782778795854353",
+      "type": "jarm"
+    },
+    {
+      "created": "2026-06-23T14:43:04.789719+00:00",
+      "extended_type": "pcap capture file, microsecond ts (little-endian) - version 2.4 (Ethernet, capture length 262144)",
+      "id": "4610087410",
+      "instance_id": "99990804655761602",
+      "mimetype": "",
+      "name": "cape_pcap-1.pcap",
+      "sandbox_task_id": "99782778795854353",
+      "type": "pcap"
+    }
+  ],
+  "sha256": "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f",
+  "status": "SUCCEEDED",
+  "team_account_number": "000000000000",
+  "upload_url": null
+}

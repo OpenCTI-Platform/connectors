@@ -35,6 +35,7 @@ def _mock_polyswarm_config(**overrides):
         "api_key": MagicMock(get_secret_value=MagicMock(return_value="test-key")),
         "api_url": "https://api.polyswarm.network/v3",
         "community": "default",
+        "allow_public_community": True,
         "timeout": 300,
         "sandbox_enabled": False,
         "sandbox_provider": "cape",
@@ -43,6 +44,9 @@ def _mock_polyswarm_config(**overrides):
         "sandbox_vm": None,
         "sandbox_network_enabled": True,
         "sandbox_timeout": 60,
+        "sandbox_lookup_max_age_days": 0,
+        "sandbox_reuse_report": False,
+        "sandbox_detonate_by_hash": False,
         "poll_interval": 5,
         "poll_timeout": 30,
         "json_report_enabled": False,
@@ -56,6 +60,10 @@ def _mock_polyswarm_config(**overrides):
         "download_artifacts": True,
         "polykg_api_url": None,
         "replace_with_lower_score": True,
+        "sandbox_max_dropped_files": 25,
+        "sandbox_c2_indicators": True,
+        "sandbox_attach_pcap": False,
+        "sandbox_pcap_max_size": 26214400,
     }
     defaults.update(overrides)
     m = MagicMock()
@@ -151,6 +159,20 @@ class TestPydanticConfig:
         assert config.polyswarm.poll_interval == 30
         assert config.connector.type == "INTERNAL_ENRICHMENT"
         assert config.connector.max_tlp == TLPLevel.AMBER
+        assert config.polyswarm.allow_public_community is False
+
+    def test_allow_public_community_from_env(self, monkeypatch):
+        ConnectorSettings = pytest.importorskip(
+            "connector.models.configs.settings", reason="connectors_sdk unavailable"
+        ).ConnectorSettings
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000005")
+        monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+        monkeypatch.setenv("POLYSWARM_ALLOW_PUBLIC_COMMUNITY", "true")
+
+        config = ConnectorSettings()
+        assert config.polyswarm.allow_public_community is True
 
     def test_deprecated_polyswarm_max_tlp_is_migrated(self, monkeypatch):
         """The deprecated POLYSWARM_MAX_TLP still works and becomes CONNECTOR_MAX_TLP."""

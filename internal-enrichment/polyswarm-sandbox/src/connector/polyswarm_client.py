@@ -6,13 +6,23 @@ and proper resource management.
 """
 
 import io
+import logging
+import os
+import re
+import tempfile
 import threading
 import time
 from typing import Any
 
 import requests
 from connector.polyswarm import PolyswarmAPI
-from polyswarm_api.exceptions import NotFoundException
+from connector.quota import QuotaMonitor
+from polyswarm_api.exceptions import (
+    NoResultsException,
+    NotFoundException,
+    PolyswarmException,
+    UsageLimitsExceededException,
+)
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -104,6 +114,24 @@ class PolySwarmAPIError(Exception):
         recommendations: List of suggested actions for the user
     """
 
+    QUOTA_CATEGORY = "API Quota Exhausted"
+
+    # Every category that means "the account may not send more requests now"
+    QUOTA_OR_RATE_CATEGORIES = (
+        QUOTA_CATEGORY,
+        "API Quota Exceeded",
+        "API Rate Limit Exceeded",
+    )
+
+    @property
+    def is_quota_exhausted(self) -> bool:
+        return self.category.startswith(self.QUOTA_CATEGORY)
+
+    @property
+    def is_quota_or_rate_limited(self) -> bool:
+        """Quota exhausted (SDK 429), quota exceeded (402) or rate limited (429)."""
+        return self.category.startswith(self.QUOTA_OR_RATE_CATEGORIES)
+
     def __init__(
         self, category: str, detail: str, recommendations: list | None = None
     ) -> None:
@@ -112,7 +140,7 @@ class PolySwarmAPIError(Exception):
         self.recommendations = recommendations or [
             "Verify your POLYSWARM_API_KEY is valid and active.",
             "Check your PolySwarm plan includes the feature you're trying to use.",
-            "Contact sales@polyswarm.io for assistance with your account or quota.",
+            "Contact customersuccess@polyswarm.io for assistance with your account or quota.",
         ]
         super().__init__(f"{category}: {detail}")
 
@@ -125,7 +153,7 @@ _HTTP_ERROR_MAP = {
         [
             "Verify POLYSWARM_API_KEY is set correctly in your environment or config.",
             "Generate a new API key at https://polyswarm.network.",
-            "Contact sales@polyswarm.io if the issue persists.",
+            "Contact customersuccess@polyswarm.io if the issue persists.",
         ],
     ),
     403: (
@@ -134,7 +162,7 @@ _HTTP_ERROR_MAP = {
         "This usually means your plan does not include this feature.",
         [
             "Check that your PolySwarm subscription includes this feature (scanning, sandbox, LLM reports).",
-            "Upgrade your plan at https://polyswarm.network or contact sales@polyswarm.io.",
+            "Upgrade your plan at https://polyswarm.network or contact customersuccess@polyswarm.io.",
         ],
     ),
     402: (
@@ -143,7 +171,7 @@ _HTTP_ERROR_MAP = {
         "your quota resets or is increased.",
         [
             "Wait for your quota to reset (check your plan's reset cycle).",
-            "Contact sales@polyswarm.io to increase your quota or upgrade your plan.",
+            "Contact customersuccess@polyswarm.io to increase your quota or upgrade your plan.",
         ],
     ),
     429: (
@@ -153,10 +181,45 @@ _HTTP_ERROR_MAP = {
         [
             "Wait a few minutes and retry.",
             "Reduce POLYSWARM_POLL_INTERVAL to lower request frequency.",
-            "Contact sales@polyswarm.io to increase your rate limit.",
+            "Contact customersuccess@polyswarm.io to increase your rate limit.",
         ],
     ),
 }
+
+
+# Status codes as the SDK and this client write them into a message, used
+# only when the exception carries no status code:
+# - polyswarm_api core.PolyswarmRequest._bad_status_message puts
+#   "Return code: <code>" on a line of its own, after the request parameters;
+# - submit_sandbox_url_async re-raises SDK errors as "...: HTTP <code>",
+#   at the end of the message.
+_RETURN_CODE_LINE = re.compile(r"^Return code: (\d{3})[ \t]*$", re.MULTILINE)
+_HTTP_CODE_AT_END = re.compile(r"\bHTTP (\d{3})\s*\Z")
+
+
+def _status_code_of(error: Exception) -> int | None:
+    """HTTP status code of an SDK or requests error, or None when unknown.
+
+    The status code carried by the exception (the SDK's ``request`` or a
+    requests ``response``) wins. Only when there is none is the message
+    read, and then only for the exact formats above (the last "Return code:"
+    line, or "HTTP <code>" ending the message). No digits or words found
+    elsewhere count: SDK messages include the request parameters (hashes,
+    names), which can contain "401" or "forbidden" by chance. Anything else
+    is None, a generic API error.
+    """
+    for holder in (getattr(error, "request", None), getattr(error, "response", None)):
+        code = getattr(holder, "status_code", None)
+        if isinstance(code, int) and not isinstance(code, bool):
+            return code
+    text = str(error)
+    lines = _RETURN_CODE_LINE.findall(text)
+    if lines:
+        return int(lines[-1])
+    match = _HTTP_CODE_AT_END.search(text)
+    if match:
+        return int(match.group(1))
+    return None
 
 
 class PolySwarmClient:
@@ -165,6 +228,10 @@ class PolySwarmClient:
     # Default retry settings for SDK calls
     SDK_MAX_RETRIES = 3
     SDK_BACKOFF_BASE = 2.0  # seconds; exponential: 2, 4, 8
+
+    # VMs that accept URL submissions, used only when the provider listing
+    # has no VM details (as listed by the API on 2026-11-10)
+    _URL_VM_FALLBACK = {"cape": "win-10-build-19041", "triage": "windows11-21h2-x64"}
 
     # Cache TTL for sandbox provider list (seconds)
     _PROVIDERS_CACHE_TTL = 300.0  # 5 minutes
@@ -192,7 +259,13 @@ class PolySwarmClient:
         ) or PolySwarmClient.is_sandbox_failure(status)
 
     def __init__(
-        self, api_key: str, api_url: str, community: str, timeout: int, helper: object
+        self,
+        api_key: str,
+        api_url: str,
+        community: str,
+        timeout: int,
+        helper: object,
+        quota_warn_below: int = 100,
     ) -> None:
         """Initialise client with SDK, retry session, and circuit breaker.
 
@@ -202,8 +275,13 @@ class PolySwarmClient:
             community: PolySwarm community slug (``default`` or ``private``).
             timeout: HTTP timeout in seconds for SDK calls.
             helper: OpenCTI connector helper for logging.
+            quota_warn_below: Warn in the log when remaining quota is below this
+                (0 turns warnings off).
         """
         self.helper = helper
+        # The SDK logs request parameters at debug level, and they carry a
+        # submitted URL (query string included). Keep its logger at WARNING.
+        logging.getLogger("polyswarm_api").setLevel(logging.WARNING)
         # The SDK expects the /v3 path; append it when the user supplies just the host.
         if (
             api_url
@@ -213,6 +291,11 @@ class PolySwarmClient:
             api_url = f"{api_url.rstrip('/')}/v3"
         self.api = PolyswarmAPI(
             key=api_key, uri=api_url, community=community, timeout=timeout
+        )
+
+        # Read-only account plan and quota visibility; never raises
+        self.quota = QuotaMonitor(
+            self.api, helper.connector_logger, warn_below=quota_warn_below
         )
 
         # PROD-01 + PROD-09: Shared session with retry and connection pooling.
@@ -308,21 +391,23 @@ class PolySwarmClient:
                         f"{type(e).__name__}: {e} — retrying in {wait:.0f}s"
                     )
                     time.sleep(wait)
+            except UsageLimitsExceededException as e:
+                # HTTP 429 from the SDK: the account's usage limits are exceeded.
+                # Retrying will not help, and the SDK message is not echoed here.
+                raise self._quota_exhausted_error(operation) from e
             except Exception as e:
-                # Some SDK wrappers stringify status codes instead of raising HTTPError;
-                # scan the message for known codes so we can still surface actionable errors.
-                err_str = str(e).lower()
-                for code, (category, detail, recs) in _HTTP_ERROR_MAP.items():
-                    if (
-                        str(code) in err_str
-                        or (code == 403 and "forbidden" in err_str)
-                        or (code == 401 and "unauthorized" in err_str)
-                    ):
-                        raise PolySwarmAPIError(
-                            category=f"{category} ({operation})",
-                            detail=f"{detail} (during {operation}: {e})",
-                            recommendations=recs,
-                        ) from e
+                # The SDK raises its own exceptions (not HTTPError) for a bad
+                # status. Classify from the real status code, never from digits
+                # that happen to appear in the message (it carries the request
+                # parameters, so a hash can contain "401" or "429").
+                code = _status_code_of(e)
+                if code in _HTTP_ERROR_MAP:
+                    category, detail, recs = _HTTP_ERROR_MAP[code]
+                    raise PolySwarmAPIError(
+                        category=f"{category} ({operation})",
+                        detail=f"{detail} (during {operation}: {e})",
+                        recommendations=recs,
+                    ) from e
                 # Non-retryable error
                 self.helper.connector_logger.error(
                     f"[POLYSWARM] {operation} non-retryable error: {type(e).__name__}: {e}"
@@ -335,6 +420,22 @@ class PolySwarmClient:
         )
         self._breaker.record_failure()
         return None
+
+    def _quota_exhausted_error(self, operation: str) -> PolySwarmAPIError:
+        """Error for an exhausted quota, with the remaining quota and reset time."""
+        quota_lines = self.quota.exhausted_note_lines()
+        return PolySwarmAPIError(
+            category=f"{PolySwarmAPIError.QUOTA_CATEGORY} ({operation})",
+            detail=(
+                "PolySwarm reported that the account's usage limits are exceeded "
+                f"(HTTP 429 during {operation}).\n\n**Account quota**\n"
+                + "\n".join(quota_lines)
+            ),
+            recommendations=[
+                "Wait for your quota to reset (see the usage window above).",
+                "Contact customersuccess@polyswarm.io to increase your quota or upgrade your plan.",
+            ],
+        )
 
     @staticmethod
     def _create_retry_session(
@@ -389,6 +490,10 @@ class PolySwarmClient:
                 )
                 return instance.id
             return None
+        except PolySwarmAPIError:
+            # Quota, authentication and access errors reach the caller's API
+            # error note instead of a generic "Scan Submission Failed"
+            raise
         except Exception as e:
             self.helper.connector_logger.error(
                 f"[POLYSWARM] Scan submit unexpected error: {type(e).__name__}: {str(e)}"
@@ -428,9 +533,174 @@ class PolySwarmClient:
                 )
                 return task.id
             return None
+        except PolySwarmAPIError:
+            raise
         except Exception as e:
             self.helper.connector_logger.error(
                 f"[POLYSWARM] Sandbox submit unexpected error: {type(e).__name__}: {str(e)}"
+            )
+            return None
+
+    def submit_sandbox_url_async(
+        self,
+        url: str,
+        provider: str = "cape",
+        vm_slug: str = "win-10-build-19041",
+        browser: str | None = None,
+    ) -> str | None:
+        """Submit a URL for sandbox detonation. Returns the sandbox task ID or None.
+
+        The URL itself is never logged. SDK errors carry the request
+        parameters (and so the URL) in their message, so they are re-raised
+        with the HTTP status only before they reach any log or note.
+        """
+
+        def _submit() -> object:
+            try:
+                return self.api.sandbox_url(
+                    url,
+                    provider_slug=provider,
+                    vm_slug=vm_slug,
+                    browser=browser,
+                )
+            except UsageLimitsExceededException:
+                # Keep the type, so quota exhaustion is reported as such
+                raise UsageLimitsExceededException(
+                    None, "URL sandbox submission: HTTP 429"
+                ) from None
+            except PolyswarmException as e:
+                request = getattr(e, "request", None)
+                status_code = getattr(request, "status_code", None)
+                detail = f"HTTP {status_code}" if status_code else "request failed"
+                raise PolyswarmException(
+                    f"URL sandbox submission {type(e).__name__}: {detail}"
+                ) from None
+
+        try:
+            self.helper.connector_logger.info(
+                f"[POLYSWARM] Submitting URL for sandbox "
+                f"(provider={provider}, vm={vm_slug}, browser={browser or 'default'})"
+            )
+            task = self._retry_sdk_call(
+                _submit,
+                operation=f"URL sandbox submit ({provider})",
+            )
+            if task and task.id:
+                self.helper.connector_logger.info(
+                    f"[POLYSWARM] URL sandbox submitted, task_id: {task.id}"
+                )
+                return task.id
+            return None
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[POLYSWARM] URL sandbox submit unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def get_latest_sandbox_task(self, sha256: str, provider: str) -> dict | None:
+        """Latest existing sandbox task for a SHA-256 and provider, read only.
+
+        Returns the task's JSON (the same shape ``get_sandbox_results`` returns,
+        report included), an empty dict when PolySwarm confirmed it has no
+        task for the hash (the API answers 404 "No tasks found."), or None
+        when the call failed and it is not known whether a task exists.
+        Callers must not treat None as "no task". Only the hash is sent.
+        Nothing is submitted and no credits are spent.
+        """
+
+        def _latest() -> dict:
+            try:
+                task = self.api.sandbox_task_latest(sha256, provider)
+            except NotFoundException:
+                return {}
+            return task.json if task else {}
+
+        try:
+            return self._retry_sdk_call(
+                _latest, operation=f"sandbox lookup by hash ({provider})"
+            )
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Sandbox lookup unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def find_instance_by_hash(self, hash_value: str) -> dict | None:
+        """Latest scan instance PolySwarm holds for a hash, read only.
+
+        Accepts an MD5, SHA-1 or SHA-256. Returns the instance JSON (``id``,
+        ``sha256``, ``community``, ``created`` ...), or None when PolySwarm
+        does not hold the sample. Only the hash is sent.
+        """
+
+        def _search() -> dict | None:
+            try:
+                instances = list(self.api.search(hash_value))
+            except (NoResultsException, NotFoundException):
+                return None
+            return instances[0].json if instances else None
+
+        try:
+            return self._retry_sdk_call(_search, operation="search by hash")
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Hash search unexpected error: {type(e).__name__}"
+            )
+            return None
+
+    def get_scan_by_hash(self, hash_value: str) -> tuple[str | None, dict | None]:
+        """Latest finished scan for a hash, read only: (instance id, scan JSON).
+
+        Returns (None, None) when PolySwarm holds no scan that has finished.
+        """
+        instance = self.find_instance_by_hash(hash_value)
+        if not instance or not instance.get("id"):
+            return None, None
+        scan = self.get_scan_results(str(instance["id"]))
+        return (str(instance["id"]), scan) if scan else (None, None)
+
+    def submit_sandbox_by_instance_async(
+        self,
+        instance_id: str,
+        provider: str,
+        vm_slug: str,
+        network: bool = True,
+    ) -> str | None:
+        """Detonate a sample PolySwarm already holds, by scan instance id.
+
+        Nothing is uploaded. This spends sandbox credits. Returns the sandbox
+        task ID or None.
+        """
+        try:
+            self.helper.connector_logger.info(
+                f"[POLYSWARM] Detonating held sample by instance "
+                f"(provider={provider}, vm={vm_slug}, network={network})"
+            )
+            task = self._retry_sdk_call(
+                self.api.sandbox,
+                instance_id,
+                provider,
+                vm_slug,
+                network,
+                operation=f"sandbox by hash ({provider})",
+            )
+            if task and task.id:
+                self.helper.connector_logger.info(
+                    f"[POLYSWARM] Sandbox started, task_id: {task.id}"
+                )
+                return task.id
+            return None
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[POLYSWARM] Sandbox by hash unexpected error: {type(e).__name__}"
             )
             return None
 
@@ -452,6 +722,8 @@ class PolySwarmClient:
                 if (result and (result.failed or result.window_closed))
                 else None
             )
+        except UsageLimitsExceededException as e:
+            raise self._quota_exhausted_error("scan poll") from e
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] Get scan results error: {str(e)}"
@@ -480,6 +752,8 @@ class PolySwarmClient:
                 if (task and self.is_sandbox_terminal(str(task.status)))
                 else None
             )
+        except UsageLimitsExceededException as e:
+            raise self._quota_exhausted_error("sandbox poll") from e
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] Get sandbox results error: {str(e)}"
@@ -566,6 +840,39 @@ class PolySwarmClient:
                 return slugs[0] if slugs else None
         return None
 
+    def get_url_vm_for_provider(
+        self, provider_slug: str, preferred: str | None = None
+    ) -> str | None:
+        """Pick a VM that accepts URL submissions for a provider.
+
+        Uses each VM's ``supported_artifact_types`` from the provider listing.
+        ``preferred`` is used when that VM accepts URLs, otherwise a Windows
+        VM that accepts URLs, otherwise the first VM that does. Returns None
+        when the provider lists VMs but none accepts URLs, or is not listed.
+        If the listing has no VM details (API unreachable), ``preferred`` or
+        the provider's known URL VM is returned and the API decides.
+        """
+        for p in self.get_available_providers():
+            if p["slug"] != provider_slug:
+                continue
+            vms = p.get("vms") or {}
+            if not isinstance(vms, dict) or not vms:
+                return preferred or self._URL_VM_FALLBACK.get(provider_slug)
+            url_vms = [
+                slug
+                for slug, vm in vms.items()
+                if isinstance(vm, dict)
+                and "URL"
+                in [str(t).upper() for t in (vm.get("supported_artifact_types") or [])]
+            ]
+            if preferred and preferred in url_vms:
+                return preferred
+            for slug in url_vms:
+                if "win" in slug.lower():
+                    return slug
+            return url_vms[0] if url_vms else None
+        return None
+
     def create_llm_report(
         self,
         instance_id: str | None = None,
@@ -622,6 +929,14 @@ class PolySwarmClient:
             )
             return report_task.id
 
+        except PolySwarmAPIError as e:
+            if e.is_quota_or_rate_limited:
+                raise
+            # A plan without LLM reports stays a soft skip
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] LLM report creation failed: {e.category}"
+            )
+            return None
         except (OSError, requests.RequestException, AttributeError) as e:
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] LLM report creation failed: {str(e)}"
@@ -705,6 +1020,41 @@ class PolySwarmClient:
         """Close the underlying requests session."""
         if self._session:
             self._session.close()
+
+    def download_sandbox_artifact_bytes(
+        self, sandbox_task_id: str, instance_id: str, max_bytes: int
+    ) -> tuple[str, bytes] | None:
+        """Download one sandbox artifact (for example a pcap) into memory.
+
+        Returns ``(file_name, data)``, or None when the download fails or the
+        file is larger than ``max_bytes``. Reads only; nothing is submitted.
+        """
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                # Called directly, not through the retry wrapper, so an error
+                # message that may carry a presigned URL is never logged.
+                art = self.api.download_sandbox_artifact(
+                    tmp, sandbox_task_id, instance_id
+                )
+                if not art:
+                    return None
+                names = os.listdir(tmp)
+                if len(names) != 1:
+                    return None
+                path = os.path.join(tmp, names[0])
+                if os.path.getsize(path) > max_bytes:
+                    self.helper.connector_logger.warning(
+                        "[POLYSWARM] Sandbox artifact larger than the configured "
+                        f"limit ({max_bytes} bytes), skipping"
+                    )
+                    return None
+                with open(path, "rb") as fh:
+                    return names[0], fh.read()
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] Sandbox artifact download failed: {type(e).__name__}"
+            )
+            return None
 
     def generate_pdf(self, task_id: str, report_type: str) -> bytes | None:
         """Generate a PDF report for scan or sandbox results.
@@ -805,6 +1155,13 @@ class PolySwarmClient:
 
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] PDF generation failed. State: {getattr(finished, 'state', 'Unknown')}"
+            )
+            return None
+        except PolySwarmAPIError as e:
+            if e.is_quota_or_rate_limited:
+                raise
+            self.helper.connector_logger.warning(
+                f"[POLYSWARM] PDF generation skipped: {e.category}"
             )
             return None
         except (OSError, requests.RequestException, AttributeError) as e:

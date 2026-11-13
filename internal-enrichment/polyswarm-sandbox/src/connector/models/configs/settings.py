@@ -34,6 +34,15 @@ class PolySwarmConfig(BaseConfigModel):
         default=ps_settings.DEFAULT_COMMUNITY,
         description="PolySwarm community (default or private).",
     )
+    allow_public_community: bool = Field(
+        default=False,
+        description=(
+            "Allow file uploads to the public PolySwarm community ('default'). "
+            "Uploaded files become visible to the PolySwarm community, so this is off "
+            "by default: set POLYSWARM_COMMUNITY to your private community, or set "
+            "this to true to submit publicly."
+        ),
+    )
     timeout: int = Field(
         default=ps_settings.DEFAULT_HTTP_TIMEOUT,
         description="HTTP timeout for PolySwarm API calls in seconds.",
@@ -79,6 +88,74 @@ class PolySwarmConfig(BaseConfigModel):
     sandbox_timeout: int = Field(
         default=600,
         description="Maximum wait time for sandbox results in seconds.",
+    )
+    sandbox_url_send_query: bool = Field(
+        default=False,
+        description=(
+            "Send a Url observable's query string and fragment to PolySwarm for "
+            "detonation. Off by default: only scheme, host and path are submitted, "
+            "so tokens in a query string never leave OpenCTI."
+        ),
+    )
+    sandbox_lookup_max_age_days: int = Field(
+        default=0,
+        ge=0,
+        description=(
+            "Hash lookup (StixFile observables) and report reuse (Artifacts): "
+            "an existing PolySwarm sandbox report older than this many days is "
+            "treated as missing. 0 means a report of any age is used."
+        ),
+    )
+    sandbox_reuse_report: bool = Field(
+        default=False,
+        description=(
+            "For an Artifact, look for an existing PolySwarm sandbox report by "
+            "SHA-256 before uploading. When every configured provider has a usable "
+            "report, it is used and the file is not uploaded again (the scan "
+            "result is also taken from the latest existing scan of the hash)."
+        ),
+    )
+    sandbox_detonate_by_hash: bool = Field(
+        default=False,
+        description=(
+            "For a StixFile observable with no usable existing report, detonate "
+            "the sample PolySwarm already holds for that hash. Nothing is uploaded "
+            "from OpenCTI, but each detonation spends sandbox credits and runs in "
+            "the community set in POLYSWARM_COMMUNITY. Off by default."
+        ),
+    )
+
+    sandbox_max_dropped_files: int = Field(
+        default=25,
+        ge=0,
+        description=(
+            "Maximum dropped files per detonation to create as File observables "
+            "related to the detonated observable (0 turns it off). Uses data "
+            "already in the sandbox report."
+        ),
+    )
+    sandbox_c2_indicators: bool = Field(
+        default=True,
+        description=(
+            "Create Indicators (valid 30 days) for command and control addresses "
+            "the sandbox report lists in an extracted malware configuration. "
+            "Observables are created either way; needs create_indicators."
+        ),
+    )
+    sandbox_attach_pcap: bool = Field(
+        default=False,
+        description=(
+            "Download the sandbox network capture (pcap) and attach it to the "
+            "observable. Off by default: it is an extra download per detonation."
+        ),
+    )
+    sandbox_pcap_max_size: int = Field(
+        default=26214400,
+        ge=1,
+        description=(
+            "Largest pcap in bytes to attach (default 25MB). Larger captures "
+            "are skipped."
+        ),
     )
 
     # Polling
@@ -133,6 +210,17 @@ class PolySwarmConfig(BaseConfigModel):
         description="Download file artifacts from OpenCTI for scanning.",
     )
 
+    # Account quota visibility (read-only)
+    quota_warn_below: int = Field(
+        default=100,
+        ge=0,
+        description=(
+            "Log a warning when the remaining daily API quota, or a sandbox or "
+            "hunt allowance, falls below this number (0 = no warnings). Accounts "
+            "with no cap are never warned."
+        ),
+    )
+
     # polykg (optional enrichment)
     polykg_api_url: str | None = Field(
         default=None,
@@ -147,9 +235,11 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     Only ``name`` and ``scope`` are overridden here; everything else
     (ID, confidence, log level) comes from env vars or SDK defaults.
 
-    Scope is ``Artifact`` only: the sandbox detonates an uploaded file,
-    so it needs the file attached to an Artifact. A StixFile observable
-    carrying just a hash has nothing to detonate.
+    Scope is ``Artifact``, ``StixFile`` and ``Url``: the sandbox detonates an
+    uploaded file (so it needs the file attached to an Artifact) or a URL. A
+    StixFile observable carrying just a hash has no file to upload, so it gets
+    the latest existing PolySwarm sandbox report for its hash (the lookup is read-only), and
+    is only detonated when POLYSWARM_SANDBOX_DETONATE_BY_HASH is true.
     """
 
     name: str = Field(
@@ -157,7 +247,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["Artifact"],
+        default=["Artifact", "StixFile", "Url"],
         description="The scope of the connector.",
     )
 

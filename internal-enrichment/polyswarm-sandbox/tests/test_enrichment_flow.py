@@ -117,6 +117,73 @@ class TestTlpCheck:
         assert result["status"] == "skipped"
         c.artifact_handler.download_artifact.assert_not_called()
 
+    @pytest.mark.parametrize("tlp, skipped", [("TLP:RED", True), ("TLP:GREEN", False)])
+    def test_tlp_check_without_stix_objects(self, tlp, skipped):
+        """An empty stix_objects list must not bypass the TLP limit (#8351)."""
+        c = make_connector()
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(None, "Download disabled")
+        )
+        result = c._enrich_file(ENTITY_ID, _entity(), _marked(tlp), [])
+        if skipped:
+            assert result["status"] == "skipped"
+            c.artifact_handler.download_artifact.assert_not_called()
+        else:
+            c.artifact_handler.download_artifact.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "marking",
+        [
+            {
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:AMBER+STRICT",
+            },
+            {"definition_type": "tlp", "definition": {"tlp": "red"}},
+            {"definition_type": "TLP", "definition": "TLP:RED"},
+            {"definition_type": "TLP", "definition": {"TLP": "red"}},
+            None,
+        ],
+    )
+    def test_bundled_tlp_marking_is_skipped(self, marking):
+        """Bundle-only TLP markings are resolved on the file path too."""
+        c = make_connector()
+        opencti_entity = _opencti_entity()
+        opencti_entity["standard_id"] = ENTITY_ID
+        entity = _entity()
+        stix_objects = [entity]
+        if marking is None:
+            # Well-known TLP:RED id with no definition object in the bundle
+            entity["object_marking_refs"] = [
+                "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+            ]
+        else:
+            marking = dict(
+                marking,
+                type="marking-definition",
+                id="marking-definition--00000000-0000-4000-8000-000000000002",
+            )
+            entity["object_marking_refs"] = [marking["id"]]
+            stix_objects.append(marking)
+        result = c._enrich_file(ENTITY_ID, entity, opencti_entity, stix_objects)
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
+    def test_stix_entity_refs_are_checked(self):
+        """The STIX entity's refs count even when the OpenCTI ids differ."""
+        c = make_connector()
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000003",
+            "name": "TLP:RED",
+        }
+        entity = _entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        opencti_entity = _opencti_entity()
+        opencti_entity["standard_id"] = "artifact--00000000-0000-0000-0000-0000000000ff"
+        result = c._enrich_file(ENTITY_ID, entity, opencti_entity, [marking])
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
     def test_skipped_artifact_forwards_original_bundle(self):
         """A TLP skip must still forward the bundle so playbooks do not stall."""
         c = make_connector()
@@ -365,3 +432,66 @@ class TestEnrichFileOrchestration:
             }
         )
         assert "not in scope" in result.lower()
+
+
+# ── Public community guard ──────────────────────────────────────────────────
+
+
+class TestPublicCommunityGuard:
+    """Uploads to the public community need POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true."""
+
+    @pytest.mark.parametrize(
+        "community",
+        ["default", "DEFAULT", " default ", "", "public", "Public", "mainnet1"],
+    )
+    def test_public_community_without_opt_in_is_refused(self, community):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": community,
+                "allow_public_community": False,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
+
+        result = c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        assert result["status"] == "error"
+        assert "public community" in result["error"]
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        c.stix_builder.create_error_note.assert_called()
+
+    def test_public_community_with_opt_in_is_uploaded(self):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": "default",
+                "allow_public_community": True,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value=None)
+
+        c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        c.polyswarm_client.submit_file_async.assert_called_once()
+
+    def test_private_community_is_uploaded_without_opt_in(self):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": "acme-private",
+                "allow_public_community": False,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value=None)
+
+        c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        c.polyswarm_client.submit_file_async.assert_called_once()
+
+    def test_opt_in_defaults_to_false(self):
+        from connector.models.configs.settings import PolySwarmConfig
+
+        assert PolySwarmConfig.model_fields["allow_public_community"].default is False
