@@ -1320,6 +1320,54 @@ class TestArtifactReuse:
         self._run_artifact(c)
         assert c._phase_submit.call_args.kwargs["existing"] == {"cape": str(task["id"])}
 
+    def test_public_community_without_scan_still_delivers_found_reports(self):
+        c = _connector(
+            latest={"cape": _task()},
+            sandbox_reuse_report=True,
+            community="default",
+            allow_public_community=False,
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(return_value=(None, None))
+        assert self._run_artifact(c) is None
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_public_community_without_scan_polls_running_task(self):
+        c = _connector(
+            latest={
+                "cape": _task(id="running-task", status="PENDING", created=_days_ago(0))
+            },
+            sandbox_reuse_report=True,
+            community="default",
+            allow_public_community=False,
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(return_value=(None, None))
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        assert self._run_artifact(c) is None
+        c.polyswarm_client.get_sandbox_results.assert_called_with("running-task")
+        c.artifact_handler.download_artifact.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_public_community_refusal_still_delivers_found_reports(self):
+        """found + missing: the upload is refused, the found report still lands."""
+        c = _connector(
+            latest={"cape": _task()},
+            sandbox_reuse_report=True,
+            sandbox_provider="both",
+            community="default",
+            allow_public_community=False,
+        )
+        c._send_error_note = MagicMock()
+        assert self._run_artifact(c) is None
+        c.artifact_handler.download_artifact.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Upload Refused: Public Community"
+        ]
+
     def test_phase_submit_skips_existing_providers(self):
         c = _connector(sandbox_provider="both")
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")

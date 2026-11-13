@@ -417,7 +417,29 @@ class HashLookupMixin:
 
         existing = {p: str(t.get("id")) for p, t in found.items()}
         existing.update(running)
+        upload_allowed = self._upload_community_allowed()
         if missing:
+            if existing and not upload_allowed:
+                # The upload for the missing providers is refused: still
+                # deliver what exists, with the refusal note.
+                self._refuse_public_upload(entity)
+                scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
+                if not scan_res or scan_res.get("failed"):
+                    scan_id, scan_res = None, None
+                return (
+                    True,
+                    self._deliver_existing(
+                        entity,
+                        found,
+                        running,
+                        lookup_hash,
+                        filename,
+                        stix_objects,
+                        scan_id,
+                        scan_res,
+                    ),
+                    {},
+                )
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No usable report for {missing}, "
                 "uploading"
@@ -425,6 +447,21 @@ class HashLookupMixin:
             return False, None, existing
 
         scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
+        if (not scan_res or scan_res.get("failed")) and not upload_allowed:
+            # Only the scan is missing, and uploading to scan is refused in
+            # the public community: deliver the sandbox reports without it.
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash and "
+                "uploads are refused in the public community, delivering the "
+                "existing sandbox reports without a scan"
+            )
+            return (
+                True,
+                self._deliver_existing(
+                    entity, found, running, lookup_hash, filename, stix_objects
+                ),
+                {},
+            )
         if not scan_res or scan_res.get("failed"):
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash, "
