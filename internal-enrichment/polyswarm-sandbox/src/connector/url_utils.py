@@ -10,9 +10,11 @@ copied here because the two connectors are separate packages:
 - Hosts are normalised (NFKC, then IDNA) before they are classified, so
   full-width and other Unicode spellings of an address or name are caught.
   A host that is still percent-encoded or not plain ASCII afterwards, or
-  that has characters outside the normal host set, is never sent. A
-  backslash is read as a path separator, as browsers do, so
-  ``http://127.0.0.1\\example.com/`` is classified by ``127.0.0.1``.
+  that has characters outside the normal host set, is never sent.
+- URLs with a backslash in the authority (before the first "/") are never
+  sent: browsers read it as a path separator and other parsers do not, so
+  the host is ambiguous (``http://127.0.0.1\\example.com/``,
+  ``http://example.com\\@10.0.0.1/``).
 - Names are not DNS-resolved here: the sandbox resolves them on PolySwarm's
   network, so the checks cover literal addresses and internal names.
 - URLs with a username or password (userinfo) are never sent.
@@ -145,13 +147,16 @@ def _is_non_public_host(host: str) -> bool:
 
 
 def _parse_url(value: str):
-    """urlparse that also accepts a scheme-less URL (example.com/path).
-
-    A backslash is read as "/", as browsers do for http and https, so the
-    host is the one the sandbox browser would connect to.
-    """
-    value = value.replace("\\", "/")
+    """urlparse that also accepts a scheme-less URL (example.com/path)."""
     return urlparse(value if "://" in value else f"//{value}")
+
+
+def _raw_authority(value: str) -> str:
+    """The raw authority of a URL: after "://" up to the first "/", "?" or "#"."""
+    rest = value.strip()
+    if "://" in rest:
+        rest = rest.split("://", 1)[1]
+    return re.split(r"[/?#]", rest, maxsplit=1)[0]
 
 
 def url_has_userinfo(value: str) -> bool:
@@ -165,6 +170,9 @@ def url_has_userinfo(value: str) -> bool:
 
 def is_non_public_url(value: str) -> bool:
     """True when a URL's host must not be sent to PolySwarm (or has no host)."""
+    if "\\" in _raw_authority(value):
+        # Browsers and other parsers disagree on the host
+        return True
     try:
         hostname = _parse_url(value).hostname
     except ValueError:

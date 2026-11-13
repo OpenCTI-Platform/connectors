@@ -127,7 +127,8 @@ class TestUrlRules:
             "http://wiki.c\uff4frp/",
             "http://\uff57\uff49\uff4b\uff49.\uff43\uff4f\uff52\uff50/",
             "http://localho\uff53t/",
-            # Backslash read as a path separator (review thread 4528424208)
+            # Backslash in the authority (review thread 4528424208)
+            "http://example.com\\@10.0.0.1/",
             "http://127.0.0.1\\example.com/",
             "http://localhost\\evil.com/",
             "http://10.0.0.1\\",
@@ -168,6 +169,8 @@ class TestUrlRules:
         "url",
         [
             "http://user:pass@example.com/",
+            "http://example.com\\@10.0.0.1/",
+            "http://example.com\\x@10.0.0.1/",
             "http://user@example.com/",
             "http://:pw@example.com/",
             "user:pass@example.com/path",
@@ -226,6 +229,10 @@ class TestUrlRefusals:
             (
                 "http://127.0.0.1\\example.com/?token=SECRET123",
                 "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://example.com\\@10.0.0.1/?token=SECRET123",
+                "Submission Refused: URL Contains Credentials",
             ),
             ("", "No URL Value"),
         ],
