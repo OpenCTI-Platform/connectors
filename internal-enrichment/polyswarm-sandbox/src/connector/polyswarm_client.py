@@ -8,6 +8,7 @@ and proper resource management.
 import io
 import logging
 import os
+import re
 import tempfile
 import threading
 import time
@@ -172,6 +173,38 @@ _HTTP_ERROR_MAP = {
         ],
     ),
 }
+
+
+# A status code stated as such in an error message ("HTTP 403",
+# "Return code: 402"), used only when the exception carries no status code.
+_STATUS_IN_MESSAGE = re.compile(
+    r"(?:\bHTTP|\bReturn code:|\bstatus code:?)\s*(\d{3})\b", re.IGNORECASE
+)
+
+
+def _status_code_of(error: Exception) -> int | None:
+    """HTTP status code of an SDK or requests error, or None when unknown.
+
+    The status code carried by the exception (the SDK's ``request`` or a
+    requests ``response``) wins. Only when there is none is the message
+    read, and then only for a code stated as a status, never for any digits:
+    SDK messages include the request parameters (hashes, names), which can
+    contain "401" or "429" by chance.
+    """
+    for holder in (getattr(error, "request", None), getattr(error, "response", None)):
+        code = getattr(holder, "status_code", None)
+        if isinstance(code, int) and not isinstance(code, bool):
+            return code
+    text = str(error)
+    match = _STATUS_IN_MESSAGE.search(text)
+    if match:
+        return int(match.group(1))
+    lowered = text.lower()
+    if "unauthorized" in lowered:
+        return 401
+    if "forbidden" in lowered:
+        return 403
+    return None
 
 
 class PolySwarmClient:
@@ -348,20 +381,18 @@ class PolySwarmClient:
                 # Retrying will not help, and the SDK message is not echoed here.
                 raise self._quota_exhausted_error(operation) from e
             except Exception as e:
-                # Some SDK wrappers stringify status codes instead of raising HTTPError;
-                # scan the message for known codes so we can still surface actionable errors.
-                err_str = str(e).lower()
-                for code, (category, detail, recs) in _HTTP_ERROR_MAP.items():
-                    if (
-                        str(code) in err_str
-                        or (code == 403 and "forbidden" in err_str)
-                        or (code == 401 and "unauthorized" in err_str)
-                    ):
-                        raise PolySwarmAPIError(
-                            category=f"{category} ({operation})",
-                            detail=f"{detail} (during {operation}: {e})",
-                            recommendations=recs,
-                        ) from e
+                # The SDK raises its own exceptions (not HTTPError) for a bad
+                # status. Classify from the real status code, never from digits
+                # that happen to appear in the message (it carries the request
+                # parameters, so a hash can contain "401" or "429").
+                code = _status_code_of(e)
+                if code in _HTTP_ERROR_MAP:
+                    category, detail, recs = _HTTP_ERROR_MAP[code]
+                    raise PolySwarmAPIError(
+                        category=f"{category} ({operation})",
+                        detail=f"{detail} (during {operation}: {e})",
+                        recommendations=recs,
+                    ) from e
                 # Non-retryable error
                 self.helper.connector_logger.error(
                     f"[POLYSWARM] {operation} non-retryable error: {type(e).__name__}: {e}"

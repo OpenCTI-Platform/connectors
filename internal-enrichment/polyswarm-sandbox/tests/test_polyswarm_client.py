@@ -200,6 +200,78 @@ class TestHTTPErrorMapping:
             client._retry_sdk_call(func, operation="test")
         assert "Rate Limit" in exc_info.value.category
 
+    # SHA-256 values that contain "401", "402", "403" and "429"
+    _HASHES = [
+        "401" + "a" * 61,
+        "b" * 30 + "402" + "c" * 31,
+        "d" * 61 + "403",
+        "e" * 10 + "429" + "f" * 51,
+    ]
+
+    @pytest.mark.parametrize("sha256", _HASHES)
+    def test_sdk_5xx_with_code_digits_in_params_is_not_actionable(self, client, sha256):
+        """The SDK message carries the request parameters; a hash that
+        contains "401" must not turn a 503 into an authentication error."""
+        from polyswarm_api import exceptions as ps_exceptions
+
+        message = (
+            "Error when running the request:\n"
+            f'{{"params": {{"sha256": "{sha256}"}}}}\n'
+            "Return code: 503\nMessage: unavailable"
+        )
+        func = MagicMock(
+            side_effect=ps_exceptions.RequestException(
+                MagicMock(status_code=503), message
+            )
+        )
+        assert client._retry_sdk_call(func, operation="test") is None
+
+    @pytest.mark.parametrize(
+        "status_code,category",
+        [
+            (401, "API Authentication Failed"),
+            (402, "API Quota Exceeded"),
+            (403, "API Access Denied"),
+        ],
+    )
+    def test_sdk_error_classified_from_status_code(self, client, status_code, category):
+        from polyswarm_api import exceptions as ps_exceptions
+
+        # The message names another code: the request's status code wins
+        func = MagicMock(
+            side_effect=ps_exceptions.RequestException(
+                MagicMock(status_code=status_code),
+                '{"sha256": "429401403"} Return code: %d' % status_code,
+            )
+        )
+        with pytest.raises(PolySwarmAPIError) as exc_info:
+            client._retry_sdk_call(func, operation="test")
+        assert exc_info.value.category.startswith(category)
+
+    @pytest.mark.parametrize(
+        "message,category",
+        [
+            ("URL sandbox submission RequestException: HTTP 403", "API Access Denied"),
+            ("Return code: 402", "API Quota Exceeded"),
+            ("401 Unauthorized", "API Authentication Failed"),
+            ("Forbidden", "API Access Denied"),
+        ],
+    )
+    def test_message_status_used_only_without_status_code(
+        self, client, message, category
+    ):
+        func = MagicMock(side_effect=Exception(message))
+        with pytest.raises(PolySwarmAPIError) as exc_info:
+            client._retry_sdk_call(func, operation="test")
+        assert exc_info.value.category.startswith(category)
+
+    @pytest.mark.parametrize(
+        "message", ["sha256 401aaaa failed", "task 4290001 not ready", "boom 403"]
+    )
+    def test_bare_digits_in_message_are_not_a_status(self, client, message):
+        func = MagicMock(side_effect=Exception(message))
+        assert client._retry_sdk_call(func, operation="test") is None
+
     def test_non_actionable_http_error_retries(self, client):
         resp = MagicMock()
         resp.status_code = 500
