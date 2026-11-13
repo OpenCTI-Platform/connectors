@@ -430,12 +430,47 @@ def test_hunting_gets_the_budget_left_after_the_feed(fake_logger, hunting_source
     one_page = _objects_in_one_sample_page(type(fake_logger)())
     pages = {"trustgroup": [page(make_sample_bundle(1), last="T1")]}
     connector, _, _ = build(
-        fake_logger, pages, hunting_enabled=True, max_objects_per_run=one_page + 50
+        fake_logger, pages, hunting_enabled=True, max_objects_per_run=one_page + 100
     )
 
     connector.process_message()
 
-    assert hunting_source.instances[0].received_max_objects == 50
+    assert hunting_source.instances[0].received_max_objects == 100
+
+
+@pytest.mark.parametrize(
+    "max_objects, floor",
+    [(1, 1), (5, 5), (60, 60), (100, 60), (600, 60), (601, 61), (20000, 2000)],
+)
+def test_hunting_minimum_budget(max_objects, floor):
+    assert connector_module.hunting_minimum_budget(max_objects) == floor
+
+
+def test_hunting_waits_when_the_feed_leaves_less_than_the_minimum(
+    fake_logger, hunting_source
+):
+    hunting_source.result = (
+        [{"type": "indicator", "id": "indicator--1"}],
+        {"since": "S2"},
+    )
+    stored = {"hunting": {"since": "S1"}}
+    one_page = _objects_in_one_sample_page(type(fake_logger)())
+    pages = {"trustgroup": [page(make_sample_bundle(1), last="T1")]}
+    connector, helper, _ = build(
+        fake_logger,
+        pages,
+        stored_state=stored,
+        hunting_enabled=True,
+        max_objects_per_run=one_page + 59,
+    )
+
+    connector.process_message()
+
+    # 59 objects left is below the 60 object minimum: hunting waits and its
+    # checkpoint does not move, so nothing in its window is dropped.
+    assert hunting_source.instances == []
+    assert helper.stored_state["hunting"] == {"since": "S1"}
+    assert any("live hunting" in m for m in fake_logger.messages("info"))
 
 
 def test_hunting_waits_when_the_feed_used_the_whole_budget(fake_logger, hunting_source):

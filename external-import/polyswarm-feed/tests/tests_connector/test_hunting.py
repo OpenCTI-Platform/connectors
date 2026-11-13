@@ -638,11 +638,11 @@ def test_object_budget_stops_reading_advances_and_warns():
     previous = NOW - timedelta(hours=1)
     client = FakeClient(_distinct_hits(10))
     source, _, logger = make_source(client=client)
-    # Each new file with a new rule can produce up to six objects.
-    objects, state = source.collect({"last_run": previous.isoformat()}, max_objects=12)
+    # A new file with a new rule and no family name produces four objects.
+    objects, state = source.collect({"last_run": previous.isoformat()}, max_objects=8)
 
     assert len(by_type(objects, "file")) == 2
-    assert len(objects) <= 12
+    assert len(objects) <= 8
     assert state["seen_hit_ids"] == ["10", "9"]
     assert state["last_run"] == NOW.isoformat()
     # Reading stopped at the first hit over the budget, not at the end.
@@ -650,6 +650,25 @@ def test_object_budget_stops_reading_advances_and_warns():
     (warning,) = [m for level, _, m in logger.messages if level == "warning"]
     assert warning["reason"] == "object budget"
     assert warning["hits_imported"] == 2
+
+
+def test_budget_estimate_is_four_objects_per_hit_without_a_family():
+    source, _, _ = make_source(_distinct_hits(10))
+    objects, _ = source.collect({}, max_objects=9)
+    # 0, 4 and 8 are below 9, so three hits fit; at 12 reading stops.
+    assert len(by_type(objects, "file")) == 3
+    assert len(objects) == 12
+
+
+def test_budget_estimate_is_six_objects_per_hit_with_a_real_family():
+    hits = _distinct_hits(10)
+    for hit in hits:
+        hit["malware_family"] = "Emotet"
+    source, _, _ = make_source(hits)
+    objects, _ = source.collect({}, max_objects=9)
+    # 0 and 6 are below 9, so two hits fit; at 12 reading stops.
+    assert len(by_type(objects, "file")) == 2
+    assert len(objects) <= 12
 
 
 class TimedClient:
@@ -721,7 +740,7 @@ def test_backlog_beyond_seen_ids_limit_never_resends(max_objects):
 
     all_sent = [h for run in sent_per_run for h in run]
     assert len(all_sent) == len(set(all_sent))
-    expected_first = count if max_objects is None else max_objects // 6
+    expected_first = count if max_objects is None else max_objects // 4
     assert len(sent_per_run[0]) == expected_first
     # The next windows only overlap the newest hits, which are remembered.
     assert sent_per_run[1:] == [[], []]
@@ -739,7 +758,7 @@ def test_hits_without_an_id_are_not_resent_once_the_window_moves():
     source, _, _ = make_source(client=client)
     runs = [NOW, NOW + timedelta(hours=1), NOW + timedelta(hours=2)]
 
-    sent_per_run, state = _run_series(client, source, runs, max_objects=6)
+    sent_per_run, state = _run_series(client, source, runs, max_objects=4)
 
     # Without an id a hit cannot be remembered, but the checkpoint moves on,
     # so it is not read (or sent) again once it is out of the window.

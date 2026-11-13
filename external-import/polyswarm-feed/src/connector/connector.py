@@ -18,6 +18,7 @@ does not discard the other's progress.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
@@ -62,6 +63,24 @@ def build_author() -> dict[str, Any]:
 def build_tlp_marking(level: str) -> dict[str, Any]:
     """The TLP marking definition for a TLP level, as a STIX dict."""
     return json.loads(TLPMarking(level=level).to_stix2_object().serialize())
+
+
+# Live hunting only runs when the feed leaves at least this many objects of
+# the run cap: 60 (ten hits at the worst case of six objects each) or a
+# tenth of the cap, whichever is larger, and never more than the cap itself.
+# A smaller leftover would read only a few hits and then move the hunting
+# checkpoint past the rest of the window, so hunting waits instead.
+HUNTING_MIN_BUDGET_OBJECTS = 60
+HUNTING_MIN_BUDGET_SHARE = 0.10
+
+
+def hunting_minimum_budget(max_objects_per_run: int) -> int:
+    """The smallest leftover of the run cap that live hunting runs with."""
+    floor = max(
+        HUNTING_MIN_BUDGET_OBJECTS,
+        math.ceil(max_objects_per_run * HUNTING_MIN_BUDGET_SHARE),
+    )
+    return min(max_objects_per_run, floor)
 
 
 def _format_timestamp(value: datetime) -> str:
@@ -206,11 +225,16 @@ class PolySwarmFeedConnector:
 
         hunting_sent = 0
         hunting_budget = max_objects - self._feed_sent
-        if polyswarm.hunting_enabled and hunting_budget <= 0:
+        hunting_floor = hunting_minimum_budget(max_objects)
+        if polyswarm.hunting_enabled and hunting_budget < hunting_floor:
             self.logger.info(
-                "Maximum objects per run reached by the feed, live hunting "
-                "resumes on the next run",
-                {"max_objects_per_run": max_objects},
+                "The feed left too little of the maximum objects per run, live "
+                "hunting waits for the next run and keeps its position",
+                {
+                    "max_objects_per_run": max_objects,
+                    "objects_left": max(0, hunting_budget),
+                    "hunting_minimum": hunting_floor,
+                },
             )
         elif polyswarm.hunting_enabled:
             try:

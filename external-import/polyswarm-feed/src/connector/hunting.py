@@ -46,12 +46,14 @@ LAG_MARGIN_SECONDS = 10 * 60
 MAX_SINCE_SECONDS = 30 * 24 * 60 * 60
 # How many recent hit ids are remembered for deduplication.
 SEEN_IDS_LIMIT = 5000
-# Upper bound on the objects one hit can add: a File, an Indicator and a
-# based-on relationship for a new file, then a Note, a Malware and an
-# indicates relationship for a new (rule, file) pair. Used to stay within
-# the run's object budget before the hits are mapped.
+# Upper bound on the objects one hit can add, used to stay within the run's
+# object budget before the hits are mapped: a File, an Indicator and a
+# based-on relationship for a new file, a Note for a new (rule, file) pair,
+# and a Malware and an indicates relationship when the pair first carries a
+# real family name. So 4 objects for a hit without a family, 6 with one.
 MAX_OBJECTS_PER_NEW_FILE = 3
-MAX_OBJECTS_PER_NEW_RULE_AND_FILE = 3
+MAX_OBJECTS_PER_NEW_RULE_AND_FILE = 1
+MAX_OBJECTS_PER_FAMILY = 2
 # Target size of one bundle of hunting objects. Objects of one file are never
 # split across bundles, so a bundle can be somewhat larger.
 BUNDLE_OBJECTS = 1000
@@ -272,6 +274,7 @@ class HuntingSource:
         new_ids: list[str] = []
         new_files: set[str] = set()
         new_pairs: set[tuple[str, str]] = set()
+        pairs_with_family: set[tuple[str, str]] = set()
         estimated_objects = 0
         stopped_by_budget = False
         hits_returned = 0
@@ -307,6 +310,11 @@ class HuntingSource:
             if (sha256, rule) not in new_pairs:
                 new_pairs.add((sha256, rule))
                 estimated_objects += MAX_OBJECTS_PER_NEW_RULE_AND_FILE
+            if (sha256, rule) not in pairs_with_family and is_malware_family_name(
+                _clean_text(hit.get("malware_family"), MAX_FAMILY_NAME_LENGTH)
+            ):
+                pairs_with_family.add((sha256, rule))
+                estimated_objects += MAX_OBJECTS_PER_FAMILY
             if key is not None:
                 seen.add(key)
                 new_ids.append(key)
