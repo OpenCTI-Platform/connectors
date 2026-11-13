@@ -166,6 +166,7 @@ class YaraHunter:
         self.max_results = max_results
         self._sleep = sleep
         self._clock = clock
+        self.lookup_failed = False
 
     # ------------------------------------------------------------------ state
     def _load_state(self) -> dict:
@@ -239,8 +240,12 @@ class YaraHunter:
         """A hunt already made for this rule: running, or finished and usable.
 
         Looked up in the saved state first, then in the account's hunts. A hunt
-        that failed or was cancelled is not reused.
+        that failed or was cancelled is not reused. Sets self.lookup_failed when
+        the saved hunt and the account listing could both not be read, so the
+        caller can tell "none found" from "could not check".
         """
+        self.lookup_failed = False
+        remembered_failed = False
         digest = rule_digest(rule)
         remembered = self._load_state().get(digest)
         if remembered:
@@ -251,6 +256,10 @@ class YaraHunter:
                 ).upper() not in FAILURE_STATUSES and not self._is_stale(hunt, outcome):
                     return hunt
             except Exception as err:
+                # NoResultsException means the hunt is gone, not a failed read
+                remembered_failed = not isinstance(
+                    err, polyswarm_exceptions.NoResultsException
+                )
                 self.helper.connector_logger.warning(
                     f"[YARA] Could not look up remembered hunt: {short_error(err)}"
                 )
@@ -265,6 +274,7 @@ class YaraHunter:
         except polyswarm_exceptions.NoResultsException:
             pass
         except Exception as err:
+            self.lookup_failed = remembered_failed
             self.helper.connector_logger.warning(
                 f"[YARA] Could not list existing hunts: {short_error(err)}"
             )
@@ -304,6 +314,17 @@ class YaraHunter:
                 "[YARA] A hunt for this rule already exists, reusing it",
                 {"hunt_id": str(hunt.id)},
             )
+        elif self.lookup_failed:
+            # The saved hunt may still be running: never pay for a second one
+            # (or overwrite its saved id) because PolySwarm could not be read
+            outcome.replaced_hunt_id = None
+            outcome.replaced_window_days = None
+            outcome.failed = True
+            outcome.error = (
+                "Could not check PolySwarm for an existing hunt for this rule, "
+                "so no new hunt was started. Enrich this Indicator again later."
+            )
+            return outcome
         else:
             try:
                 hunt = self._create_hunt(rule)

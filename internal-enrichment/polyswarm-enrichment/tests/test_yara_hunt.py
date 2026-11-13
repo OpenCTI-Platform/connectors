@@ -455,6 +455,55 @@ class TestNoSecondHunt:
         since = api.historical_list.call_args.kwargs["since"]
         assert since >= 181 * 86400
 
+    def test_failed_lookups_do_not_start_a_hunt_or_overwrite_state(self):
+        helper = FakeHelper()
+        saved = {rule_digest(RULE): {"hunt_id": "55", "started": "x"}}
+        helper.state = {yara_hunt.STATE_KEY: dict(saved)}
+        api = _api()
+        api.historical_get.side_effect = ConnectionError("read timed out")
+        api.historical_list.side_effect = ConnectionError("read timed out")
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt") as create:
+            outcome = hunter.run(RULE)
+        create.assert_not_called()
+        assert outcome.failed and not outcome.reused and outcome.hunt_id is None
+        assert helper.state[yara_hunt.STATE_KEY] == saved
+        content = build_note(INDICATOR, RULE, outcome, "identity--x")["content"]
+        assert "Could not check PolySwarm for an existing hunt" in content
+        assert "Enrich this Indicator again later" in content
+
+    def test_failed_listing_with_deleted_saved_hunt_starts_a_hunt(self):
+        helper = FakeHelper()
+        helper.state = {yara_hunt.STATE_KEY: {rule_digest(RULE): {"hunt_id": "55"}}}
+        api = _api()
+        api.historical_get.side_effect = [
+            polyswarm_exceptions.NoResultsException("gone"),
+            _hunt("9", "COMPLETED", 0),
+        ]
+        api.historical_list.side_effect = ConnectionError("read timed out")
+        api.historical_results.return_value = iter([])
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt", return_value=_hunt("9")) as create:
+            outcome = hunter.run(RULE)
+        create.assert_called_once()
+        assert outcome.hunt_id == "9" and not outcome.failed
+
+    def test_failed_saved_read_with_empty_listing_starts_a_hunt(self):
+        helper = FakeHelper()
+        helper.state = {yara_hunt.STATE_KEY: {rule_digest(RULE): {"hunt_id": "55"}}}
+        api = _api()
+        api.historical_get.side_effect = [
+            ConnectionError("read timed out"),
+            _hunt("9", "COMPLETED", 0),
+        ]
+        api.historical_list.side_effect = polyswarm_exceptions.NoResultsException("x")
+        api.historical_results.return_value = iter([])
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt", return_value=_hunt("9")) as create:
+            outcome = hunter.run(RULE)
+        create.assert_called_once()
+        assert outcome.hunt_id == "9" and not outcome.failed
+
     def test_running_hunt_on_the_account_is_followed(self):
         api = _api()
         name = YaraHunter.hunt_name(RULE)
