@@ -533,7 +533,11 @@ class PolySwarmConnector(HashLookupMixin):
             )
 
     def _submit_sandboxes(
-        self, file_data: bytes, filename: str, password: str | None = None
+        self,
+        file_data: bytes,
+        filename: str,
+        password: str | None = None,
+        skip: set[str] | None = None,
     ) -> tuple[dict[str, str], dict[str, PolySwarmAPIError]]:
         """Submit file to all configured sandbox providers.
 
@@ -544,7 +548,7 @@ class PolySwarmConnector(HashLookupMixin):
         """
         sandbox_tasks: dict[str, str] = {}
         errors: dict[str, PolySwarmAPIError] = {}
-        providers = self._get_sandbox_providers()
+        providers = [p for p in self._get_sandbox_providers() if p not in (skip or ())]
 
         self.helper.connector_logger.info(
             f"[CONNECTOR] Submitting to sandbox provider(s): {providers}"
@@ -985,13 +989,19 @@ class PolySwarmConnector(HashLookupMixin):
         filename: str,
         mime_type: str | None,
         password: str | None,
+        existing: dict[str, str] | None = None,
     ) -> tuple[str, dict[str, str]]:
         """Submit file for scanning and optionally sandbox analysis.
+
+        ``existing`` maps provider to the task id of a report that already
+        exists or a task still running: those providers are not detonated
+        again, their task is returned with the new ones to be polled.
 
         Returns:
             (scan_id, sandbox_tasks) where sandbox_tasks maps provider→task_id.
             Raises ValueError if scan submission fails.
         """
+        existing = existing or {}
         scan_id = self.polyswarm_client.submit_file_async(
             file_data, filename, mime_type, "default", password
         )
@@ -1018,8 +1028,14 @@ class PolySwarmConnector(HashLookupMixin):
         sandbox_tasks: dict[str, str] = {}
         if self.config.polyswarm.sandbox_enabled:
             sandbox_tasks, errors = self._submit_sandboxes(
-                file_data, filename, password
+                file_data, filename, password, skip=set(existing)
             )
+            if existing:
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] {self._enrich_ctx} Reusing existing sandbox "
+                    f"task(s) for {list(existing)}"
+                )
+            sandbox_tasks = {**existing, **sandbox_tasks}
             if errors:
                 # The scan is already submitted, so nothing is raised here: the
                 # API error (quota ...) gets its own note and the enrichment
@@ -1551,10 +1567,11 @@ class PolySwarmConnector(HashLookupMixin):
                 or lookup_hash
                 or "sample"
             )
-            if self._try_reuse_existing_reports(
+            handled, reuse_result, existing_tasks = self._try_reuse_existing_reports(
                 entity, lookup_hash, reuse_name, stix_objects
-            ):
-                return None
+            )
+            if handled:
+                return reuse_result
 
             # ── PUBLIC COMMUNITY GUARD: refuse to upload publicly unless allowed
             if not self._upload_community_allowed():
@@ -1596,7 +1613,12 @@ class PolySwarmConnector(HashLookupMixin):
                 }
             try:
                 scan_id, sandbox_tasks = self._phase_submit(
-                    entity, file_data, filename, mime_type, password
+                    entity,
+                    file_data,
+                    filename,
+                    mime_type,
+                    password,
+                    existing=existing_tasks,
                 )
             except ValueError as e:
                 return {"status": "error", "error": str(e)}

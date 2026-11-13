@@ -225,20 +225,89 @@ class HashLookupMixin:
 
     # -- Artifact: reuse an existing report instead of uploading again
 
+    def _send_lookup_failed_note(self, entity: dict[str, Any], failed: list[str]):
+        """Error note for providers whose report lookup failed."""
+        self._send_error_note(
+            entity,
+            "Sandbox Lookup Failed",
+            "The lookup of the existing sandbox report failed for "
+            f"provider(s): {', '.join(failed)}. It is not known whether a "
+            "report exists, so nothing was detonated for them.",
+            [
+                "Retry the enrichment in a few minutes.",
+                "Check the connector logs for the PolySwarm API error.",
+            ],
+        )
+
+    def _deliver_existing(
+        self,
+        entity: dict[str, Any],
+        found: dict[str, dict],
+        running: dict[str, str],
+        lookup_hash: str,
+        filename: str,
+        stix_objects: list,
+        scan_id: str | None = None,
+        scan_res: dict | None = None,
+    ) -> dict | None:
+        """Deliver reports that exist, waiting for the tasks still running.
+
+        Nothing is submitted. Returns None on success, or an error result
+        when no report could be delivered.
+        """
+        ps = self.config.polyswarm
+        results: dict[str, dict | None] = dict(found)
+        tasks = {p: str(t.get("id")) for p, t in found.items()}
+        llm_task_ids = self._fire_llm_for_existing(found, scan_id, scan_res)
+        if running:
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] {self._enrich_ctx} Sandbox task already running for "
+                f"{list(running)}, waiting for it"
+            )
+            polled = self._phase_poll_sandboxes(
+                entity, running, ps.poll_interval, ps.sandbox_timeout, llm_task_ids
+            )
+            results.update({p: r for p, r in polled.items() if r})
+            tasks.update(running)
+        if not results and not scan_res:
+            return {
+                "status": "error",
+                "error": "No existing sandbox report could be delivered",
+            }
+        self._deliver_reports(
+            entity,
+            results,
+            tasks,
+            lookup_hash,
+            filename,
+            stix_objects,
+            scan_id=scan_id,
+            scan_res=scan_res,
+            llm_task_ids=llm_task_ids,
+        )
+        return None
+
     def _try_reuse_existing_reports(
         self,
         entity: dict[str, Any],
         lookup_hash: str | None,
         filename: str,
         stix_objects: list,
-    ) -> bool:
-        """Use existing reports for an Artifact when every provider has one.
+    ) -> tuple[bool, dict | None, dict[str, str]]:
+        """Use existing reports for an Artifact instead of uploading again.
 
-        Returns True when the enrichment was completed from existing reports
-        and an existing finished scan (nothing was uploaded). Returns False to let the normal upload path
-        run: reuse is off, the sandbox is off, the Artifact has no SHA-256,
-        at least one provider has no usable report, or there is no finished
-        scan of the hash.
+        Returns (handled, result, existing):
+        - handled True: the enrichment is finished, ``result`` is its
+          result (None on success). Nothing was uploaded.
+        - handled False: run the upload. ``existing`` maps provider to the
+          task id of a report that exists or a task still running; those
+          providers must not be detonated again, only polled.
+
+        Never uploads or detonates when a lookup failed: it is not known
+        whether a report (or a paid task in progress) exists. Never starts a
+        second detonation for a task still running. When every provider has
+        a report or a running task but no finished scan of the hash exists,
+        the upload only scans the file.
         """
         ps = self.config.polyswarm
         if (
@@ -246,7 +315,7 @@ class HashLookupMixin:
             or ps.sandbox_enabled is not True
             or not lookup_hash
         ):
-            return False
+            return False, None, {}
         try:
             providers = self._get_sandbox_providers()
             found, missing, failed, running = self._lookup_reports(
@@ -262,38 +331,72 @@ class HashLookupMixin:
                 f"[CONNECTOR] {self._enrich_ctx} Report lookup failed, uploading "
                 f"instead: {e.category}"
             )
-            return False
-        unusable = missing + failed + list(running)
-        if unusable or not found:
-            self.helper.connector_logger.info(
-                f"[CONNECTOR] {self._enrich_ctx} No usable report for "
-                f"{unusable or providers}, uploading"
+            return False, None, {}
+
+        if failed:
+            self._send_lookup_failed_note(entity, failed)
+            if not found and not running:
+                return (
+                    True,
+                    {
+                        "status": "error",
+                        "error": "Sandbox report lookup failed for "
+                        f"{', '.join(failed)}, nothing was uploaded",
+                    },
+                    {},
+                )
+            scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
+            if not scan_res or scan_res.get("failed"):
+                scan_id, scan_res = None, None
+            return (
+                True,
+                self._deliver_existing(
+                    entity,
+                    found,
+                    running,
+                    lookup_hash,
+                    filename,
+                    stix_objects,
+                    scan_id,
+                    scan_res,
+                ),
+                {},
             )
-            return False
+
+        existing = {p: str(t.get("id")) for p, t in found.items()}
+        existing.update(running)
+        if missing:
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] {self._enrich_ctx} No usable report for {missing}, "
+                "uploading"
+            )
+            return False, None, existing
 
         scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
         if not scan_res or scan_res.get("failed"):
             self.helper.connector_logger.info(
-                f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash, uploading"
+                f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash, "
+                "uploading to scan only (existing sandbox tasks are reused)"
             )
-            return False
+            return False, None, existing
         self.helper.connector_logger.info(
             f"[CONNECTOR] {self._enrich_ctx} Existing report and scan found for "
-            f"{list(found)}, not uploading again"
+            f"{list(existing)}, not uploading again"
         )
-        llm_task_ids = self._fire_llm_for_existing(found, scan_id, scan_res)
-        self._deliver_reports(
-            entity,
-            dict(found),
-            {p: str(t.get("id")) for p, t in found.items()},
-            lookup_hash,
-            filename,
-            stix_objects,
-            scan_id=scan_id,
-            scan_res=scan_res,
-            llm_task_ids=llm_task_ids,
+        return (
+            True,
+            self._deliver_existing(
+                entity,
+                found,
+                running,
+                lookup_hash,
+                filename,
+                stix_objects,
+                scan_id,
+                scan_res,
+            ),
+            {},
         )
-        return True
 
     # -- StixFile: lookup, then optionally detonate by hash
 
@@ -442,17 +545,7 @@ class HashLookupMixin:
             if failed:
                 # Unknown is not "no report": never detonate on a failed lookup,
                 # it could start a second paid analysis of the same sample.
-                self._send_error_note(
-                    entity,
-                    "Sandbox Lookup Failed",
-                    "The lookup of the existing sandbox report failed for "
-                    f"provider(s): {', '.join(failed)}. It is not known whether a "
-                    "report exists, so nothing was detonated for them.",
-                    [
-                        "Retry the enrichment in a few minutes.",
-                        "Check the connector logs for the PolySwarm API error.",
-                    ],
-                )
+                self._send_lookup_failed_note(entity, failed)
 
             held_outcome = ""
             no_analysis = False

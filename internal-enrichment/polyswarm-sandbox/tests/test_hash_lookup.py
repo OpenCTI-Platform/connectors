@@ -828,24 +828,6 @@ class TestLookupFailureNeverDetonates:
         c.polyswarm_client.get_sandbox_results.assert_not_called()
         assert any("No PolySwarm Sandbox Report" in n["abstract"] for n in _notes(c))
 
-    def test_artifact_reuse_failed_lookup_uploads(self):
-        c = _connector(latest={"cape": None}, sandbox_reuse_report=True)
-        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
-        entity = {
-            "type": "artifact",
-            "spec_version": "2.1",
-            "id": ARTIFACT_ID,
-            "hashes": {"SHA-256": EICAR_SHA256},
-        }
-        with patch("connector.polyswarm_connector.time.sleep"):
-            c._enrich_file(
-                ARTIFACT_ID,
-                entity,
-                {"entity_type": "Artifact", "standard_id": ARTIFACT_ID},
-                [entity],
-            )
-        c.artifact_handler.download_artifact.assert_called_once()
-
 
 # -- Artifact: reuse an existing report before uploading
 
@@ -1072,6 +1054,120 @@ class TestArtifactReuse:
             PolySwarmAPIError.QUOTA_CATEGORY
         )
         c.artifact_handler.download_artifact.assert_not_called()
+
+    # Failed and running lookups never lead to a second paid detonation
+
+    def _stop_at_submit(self, c):
+        """Let the upload run up to _phase_submit, then stop there."""
+        c._phase_download = MagicMock(
+            return_value=(b"data", "eicar.com", None, "application/octet-stream")
+        )
+        c._phase_submit = MagicMock(side_effect=ValueError("stop"))
+
+    def test_failed_lookup_does_not_upload(self):
+        c = _connector(latest={"cape": None}, sandbox_reuse_report=True)
+        c._send_error_note = MagicMock()
+        result = self._run_artifact(c)
+        assert result["status"] == "error"
+        assert "lookup failed" in result["error"]
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        assert c._send_error_note.call_args.args[1] == "Sandbox Lookup Failed"
+
+    def test_failed_lookup_keeps_found_reports_without_upload(self):
+        c = _connector(
+            latest={"cape": None, "triage": _task("triage")},
+            sandbox_reuse_report=True,
+            sandbox_provider="both",
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(
+            return_value=(INSTANCE_ID, _scan())
+        )
+        c._send_error_note = MagicMock()
+        assert self._run_artifact(c) is None
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        assert any("Triage Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Sandbox Lookup Failed"
+        ]
+
+    def test_running_task_is_polled_not_uploaded(self):
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING")},
+            sandbox_reuse_report=True,
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(
+            return_value=(INSTANCE_ID, _scan())
+        )
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        assert self._run_artifact(c) is None
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        c.polyswarm_client.get_sandbox_results.assert_called_with("running-task")
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_running_plus_missing_uploads_without_redetonating_running(self):
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING")},
+            sandbox_reuse_report=True,
+            sandbox_provider="both",
+        )
+        self._stop_at_submit(c)
+        self._run_artifact(c)
+        assert c._phase_submit.call_args.kwargs["existing"] == {"cape": "running-task"}
+
+    def test_partial_coverage_reuses_the_found_report(self):
+        task = _task()
+        c = _connector(
+            latest={"cape": task}, sandbox_reuse_report=True, sandbox_provider="both"
+        )
+        self._stop_at_submit(c)
+        self._run_artifact(c)
+        assert c._phase_submit.call_args.kwargs["existing"] == {"cape": str(task["id"])}
+
+    def test_all_found_without_scan_uploads_to_scan_only(self):
+        """A missing or failed scan lookup never re-detonates found reports."""
+        task = _task()
+        c = _connector(latest={"cape": task}, sandbox_reuse_report=True)
+        c.polyswarm_client.get_scan_by_hash = MagicMock(return_value=(None, None))
+        self._stop_at_submit(c)
+        self._run_artifact(c)
+        assert c._phase_submit.call_args.kwargs["existing"] == {"cape": str(task["id"])}
+
+    def test_phase_submit_skips_existing_providers(self):
+        c = _connector(sandbox_provider="both")
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")
+        c.polyswarm_client.submit_sandbox_async = MagicMock(return_value="new-triage")
+        c._send_error_note = MagicMock()
+        scan_id, tasks = c._phase_submit(
+            {"id": ARTIFACT_ID},
+            b"data",
+            "eicar.com",
+            None,
+            None,
+            existing={"cape": "running-task"},
+        )
+        assert scan_id == "scan-1"
+        assert tasks == {"cape": "running-task", "triage": "new-triage"}
+        calls = c.polyswarm_client.submit_sandbox_async.call_args_list
+        assert [call.kwargs["provider"] for call in calls] == ["triage"]
+        c._send_error_note.assert_not_called()
+
+    def test_phase_submit_all_existing_submits_scan_only(self):
+        c = _connector()
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")
+        c._send_error_note = MagicMock()
+        _scan_id, tasks = c._phase_submit(
+            {"id": ARTIFACT_ID}, b"d", "e", None, None, existing={"cape": "t1"}
+        )
+        assert tasks == {"cape": "t1"}
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        c._send_error_note.assert_not_called()
 
 
 # -- Client
