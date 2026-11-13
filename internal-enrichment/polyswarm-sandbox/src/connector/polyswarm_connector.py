@@ -566,8 +566,15 @@ class PolySwarmConnector(HashLookupMixin):
         filename: str,
         password: str | None = None,
         skip: set[str] | None = None,
+        only: list[str] | None = None,
     ) -> tuple[dict[str, str], dict[str, PolySwarmAPIError]]:
-        """Submit file to all configured sandbox providers.
+        """Submit file to the configured sandbox providers.
+
+        ``only``, when given, is the exact list of providers to submit to
+        (the ones a report lookup confirmed have no report), so a provider
+        that appears in a later provider listing is never detonated without
+        having been looked up. Otherwise every configured provider not in
+        ``skip`` is used.
 
         Returns (provider to task ID for successful submissions, provider to
         API error). Failures are not raised: the scan is already submitted,
@@ -576,7 +583,12 @@ class PolySwarmConnector(HashLookupMixin):
         """
         sandbox_tasks: dict[str, str] = {}
         errors: dict[str, PolySwarmAPIError] = {}
-        providers = [p for p in self._get_sandbox_providers() if p not in (skip or ())]
+        if only is not None:
+            providers = [p for p in only if p not in (skip or ())]
+        else:
+            providers = [
+                p for p in self._get_sandbox_providers() if p not in (skip or ())
+            ]
 
         self.helper.connector_logger.info(
             f"[CONNECTOR] Submitting to sandbox provider(s): {providers}"
@@ -1018,12 +1030,16 @@ class PolySwarmConnector(HashLookupMixin):
         mime_type: str | None,
         password: str | None,
         existing: dict[str, str] | None = None,
+        detonate: list[str] | None = None,
     ) -> tuple[str, dict[str, str]]:
         """Submit file for scanning and optionally sandbox analysis.
 
         ``existing`` maps provider to the task id of a report that already
         exists or a task still running: those providers are not detonated
         again, their task is returned with the new ones to be polled.
+        ``detonate``, when given, is the exact list of providers to detonate
+        (looked up and confirmed to have no report); None means every
+        configured provider not in ``existing``.
 
         Returns:
             (scan_id, sandbox_tasks) where sandbox_tasks maps provider→task_id.
@@ -1056,7 +1072,7 @@ class PolySwarmConnector(HashLookupMixin):
         sandbox_tasks: dict[str, str] = {}
         if self.config.polyswarm.sandbox_enabled:
             sandbox_tasks, errors = self._submit_sandboxes(
-                file_data, filename, password, skip=set(existing)
+                file_data, filename, password, skip=set(existing), only=detonate
             )
             if existing:
                 self.helper.connector_logger.info(
@@ -1595,8 +1611,10 @@ class PolySwarmConnector(HashLookupMixin):
                 or lookup_hash
                 or "sample"
             )
-            handled, reuse_result, existing_tasks = self._try_reuse_existing_reports(
-                entity, lookup_hash, reuse_name, stix_objects
+            handled, reuse_result, existing_tasks, detonate = (
+                self._try_reuse_existing_reports(
+                    entity, lookup_hash, reuse_name, stix_objects
+                )
             )
             if handled:
                 return reuse_result
@@ -1627,6 +1645,7 @@ class PolySwarmConnector(HashLookupMixin):
                     mime_type,
                     password,
                     existing=existing_tasks,
+                    detonate=detonate,
                 )
             except ValueError as e:
                 return {"status": "error", "error": str(e)}

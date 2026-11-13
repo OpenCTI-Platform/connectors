@@ -1368,6 +1368,35 @@ class TestArtifactReuse:
             "Upload Refused: Public Community"
         ]
 
+    def _run_upload(self, c):
+        """Run the Artifact path through the real _phase_submit."""
+        c._phase_download = MagicMock(
+            return_value=(b"data", "eicar.com", None, "application/octet-stream")
+        )
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")
+        c._phase_poll_scan = MagicMock(return_value=(None, {}))
+        return self._run_artifact(c)
+
+    def test_upload_detonates_only_providers_that_were_looked_up(self):
+        """A provider listing that grows after the lookup never adds a
+        provider that was not looked up."""
+        c = _connector(latest={}, sandbox_reuse_report=True)
+        listings = iter([["cape"], ["cape", "triage"], ["cape", "triage"]])
+        c._get_sandbox_providers = MagicMock(side_effect=lambda: next(listings))
+        c.polyswarm_client.submit_sandbox_async = MagicMock(return_value="new-cape")
+        c._phase_poll_sandboxes = MagicMock(return_value={})
+        self._run_upload(c)
+        calls = c.polyswarm_client.submit_sandbox_async.call_args_list
+        assert [call.kwargs["provider"] for call in calls] == ["cape"]
+
+    def test_reuse_reports_which_providers_to_detonate(self):
+        c = _connector(
+            latest={"cape": _task()}, sandbox_reuse_report=True, sandbox_provider="both"
+        )
+        self._stop_at_submit(c)
+        self._run_artifact(c)
+        assert c._phase_submit.call_args.kwargs["detonate"] == ["triage"]
+
     def test_phase_submit_skips_existing_providers(self):
         c = _connector(sandbox_provider="both")
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")

@@ -350,15 +350,18 @@ class HashLookupMixin:
         lookup_hash: str | None,
         filename: str,
         stix_objects: list,
-    ) -> tuple[bool, dict | None, dict[str, str]]:
+    ) -> tuple[bool, dict | None, dict[str, str], list[str] | None]:
         """Use existing reports for an Artifact instead of uploading again.
 
-        Returns (handled, result, existing):
+        Returns (handled, result, existing, detonate):
         - handled True: the enrichment is finished, ``result`` is its
           result (None on success). Nothing was uploaded.
         - handled False: run the upload. ``existing`` maps provider to the
           task id of a report that exists or a task still running; those
-          providers must not be detonated again, only polled.
+          providers must not be detonated again, only polled. ``detonate``
+          lists the providers looked up and confirmed to have no report,
+          the only ones the upload may detonate (None when no lookup was
+          made: every configured provider).
 
         Never uploads or detonates when a lookup failed: it is not known
         whether a report (or a paid task in progress) exists. Never starts a
@@ -372,7 +375,7 @@ class HashLookupMixin:
             or ps.sandbox_enabled is not True
             or not lookup_hash
         ):
-            return False, None, {}
+            return False, None, {}, None
         try:
             providers = self._get_sandbox_providers()
             found, missing, failed, running = self._lookup_reports(
@@ -396,6 +399,7 @@ class HashLookupMixin:
                         f"{', '.join(failed)}, nothing was uploaded",
                     },
                     {},
+                    None,
                 )
             scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
             if not scan_res or scan_res.get("failed"):
@@ -413,6 +417,7 @@ class HashLookupMixin:
                     scan_res,
                 ),
                 {},
+                None,
             )
 
         existing = {p: str(t.get("id")) for p, t in found.items()}
@@ -439,12 +444,13 @@ class HashLookupMixin:
                         scan_res,
                     ),
                     {},
+                    None,
                 )
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No usable report for {missing}, "
                 "uploading"
             )
-            return False, None, existing
+            return False, None, existing, list(missing)
 
         scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
         if (not scan_res or scan_res.get("failed")) and not upload_allowed:
@@ -461,13 +467,14 @@ class HashLookupMixin:
                     entity, found, running, lookup_hash, filename, stix_objects
                 ),
                 {},
+                None,
             )
         if not scan_res or scan_res.get("failed"):
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash, "
                 "uploading to scan only (existing sandbox tasks are reused)"
             )
-            return False, None, existing
+            return False, None, existing, []
         self.helper.connector_logger.info(
             f"[CONNECTOR] {self._enrich_ctx} Existing report and scan found for "
             f"{list(existing)}, not uploading again"
@@ -485,6 +492,7 @@ class HashLookupMixin:
                 scan_res,
             ),
             {},
+            None,
         )
 
     # -- StixFile: lookup, then optionally detonate by hash
