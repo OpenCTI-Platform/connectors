@@ -18,6 +18,11 @@ from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
 from pycti import OpenCTIConnectorHelper
 
+# Names that all mean PolySwarm's public community: an account's community list
+# shows it as "public", the API's default is "default", and task records say
+# "mainnet1".
+PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
 
 class PolySwarmConnector:
     """OpenCTI internal enrichment connector for PolySwarm file scanning and sandbox analysis."""
@@ -332,6 +337,13 @@ class PolySwarmConnector:
                 if h.get("algorithm") == "SHA-256":
                     return h.get("hash")
         return None
+
+    def _upload_community_allowed(self) -> bool:
+        """True unless uploads would go to the public community without opt-in."""
+        community = (self.config.polyswarm.community or "").strip().lower()
+        if community not in PUBLIC_COMMUNITY_NAMES:
+            return True
+        return self.config.polyswarm.allow_public_community is True
 
     def _send_error_note(
         self,
@@ -1257,6 +1269,30 @@ class PolySwarmConnector:
                         "status": "skipped",
                         "message": f"TLP exceeds configured max_tlp ({max_tlp})",
                     }
+
+            # ── PUBLIC COMMUNITY GUARD: refuse to upload publicly unless allowed
+            if not self._upload_community_allowed():
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] {self._enrich_ctx} Upload refused: the community is "
+                    "the public 'default' community and POLYSWARM_ALLOW_PUBLIC_COMMUNITY "
+                    "is not true"
+                )
+                self._send_error_note(
+                    entity,
+                    "Upload Refused: Public Community",
+                    "The file was not uploaded. POLYSWARM_COMMUNITY is set to the public "
+                    "'default' community, where uploaded files become visible to the "
+                    "PolySwarm community, and POLYSWARM_ALLOW_PUBLIC_COMMUNITY is not true.",
+                    [
+                        "Set POLYSWARM_COMMUNITY to your private PolySwarm community.",
+                        "Or set POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true to submit files publicly.",
+                    ],
+                )
+                return {
+                    "status": "error",
+                    "error": "Upload to the public community refused "
+                    "(POLYSWARM_ALLOW_PUBLIC_COMMUNITY is not true)",
+                }
 
             # ── DOWNLOAD
             try:

@@ -365,3 +365,66 @@ class TestEnrichFileOrchestration:
             }
         )
         assert "not in scope" in result.lower()
+
+
+# ── Public community guard ──────────────────────────────────────────────────
+
+
+class TestPublicCommunityGuard:
+    """Uploads to the public community need POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true."""
+
+    @pytest.mark.parametrize(
+        "community",
+        ["default", "DEFAULT", " default ", "", "public", "Public", "mainnet1"],
+    )
+    def test_public_community_without_opt_in_is_refused(self, community):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": community,
+                "allow_public_community": False,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
+
+        result = c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        assert result["status"] == "error"
+        assert "public community" in result["error"]
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+        c.polyswarm_client.submit_sandbox_async.assert_not_called()
+        c.stix_builder.create_error_note.assert_called()
+
+    def test_public_community_with_opt_in_is_uploaded(self):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": "default",
+                "allow_public_community": True,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value=None)
+
+        c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        c.polyswarm_client.submit_file_async.assert_called_once()
+
+    def test_private_community_is_uploaded_without_opt_in(self):
+        c = make_connector(
+            polyswarm_overrides={
+                "community": "acme-private",
+                "allow_public_community": False,
+            }
+        )
+        c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
+        c.polyswarm_client.submit_file_async = MagicMock(return_value=None)
+
+        c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
+
+        c.polyswarm_client.submit_file_async.assert_called_once()
+
+    def test_opt_in_defaults_to_false(self):
+        from connector.models.configs.settings import PolySwarmConfig
+
+        assert PolySwarmConfig.model_fields["allow_public_community"].default is False

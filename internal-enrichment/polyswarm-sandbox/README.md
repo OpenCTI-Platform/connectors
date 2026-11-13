@@ -33,6 +33,17 @@ A comprehensive OpenCTI internal enrichment connector that integrates with PolyS
 - **PDF Reports**: Professional PDF reports for scan and each sandbox provider
 - **AI LLM Reports**: AI-generated threat analysis summaries embedded in scan and sandbox notes
 
+## 🔐 Data Handling: What Leaves Your Environment
+
+The connector sends data to PolySwarm only when it enriches an artifact, which is manual by default (`CONNECTOR_AUTO=false`).
+
+- **The file.** The artifact's file, its file name, and its archive password if one is set are uploaded to PolySwarm for a multi-engine scan. When `POLYSWARM_SANDBOX_ENABLED=true` (the default), the file is also detonated in the selected sandbox provider(s) (CAPE, Triage).
+- **Where it goes.** Uploads go to the PolySwarm community set in `POLYSWARM_COMMUNITY`. Files uploaded to the public community (`default`, also listed as `public`) become visible to the PolySwarm community, so the connector refuses to upload there unless `POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true`. To keep files private, set `POLYSWARM_COMMUNITY` to your private community.
+- **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
+- **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
+- **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
+
 ## 📋 Requirements
 
 - OpenCTI Platform 6.x+
@@ -93,6 +104,12 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `CONNECTOR_ID` | Unique connector ID (UUID v4) |
 | `CONNECTOR_ENRICHMENT_RESOLUTION` | Set to `AUTHORIZED_AUTHORITIES` (required for OpenCTI ≥6.8.9) |
 | `POLYSWARM_API_KEY` | PolySwarm API key |
+
+#### Community
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `POLYSWARM_COMMUNITY` | `default` | Community to upload into: the public `default` community, or your private community name |
+| `POLYSWARM_ALLOW_PUBLIC_COMMUNITY` | `false` | Must be `true` to upload files to the public `default` community (see Data Handling) |
 
 #### Feature Toggles
 | Variable | Default | Description |
