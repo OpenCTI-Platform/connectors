@@ -1,10 +1,15 @@
 """VCR-based tests for ScanProcessor — uses real API data from cassettes."""
 
+import copy
+import json
+import os
+
 import pytest
+import yaml
 from connector.scan_processor import ScanProcessor
 from polyswarm_api.api import PolyswarmAPI
 
-from tests.conftest import EICAR_SHA256, SAMPLE_SHA256, WANNACRY_SHA256
+from tests.conftest import CASSETTE_DIR, EICAR_SHA256, SAMPLE_SHA256, WANNACRY_SHA256
 
 
 @pytest.fixture
@@ -141,3 +146,107 @@ class TestScanProcessorSample:
                     "SSDEEP" in hashes or "TLSH" in hashes
                 ), f"Expected extended hashes, got: {list(hashes.keys())}"
                 break
+
+
+def _recorded_scan_polls(cassette="scan_eicar_poll.yaml"):
+    """Scan results as recorded from the API while polling an EICAR scan."""
+    with open(os.path.join(CASSETTE_DIR, cassette)) as f:
+        interactions = yaml.safe_load(f)["interactions"]
+    polls = []
+    for interaction in interactions:
+        try:
+            result = json.loads(interaction["response"]["body"]["string"])["result"]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if isinstance(result, dict):
+            polls.append(result)
+    return polls
+
+
+class TestScanProcessorNullFields:
+    """The API sends null for detections (and other fields) until it fills them in.
+
+    Recorded in scan_eicar_poll.yaml: every poll before the final one has
+    "detections": null, some with engine verdicts already in.
+    """
+
+    def test_recording_has_null_detections(self):
+        polls = _recorded_scan_polls()
+        assert any(p.get("detections") is None and p.get("assertions") for p in polls)
+
+    def test_null_detections_does_not_raise(self):
+        for poll in _recorded_scan_polls():
+            if poll.get("detections") is None:
+                assert ScanProcessor.process(poll) is not None
+
+    def test_null_detections_counts_engine_verdicts(self):
+        final = _recorded_scan_polls()[-1]
+        assert final["detections"] == {"benign": 0, "malicious": 14, "total": 14}
+        nulled = copy.deepcopy(final)
+        nulled["detections"] = None
+        stats = ScanProcessor.process(nulled)["detection_stats"]
+        assert (stats["malicious"], stats["total"]) == (14, 14)
+
+    def test_api_detections_used_when_present(self):
+        final = _recorded_scan_polls()[-1]
+        stats = ScanProcessor.process(final)["detection_stats"]
+        assert (stats["malicious"], stats["total"]) == (14, 14)
+
+    def test_null_polyunite_metadata_does_not_raise(self):
+        result = {
+            "sha256": EICAR_SHA256,
+            "metadata": [
+                {"tool": "polyunite", "tool_metadata": None},
+                None,
+            ],
+            "assertions": [
+                {
+                    "verdict": True,
+                    "author_name": "engine",
+                    "metadata": None,
+                    "engine": None,
+                },
+                None,
+            ],
+            "detections": None,
+            "polyscore": None,
+        }
+        processed = ScanProcessor.process(result)
+        assert processed["family"] == "Unknown"
+        assert processed["labels"] == []
+        assert processed["detection_stats"]["malicious"] == 1
+        assert processed["engine_detections"][0]["family"] == "Malicious"
+
+
+# A closed scan window with no engine responses, as returned by the live API for
+# EICAR on 2026-11-09 (bounty_state 7, not failed, no assertions, nulls).
+NO_VERDICT_SCAN = {
+    "sha256": EICAR_SHA256,
+    "window_closed": True,
+    "failed": False,
+    "bounty_state": 7,
+    "assertions": [],
+    "detections": None,
+    "polyscore": None,
+    "metadata": [],
+}
+
+
+class TestScanProcessorNoVerdicts:
+    """A scan with no engine verdicts must not read as a clean score of 0."""
+
+    def test_no_verdict_scan_is_flagged(self):
+        result = ScanProcessor.process(NO_VERDICT_SCAN)
+        assert result["has_verdicts"] is False
+        assert not any(
+            label.startswith("polyscore:") for label in result["stix_labels"]
+        )
+
+    def test_recorded_final_scan_has_verdicts(self):
+        final = _recorded_scan_polls()[-1]
+        assert ScanProcessor.process(final)["has_verdicts"] is True
+
+    def test_verdicts_without_polyscore_count(self):
+        scan = copy.deepcopy(NO_VERDICT_SCAN)
+        scan["assertions"] = [{"verdict": False, "author_name": "engine"}]
+        assert ScanProcessor.process(scan)["has_verdicts"] is True

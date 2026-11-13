@@ -39,14 +39,20 @@ class ScanProcessor:
         family = None
         labels = []
         operating_systems = []
-        metadata = result.get("metadata", [])
-        if isinstance(metadata, list):
+        metadata = result.get("metadata")
+        metadata = (
+            [m for m in metadata if isinstance(m, dict)]
+            if isinstance(metadata, list)
+            else []
+        )
+        if metadata:
             for entry in metadata:
                 if entry.get("tool") == "polyunite":
-                    tool_meta = entry.get("tool_metadata", {})
+                    # The API can send null for any of these, so default with "or"
+                    tool_meta = entry.get("tool_metadata") or {}
                     family = tool_meta.get("malware_family")
-                    labels = tool_meta.get("labels", [])
-                    operating_systems = tool_meta.get("operating_system", [])
+                    labels = tool_meta.get("labels") or []
+                    operating_systems = tool_meta.get("operating_system") or []
                     break
 
         # Engine detections — still need assertion iteration for per-engine detail
@@ -56,27 +62,41 @@ class ScanProcessor:
         engine_detections = ScanProcessor._extract_engine_detections(raw_assertions)
 
         # Hashes — use top-level fields + metadata hash tool for extended hashes
-        hashes = ScanProcessor._extract_hashes(
-            result, metadata if isinstance(metadata, list) else []
-        )
+        hashes = ScanProcessor._extract_hashes(result, metadata)
 
         # File metadata — PE/exiftool/LIEF (no top-level equivalent)
-        file_info = ScanProcessor._extract_file_info(
-            result, metadata if isinstance(metadata, list) else []
+        file_info = ScanProcessor._extract_file_info(result, metadata)
+
+        # A scan whose window closed with no engine verdicts and no polyscore says
+        # nothing about the file; it must not read as a clean score of 0.
+        has_verdicts = result.get("polyscore") is not None or any(
+            isinstance(a, dict) and a.get("verdict") is not None for a in raw_assertions
         )
 
         # STIX labels
         stix_labels = []
         if family:
             stix_labels.append(f"polyswarm-family:{family.lower()}")
-        stix_labels.append(f"polyscore:{threat_score}")
+        if has_verdicts:
+            stix_labels.append(f"polyscore:{threat_score}")
         for label in labels:
             stix_labels.append(f"polyswarm-type:{label.lower()}")
 
-        # Detection stats — use pre-computed API field
-        api_detections = result.get("detections", {})
-        malicious_count = api_detections.get("malicious", 0)
-        total_engines = api_detections.get("total", 0)
+        # Detection stats: use the pre-computed API field when present. The API
+        # sends "detections": null until it fills the field in, so fall back to
+        # counting engine verdicts the same way (abstentions are not counted).
+        api_detections = result.get("detections")
+        if isinstance(api_detections, dict):
+            malicious_count = api_detections.get("malicious") or 0
+            total_engines = api_detections.get("total") or 0
+        else:
+            verdicts = [
+                a.get("verdict")
+                for a in raw_assertions
+                if isinstance(a, dict) and a.get("verdict") is not None
+            ]
+            malicious_count = sum(1 for v in verdicts if v is True)
+            total_engines = len(verdicts)
 
         return {
             "score": threat_score,
@@ -84,6 +104,7 @@ class ScanProcessor:
             "family": family or "Unknown",
             "labels": labels,
             "stix_labels": stix_labels,
+            "has_verdicts": has_verdicts,
             "operating_systems": operating_systems,
             "permalink": (
                 f"https://polyswarm.network/scan/results/file/{result.get('sha256')}"
@@ -115,15 +136,16 @@ class ScanProcessor:
         """
         detections = []
         for assertion in assertions:
-            if assertion.get("verdict") is True:
+            if isinstance(assertion, dict) and assertion.get("verdict") is True:
                 detections.append(
                     {
                         "engine": assertion.get("author_name"),
-                        "family": assertion.get("metadata", {}).get(
-                            "malware_family", "Malicious"
-                        ),
-                        "engine_info": assertion.get("engine", {}).get(
-                            "description", ""
+                        "family": (assertion.get("metadata") or {}).get(
+                            "malware_family"
+                        )
+                        or "Malicious",
+                        "engine_info": (
+                            (assertion.get("engine") or {}).get("description") or ""
                         )[:200],
                     }
                 )
