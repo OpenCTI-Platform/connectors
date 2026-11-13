@@ -194,6 +194,65 @@ class TestExtractDropped:
     def test_odd_input_is_safe(self, raw):
         assert extract_report_depth(raw) == {"dropped_files": [], "c2": []}
 
+    def test_dropped_file_only_in_sandbox_artifacts(self):
+        task = _cape_task()
+        task["sandbox_artifacts"].append(
+            {
+                "type": "dropped_file",
+                "name": DROP_C.upper(),
+                "mimetype": "application/x-dosexec",
+            }
+        )
+        files = {f["sha256"]: f for f in extract_report_depth(task)["dropped_files"]}
+        assert set(files) == {DROP_A, DROP_B, DROP_C}
+        assert files[DROP_C] == {
+            "sha256": DROP_C,
+            "mime_type": "application/x-dosexec",
+        }
+        # The report entries keep their richer details, never duplicated
+        assert files[DROP_A]["name"] == "1017.WNCRYT"
+
+    def test_artifact_dropped_files_without_report(self):
+        raw = {
+            "sha256": SAMPLE_SHA,
+            "sandbox_artifacts": [
+                {"type": "dropped_file", "name": DROP_C, "mimetype": ""},
+                {"type": "dropped_file", "name": SAMPLE_SHA},
+                {"type": "dropped_file", "name": "not-a-hash"},
+                {"type": "dropped_file", "name": DROP_C},
+                {"type": "pcap", "name": DROP_A},
+                "garbage",
+            ],
+        }
+        assert extract_report_depth(raw) == {
+            "dropped_files": [{"sha256": DROP_C}],
+            "c2": [],
+        }
+
+    def test_artifact_only_dropped_file_becomes_an_observable(self, stub_helper):
+        task = _triage_task()
+        task["report"]["dumped"] = []
+        task["sandbox_artifacts"] = [
+            {
+                "type": "dropped_file",
+                "name": DROP_A,
+                "mimetype": "application/x-dosexec",
+            }
+        ]
+        objs = build_report_depth_objects(
+            StixBuilder(helper=stub_helper),
+            ENTITY,
+            None,
+            [extract_report_depth(task)],
+            max_dropped_files=25,
+            create_observables=True,
+            c2_indicators=False,
+            create_indicators=False,
+        )
+        files = [o for o in objs if o["type"] == "file"]
+        assert [f["hashes"]["SHA-256"] for f in files] == [DROP_A]
+        assert files[0]["mime_type"] == "application/x-dosexec"
+
 
 class TestExtractC2:
     def test_config_c2_classified(self):

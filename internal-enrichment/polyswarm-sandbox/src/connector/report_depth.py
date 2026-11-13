@@ -19,7 +19,8 @@ Report shapes this module reads (measured on real tasks, read only):
   ``rule`` and, for some families, ``c2`` (strings such as ``host:port``,
   ``host`` or ``ip:port``).
 * Both: ``sandbox_artifacts[]`` entries of type ``dropped_file`` are named by
-  SHA-256 and may carry a ``mimetype``.
+  SHA-256 and may carry a ``mimetype``. A dropped file listed only there
+  (not in the report) is still emitted, with its SHA-256 and MIME type.
 """
 
 from __future__ import annotations
@@ -110,7 +111,8 @@ def extract_report_depth(raw: dict | None) -> dict[str, Any]:
         return empty
     report = raw.get("report")
     if not isinstance(report, dict):
-        return empty
+        # Dropped files can still be listed in sandbox_artifacts
+        return {"dropped_files": _extract_dropped_files(raw, {}), "c2": []}
     return {
         "dropped_files": _extract_dropped_files(raw, report),
         "c2": _extract_config_c2(report, raw),
@@ -183,6 +185,19 @@ def _extract_dropped_files(raw: dict, report: dict) -> list[dict[str, Any]]:
         name = _entry_name(entry)
         if name:
             item["name"] = name
+        if sha256 in mimes:
+            item["mime_type"] = mimes[sha256]
+        files.append(item)
+
+    # A dropped file listed only in sandbox_artifacts (named by its SHA-256)
+    for art in raw.get("sandbox_artifacts") or []:
+        if not isinstance(art, dict) or art.get("type") != "dropped_file":
+            continue
+        sha256 = str(art.get("name") or "").strip().lower()
+        if not _SHA256_RE.match(sha256) or sha256 == own or sha256 in seen:
+            continue
+        seen.add(sha256)
+        item = {"sha256": sha256}
         if sha256 in mimes:
             item["mime_type"] = mimes[sha256]
         files.append(item)
