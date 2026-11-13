@@ -22,7 +22,7 @@ from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.stix_builder import StixBuilder
 from polyswarm_api import exceptions as ps_exceptions
 from polyswarm_api import resources
-from pycti import OpenCTIConnectorHelper
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 from tests.test_connector import make_connector
 
@@ -115,6 +115,45 @@ class TestUrlRules:
     @pytest.mark.parametrize(
         "url",
         [
+            # Percent-encoded hosts (review threads 4528431174, 4528455047)
+            "http://%31%32%37.0.0.1/",
+            "http://%31%30.0.0.1/admin",
+            "http://%6c%6f%63%61%6c%68%6f%73%74/",
+            "http://example%2ecom/",
+            # Full-width spellings of loopback, private and internal hosts
+            "http://\uff11\uff12\uff17.\uff10.\uff10.\uff11/",
+            "http://\uff11\uff10.\uff10.\uff10.\uff11/",
+            "http://\uff11\uff10\uff0e0\uff0e0\uff0e1/",
+            "http://wiki.c\uff4frp/",
+            "http://\uff57\uff49\uff4b\uff49.\uff43\uff4f\uff52\uff50/",
+            "http://localho\uff53t/",
+            # Backslash read as a path separator (review thread 4528424208)
+            "http://127.0.0.1\\example.com/",
+            "http://localhost\\evil.com/",
+            "http://10.0.0.1\\",
+            "http:\\\\127.0.0.1\\x",
+            # Not a valid IDNA name
+            "http://\u00ad\u00ad/",
+        ],
+    )
+    def test_encoded_and_unicode_hosts_are_refused(self, url):
+        assert url_utils.is_non_public_url(url) is True
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://b\u00fccher.de/",
+            "http://ex\uff41mple.com/",
+            "http://example.com/a\\b",
+            "http://example.com/%41",
+        ],
+    )
+    def test_unicode_public_hosts_and_path_escapes_are_allowed(self, url):
+        assert url_utils.is_non_public_url(url) is False
+
+    @pytest.mark.parametrize(
+        "url",
+        [
             "https://example.com/a",
             "http://8.8.8.8/x",
             "https://[2606:4700:4700::1111]/",
@@ -174,6 +213,18 @@ class TestUrlRefusals:
             ),
             (
                 "http://intranet/x?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://%31%30.0.0.1/admin?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://\uff11\uff12\uff17.\uff10.\uff10.\uff11/?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://127.0.0.1\\example.com/?token=SECRET123",
                 "Submission Refused: Private or Internal Host",
             ),
             ("", "No URL Value"),
@@ -280,6 +331,119 @@ class TestUrlRefusals:
         entity["object_marking_refs"] = [marking["id"]]
         with patch("connector.polyswarm_connector.time.sleep"):
             result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        assert result["status"] == "skipped"
+        assert c.polyswarm_client.mock_calls == []
+
+    @pytest.mark.parametrize(
+        "marking, skipped",
+        [
+            # OpenCTI custom definition carrying only x_opencti_definition
+            (
+                {
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+                True,
+            ),
+            # Custom name, TLP in x_opencti_definition
+            (
+                {
+                    "name": "Restricted",
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:RED",
+                },
+                True,
+            ),
+            # STIX 2.1 TLP form with no name
+            ({"definition_type": "tlp", "definition": {"tlp": "red"}}, True),
+            ({"definition_type": "tlp", "definition": {"tlp": "green"}}, False),
+            ({"name": "TLP:GREEN"}, False),
+            ({"name": "PAP:RED"}, False),
+        ],
+    )
+    def test_tlp_check_resolves_bundled_marking_shapes(self, marking, skipped):
+        """TLP is read from x_opencti_definition, name or definition.tlp."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = dict(
+            marking,
+            type="marking-definition",
+            id="marking-definition--00000000-0000-4000-8000-000000000002",
+        )
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "tlp, skipped",
+        [
+            ("TLP:RED", True),
+            ("TLP:AMBER+STRICT", True),
+            ("TLP:AMBER", False),
+            ("TLP:CLEAR", False),
+        ],
+    )
+    def test_tlp_check_well_known_ref_without_definition(self, tlp, skipped):
+        """A well-known TLP id is enforced even when its object is absent."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        entity = _url_entity()
+        entity["object_marking_refs"] = [MarkingDefinition.generate_id("TLP", tlp)]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
+    def test_tlp_check_bundle_cannot_redefine_well_known_id(self):
+        """A bundled object reusing the TLP:RED id cannot relabel it."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = {
+            "type": "marking-definition",
+            "id": MarkingDefinition.generate_id("TLP", "TLP:RED"),
+            "name": "TLP:CLEAR",
+        }
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, _opencti_url(), [entity, marking])
+
+        assert result["status"] == "skipped"
+        assert c.polyswarm_client.mock_calls == []
+
+    def test_tlp_check_reads_stix_entity_refs(self):
+        """The STIX entity's own refs count even when the OpenCTI ids differ."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000003",
+            "name": "TLP:RED",
+        }
+        entity = _url_entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        opencti = _opencti_url()
+        opencti["standard_id"] = "url--00000000-0000-0000-0000-0000000000ff"
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, entity, opencti, [marking])
 
         assert result["status"] == "skipped"
         assert c.polyswarm_client.mock_calls == []
@@ -401,7 +565,7 @@ class TestUrlSubmission:
 # -- Results: notes, reports, score, observables
 
 
-def _run_with_builder(task_name, provider="cape", **overrides):
+def _run_with_builder(task_name, provider="cape", stix_objects=None, **overrides):
     c = _url_connector(sandbox_provider=provider, **overrides)
     c.config.polyswarm.json_report_enabled = True
     c.config.polyswarm.pdf_report_enabled = True
@@ -409,7 +573,12 @@ def _run_with_builder(task_name, provider="cape", **overrides):
     c.polyswarm_client.get_sandbox_results = MagicMock(return_value=_task(task_name))
     # As OpenCTI sends it: stix_objects holds the enriched observable
     with patch("connector.polyswarm_connector.time.sleep"):
-        result = c._enrich_url(URL_ID, _url_entity(), _opencti_url(), [_url_entity()])
+        result = c._enrich_url(
+            URL_ID,
+            _url_entity(),
+            _opencti_url(),
+            [_url_entity()] if stix_objects is None else stix_objects,
+        )
     sent = c.helper.stix2_create_bundle.call_args_list
     objects = sent[-1].args[0] if sent else []
     return c, result, objects
@@ -443,6 +612,32 @@ class TestUrlResults:
         )
         # File-hash indicators are for files only
         assert not [o for o in objects if o["type"] == "indicator"]
+
+    @pytest.mark.parametrize(
+        "stix_objects",
+        [
+            [],
+            [
+                {
+                    "type": "domain-name",
+                    "spec_version": "2.1",
+                    "id": "domain-name--00000000-0000-0000-0000-000000000002",
+                    "value": "example.com",
+                }
+            ],
+        ],
+    )
+    def test_url_object_carries_value_without_bundle(self, stix_objects):
+        """The sent url object has its value when the bundle lacks the URL."""
+        _, result, objects = _run_with_builder(
+            "sandbox_url_task_cape.json", stix_objects=stix_objects
+        )
+        assert result is None
+        url_obj = [o for o in objects if o["id"] == URL_ID]
+        assert url_obj
+        for obj in url_obj:
+            assert obj["type"] == "url"
+            assert obj["value"] == QUERY_URL
 
     def test_reports_attached_and_named_from_hash(self):
         c, _, _ = _run_with_builder("sandbox_url_task_cape.json")

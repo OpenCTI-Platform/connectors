@@ -27,12 +27,40 @@ from connector.url_utils import (
     url_has_query_or_fragment,
     url_has_userinfo,
 )
-from pycti import OpenCTIConnectorHelper
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 # Names that all mean PolySwarm's public community: an account's community list
 # shows it as "public", the API's default is "default", and task records say
 # "mainnet1".
 PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
+# Fixed STIX ids of the TLP markings, so a ref is resolved even when the
+# bundle does not carry its marking-definition object. TLP:WHITE and
+# TLP:CLEAR share one id. A bundle cannot redefine these ids.
+WELL_KNOWN_TLP_IDS = {
+    MarkingDefinition.generate_id("TLP", tlp): tlp
+    for tlp in ("TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED")
+}
+
+
+def tlp_of_marking(marking: dict) -> str | None:
+    """TLP name of a STIX marking-definition, or None when it is not a TLP.
+
+    Read in order: OpenCTI's x_opencti_definition (when its type is TLP),
+    then a name starting with "TLP:", then the STIX 2.1 TLP form
+    (definition_type "tlp", definition {"tlp": "red"}).
+    """
+    if str(marking.get("x_opencti_definition_type") or "").upper() == "TLP":
+        if marking.get("x_opencti_definition"):
+            return str(marking["x_opencti_definition"]).upper()
+    name = str(marking.get("name") or "")
+    if name.upper().startswith("TLP:"):
+        return name.upper()
+    if str(marking.get("definition_type") or "").lower() == "tlp":
+        definition = marking.get("definition")
+        if isinstance(definition, dict) and definition.get("tlp"):
+            return f"TLP:{str(definition['tlp']).upper()}"
+    return None
 
 
 class PolySwarmConnector(HashLookupMixin):
@@ -401,12 +429,17 @@ class PolySwarmConnector(HashLookupMixin):
         return None
 
     def _tlp_skip(
-        self, opencti_entity: dict[str, Any], stix_objects: list
+        self,
+        opencti_entity: dict[str, Any],
+        stix_objects: list,
+        entity: dict[str, Any] | None = None,
     ) -> dict | None:
         """Return a "skipped" result when the entity's TLP exceeds max_tlp (#38).
 
         check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of marking
         ids, so each TLP marking on the entity is checked (the #7955 fix).
+        ``entity`` is the STIX entity being enriched; its own
+        object_marking_refs are checked too.
         """
         max_tlp = self.max_tlp
         if max_tlp:
@@ -422,23 +455,27 @@ class PolySwarmConnector(HashLookupMixin):
                 and m.get("definition_type") == "TLP"
                 and m.get("definition")
             ]
-            by_id = {
-                o.get("id"): o.get("name")
-                for o in stix_objects or []
-                if isinstance(o, dict)
-                and o.get("type") == "marking-definition"
-                and str(o.get("name") or "").upper().startswith("TLP:")
-            }
+            by_id = dict(WELL_KNOWN_TLP_IDS)
             for o in stix_objects or []:
-                if isinstance(o, dict) and o.get("id") in (
+                if isinstance(o, dict) and o.get("type") == "marking-definition":
+                    tlp = tlp_of_marking(o)
+                    if tlp:
+                        by_id.setdefault(o.get("id"), tlp)
+            entity = entity if isinstance(entity, dict) else {}
+            entity_ids = {
+                i
+                for i in (
                     opencti_entity.get("standard_id"),
                     opencti_entity.get("id"),
-                ):
-                    tlp_levels += [
-                        by_id[r]
-                        for r in o.get("object_marking_refs") or []
-                        if r in by_id
-                    ]
+                    entity.get("id"),
+                )
+                if i
+            }
+            refs = list(entity.get("object_marking_refs") or [])
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("id") in entity_ids:
+                    refs += o.get("object_marking_refs") or []
+            tlp_levels += [by_id[r] for r in refs if r in by_id]
             if any(not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels):
                 self.helper.connector_logger.info(
                     f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
@@ -1502,7 +1539,7 @@ class PolySwarmConnector(HashLookupMixin):
                 )
 
             # ── TLP CHECK (#38)
-            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
             if tlp_skip:
                 return tlp_skip
 
@@ -1746,7 +1783,7 @@ class PolySwarmConnector(HashLookupMixin):
             )
 
             # -- TLP CHECK (#38)
-            tlp_skip = self._tlp_skip(opencti_entity, stix_objects)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
             if tlp_skip:
                 return tlp_skip
 

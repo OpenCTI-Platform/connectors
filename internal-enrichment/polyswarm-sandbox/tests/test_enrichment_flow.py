@@ -131,6 +131,57 @@ class TestTlpCheck:
         else:
             c.artifact_handler.download_artifact.assert_called_once()
 
+    @pytest.mark.parametrize(
+        "marking",
+        [
+            {
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:AMBER+STRICT",
+            },
+            {"definition_type": "tlp", "definition": {"tlp": "red"}},
+            None,
+        ],
+    )
+    def test_bundled_tlp_marking_is_skipped(self, marking):
+        """Bundle-only TLP markings are resolved on the file path too."""
+        c = make_connector()
+        opencti_entity = _opencti_entity()
+        opencti_entity["standard_id"] = ENTITY_ID
+        entity = _entity()
+        stix_objects = [entity]
+        if marking is None:
+            # Well-known TLP:RED id with no definition object in the bundle
+            entity["object_marking_refs"] = [
+                "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+            ]
+        else:
+            marking = dict(
+                marking,
+                type="marking-definition",
+                id="marking-definition--00000000-0000-4000-8000-000000000002",
+            )
+            entity["object_marking_refs"] = [marking["id"]]
+            stix_objects.append(marking)
+        result = c._enrich_file(ENTITY_ID, entity, opencti_entity, stix_objects)
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
+    def test_stix_entity_refs_are_checked(self):
+        """The STIX entity's refs count even when the OpenCTI ids differ."""
+        c = make_connector()
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--00000000-0000-4000-8000-000000000003",
+            "name": "TLP:RED",
+        }
+        entity = _entity()
+        entity["object_marking_refs"] = [marking["id"]]
+        opencti_entity = _opencti_entity()
+        opencti_entity["standard_id"] = "artifact--00000000-0000-0000-0000-0000000000ff"
+        result = c._enrich_file(ENTITY_ID, entity, opencti_entity, [marking])
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
     def test_skipped_artifact_forwards_original_bundle(self):
         """A TLP skip must still forward the bundle so playbooks do not stall."""
         c = make_connector()
