@@ -111,7 +111,10 @@ class RansomwareAPIConnector:
                 "Error fetching location", {"country": country, "error": e}
             )
             return None
-        self.country_cache[country] = country_obj
+        # An empty export (country deleted meanwhile) is not cached, so the
+        # next victim of the same country retries the lookup.
+        if country_obj:
+            self.country_cache[country] = country_obj
         return country_obj
 
     def _find_existing_country(self, country: str) -> dict | None:

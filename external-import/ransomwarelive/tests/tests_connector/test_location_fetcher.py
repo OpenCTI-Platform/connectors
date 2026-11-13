@@ -144,6 +144,18 @@ def test_location_fetcher_returns_none_and_does_not_cache_on_error():
     assert connector.location_fetcher("DE")["id"] == "stix-of-germany-internal-id"
 
 
+def test_location_fetcher_does_not_cache_an_empty_export():
+    connector = _make_connector([GERMANY])
+    export = connector.helper.api.stix2.get_stix_bundle_or_object_from_entity_id
+    export.side_effect = [None, {"type": "location", "id": "stix-of-germany"}]
+
+    assert connector.location_fetcher("DE") is None
+    assert connector.country_cache == {}
+
+    assert connector.location_fetcher("DE")["id"] == "stix-of-germany"
+    assert connector.helper.api.location.list.call_count == 2
+
+
 def test_collect_intelligence_resets_the_country_cache():
     connector = _make_connector()
     connector.country_cache = {"DE": {"id": "stale"}}
