@@ -31,7 +31,11 @@ from crowdstrike_indicators.extractor import (
     IndicatorsClient,
     validate_indicator,
 )
+from crowdstrike_indicators.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
 from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+
+from shared.transformer import AbstractTransformer
 
 LOGGER = logging.getLogger("crowdstrike_indicators")
 
@@ -44,6 +48,12 @@ CLIENT_SECRET = "CROWDSTRIKE_CLIENT_SECRET"
 BASE_URL = "CROWDSTRIKE_BASE_URL"
 DEFAULT_BASE_URL = "https://api.crowdstrike.com"
 DEFAULT_ENV_FILE = Path(".env")
+
+# The steps ``transform`` runs, in order: each takes the previous one's output.
+TRANSFORM_STEPS: tuple[AbstractTransformer[Any, Any], ...] = (
+    CrowdStrikeIndicatorTransformer(),
+    CrowdStrikeAddMalware(),
+)
 
 
 def build_client(client_id: str, client_secret: str, base_url: str) -> IndicatorsClient:
@@ -233,6 +243,18 @@ def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
     return EXIT_OK
 
 
+def _to_json(value: Any) -> Any:
+    """Return the JSON form of a step's output."""
+    if isinstance(value, CrowdStrikeIndicatorBundle):
+        return {
+            "indicator": _to_json(value.indicator),
+            "malware": [_to_json(obj) for obj in value.malware],
+            "relationships": [_to_json(obj) for obj in value.relationships],
+        }
+    # stix2 objects: their STIX JSON, in stix2's property order.
+    return json.loads(value.serialize(pretty=True))
+
+
 def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     if args.file is not None and not args.file.is_file():
         parser.error(f"no such file: {args.file}")
@@ -250,8 +272,18 @@ def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         )
         return EXIT_FAILURE
 
+    steps: list[dict[str, Any]] = []
     try:
-        indicator = CrowdStrikeIndicatorTransformer().convert(validate_indicator(raw))
+        value: Any = validate_indicator(raw)
+        for number, step in enumerate(TRANSFORM_STEPS, start=1):
+            value = step.convert(value)
+            steps.append(
+                {
+                    "step": number,
+                    "transformer": type(step).__name__,
+                    "output": _to_json(value),
+                }
+            )
     except IndicatorValidationError as error:
         _report_validation_error(error)
         return EXIT_FAILURE
@@ -259,8 +291,8 @@ def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         print(f"error: {error}", file=sys.stderr)
         return EXIT_FAILURE
 
-    print(indicator.serialize(pretty=True))
-    LOGGER.info("Transformed indicator %s into %s", raw.get("id"), indicator.id)
+    print(json.dumps(steps, indent=2))
+    LOGGER.info("Transformed indicator %s in %d step(s)", raw.get("id"), len(steps))
     return EXIT_OK
 
 

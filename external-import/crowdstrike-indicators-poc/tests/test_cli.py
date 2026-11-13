@@ -14,6 +14,7 @@ from conftest import (
     ok,
 )
 from crowdstrike_indicators import cli
+from crowdstrike_indicators.errors import IndicatorConversionError
 
 SECRET = "s3cr3t-value-never-shown"
 CREDENTIAL_KEYS = (cli.CLIENT_ID, cli.CLIENT_SECRET, cli.BASE_URL)
@@ -334,9 +335,13 @@ def no_api(monkeypatch):
     monkeypatch.setattr(cli, "build_client", forbidden)
 
 
+def _transform_steps(capsys) -> list[dict[str, Any]]:
+    return json.loads(capsys.readouterr().out)
+
+
 def _transform_output(capsys) -> dict[str, Any]:
-    captured = capsys.readouterr()
-    return json.loads(captured.out)
+    """Output of step 1, the STIX indicator."""
+    return _transform_steps(capsys)[0]["output"]
 
 
 def _assert_stix_of_sample(stix: dict[str, Any]) -> None:
@@ -432,3 +437,57 @@ def test_transform_unsupported_type_exits_1(isolated, no_api, capsys):
     assert captured.out == ""
     assert "email_address_a@b.example" in captured.err
     assert "'email_address'" in captured.err
+
+
+# --- transform runs the chain ------------------------------------------------
+
+
+def test_transform_prints_every_step(isolated, no_api, capsys):
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    assert _run("transform", "indicator.json") == 0
+
+    first, second = _transform_steps(capsys)
+    assert first["step"] == 1
+    assert first["transformer"] == "CrowdStrikeIndicatorTransformer"
+    _assert_stix_of_sample(first["output"])
+    assert second["step"] == 2
+    assert second["transformer"] == "CrowdStrikeAddMalware"
+    bundle = second["output"]
+    assert bundle["indicator"] == first["output"]
+    assert [m["name"] for m in bundle["malware"]] == SAMPLE_DOMAIN["malware_families"]
+    assert [r["relationship_type"] for r in bundle["relationships"]] == [
+        "indicates"
+    ] * len(SAMPLE_DOMAIN["malware_families"])
+    assert [r["target_ref"] for r in bundle["relationships"]] == [
+        m["id"] for m in bundle["malware"]
+    ]
+
+
+def test_transform_without_malware_prints_empty_lists(isolated, no_api, capsys):
+    raw = {**SAMPLE_DOMAIN, "malware_families": []}
+    (isolated / "indicator.json").write_text(json.dumps(raw))
+
+    assert _run("transform", "indicator.json") == 0
+
+    bundle = _transform_steps(capsys)[1]["output"]
+    assert bundle["malware"] == []
+    assert bundle["relationships"] == []
+
+
+def test_transform_later_step_failure_prints_nothing(
+    monkeypatch, isolated, no_api, capsys
+):
+    class FailingStep:
+        def convert(self, item: Any) -> Any:
+            raise IndicatorConversionError(SAMPLE_DOMAIN["id"], "forced failure")
+
+    monkeypatch.setattr(cli, "TRANSFORM_STEPS", (cli.TRANSFORM_STEPS[0], FailingStep()))
+    (isolated / "indicator.json").write_text(json.dumps(SAMPLE_DOMAIN))
+
+    assert _run("transform", "indicator.json") == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "forced failure" in captured.err
+    assert SAMPLE_DOMAIN["id"] in captured.err

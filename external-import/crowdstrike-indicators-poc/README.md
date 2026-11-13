@@ -243,7 +243,12 @@ yet (`reports`, `relations`, ...) are printed as received.
 `transform` reads **one** indicator as a JSON object, in the API shape (one
 element of an API page's `resources`, such as a row of
 `tests/fixtures/indicators_sample.json`), from a file or from standard input,
-and prints its STIX 2.1 indicator as JSON.
+runs it through the chain of transformers, and prints every step's result as
+JSON:
+
+1. `CrowdStrikeIndicatorTransformer`: the STIX 2.1 indicator;
+2. `CrowdStrikeAddMalware`: the bundle of that indicator, its Malware objects
+   and its `indicates` relationships.
 
 ```sh
 # Take a domain row of the committed sample as input
@@ -256,22 +261,43 @@ PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
 PYTHONPATH=src python -m crowdstrike_indicators transform < indicator.json
 ```
 
-The output is one STIX object, with the native properties first, then the
-CrowdStrike fields that no native property holds, in `x_crowdstrike_*`
-properties:
+Standard output is one JSON array, one entry per step, so it can be piped
+(`| jq '.[1].output.malware'`). STIX objects appear as their STIX JSON, with
+the native properties first, then the CrowdStrike fields no native property
+holds, in `x_crowdstrike_*` properties:
 
 ```json
-{
-    "type": "indicator",
-    "spec_version": "2.1",
-    "id": "indicator--...",
-    "name": "malicious-7.example",
-    "pattern": "[domain-name:value = 'malicious-7.example']",
-    "...": "...",
-    "x_crowdstrike_marker": "...",
-    "x_crowdstrike_labels": [{"name": "...", "created_on": "..."}]
-}
+[
+  {
+    "step": 1,
+    "transformer": "CrowdStrikeIndicatorTransformer",
+    "output": {
+      "type": "indicator",
+      "id": "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b",
+      "name": "malicious-7.example",
+      "pattern": "[domain-name:value = 'malicious-7.example']",
+      "...": "...",
+      "x_crowdstrike_malware_families": ["ExampleFamily4", "ExampleFamily6", "ExampleFamily7"]
+    }
+  },
+  {
+    "step": 2,
+    "transformer": "CrowdStrikeAddMalware",
+    "output": {
+      "indicator": {"...": "the indicator of step 1, unchanged"},
+      "malware": [
+        {"type": "malware", "id": "malware--06d31b08-d590-5298-8440-23b86775f679", "name": "ExampleFamily4", "is_family": true, "...": "..."}
+      ],
+      "relationships": [
+        {"type": "relationship", "relationship_type": "indicates", "source_ref": "indicator--f975582d-...", "target_ref": "malware--06d31b08-...", "...": "..."}
+      ]
+    }
+  }
+]
 ```
+
+Every step runs before anything is printed: if one fails, standard output
+stays empty and the error goes to standard error.
 
 `transform` accepts one object only: a JSON array, such as the `extract`
 output, is rejected. It takes `--log-level` too.
