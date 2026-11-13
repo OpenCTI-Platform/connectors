@@ -9,6 +9,7 @@ import sys
 import threading
 import traceback
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 from asyncio import Queue
@@ -25,6 +26,23 @@ from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
 
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
+# Headers of the browser's requests that urllib sets itself, or that would ask for a
+# compressed body urllib does not decode.
+_NOT_FORWARDED_REQUEST_HEADERS = {
+    "accept-encoding",
+    "connection",
+    "content-length",
+    "host",
+}
+# Headers of the responses that describe the transfer from the server, not the body
+# handed to the browser.
+_NOT_FORWARDED_RESPONSE_HEADERS = {
+    "connection",
+    "content-length",
+    "keep-alive",
+    "transfer-encoding",
+}
 
 
 def is_valid_url(url: str) -> bool:
@@ -48,6 +66,12 @@ class ImportExternalReferenceConnector:
 
         # Max download size (in bytes)
         self.max_download_size = self.config.import_external_reference.max_download_size
+
+        # Set by the FIPS image: the browser is then the one of the base image, and
+        # every request it makes is fetched by Python, through the system OpenSSL
+        # and its FIPS provider, instead of the browser's own TLS stack.
+        self.chromium_executable_path = os.environ.get("CHROMIUM_EXECUTABLE_PATH")
+        self.fetch_from_python = os.environ.get("BROWSER_FETCH_FROM_PYTHON") == "true"
 
         if not isinstance(self.cache_size, int) or self.cache_size <= 0:
             raise ValueError(
@@ -141,6 +165,49 @@ class ImportExternalReferenceConnector:
             self._download_cache[url] = data
         return data
 
+    async def _fetch_for_browser(self, method: str, url: str, headers, body):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, self._fetch_for_browser_sync, method, url, headers, body
+        )
+
+    def _fetch_for_browser_sync(self, method: str, url: str, headers, body):
+        """Fetch a request of the browser, following redirects.
+
+        Returns the final URL, the status, the headers and the body of the response.
+        """
+        request_headers = {
+            name: value
+            for name, value in headers.items()
+            if not name.startswith(":")
+            and name.lower() not in _NOT_FORWARDED_REQUEST_HEADERS
+        }
+        req = urllib.request.Request(
+            url, data=body, headers=request_headers, method=method
+        )
+        try:
+            resp = urllib.request.urlopen(
+                req, context=ssl.create_default_context(), timeout=180
+            )
+        except urllib.error.HTTPError as e:
+            # The browser renders error pages as any other response
+            resp = e
+        with resp:
+            data = resp.read(self.max_download_size + 1)
+            if len(data) > self.max_download_size:
+                raise ValueError("Downloaded data exceeds size limit")
+            response_headers = {}
+            for name, value in resp.headers.items():
+                if name.lower() in _NOT_FORWARDED_RESPONSE_HEADERS:
+                    continue
+                if name in response_headers:
+                    # Playwright splits Set-Cookie values joined by newlines back
+                    # into one header each
+                    separator = "\n" if name.lower() == "set-cookie" else ", "
+                    value = response_headers[name] + separator + value
+                response_headers[name] = value
+            return resp.url, resp.status, response_headers, data
+
     # ────────────────────────────────────────────────────────────────────────────────
     # PLAYWRIGHT WORKERS
     # ────────────────────────────────────────────────────────────────────────────────
@@ -150,6 +217,33 @@ class ImportExternalReferenceConnector:
             await route.abort()
         else:
             await route.continue_()
+
+    async def _route_through_python(self, route, request, prefetched: Dict):
+        """Fulfill a request of the browser with a response fetched by Python.
+
+        `prefetched` maps the URL of a page already fetched to its response, which
+        the navigation to it takes instead of fetching it again.
+        """
+        if request.resource_type == "media":
+            await route.abort()
+            return
+        try:
+            response = None
+            if request.is_navigation_request():
+                response = prefetched.pop(request.url, None)
+            if response is None:
+                response = await self._fetch_for_browser(
+                    request.method,
+                    request.url,
+                    await request.all_headers(),
+                    request.post_data_buffer,
+                )
+        except Exception as e:
+            self.helper.connector_logger.debug(f"Fetch failed ({request.url}): {e}")
+            await route.abort()
+            return
+        _, status, headers, body = response
+        await route.fulfill(status=status, headers=headers, body=body)
 
     async def _dismiss_cookies(self, page: Page) -> bool:
         """
@@ -260,6 +354,10 @@ class ImportExternalReferenceConnector:
                         ignore_https_errors=True,
                         viewport={"width": 1280, "height": 800},
                         extra_http_headers=self.headers,
+                        # Requests of a service worker escape the routes
+                        service_workers=(
+                            "block" if self.fetch_from_python else "allow"
+                        ),
                     )
                     await ctx.add_init_script("""
                         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
@@ -369,10 +467,26 @@ class ImportExternalReferenceConnector:
                     # Add listener before navigation
                     page.on("response", handle_response)
 
-                    await page.route("**/*", self._block_resource)
                     try:
 
                         async def _safe_navigate(page: Page, url: str):
+                            if self.fetch_from_python:
+                                # The browser sends the request a redirect leads to
+                                # without routing it, so the redirects are followed
+                                # here, and the browser opens the page they lead to.
+                                response = await self._fetch_for_browser(
+                                    "GET", url, self.headers, None
+                                )
+                                url = response[0]
+                                prefetched = {url: response}
+                                await page.route(
+                                    "**/*",
+                                    lambda route, request: self._route_through_python(
+                                        route, request, prefetched
+                                    ),
+                                )
+                            else:
+                                await page.route("**/*", self._block_resource)
                             resp = await page.goto(url, wait_until="domcontentloaded")
                             await asyncio.sleep(5)
                             await page.wait_for_load_state("load")
@@ -792,13 +906,23 @@ class ImportExternalReferenceConnector:
         pw = await async_playwright().start()
         self.playwright = pw
         self.helper.connector_logger.info("▶ launching browser…")
+        args = [
+            "--disable-dev-shm-usage",
+            "--ignore-certificate-errors",
+            "--disable-blink-features=AutomationControlled",  # Disable WebDriver detection for WAF bypass
+        ]
+        proxy = None
+        if self.fetch_from_python:
+            # Any request the browser would still send itself goes to this proxy,
+            # where nothing listens, so it fails instead of leaving through the
+            # browser's own TLS stack.
+            proxy = {"server": "http://127.0.0.1:9", "bypass": "<-loopback>"}
+            args.append("--force-webrtc-ip-handling-policy=disable_non_proxied_udp")
         self.browser = await pw.chromium.launch(
             headless=True,
-            args=[
-                "--disable-dev-shm-usage",
-                "--ignore-certificate-errors",
-                "--disable-blink-features=AutomationControlled",  # Disable WebDriver detection for WAF bypass
-            ],
+            executable_path=self.chromium_executable_path,
+            args=args,
+            proxy=proxy,
         )
         self.helper.connector_logger.info("▶ browser launched")
 
