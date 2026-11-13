@@ -259,17 +259,24 @@ class YaraHunter:
             self.helper.connector_logger.warning(
                 f"[YARA] Could not read saved hunt state: {short_error(err)}"
             )
-        if remembered:
+        # A malformed saved entry (no hunt id) is treated as a hunt that is gone
+        hunt_id = remembered.get("hunt_id") if isinstance(remembered, dict) else None
+        if hunt_id:
             try:
-                hunt = self._get_hunt(remembered["hunt_id"])
+                hunt = self._get_hunt(hunt_id)
                 if str(
                     hunt.status
                 ).upper() not in FAILURE_STATUSES and not self._is_stale(hunt, outcome):
                     return hunt
             except Exception as err:
-                # NoResultsException means the hunt is gone, not a failed read
+                # No results (204) or not found (404): the hunt is gone, not
+                # a failed read
                 remembered_failed = not isinstance(
-                    err, polyswarm_exceptions.NoResultsException
+                    err,
+                    (
+                        polyswarm_exceptions.NoResultsException,
+                        polyswarm_exceptions.NotFoundException,
+                    ),
                 )
                 self.helper.connector_logger.warning(
                     f"[YARA] Could not look up remembered hunt: {short_error(err)}"

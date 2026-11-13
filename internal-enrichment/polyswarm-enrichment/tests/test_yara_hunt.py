@@ -511,6 +511,32 @@ class TestNoSecondHunt:
         create.assert_called_once()
         assert outcome.hunt_id == "9" and not outcome.failed
 
+    @pytest.mark.parametrize(
+        "saved, get_error",
+        [
+            ({"hunt_id": "55"}, polyswarm_exceptions.NotFoundException("404")),
+            ({"started": "x"}, None),
+            ("55", None),
+        ],
+        ids=["not-found", "no-hunt-id", "not-a-dict"],
+    )
+    def test_gone_or_malformed_saved_hunt_with_failed_listing_starts_a_hunt(
+        self, saved, get_error
+    ):
+        helper = FakeHelper()
+        helper.state = {yara_hunt.STATE_KEY: {rule_digest(RULE): saved}}
+        api = _api()
+        # A saved hunt with an id is read first; the rest is the wait loop
+        reads = [get_error] if get_error is not None else []
+        api.historical_get.side_effect = reads + [_hunt("9", "COMPLETED", 0)]
+        api.historical_list.side_effect = ConnectionError("read timed out")
+        api.historical_results.return_value = iter([])
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt", return_value=_hunt("9")) as create:
+            outcome = hunter.run(RULE)
+        create.assert_called_once()
+        assert outcome.hunt_id == "9" and not outcome.failed
+
     def test_failed_saved_read_with_empty_listing_starts_a_hunt(self):
         helper = FakeHelper()
         helper.state = {yara_hunt.STATE_KEY: {rule_digest(RULE): {"hunt_id": "55"}}}
