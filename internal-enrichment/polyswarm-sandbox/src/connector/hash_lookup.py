@@ -60,12 +60,8 @@ class HashLookupMixin:
                 ] = str(value)
         return found
 
-    def _report_usable(self, task: dict | None) -> bool:
-        """A finished (successful) report that is not older than the age limit."""
-        if not task or not PolySwarmClient.is_sandbox_success(
-            str(task.get("status", ""))
-        ):
-            return False
+    def _within_max_age(self, task: dict) -> bool:
+        """True when the task is not older than the configured age limit."""
         max_age = self.config.polyswarm.sandbox_lookup_max_age_days
         if not isinstance(max_age, int) or isinstance(max_age, bool) or max_age <= 0:
             return True
@@ -79,19 +75,50 @@ class HashLookupMixin:
             return False
         return datetime.now(timezone.utc) - created <= timedelta(days=max_age)
 
+    def _report_usable(self, task: dict | None) -> bool:
+        """A finished (successful) report that is not older than the age limit."""
+        if not task or not PolySwarmClient.is_sandbox_success(
+            str(task.get("status", ""))
+        ):
+            return False
+        return self._within_max_age(task)
+
+    def _task_running(self, task: dict | None) -> bool:
+        """A task that has not finished yet and is not older than the age limit."""
+        if not task or not task.get("id"):
+            return False
+        if PolySwarmClient.is_sandbox_terminal(str(task.get("status", ""))):
+            return False
+        return self._within_max_age(task)
+
     def _lookup_reports(
         self, sha256: str, providers: list[str]
-    ) -> tuple[dict[str, dict], list[str]]:
-        """Latest usable report per provider, and the providers that have none."""
+    ) -> tuple[dict[str, dict], list[str], list[str], dict[str, str]]:
+        """Latest task per provider, sorted by what it means.
+
+        Returns (found, missing, failed, running):
+        - found: provider to a usable report
+        - missing: providers for which PolySwarm confirmed there is no
+          usable report
+        - failed: providers whose lookup failed, so it is not known whether
+          a report exists (never treated as missing)
+        - running: provider to the id of a task that is still in progress
+        """
         found: dict[str, dict] = {}
         missing: list[str] = []
+        failed: list[str] = []
+        running: dict[str, str] = {}
         for provider in providers:
             task = self.polyswarm_client.get_latest_sandbox_task(sha256, provider)
-            if self._report_usable(task):
+            if task is None:
+                failed.append(provider)
+            elif self._report_usable(task):
                 found[provider] = task
+            elif self._task_running(task):
+                running[provider] = str(task["id"])
             else:
                 missing.append(provider)
-        return found, missing
+        return found, missing, failed, running
 
     def _send_info_note(
         self,
@@ -203,7 +230,9 @@ class HashLookupMixin:
             return False
         try:
             providers = self._get_sandbox_providers()
-            found, missing = self._lookup_reports(lookup_hash, providers)
+            found, missing, failed, running = self._lookup_reports(
+                lookup_hash, providers
+            )
         except PolySwarmAPIError as e:
             if e.is_quota_exhausted:
                 # A second request (the upload) would hit the same 429. End the
@@ -214,10 +243,11 @@ class HashLookupMixin:
                 f"instead: {e.category}"
             )
             return False
-        if missing or not found:
+        unusable = missing + failed + list(running)
+        if unusable or not found:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No usable report for "
-                f"{missing or providers}, uploading"
+                f"{unusable or providers}, uploading"
             )
             return False
 
@@ -371,17 +401,59 @@ class HashLookupMixin:
             )
 
             providers = self._get_sandbox_providers()
-            found, missing = self._lookup_reports(sha256, providers)
+            found, missing, failed, running = self._lookup_reports(sha256, providers)
             tasks = {p: str(t.get("id")) for p, t in found.items()}
             results: dict[str, dict | None] = dict(found)
             llm_task_ids = self._fire_llm_for_existing(found)
 
+            if failed:
+                # Unknown is not "no report": never detonate on a failed lookup,
+                # it could start a second paid analysis of the same sample.
+                self._send_error_note(
+                    entity,
+                    "Sandbox Lookup Failed",
+                    "The lookup of the existing sandbox report failed for "
+                    f"provider(s): {', '.join(failed)}. It is not known whether a "
+                    "report exists, so nothing was detonated for them.",
+                    [
+                        "Retry the enrichment in a few minutes.",
+                        "Check the connector logs for the PolySwarm API error.",
+                    ],
+                )
+
             held_outcome = ""
             no_analysis = False
-            if missing and ps.sandbox_detonate_by_hash is True:
-                started, held_outcome = self._detonate_held_sample(
-                    entity, sha256, missing
-                )
+            if ps.sandbox_detonate_by_hash is not True:
+                # A task still in progress has no report yet: with detonation
+                # off it is reported like any other missing report.
+                missing = missing + list(running)
+                running = {}
+            if (missing or running) and ps.sandbox_detonate_by_hash is True:
+                started: dict[str, str] = {}
+                if missing:
+                    started, held_outcome = self._detonate_held_sample(
+                        entity, sha256, missing
+                    )
+                if held_outcome == "submit_failed":
+                    self._send_error_note(
+                        entity,
+                        "Sandbox Submission Failed",
+                        "Failed to start the sandbox for the sample PolySwarm holds "
+                        f"on provider(s): {', '.join(missing)}.",
+                        [
+                            "Verify your PolySwarm plan includes sandbox analysis.",
+                            "Contact customersuccess@polyswarm.io to enable sandbox features "
+                            "or increase quota.",
+                        ],
+                    )
+                if running:
+                    # Poll the detonation already in progress instead of
+                    # starting (and paying for) another one.
+                    self.helper.connector_logger.info(
+                        f"[CONNECTOR] {self._enrich_ctx} Sandbox task already "
+                        f"running for {list(running)}, waiting for it"
+                    )
+                    started = {**started, **running}
                 if started:
                     polled = self._phase_poll_sandboxes(
                         entity,
@@ -404,23 +476,11 @@ class HashLookupMixin:
                             "error": "No sandbox analysis completed before the "
                             "timeout",
                         }
-                elif held_outcome == "submit_failed":
-                    self._send_error_note(
-                        entity,
-                        "Sandbox Submission Failed",
-                        "Failed to start the sandbox for the sample PolySwarm holds "
-                        f"on provider(s): {', '.join(missing)}.",
-                        [
-                            "Verify your PolySwarm plan includes sandbox analysis.",
-                            "Contact customersuccess@polyswarm.io to enable sandbox features "
-                            "or increase quota.",
-                        ],
-                    )
-                    if not results:
-                        return {
-                            "status": "error",
-                            "error": "Sandbox start for the held sample failed",
-                        }
+                elif held_outcome == "submit_failed" and not results:
+                    return {
+                        "status": "error",
+                        "error": "Sandbox start for the held sample failed",
+                    }
                 elif held_outcome == "refused" and not results:
                     return {
                         "status": "error",
@@ -429,6 +489,12 @@ class HashLookupMixin:
                     }
 
             if not results:
+                if failed:
+                    return {
+                        "status": "error",
+                        "error": "Sandbox report lookup failed for "
+                        f"{', '.join(failed)}, nothing was detonated",
+                    }
                 if held_outcome == "not_held":
                     detail = (
                         "PolySwarm has no sandbox report for this hash, and does not "

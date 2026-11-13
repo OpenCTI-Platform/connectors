@@ -66,7 +66,11 @@ def _opencti_file(entity_type="StixFile", **extra):
 
 
 def _connector(latest=None, **overrides):
-    """Connector with a mocked client. latest maps provider -> task or None."""
+    """Connector with a mocked client.
+
+    latest maps provider -> task. A provider left out has no task (the
+    client's {}); map a provider to None for a failed lookup.
+    """
     polyswarm = {
         "community": "acme-private",
         "allow_public_community": False,
@@ -84,7 +88,7 @@ def _connector(latest=None, **overrides):
     client.get_default_vm_for_provider = MagicMock(return_value="win-10-build-19041")
     latest = {"cape": _task()} if latest is None else latest
     client.get_latest_sandbox_task = MagicMock(
-        side_effect=lambda sha, prov: latest.get(prov)
+        side_effect=lambda sha, prov: latest.get(prov, {})
     )
     client.find_instance_by_hash = MagicMock(
         return_value={"id": INSTANCE_ID, "sha256": EICAR_SHA256}
@@ -623,6 +627,146 @@ class TestDetonateByHash:
         assert c._phase_poll_sandboxes.call_args.args[2:4] == (7, 99)
 
 
+class TestLookupFailureNeverDetonates:
+    """A failed lookup is not "no report", and a running task is not missing."""
+
+    def test_failed_lookup_does_not_detonate(self):
+        c = _connector(latest={"cape": None}, sandbox_detonate_by_hash=True)
+        c._send_error_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        assert "lookup failed" in result["error"]
+        c.polyswarm_client.find_instance_by_hash.assert_not_called()
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert titles == ["Sandbox Lookup Failed"]
+        assert "nothing was detonated" in c._send_error_note.call_args.args[2]
+
+    def test_sdk_server_error_does_not_detonate(self):
+        """The real client turns an SDK 503 into a failed lookup, not a miss."""
+        c = _connector(sandbox_detonate_by_hash=True)
+        real = _client()
+        real.api.sandbox_task_latest = MagicMock(
+            side_effect=ps_exceptions.RequestException(
+                MagicMock(status_code=503), "Return code: 503"
+            )
+        )
+        c.polyswarm_client.get_latest_sandbox_task = real.get_latest_sandbox_task
+        c._send_error_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+
+    def test_not_found_still_detonates(self):
+        c = _connector(sandbox_detonate_by_hash=True)
+        real = _client()
+        real.api.sandbox_task_latest = MagicMock(
+            side_effect=ps_exceptions.NotFoundException(
+                MagicMock(status_code=404), "No tasks found."
+            )
+        )
+        c.polyswarm_client.get_latest_sandbox_task = real.get_latest_sandbox_task
+        assert _run(c) is None
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_called_once()
+
+    def test_failed_lookup_without_detonation_is_not_no_report(self):
+        c = _connector(latest={"cape": None})
+        c._send_error_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        assert not any(
+            "No PolySwarm Sandbox Report" in n["abstract"] for n in _notes(c)
+        )
+        assert c._send_error_note.call_args.args[1] == "Sandbox Lookup Failed"
+
+    def test_one_provider_failed_other_missing_detonates_only_missing(self):
+        c = _connector(
+            latest={"cape": None},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        calls = c.polyswarm_client.submit_sandbox_by_instance_async.call_args_list
+        assert [call.args[1] for call in calls] == ["triage"]
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert "Sandbox Lookup Failed" in titles
+
+    def test_failed_lookup_keeps_found_reports(self):
+        c = _connector(
+            latest={"cape": None, "triage": _task("triage")},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        assert any("Triage Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    @pytest.mark.parametrize("status", ["PENDING", "RUNNING", "STARTED"])
+    def test_running_task_is_polled_not_detonated_again(self, status):
+        c = _connector(
+            latest={"cape": _task(id="running-task", status=status)},
+            sandbox_detonate_by_hash=True,
+        )
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        assert _run(c) is None
+        c.polyswarm_client.find_instance_by_hash.assert_not_called()
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        c.polyswarm_client.get_sandbox_results.assert_called_with("running-task")
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_running_plus_missing_polls_both(self):
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING")},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c._phase_poll_sandboxes = MagicMock(return_value={})
+        _run(c)
+        calls = c.polyswarm_client.submit_sandbox_by_instance_async.call_args_list
+        assert [call.args[1] for call in calls] == ["triage"]
+        assert c._phase_poll_sandboxes.call_args.args[1] == {
+            "triage": "new-task",
+            "cape": "running-task",
+        }
+
+    def test_stale_running_task_is_missing(self):
+        c = _connector(
+            latest={"cape": _task(status="PENDING", created=_days_ago(90))},
+            sandbox_lookup_max_age_days=30,
+            sandbox_detonate_by_hash=True,
+        )
+        _run(c)
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_called_once()
+
+    def test_running_task_with_detonation_off_gives_no_report_note(self):
+        c = _connector(latest={"cape": _task(status="PENDING")})
+        assert _run(c) is None
+        c.polyswarm_client.get_sandbox_results.assert_not_called()
+        assert any("No PolySwarm Sandbox Report" in n["abstract"] for n in _notes(c))
+
+    def test_artifact_reuse_failed_lookup_uploads(self):
+        c = _connector(latest={"cape": None}, sandbox_reuse_report=True)
+        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
+        entity = {
+            "type": "artifact",
+            "spec_version": "2.1",
+            "id": ARTIFACT_ID,
+            "hashes": {"SHA-256": EICAR_SHA256},
+        }
+        with patch("connector.polyswarm_connector.time.sleep"):
+            c._enrich_file(
+                ARTIFACT_ID,
+                entity,
+                {"entity_type": "Artifact", "standard_id": ARTIFACT_ID},
+                [entity],
+            )
+        c.artifact_handler.download_artifact.assert_called_once()
+
+
 # -- Artifact: reuse an existing report before uploading
 
 
@@ -866,7 +1010,7 @@ class TestClientLookup:
         assert seen[0]["params"]["sandbox"] == "cape"
         assert seen[0]["params"]["community"] == "acme-private"
 
-    def test_latest_404_is_none_and_not_retried(self):
+    def test_latest_404_is_empty_and_not_retried(self):
         c = _client()
         calls = []
 
@@ -875,8 +1019,26 @@ class TestClientLookup:
             return _Resp(404, {"result": "No tasks found.", "status": "ERROR"})
 
         with patch.object(c.api.session, "request", side_effect=fake_request):
-            assert c.get_latest_sandbox_task("0" * 64, "cape") is None
+            assert c.get_latest_sandbox_task("0" * 64, "cape") == {}
         assert len(calls) == 1
+
+    def test_latest_server_error_is_none_not_empty(self):
+        """A 5xx is a failed lookup (None), never a confirmed miss ({})."""
+        c = _client()
+
+        def fake_request(**kwargs):
+            return _Resp(503, {"result": "unavailable", "status": "ERROR"})
+
+        with patch.object(c.api.session, "request", side_effect=fake_request):
+            assert c.get_latest_sandbox_task(EICAR_SHA256, "cape") is None
+
+    def test_latest_breaker_open_is_none(self):
+        c = _client()
+        for _ in range(c._breaker.failure_threshold):
+            c._breaker.record_failure()
+        c.api.sandbox_task_latest = MagicMock()
+        assert c.get_latest_sandbox_task(EICAR_SHA256, "cape") is None
+        c.api.sandbox_task_latest.assert_not_called()
 
     def test_latest_quota_error_raises(self):
         c = _client()

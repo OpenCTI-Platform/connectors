@@ -551,17 +551,19 @@ class PolySwarmClient:
         """Latest existing sandbox task for a SHA-256 and provider, read only.
 
         Returns the task's JSON (the same shape ``get_sandbox_results`` returns,
-        report included), or None when PolySwarm has no task for the hash (the
-        API answers 404 "No tasks found.") or the call failed. Only the hash is
-        sent. Nothing is submitted and no credits are spent.
+        report included), an empty dict when PolySwarm confirmed it has no
+        task for the hash (the API answers 404 "No tasks found."), or None
+        when the call failed and it is not known whether a task exists.
+        Callers must not treat None as "no task". Only the hash is sent.
+        Nothing is submitted and no credits are spent.
         """
 
-        def _latest() -> dict | None:
+        def _latest() -> dict:
             try:
                 task = self.api.sandbox_task_latest(sha256, provider)
             except NotFoundException:
-                return None
-            return task.json if task else None
+                return {}
+            return task.json if task else {}
 
         try:
             return self._retry_sdk_call(
