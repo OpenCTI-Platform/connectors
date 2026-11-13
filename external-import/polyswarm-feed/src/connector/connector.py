@@ -116,6 +116,9 @@ class PolySwarmFeedConnector:
         )
         self.author = build_author()
         self.tlp_marking = build_tlp_marking(polyswarm.tlp_level)
+        # Feed objects sent in the current run, counted as each page is sent
+        # so a collection that fails part way still uses up its share.
+        self._feed_sent = 0
 
     # ------------------------------------------------------------------
     # Scheduling
@@ -165,9 +168,9 @@ class PolySwarmFeedConnector:
             min_confidence=polyswarm.feed_min_confidence,
         )
         max_objects = polyswarm.max_objects_per_run
-        sent_total = 0
+        self._feed_sent = 0
         for collection in polyswarm.feed_collections:
-            if sent_total >= max_objects:
+            if self._feed_sent >= max_objects:
                 self.logger.info(
                     "Maximum objects per run reached, remaining collections "
                     "resume on the next run",
@@ -175,8 +178,8 @@ class PolySwarmFeedConnector:
                 )
                 break
             try:
-                sent_total += self._import_collection(
-                    collection, state, converter, now, max_objects - sent_total
+                self._import_collection(
+                    collection, state, converter, now, max_objects - self._feed_sent
                 )
             except (KeyboardInterrupt, SystemExit):
                 raise
@@ -215,7 +218,7 @@ class PolySwarmFeedConnector:
         state.save()
         self.logger.info(
             "Connector run completed",
-            {"objects_sent": sent_total, "state": state.to_json()},
+            {"objects_sent": self._feed_sent, "state": state.to_json()},
         )
 
     def _import_collection(
@@ -226,7 +229,11 @@ class PolySwarmFeedConnector:
         now: datetime,
         budget: int,
     ) -> int:
-        """Import one TAXII collection, page by page. Return objects sent."""
+        """Import one TAXII collection, page by page. Return objects sent.
+
+        Every sent page is also added to ``self._feed_sent`` right away, so
+        the run total stays right when the collection fails part way.
+        """
         cursor = state.get_cursor(collection)
         if not cursor.added_after:
             cursor.added_after = _format_timestamp(
@@ -249,6 +256,7 @@ class PolySwarmFeedConnector:
                         work_id = self._initiate_work(f"feed {collection}")
                     self._send(objects, work_id)
                     sent += len(objects)
+                    self._feed_sent += len(objects)
 
                 if page.date_added_last:
                     cursor.added_after = page.date_added_last

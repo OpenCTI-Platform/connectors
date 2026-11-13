@@ -223,6 +223,49 @@ def test_max_objects_is_shared_across_collections(fake_logger):
     assert "ransomware" not in helper.stored_state["collections"]
 
 
+def _objects_in_one_sample_page(fake_logger) -> int:
+    pages = {"trustgroup": [page(make_sample_bundle(1), last="T1")]}
+    connector, helper, _ = build(fake_logger, pages)
+    connector.process_message()
+    # Each bundle also carries the author and the TLP marking.
+    return len(helper.bundles[0]["bundle"]["objects"]) - 2
+
+
+def test_objects_sent_before_a_collection_fails_count_toward_the_cap(fake_logger):
+    one_page = _objects_in_one_sample_page(type(fake_logger)())
+    pages = {
+        "trustgroup": [
+            page(make_sample_bundle(1), more=True, next_token="n1", last="T1"),
+            ApiServerError("boom", status_code=500),
+            ApiServerError("boom again", status_code=500),
+        ],
+        "ransomware": [
+            page(make_sample_bundle(2), more=True, next_token="r1", last="R1"),
+            page(make_sample_bundle(3), last="R2"),
+        ],
+    }
+    connector, helper, client = build(
+        fake_logger,
+        pages,
+        feed_collections="trustgroup,ransomware",
+        max_objects_per_run=one_page + 1,
+    )
+
+    connector.process_message()
+
+    # The failed collection's sent page counts, so only one object of budget
+    # is left: the next collection sends one page and stops.
+    ransomware_calls = [c for c in client.calls if c["collection"] == "ransomware"]
+    assert len(ransomware_calls) == 1
+    assert helper.stored_state["collections"]["ransomware"]["next_token"] == "r1"
+    (completed,) = [
+        meta
+        for _, message, meta in fake_logger.records
+        if message == "Connector run completed"
+    ]
+    assert completed["objects_sent"] == 2 * one_page
+
+
 def test_each_collection_has_its_own_work_and_cursor(fake_logger):
     pages = {
         "trustgroup": [page(make_sample_bundle(1), last="T1")],
