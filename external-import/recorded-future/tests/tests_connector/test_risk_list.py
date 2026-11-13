@@ -356,3 +356,33 @@ class TestRiskListRunNonVuln:
 
         add_labels_call = mock_stix_obj.add_labels.call_args[0][0]
         assert "No Score Rule" in add_labels_call
+
+
+# ── Tests for RiskList.run() state handling ───────────────────────────────────
+
+
+# Scenario: keys saved by other modules while the risk lists run are kept
+def test_run_keeps_state_keys_saved_by_other_modules_meanwhile():
+    helper = _mock_helper()
+    state_at_start = {
+        "last_risk_lists_run": "2026-11-01 00:00:00",
+        "last_analyst_notes_run": "2026-11-01 00:00:00",
+    }
+    # Analyst Notes and Threat Maps run in parallel threads and save the state
+    # while the risk lists are being pulled.
+    state_before_save = {
+        "last_risk_lists_run": "2026-11-01 00:00:00",
+        "last_analyst_notes_run": "2026-11-05 09:00:00",
+        "last_threat_maps_run": "2026-11-05 09:00:00",
+    }
+    helper.get_state.side_effect = [state_at_start, state_before_save]
+    risk_list = _build_risk_list(helper=helper)
+
+    with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", {}):
+        risk_list.run()
+
+    helper.connector_logger.error.assert_not_called()
+    saved_state = helper.set_state.call_args.kwargs["state"]
+    assert saved_state["last_analyst_notes_run"] == "2026-11-05 09:00:00"
+    assert saved_state["last_threat_maps_run"] == "2026-11-05 09:00:00"
+    assert saved_state["last_risk_lists_run"] != "2026-11-01 00:00:00"

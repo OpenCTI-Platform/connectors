@@ -256,6 +256,9 @@ class RiskList(threading.Thread):
             last_run_datetime = datetime.fromtimestamp(
                 current_timestamp, tz=timezone.utc
             ).strftime("%Y-%m-%d %H:%M:%S")
+            # Re-read the state before saving: Threat Maps, Analyst Notes and
+            # Alerts run in parallel threads and save their own keys meanwhile.
+            current_state = self.helper.get_state() or {}
             current_state.update({"last_risk_lists_run": last_run_datetime})
             self.helper.set_state(state=current_state)
 
