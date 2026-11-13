@@ -116,9 +116,21 @@ class PolySwarmAPIError(Exception):
 
     QUOTA_CATEGORY = "API Quota Exhausted"
 
+    # Every category that means "the account may not send more requests now"
+    QUOTA_OR_RATE_CATEGORIES = (
+        QUOTA_CATEGORY,
+        "API Quota Exceeded",
+        "API Rate Limit Exceeded",
+    )
+
     @property
     def is_quota_exhausted(self) -> bool:
         return self.category.startswith(self.QUOTA_CATEGORY)
+
+    @property
+    def is_quota_or_rate_limited(self) -> bool:
+        """Quota exhausted (SDK 429), quota exceeded (402) or rate limited (429)."""
+        return self.category.startswith(self.QUOTA_OR_RATE_CATEGORIES)
 
     def __init__(
         self, category: str, detail: str, recommendations: list | None = None

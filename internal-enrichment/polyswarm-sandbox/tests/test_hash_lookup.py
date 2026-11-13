@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.stix_builder import StixBuilder
 from polyswarm_api import exceptions as ps_exceptions
@@ -970,6 +971,34 @@ class TestArtifactReuse:
         with pytest.raises(PolySwarmAPIError) as exc:
             self._run_artifact(c)
         assert exc.value.is_quota_exhausted
+        c.artifact_handler.download_artifact.assert_not_called()
+        c.polyswarm_client.submit_file_async.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "error,category",
+        [
+            (
+                ps_exceptions.RequestException(
+                    MagicMock(status_code=402), "Return code: 402"
+                ),
+                "API Quota Exceeded",
+            ),
+            (
+                requests.HTTPError(response=MagicMock(status_code=429)),
+                "API Rate Limit Exceeded",
+            ),
+        ],
+    )
+    def test_quota_402_and_rate_429_lookup_stop_the_upload(self, error, category):
+        """Every quota or rate category stops the upload, not only the SDK 429."""
+        c = _connector(sandbox_reuse_report=True)
+        real = _client()
+        real.api.sandbox_task_latest = MagicMock(side_effect=error)
+        c.polyswarm_client.get_latest_sandbox_task = real.get_latest_sandbox_task
+        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "stop"))
+        with pytest.raises(PolySwarmAPIError) as exc:
+            self._run_artifact(c)
+        assert exc.value.category.startswith(category)
         c.artifact_handler.download_artifact.assert_not_called()
         c.polyswarm_client.submit_file_async.assert_not_called()
 

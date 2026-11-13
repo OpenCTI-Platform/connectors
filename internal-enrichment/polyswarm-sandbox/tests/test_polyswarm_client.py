@@ -285,6 +285,21 @@ class TestHTTPErrorMapping:
 # ── PolySwarmAPIError ───────────────────────────────────────────────────────
 
 
+class TestQuotaOrRateLimited:
+    @pytest.mark.parametrize(
+        "category,expected",
+        [
+            ("API Quota Exhausted (scan submit)", True),
+            ("API Quota Exceeded (scan submit)", True),
+            ("API Rate Limit Exceeded (scan submit)", True),
+            ("API Access Denied (scan submit)", False),
+            ("API Authentication Failed (scan submit)", False),
+        ],
+    )
+    def test_categories(self, category, expected):
+        assert PolySwarmAPIError(category, "x").is_quota_or_rate_limited is expected
+
+
 class TestPolySwarmAPIError:
     """Verify PolySwarmAPIError carries category, detail, and actionable recommendations."""
 

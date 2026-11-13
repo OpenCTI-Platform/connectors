@@ -234,9 +234,10 @@ class HashLookupMixin:
                 lookup_hash, providers
             )
         except PolySwarmAPIError as e:
-            if e.is_quota_exhausted:
-                # A second request (the upload) would hit the same 429. End the
-                # enrichment so the quota note is attached instead.
+            if e.is_quota_or_rate_limited:
+                # A second request (the upload) would hit the same quota or
+                # rate limit. End the enrichment so the quota note is
+                # attached instead.
                 raise
             self.helper.connector_logger.warning(
                 f"[CONNECTOR] {self._enrich_ctx} Report lookup failed, uploading "
