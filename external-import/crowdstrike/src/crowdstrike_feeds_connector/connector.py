@@ -16,8 +16,9 @@ from crowdstrike_feeds_services.utils import (
     timestamp_to_datetime,
 )
 from crowdstrike_feeds_services.utils.attack_lookup import (
-    AttackTechniqueLookup,
     AttackTechniqueLookupError,
+    CustomAttackTechniqueLookup,
+    GithubAttackTechniqueLookup,
 )
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
@@ -121,19 +122,24 @@ class CrowdStrike:
         # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
         self.attack_lookup = None
         try:
-            attack_version = self.config.crowdstrike.attack_version
-            attack_url_override = (
-                str(self.config.crowdstrike.attack_enterprise_url)
-                if self.config.crowdstrike.attack_enterprise_url
-                else None
-            )
-            self.attack_lookup = AttackTechniqueLookup(
-                attack_version=attack_version,
-                enterprise_attack_url=attack_url_override,
-            )
+            attack_enterprise_url = self.config.crowdstrike.attack_enterprise_url
+            if attack_enterprise_url:
+                self.attack_lookup = CustomAttackTechniqueLookup(
+                    enterprise_attack_url=str(attack_enterprise_url)
+                )
+            else:
+                self.attack_lookup = GithubAttackTechniqueLookup(
+                    attack_version=self.config.crowdstrike.attack_version
+                )
+
+            # Sources that failed before the one that provided the dataset (e.g. a missing versioned file).
+            for retrieval_error in self.attack_lookup.retrieval_errors:
+                self.helper.log_warning(
+                    f"ATT&CK Enterprise dataset source skipped: {retrieval_error}"
+                )
 
             self.helper.log_info(
-                f"Loaded ATT&CK Enterprise dataset ({attack_version}) from {self.attack_lookup.enterprise_attack_url} "
+                f"Loaded ATT&CK Enterprise dataset from {self.attack_lookup.enterprise_attack_url} "
                 f"with {len(self.attack_lookup.attack_techniques)} techniques"
             )
         except AttackTechniqueLookupError as e:
