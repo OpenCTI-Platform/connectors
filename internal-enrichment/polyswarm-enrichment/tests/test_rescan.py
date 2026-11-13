@@ -462,6 +462,32 @@ class TestRescanFailureModes:
         data, error = _query(client)
         assert error is None and data is not None
 
+    def test_empty_next_page_after_old_result_still_rescans(self):
+        def pages():
+            yield _instance(days_old=400, polyscore=0.1)
+            raise polyswarm_exceptions.NoResultsException("204")
+
+        client = _client(
+            days=7,
+            rescan=_instance(days_old=0, assertions=False, window_closed=False),
+            wait_for=lambda *_a, **_k: _instance(days_old=0, polyscore=0.9),
+        )
+        client.polyswarm.search.return_value = pages()
+        data, error = _query(client)
+        client.polyswarm.rescan.assert_called_once()
+        assert error is None and data["polyscore"] == 0.9
+
+    def test_running_scan_then_empty_next_page_blocks_rescan(self):
+        def pages():
+            yield _instance(days_old=400, polyscore=0.1)
+            yield _instance(days_old=0, assertions=False, window_closed=False)
+            raise polyswarm_exceptions.NoResultsException("204")
+
+        client = _client(days=7)
+        client.polyswarm.search.return_value = pages()
+        _query(client)
+        client.polyswarm.rescan.assert_not_called()
+
     def test_unreadable_rest_after_old_result_skips_rescan(self):
         def pages():
             yield _instance(days_old=400, polyscore=0.1)

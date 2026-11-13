@@ -648,6 +648,8 @@ class ConnectorClient:
                     if self._rescan_reason([result], data, result):
                         try:
                             results.extend(found)
+                        except polyswarm_exceptions.NoResultsException:
+                            pass  # an empty next page (204) is the end of the list
                         except Exception as err:
                             # Unsure whether a scan is running: no paid rescan
                             data["_other_results_incomplete"] = True
