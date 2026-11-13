@@ -12,9 +12,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [DomainTools extra parameters environment variables](#domaintools-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -36,38 +33,10 @@ This connector uses IrisQL to fetch data from DomainTools Iris Investigate and i
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-Below are the parameters you'll need to set for OpenCTI:
-
-### OpenCTI environment variables
-
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml `connector` | Docker environment variable | Default | Mandatory | Description                                                                              |
-|-----------------|------------------------|-----------------------------|---------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | `id`                   | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name  | `name`                 | `CONNECTOR_NAME`            | /       | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | stix2  | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | error   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | PT1H    | Yes       | The period of time between two connector runs (ISO 8601 duration format).                |
-
-### DomainTools extra parameters environment variables
-
-| Parameter               | config.yml                     | Docker environment variable       | Default | Mandatory | Description                           |
-|-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
-| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |  | https://api.domaintools.com/v1/iris-investigate/       | Yes       | DomainTools API base URL                   |
-| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |      | Yes       | DomainTools API key                        |
-| IrisQL Query            | domaintools.iris_ql         | `DOMAINTOOLS_IRIS_QL`         |             | Yes       | IrisQL query to execute                        |
-| STORE IRIS DATA | domaintools.store_iris_data | `DOMAINTOOLS_STORE_IRIS_DATA` | false |No| Store DomainTools Iris data as note object. |
-| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                  | clear   | No        | TLP marking for created STIX objects. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
