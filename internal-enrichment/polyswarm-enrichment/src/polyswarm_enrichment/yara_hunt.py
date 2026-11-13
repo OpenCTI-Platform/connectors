@@ -59,8 +59,10 @@ STRINGS_PER_RESULT = 5
 STRING_DATA_MAX = 60
 STATE_KEY = "yara_hunts"
 # historical_list(since=...) takes seconds (measured: 120 days back returned
-# only the hunts of the last 120 days); an empty list raises NoResultsException
-ACCOUNT_LOOKBACK_SECONDS = 30 * 86400
+# only the hunts of the last 120 days); an empty list raises NoResultsException.
+# A finished hunt stays reusable for its whole window plus part of a day (see
+# _is_stale), so look back the longest valid window plus one day.
+ACCOUNT_LOOKBACK_SECONDS = (max(VALID_WINDOW_DAYS) + 1) * 86400
 
 _RULE_NAME_RE = re.compile(r"^\s*(?:(?:private|global)\s+)*rule\s+([A-Za-z_]\w*)", re.M)
 

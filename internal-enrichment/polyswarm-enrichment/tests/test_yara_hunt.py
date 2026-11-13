@@ -413,6 +413,48 @@ class TestNoSecondHunt:
             since=yara_hunt.ACCOUNT_LOOKBACK_SECONDS
         )
 
+    @staticmethod
+    def _listing_api(hunts):
+        """historical_list that, like the API, returns only hunts created since."""
+        api = _api()
+
+        def listing(since):
+            cutoff = datetime.now(timezone.utc) - timedelta(seconds=since)
+            found = [h for h in hunts if h.created >= cutoff]
+            if not found:
+                raise polyswarm_exceptions.NoResultsException("x")
+            return iter(found)
+
+        api.historical_list.side_effect = listing
+        return api
+
+    @pytest.mark.parametrize(
+        "age", [timedelta(days=120), timedelta(days=180, hours=12)]
+    )
+    def test_account_hunt_within_long_window_is_found_after_state_loss(self, age):
+        name = YaraHunter.hunt_name(RULE)
+        created = datetime.now(timezone.utc) - age
+        old = _hunt("80", "COMPLETED", 0, name=name, window_days=180, created=created)
+        api = self._listing_api([old])
+        api.historical_get.return_value = old
+        api.historical_results.return_value = iter([])
+        clock = Clock()
+        hunter = YaraHunter(
+            api,
+            FakeHelper(),
+            window_days=180,
+            timeout=60,
+            max_results=50,
+            sleep=clock.sleep,
+            clock=clock,
+        )
+        with patch.object(hunter, "_create_hunt") as create:
+            outcome = hunter.run(RULE)
+        create.assert_not_called()
+        assert outcome.reused and outcome.hunt_id == "80"
+        since = api.historical_list.call_args.kwargs["since"]
+        assert since >= 181 * 86400
+
     def test_running_hunt_on_the_account_is_followed(self):
         api = _api()
         name = YaraHunter.hunt_name(RULE)
