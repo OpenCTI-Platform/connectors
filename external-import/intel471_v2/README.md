@@ -106,9 +106,10 @@ Grant only the APIs your watchers match. If you are unsure which those are, or w
 | **Watchers** | The alerts stream itself, and watcher / watcher-group details |
 | **Indicators** | Indicators |
 | **Reports** | Reports — Fintel, Info, Breach Alert, Spot, Malware, Geopol and Vulnerability |
-| **Sources** | Forum posts, forum private messages, chat / messaging-service messages, data-leak-site posts |
+| **Sources** | Forum posts, forum private messages, chat / messaging-service messages, data-leak-site posts and file listings |
 | **Credentials** | Leaked credentials, credential occurrences, credential sets |
 | **Malware** | Malware families and malware-intel events |
+| **Marketplaces** | Marketplaces and their products, resources and vendors |
 
 An alert whose target needs an API you have not granted is skipped (logged, not fatal); the rest of the alerts keep ingesting.
 

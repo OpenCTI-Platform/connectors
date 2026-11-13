@@ -1,3 +1,8 @@
+# v2.4.1
+
+  + Upgrade `verity471[stix]` to version [1.3.1](https://github.com/intel471/verity471-python/releases/tag/v1.3.1), which adds the Marketplaces API: watcher alerts on marketplaces and their products, resources and vendors are now resolved and mapped instead of skipped. Grant the **Marketplaces** API to your Verity471 application to ingest them
+  + With the same upgrade, watcher alerts on data-leak-site file listings are now resolved through the file-listing details endpoint and mapped with their file-listing details, instead of the target being dropped and only the generic alert information being ingested
+
 # v2.4.0
 
   + Add a Verity471 leaked **credentials** stream that ingests from `/credentials/stream` and maps each leaked credential to STIX: a `UserAccount` (an email login is also emitted as an `EmailAddress` linked back to it), related to the affected `DomainName`s and the harvesting infostealer `Malware`. Disabled by default; enable it with a non-zero `INTEL471_INTERVAL_CREDENTIALS`. Restrict what is ingested with the optional `INTEL471_AFFILIATION_GROUP` filter (`my_employees`, `my_customers`, `third_parties`, `vip_emails`); as with the alerts stream, changing the filter discards the Verity471 cursor and re-anchors the from-date to the last processed credential minus a small margin (a filter change re-ingests a small overlapping window)
