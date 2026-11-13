@@ -1062,6 +1062,9 @@ class ConnectorClient:
                 held_results = [source] if source is not None else []
                 community = data.get("community") or self.polyswarm_community
             elif held:
+                if any(self._still_running(results) for _, results in held):
+                    # A scan still running in any community is left to finish
+                    return result
                 community, held_results = held[0]
             else:
                 return result

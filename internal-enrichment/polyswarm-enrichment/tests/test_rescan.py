@@ -314,6 +314,39 @@ class TestRescanFailureModes:
         assert error is None and data is not None
         client.polyswarm.rescan.assert_not_called()
 
+    def _dual_held(self, private, default):
+        client, default_api = self._dual(private_days=1, default_days=1)
+        client.polyswarm.search.return_value = [private]
+        default_api.search.return_value = [default]
+        return client, default_api
+
+    def test_dual_private_failed_default_running_is_not_rescanned(self):
+        client, default_api = self._dual_held(
+            private=_instance(assertions=False, failed=True, window_closed=True),
+            default=_instance(assertions=False, failed=False, window_closed=False),
+        )
+        client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_not_called()
+        default_api.rescan.assert_not_called()
+
+    def test_dual_private_running_default_failed_is_not_rescanned(self):
+        client, default_api = self._dual_held(
+            private=_instance(assertions=False, failed=False, window_closed=False),
+            default=_instance(assertions=False, failed=True, window_closed=True),
+        )
+        client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_not_called()
+        default_api.rescan.assert_not_called()
+
+    def test_dual_both_failed_rescans_once_in_private(self):
+        client, default_api = self._dual_held(
+            private=_instance(assertions=False, failed=True, window_closed=True),
+            default=_instance(assertions=False, failed=True, window_closed=True),
+        )
+        client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_called_once()
+        default_api.rescan.assert_not_called()
+
     def test_no_completed_scan_and_failed_rescan_is_reported(self):
         client = _client(days=7, search=[_instance(assertions=False)])
         client.polyswarm.rescan.side_effect = polyswarm_exceptions.RequestException(
