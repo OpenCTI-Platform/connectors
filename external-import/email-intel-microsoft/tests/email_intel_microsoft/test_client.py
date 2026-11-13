@@ -1,8 +1,8 @@
 import asyncio
+import base64
 import datetime
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -11,12 +11,13 @@ import pytest
 from email_intel_microsoft.client import (
     MAX_CONCURRENT_ATTACHMENT_DOWNLOADS,
     ConnectorClient,
-    _suspend_backed_model_lambdas,
 )
-from kiota_abstractions.store.backed_model import BackedModel
-from kiota_abstractions.store.in_memory_backing_store import InMemoryBackingStore
+from kiota_serialization_json.json_parse_node import JsonParseNode
 from msgraph.generated.models.file_attachment import (
     FileAttachment,
+)
+from msgraph.generated.models.message_collection_response import (
+    MessageCollectionResponse,
 )
 from msgraph.generated.models.o_data_errors.main_error import MainError
 from msgraph.generated.models.o_data_errors.o_data_error import ODataError
@@ -200,16 +201,19 @@ def test_attachment_downloads_should_never_exceed_mailbox_concurrency_limit(
     in_flight = 0
     max_in_flight = 0
 
-    async def _tracked_get() -> FileAttachment:
-        nonlocal in_flight, max_in_flight
-        in_flight += 1
-        max_in_flight = max(max_in_flight, in_flight)
-        await asyncio.sleep(0)  # yield so that every started download overlaps
-        in_flight -= 1
-        return attachment(with_bytes=True)
+    def _tracked_builder(att_id: str) -> MagicMock:
+        async def _tracked_get() -> FileAttachment:
+            nonlocal in_flight, max_in_flight
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+            await asyncio.sleep(0)  # yield so that every started download overlaps
+            in_flight -= 1
+            return attachment(att_id, with_bytes=True)
 
-    messages.by_message_id.return_value.attachments.by_attachment_id.return_value.get = AsyncMock(
-        side_effect=_tracked_get
+        return MagicMock(get=AsyncMock(side_effect=_tracked_get))
+
+    messages.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
+        _tracked_builder
     )
     graph_mock.return_value.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
         messages
@@ -333,53 +337,82 @@ def test_transient_attachment_download_error_should_propagate(
     assert exc_info.value.response_status_code == 429
 
 
-@dataclass
-class _FakeBackedItem(BackedModel):
-    """Minimal BackedModel used to reproduce the InMemoryBackingStore bug in isolation."""
+def _graph_file_attachment(att_id: str, content: bytes | None = None) -> dict[str, Any]:
+    payload = {
+        "@odata.type": "#microsoft.graph.fileAttachment",
+        "id": att_id,
+        "name": f"{att_id}.txt",
+        "contentType": "text/plain",
+    }
+    if content is not None:
+        payload["contentBytes"] = base64.b64encode(content).decode()
+    return payload
 
-    content_bytes: bytes | None = field(default=None)
 
-
-def test_suspend_backed_model_lambdas_prevents_infinite_loop() -> None:
+def test_attachment_download_should_not_reenter_the_message_backing_store(
+    patch_graph_and_identity: tuple[MagicMock, MagicMock],
+    messages_builder: Callable[[list[SimpleNamespace]], MagicMock],
+) -> None:
     """
-    Reproduces the microsoft-kiota-abstractions InMemoryBackingStore infinite-loop bug
-    (https://github.com/microsoftgraph/msgraph-sdk-python/issues/954) and verifies that
-    `_suspend_backed_model_lambdas` prevents mutating an item inside a tracked collection
-    from re-triggering the parent store's `set()`.
+    Regression for microsoftgraph/msgraph-sdk-python#954. The listed attachments are
+    tracked by the message's kiota backing store: mutating one re-enters the
+    message's set(), which spins the CPU with microsoft-kiota-abstractions 1.12.x.
+    Loading the content must leave the message's backing store untouched.
     """
-    parent_store = InMemoryBackingStore()
-    item = _FakeBackedItem(backing_store=InMemoryBackingStore())
+    graph_mock, _ = patch_graph_and_identity
+    page = JsonParseNode(
+        {
+            "value": [
+                {
+                    "id": "msg-1",
+                    "subject": "Report",
+                    "attachments": [
+                        _graph_file_attachment("a1"),
+                        _graph_file_attachment("a2"),
+                    ],
+                }
+            ]
+        }
+    ).get_object_value(MessageCollectionResponse)
+    downloads = {
+        "a1": JsonParseNode(_graph_file_attachment("a1", b"one")).get_object_value(
+            FileAttachment
+        ),
+        "a2": JsonParseNode(_graph_file_attachment("a2", b"two")).get_object_value(
+            FileAttachment
+        ),
+    }
+    messages = messages_builder([page])
+    messages.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
+        lambda att_id: MagicMock(get=AsyncMock(return_value=downloads[att_id]))
+    )
+    graph_mock.return_value.users.by_user_id.return_value.mail_folders.by_mail_folder_id.return_value.messages = (
+        messages
+    )
+    message_store = page.value[0].backing_store
+    message_store_set_keys: list[str] = []
+    original_set = message_store.set
 
-    set_call_count = 0
-    original_set = parent_store.set
-
-    def _counting_set(key: str, value: Any) -> None:
-        nonlocal set_call_count
-        set_call_count += 1
+    def _spy_set(key: str, value: Any) -> None:
+        message_store_set_keys.append(key)
         original_set(key, value)
 
-    parent_store.set = _counting_set  # type: ignore[method-assign]
-
-    # Simulate what InMemoryBackingStore.set() does when `message.attachments = [item]`:
-    # it subscribes a lambda on the item's backing store that re-invokes the parent's set().
-    item.backing_store.subscribe(
-        lambda prop_key, old_val, new_val: parent_store.set("attachments", [item])
+    message_store.set = _spy_set  # type: ignore[method-assign]
+    client = ConnectorClient(
+        tenant_id="tenant-id",
+        client_id="client-id",
+        client_secret="client-secret",
+        email="user@test",
+        mailbox="INBOX",
+        attachments_mime_types=["text/plain"],
     )
-    parent_store.set("attachments", [item])
-    baseline_calls = set_call_count
 
-    # Without the workaround, mutating `item.content_bytes` re-triggers the parent's
-    # set() - this is the reported bug.
-    item.content_bytes = b"data"
-    assert set_call_count > baseline_calls
+    [result_msg] = client.fetch_from_relative_import_start_date(
+        datetime.datetime.now(tz=datetime.UTC)
+    )
 
-    # The workaround must prevent the parent's set() from being retriggered.
-    set_call_count = 0
-    with _suspend_backed_model_lambdas(item):
-        item.content_bytes = b"more data"
-    assert set_call_count == 0
-    assert item.content_bytes == b"more data"
-
-    # Subscriptions must be restored once the context manager exits.
-    item.content_bytes = b"final"
-    assert set_call_count > 0
+    assert message_store_set_keys == []
+    assert [(a.id, a.content_bytes) for a in result_msg.attachments] == [
+        ("a1", b"one"),
+        ("a2", b"two"),
+    ]
