@@ -460,7 +460,9 @@ class HashLookupMixin:
         scan_id, scan_res = self.polyswarm_client.get_scan_by_hash(lookup_hash)
         if (not scan_res or scan_res.get("failed")) and not upload_allowed:
             # Only the scan is missing, and uploading to scan is refused in
-            # the public community: deliver the sandbox reports without it.
+            # the public community: note the refusal and deliver the sandbox
+            # reports without a scan.
+            self._refuse_public_upload(entity)
             self.helper.connector_logger.info(
                 f"[CONNECTOR] {self._enrich_ctx} No finished scan for the hash and "
                 "uploads are refused in the public community, delivering the "

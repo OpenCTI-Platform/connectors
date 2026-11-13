@@ -1384,6 +1384,22 @@ class TestArtifactReuse:
         c.polyswarm_client.submit_file_async.assert_not_called()
         assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
 
+    def test_public_community_without_scan_notes_the_refusal(self):
+        c = _connector(
+            latest={"cape": _task()},
+            sandbox_reuse_report=True,
+            community="default",
+            allow_public_community=False,
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(return_value=(None, None))
+        c._send_error_note = MagicMock()
+        assert self._run_artifact(c) is None
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            "Upload Refused: Public Community"
+        ]
+        c.artifact_handler.download_artifact.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
     def test_public_community_without_scan_polls_running_task(self):
         c = _connector(
             latest={
