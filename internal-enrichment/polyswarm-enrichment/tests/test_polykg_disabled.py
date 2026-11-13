@@ -1,6 +1,6 @@
-"""Regression tests for polykg enrichment disabled via blank POLYKG_API_URL.
+"""Regression tests for polykg enrichment disabled via blank POLYSWARM_POLYKG_API_URL.
 
-Guards the bug where a blank ``POLYKG_API_URL`` still built a schemeless
+Guards the bug where a blank ``POLYSWARM_POLYKG_API_URL`` still built a schemeless
 ``/v3/kg/profile`` URL and raised ``requests.exceptions.MissingSchema`` on
 every malware-family lookup (logged as an ERROR per family). Disabled mode
 must be silent: no HTTP attempt, no error, clean None/False returns.

@@ -98,7 +98,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `POLYSWARM_SANDBOX_ENABLED` | `true` | Enable sandbox analysis |
-| `POLYSWARM_SANDBOX_PROVIDER` | `both` | `cape`, `triage`, or `both` |
+| `POLYSWARM_SANDBOX_PROVIDER` | `cape` | `cape`, `triage`, or `both` |
 | `POLYSWARM_JSON_REPORT_ENABLED` | `true` | Attach JSON reports |
 | `POLYSWARM_PDF_REPORT_ENABLED` | `true` | Attach PDF reports |
 | `POLYSWARM_LLM_REPORT_ENABLED` | `false` | Generate AI threat analysis summaries (opt-in) |
@@ -119,7 +119,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_MIN_POLYSCORE` | `50` | Min score for indicators (0-100) |
 | `POLYSWARM_CREATE_INDICATORS` | `true` | Create indicator objects |
 | `POLYSWARM_CREATE_OBSERVABLES` | `true` | Create network IOCs |
-| `POLYKG_API_URL` | *(empty)* | polykg REST API URL for malware profile enrichment (optional) |
+| `POLYSWARM_POLYKG_API_URL` | *(empty)* | polykg REST API URL for malware profile enrichment (optional) |
 
 ## 📊 STIX Objects Generated
 
@@ -184,7 +184,7 @@ The connector checks these fields in order:
 
 ### Malware Profile Enrichment (Optional)
 
-When `POLYKG_API_URL` is configured, the connector fetches live malware family profiles from the polykg REST API. This provides enhanced intelligence including threat actors, target locations, exploited CVEs, and related malware. The connector works fully without polykg — it just produces basic scan/sandbox enrichment without the extended threat intel.
+When `POLYSWARM_POLYKG_API_URL` is configured, the connector fetches live malware family profiles from the polykg REST API. This provides enhanced intelligence including threat actors, target locations, exploited CVEs, and related malware. The connector works fully without polykg — it just produces basic scan/sandbox enrichment without the extended threat intel.
 
 ## 🔧 Troubleshooting
 
