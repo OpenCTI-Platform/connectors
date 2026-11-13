@@ -172,9 +172,9 @@ When `POLYSWARM_HUNTING_ENABLED=true`, the connector also reads hits from the li
 
 Many hits report an antivirus style label in the family field (for example `Trojan.Packed2` or `PUA.Generic`) rather than a family name. The connector decides with a heuristic, not with a complete list of families. It accepts a short allowlist of well-known family names, rejects a denylist of generic engine labels (for example Wacatac, Kryptik, Injector), and for all other names rejects dots, slashes, colons and brackets, generic words (such as generic, agent, packed, heur, suspicious, malware, trojan, pua, adware, riskware, phishing, unknown, variant, gen), names made only of type words, random-looking strings and very short names. It will get some names wrong in both directions. The name is never lost: it stays in the note and in the `polyswarm-family:<name>` label whether or not a malware object is created.
 
-A hit that was already imported is not imported again. The connector remembers a bounded number of recent hit identifiers in its state.
+Each run reads the hits since the previous run, plus a 10 minute overlap so late hits are not missed. Hits in the overlap that were already imported are skipped by hit identifier; the connector remembers the 5000 most recent identifiers in its state. A hit that comes without an identifier cannot be remembered, so it can be imported a second time if it falls in the overlap.
 
-If reading the hunting results stops before the end of the period (the API gives no usable next-page cursor, or the page limit is reached), the connector imports what it read, logs a warning and does not move its hunting position forward. The next run reads the same period again and skips the hits it already imported.
+The PolySwarm API returns hunting results newest first and can only be told how far back to go, not where to stop. If a run stops reading before the end of the period (it reached `POLYSWARM_MAX_OBJECTS_PER_RUN`, reached the page limit, or the API gave no usable next-page cursor), the older hits of that period are not imported and are not retried: the connector imports what it read, moves its hunting position forward as usual so the next run starts from new hits, and logs a warning with the reason, how many hits it read and imported, and the time of the oldest hit it read. The API does not report a total, so the number of hits left behind is not known. If you see this warning, raise `POLYSWARM_MAX_OBJECTS_PER_RUN` or run the connector more often.
 
 ### Indicator lifetime
 
@@ -182,7 +182,7 @@ Indicators are given a `valid_until` of the import time plus `POLYSWARM_FEED_IND
 
 ### State and resuming
 
-The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging (the feed checks the cap after each page, so it can exceed it by up to one page). Live hunting then gets what is left: it stops reading at the first hit that would go over it, so it can exceed it by at most one hit's objects, and when nothing is left it waits for the next run. Hunting objects are sent in bundles of about 1000 objects. The next run resumes from the recorded position; for hunting, the hits already imported are skipped by id.
+The connector stores its progress in the OpenCTI connector state, per collection and for hunting. The backfill settings apply to the first run only. When a run reaches `POLYSWARM_MAX_OBJECTS_PER_RUN`, it stops paging (the feed checks the cap after each page, so it can exceed it by up to one page). Live hunting then gets what is left: it stops reading at the first hit that would go over it, so it can exceed it by at most one hit's objects, and when nothing is left it waits for the next run without moving its position. Hunting objects are sent in bundles of about 1000 objects. The feed resumes from its recorded position. Hunting always moves its position forward after it runs, so hits it did not reach are not retried (see [Live hunting hits](#live-hunting-hits)).
 
 ### Volume
 

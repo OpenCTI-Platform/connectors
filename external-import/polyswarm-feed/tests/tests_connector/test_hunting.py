@@ -585,10 +585,13 @@ def test_seen_ids_bounded_newest_first():
 
 
 @pytest.mark.parametrize("reason", ["missing cursor", "repeated cursor", "page limit"])
-def test_incomplete_paging_keeps_the_checkpoint_and_records_read_hits(reason):
+def test_incomplete_paging_advances_the_checkpoint_and_warns(reason):
     previous = NOW - timedelta(hours=1)
     client = FakeClient(
-        [make_hit("2", sha256=SHA256_B), make_hit("1")],
+        [
+            make_hit("2", sha256=SHA256_B, created="2026-11-10T14:50:00+00:00"),
+            make_hit("1", created="2026-11-10T14:40:00+00:00"),
+        ],
         complete=False,
         stop_reason=reason,
     )
@@ -600,48 +603,38 @@ def test_incomplete_paging_keeps_the_checkpoint_and_records_read_hits(reason):
     # The hits that were read are imported and remembered.
     assert len(by_type(objects, "indicator")) == 2
     assert state["seen_hit_ids"] == ["2", "1", "0"]
-    # The checkpoint does not move past the hits that were not read.
-    assert abs(datetime.fromisoformat(state["last_run"]) - previous) <= timedelta(
-        seconds=1
-    )
-    warnings = [m for level, _, m in logger.messages if level == "warning"]
-    assert any(meta and meta.get("reason") == reason for meta in warnings)
+    # The checkpoint always moves forward, so the next run never pages
+    # through the same hits again.
+    assert state["last_run"] == NOW.isoformat()
+    (warning,) = [m for level, _, m in logger.messages if level == "warning"]
+    assert warning["reason"] == reason
+    assert warning["hits_read"] == 2
+    assert warning["hits_imported"] == 2
+    assert warning["oldest_hit_read"] == "2026-11-10T14:40:00+00:00"
 
 
-def test_incomplete_first_run_keeps_the_backfill_window_start():
+def test_run_after_incomplete_paging_asks_only_for_the_new_window():
     client = FakeClient([make_hit("1")], complete=False, stop_reason="page limit")
     source, _, _ = make_source(client=client)
     _, state = source.collect({})
 
-    # The next run asks for the same backfill window again, plus elapsed time.
     source._now = lambda: NOW + timedelta(hours=1)
     source.collect(state)
-    assert client.calls == [24 * 3600, 25 * 3600]
+    assert client.calls == [24 * 3600, 3600 + LAG_MARGIN_SECONDS]
 
 
-def test_rerun_after_incomplete_paging_imports_only_unread_hits():
-    previous = NOW - timedelta(hours=1)
-    first = FakeClient([make_hit("2", sha256=SHA256_B)], complete=False)
-    source, _, _ = make_source(client=first)
-    _, state = source.collect({"last_run": previous.isoformat()})
-
-    second = FakeClient([make_hit("2", sha256=SHA256_B), make_hit("1")])
-    source.client = second
-    objects, state = source.collect(state)
-    files = by_type(objects, "file")
-    assert [f["hashes"]["SHA-256"] for f in files] == [SHA256_A]
-    assert state["last_run"] == NOW.isoformat()
-
-
-def _distinct_hits(count):
+def _distinct_hits(count, created=None):
     """Hits for ``count`` different files, newest (highest id) first."""
-    return [
-        make_hit(str(n), sha256=f"{n:064x}", md5=f"{n:032x}", sha1=f"{n:040x}")
-        for n in range(count, 0, -1)
-    ]
+    hits = []
+    for n in range(count, 0, -1):
+        hit = make_hit(str(n), sha256=f"{n:064x}", md5=f"{n:032x}", sha1=f"{n:040x}")
+        if created is not None:
+            hit["created"] = created(n).isoformat()
+        hits.append(hit)
+    return hits
 
 
-def test_object_budget_stops_reading_and_keeps_the_checkpoint():
+def test_object_budget_stops_reading_advances_and_warns():
     previous = NOW - timedelta(hours=1)
     client = FakeClient(_distinct_hits(10))
     source, _, logger = make_source(client=client)
@@ -651,39 +644,114 @@ def test_object_budget_stops_reading_and_keeps_the_checkpoint():
     assert len(by_type(objects, "file")) == 2
     assert len(objects) <= 12
     assert state["seen_hit_ids"] == ["10", "9"]
-    assert abs(datetime.fromisoformat(state["last_run"]) - previous) <= timedelta(
-        seconds=1
-    )
+    assert state["last_run"] == NOW.isoformat()
     # Reading stopped at the first hit over the budget, not at the end.
     assert client.readers[0].yielded == 3
-    warnings = [m for level, _, m in logger.messages if level == "warning"]
-    assert any(meta and meta.get("reason") == "object budget" for meta in warnings)
+    (warning,) = [m for level, _, m in logger.messages if level == "warning"]
+    assert warning["reason"] == "object budget"
+    assert warning["hits_imported"] == 2
 
 
-def test_object_budget_rerun_continues_after_the_hits_already_imported():
-    previous = NOW - timedelta(hours=1)
-    source, _, _ = make_source(client=FakeClient(_distinct_hits(5)))
-    _, state = source.collect({"last_run": previous.isoformat()}, max_objects=12)
-    objects, state = source.collect(state, max_objects=12)
+class TimedClient:
+    """Honours ``since`` like the API: hits created in the window, newest
+    first, with at most ``page_cap`` hits per read (then incomplete)."""
 
-    hashes = [f["hashes"]["SHA-256"] for f in by_type(objects, "file")]
-    assert hashes == [f"{n:064x}" for n in (3, 2)]
-    assert state["seen_hit_ids"][:4] == ["3", "2", "5", "4"]
+    def __init__(self, hits, clock, page_cap=None):
+        self.hits = sorted(hits, key=lambda h: h["created"], reverse=True)
+        self.clock = clock
+        self.page_cap = page_cap
+        self.calls = []
 
-    objects, state = source.collect(state, max_objects=12)
-    assert [f["hashes"]["SHA-256"] for f in by_type(objects, "file")] == [
-        f"{1:064x}"
+    def read_live_hits(self, since_seconds):
+        self.calls.append(since_seconds)
+        start = self.clock() - timedelta(seconds=since_seconds)
+        window = [h for h in self.hits if datetime.fromisoformat(h["created"]) >= start]
+        if self.page_cap is not None and len(window) > self.page_cap:
+            return FakeReader(window[: self.page_cap], False, "page limit")
+        return FakeReader(window, True, None)
+
+
+def _run_series(client, source, clock_times, max_objects):
+    """Run collect once per clock time; return the hit ids sent per run."""
+    state: dict = {}
+    sent_per_run = []
+    for when in clock_times:
+        source._now = lambda when=when: when
+        client.clock = lambda when=when: when
+        objects, state = source.collect(state, max_objects=max_objects)
+        sent_per_run.append(
+            sorted(
+                f["hashes"]["SHA-256"].lstrip("0") or "0"
+                for f in by_type(objects, "file")
+            )
+        )
+    return sent_per_run, state
+
+
+def test_repeated_incomplete_reads_make_progress_and_never_resend():
+    # 300 hits over the last 50 minutes; each read sees at most 40 of them.
+    hits = _distinct_hits(300, created=lambda n: NOW - timedelta(seconds=10 * n))
+    client = TimedClient(hits, clock=lambda: NOW, page_cap=40)
+    source, _, _ = make_source(client=client)
+    runs = [NOW + timedelta(hours=h) for h in range(4)]
+
+    sent_per_run, state = _run_series(client, source, runs, max_objects=None)
+
+    all_sent = [h for run in sent_per_run for h in run]
+    assert len(all_sent) == len(set(all_sent))
+    assert len(sent_per_run[0]) == 40
+    # Later windows start after the previous run, so nothing is re-read.
+    assert all(run == [] for run in sent_per_run[1:])
+    assert client.calls[1:] == [3600 + LAG_MARGIN_SECONDS] * 3
+    assert state["last_run"] == runs[-1].isoformat()
+
+
+@pytest.mark.parametrize("max_objects", [None, 6 * 2000])
+def test_backlog_beyond_seen_ids_limit_never_resends(max_objects):
+    count = SEEN_IDS_LIMIT + 500
+    # One hit every 600 ms over the last 55 minutes.
+    hits = _distinct_hits(
+        count, created=lambda n: NOW - timedelta(milliseconds=600 * n)
+    )
+    client = TimedClient(hits, clock=lambda: NOW)
+    source, _, _ = make_source(client=client)
+    runs = [NOW + timedelta(hours=h) for h in range(3)]
+
+    sent_per_run, state = _run_series(client, source, runs, max_objects=max_objects)
+
+    all_sent = [h for run in sent_per_run for h in run]
+    assert len(all_sent) == len(set(all_sent))
+    expected_first = count if max_objects is None else max_objects // 6
+    assert len(sent_per_run[0]) == expected_first
+    # The next windows only overlap the newest hits, which are remembered.
+    assert sent_per_run[1:] == [[], []]
+    assert len(state["seen_hit_ids"]) <= SEEN_IDS_LIMIT
+    assert state["last_run"] == runs[-1].isoformat()
+
+
+def test_hits_without_an_id_are_not_resent_once_the_window_moves():
+    created = (NOW - timedelta(minutes=30)).isoformat()
+    hits = [
+        make_hit(None, created=created),
+        make_hit(None, sha256=SHA256_B, created=created),
     ]
-    assert state["last_run"] == NOW.isoformat()
+    client = TimedClient(hits, clock=lambda: NOW)
+    source, _, _ = make_source(client=client)
+    runs = [NOW, NOW + timedelta(hours=1), NOW + timedelta(hours=2)]
+
+    sent_per_run, state = _run_series(client, source, runs, max_objects=6)
+
+    # Without an id a hit cannot be remembered, but the checkpoint moves on,
+    # so it is not read (or sent) again once it is out of the window.
+    assert [len(run) for run in sent_per_run] == [1, 0, 0]
+    assert state["seen_hit_ids"] == []
 
 
 def test_already_seen_hits_do_not_use_the_object_budget():
     hits = _distinct_hits(3)
     source, _, _ = make_source(hits)
     objects, state = source.collect({"seen_hit_ids": ["3", "2"]}, max_objects=1)
-    assert [f["hashes"]["SHA-256"] for f in by_type(objects, "file")] == [
-        f"{1:064x}"
-    ]
+    assert [f["hashes"]["SHA-256"] for f in by_type(objects, "file")] == [f"{1:064x}"]
     assert state["last_run"] == NOW.isoformat()
 
 

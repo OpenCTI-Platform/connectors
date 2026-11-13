@@ -12,7 +12,17 @@ account's live YARA rules) and maps them to STIX 2.1:
   reported always stays in the note and in a ``polyswarm-family:<name>``
   label, whether or not a Malware object is created.
 
-Hits are deduplicated by hit id across runs with a bounded list in state.
+Each run asks for the hits since the previous run (plus a small overlap) and
+then moves its checkpoint to the run time. Hits in the overlap are
+deduplicated by hit id with a bounded list in state.
+
+The API returns hits newest first and can only be bounded by how far back
+to go, not where to stop, so a read that stops early (the per-run object
+budget, the page limit, or a missing or repeated paging cursor) cannot be
+resumed from the old end. The checkpoint still moves forward, so every run
+makes progress and never pages through the same hits again; the older hits
+that were not read are not imported, and a warning says so.
+
 This source only reads from PolySwarm; nothing is sent to PolySwarm.
 """
 
@@ -239,9 +249,9 @@ class HuntingSource:
         resolve within the bundle (plus the author and the TLP marking).
 
         ``max_objects`` bounds the objects of this run. Reading stops at the
-        first new hit that would go over it; the checkpoint then stays at the
-        start of the window and the next run continues past the hits already
-        imported, which are skipped by id.
+        first new hit that would go over it. The checkpoint moves to the run
+        time whether or not the window was read to the end; when it was not,
+        the older hits not read are not imported and a warning is logged.
         """
         state = state if isinstance(state, dict) else {}
         now = self._now()
@@ -267,11 +277,13 @@ class HuntingSource:
         hits_returned = 0
         skipped_seen = 0
         skipped_invalid = 0
+        oldest_read = None
         for hit in reader:
             hits_returned += 1
             if not isinstance(hit, dict):
                 skipped_invalid += 1
                 continue
+            oldest_read = hit.get("created") or oldest_read
             key = self._hit_key(hit)
             if key is not None and key in seen:
                 skipped_seen += 1
@@ -318,17 +330,14 @@ class HuntingSource:
         # Newest ids first, so truncation drops the oldest ones.
         new_id_set = set(new_ids)
         merged_ids = new_ids + [i for i in previous_ids if i not in new_id_set]
-        checkpoint = now
-        complete = reader.complete and not stopped_by_budget
-        if not complete:
-            # Hits come newest first, so the ones not read are the oldest in
-            # the window. Keep the checkpoint at the start of this window so
-            # the next run asks for it again; hits already imported are then
-            # skipped by id.
-            checkpoint = now - timedelta(seconds=since - LAG_MARGIN_SECONDS)
+        if stopped_by_budget or not reader.complete:
+            # Hits come newest first and the API cannot be asked to start
+            # from the old end, so re-reading the window would only page
+            # through the same newest hits again. Move on and say what was
+            # left behind; the API gives no total, so the count is unknown.
             self.logger.warning(
-                "Live hunting window not fully read; the checkpoint is kept at "
-                "the start of the window and the next run reads it again.",
+                "Live hunting window not read to the end; older hits in the "
+                "window were not imported and will not be retried.",
                 meta={
                     "reason": (
                         "object budget" if stopped_by_budget else reader.stop_reason
@@ -336,10 +345,13 @@ class HuntingSource:
                     "max_objects": max_objects,
                     "since_seconds": since,
                     "hits_read": hits_returned,
+                    "hits_imported": len(new_hits),
+                    "oldest_hit_read": _clean_text(oldest_read, 64) or None,
+                    "hits_not_read": "unknown (the API reports no total)",
                 },
             )
         new_state = {
-            STATE_LAST_RUN: checkpoint.isoformat(),
+            STATE_LAST_RUN: now.isoformat(),
             STATE_SEEN_IDS: merged_ids[:SEEN_IDS_LIMIT],
         }
         return batches, new_state
