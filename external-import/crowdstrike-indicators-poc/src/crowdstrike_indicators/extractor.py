@@ -67,6 +67,23 @@ def api_error_message(body: Any) -> str:
     return str(message) if message else NO_ERROR_MESSAGE
 
 
+def validate_indicator(raw: Any) -> CrowdStrikeIndicator:
+    """Validate one raw API indicator.
+
+    :raises IndicatorValidationError: with the id, the JSON-safe validation
+        errors and the raw indicator.
+    """
+    try:
+        return CrowdStrikeIndicator.model_validate(raw)
+    except ValidationError as error:
+        raw_id = raw.get("id") if isinstance(raw, dict) else None
+        raise IndicatorValidationError(
+            indicator_id=raw_id if isinstance(raw_id, str) else None,
+            errors=json.loads(error.json(include_url=False)),
+            raw=raw,
+        ) from error
+
+
 class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
     """Extract indicators with marker-based deep pagination.
 
@@ -108,7 +125,7 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
                 raw_id = raw.get("id") if isinstance(raw, dict) else None
                 if isinstance(raw_id, str) and raw_id in seen_ids:
                     continue
-                indicator = self._validate(raw)
+                indicator = validate_indicator(raw)
                 seen_ids.add(indicator.id)
                 collected.append((marker_datetime(indicator.marker), indicator))
                 new_count += 1
@@ -144,15 +161,3 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
         if self.on_raw_page is not None:
             self.on_raw_page(body)
         return body
-
-    @staticmethod
-    def _validate(raw: Any) -> CrowdStrikeIndicator:
-        try:
-            return CrowdStrikeIndicator.model_validate(raw)
-        except ValidationError as error:
-            raw_id = raw.get("id") if isinstance(raw, dict) else None
-            raise IndicatorValidationError(
-                indicator_id=raw_id if isinstance(raw_id, str) else None,
-                errors=json.loads(error.json(include_url=False)),
-                raw=raw,
-            ) from error

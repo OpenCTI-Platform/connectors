@@ -1,8 +1,7 @@
 # CrowdStrike indicators: proof of concept
 
 > **Status: proof of concept, command line only.** Not a connector: it does
-> not talk to OpenCTI and keeps no state between runs. The STIX transformer
-> exists but the command line does not run it yet.
+> not talk to OpenCTI and keeps no state between runs.
 
 This folder tests a new organization for connectors, built from small
 contracts that do not depend on OpenCTI:
@@ -133,18 +132,24 @@ The API client needs the **Indicators (Falcon Intelligence): Read** scope.
 
 ## Usage
 
-Run from this folder, with `src` on the Python path:
+Run from this folder, with `src` on the Python path. The command has two
+subcommands:
+
+- `extract` calls the CrowdStrike API and prints the indicators;
+- `transform` converts one indicator into STIX, without credentials or network.
+
+### `extract`
 
 ```sh
 # The 50 earliest indicators from 1 November 2026 (UTC) onwards
-PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01T00:00:00Z --max 50
+PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01T00:00:00Z --max 50
 
 # Same, and also save the raw API pages, to study the real response shape
-PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01 --max 50 \
+PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01 --max 50 \
     --dump-raw raw-dumps/first.raw.json
 
 # Credentials from another file, with debug logs
-PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01 --max 10 \
+PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01 --max 10 \
     --env-file ~/secrets/crowdstrike.env --log-level DEBUG
 ```
 
@@ -155,8 +160,6 @@ PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01 --max 10 \
 | `--env-file PATH` | credentials file, `./.env` by default. |
 | `--dump-raw PATH` | also write every raw API page received, as a JSON array, even when the extraction fails. `raw-dumps/` and `*.raw.json` are git-ignored. |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. |
-
-### Output
 
 Standard output holds a single JSON array, so it can be piped (`| jq ...`).
 Logs and errors go to standard error.
@@ -180,13 +183,51 @@ Logs and errors go to standard error.
 Fields the API did not return are left out. Fields the model does not declare
 yet (`reports`, `relations`, ...) are printed as received.
 
+### `transform`
+
+`transform` reads **one** indicator as a JSON object, in the API shape (one
+element of an API page's `resources`, such as a row of
+`tests/fixtures/indicators_sample.json`), from a file or from standard input,
+and prints its STIX 2.1 indicator as JSON.
+
+```sh
+# Take a domain row of the committed sample as input
+python -c "import json; rows = json.load(open('tests/fixtures/indicators_sample.json'))['resources']; print(json.dumps(next(r for r in rows if r['type'] == 'domain')))" > indicator.json
+
+# From a file
+PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
+
+# From standard input
+PYTHONPATH=src python -m crowdstrike_indicators transform < indicator.json
+```
+
+The output is one STIX object, with the native properties first and every
+CrowdStrike field in `x_crowdstrike_*` properties:
+
+```json
+{
+    "type": "indicator",
+    "spec_version": "2.1",
+    "id": "indicator--...",
+    "name": "malicious-7.example",
+    "pattern": "[domain-name:value = 'malicious-7.example']",
+    "...": "...",
+    "x_crowdstrike_id": "domain_malicious-7.example",
+    "x_crowdstrike_marker": "...",
+    "x_crowdstrike_labels": [{"name": "...", "created_on": "..."}]
+}
+```
+
+`transform` accepts one object only: a JSON array, such as the `extract`
+output, is rejected. It takes `--log-level` too.
+
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
-| 0 | success, including an empty result (`[]`) |
-| 1 | extraction failed: API error (status and message on standard error), or an indicator that does not match the model (its `id`, the validation errors and the raw indicator on standard error) |
-| 2 | usage or configuration error: bad argument, missing credential, missing `--env-file` |
+| 0 | success, including an empty result (`[]`) for `extract` |
+| 1 | `extract`: API error (status and message on standard error), or an indicator that does not match the model (its `id`, the validation errors and the raw indicator on standard error). `transform`: input that is not valid JSON or not one JSON object, an indicator that does not match the model (reported as for `extract`), or an indicator that cannot be converted (unsupported type, `published_date` after `last_updated`) |
+| 2 | usage or configuration error: no or unknown subcommand, bad argument, missing credential, missing `--env-file`, missing `transform` input file |
 
 ## Tests
 
@@ -211,8 +252,8 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   deliberately lenient. Use `--dump-raw` to see the real shape.
 - **One invalid indicator stops the run**, with nothing printed on standard
   output. This is on purpose while the model is being refined.
-- **No state, no OpenCTI.** Every run is independent, and the command line
-  prints the raw API data: it does not run the transformer yet.
+- **No state, no OpenCTI.** Every run is independent. `extract` prints the raw
+  API data, and `transform` converts one indicator at a time.
 - **Empty list and absent field look the same in STIX.** stix2 drops empty
   lists, so an empty CrowdStrike list gives no `x_crowdstrike_*` property, and
   reads back as absent. In real data every list field is always present, so no

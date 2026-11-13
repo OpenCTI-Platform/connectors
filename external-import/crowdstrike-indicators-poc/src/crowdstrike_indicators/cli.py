@@ -1,11 +1,13 @@
-"""Command-line entry point: extract CrowdStrike indicators and print them.
+"""Command-line entry point: extract CrowdStrike indicators, or transform one.
 
 Usage, from the proof of concept folder::
 
-    PYTHONPATH=src python -m crowdstrike_indicators --from 2026-11-01T00:00:00Z --max 50
+    PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01T00:00:00Z --max 50
+    PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
 
-Exit codes: 0 on success, 1 when the extraction fails (API or validation
-error), 2 on a usage or configuration error.
+Exit codes: 0 on success, 1 when the extraction or the transformation fails
+(API, validation or conversion error, unreadable input), 2 on a usage or
+configuration error.
 """
 
 import argparse
@@ -19,16 +21,22 @@ from pathlib import Path
 from typing import Any
 
 from crowdstrike_indicators.dotenv import read_dotenv
-from crowdstrike_indicators.errors import CrowdStrikeAPIError, IndicatorValidationError
+from crowdstrike_indicators.errors import (
+    CrowdStrikeAPIError,
+    IndicatorConversionError,
+    IndicatorValidationError,
+)
 from crowdstrike_indicators.extractor import (
     CrowdStrikeIndicatorExtractor,
     IndicatorsClient,
+    validate_indicator,
 )
+from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
 
 LOGGER = logging.getLogger("crowdstrike_indicators")
 
 EXIT_OK = 0
-EXIT_EXTRACTION_ERROR = 1
+EXIT_FAILURE = 1
 EXIT_USAGE_ERROR = 2
 
 CLIENT_ID = "CROWDSTRIKE_CLIENT_ID"
@@ -66,14 +74,32 @@ def _parse_max(value: str) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="log level on standard error (default: INFO)",
+    )
+
     parser = argparse.ArgumentParser(
         prog="python -m crowdstrike_indicators",
+        description="CrowdStrike Falcon Intelligence indicators proof of concept.",
+    )
+    commands = parser.add_subparsers(
+        dest="command", required=True, metavar="{extract,transform}"
+    )
+
+    extract = commands.add_parser(
+        "extract",
+        parents=[common],
+        help="extract indicators from the API and print them as JSON",
         description=(
             "Extract CrowdStrike Falcon Intelligence indicators and print them "
             "as JSON on standard output."
         ),
     )
-    parser.add_argument(
+    extract.add_argument(
         "--from",
         dest="from_date",
         required=True,
@@ -84,7 +110,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Without a timezone, it is read as UTC."
         ),
     )
-    parser.add_argument(
+    extract.add_argument(
         "--max",
         dest="max_element_count",
         required=True,
@@ -92,23 +118,35 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="maximum number of indicators to return (1 or more)",
     )
-    parser.add_argument(
+    extract.add_argument(
         "--env-file",
         type=Path,
         metavar="PATH",
         help=f"file holding the credentials (default: ./{DEFAULT_ENV_FILE})",
     )
-    parser.add_argument(
+    extract.add_argument(
         "--dump-raw",
         type=Path,
         metavar="PATH",
         help="also write every raw API page received, as a JSON array",
     )
-    parser.add_argument(
-        "--log-level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="log level on standard error (default: INFO)",
+
+    transform = commands.add_parser(
+        "transform",
+        parents=[common],
+        help="convert one indicator given as JSON into STIX JSON",
+        description=(
+            "Read one CrowdStrike indicator as a JSON object, in the API shape, "
+            "and print its STIX 2.1 indicator as JSON on standard output. "
+            "No credentials and no network are needed."
+        ),
+    )
+    transform.add_argument(
+        "file",
+        nargs="?",
+        type=Path,
+        metavar="FILE",
+        help="JSON file holding one indicator (default: standard input)",
     )
     return parser
 
@@ -143,17 +181,13 @@ def _report_validation_error(error: IndicatorValidationError) -> None:
     print(json.dumps(error.raw, indent=2, default=str), file=sys.stderr)
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-
-    logging.basicConfig(
-        stream=sys.stderr,
-        level=args.log_level,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        force=True,
+def _json_type_name(value: Any) -> str:
+    return {list: "array", str: "string", bool: "boolean", type(None): "null"}.get(
+        type(value), "number"
     )
 
+
+def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     if args.env_file is not None and not args.env_file.is_file():
         parser.error(f"--env-file: no such file: {args.env_file}")
     config = _load_config(args.env_file or DEFAULT_ENV_FILE)
@@ -177,10 +211,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = extractor.extract(args.from_date, args.max_element_count)
     except CrowdStrikeAPIError as error:
         print(f"error: {error}", file=sys.stderr)
-        return EXIT_EXTRACTION_ERROR
+        return EXIT_FAILURE
     except IndicatorValidationError as error:
         _report_validation_error(error)
-        return EXIT_EXTRACTION_ERROR
+        return EXIT_FAILURE
     finally:
         if args.dump_raw:
             _write_dump(args.dump_raw, pages)
@@ -197,3 +231,50 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(json.dumps(output, indent=2))
     LOGGER.info("Extracted %d indicator(s)", len(result))
     return EXIT_OK
+
+
+def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    if args.file is not None and not args.file.is_file():
+        parser.error(f"no such file: {args.file}")
+    text = args.file.read_text(encoding="utf-8") if args.file else sys.stdin.read()
+
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError as error:
+        print(f"error: input is not valid JSON: {error}", file=sys.stderr)
+        return EXIT_FAILURE
+    if not isinstance(raw, dict):
+        print(
+            f"error: expected one JSON object, got {_json_type_name(raw)}",
+            file=sys.stderr,
+        )
+        return EXIT_FAILURE
+
+    try:
+        indicator = CrowdStrikeIndicatorTransformer().convert(validate_indicator(raw))
+    except IndicatorValidationError as error:
+        _report_validation_error(error)
+        return EXIT_FAILURE
+    except IndicatorConversionError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return EXIT_FAILURE
+
+    print(indicator.serialize(pretty=True))
+    LOGGER.info("Transformed indicator %s into %s", raw.get("id"), indicator.id)
+    return EXIT_OK
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=args.log_level,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        force=True,
+    )
+
+    if args.command == "transform":
+        return _run_transform(parser, args)
+    return _run_extract(parser, args)
