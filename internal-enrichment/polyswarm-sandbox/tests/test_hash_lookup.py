@@ -1397,6 +1397,48 @@ class TestArtifactReuse:
         self._run_artifact(c)
         assert c._phase_submit.call_args.kwargs["detonate"] == ["triage"]
 
+    def test_found_report_passed_as_existing_is_delivered(self):
+        """found cape + missing triage: cape is polled (not paid) and delivered
+        with the new triage analysis."""
+        cape = _task()
+        triage = _task("triage", id="new-triage")
+        c = _connector(
+            latest={"cape": cape}, sandbox_reuse_report=True, sandbox_provider="both"
+        )
+        c.polyswarm_client.submit_sandbox_async = MagicMock(return_value="new-triage")
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            side_effect=lambda task_id: cape if task_id == str(cape["id"]) else triage
+        )
+        assert self._run_upload(c) is None
+        calls = c.polyswarm_client.submit_sandbox_async.call_args_list
+        assert [call.kwargs["provider"] for call in calls] == ["triage"]
+        polled = {
+            call.args[0]
+            for call in c.polyswarm_client.get_sandbox_results.call_args_list
+        }
+        assert polled == {str(cape["id"]), "new-triage"}
+        abstracts = {n["abstract"] for n in _notes(c)}
+        assert "PolySwarm Cape Sandbox Analysis" in abstracts
+        assert "PolySwarm Triage Sandbox Analysis" in abstracts
+
+    def test_found_plus_missing_submit_error_keeps_found_report(self):
+        cape = _task()
+        c = _connector(
+            latest={"cape": cape}, sandbox_reuse_report=True, sandbox_provider="both"
+        )
+        quota = PolySwarmAPIError(
+            f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox submit (triage))", "q"
+        )
+        c.polyswarm_client.submit_sandbox_async = MagicMock(side_effect=quota)
+        c.polyswarm_client.get_sandbox_results = MagicMock(return_value=cape)
+        c._send_error_note = MagicMock()
+        assert self._run_upload(c) is None
+        assert [call.args[1] for call in c._send_error_note.call_args_list] == [
+            quota.category
+        ]
+        assert "CAPE" in c._send_error_note.call_args.args[2]
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
     def test_phase_submit_skips_existing_providers(self):
         c = _connector(sandbox_provider="both")
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-1")

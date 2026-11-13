@@ -234,6 +234,15 @@ class TestUrlRefusals:
                 "http://example.com\\@10.0.0.1/?token=SECRET123",
                 "Submission Refused: URL Contains Credentials",
             ),
+            # "@" in the authority without a backslash
+            (
+                "http://example.com@10.0.0.1/?token=SECRET123",
+                "Submission Refused: URL Contains Credentials",
+            ),
+            (
+                "http://login.example.com@example.org/?token=SECRET123",
+                "Submission Refused: URL Contains Credentials",
+            ),
             ("", "No URL Value"),
         ],
     )
