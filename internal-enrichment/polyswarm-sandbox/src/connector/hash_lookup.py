@@ -401,12 +401,21 @@ class HashLookupMixin:
     # -- StixFile: lookup, then optionally detonate by hash
 
     def _detonate_held_sample(
-        self, entity: dict[str, Any], hash_value: str, missing: list[str]
+        self,
+        entity: dict[str, Any],
+        hash_value: str,
+        missing: list[str],
+        kept: list[str] | None = None,
     ) -> tuple[dict[str, str], str]:
         """Start sandbox runs for the sample PolySwarm holds.
 
+        ``kept`` names providers with a report found or a task running: an
+        API error on every submit is then noted per provider instead of
+        raised, so those are still delivered.
+
         Returns (provider to task id, outcome) where outcome is one of
-        "started", "refused", "not_held", "submit_failed".
+        "started", "refused", "not_held", "submit_failed", "api_error" (no
+        task started, every failure was an API error and is already noted).
         """
         if not self._upload_community_allowed():
             self.helper.connector_logger.warning(
@@ -458,8 +467,12 @@ class HashLookupMixin:
                 self.helper.connector_logger.warning(
                     f"[CONNECTOR] Failed to start {provider} sandbox for the held sample"
                 )
-        self._settle_submit_errors(entity, tasks, errors)
-        return tasks, "started" if tasks else "submit_failed"
+        self._settle_submit_errors(entity, tasks, errors, kept)
+        if tasks:
+            return tasks, "started"
+        if errors and len(errors) == len(missing):
+            return tasks, "api_error"
+        return tasks, "submit_failed"
 
     def _enrich_stixfile(
         self,
@@ -558,7 +571,7 @@ class HashLookupMixin:
                 started: dict[str, str] = {}
                 if missing:
                     started, held_outcome = self._detonate_held_sample(
-                        entity, sha256, missing
+                        entity, sha256, missing, kept=[*found, *running]
                     )
                 if held_outcome == "submit_failed":
                     self._send_error_note(
@@ -602,7 +615,7 @@ class HashLookupMixin:
                             "error": "No sandbox analysis completed before the "
                             "timeout",
                         }
-                elif held_outcome == "submit_failed" and not results:
+                elif held_outcome in ("submit_failed", "api_error") and not results:
                     return {
                         "status": "error",
                         "error": "Sandbox start for the held sample failed",

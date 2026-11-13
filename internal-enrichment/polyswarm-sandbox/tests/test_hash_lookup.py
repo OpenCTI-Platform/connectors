@@ -579,6 +579,46 @@ class TestDetonateByHash:
         ]
         assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
 
+    def test_submit_error_keeps_found_report_and_its_llm_report(self):
+        c = _connector(
+            latest={"triage": _task("triage")},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+            llm_report_enabled=True,
+        )
+        quota = PolySwarmAPIError(
+            f"{PolySwarmAPIError.QUOTA_CATEGORY} (sandbox by hash (cape))", "q"
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=quota
+        )
+        c.polyswarm_client.create_llm_report = MagicMock(return_value="llm-1")
+        c.polyswarm_client.collect_llm_report = MagicMock(return_value="report")
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        assert any("Triage Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        c.polyswarm_client.collect_llm_report.assert_called_once()
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert titles == [quota.category]
+        assert "Sandbox Submission Failed" not in titles
+
+    def test_submit_error_keeps_running_task(self):
+        c = _connector(
+            latest={"cape": _task(id="running-task", status="PENDING")},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c.polyswarm_client.submit_sandbox_by_instance_async = MagicMock(
+            side_effect=PolySwarmAPIError("API Access Denied (triage)", "x")
+        )
+        c.polyswarm_client.get_sandbox_results = MagicMock(
+            return_value=_task(id="running-task")
+        )
+        c._send_error_note = MagicMock()
+        assert _run(c) is None
+        c.polyswarm_client.get_sandbox_results.assert_called_with("running-task")
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
     def test_all_providers_error_raises(self):
         c = _connector(
             latest={}, sandbox_provider="both", sandbox_detonate_by_hash=True

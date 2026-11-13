@@ -1714,24 +1714,28 @@ class PolySwarmConnector(HashLookupMixin):
         entity: dict[str, Any],
         started: dict[str, str],
         errors: dict[str, PolySwarmAPIError],
+        kept: list[str] | None = None,
     ) -> None:
         """Handle API errors from a per-provider submit loop.
 
-        When no provider started, the first error is raised so the caller's
-        API error note (quota, authentication ...) is attached. When another
-        provider did start, its task is kept: each failed provider gets its
-        own note and the enrichment goes on with the tasks that started.
+        ``kept`` names providers that already have something to deliver (a
+        report found or a task still running). When nothing started and
+        nothing is kept, the first error is raised so the caller's API error
+        note (quota, authentication ...) is attached. Otherwise the tasks
+        and reports are kept: each failed provider gets its own note and the
+        enrichment goes on with what it has.
         """
         if not errors:
             return
-        if not started:
+        going_on = list(dict.fromkeys([*started, *(kept or [])]))
+        if not going_on:
             raise next(iter(errors.values()))
         for provider, err in errors.items():
             self._send_error_note(
                 entity,
                 err.category,
                 f"The {provider.upper()} sandbox was not started. The analysis on "
-                f"{', '.join(p.upper() for p in started)} continues.\n\n{err.detail}",
+                f"{', '.join(p.upper() for p in going_on)} continues.\n\n{err.detail}",
                 err.recommendations,
             )
 
