@@ -274,13 +274,46 @@ class TestLookupAge:
                 if "No PolySwarm Sandbox Report" in n["abstract"]
             ) or not _notes(c)
 
-    def test_unparseable_created_with_limit_is_missing(self):
+    @pytest.mark.parametrize("created", ["not a date", "", None])
+    def test_finished_report_without_created_is_used_not_redetonated(self, created):
+        """Unknown age is not "too old": the finished report is used."""
+        task = _task()
+        task["created"] = created
         c = _connector(
-            latest={"cape": _task(created="not a date")},
+            latest={"cape": task},
             sandbox_lookup_max_age_days=30,
+            sandbox_detonate_by_hash=True,
         )
-        _run(c)
-        assert not any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+        assert _run(c) is None
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        assert any("Cape Sandbox Analysis" in n["abstract"] for n in _notes(c))
+
+    def test_artifact_report_without_created_is_reused_not_uploaded(self):
+        task = _task()
+        task["created"] = None
+        c = _connector(
+            latest={"cape": task},
+            sandbox_lookup_max_age_days=30,
+            sandbox_reuse_report=True,
+        )
+        c.polyswarm_client.get_scan_by_hash = MagicMock(
+            return_value=(INSTANCE_ID, _scan())
+        )
+        entity = {
+            "type": "artifact",
+            "spec_version": "2.1",
+            "id": ARTIFACT_ID,
+            "hashes": {"SHA-256": EICAR_SHA256},
+        }
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_file(
+                ARTIFACT_ID,
+                entity,
+                {"entity_type": "Artifact", "standard_id": ARTIFACT_ID},
+                [entity],
+            )
+        assert result is None
+        c.artifact_handler.download_artifact.assert_not_called()
 
     def test_naive_and_z_timestamps(self):
         recent = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()

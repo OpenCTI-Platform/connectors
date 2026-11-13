@@ -62,18 +62,23 @@ class HashLookupMixin:
         return found
 
     def _within_max_age(self, task: dict) -> bool:
-        """True when the task is not older than the configured age limit."""
+        """True when the task is not older than the configured age limit.
+
+        A task whose creation time is missing or unparseable counts as
+        within the limit: its age is unknown, and treating it as too old
+        would detonate (and pay for) the sample again.
+        """
         max_age = self.config.polyswarm.sandbox_lookup_max_age_days
         if not isinstance(max_age, int) or isinstance(max_age, bool) or max_age <= 0:
             return True
         try:
             created = datetime.fromisoformat(
-                str(task.get("created", "")).replace("Z", "+00:00")
+                str(task.get("created") or "").replace("Z", "+00:00")
             )
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
         except ValueError:
-            return False
+            return True
         return datetime.now(timezone.utc) - created <= timedelta(days=max_age)
 
     def _report_usable(self, task: dict | None) -> bool:
