@@ -107,9 +107,9 @@ def test_settings_should_apply_defaults():
     assert settings.connector.auto is False
 
     scoring = settings.connector_scoring
-    assert scoring.high_priority_labels == "[]"
-    assert scoring.medium_priority_labels == "[]"
-    assert scoring.low_priority_labels == "[]"
+    assert scoring.high_priority_labels == []
+    assert scoring.medium_priority_labels == []
+    assert scoring.low_priority_labels == []
     assert (
         scoring.indicator_type_enrichable == "IPv4-Addr,IPv6-Addr,Domain-Name,StixFile"
     )
@@ -129,21 +129,39 @@ def test_settings_should_default_connector_id():
     assert UUID(settings.connector.id).version == 4
 
 
-def test_settings_should_keep_label_lists_as_json_string():
-    """A YAML list (config.yml) MUST be kept as a JSON string, like an env var."""
+@pytest.mark.parametrize(
+    "value",
+    [
+        pytest.param('["[Scoring] High priority", "Critical"]', id="json_string"),
+        pytest.param(["[Scoring] High priority", "Critical"], id="yaml_list"),
+    ],
+)
+def test_settings_should_parse_label_lists(value):
+    """A JSON string (env var) and a YAML list (config.yml) MUST both give a list."""
     settings = _build_settings(
         {
             **MINIMAL_VALID_SETTINGS_DICT,
-            "connector_scoring": {
-                "high_priority_labels": ["[Scoring] High priority", "Critical"],
-            },
+            "connector_scoring": {"high_priority_labels": value},
         }
     )
 
-    assert (
-        settings.connector_scoring.high_priority_labels
-        == '["[Scoring] High priority", "Critical"]'
+    assert settings.connector_scoring.high_priority_labels == [
+        "[Scoring] High priority",
+        "Critical",
+    ]
+
+
+@pytest.mark.parametrize("value", [None, "", []])
+def test_settings_should_accept_empty_label_lists(value):
+    """An empty field in an existing `config.yml` MUST give an empty list."""
+    settings = _build_settings(
+        {
+            **MINIMAL_VALID_SETTINGS_DICT,
+            "connector_scoring": {"high_priority_labels": value},
+        }
     )
+
+    assert settings.connector_scoring.high_priority_labels == []
 
 
 def test_settings_should_coerce_string_values():

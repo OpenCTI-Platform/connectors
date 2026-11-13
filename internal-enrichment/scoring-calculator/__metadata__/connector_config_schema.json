@@ -67,16 +67,37 @@
       "default": "amber"
     },
     "CONNECTOR_SCORING_HIGH_PRIORITY_LABELS": {
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "default": "[]",
       "description": "JSON array of labels marking an entity as high priority, e.g. [\"[Scoring] High priority\"].",
       "type": "string"
     },
     "CONNECTOR_SCORING_MEDIUM_PRIORITY_LABELS": {
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "default": "[]",
       "description": "JSON array of labels marking an entity as medium priority, e.g. [\"[Scoring] Medium priority\"].",
       "type": "string"
     },
     "CONNECTOR_SCORING_LOW_PRIORITY_LABELS": {
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
       "default": "[]",
       "description": "JSON array of labels marking an entity as low priority, e.g. [\"[Scoring] Low priority\"].",
       "type": "string"

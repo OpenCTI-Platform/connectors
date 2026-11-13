@@ -46,7 +46,7 @@ class StubConnectorSettings(ConnectorSettings):
                 "connector_scoring": {
                     "high_priority_labels": '["[Scoring] High priority"]',
                     "medium_priority_labels": ["[Scoring] Medium priority"],
-                    "low_priority_labels": "Low",
+                    "low_priority_labels": '["Low"]',
                     "indicator_type_enrichable": "IPv4-Addr, IPv6-Addr,Domain-Name,StixFile",
                     "browse_report": False,
                     "threat_impact_score": True,
@@ -136,10 +136,12 @@ def test_connector_is_instantiated(monkeypatch, mock_opencti_connector_helper):
     assert isinstance(config.settings, StubConnectorSettings)
     assert config.opencti_url == "http://localhost:8080/"
     assert config.opencti_token == "test-token"
-    # Label lists from env vars (JSON string), config.yml (list) and bare strings
-    assert config.high_priority_labels == ["[scoring] high priority"]
-    assert config.medium_priority_labels == ["[scoring] medium priority"]
-    assert config.low_priority_labels == ["low"]
+    # Label lists from env vars (JSON string) and config.yml (list)
+    assert config.high_priority_labels == ["[Scoring] High priority"]
+    assert config.medium_priority_labels == ["[Scoring] Medium priority"]
+    assert config.low_priority_labels == ["Low"]
+    # Labels are compared case-insensitively by the connector
+    assert connector._high_priority_labels == {"[scoring] high priority"}
     assert config.indicator_type_enrichable == [
         "IPv4-Addr",
         "IPv6-Addr",

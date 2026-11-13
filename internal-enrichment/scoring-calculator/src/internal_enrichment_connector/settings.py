@@ -9,24 +9,24 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import BeforeValidator, Field
+from pydantic import BeforeValidator, Field, Json
 
 
-def _list_to_json_string(value: Any) -> Any:
-    """Keep label lists as a JSON string.
+def _yaml_list_to_json(value: Any) -> Any:
+    """Turn a legacy `config.yml` value into the JSON text `Json[list[str]]` expects.
 
     Environment variables give a JSON array as a string, while `config.yml` gives a
-    native YAML list. Serializing the YAML list back to JSON lets the legacy
-    `normalize_list_param` parse both sources the same way.
+    native YAML list. An empty field (`high_priority_labels:`) gives `None` or an
+    empty string, which previously meant "no label".
     """
-    if value is None:
+    if value is None or value == "":
         return "[]"
     if isinstance(value, list):
         return json.dumps(value)
     return value
 
 
-LabelList = Annotated[str, BeforeValidator(_list_to_json_string)]
+LabelList = Annotated[Json[list[str]], BeforeValidator(_yaml_list_to_json)]
 
 
 class ScoringCalculatorConnectorConfig(BaseInternalEnrichmentConnectorConfig):

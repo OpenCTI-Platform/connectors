@@ -122,6 +122,13 @@ class ConnectorScoring:
         self.helper = helper
         self.client = ConnectorClient(api)
 
+        # Labels are compared case-insensitively
+        self._high_priority_labels = {v.lower() for v in config.high_priority_labels}
+        self._medium_priority_labels = {
+            v.lower() for v in config.medium_priority_labels
+        }
+        self._low_priority_labels = {v.lower() for v in config.low_priority_labels}
+
     # In case labels of two different priorities are present, keep the highest priority
     def _priority_of(self, entity):
         # Defensive ``.get(...) or []`` rather than ``entity["objectLabel"]``:
@@ -136,11 +143,11 @@ class ConnectorScoring:
             label_value = (label.get("value") or "").lower()
             if not label_value:
                 continue
-            if label_value in self.config.high_priority_labels:
+            if label_value in self._high_priority_labels:
                 return "high"
-            elif label_value in self.config.medium_priority_labels:
+            elif label_value in self._medium_priority_labels:
                 priority.append("medium")
-            elif label_value in self.config.low_priority_labels:
+            elif label_value in self._low_priority_labels:
                 priority.append("low")
 
         if "medium" in priority:

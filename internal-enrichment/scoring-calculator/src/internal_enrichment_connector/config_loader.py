@@ -1,49 +1,4 @@
-import ast
-import json
-
 from internal_enrichment_connector.settings import ConnectorSettings
-
-
-def normalize_list_param(param):
-    """Normalise a label-priority config value into a ``list[str]`` of
-    lowercase tokens that ``ConnectorScoring._priority_of`` can compare
-    against.
-
-    The downstream comparison in ``_priority_of`` lowercases the
-    incoming label value before checking membership, so every branch
-    here MUST return lowercase strings — otherwise a single-string
-    config value (or a non-string fallback) would silently never
-    match an incoming label even when the operator's intent was a
-    direct equality. The previous shape returned the raw ``[param]``
-    on the bare-string fallback, so an operator who wrote
-    ``CONNECTOR_SCORING_HIGH_PRIORITY_LABELS=High`` (no JSON, no
-    Python-literal list) got a list ``["High"]`` that never matched
-    a lowercased ``"high"`` from the incoming label.
-    """
-    if not param:
-        return []
-
-    if isinstance(param, str):
-        # Check for JSON
-        try:
-            loaded = json.loads(param)
-            if isinstance(loaded, list):
-                return [str(s).lower() for s in loaded]
-        except json.JSONDecodeError:
-            pass
-
-        # Fallback
-        try:
-            loaded = ast.literal_eval(param)
-            if isinstance(loaded, list):
-                return [str(s).lower() for s in loaded]
-        except Exception:
-            pass
-
-    elif isinstance(param, list):
-        return [str(s).lower() for s in param]
-
-    return [str(param).lower()]
 
 
 class ConfigConnector:
@@ -68,11 +23,9 @@ class ConfigConnector:
         scoring = self.settings.connector_scoring
 
         # Connector extra parameters
-        self.high_priority_labels = normalize_list_param(scoring.high_priority_labels)
-        self.medium_priority_labels = normalize_list_param(
-            scoring.medium_priority_labels
-        )
-        self.low_priority_labels = normalize_list_param(scoring.low_priority_labels)
+        self.high_priority_labels = scoring.high_priority_labels
+        self.medium_priority_labels = scoring.medium_priority_labels
+        self.low_priority_labels = scoring.low_priority_labels
 
         # Strip whitespace on every token so an operator-friendly
         # ``"IPv4-Addr, IPv6-Addr, Domain-Name"`` (with the spaces a
