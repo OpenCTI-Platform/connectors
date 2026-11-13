@@ -110,9 +110,12 @@ def test_settings_should_apply_defaults():
     assert scoring.high_priority_labels == []
     assert scoring.medium_priority_labels == []
     assert scoring.low_priority_labels == []
-    assert (
-        scoring.indicator_type_enrichable == "IPv4-Addr,IPv6-Addr,Domain-Name,StixFile"
-    )
+    assert scoring.indicator_type_enrichable == [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "StixFile",
+    ]
     assert scoring.browse_report is False
     for category in ("threat", "toolbox", "location", "sector", "ttp", "author"):
         assert getattr(scoring, f"{category}_impact_score") is False
@@ -162,6 +165,23 @@ def test_settings_should_accept_empty_label_lists(value):
     )
 
     assert settings.connector_scoring.high_priority_labels == []
+
+
+def test_settings_should_split_indicator_types_and_strip_spaces():
+    """A comma-separated string with spaces MUST give a clean list of types."""
+    settings = _build_settings(
+        {
+            **MINIMAL_VALID_SETTINGS_DICT,
+            "connector_scoring": {
+                "indicator_type_enrichable": "IPv4-Addr, Domain-Name"
+            },
+        }
+    )
+
+    assert settings.connector_scoring.indicator_type_enrichable == [
+        "IPv4-Addr",
+        "Domain-Name",
+    ]
 
 
 def test_settings_should_coerce_string_values():

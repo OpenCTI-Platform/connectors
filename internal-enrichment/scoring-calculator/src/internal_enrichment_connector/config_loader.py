@@ -27,16 +27,7 @@ class ConfigConnector:
         self.medium_priority_labels = scoring.medium_priority_labels
         self.low_priority_labels = scoring.low_priority_labels
 
-        # Strip whitespace on every token so an operator-friendly
-        # ``"IPv4-Addr, IPv6-Addr, Domain-Name"`` (with the spaces a
-        # human would naturally insert after the commas) matches the
-        # canonical bare-comma form ``"IPv4-Addr,IPv6-Addr,..."`` that
-        # the rest of the connector compares against.
-        self.indicator_type_enrichable = [
-            entry.strip()
-            for entry in scoring.indicator_type_enrichable.split(",")
-            if entry.strip()
-        ]
+        self.indicator_type_enrichable = scoring.indicator_type_enrichable
 
         self.browse_report = scoring.browse_report
 

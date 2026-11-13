@@ -70,9 +70,9 @@ class ScoringCalculatorConfig(BaseConfigModel):
         ),
         default="[]",
     )
-    indicator_type_enrichable: str = Field(
-        description="Comma-separated list of main observable types of the Indicators to enrich.",
-        default="IPv4-Addr,IPv6-Addr,Domain-Name,StixFile",
+    indicator_type_enrichable: ListFromString = Field(
+        description="Main observable types of the Indicators to enrich.",
+        default=["IPv4-Addr", "IPv6-Addr", "Domain-Name", "StixFile"],
     )
     browse_report: bool = Field(
         description="Whether to take into account the entities contained in the Reports containing the Indicator.",

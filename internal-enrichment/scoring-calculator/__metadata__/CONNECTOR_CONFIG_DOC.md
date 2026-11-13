@@ -17,7 +17,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCORING_HIGH_PRIORITY_LABELS | `string` |  | string | `"[]"` | JSON array of labels marking an entity as high priority, e.g. ["[Scoring] High priority"]. |
 | CONNECTOR_SCORING_MEDIUM_PRIORITY_LABELS | `string` |  | string | `"[]"` | JSON array of labels marking an entity as medium priority, e.g. ["[Scoring] Medium priority"]. |
 | CONNECTOR_SCORING_LOW_PRIORITY_LABELS | `string` |  | string | `"[]"` | JSON array of labels marking an entity as low priority, e.g. ["[Scoring] Low priority"]. |
-| CONNECTOR_SCORING_INDICATOR_TYPE_ENRICHABLE | `string` |  | string | `"IPv4-Addr,IPv6-Addr,Domain-Name,StixFile"` | Comma-separated list of main observable types of the Indicators to enrich. |
+| CONNECTOR_SCORING_INDICATOR_TYPE_ENRICHABLE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "Domain-Name", "StixFile"]` | Main observable types of the Indicators to enrich. |
 | CONNECTOR_SCORING_BROWSE_REPORT | `boolean` |  | boolean | `false` | Whether to take into account the entities contained in the Reports containing the Indicator. |
 | CONNECTOR_SCORING_THREAT_IMPACT_SCORE | `boolean` |  | boolean | `false` | Whether the related threats (Intrusion Sets, Threat Actors) impact the score. |
 | CONNECTOR_SCORING_THREAT_HIGH_PRIORITY | `integer` |  | integer | `0` | Impact (%) on the score of a threat categorized as high priority. |

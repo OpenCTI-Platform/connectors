@@ -103,9 +103,17 @@
       "type": "string"
     },
     "CONNECTOR_SCORING_INDICATOR_TYPE_ENRICHABLE": {
-      "default": "IPv4-Addr,IPv6-Addr,Domain-Name,StixFile",
-      "description": "Comma-separated list of main observable types of the Indicators to enrich.",
-      "type": "string"
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "StixFile"
+      ],
+      "description": "Main observable types of the Indicators to enrich.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_SCORING_BROWSE_REPORT": {
       "default": false,
