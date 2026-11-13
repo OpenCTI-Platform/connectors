@@ -766,6 +766,32 @@ def test_hits_without_an_id_are_not_resent_once_the_window_moves():
     assert state["seen_hit_ids"] == []
 
 
+@pytest.mark.parametrize(
+    "period, expected",
+    [
+        # Hourly: the next window starts 10 minutes before the first run, so
+        # the hit is read once more, then never again.
+        (timedelta(hours=1), [1, 1, 0, 0, 0, 0, 0, 0]),
+        # Every 10 minutes: still at most one extra read.
+        (timedelta(minutes=10), [1, 1, 0, 0, 0, 0, 0, 0]),
+        # Every 2 minutes: read by each run that follows a run made within
+        # 10 minutes of the hit, five extra times here, then never again.
+        (timedelta(minutes=2), [1, 1, 1, 1, 1, 1, 0, 0]),
+    ],
+)
+def test_hit_without_an_id_inside_the_overlap_repeats_a_bounded_number_of_times(
+    period, expected
+):
+    hits = [make_hit(None, created=(NOW - timedelta(seconds=1)).isoformat())]
+    client = TimedClient(hits, clock=lambda: NOW)
+    source, _, _ = make_source(client=client)
+    runs = [NOW + period * k for k in range(8)]
+
+    sent_per_run, _ = _run_series(client, source, runs, max_objects=None)
+
+    assert [len(run) for run in sent_per_run] == expected
+
+
 def test_already_seen_hits_do_not_use_the_object_budget():
     hits = _distinct_hits(3)
     source, _, _ = make_source(hits)

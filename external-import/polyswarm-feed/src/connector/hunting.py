@@ -291,8 +291,10 @@ class HuntingSource:
             if key is not None and key in seen:
                 skipped_seen += 1
                 continue
-            # A hit that is unusable now may be complete in a later copy, so
-            # it is counted as skipped but not remembered as seen.
+            # A hit that is unusable now is not remembered, so a complete copy
+            # can still be imported if one comes back, which can only happen
+            # within the next run's overlap (LAG_MARGIN_SECONDS). It is only
+            # counted as skipped.
             sha256 = _clean_hash(hit.get("sha256"), "SHA-256")
             if sha256 is None:
                 skipped_invalid += 1
@@ -345,7 +347,8 @@ class HuntingSource:
             # left behind; the API gives no total, so the count is unknown.
             self.logger.warning(
                 "Live hunting window not read to the end; older hits in the "
-                "window were not imported and will not be retried.",
+                "window were not imported. The next run only reads back to "
+                "10 minutes before this run, so older hits are not retried.",
                 meta={
                     "reason": (
                         "object budget" if stopped_by_budget else reader.stop_reason
