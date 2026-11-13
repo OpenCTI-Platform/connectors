@@ -734,6 +734,10 @@ class StixBuilder:
             update["hashes"] = entity["hashes"]
         if entity.get("name"):
             update["name"] = entity["name"]
+        # A url SCO needs its value: when the incoming bundle does not carry
+        # the observable, this update object is sent on its own (#8351)
+        if entity.get("value"):
+            update["value"] = entity["value"]
         # The entity being enriched here is a ``file`` SCO (or
         # equivalent ``entity.get("type", "file")`` SCO). Author goes
         # on ``x_opencti_created_by_ref``, not the SDO/SRO-only

@@ -405,7 +405,7 @@ class TestUrlSubmission:
 # -- Results: notes, reports, score, observables
 
 
-def _run_with_builder(task_name, provider="cape", **overrides):
+def _run_with_builder(task_name, provider="cape", stix_objects=None, **overrides):
     c = _url_connector(sandbox_provider=provider, **overrides)
     c.config.polyswarm.json_report_enabled = True
     c.config.polyswarm.pdf_report_enabled = True
@@ -413,7 +413,12 @@ def _run_with_builder(task_name, provider="cape", **overrides):
     c.polyswarm_client.get_sandbox_results = MagicMock(return_value=_task(task_name))
     # As OpenCTI sends it: stix_objects holds the enriched observable
     with patch("connector.polyswarm_connector.time.sleep"):
-        result = c._enrich_url(URL_ID, _url_entity(), _opencti_url(), [_url_entity()])
+        result = c._enrich_url(
+            URL_ID,
+            _url_entity(),
+            _opencti_url(),
+            [_url_entity()] if stix_objects is None else stix_objects,
+        )
     sent = c.helper.stix2_create_bundle.call_args_list
     objects = sent[-1].args[0] if sent else []
     return c, result, objects
@@ -447,6 +452,32 @@ class TestUrlResults:
         )
         # File-hash indicators are for files only
         assert not [o for o in objects if o["type"] == "indicator"]
+
+    @pytest.mark.parametrize(
+        "stix_objects",
+        [
+            [],
+            [
+                {
+                    "type": "domain-name",
+                    "spec_version": "2.1",
+                    "id": "domain-name--00000000-0000-0000-0000-000000000002",
+                    "value": "example.com",
+                }
+            ],
+        ],
+    )
+    def test_url_object_carries_value_without_bundle(self, stix_objects):
+        """The sent url object has its value when the bundle lacks the URL."""
+        _, result, objects = _run_with_builder(
+            "sandbox_url_task_cape.json", stix_objects=stix_objects
+        )
+        assert result is None
+        url_obj = [o for o in objects if o["id"] == URL_ID]
+        assert url_obj
+        for obj in url_obj:
+            assert obj["type"] == "url"
+            assert obj["value"] == QUERY_URL
 
     def test_reports_attached_and_named_from_hash(self):
         c, _, _ = _run_with_builder("sandbox_url_task_cape.json")
