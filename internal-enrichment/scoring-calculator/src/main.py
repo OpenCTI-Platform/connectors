@@ -1,7 +1,7 @@
 import traceback
 
 from internal_enrichment_connector import ConnectorScoring
-from internal_enrichment_connector.config_loader import ConfigConnector
+from internal_enrichment_connector.settings import ConnectorSettings
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -15,14 +15,17 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigConnector()
+        settings = ConnectorSettings()
         # playbook_compatible=True only if a bundle is sent !
         helper = OpenCTIConnectorHelper(
-            config=config.settings.to_helper_config(), playbook_compatible=True
+            config=settings.to_helper_config(), playbook_compatible=True
         )
-        api = OpenCTIApiClient(url=config.opencti_url, token=config.opencti_token)
+        api = OpenCTIApiClient(
+            url=str(settings.opencti.url),
+            token=settings.opencti.token.get_secret_value(),
+        )
 
-        connector = ConnectorScoring(config=config, helper=helper, api=api)
+        connector = ConnectorScoring(settings=settings, helper=helper, api=api)
         connector.run()
     except Exception:
         traceback.print_exc()

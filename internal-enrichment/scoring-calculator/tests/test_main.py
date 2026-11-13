@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from internal_enrichment_connector import ConnectorScoring
-from internal_enrichment_connector.config_loader import ConfigConnector
 from internal_enrichment_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
@@ -112,45 +111,41 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_auto is True
 
 
-def test_connector_is_instantiated(monkeypatch, mock_opencti_connector_helper):
+def test_connector_is_instantiated(mock_opencti_connector_helper):
     """
     Test that the connector is wired as in `main.py`:
-        - `ConfigConnector` MUST build its values from `ConnectorSettings`
         - the helper MUST be built from `settings.to_helper_config()`
-        - the connector MUST receive the config, the helper and the API client
+        - the connector MUST receive the settings, the helper and the API client
+        - the connector MUST read its configuration from `settings.connector_scoring`
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
     """
-    monkeypatch.setattr(
-        "internal_enrichment_connector.config_loader.ConnectorSettings",
-        StubConnectorSettings,
-    )
-
-    config = ConfigConnector()
+    settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(
-        config=config.settings.to_helper_config(), playbook_compatible=True
+        config=settings.to_helper_config(), playbook_compatible=True
     )
     api = MagicMock()
-    connector = ConnectorScoring(config=config, helper=helper, api=api)
+    connector = ConnectorScoring(settings=settings, helper=helper, api=api)
 
-    assert isinstance(config.settings, StubConnectorSettings)
-    assert config.opencti_url == "http://localhost:8080/"
-    assert config.opencti_token == "test-token"
     # Label lists from env vars (JSON string) and config.yml (list)
-    assert config.high_priority_labels == ["[Scoring] High priority"]
-    assert config.medium_priority_labels == ["[Scoring] Medium priority"]
-    assert config.low_priority_labels == ["Low"]
-    # Labels are compared case-insensitively by the connector
-    assert connector._high_priority_labels == {"[scoring] high priority"}
-    assert config.indicator_type_enrichable == [
+    scoring = settings.connector_scoring
+    assert scoring.high_priority_labels == ["[Scoring] High priority"]
+    assert scoring.medium_priority_labels == ["[Scoring] Medium priority"]
+    assert scoring.low_priority_labels == ["Low"]
+    assert scoring.indicator_type_enrichable == [
         "IPv4-Addr",
         "IPv6-Addr",
         "Domain-Name",
         "StixFile",
     ]
-    assert config.browse_report is False
-    assert config.impact_map["Threat"] == {"high": 20, "medium": 10, "low": 5}
-    assert config.impact_enabled == {
+    assert scoring.browse_report is False
+
+    # Labels are compared case-insensitively by the connector
+    assert connector._high_priority_labels == {"[scoring] high priority"}
+    assert connector._medium_priority_labels == {"[scoring] medium priority"}
+    assert connector._low_priority_labels == {"low"}
+    assert connector.impact_map["Threat"] == {"high": 20, "medium": 10, "low": 5}
+    assert connector.impact_enabled == {
         "Threat": True,
         "Toolbox": True,
         "Location": False,
@@ -159,7 +154,8 @@ def test_connector_is_instantiated(monkeypatch, mock_opencti_connector_helper):
         "Author": False,
     }
 
-    assert connector.config is config
+    assert connector.settings is settings
+    assert connector.config is scoring
     assert connector.helper is helper
     assert helper.connect_id == "connector-id"
     assert connector.client.api is api
