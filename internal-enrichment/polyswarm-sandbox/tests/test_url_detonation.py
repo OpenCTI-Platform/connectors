@@ -115,6 +115,45 @@ class TestUrlRules:
     @pytest.mark.parametrize(
         "url",
         [
+            # Percent-encoded hosts (review threads 4528431174, 4528455047)
+            "http://%31%32%37.0.0.1/",
+            "http://%31%30.0.0.1/admin",
+            "http://%6c%6f%63%61%6c%68%6f%73%74/",
+            "http://example%2ecom/",
+            # Full-width spellings of loopback, private and internal hosts
+            "http://\uff11\uff12\uff17.\uff10.\uff10.\uff11/",
+            "http://\uff11\uff10.\uff10.\uff10.\uff11/",
+            "http://\uff11\uff10\uff0e0\uff0e0\uff0e1/",
+            "http://wiki.c\uff4frp/",
+            "http://\uff57\uff49\uff4b\uff49.\uff43\uff4f\uff52\uff50/",
+            "http://localho\uff53t/",
+            # Backslash read as a path separator (review thread 4528424208)
+            "http://127.0.0.1\\example.com/",
+            "http://localhost\\evil.com/",
+            "http://10.0.0.1\\",
+            "http:\\\\127.0.0.1\\x",
+            # Not a valid IDNA name
+            "http://\u00ad\u00ad/",
+        ],
+    )
+    def test_encoded_and_unicode_hosts_are_refused(self, url):
+        assert url_utils.is_non_public_url(url) is True
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://b\u00fccher.de/",
+            "http://ex\uff41mple.com/",
+            "http://example.com/a\\b",
+            "http://example.com/%41",
+        ],
+    )
+    def test_unicode_public_hosts_and_path_escapes_are_allowed(self, url):
+        assert url_utils.is_non_public_url(url) is False
+
+    @pytest.mark.parametrize(
+        "url",
+        [
             "https://example.com/a",
             "http://8.8.8.8/x",
             "https://[2606:4700:4700::1111]/",
@@ -174,6 +213,18 @@ class TestUrlRefusals:
             ),
             (
                 "http://intranet/x?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://%31%30.0.0.1/admin?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://\uff11\uff12\uff17.\uff10.\uff10.\uff11/?token=SECRET123",
+                "Submission Refused: Private or Internal Host",
+            ),
+            (
+                "http://127.0.0.1\\example.com/?token=SECRET123",
                 "Submission Refused: Private or Internal Host",
             ),
             ("", "No URL Value"),

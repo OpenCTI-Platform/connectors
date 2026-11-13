@@ -7,6 +7,14 @@ copied here because the two connectors are separate packages:
   reserved, multicast or unspecified, a non-canonical IPv4 form, or an internal
   name (single label, .local, .internal, .lan, .corp, .home.arpa, .localhost)
   are never sent.
+- Hosts are normalised (NFKC, then IDNA) before they are classified, so
+  full-width and other Unicode spellings of an address or name are caught.
+  A host that is still percent-encoded or not plain ASCII afterwards, or
+  that has characters outside the normal host set, is never sent. A
+  backslash is read as a path separator, as browsers do, so
+  ``http://127.0.0.1\\example.com/`` is classified by ``127.0.0.1``.
+- Names are not DNS-resolved here: the sandbox resolves them on PolySwarm's
+  network, so the checks cover literal addresses and internal names.
 - URLs with a username or password (userinfo) are never sent.
 - The query string and fragment are removed before submission unless the
   operator opts in.
@@ -14,7 +22,9 @@ copied here because the two connectors are separate packages:
 """
 
 import ipaddress
+import re
 import socket
+import unicodedata
 from urllib.parse import urlparse, urlsplit, urlunsplit
 
 # Suffixes of names that only resolve inside a private network
@@ -32,6 +42,10 @@ _SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
 
 # Characters of a legacy numeric IPv4 form (127.1, 0x7f.0.0.1, 2130706433)
 _LEGACY_IPV4_CHARS = frozenset("0123456789abcdefx.")
+
+# Characters a normalised URL host may contain (IPv6 brackets are removed by
+# urlparse). Anything else, such as "%" or "\\", is refused.
+_HOST_CHARS = re.compile(r"[a-z0-9._:-]+")
 
 
 def _is_private_or_noise(ip_str: str) -> bool:
@@ -95,9 +109,29 @@ def _is_non_public_domain(domain: str) -> bool:
     return f".{name}".endswith(_INTERNAL_DOMAIN_SUFFIXES)
 
 
+def _normalise_host(host: str) -> str | None:
+    """ASCII form of a URL host (NFKC, then IDNA), or None when it has none.
+
+    NFKC maps full-width digits, letters and dots to ASCII (full-width
+    "127.0.0.1" becomes "127.0.0.1"). A host that is still not ASCII is
+    IDNA-encoded ("b\\u00fccher.de" becomes "xn--bcher-kva.de").
+    """
+    name = unicodedata.normalize("NFKC", host).strip()
+    if not name.isascii():
+        try:
+            name = name.encode("idna").decode("ascii")
+        except UnicodeError:
+            return None
+    name = name.rstrip(".").lower()
+    if not name.isascii() or not _HOST_CHARS.fullmatch(name):
+        # Percent-encoded, backslash or other characters outside a host
+        return None
+    return name
+
+
 def _is_non_public_host(host: str) -> bool:
     """Check a URL host: IP literals as IPs, everything else as a name."""
-    name = host.strip().rstrip(".").lower()
+    name = _normalise_host(host)
     if not name or _is_legacy_ipv4(name):
         return True
     if ":" in name or name.startswith("["):
@@ -111,7 +145,12 @@ def _is_non_public_host(host: str) -> bool:
 
 
 def _parse_url(value: str):
-    """urlparse that also accepts a scheme-less URL (example.com/path)."""
+    """urlparse that also accepts a scheme-less URL (example.com/path).
+
+    A backslash is read as "/", as browsers do for http and https, so the
+    host is the one the sandbox browser would connect to.
+    """
+    value = value.replace("\\", "/")
     return urlparse(value if "://" in value else f"//{value}")
 
 
