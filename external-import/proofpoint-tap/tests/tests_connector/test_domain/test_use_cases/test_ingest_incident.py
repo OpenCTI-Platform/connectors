@@ -1,6 +1,7 @@
 # pragma: no cover # do not include tests modules in coverage metrics
 """Test the ingest incident use case."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
@@ -464,6 +465,29 @@ def test_invalid_click_address_is_omitted(invalid_value: str):
         entities, ["recipient2@example.com"]
     )
     _assert_entities_serialize_without_dangling_references(entities)
+
+
+def test_invalid_address_is_logged_as_warning(caplog: pytest.LogCaptureFixture):
+    """Log a warning naming each invalid address that is skipped."""
+    # Given a click event with one invalid recipient
+    adapter = DummyClickEventAdapter(
+        recipients=["not-an-email", "recipient2@example.com"],
+    )
+    processor = IncidentProcessor(tlp_marking_name="white")
+    # When running the processor on the adapter
+    with caplog.at_level(
+        logging.WARNING, logger="proofpoint_tap.domain.use_cases.ingest_incident"
+    ):
+        processor.run_on_event(adapter)
+    # Then one warning names the skipped address
+    warnings = [
+        record
+        for record in caplog.records
+        if record.getMessage() == "Invalid email address skipped"
+    ]
+    assert len(warnings) == 1  # noqa: S101
+    assert warnings[0].levelno == logging.WARNING  # noqa: S101
+    assert warnings[0].attributes == {"email_address": "not-an-email"}  # noqa: S101
 
 
 def test_incident_processor_can_prcoess_message_event():

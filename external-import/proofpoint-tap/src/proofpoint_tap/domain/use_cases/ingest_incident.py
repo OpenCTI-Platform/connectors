@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from connectors_sdk import get_logger
 from proofpoint_tap.domain.models.octi.common import BaseEntity
 from proofpoint_tap.domain.models.octi.domain import Incident
 from proofpoint_tap.domain.models.octi.observables import EmailAddress, EmailMessage
@@ -12,6 +13,8 @@ from proofpoint_tap.domain.models.octi.relationships import (
 from proofpoint_tap.domain.use_cases.common import BaseUseCase
 from proofpoint_tap.ports.event import ClickEventPort, EventPort, MessageEventPort
 from pydantic import ValidationError
+
+logger = get_logger(__name__)
 
 
 class IncidentProcessor(BaseUseCase):
@@ -43,14 +46,11 @@ class IncidentProcessor(BaseUseCase):
         )
 
     def _make_email_address(self, value: Optional[str]) -> Optional[EmailAddress]:
-        """Return an email address, or None when the value is empty or invalid.
-
-        Validation errors that do not concern the address value are re-raised.
-        """
+        """Return an email address, or None when the value is empty or invalid."""
         if value is None or value.strip() == "":
             return None
         try:
-            address: Optional[EmailAddress] = EmailAddress(
+            return EmailAddress(
                 score=None,
                 description=None,
                 labels=None,
@@ -60,14 +60,11 @@ class IncidentProcessor(BaseUseCase):
                 value=value,
                 display_name=None,
             )
-        except ValidationError as error:
-            details = error.errors()
-            if not details or any(
-                detail["loc"][:1] != ("value",) for detail in details
-            ):
-                raise
-            address = None
-        return address
+        except ValidationError:
+            logger.warning(
+                "Invalid email address skipped", meta={"email_address": value}
+            )
+            return None
 
     def _make_email_addresses(self, values: Optional[list[str]]) -> list[EmailAddress]:
         """Build email addresses, omitting empty or invalid values in input order."""
