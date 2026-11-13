@@ -16,7 +16,6 @@ from stix2 import (
     ObservationExpression,
     StringConstant,
 )
-from stix2.canonicalization.Canonicalize import canonicalize
 from stix2.exceptions import STIXError
 
 from shared.transformer import AbstractTransformer
@@ -53,9 +52,9 @@ KILL_CHAIN_PHASES = {
 
 SOURCE_NAME = "CrowdStrike"
 
-# Namespace of OpenCTI's deterministic indicator ids (pycti
-# ``Indicator.generate_id``).
-OPENCTI_INDICATOR_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
+# Namespace of the STIX ids derived from CrowdStrike ids. Derived from
+# CrowdStrike's domain so anyone can recompute it; independent of OpenCTI.
+CROWDSTRIKE_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_DNS, "crowdstrike.com")
 
 X_PREFIX = "x_crowdstrike_"
 X_EXTRA = f"{X_PREFIX}extra"
@@ -92,10 +91,14 @@ def build_pattern(item: CrowdStrikeIndicator) -> str:
     return str(ObservationExpression(str(comparison)))
 
 
-def indicator_id(pattern: str) -> str:
-    """Return the deterministic STIX id OpenCTI (pycti) gives to ``pattern``."""
-    name = canonicalize({"pattern": pattern.strip()}, utf8=False)
-    return f"indicator--{uuid.uuid5(OPENCTI_INDICATOR_NAMESPACE, name)}"
+def indicator_id(crowdstrike_id: str) -> str:
+    """Return the deterministic STIX id of the CrowdStrike indicator ``crowdstrike_id``.
+
+    A STIX id must be ``indicator--<UUID>``, so the CrowdStrike id is turned
+    into a UUIDv5 in :data:`CROWDSTRIKE_NAMESPACE`. Converting it to an
+    OpenCTI id belongs to a later, OpenCTI-specific stage.
+    """
+    return f"indicator--{uuid.uuid5(CROWDSTRIKE_NAMESPACE, crowdstrike_id)}"
 
 
 def x_property_name(field_name: str) -> str:
@@ -196,6 +199,6 @@ class CrowdStrikeIndicatorTransformer(
         }
         properties.update(_x_properties(item, confidence))
         try:
-            return CrowdStrikeStix2Indicator(id=indicator_id(pattern), **properties)
+            return CrowdStrikeStix2Indicator(id=indicator_id(item.id), **properties)
         except STIXError as error:
             raise IndicatorConversionError(item.id, str(error)) from error

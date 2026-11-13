@@ -2,6 +2,7 @@
 
 import copy
 import json
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 from unittest import mock
@@ -14,6 +15,7 @@ from crowdstrike_indicators.errors import IndicatorConversionError
 from crowdstrike_indicators.models import CrowdStrikeIndicator
 from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
 from crowdstrike_indicators.transformer import (
+    CROWDSTRIKE_NAMESPACE,
     NATIVELY_HELD_FIELDS,
     X_EXTRA,
     CrowdStrikeIndicatorTransformer,
@@ -24,20 +26,20 @@ from stix2.exceptions import InvalidValueError
 SAMPLE_ROWS = load_fixture("indicators_sample.json")["resources"]
 SAMPLE_IDS = [f"{row['type']}-{i}" for i, row in enumerate(SAMPLE_ROWS)]
 
-# Ids computed with pycti 7.261109.0 ``Indicator.generate_id(pattern)`` for the
-# fixture rows, with patterns built independently of this code.
-PYCTI_IDS = {
-    "hash_sha1_a544af123662c61ae0664b4d41457639d24ed7f1": "indicator--3b63cbaa-b145-553c-9697-9e4c98a93d0d",
-    "hash_md5_10c9e2cde0416ca92132df8805841b00": "indicator--aa7fc987-2694-5fb9-a23b-220dd368b6df",
-    "url_http://malicious-3.example/path/3?id=fixture": "indicator--7b4cc0b4-9099-5018-8c0e-d67242926c67",
-    "hash_sha256_8c09b37123eb0d9dcec63788149e576b1614ed481ad002512d0a47a09cbf59fc": "indicator--ac086b97-99f6-5898-a65a-c49e8b0cea0b",
-    "hash_sha1_0cf6a0048ea1c355212b6630ebcd34f463691845": "indicator--20441abc-b908-52c6-876b-9866b5795c11",
-    "ip_address_192.0.2.6": "indicator--819f620b-8ebf-5a9f-9087-6cee559f72dc",
-    "domain_malicious-7.example": "indicator--c9ca11dc-e430-58eb-bf35-b82ffeeea04d",
-    "domain_malicious-8.example": "indicator--49f7bafd-95a2-5ed2-9b4f-5b605e1696aa",
-    "domain_malicious-9.example": "indicator--15da8078-d116-5c72-a54a-63f2af631731",
-    "domain_malicious-10.example": "indicator--42cd3b95-0e73-5421-b1bf-c350d75047f9",
-    "domain_malicious-11.example": "indicator--b979e4f4-2874-5607-9213-3efbded6e1ba",
+# STIX ids of the fixture rows: UUIDv5 of the CrowdStrike id in the
+# CrowdStrike namespace, pinned as literal values.
+EXPECTED_IDS = {
+    "hash_sha1_a544af123662c61ae0664b4d41457639d24ed7f1": "indicator--1455db42-6c02-5136-aa8f-149a7c58270c",
+    "hash_md5_10c9e2cde0416ca92132df8805841b00": "indicator--aeee2c16-be7d-5381-9209-8b83d5e0566b",
+    "url_http://malicious-3.example/path/3?id=fixture": "indicator--e81a6c43-4f11-5627-a821-31e09136fa9b",
+    "hash_sha256_8c09b37123eb0d9dcec63788149e576b1614ed481ad002512d0a47a09cbf59fc": "indicator--74fccf7a-599a-5dea-ab4e-d6e06412a8c1",
+    "hash_sha1_0cf6a0048ea1c355212b6630ebcd34f463691845": "indicator--30c04d2e-9c02-57d4-b4c8-482aea1cc871",
+    "ip_address_192.0.2.6": "indicator--85a216e6-db02-5464-9b94-44a5b22096fe",
+    "domain_malicious-7.example": "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b",
+    "domain_malicious-8.example": "indicator--0072b9b1-7486-520a-b29e-200aaac0ab83",
+    "domain_malicious-9.example": "indicator--102138ca-08e1-579d-b842-b5d1ed584f3e",
+    "domain_malicious-10.example": "indicator--c33286b5-33fb-5aeb-8fbd-2ffe5323e4ed",
+    "domain_malicious-11.example": "indicator--bd860d95-48d7-50dc-a047-4e01164704f6",
 }
 
 T1 = datetime(2026, 11, 1, 10, 0, 0, tzinfo=UTC)
@@ -182,17 +184,35 @@ def test_invalid_ip_address_fails():
 
 
 @pytest.mark.parametrize("raw", SAMPLE_ROWS, ids=SAMPLE_IDS)
-def test_id_matches_pycti(raw):
+def test_id_is_derived_from_the_crowdstrike_id(raw):
     result = convert(CrowdStrikeIndicator.model_validate(raw))
 
-    assert result.id == PYCTI_IDS[raw["id"]]
+    assert result.id == EXPECTED_IDS[raw["id"]]
 
 
-def test_same_value_gives_same_id():
-    first = convert(record(id="a", last_updated=int(T1.timestamp())))
-    second = convert(record(id="b", malicious_confidence="low"))
+def test_crowdstrike_namespace_is_pinned():
+    assert CROWDSTRIKE_NAMESPACE == uuid.UUID("772e62ec-40d9-5c7b-8696-73937645c55b")
+    assert CROWDSTRIKE_NAMESPACE == uuid.uuid5(uuid.NAMESPACE_DNS, "crowdstrike.com")
+
+
+def test_same_crowdstrike_id_gives_same_id():
+    first = convert(record(id="domain_a.example", last_updated=int(T1.timestamp())))
+    second = convert(
+        record(
+            id="domain_a.example",
+            malicious_confidence="low",
+            published_date=int(T1.timestamp()),
+        )
+    )
 
     assert first.id == second.id
+
+
+def test_different_crowdstrike_ids_give_different_ids():
+    first = convert(record(id="domain_a.example"))
+    second = convert(record(id="domain_b.example"))
+
+    assert first.id != second.id
 
 
 # --- Native properties -------------------------------------------------------

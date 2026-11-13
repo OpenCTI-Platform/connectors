@@ -107,10 +107,13 @@ Supported types: `domain`, `url`, `ip_address` (IPv4 and IPv6), `hash_md5`,
 `hash_sha1` and `hash_sha256`. Any other type raises `IndicatorConversionError`,
 and so does a `published_date` later than `last_updated`.
 
-The STIX `id` is the one pycti's `Indicator.generate_id(pattern)` gives, a
-UUIDv5 over the canonicalized pattern, reimplemented with stix2 alone. The
-existing CrowdStrike connector builds its patterns the same way, so an
-indicator gets the id it already has in OpenCTI.
+The STIX `id` is derived from the CrowdStrike id alone: `indicator--` followed
+by a UUIDv5 of the CrowdStrike `id` in the namespace
+`uuid5(NAMESPACE_DNS, "crowdstrike.com")`. The same CrowdStrike indicator always
+gets the same id, with no OpenCTI convention involved. These ids differ from
+the ones the existing connector gives in OpenCTI (pycti's, derived from the
+pattern): converting them is the job of a later, OpenCTI-specific stage, which
+finds the CrowdStrike id in `external_references`.
 
 `stix2.parse` rebuilds a plain `Indicator`, which accepts the
 `x_crowdstrike_*` properties only with `allow_custom=True`.
