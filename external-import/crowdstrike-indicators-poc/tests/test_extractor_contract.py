@@ -20,11 +20,11 @@ class InMemoryExtractor(AbstractExtractor[Item]):
         self.calls = 0
 
     def extract(
-        self, after_date: datetime, max_element_count: int
+        self, from_date: datetime, max_element_count: int
     ) -> list[tuple[datetime, Item]]:
-        self.check_arguments(after_date, max_element_count)
+        self.check_arguments(from_date, max_element_count)
         self.calls += 1
-        return [pair for pair in self.data if pair[0] > after_date][:max_element_count]
+        return [pair for pair in self.data if pair[0] >= from_date][:max_element_count]
 
 
 T0 = datetime(2026, 1, 1, tzinfo=UTC)
@@ -56,18 +56,29 @@ def test_rejects_naive_datetime_before_touching_the_source():
 
 
 def test_valid_call_returns_validated_items_with_aware_ascending_datetimes():
-    result = _source(5).extract(T0, 10)
+    result = _source(5).extract(T0 + timedelta(seconds=1), 10)
 
-    # The item at T0 equals after_date and is excluded.
+    # The item at from_date is included; the one before it is not.
     assert [item.name for _, item in result] == [f"item-{i}" for i in range(1, 5)]
     assert all(isinstance(item, Item) for _, item in result)
     assert all(dt.tzinfo is not None for dt, _ in result)
     assert [dt for dt, _ in result] == sorted(dt for dt, _ in result)
 
 
-def test_cap_is_a_hard_upper_bound():
-    assert len(_source(10).extract(T0, 3)) == 3
+def test_cap_is_a_hard_upper_bound_and_keeps_the_earliest_items():
+    result = _source(10).extract(T0, 3)
+    assert [item.name for _, item in result] == ["item-0", "item-1", "item-2"]
 
 
-def test_empty_result_when_nothing_after_date():
+def test_resuming_from_latest_datetime_repeats_it_and_skips_nothing():
+    source = _source(5)
+    first = source.extract(T0, 3)
+    second = source.extract(first[-1][0], 3)
+
+    assert [item.name for _, item in second] == ["item-2", "item-3", "item-4"]
+    names = {item.name for _, item in first + second}
+    assert names == {f"item-{i}" for i in range(5)}
+
+
+def test_empty_result_when_nothing_at_or_after_date():
     assert _source(3).extract(T0 + timedelta(days=1), 10) == []
