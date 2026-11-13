@@ -171,6 +171,19 @@ class TestResolutionsConfig(unittest.TestCase):
             ConfigLoaderVirusTotal(token="fake-token", ip_resolutions_max_entries=0)
 
 
+class TestIndicatorConfig(unittest.TestCase):
+    def test_minimum_score_applies_to_every_observable_type(self):
+        config = ConfigLoaderVirusTotal(token="fake-token", indicator_min_score="21")
+
+        for prefix in ("file", "ip", "domain", "url"):
+            indicator_config = config.model_extra[f"{prefix}_indicator_config"]
+            self.assertEqual(indicator_config.min_score, 21)
+
+    def test_validity_must_be_positive(self):
+        with self.assertRaises(ValidationError):
+            ConfigLoaderVirusTotal(token="fake-token", file_indicator_valid_minutes=0)
+
+
 class TestResolutionsClient(unittest.TestCase):
     def setUp(self):
         self.client = VirusTotalClient(

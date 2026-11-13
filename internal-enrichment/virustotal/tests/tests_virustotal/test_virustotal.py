@@ -33,7 +33,7 @@ def _make_connector() -> VirusTotalConnector:
     config.virustotal.gti_relationship_limit = 10
     config.virustotal.token.get_secret_value.return_value = "fake-token"
     config.virustotal.model_extra.get.return_value = MagicMock(
-        threshold=10, valid_minutes=2880, detect=True
+        threshold=10, valid_minutes=2880, detect=True, min_score=0
     )
 
     helper = MagicMock()
@@ -73,16 +73,16 @@ def _make_connector() -> VirusTotalConnector:
     connector.gti_include_reports = config.virustotal.gti_include_reports
     connector.gti_relationship_limit = config.virustotal.gti_relationship_limit
     connector.file_indicator_config = MagicMock(
-        threshold=10, valid_minutes=2880, detect=True
+        threshold=10, valid_minutes=2880, detect=True, min_score=0
     )
     connector.ip_indicator_config = MagicMock(
-        threshold=10, valid_minutes=2880, detect=True
+        threshold=10, valid_minutes=2880, detect=True, min_score=0
     )
     connector.domain_indicator_config = MagicMock(
-        threshold=10, valid_minutes=2880, detect=True
+        threshold=10, valid_minutes=2880, detect=True, min_score=0
     )
     connector.url_indicator_config = MagicMock(
-        threshold=10, valid_minutes=2880, detect=True
+        threshold=10, valid_minutes=2880, detect=True, min_score=0
     )
     connector.yara_cache = {}
     connector.author = stix2.Identity(

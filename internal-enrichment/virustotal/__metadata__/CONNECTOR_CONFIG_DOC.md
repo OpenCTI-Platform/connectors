@@ -16,15 +16,16 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |  |
 | VIRUSTOTAL_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. Available values: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED |  |
 | VIRUSTOTAL_REPLACE_WITH_LOWER_SCORE | `boolean` |  | boolean | `true` | Whether to keep the higher of the VT or existing score (false) or force the score to be updated with the VT score even if its lower than existing score (true). |  |
+| VIRUSTOTAL_INDICATOR_MIN_SCORE | `integer` |  | `0 <= x <= 100` | `0` | Minimum VirusTotal score required to create an Indicator. |  |
 | VIRUSTOTAL_FILE_CREATE_NOTE_FULL_REPORT | `boolean` |  | boolean | `true` | Whether or not to include the full report as a Note. |  |
 | VIRUSTOTAL_FILE_UPLOAD_UNSEEN_ARTIFACTS | `boolean` |  | boolean | `true` | Whether to upload artifacts (smaller than 32MB) that VirusTotal has no record of for analysis. |  |
 | VIRUSTOTAL_FILE_IMPORT_YARA | `boolean` |  | boolean | `true` | Whether or not to import Crowdsourced YARA rules. |  |
 | VIRUSTOTAL_FILE_INDICATOR_CREATE_POSITIVES | `integer` |  | integer | `10` | Create an indicator for File/Artifact based observables once this positive threshold is reached. |  |
-| VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |  |
+| VIRUSTOTAL_FILE_INDICATOR_VALID_MINUTES | `integer` |  | `0 < x ` | `2880` | How long the indicator is valid for in minutes. |  |
 | VIRUSTOTAL_FILE_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |  |
 | VIRUSTOTAL_IP_ADD_RELATIONSHIPS | `boolean` |  | boolean | `false` | Whether or not to add ASN and location resolution relationships. |  |
 | VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES | `integer` |  | integer | `10` | Create an indicator for IPv4 based observables once this positive threshold is reached. |  |
-| VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |  |
+| VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES | `integer` |  | `0 < x ` | `2880` | How long the indicator is valid for in minutes. |  |
 | VIRUSTOTAL_IP_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |  |
 | VIRUSTOTAL_IP_ADD_RESOLUTIONS | `boolean` |  | boolean | `false` | Whether or not to import the domains resolving to the IP (VirusTotal resolutions) as Domain-Name observables linked with a dated `resolves-to` relationship. Off: no additional API call and no additional object. |  |
 | VIRUSTOTAL_IP_RESOLUTIONS_SINCE | `string` |  | string | `"P90D"` | Date floor for IP resolutions: stop paging at the first resolution last seen before it. ISO-8601 duration relative to each enrichment (`P90D`), absolute ISO-8601 date (`2025-10-01`) or `none` to disable the floor (the entry and page caps still apply). | ```P90D```, ```2025-10-01```, ```none``` |
@@ -34,11 +35,11 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | VIRUSTOTAL_API_REQUESTS_PER_MINUTE | `integer` |  | `0 <= x ` | `4` | Spacing between IP resolutions pages, in requests per minute. 4 fits a free API key; 0 disables the wait (premium keys). Applies only to IP resolutions paging. | ```4```, ```0``` |
 | VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS | `boolean` |  | boolean | `false` | Whether or not to add IP resolution relationships. |  |
 | VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES | `integer` |  | integer | `10` | Create an indicator for Domain based observables once this positive threshold is reached. |  |
-| VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |  |
+| VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES | `integer` |  | `0 < x ` | `2880` | How long the indicator is valid for in minutes. |  |
 | VIRUSTOTAL_DOMAIN_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |  |
 | VIRUSTOTAL_URL_UPLOAD_UNSEEN | `boolean` |  | boolean | `true` | Whether to upload URLs that VirusTotal has no record of for analysis. |  |
 | VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES | `integer` |  | integer | `10` | Create an indicator for URL based observables once this positive threshold is reached. |  |
-| VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |  |
+| VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES | `integer` |  | `0 < x ` | `2880` | How long the indicator is valid for in minutes. |  |
 | VIRUSTOTAL_URL_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |  |
 | VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE | `boolean` |  | boolean | `false` | Whether or not to include the attributes info in Note. |  |
 | VIRUSTOTAL_GTI_ENRICHMENT_ENABLED | `boolean` |  | boolean | `false` | Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access. |  |
