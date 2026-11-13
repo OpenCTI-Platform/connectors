@@ -169,10 +169,13 @@ class YaraHunter:
         self.lookup_failed = False
 
     # ------------------------------------------------------------------ state
-    def _load_state(self) -> dict:
+    def _load_state(self, strict: bool = False) -> dict:
+        """The saved hunts; a read error gives {} unless ``strict`` (then raises)."""
         try:
             state = self.helper.get_state() or {}
         except Exception:
+            if strict:
+                raise
             state = {}
         return state.get(STATE_KEY) or {}
 
@@ -247,7 +250,15 @@ class YaraHunter:
         self.lookup_failed = False
         remembered_failed = False
         digest = rule_digest(rule)
-        remembered = self._load_state().get(digest)
+        try:
+            remembered = self._load_state(strict=True).get(digest)
+        except Exception as err:
+            # The saved hunt could not be read: same as a failed hunt read
+            remembered = None
+            remembered_failed = True
+            self.helper.connector_logger.warning(
+                f"[YARA] Could not read saved hunt state: {short_error(err)}"
+            )
         if remembered:
             try:
                 hunt = self._get_hunt(remembered["hunt_id"])
