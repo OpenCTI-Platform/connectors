@@ -38,7 +38,9 @@ EVERY_X_PROPERTY = {
 
 
 def _build(**properties) -> CrowdStrikeStix2Indicator:
-    return CrowdStrikeStix2Indicator(**NATIVE, **properties)
+    return CrowdStrikeStix2Indicator(
+        id="indicator--00000000-0000-5000-8000-000000000001", **NATIVE, **properties
+    )
 
 
 def test_every_x_crowdstrike_property_is_accepted():
