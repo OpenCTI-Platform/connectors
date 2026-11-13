@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
 #      - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
 #      - CONNECTOR_LOG_LEVEL=error
+#      - CONNECTOR_MAX_TLP=TLP:AMBER # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
       - MALBEACON_API_KEY=ChangeMe # Required
 #      - MALBEACON_API_BASE_URL=https://api.malbeacon.com/v1/
 #      - MALBEACON_INDICATOR_SCORE_LEVEL=50
-#      - MALBEACON_MAX_TLP=TLP:AMBER # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
     restart: always

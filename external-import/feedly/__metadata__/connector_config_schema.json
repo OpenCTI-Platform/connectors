@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Feedly",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -25,6 +27,7 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -57,6 +60,7 @@
       "default": [],
       "description": "Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly.",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -70,6 +74,7 @@
     "FEEDLY_API_KEY": {
       "description": "Feedly API key for authentication. Generate your API key at https://feedly.com/i/team/api",
       "format": "password",
+      "minLength": 1,
       "type": "string",
       "writeOnly": true
     },

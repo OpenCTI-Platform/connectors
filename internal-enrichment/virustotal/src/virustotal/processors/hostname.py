@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 class HostnameProcessor(EntityProcessor):
     """Enriches Domain-Name and Hostname observables and Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "domains"
+
     def _fetch_data(self) -> dict:
         return self.client.get_domain_info(self.opencti_entity["observable_value"])
 

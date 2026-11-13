@@ -15,7 +15,8 @@ WORKDIR /opt/opencti-connector-akamai
 
 # Install system dependencies required for cryptography and EdgeGrid
 
-RUN apk add --no-cache \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
     build-base \
     libffi-dev \
     openssl-dev \
@@ -26,7 +27,8 @@ RUN apk add --no-cache \
 COPY src/requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    apk del build-base libffi-dev openssl-dev git
 
 # Copy full source code (including config.yml.sample)
 COPY src/ .

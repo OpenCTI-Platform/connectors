@@ -30,7 +30,7 @@ class GreyNoiseConnector:
 
         # Greynoise configuration
         self.greynoise_key = self.config.greynoise.key.get_secret_value()
-        self.max_tlp = self.config.greynoise.max_tlp
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
         self.sighting_not_seen = self.config.greynoise.sighting_not_seen
         self.no_sightings = self.config.greynoise.no_sightings
         self.greynoise_ent_name = self.config.greynoise.name
@@ -140,7 +140,7 @@ class GreyNoiseConnector:
                 self._create_custom_label(f"{tag['name']}", "#ff8178")
             elif tag["category"] == "worm":
                 malware_worm = {
-                    "name": f"{tag}",
+                    "name": tag["name"],
                     "description": f"{tag['description']}",
                     "type": "worm",
                 }

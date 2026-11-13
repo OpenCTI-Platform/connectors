@@ -63,13 +63,13 @@ This connector enriches IPv4 observables and Shodan pattern indicators with comp
 | `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `IPv4-Addr,Indicator` (pattern_type: shodan) |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `SHODAN_MAX_TLP` |
 
 ### Shodan Configuration
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `shodan_token` | `SHODAN_TOKEN` | Yes | Shodan API token |
-| `shodan_max_tlp` | `SHODAN_MAX_TLP` | No | Maximum TLP for enrichment |
 | `shodan_default_score` | `SHODAN_DEFAULT_SCORE` | No | Default score for created indicators |
 | `shodan_import_search_results` | `SHODAN_IMPORT_SEARCH_RESULTS` | No | Import search results for indicators (default: true) |
 | `shodan_create_note` | `SHODAN_CREATE_NOTE` | No | Create note with facets for indicators |

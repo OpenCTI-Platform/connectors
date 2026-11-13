@@ -7,7 +7,6 @@ connector:
   id: 'ChangeMe'  # Connector UUID
   name: 'MISP Intel'
   scope: 'misp'
-  confidence_level: 80  # From 0 (not confident) to 100 (fully confident)
   log_level: 'info'  # Logging level (debug, info, warning, error)
   live_stream_id: 'ChangeMe'  # ID of the live stream to listen to
   live_stream_listen_delete: true  # Listen to delete events
@@ -33,6 +32,9 @@ misp:
   # Tagging configuration
   tag_opencti: true  # Add OpenCTI-specific tags to MISP events
   tag_prefix: 'opencti:'  # Prefix for OpenCTI tags
+  # Marking definition types whose container markings are converted to MISP event tags
+  # (only controls tag conversion, does not filter exported objects)
+  marking_types_to_convert: 'TLP,PAP'
 
   # Round-trip configuration
   detect_round_trip: false  # Enable round-trip detection (update existing MISP events instead of creating duplicates)

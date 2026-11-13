@@ -1,14 +1,25 @@
+import logging
 import sys
 from pathlib import Path
 from typing import Annotated
 from unittest.mock import patch
 
 import pytest
+from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
+    BaseInternalExportFileConnectorConfig,
+    BaseInternalExportFileConnectorSettings,
+    BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
@@ -330,6 +341,88 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["connector"]["log_level"] == "error"
 
 
+def test_base_connector_settings_should_keep_a_logging_setup_made_by_others(
+    mock_environment, monkeypatch
+):
+    """Test that settings do not change a logging setup made by the developer.
+
+    JSON logging is disabled in the tests (see `conftest.py`), so the developer owns
+    the logging setup. Here, pytest's capture handlers are on the root logger, so
+    creating settings changes nothing.
+    """
+    # Given: A configured log level, and a root logger filtering on another one
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    logging.getLogger().setLevel(logging.CRITICAL)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: The root logger still filters on its own level
+    assert logging.getLogger().level == logging.CRITICAL
+
+
+@pytest.mark.parametrize(
+    "env_value, expected",
+    [
+        pytest.param(None, True, id="default"),
+        pytest.param("true", True, id="true"),
+        pytest.param("false", False, id="false"),
+        pytest.param("0", False, id="0"),
+        pytest.param("no", False, id="no"),
+    ],
+)
+def test_base_connector_settings_should_read_json_logging(
+    mock_environment, monkeypatch, env_value, expected
+):
+    """Test that `OPENCTI_JSON_LOGGING` is read as a boolean, JSON by default."""
+    # Given: The environment variable, set or not
+    if env_value is None:
+        monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
+    else:
+        monkeypatch.setenv("OPENCTI_JSON_LOGGING", env_value)
+
+    # When: Settings are instantiated
+    settings = BaseConnectorSettings()
+
+    # Then: The value is a boolean
+    assert settings.opencti.json_logging is expected
+
+
+def test_base_connector_settings_should_configure_logging(
+    mock_environment, monkeypatch
+):
+    """Test that the validated log level and format apply as soon as they are known."""
+    # Given: A log level and a format
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    monkeypatch.setenv("OPENCTI_JSON_LOGGING", "false")
+
+    # When: Settings are instantiated
+    with patch(
+        "connectors_sdk.settings.base_settings.configure_logging"
+    ) as configure_logging:
+        BaseConnectorSettings()
+
+    # Then: Logging is configured with the validated values
+    configure_logging.assert_called_once_with(log_level="debug", json_logging=False)
+
+
+def test_base_connector_settings_should_never_log_settings_values(
+    mock_environment, monkeypatch, caplog
+):
+    """Test that settings values (possibly secrets) never end up in logs."""
+    # Given: Debug logs enabled
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
+    caplog.set_level(logging.DEBUG)
+
+    # When: Settings are instantiated
+    BaseConnectorSettings()
+
+    # Then: Settings are logged, without any value
+    assert caplog.records
+    assert "changeme" not in caplog.text  # OPENCTI_TOKEN
+    assert not any(hasattr(record, "attributes") for record in caplog.records)
+
+
 def test_base_connector_settings_should_validate_settings_from_dot_env_file(
     mock_dot_env_file_presence,
 ):
@@ -402,13 +495,17 @@ def test_base_connector_settings_should_raise_when_missing_mandatory_env_vars():
         BaseConnectorSettings()
 
 
-def test_base_connector_settings_should_provide_helper_config(mock_environment):
+def test_base_connector_settings_should_provide_helper_config(
+    mock_environment, monkeypatch
+):
     """
     Test that `BaseConnectorSettings().to_helper_config` returns a valid `config` dict for `pycti.OpenCTIConnectorHelper`.
     For testing purpose, `os.environ` is patched.
     """
 
     # Given: A valid BaseConnectorSettings instance built from patched environment
+    # (without `OPENCTI_JSON_LOGGING`, whatever the shell running the tests sets)
+    monkeypatch.delenv("OPENCTI_JSON_LOGGING", raising=False)
     # When: OpenCTIConnectorHelper config dict is generated
     settings = BaseConnectorSettings()
     json_dump = settings.model_dump(mode="json")
@@ -423,6 +520,7 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
         "opencti": {
             "token": "changeme",  # clear token
             "url": "http://localhost:8080/",
+            "json_logging": True,
         },
         "connector": {
             "duration_period": "PT5M",
@@ -466,6 +564,9 @@ def test_base_connector_settings_config_json_schema():
 
     # Then: CONNECTOR_ID is intentionally excluded from generated properties
     assert "CONNECTOR_ID" not in schema["properties"]
+
+    # Then: OPENCTI_JSON_LOGGING is not a setting for end users
+    assert "OPENCTI_JSON_LOGGING" not in schema["properties"]
 
 
 def test_base_stream_connector_config_recovery_fields_default_to_none():
@@ -552,3 +653,202 @@ def test_base_stream_connector_config_json_schema_exposes_recovery_vars():
     assert "CONNECTOR_LIVE_STREAM_START_TIMESTAMP" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE" in schema["properties"]
+
+
+def test_base_internal_enrichment_connector_config_max_tlp_defaults_to_amber():
+    """Test that `BaseInternalEnrichmentConnectorConfig.max_tlp` defaults to `amber`."""
+
+    # Given/When: An internal enrichment connector config without max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"]
+    )
+
+    # Then: The default max TLP is amber
+    assert config.max_tlp is TLPLevel.AMBER
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("TLP:RED", TLPLevel.RED),
+        ("amber+strict", TLPLevel.AMBER_STRICT),
+        (" TLP:Amber+Strict ", TLPLevel.AMBER_STRICT),
+        ("clear", TLPLevel.CLEAR),
+        ("WHITE", TLPLevel.WHITE),
+    ],
+)
+def test_base_internal_enrichment_connector_config_normalizes_max_tlp(value, expected):
+    """Test that `max_tlp` accepts levels with or without `TLP:` prefix, in any case."""
+
+    # Given/When: An internal enrichment connector config with a non-canonical max_tlp
+    config = BaseInternalEnrichmentConnectorConfig(
+        id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+    )
+
+    # Then: The value is normalized to the matching TLP level
+    assert config.max_tlp is expected
+
+
+@pytest.mark.parametrize("value", ["purple", "TLP:PURPLE", 3])
+def test_base_internal_enrichment_connector_config_rejects_invalid_max_tlp(value):
+    """Test that `max_tlp` rejects unknown TLP levels."""
+
+    # Given/When/Then: An unknown TLP level is rejected
+    with pytest.raises(ValidationError):
+        BaseInternalEnrichmentConnectorConfig(
+            id="connector--uid", name="Test", scope=["IPv4-Addr"], max_tlp=value
+        )
+
+
+def test_base_internal_enrichment_connector_config_json_schema_exposes_max_tlp():
+    """Test that the generated config JSON schema exposes `CONNECTOR_MAX_TLP`."""
+
+    # Given: An internal enrichment connector settings class
+    class _EnrichmentSettings(BaseConnectorSettings):
+        connector: BaseInternalEnrichmentConnectorConfig = Field(
+            default_factory=BaseInternalEnrichmentConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _EnrichmentSettings.config_json_schema(connector_name="test-enrichment")
+
+    # Then: The max TLP env var is exposed with its default and allowed values
+    max_tlp = schema["properties"]["CONNECTOR_MAX_TLP"]
+    assert max_tlp["default"] == "amber"
+    assert "amber+strict" in max_tlp["enum"]
+
+
+# (settings class, config class, connector type, type-specific env var, extra env vars)
+PER_TYPE_SETTINGS = [
+    pytest.param(
+        BaseExternalImportConnectorSettings,
+        BaseExternalImportConnectorConfig,
+        "EXTERNAL_IMPORT",
+        "CONNECTOR_DURATION_PERIOD",
+        {},
+        id="external-import",
+    ),
+    pytest.param(
+        BaseInternalEnrichmentConnectorSettings,
+        BaseInternalEnrichmentConnectorConfig,
+        "INTERNAL_ENRICHMENT",
+        "CONNECTOR_MAX_TLP",
+        {},
+        id="internal-enrichment",
+    ),
+    pytest.param(
+        BaseStreamConnectorSettings,
+        BaseStreamConnectorConfig,
+        "STREAM",
+        "CONNECTOR_LIVE_STREAM_ID",
+        {"CONNECTOR_LIVE_STREAM_ID": "stream--uid"},
+        id="stream",
+    ),
+    # This config adds no field of its own: `CONNECTOR_TYPE` is the type-specific
+    # variable checked.
+    pytest.param(
+        BaseInternalExportFileConnectorSettings,
+        BaseInternalExportFileConnectorConfig,
+        "INTERNAL_EXPORT_FILE",
+        "CONNECTOR_TYPE",
+        {},
+        id="internal-export-file",
+    ),
+    pytest.param(
+        BaseInternalImportFileConnectorSettings,
+        BaseInternalImportFileConnectorConfig,
+        "INTERNAL_IMPORT_FILE",
+        "CONNECTOR_AUTO",
+        {},
+        id="internal-import-file",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_should_narrow_connector_field(
+    settings_class, config_class, connector_type, env_var, extra_env
+):
+    """Test that each per-type settings class types `connector` as its config class."""
+
+    # Given/When: A per-type settings class
+    annotation = settings_class.model_fields["connector"].annotation
+
+    # Then: The `connector` field is annotated with the matching config class
+    assert annotation is config_class
+    assert issubclass(settings_class, BaseConnectorSettings)
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_should_load_matching_connector_config(
+    mock_environment,
+    monkeypatch,
+    settings_class,
+    config_class,
+    connector_type,
+    env_var,
+    extra_env,
+):
+    """Test that each per-type settings class loads a `connector` of the matching type."""
+
+    # Given: Valid connector settings in the environment (plus type-specific ones)
+    for name, value in extra_env.items():
+        monkeypatch.setenv(name, value)
+
+    # When: The per-type settings class is instantiated
+    settings = settings_class()
+
+    # Then: `connector` is an instance of the matching config class, with its type
+    assert isinstance(settings.connector, config_class)
+    assert settings.connector.type == connector_type
+    assert settings.connector.id == "connector-poc--uid"
+
+
+def test_base_external_import_connector_settings_should_load_duration_period(
+    mock_environment,
+):
+    """Test that `BaseExternalImportConnectorSettings` exposes `duration_period` (required, no default)."""
+
+    # Given: CONNECTOR_DURATION_PERIOD is set to PT5M in the environment
+    # When: The external import settings are instantiated
+    settings = BaseExternalImportConnectorSettings()
+
+    # Then: duration_period is a timedelta of 5 minutes
+    assert settings.connector.duration_period.total_seconds() == 300
+
+
+def test_base_external_import_connector_settings_should_require_duration_period(
+    mock_environment, monkeypatch
+):
+    """Test that `BaseExternalImportConnectorSettings` requires `CONNECTOR_DURATION_PERIOD`."""
+
+    # Given: CONNECTOR_DURATION_PERIOD is not set
+    monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
+
+    # When/Then: Instantiating the settings raises a ConfigValidationError
+    with pytest.raises(ConfigValidationError):
+        BaseExternalImportConnectorSettings()
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_config_json_schema_exposes_type_specific_vars(
+    settings_class, config_class, connector_type, env_var, extra_env
+):
+    """Test that the config JSON schema of each per-type settings class exposes its type-specific vars."""
+
+    # Given: A per-type settings class
+    # When: The config JSON schema is generated
+    schema = settings_class.config_json_schema(connector_name="test-connector")
+
+    # Then: The type-specific env var and the connector type are exposed
+    assert env_var in schema["properties"]
+    assert schema["properties"]["CONNECTOR_TYPE"]["default"] == connector_type

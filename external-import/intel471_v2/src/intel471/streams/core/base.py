@@ -10,6 +10,7 @@ from stix2 import Bundle
 
 if TYPE_CHECKING:
     from intel471.backend import ClientWrapper
+    from intel471.settings import Intel471_V2Config
 
 version = get_version()
 
@@ -60,6 +61,7 @@ class Intel471Stream(ABC):
         initial_history: int = None,
         update_existing_data: bool = False,
         ioc_score: Union[int, None] = None,
+        connector_config: "Intel471_V2Config | None" = None,
     ) -> None:
         self.client_wrapper = client_wrapper
         self.helper = helper
@@ -67,6 +69,11 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
+        # The Intel471-specific connector config. Only streams that need extra,
+        # per-stream settings read from it (e.g. the alerts stream's watcher/status
+        # filters); the others ignore it. Optional so direct instantiation in tests
+        # keeps working.
+        self.connector_config = connector_config
         # Whether the "not entitled to this report type" warning has already been
         # emitted in this process. The connector creates each stream once and the
         # scheduler reuses the instance every interval, so this flag persists across
@@ -130,13 +137,29 @@ class Intel471Stream(ABC):
                     if not api_payload_objects:
                         break
                     cursor = self._get_cursor_value(api_response)
+                    settings_kwargs = {
+                        "ioc_opencti_score": self.ioc_score,
+                        "report_full_content": True,
+                    }
+                    # Verity471's STIXMapperSettings gates the cleartext credential
+                    # password; Titan's has no such field. The one connector setting
+                    # governs both the credentials stream and the watcher-alerts stream
+                    # (the alerts mapper re-dispatches credential targets through these
+                    # same settings).
+                    if self.client_wrapper.backend_name == "verity471":
+                        settings_kwargs["credentials_include_plain_password"] = bool(
+                            getattr(
+                                self.connector_config,
+                                "enable_credentials_plain_password",
+                                False,
+                            )
+                        )
                     try:
                         bundle = api_response.to_stix(
                             self.client_wrapper.stix_mapper_settings_class(
                                 self.client_wrapper.module,
                                 api_client,
-                                ioc_opencti_score=self.ioc_score,
-                                report_full_content=True,
+                                **settings_kwargs,
                             )
                         )
                     except self.client_wrapper.empty_bundle_exception:

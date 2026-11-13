@@ -1,5 +1,6 @@
 # pragma: no cover
 # type: ignore
+import logging
 from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock
@@ -7,7 +8,22 @@ from unittest.mock import MagicMock
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.settings.base_settings import BaseExternalImportConnectorSettings
+from connectors_sdk.states.states import ExternalImportConnectorState
+
+
+class ParameterizedProcessor(
+    BaseDataProcessor[BaseExternalImportConnectorSettings, ExternalImportConnectorState]
+):
+    """Processor parameterized with the settings and the state types."""
+
+    work_name = "Parameterized Import"
+
+    def collect(self) -> list[str]:
+        return ["raw"]
+
+    def transform(self, data: Any) -> list[Any]:
+        return [f"stix-{d}" for d in data]
 
 
 class ListProcessor(BaseDataProcessor):
@@ -64,11 +80,14 @@ class EmptyChunkGeneratorProcessor(BaseDataProcessor):
 
 
 class TestBaseDataProcessor:
+    def test_logger_is_named_after_the_module(self):
+        assert BaseDataProcessor.logger.name == (
+            "connectors_sdk.connectors.external_import.base_data_processor"
+        )
+        assert ListProcessor.logger.name == __name__
+
     def _attach_deps(
-        self,
-        processor: BaseDataProcessor,
-        mock_helper: MagicMock,
-        mock_logger: ConnectorLogger,
+        self, processor: BaseDataProcessor, mock_helper: MagicMock
     ) -> None:
         processor.inject_dependencies(
             settings=MagicMock(),
@@ -77,46 +96,38 @@ class TestBaseDataProcessor:
         )
         processor.post_init()
 
-    def test_process_list(self, mock_helper: MagicMock, mock_logger: ConnectorLogger):
+    def test_process_list(self, mock_helper: MagicMock):
         proc = ListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         mock_helper.api.work.initiate_work.assert_called_once()
         mock_helper.send_stix2_bundle.assert_called_once()
 
-    def test_process_generator(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_generator(self, mock_helper: MagicMock):
         proc = GeneratorProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         mock_helper.api.work.initiate_work.assert_called_once()
         # 3 chunks → 3 send calls
         assert mock_helper.send_stix2_bundle.call_count == 3
 
-    def test_process_empty_list(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_empty_list(self, mock_helper: MagicMock):
         proc = EmptyListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         # Empty list → no work created
         mock_helper.api.work.initiate_work.assert_not_called()
 
-    def test_process_generator_skips_empty_chunks(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_generator_skips_empty_chunks(self, mock_helper: MagicMock):
         proc = EmptyChunkGeneratorProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         # Only 2 non-empty chunks sent
         assert mock_helper.send_stix2_bundle.call_count == 2
 
-    def test_send_passes_work_name(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_send_passes_work_name(self, mock_helper: MagicMock):
         proc = ListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         # Call send directly to verify work_name is passed
         with proc.work_manager:
             proc.send(["obj1", "obj2"])
@@ -124,9 +135,63 @@ class TestBaseDataProcessor:
             "test-connector-id", "List Import"
         )
 
-    def test_post_init_called(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_logs_the_run_at_debug_level(self, mock_helper: MagicMock, caplog):
+        caplog.set_level(logging.DEBUG)
+        proc = EmptyChunkGeneratorProcessor()
+        self._attach_deps(proc, mock_helper)
+        caplog.clear()  # only what `process()` logs
+
+        proc.process()
+
+        records = [r for r in caplog.records if r.name == __name__]
+        assert [r.getMessage() for r in records] == [
+            "Processor run starting",
+            "Sending objects",
+            "Sending objects",
+            "Processor run completed",
+        ]
+        starting, sending, _, completed = (r.attributes for r in records)
+        assert starting == {"data_processor": "EmptyChunkGeneratorProcessor"}
+        assert sending == {"work_name": "Mixed Import", "objects_count": 1}
+        # The empty chunk is not sent, so it is not logged either
+        assert completed == {"data_processor": "EmptyChunkGeneratorProcessor"}
+
+    def test_parameterized_subclass_logger_is_named_after_its_module(self):
+        assert ParameterizedProcessor.logger.name == __name__
+        # The base class and the generic alias keep the SDK module logger
+        sdk_logger_name = (
+            "connectors_sdk.connectors.external_import.base_data_processor"
+        )
+        assert BaseDataProcessor.logger.name == sdk_logger_name
+        alias = BaseDataProcessor[
+            BaseExternalImportConnectorSettings, ExternalImportConnectorState
+        ]
+        assert alias.logger.name == sdk_logger_name
+
+    def test_parameterized_subclass_is_a_data_processor(self):
+        assert issubclass(ParameterizedProcessor, BaseDataProcessor)
+        assert isinstance(ParameterizedProcessor(), BaseDataProcessor)
+        assert BaseDataProcessor in ParameterizedProcessor.__mro__
+
+    def test_inject_dependencies_stores_the_objects(self, mock_helper: MagicMock):
+        settings = MagicMock()
+        state = MagicMock()
+        proc = ParameterizedProcessor()
+
+        proc.inject_dependencies(settings=settings, helper=mock_helper, state=state)
+
+        assert proc.settings is settings
+        assert proc.state is state
+        assert proc.work_manager is not None
+
+    def test_parameterized_subclass_runs_the_pipeline(self, mock_helper: MagicMock):
+        proc = ParameterizedProcessor()
+        self._attach_deps(proc, mock_helper)
+        proc.process()
+        mock_helper.api.work.initiate_work.assert_called_once()
+        mock_helper.send_stix2_bundle.assert_called_once()
+
+    def test_post_init_called(self, mock_helper: MagicMock):
         """post_init is called by _init_infrastructure after inject_dependencies."""
 
         class TrackedProcessor(BaseDataProcessor):
@@ -144,5 +209,5 @@ class TestBaseDataProcessor:
 
         proc = TrackedProcessor()
         assert not proc.post_init_called
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         assert proc.post_init_called

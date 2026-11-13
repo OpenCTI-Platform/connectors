@@ -1,0 +1,14 @@
+FROM filigran/alpine-python-fips:python3.12
+ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
+
+COPY src /opt/opencti-connector-import-document-ai
+WORKDIR /opt/opencti-connector-import-document-ai
+
+RUN apk --no-cache add git && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git
+
+RUN chmod -R 0777 /opt/opencti-connector-import-document-ai
+ENV HOME=/opt/opencti-connector-import-document-ai
+
+ENTRYPOINT ["python", "main.py"]

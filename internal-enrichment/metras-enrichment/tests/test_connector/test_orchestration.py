@@ -18,9 +18,8 @@ def _enr(max_tlp=TLPLevel.AMBER_STRICT):
             api_base_url="http://x/api",
             api_key=SecretStr("k"),
             verify_ssl=True,
-            max_tlp=max_tlp,
         ),
-        connector=SimpleNamespace(scope=["IPv4-Addr", "StixFile"]),
+        connector=SimpleNamespace(scope=["IPv4-Addr", "StixFile"], max_tlp=max_tlp),
     )
     helper = MagicMock()
     helper.connect_confidence_level = 50

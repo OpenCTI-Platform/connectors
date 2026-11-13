@@ -7,12 +7,12 @@ WORKDIR /opt/opencti-connector-abuseipdb
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 RUN cd /opt/opencti-connector-abuseipdb/src && \
     pip3 install --no-cache-dir -r /opt/opencti-connector-abuseipdb/src/requirements.txt && \
-    apk del git build-base && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev && \
     rm -rf /var/cache/apk/*
 
 CMD ["python", "-m", "src"]

@@ -3,16 +3,6 @@
 # transient failures (e.g. registry 5xx/timeouts, rate limiting) with
 # exponential backoff, honoring the registry's "retry-after" hint as a floor.
 #
-# The image push and the registry build-cache export are run as two separate
-# buildx invocations. Bundling them in one invocation is fragile: if the cache
-# export hits a transient registry error (e.g. ghcr.io "toomanyrequests" write
-# rate limiting, which is common when many connectors build concurrently),
-# BuildKit cancels the *entire* solve, including an image export that had
-# already succeeded — turning a harmless cache-write hiccup into a full build
-# failure. Since the build-cache export is only a CI speed optimization (not
-# required to ship the connector image), its failures are retried but treated
-# as non-fatal once the image itself has been pushed successfully.
-#
 # Required environment variables:
 #   CONTEXT      - Build context directory
 #   DOCKERFILE   - Path to the Dockerfile
@@ -21,18 +11,18 @@
 #
 # Optional environment variables:
 #   PUSH         - "true" to push, anything else to build only (default: false)
+#   PUSH_BY_DIGEST - "true" (with PUSH=true) to push by digest only, without
+#                  tags. TAGS then only names the repositories to push to; the
+#                  caller tags the digest later.
 #   PULL         - "true" to always pull base images (default: true)
 #   BUILD_ARGS   - Newline-separated list of KEY=VALUE build args
 #   LABELS       - Newline-separated list of KEY=VALUE OCI labels
-#   CACHE_FROM   - buildx --cache-from value (skipped when empty)
-#   CACHE_TO     - buildx --cache-to value (skipped when empty). Pushed in a
-#                  separate, non-fatal retry loop after the image push succeeds.
 #   PROVENANCE   - buildx --provenance value (default: false, matches
 #                  docker/build-push-action so per-arch images stay
 #                  single-manifest for the imagetools merge)
 #   DIGEST_OUT   - File path to write the resulting image digest to
 #   MAX_ATTEMPTS - Maximum number of attempts (default: 5)
-#   INITIAL_DELAY- Initial backoff delay in seconds (default: 15)
+#   INITIAL_DELAY- Initial backoff delay in seconds (default: 60)
 set -euo pipefail
 
 : "${CONTEXT:?CONTEXT is required}"
@@ -41,6 +31,11 @@ set -euo pipefail
 : "${TAGS:?TAGS is required}"
 
 PUSH="${PUSH:-false}"
+PUSH_BY_DIGEST="${PUSH_BY_DIGEST:-false}"
+by_digest=false
+if [ "$PUSH" = "true" ] && [ "$PUSH_BY_DIGEST" = "true" ]; then
+  by_digest=true
+fi
 PULL="${PULL:-true}"
 PROVENANCE="${PROVENANCE:-false}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-5}"
@@ -48,9 +43,6 @@ INITIAL_DELAY="${INITIAL_DELAY:-60}"
 
 METADATA_FILE="$(mktemp)"
 
-# Assemble the shared buildx argument list. --push is added only to the image
-# invocation below (step 1): the cache-export invocation (step 2) omits it so
-# it doesn't needlessly re-push the already-published image, just the cache.
 base_args=(build "$CONTEXT" --file "$DOCKERFILE" --platform "$PLATFORMS")
 base_args+=(--provenance "$PROVENANCE" --metadata-file "$METADATA_FILE")
 
@@ -58,9 +50,17 @@ if [ "$PULL" = "true" ]; then
   base_args+=(--pull)
 fi
 
+# Repositories to push to, derived from TAGS (used for push-by-digest only).
+repos=""
 while IFS= read -r tag; do
-  [ -n "$tag" ] && base_args+=(--tag "$tag")
+  [ -n "$tag" ] || continue
+  if [ "$by_digest" = "true" ]; then
+    repos="${repos:+${repos},}${tag%:*}"
+  else
+    base_args+=(--tag "$tag")
+  fi
 done <<< "$TAGS"
+repos="$(tr ',' '\n' <<< "$repos" | sort -u | paste -sd, -)"
 
 if [ -n "${BUILD_ARGS:-}" ]; then
   while IFS= read -r ba; do
@@ -72,10 +72,6 @@ if [ -n "${LABELS:-}" ]; then
   while IFS= read -r label; do
     [ -n "$label" ] && base_args+=(--label "$label")
   done <<< "$LABELS"
-fi
-
-if [ -n "${CACHE_FROM:-}" ]; then
-  base_args+=(--cache-from "$CACHE_FROM")
 fi
 
 # Extracts the largest "retry-after: <n>(ms|s)" hint from buildx output, in
@@ -134,9 +130,11 @@ run_with_retry() {
   done
 }
 
-# Step 1: build + push the actual image. Must succeed.
 image_args=("${base_args[@]}")
-if [ "$PUSH" = "true" ]; then
+if [ "$by_digest" = "true" ]; then
+  # CSV-quoted so the comma-separated repository list stays one attribute.
+  image_args+=(--output "type=image,\"name=${repos}\",push-by-digest=true,name-canonical=true,push=true")
+elif [ "$PUSH" = "true" ]; then
   image_args+=(--push)
 fi
 if ! run_with_retry "${image_args[@]}"; then
@@ -149,20 +147,6 @@ if [ -n "${DIGEST_OUT:-}" ]; then
   DIGEST="$(jq -r '.["containerimage.digest"] // empty' "$METADATA_FILE")"
   echo "$DIGEST" > "$DIGEST_OUT"
   echo "📋 Digest: ${DIGEST:-(none)}"
-fi
-
-# Step 2: export the registry build cache only — no --push, so BuildKit
-# produces no image output and doesn't redundantly re-push what step 1
-# already published. Everything is already cached locally from step 1 (same
-# context/args), so BuildKit reuses it and this just uploads the cache
-# manifest/layers. Isolated from the image push so a transient registry write
-# failure here can't discard the already-pushed image. Failure is non-fatal:
-# it only slows down the *next* CI build.
-if [ -n "${CACHE_TO:-}" ]; then
-  cache_args=("${base_args[@]}" --cache-to "$CACHE_TO")
-  if ! run_with_retry "${cache_args[@]}"; then
-    echo "⚠️  buildx cache export failed after ${MAX_ATTEMPTS} attempts, continuing anyway (image was already pushed)"
-  fi
 fi
 
 rm -f "$METADATA_FILE"

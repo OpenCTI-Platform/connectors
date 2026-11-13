@@ -27,6 +27,7 @@ from src.google_dtm_connector import ConnectorSettings
                     "import_start_date": "P10D",
                     "alert_type": "Email,Message",
                     "alert_severity": "high,medium",
+                    "import_passwords": False,
                 },
             },
             id="full_valid_settings_dict",
@@ -70,6 +71,10 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.google_dtm, BaseConfigModel) is True
+    expected_import_passwords = settings_dict["google_dtm"].get(
+        "import_passwords", True
+    )
+    assert settings.google_dtm.import_passwords is expected_import_passwords
 
 
 @pytest.mark.parametrize(
@@ -126,6 +131,21 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "google_dtm.api_key",
             id="missing_google_dtm_api_key",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {},
+                "google_dtm": {
+                    "api_key": "test-api-key",
+                    "import_passwords": "not-a-bool",
+                },
+            },
+            "google_dtm.import_passwords",
+            id="invalid_google_dtm_import_passwords",
         ),
     ],
 )

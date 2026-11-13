@@ -1,9 +1,7 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
 )
 from pydantic import Field, HttpUrl
 
@@ -27,22 +25,11 @@ class TemplateConfig(BaseConfigModel):
 
     api_base_url: HttpUrl = Field(description="External API base URL.")
     api_key: str = Field(description="API key for authentication.")
-    max_tlp_level: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
-        description="Max TLP level of the entities to enrich.",
-        default="amber+strict",
-    )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalEnrichmentConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TemplateConfig`.
+    Override `BaseInternalEnrichmentConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TemplateConfig`.
     """
 
     connector: InternalEnrichmentConnectorConfig = Field(

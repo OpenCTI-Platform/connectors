@@ -1,12 +1,13 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY requirements.txt /opt/opencti-connector-catalyst/
-RUN pip3 install --no-cache-dir -r /opt/opencti-connector-catalyst/requirements.txt
+RUN pip3 install --no-cache-dir -r /opt/opencti-connector-catalyst/requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 COPY src /opt/opencti-connector-catalyst
 

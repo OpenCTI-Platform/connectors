@@ -31,6 +31,9 @@ __all__ = [
     "RelationshipType",
     "Reliability",
     "ReportType",
+    "SsvcAutomatable",
+    "SsvcExploitation",
+    "SsvcTechnicalImpact",
     "ThreatActorRole",
     "ThreatActorSophistication",
     "ThreatActorTypes",
@@ -561,6 +564,37 @@ class ReportType(_PermissiveEnum):
     THREAT_REPORT = "threat-report"
 
 
+class SsvcExploitation(StrEnum):
+    """SSVC Exploitation Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    NONE = "none"
+    PROOF_OF_CONCEPT = "proof_of_concept"
+    ACTIVE = "active"
+
+
+class SsvcAutomatable(StrEnum):
+    """SSVC Automatable Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    NO = "no"
+    YES = "yes"
+
+
+class SsvcTechnicalImpact(StrEnum):
+    """SSVC Technical Impact Decision Point Enum.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-front/src/schema/relay.schema.graphql
+    """
+
+    PARTIAL = "partial"
+    TOTAL = "total"
+
+
 class ThreatActorRole(_PermissiveEnum):
     """Threat Actor Role Open Vocabulary.
 
@@ -623,6 +657,24 @@ class TLPLevel(StrEnum):
     AMBER = "amber"
     AMBER_STRICT = "amber+strict"
     RED = "red"
+
+    @classmethod
+    def _missing_(cls, value: object) -> TLPLevel | None:
+        """Find the member of a TLP level given in any case, with or without prefix.
+
+        Accepts the OpenCTI marking form (`TLP:AMBER+STRICT`) as well as the level
+        itself (`amber+strict`), in any case.
+
+        Args:
+            value: The value that did not match any member exactly.
+
+        Returns:
+            The matching member, or `None` to let the lookup fail.
+        """
+        if not isinstance(value, str):
+            return None
+        level = value.strip().lower().removeprefix("tlp:")
+        return next((member for member in cls if member.value == level), None)
 
 
 class ToolType(_PermissiveEnum):

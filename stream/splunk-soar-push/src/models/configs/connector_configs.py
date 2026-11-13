@@ -50,12 +50,6 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="info",
         description="Determines the verbosity of the logs.",
     )
-    confidence_level: int = Field(
-        default=100,
-        ge=0,
-        le=100,
-        description="The default confidence level for created entities (0-100).",
-    )
 
     # Stream-specific configuration
     live_stream_id: str = Field(

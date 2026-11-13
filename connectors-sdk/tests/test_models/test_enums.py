@@ -1,6 +1,7 @@
 import warnings
 
 import connectors_sdk.models.enums as enums
+import pytest
 
 OCTI_ENUMS = {
     "AttackMotivation",
@@ -19,6 +20,9 @@ OCTI_ENUMS = {
     "ProcessorArchitecture",
     "Reliability",
     "ReportType",
+    "SsvcAutomatable",
+    "SsvcExploitation",
+    "SsvcTechnicalImpact",
     "TLPLevel",
     "ThreatActorRole",
     "ThreatActorSophistication",
@@ -65,3 +69,26 @@ def test_public_enums_are_present() -> None:
     extra = set(enums.__all__) - set(ENUMS)
     assert not missing, f"Missing features in models model public api: {missing}"
     assert not extra, f"Unexpected features in models model public api: {extra}"
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("amber", enums.TLPLevel.AMBER),
+        ("TLP:AMBER+STRICT", enums.TLPLevel.AMBER_STRICT),
+        (" tlp:Clear ", enums.TLPLevel.CLEAR),
+        ("RED", enums.TLPLevel.RED),
+    ],
+)
+def test_tlp_level_accepts_any_case_with_or_without_prefix(
+    value: str, expected: enums.TLPLevel
+) -> None:
+    """Test that TLPLevel accepts the OpenCTI marking form and any case."""
+    assert enums.TLPLevel(value) is expected
+
+
+@pytest.mark.parametrize("value", ["purple", "TLP:PURPLE", "", 3])
+def test_tlp_level_rejects_unknown_levels(value: object) -> None:
+    """Test that TLPLevel still rejects unknown levels."""
+    with pytest.raises(ValueError):
+        enums.TLPLevel(value)

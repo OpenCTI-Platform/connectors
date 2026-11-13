@@ -3,12 +3,11 @@ import sys
 from datetime import datetime, timedelta, timezone
 
 from flashpoint_client import FlashpointClient, FlashpointClientError
+from flashpoint_connector.config_loader import ConfigLoader
+from flashpoint_connector.converter_to_stix import ConverterToStix
+from flashpoint_connector.indicator_converter_to_stix import IndicatorConverterToStix
 from pycti import OpenCTIConnectorHelper
 from stix2.exceptions import STIXError
-
-from .config_loader import ConfigLoader
-from .converter_to_stix import ConverterToStix
-from .indicator_converter_to_stix import IndicatorConverterToStix
 
 
 class FlashpointConnector:
@@ -28,6 +27,12 @@ class FlashpointConnector:
         self.indicator_converter_to_stix = IndicatorConverterToStix(
             helper=self.helper,
             tlp_definition=self.config.flashpoint.indicator_tlp,
+            import_extracted_config_domains_urls=(
+                self.config.flashpoint.import_extracted_config_domains_urls
+            ),
+            import_attack_patterns=(
+                self.config.flashpoint.import_indicator_attack_patterns
+            ),
         )
 
     @staticmethod

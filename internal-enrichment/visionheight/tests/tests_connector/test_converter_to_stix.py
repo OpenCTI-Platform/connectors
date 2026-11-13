@@ -22,7 +22,7 @@ def _score_in_extensions(stix_entity: dict):
 
 def test_enrich_ip_high_sets_score_100():
     """HIGH risk must set score to 100 and create an Indicator."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     data = {"risk": {"latest_risk": "HIGH"}, "tags": ["c2"]}
 
@@ -35,7 +35,7 @@ def test_enrich_ip_high_sets_score_100():
 
 def test_enrich_ip_suspicious_sets_score_50():
     """SUSPICIOUS risk must set score to 50 and create no Indicator."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     data = {"risk": {"latest_risk": "SUSPICIOUS"}}
 
@@ -48,7 +48,7 @@ def test_enrich_ip_suspicious_sets_score_50():
 
 def test_enrich_ip_halo_tag_sets_score_0():
     """UNRATED + `halo` tag must set score to 0 and create no Indicator."""
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     data = {
         "risk": {"latest_risk": "UNRATED"},
@@ -68,7 +68,7 @@ def test_enrich_ip_unrated_no_halo_does_not_set_score():
     Regression: previously UNRATED mapped to 0, which silently overwrote
     higher-confidence scores from other connectors.
     """
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     ip_entity = _make_ip_entity()
     assert "extensions" not in ip_entity
     data = {"risk": {"latest_risk": "UNRATED"}, "tags": ["cloud-provider"]}
@@ -87,7 +87,7 @@ def test_enrich_domain_emits_relationship_for_each_cert():
     Regression test: certs were previously appended to the bundle as orphan
     observables with no link back to the domain that owned them.
     """
-    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    converter = ConverterToStix(helper=MagicMock())
     domain_entity = _make_domain_entity("discord.ma")
 
     data = {

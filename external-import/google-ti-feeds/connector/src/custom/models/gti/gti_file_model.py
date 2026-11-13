@@ -1,6 +1,6 @@
 """Module containing models for GTI File response from Google Threat Intelligence API."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CrowdsourcedAlertContext(BaseModel):
@@ -176,6 +176,10 @@ class GTIAssessment(BaseModel):
 
 class LastAnalysisResult(BaseModel):
     """Result from a single antivirus engine."""
+
+    # The GTI API sometimes returns `engine_update` as a Unix timestamp (int)
+    # instead of a string; coerce so one engine entry cannot fail the whole file.
+    model_config = ConfigDict(coerce_numbers_to_str=True)
 
     category: str | None = Field(None, description="Normalized result category.")
     engine_name: str | None = Field(None, description="Name of the antivirus engine.")

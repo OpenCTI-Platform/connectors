@@ -4,14 +4,15 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
-| CONNECTOR_NAME | `string` |  | string | `"Shodan InternetDB"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr"]` | The scope of the connector, i.e. the observable types it enriches. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| SHODAN_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:RED` `TLP:CLEAR` `TLP:AMBER+STRICT` | `"TLP:WHITE"` | The maximum TLP marking of observables the connector is allowed to process. |
-| SHODAN_SSL_VERIFY | `boolean` |  | boolean | `true` | Whether to verify SSL connections to the Shodan InternetDB API. |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| CONNECTOR_NAME | `string` |  | string |  | `"Shodan InternetDB"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["IPv4-Addr"]` | The scope of the connector, i.e. the observable types it enriches. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
+| CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"white"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
+| SHODAN_SSL_VERIFY | `boolean` |  | boolean |  | `true` | Whether to verify SSL connections to the Shodan InternetDB API. |
+| SHODAN_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

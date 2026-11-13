@@ -175,7 +175,6 @@ Key tasks included:
 | `push_docker` | `push`, `p` | Push the image to the local registry |
 | `generate_config_schema` | `gs` | Generate JSON schema from connector settings |
 | `global_manifest` | — | Regenerate the global manifest file |
-| `deploy_to_catalog` | `deploy` | Build the connector, push to local registry, and restart OpenCTI |
 
 Run a task from inside a connector directory:
 
@@ -185,10 +184,16 @@ mise run build        # or: mise run b
 mise run gs
 ```
 
-> **Note:** Docker-related tasks (`build_docker`, `push_docker`, `deploy_to_catalog`) are designed for a local
+On your machine, `gs` installs the `connectors-sdk/` of your checkout, so schemas
+include SDK changes that are not merged yet. CI does the same: the Config Schema
+check of your pull request and the manifest build both use the `connectors-sdk/` of
+the commit they run on. Run `SDK_SOURCE=git mise run gs` to generate the schema
+against the SDK of GitHub `master` instead.
+
+> **Note:** Docker-related tasks (`build_docker`, `push_docker`) are designed for a local
 > development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
 > with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for
-> this registry, push sends them there, and deploy restarts the OpenCTI container so it pulls the updated image.
+> this registry, and push sends them there.
 > If your registry address differs, override it via the `DOCKER_REGISTRY` environment variable.
 
 #### Local Configuration
@@ -198,8 +203,7 @@ User-specific settings (paths, registries, env vars) should go in `.mise/config.
 ```toml
 # .mise/config.local.toml (not committed)
 [env]
-DOCKER_REPO_PATH = "/path/to/your/opencti-docker-compose"  # path to your OpenCTI-Platform/docker clone
-DOCKER_REGISTRY = "localhost:5000"                          # override if your registry differs
+DOCKER_REGISTRY = "localhost:5000"  # override if your registry differs
 ```
 
 You can also add personal tasks in `.mise/tasks/local/` (also git-ignored).
@@ -397,16 +401,34 @@ All connectors use **Pydantic models** for configuration validation:
 ```python
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
+
+
+class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    id: str = Field(
+        description="The unique identifier of the connector.",
+        default="my-connector-uuid",  # replace with a valid UUIDv4
+    )
+    name: str = Field(default="My Connector")
 
 
 class MyConnectorConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_key: SecretStr = Field(description="API key for authentication.")
+
+
+class ConnectorSettings(BaseExternalImportConnectorSettings):
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    my_connector: MyConnectorConfig = Field(default_factory=MyConnectorConfig)
 ```
+
+The example inherits the external import settings base. For another connector type, use the
+`Base<Type>ConnectorSettings` matching it (for example `BaseInternalEnrichmentConnectorSettings`).
 
 #### Using the Connectors SDK
 
@@ -570,7 +592,7 @@ flake8 --ignore=E,W .
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
 - **Configuration parameters with examples**
   - By using the template, settings is defined with Pydantic models, which allows you to include descriptions and examples for each configuration parameter. This information will be used to automatically generate documentation and provide clear guidance to users when configuring the connector.
-  - To generate documentation, simply run `make connector_config_schema` in the root of the repository if you have `make` installed, or run the following command: `sh ./shared/tools/composer/generate_connectors_config_schemas/generate_connector_config_json_schema.sh`
+  - To generate documentation, simply run `make connector_config_schema` in the root of the repository if you have `make` installed, or run the following command: `sh ./shared/tools/composer/generate_connectors_config_schemas/generate_connector_config_json_schema.sh`. These install `connectors-sdk` from GitHub `master`: if your change also touches `connectors-sdk/`, run `mise run gs` from the connector directory instead, which uses the SDK of your checkout.
 
    This will create a JSON schema file for your connector's configuration, which will be used to generate documentation and provide clear guidance to users when configuring the connector.
 - **Inline code documentation** for complex logic
@@ -592,6 +614,7 @@ For questions and community help:
 
 - **Slack Community**: [https://community.filigran.io](https://community.filigran.io)
 - **GitHub Issues**: [https://github.com/OpenCTI-Platform/connectors/issues](https://github.com/OpenCTI-Platform/connectors/issues)
+- **Open a documentation request**: [pre-filled documentation issue](https://github.com/OpenCTI-Platform/connectors/issues/new?template=3-documentation.yaml&title=docs%20%28contributing%20guide%29%3A%20)
 
 ### Contributing
 

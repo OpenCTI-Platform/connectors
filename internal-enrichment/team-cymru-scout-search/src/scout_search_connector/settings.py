@@ -2,6 +2,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -37,9 +38,11 @@ class TeamCymruScoutSearchConfig(BaseConfigModel):
         default="https://taxii.cymru.com/api/scout",
     )
     api_token: SecretStr = Field(description="Bearer token for the Scout API")
-    max_tlp: str = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level for enrichment (default: TLP:AMBER)",
-        default="TLP:AMBER",
     )
     search_interval: int = Field(
         description="Search interval in days (default: 1)", default=1

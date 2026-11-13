@@ -6,10 +6,10 @@ WORKDIR /opt/opencti/NTI-connector
 
 COPY ./src ./src
 
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev && \
     pip3 install --no-cache-dir -r ./src/requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

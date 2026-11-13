@@ -11,6 +11,7 @@ services:
       - CONNECTOR_SCOPE=Report
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_AUTO=false # optional (default: false)
+      # - CONNECTOR_MAX_TLP=TLP:AMBER # optional (default: 'TLP:AMBER')
       # Custom parameters for connector-ioc-extractor
       - IOC_EXTRACTOR_EXTRACT_HASHES=true # optional (default: true)
       - IOC_EXTRACTOR_EXTRACT_IPV4=true # optional (default: true)

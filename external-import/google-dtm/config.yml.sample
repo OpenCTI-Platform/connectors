@@ -15,4 +15,5 @@ google_dtm:
 #  import_start_date: 'P10D'
 #  alert_type: ''
 #  alert_severity: ''
+#  import_passwords: true
   

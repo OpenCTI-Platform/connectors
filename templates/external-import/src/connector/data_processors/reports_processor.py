@@ -33,6 +33,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
     BaseIdentifiedObject,
@@ -43,8 +45,6 @@ from connectors_sdk.models import (
 from template_client import TemplateClient
 
 if TYPE_CHECKING:
-    from connector.settings import ConnectorSettings
-    from connector.state import ConnectorState
     from template_client.models import Report as TemplateReport
 
 
@@ -54,7 +54,8 @@ class ReportConversionError(Exception):
     pass
 
 
-class ReportsProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class ReportsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """EXAMPLE processor -- fetches and converts a small, non-paginated data type.
 
     "Reports" is a stand-in entity type used only to illustrate the
@@ -63,10 +64,12 @@ class ReportsProcessor(BaseDataProcessor):
     rename everything (class name, file name, exception, fields) to match.
 
     Attributes:
-        settings: The connector's configuration. Not created here:
-            `BaseDataProcessor.inject_dependencies()` sets it for every processor
-            before `post_init` runs.
-        state: The connector's persisted state, injected the same way as `settings`.
+        settings: The connector's configuration, typed as `ConnectorSettings`
+            through the `BaseDataProcessor[ConnectorSettings, ConnectorState]`
+            base class. Not created here: `BaseDataProcessor.inject_dependencies()`
+            sets it for every processor before `post_init` runs.
+        state: The connector's persisted state, typed as `ConnectorState` and
+            injected the same way as `settings`.
 
     Notes:
         This class only defines `post_init`/`collect`/`transform` --
@@ -84,9 +87,6 @@ class ReportsProcessor(BaseDataProcessor):
                which builds the bundle and delivers it to OpenCTI -- you
                never call `send()` yourself.
     """
-
-    settings: ConnectorSettings
-    state: ConnectorState
 
     work_name = "Reports import"
 
@@ -167,7 +167,10 @@ class ReportsProcessor(BaseDataProcessor):
             except ReportConversionError as e:
                 self.logger.warning(
                     "Failed to convert report, skipping it",
-                    {"report_id": report.id if report else "unknown", "error": str(e)},
+                    meta={
+                        "report_id": report.id if report else "unknown",
+                        "error": str(e),
+                    },
                 )
 
         if stix_objects:

@@ -14,9 +14,6 @@ The SpyCloud connector imports breach records and compromised data from SpyCloud
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -41,37 +38,10 @@ The SpyCloud connector imports breach records and compromised data from SpyCloud
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-> **Note**: All environment variables' values are strings (e.g., stringified numbers, dates in ISO format, comma-separated lists).
-
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml      | Docker environment variable   | Default  | Mandatory | Description                                                              |
-|-----------------|-----------------|-------------------------------|----------|-----------|--------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`                |          | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name  | name            | `CONNECTOR_NAME`              | SpyCloud | No        | Name of the connector.                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`             | spycloud | No        | The scope or type of data the connector is importing.                    |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info     | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |          | Yes       | Interval between runs in ISO 8601 format (e.g., `PT1H`).                 |
-
-### Connector extra parameters environment variables
-
-| Parameter         | config.yml        | Docker environment variable  | Default             | Mandatory | Description                                                    |
-|-------------------|-------------------|------------------------------|---------------------|-----------|----------------------------------------------------------------|
-| API Base URL      | api_base_url      | `SPYCLOUD_API_BASE_URL`      |                     | Yes       | SpyCloud API base URL.                                         |
-| API Key           | api_key           | `SPYCLOUD_API_KEY`           |                     | Yes       | SpyCloud API key.                                              |
-| Severity Levels   | severity_levels   | `SPYCLOUD_SEVERITY_LEVELS`   |                     | No        | Filter by severity: `2`, `5`, `20`, `25` (comma-separated).    |
-| Watchlist Types   | watchlist_types   | `SPYCLOUD_WATCHLIST_TYPES`   |                     | No        | Filter by type: `email`, `domain`, `subdomain`, `ip`.          |
-| TLP Level         | tlp_level         | `SPYCLOUD_TLP_LEVEL`         | amber+strict        | No        | TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`. |
-| Import Start Date | import_start_date | `SPYCLOUD_IMPORT_START_DATE` | 1970-01-01T00:00Z   | No        | Starting date in ISO 8601 format if state is not set.          |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

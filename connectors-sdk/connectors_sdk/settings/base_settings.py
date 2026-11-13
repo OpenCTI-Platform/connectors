@@ -9,8 +9,11 @@ These models can be extended to create specific configurations for different typ
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import Any, ClassVar, Literal, Self, Union, cast, get_args, get_origin
 
+from connectors_sdk.logger import configure_logging
+from connectors_sdk.logger._class_logger import _ClassLoggerMixin
+from connectors_sdk.models.enums import TLPLevel
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -38,6 +41,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic.fields import FieldInfo
+from pydantic.json_schema import SkipJsonSchema
 
 
 class BaseConfigModel(BaseModel, ABC):
@@ -69,7 +73,8 @@ class BaseConfigModel(BaseModel, ABC):
                         field.annotation = annotation | None  # type: ignore[assignment]
                     elif annotation is not None and get_origin(annotation) is not None:
                         # Handle typing wrappers (e.g. SkipJsonSchema[X], Annotated[X, ...])
-                        field.annotation = annotation | None
+                        # cast: annotation type differs across pydantic versions
+                        field.annotation = cast(Any, annotation | None)
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False
@@ -101,6 +106,14 @@ class _OpenCTIConfig(BaseConfigModel):
     )
     token: SecretStr = Field(
         description="The API token to connect to OpenCTI.",
+    )
+    # Hidden from the connector's config schema, so that XTM Composer does not offer it
+    json_logging: SkipJsonSchema[bool] = Field(
+        default=True,
+        description=(
+            "Whether the SDK owns the logging setup and writes logs as JSON (pycti's "
+            "format), or leaves the logging setup to the developer."
+        ),
     )
 
     @field_serializer("token", mode="wrap", when_used="json")
@@ -160,7 +173,7 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
 
 
-class BaseConnectorSettings(BaseConfigModel, ABC):
+class BaseConnectorSettings(_ClassLoggerMixin, BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
 
     This class centralizes settings related to OpenCTI and the connector,
@@ -180,7 +193,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         >>> class ExampleAPISettings(BaseSettings):
         ...     api_key: str = Field(description="API key for authentication")
         ...
-        >>> class ExampleConnectorSettings(BaseConnectorSettings):
+        >>> class ExampleConnectorSettings(BaseExternalImportConnectorSettings):
         ...     connector: ConnectorSettings = Field(default_factory=ConnectorSettings)
         ...     connector_api: ExampleAPISettings = Field(default_factory=ExampleAPISettings)
         ...
@@ -208,6 +221,13 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        # Apply the log level and format as soon as settings are known
+        # (until then, logging configuration is based on env vars only)
+        configure_logging(
+            log_level=self.connector.log_level,
+            json_logging=self.opencti.json_logging,
+        )
 
     @classmethod
     def config_json_schema(
@@ -429,12 +449,20 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
         auto (bool): Whether the connector should run automatically when an entity is created or updated.
+        max_tlp (TLPLevel): The highest TLP of the entities the connector is allowed to enrich.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
     auto: bool = Field(
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+    max_tlp: TLPLevel = Field(
+        default=TLPLevel.AMBER,
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
     )
 
 
@@ -537,4 +565,89 @@ class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
     auto: bool = Field(
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
+# Per-type settings classes.
+# `BaseConnectorSettings.connector` is typed `_BaseConnectorConfig`, so a type variable
+# bound to `BaseConnectorSettings` cannot see type-specific fields such as
+# `duration_period`. Each class below narrows `connector` to its connector type's config.
+
+
+class BaseExternalImportConnectorSettings(BaseConnectorSettings):
+    """Settings class for external import connectors.
+
+    Narrows `connector` to `BaseExternalImportConnectorConfig`, so that type-specific
+    fields (e.g. `duration_period`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseExternalImportConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseExternalImportConnectorConfig = Field(
+        default_factory=BaseExternalImportConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalEnrichmentConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal enrichment connectors.
+
+    Narrows `connector` to `BaseInternalEnrichmentConnectorConfig`, so that type-specific
+    fields (e.g. `max_tlp`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseInternalEnrichmentConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalEnrichmentConnectorConfig = Field(
+        default_factory=BaseInternalEnrichmentConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseStreamConnectorSettings(BaseConnectorSettings):
+    """Settings class for stream connectors.
+
+    Narrows `connector` to `BaseStreamConnectorConfig`, so that type-specific
+    fields (e.g. `live_stream_id`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseStreamConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseStreamConnectorConfig = Field(
+        default_factory=BaseStreamConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalExportFileConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal export file connectors.
+
+    Narrows `connector` to `BaseInternalExportFileConnectorConfig`.
+
+    Attributes:
+        connector (BaseInternalExportFileConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalExportFileConnectorConfig = Field(
+        default_factory=BaseInternalExportFileConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+
+class BaseInternalImportFileConnectorSettings(BaseConnectorSettings):
+    """Settings class for internal import file connectors.
+
+    Narrows `connector` to `BaseInternalImportFileConnectorConfig`, so that type-specific
+    fields (e.g. `auto`) are visible to type checkers.
+
+    Attributes:
+        connector (BaseInternalImportFileConnectorConfig): Connector configuration.
+    """
+
+    connector: BaseInternalImportFileConnectorConfig = Field(
+        default_factory=BaseInternalImportFileConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
     )

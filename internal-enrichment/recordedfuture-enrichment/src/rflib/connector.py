@@ -127,10 +127,10 @@ class RFEnrichmentConnector:
                 if marking_definition["definition_type"] == "TLP":
                     tlp = marking_definition["definition"]
             if not self.helper.check_max_tlp(
-                tlp, self.config.recorded_future.info_max_tlp
+                tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
             ):
                 message = f"Do not send any data, TLP of the entity is ({tlp}), "
-                f"which is greater than MAX TLP: ({self.config.recorded_future.info_max_tlp})"
+                f"which is greater than MAX TLP: (TLP:{self.config.connector.max_tlp.upper()})"
                 self.helper.connector_logger.warning(
                     message,
                     {"entity_type": entity_type, "entity_stix_id": entity_stix_id},

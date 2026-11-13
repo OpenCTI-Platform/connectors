@@ -26,6 +26,15 @@ class Connector:
         self._do_work()
 """
 
+_SDK_MAIN = """\
+from connectors_sdk.connectors.external_import.external_import_connector import (
+    ExternalImportConnector,
+)
+
+if __name__ == "__main__":
+    ExternalImportConnector(settings=settings, state=state, data_processors=[]).start()
+"""
+
 
 class TestVC316WorkClosed:
     """VC316 checks that work is closed with to_processed (EXTERNAL_IMPORT only)."""
@@ -60,6 +69,16 @@ class TestVC316WorkClosed:
         )
         results = run_checks(path, select=["VC316"])
         assert any(r.severity == Severity.ERROR for r in results)
+
+    def test_passes_with_sdk_external_import_connector(self, connector_src):
+        """The SDK base connector closes the work itself, in_error=True included."""
+        path = connector_src(
+            ("src/main.py", _SDK_MAIN),
+            connector_type="EXTERNAL_IMPORT",
+        )
+        results = run_checks(path, select=["VC316"])
+        assert all(r.severity == Severity.INFO for r in results)
+        assert any("connectors-sdk" in r.message for r in results)
 
     def test_skipped_for_stream_connector(self, connector_src):
         """VC316 only applies to EXTERNAL_IMPORT."""

@@ -30,7 +30,9 @@ class ExternalImportConnector:
             if helper is not None
             else OpenCTIConnectorHelper(config=self.settings.to_helper_config())
         )
-        self.cfg = ConfigConnector()
+        # The ``ti_api`` section is read from the sdk-validated settings instead
+        # of the legacy yaml / ``get_config_variable`` / ``os.environ`` loader.
+        self.cfg = ConfigConnector(settings=self.settings)
         self._setup_file_logging()
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
 

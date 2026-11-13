@@ -9,8 +9,8 @@ connector:
   scope: 'ChangeMe'
   log_level: 'error' # optional (default: 'error')
   auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  max_tlp: 'TLP:AMBER' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
 
 template:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
-  max_tlp_level: 'amber+strict'  # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

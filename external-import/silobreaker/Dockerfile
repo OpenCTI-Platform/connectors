@@ -6,11 +6,11 @@ COPY src /opt/opencti-connector-silobreaker
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxslt libxslt-dev libxml2 libxml2-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev libxslt-dev libxml2-dev && \
     cd /opt/opencti-connector-silobreaker && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxslt-dev libxml2-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

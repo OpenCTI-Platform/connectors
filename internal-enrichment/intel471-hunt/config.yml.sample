@@ -11,6 +11,7 @@ connector:
   # scope: Report,Indicator,Note,Intrusion-Set,Threat-Actor,Threat-Actor-Group,Threat-Actor-Individual,Campaign,Attack-Pattern,Vulnerability,Malware,Tool,Sector,Country,Region  # optional
   # auto: false                                # optional; true auto-enriches on create
   # log_level: error                           # optional
+  # max_tlp: TLP:AMBER                         # optional
 
 hunter:
   api_key: ChangeMe                            # sent as `Authorization: API-Key <key>`
@@ -21,4 +22,3 @@ hunter:
   # max_results_per_query: 100                 # optional
   # cache_path: /opt/opencti-connector-intel471-hunt/cache/cache.json  # optional; dedicated subdir, never the WORKDIR
   # cache_ttl_hours: 24                        # optional
-  # max_tlp: TLP:AMBER                         # optional

@@ -1,9 +1,8 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -35,16 +34,11 @@ class ShadowTrackrConfig(BaseConfigModel):
         default="https://shadowtrackr.com/api/v3",
     )
     api_key: SecretStr = Field(description="API key for authentication.")
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Max TLP level of the entities to enrich.",
-        default="TLP:AMBER",
     )
     replace_with_lower_score: bool = Field(
         description="Replace the score with a lower score based on the ShadowTrackr false positive estimate.",

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from virustotal.client import VirusTotalQuotaExceededError
 from virustotal.processors.entity import EntityProcessor
 
 if TYPE_CHECKING:
@@ -8,6 +9,12 @@ if TYPE_CHECKING:
 
 class FileProcessor(EntityProcessor):
     """Enriches StixFile, Artifact, and file-type Indicators."""
+
+    _GTI_ENDPOINT_TYPE = "files"
+
+    def _gti_identifier(self) -> str:
+        """Files are looked up by hash, not by the raw SCO value."""
+        return self._resolve_hash()
 
     def _fetch_data(self) -> dict | None:
         hash_value = self._resolve_hash()
@@ -48,9 +55,16 @@ class FileProcessor(EntityProcessor):
 
         if self.connector.file_import_yara:
             for yara in attributes.get("crowdsourced_yara_results", []):
-                ruleset = self.connector._retrieve_yara_ruleset(
-                    yara.get("ruleset_id", "No ruleset id provided")
-                )
+                try:
+                    ruleset = self.connector._retrieve_yara_ruleset(
+                        yara.get("ruleset_id", "No ruleset id provided")
+                    )
+                except VirusTotalQuotaExceededError:
+                    self.helper.connector_logger.warning(
+                        "[VirusTotal] Quota exceeded, skipping YARA ruleset",
+                        {"ruleset_id": yara.get("ruleset_id")},
+                    )
+                    continue
                 builder.create_yara(
                     yara,
                     ruleset,
@@ -128,6 +142,8 @@ class FileProcessor(EntityProcessor):
             analysis_id = self.client.upload_artifact(file_meta["name"], artifact)
             # Queuing the file info call triggers more immediate analysis.
             self.client.get_file_info(hash_value)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError(
                 "[VirusTotal] Error uploading artifact to VirusTotal."
@@ -135,6 +151,8 @@ class FileProcessor(EntityProcessor):
 
         try:
             self.client.check_upload_status("artifact", hash_value, analysis_id)
+        except VirusTotalQuotaExceededError:
+            raise
         except Exception as err:
             raise ValueError(
                 "[VirusTotal] Error waiting for VirusTotal to analyse artifact."

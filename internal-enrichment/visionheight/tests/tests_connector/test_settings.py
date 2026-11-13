@@ -1,8 +1,10 @@
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 
 
 @pytest.mark.parametrize(
@@ -20,11 +22,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "visionheight": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             id="full_valid_settings_dict",
@@ -35,12 +37,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                },
+                "connector": {},
                 "visionheight": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
             },
@@ -97,11 +95,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "visionheight": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "opencti.url",
@@ -111,22 +109,58 @@ def test_settings_should_accept_valid_input(settings_dict):
             {
                 "opencti": {
                     "url": "http://localhost:8080",
+                },
+                "connector": {},
+                "visionheight": {
+                    "api_key": "test-api-key",
+                },
+            },
+            "opencti.token",
+            id="missing_opencti_token",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
                     "token": "test-token",
                 },
                 "connector": {
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "auto": True,
+                    "id": 1234,  # must be a string, not an int
                 },
                 "visionheight": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "connector.id",
-            id="missing_connector_id",
+            id="invalid_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {},
+                "visionheight": {},  # api_key is required and has no default
+            },
+            "visionheight.api_key",
+            id="missing_visionheight_api_key",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "max_tlp": "purple",  # not a valid TLP level
+                },
+                "visionheight": {
+                    "api_key": "test-api-key",
+                },
+            },
+            "connector.max_tlp",
+            id="invalid_connector_max_tlp",
         ),
     ],
 )
@@ -152,3 +186,164 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_default_connector_id():
+    """
+    Test that `connector.id` falls back on the connector's own unique default UUID v4.
+
+    `_BaseConnectorConfig.id` is declared required with no default in `connectors-sdk`.
+    `InternalEnrichmentConnectorConfig` overrides it so the connector can be deployed
+    from the catalog without the user having to provide a CONNECTOR_ID.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict
+        whose `connector` section is empty, so every connector field falls back on its default.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.id == "72de5a27-4619-4189-a66b-ad89819b200a"
+    assert UUID(settings.connector.id).version == 4
+
+
+def test_settings_should_default_connector_name_and_scope():
+    """
+    Test that `connector.name` and `connector.scope` fall back on the connector's own defaults,
+    and that `scope` is parsed from a comma-separated string into a list of strings.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.name == "VisionHeight"
+    assert settings.connector.scope == ["IPv4-Addr", "Domain-Name"]
+    # `pycti` expects a comma-separated string, not a list
+    assert settings.to_helper_config()["connector"]["scope"] == "IPv4-Addr,Domain-Name"
+
+
+def test_settings_should_keep_api_key_secret():
+    """
+    Test that `visionheight.api_key` is a `SecretStr`: it must not leak in the string
+    representation of the settings, and must be readable via `get_secret_value()`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "super-secret-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.visionheight.api_key.get_secret_value() == "super-secret-api-key"
+    assert "super-secret-api-key" not in str(settings.visionheight)
+
+
+def test_settings_should_default_connector_max_tlp_to_amber_strict():
+    """
+    Test that `connector.max_tlp` (`CONNECTOR_MAX_TLP`) keeps the connector's historical
+    default, `TLP:AMBER+STRICT`, instead of the `TLP:AMBER` default of `connectors-sdk`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == TLPLevel.AMBER_STRICT
+
+
+def test_settings_should_migrate_deprecated_visionheight_max_tlp_level_to_connector_max_tlp():
+    """
+    Test that the deprecated `visionheight.max_tlp_level` (`VISIONHEIGHT_MAX_TLP_LEVEL`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`), as the matching TLP level.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "visionheight": {
+                        "api_key": "test-api-key",
+                        "max_tlp_level": "red",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="visionheight.max_tlp_level"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == TLPLevel.RED

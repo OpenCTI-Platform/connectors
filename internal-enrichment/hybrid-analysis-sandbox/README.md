@@ -81,9 +81,9 @@ services:
       - "CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,Hostname"
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_MAX_TLP=TLP:AMBER
       - HYBRID_ANALYSIS_TOKEN=ChangeMe
       - HYBRID_ANALYSIS_ENVIRONMENT_ID=160
-      - HYBRID_ANALYSIS_MAX_TLP=TLP:AMBER
     restart: always
 ```
 

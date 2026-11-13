@@ -41,10 +41,10 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "shodan": {
                     "token": "SecretStr",
-                    "max_tlp": "TLP:CLEAR",
                     "default_score": 42,
                     "import_search_results": True,
                     "create_note": True,

@@ -1,0 +1,205 @@
+# -*- coding: utf-8 -*-
+"""Unit tests for ConnectorSettings in Lamis Network connector."""
+
+from typing import Any
+
+import pytest
+from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
+from lamis_network.settings import ConnectorSettings
+
+
+@pytest.mark.parametrize(
+    "settings_dict",
+    [
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Lamis Network IP Intelligence",
+                    "scope": "IPv4-Addr,IPv6-Addr",
+                    "log_level": "info",
+                    "auto": True,
+                    "max_tlp": "TLP:AMBER",
+                },
+                "lamis_network": {
+                    "api_key": "test-api-key",
+                    "api_url": "https://api.lamisnetwork.com",
+                    "timeout": 15,
+                    "suspicious_threshold": 80,
+                    "create_indicator": True,
+                    "add_relationships": True,
+                    "default_tlp": "TLP:CLEAR",
+                },
+            },
+            id="full_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "IPv4-Addr,IPv6-Addr",
+                },
+                "lamis_network": {
+                    "api_key": "test-api-key",
+                },
+            },
+            id="minimal_valid_settings_dict",
+        ),
+    ],
+)
+def test_settings_should_accept_valid_input(settings_dict):
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+    assert isinstance(settings.opencti, BaseConfigModel) is True
+    assert isinstance(settings.connector, BaseConfigModel) is True
+    assert isinstance(settings.lamis_network, BaseConfigModel) is True
+    assert settings.lamis_network.default_tlp == "TLP:CLEAR"
+    assert settings.connector.max_tlp == TLPLevel.AMBER
+    if "auto" in settings_dict.get("connector", {}):
+        assert settings.connector.auto is settings_dict["connector"]["auto"]
+    else:
+        assert settings.connector.auto is False
+    assert isinstance(settings.connector.scope, list)
+    assert settings.to_helper_config()["connector"]["scope"] == "IPv4-Addr,IPv6-Addr"
+
+
+@pytest.mark.parametrize(
+    "settings_dict, field_name",
+    [
+        pytest.param(
+            {},
+            "settings",
+            id="empty_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "IPv4-Addr",
+                },
+                "lamis_network": {
+                    "api_key": "test-api-key",
+                },
+            },
+            "opencti.url",
+            id="invalid_opencti_url",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "name": "Lamis Network IP Intelligence",
+                    "scope": "IPv4-Addr",
+                },
+                "lamis_network": {
+                    "api_key": "test-api-key",
+                },
+            },
+            "connector.id",
+            id="missing_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "IPv4-Addr",
+                },
+                "lamis_network": {},
+            },
+            "lamis_network.api_key",
+            id="missing_api_key",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "IPv4-Addr",
+                },
+                "lamis_network": {
+                    "api_key": "   ",
+                },
+            },
+            "lamis_network.api_key",
+            id="empty_api_key",
+        ),
+    ],
+)
+def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    with pytest.raises(ConfigValidationError) as err:
+        FakeConnectorSettings()
+    assert "Error validating configuration" in str(err)
+
+
+def test_settings_should_migrate_deprecated_lamis_network_max_tlp_to_connector_max_tlp():
+    """The deprecated `lamis_network.max_tlp` (`LAMIS_NETWORK_MAX_TLP`) is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`)."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "lamis_network": {"api_key": "test-api-key", "max_tlp": "TLP:RED"},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="lamis_network.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.max_tlp == TLPLevel.RED
+
+
+def test_settings_should_still_normalize_default_tlp():
+    """`lamis_network.default_tlp` keeps accepting a level without prefix, in any case."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "lamis_network": {
+                        "api_key": "test-api-key",
+                        "default_tlp": "green",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.lamis_network.default_tlp == "TLP:GREEN"

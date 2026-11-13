@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""
+Generate the GitHub Actions matrix for config-schema generation.
+
+By default (build-manifest.yml) the matrix is NOT filtered by git changes:
+every manager-supported connector's config schema is regenerated on every
+run, since the schema feeds the global manifest which must stay complete
+and correct even for connectors that weren't touched in the latest push.
+
+With CHANGED_ONLY=true (ci-config-schema.yml, on pull requests) it keeps
+only the connectors changed since the merge base, so a connector whose
+schema cannot be generated is caught before it reaches master. A change to
+the schema generation tooling, or to the connectors-sdk the generator imports,
+selects every connector. A changed manager-supported connector that cannot be
+generated (no pydantic-settings / connectors-sdk dependency) fails the run
+instead of being skipped with a warning; in the full run it stays a warning.
+
+Shared git/manifest/output/batching helpers live in _matrix_common.py.
+"""
+
+import json
+import os
+import sys
+
+import _matrix_common as common
+
+# Changing any of these can break schema generation for every connector. The
+# generator imports connectors_sdk.settings.json_schema_generator and the task
+# installs the SDK into every connector's venv.
+SCHEMA_TOOLING_PATHS = (
+    "connectors-sdk",
+    ".mise/tasks/generate_config_schema.sh",
+    ".mise/tasks/_helpers.sh",
+    "shared/tools/composer/generate_connectors_config_schemas",
+    ".github/scripts/build_manifest_matrix.py",
+    ".github/scripts/_matrix_common.py",
+    ".github/workflows/ci-config-schema.yml",
+)
+
+# ---------------------------------------------------------------------------
+# Connector discovery
+# ---------------------------------------------------------------------------
+
+
+def discover_manager_supported_connectors() -> tuple[list, list]:
+    """Split manager-supported connectors into (eligible, skipped) roots.
+
+    Eligibility mirrors the checks performed by the `generate_config_schema`
+    mise task itself, so the matrix never schedules a job that the task
+    would immediately reject: the connector must be manager-supported *and*
+    declare pydantic-settings or connectors-sdk.
+    """
+    eligible: list = []
+    skipped: list = []
+    for root in common.discover_connector_roots():
+        if not common.is_manager_supported(common.load_manifest(root)):
+            continue
+        target = eligible if common.has_config_schema_deps(root) else skipped
+        target.append(root)
+    return eligible, skipped
+
+
+def warn_on_unmaintainable_schemas(skipped: list) -> None:
+    """Warn about committed schemas that CI can no longer refresh.
+
+    A connector skipped for missing dependencies but which already has a
+    committed config schema is the dangerous case: nothing fails, yet its
+    schema silently drifts as the connector's configuration evolves. Warn
+    loudly so it gets fixed rather than rotting unnoticed.
+    """
+    for root in skipped:
+        if common.has_config_schema(root):
+            common.warn(
+                f"{root} is manager_supported and has a committed "
+                f"{common.CONFIG_SCHEMA_FILENAME}, but declares neither "
+                "pydantic-settings nor connectors-sdk, so generate_config_schema "
+                "cannot regenerate it. The committed schema will drift out of "
+                "sync until one of these dependencies is declared.",
+                file=common.config_schema_path(root),
+            )
+        else:
+            print(f"Skipping {root}: no config-schema dependency declared")
+
+
+def fail_on_changed_unmaintainable_schemas(changed_skipped: list) -> None:
+    """Fail when a pull request changes a connector CI cannot generate a schema for.
+
+    Such a connector is manager_supported, yet the generate_config_schema task
+    rejects it for lack of pydantic-settings / connectors-sdk. Warning would let
+    the required summary pass without ever testing it, so the pull request has to
+    migrate the connector or fix its manager_supported flag instead.
+    """
+    if not changed_skipped:
+        return
+    for root in changed_skipped:
+        print(
+            f"::error file={common.config_schema_path(root)}::{root} is "
+            "manager_supported and changed by this pull request, but declares "
+            "neither pydantic-settings nor connectors-sdk, so "
+            "generate_config_schema cannot generate its config schema. Migrate "
+            "the connector to the connectors-sdk settings, or fix its "
+            "manager_supported flag."
+        )
+    sys.exit(1)
+
+
+def changed_roots(roots: list, base_commit: str | None) -> list:
+    """Keep the connector roots whose own files changed since *base_commit*.
+
+    Unlike select_changed, a change to the schema generation tooling does not
+    select every root. Without a merge base nothing can be told changed.
+    """
+    if base_commit is None:
+        return []
+    return [root for root in roots if common.has_changes(base_commit, str(root))]
+
+
+def select_changed(roots: list, base_commit: str | None) -> list:
+    """Keep the connector roots changed since *base_commit*.
+
+    Every root is kept when there is no merge base or when the schema
+    generation tooling itself changed.
+    """
+    if base_commit is None or common.has_changes(base_commit, *SCHEMA_TOOLING_PATHS):
+        return roots
+    return changed_roots(roots, base_commit)
+
+
+# ---------------------------------------------------------------------------
+# Matrix building
+# ---------------------------------------------------------------------------
+
+
+def make_entry(connector_roots: list) -> dict:
+    names = [f"{p.parent.name}/{p.name}" for p in connector_roots]
+    paths = [str(p) for p in connector_roots]
+    return {
+        "name": (
+            ", ".join(names)
+            if len(names) <= 3
+            else f"{names[0]} (+{len(names) - 1} more)"
+        ),
+        "connector_paths": "\n".join(paths),
+    }
+
+
+def main() -> None:
+    connectors, skipped = discover_manager_supported_connectors()
+    print(f"Manager-supported connectors: {len(connectors)} ({len(skipped)} skipped)")
+
+    if os.environ.get("CHANGED_ONLY") == "true":
+        base_commit = common.get_base_commit()
+        connectors = select_changed(connectors, base_commit)
+        fail_on_changed_unmaintainable_schemas(changed_roots(skipped, base_commit))
+        print(f"Connectors selected for this run: {len(connectors)}")
+    else:
+        warn_on_unmaintainable_schemas(skipped)
+
+    if not connectors:
+        print("No manager-supported connectors, skipping.")
+        common.write_output("has_connectors", "false")
+        common.write_output(
+            "matrix", json.dumps({"include": []}, separators=(",", ":"))
+        )
+        return
+
+    entries = common.build_batched_matrix(
+        connectors, make_entry, type_of=lambda p: p.parts[0]
+    )
+    print(f"Matrix jobs: {len(entries)}")
+    common.write_output("has_connectors", "true")
+    common.write_output(
+        "matrix", json.dumps({"include": entries}, separators=(",", ":"))
+    )
+
+
+if __name__ == "__main__":
+    main()

@@ -5,6 +5,7 @@ import re
 import time
 from hashlib import sha256
 from typing import Dict
+from urllib.parse import urlsplit
 
 import magic
 import pycti
@@ -16,9 +17,50 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
+from requests import RequestException, Session
 from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
 from triage.client import ServerError
+
+RETRY_DELAY_SECONDS = 10
+TRIAGE_ERROR_KEYS = {"error", "message"}
+TRIAGE_ERROR_CODE = re.compile(r"[A-Z][A-Z0-9_]*")
+
+
+def _is_triage_error_body(content):
+    """Return True if a file download body is a Triage API error, e.g. NOT_AVAILABLE."""
+    if content.strip() == b"NOT_AVAILABLE":
+        return True
+    # Error payloads are tiny; skip parsing real (possibly large) files
+    if len(content) > 4096 or not content.lstrip().startswith(b"{"):
+        return False
+    try:
+        body = json.loads(content)
+    except ValueError:
+        return False
+    # Same envelope the triage client's ServerError reads: an error code and a message
+    return (
+        isinstance(body, dict)
+        and body.keys() <= TRIAGE_ERROR_KEYS
+        and isinstance(body.get("error"), str)
+        and TRIAGE_ERROR_CODE.fullmatch(body["error"]) is not None
+        and isinstance(body.get("message", ""), str)
+    )
+
+
+class TriageClient(Client):
+    """Triage client whose file downloads raise on HTTP errors."""
+
+    def _req_file(self, method, path):
+        # The upstream implementation returns the body of an error page as file content
+        request = self._new_request(method, path)
+        with Session() as session:
+            settings = session.merge_environment_settings(
+                request.url, {}, None, False, None
+            )
+            response = session.send(request.prepare(), **settings)
+            response.raise_for_status()
+            return response.content
 
 
 class HatchingTriageSandboxConnector:
@@ -37,7 +79,7 @@ class HatchingTriageSandboxConnector:
         # Instantiate the Triage Client
         self.base_url = self.config.hatching_triage_sandbox.base_url
         token = self.config.hatching_triage_sandbox.token.get_secret_value()
-        self.triage_client = Client(token, root_url=self.base_url)
+        self.triage_client = TriageClient(token, root_url=self.base_url)
 
         # Get other config values
         self.use_existing_analysis = (
@@ -47,19 +89,32 @@ class HatchingTriageSandboxConnector:
         self.botnet_color = self.config.hatching_triage_sandbox.botnet_color
         self.campaign_color = self.config.hatching_triage_sandbox.campaign_color
         self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
-        self.max_tlp = self.config.hatching_triage_sandbox.max_tlp
+        self.max_attempts = self.config.hatching_triage_sandbox.max_attempts
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+
+    def _build_report_url(self, sample_id: str) -> str:
+        """Build the link to an analysis on the sandbox web UI.
+
+        The web UI is served from the same host as the configured API, e.g.
+        https://tria.ge/api -> https://tria.ge/<sample_id>/ and
+        https://private.tria.ge/api -> https://private.tria.ge/<sample_id>/.
+        """
+        parsed = urlsplit(self.base_url)
+        # Use hostname and port, not netloc, so credentials that may be set in
+        # the base URL (user:password@) never end up in the OpenCTI link.
+        host = parsed.hostname or ""
+        if ":" in host:  # IPv6 literal
+            host = f"[{host}]"
+        if parsed.port is not None:
+            host += f":{parsed.port}"
+        return f"{parsed.scheme}://{host}/{sample_id}/"
 
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type
     ):
         bundle_objects = []
 
-        if "us-sandbox.recordedfuture.com" in self.base_url:
-            report_url = f"https://us-sandbox.recordedfuture.com/{sample_id}/"
-        elif "sandbox.recordedfuture.com" in self.base_url:
-            report_url = f"https://sandbox.recordedfuture.com/{sample_id}/"
-        else:
-            report_url = f"https://triage.ge/{sample_id}/"
+        report_url = self._build_report_url(sample_id)
 
         # Create external reference
         external_reference = self.helper.api.external_reference.create(
@@ -128,7 +183,7 @@ class HatchingTriageSandboxConnector:
                     key = "Url"
                     relationship_type = (
                         "communicates-with"
-                        if entity_type == "artifact"
+                        if entity_type in ["artifact", "stixfile"]
                         else "related-to"
                     )
                     if self._is_ipv4_address(parsed):
@@ -221,20 +276,16 @@ class HatchingTriageSandboxConnector:
                 # Download task file, wait for it to become available
                 task_id = extracted_dict["tasks"][0]
                 filename = extracted_dict["dumped_file"]
-                file_contents = self.triage_client.sample_task_file(
-                    sample_id, task_id, filename
-                )
-                for x in range(5):
-                    if b"NOT_AVAILABLE" in file_contents[:30]:
-                        time.sleep(10)
-                        continue
-                    file_contents = self.triage_client.sample_task_file(
-                        sample_id, task_id, filename
-                    )
-
-                if b"NOT_AVAILABLE" in file_contents[:30]:
-                    self.helper.connector_logger.info(
-                        "Maximum attempts tried to obtain extracted file, skipping..."
+                file_contents = self._get_task_file(sample_id, task_id, filename)
+                if file_contents is None:
+                    self.helper.connector_logger.warning(
+                        "Maximum attempts tried to obtain extracted file, skipping...",
+                        meta={
+                            "sample_id": sample_id,
+                            "task_id": task_id,
+                            "filename": filename,
+                            "max_attempts": self.max_attempts,
+                        },
                     )
                     continue
                 # Upload task file to OpenCTI
@@ -307,7 +358,9 @@ class HatchingTriageSandboxConnector:
         # Attach domains
         if overview_dict.get("targets"):
             relationship_type = (
-                "communicates-with" if entity_type == "artifact" else "related-to"
+                "communicates-with"
+                if entity_type in ["artifact", "stixfile"]
+                else "related-to"
             )
 
             domains = [
@@ -385,7 +438,9 @@ class HatchingTriageSandboxConnector:
                     )
 
                     relationship_type = (
-                        "uses" if entity_type == "artifact" else "related-to"
+                        "uses"
+                        if entity_type in ["artifact", "stixfile"]
+                        else "related-to"
                     )
 
                     relationship = stix2.Relationship(
@@ -422,22 +477,39 @@ class HatchingTriageSandboxConnector:
         observable_value = observable["observable_value"]
 
         if entity_type == "artifact":
-            if not observable["importFiles"]:
+            import_files = observable.get("importFiles") or []
+            if not import_files:
                 raise ValueError(f"No files found for {observable_value}")
 
-            file_name = observable["importFiles"][0]["name"]
-            file_id = observable["importFiles"][0]["id"]
+            file_name = import_files[0]["name"]
+            file_id = import_files[0]["id"]
             file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
             file_content = self.helper.api.fetch_opencti_file(file_uri, True)
             sha256_hash = self._get_sha256(file_content)
-
             search_query = f"sha256:{sha256_hash}"
             sample_id = self._search_for_analysis(search_query)
-
             if sample_id is None:
                 sample_id = self._submit_sample(
                     file_name=file_name, file_content=file_content
                 )
+
+        elif entity_type == "stixfile":
+            if not self.use_existing_analysis:
+                raise ValueError(
+                    "File observables are only enriched from existing analyses; "
+                    "enable use_existing_analysis"
+                )
+            if not self._get_hash_candidates_from_observable(observable):
+                raise ValueError(f"No supported hash found for {observable_value}")
+
+            sample_id = self._search_for_analysis_by_hashes(observable)
+            if sample_id is None:
+                message = (
+                    f"No existing Hatching Triage analysis found for "
+                    f"{observable_value}"
+                )
+                self.helper.connector_logger.info(message)
+                return message
 
         if entity_type == "url":
             search_query = f"url:{observable_value}"
@@ -447,11 +519,78 @@ class HatchingTriageSandboxConnector:
                 sample_id = self._submit_sample(url=observable_value)
 
         # Get the Overview report
-        overview_dict = self.triage_client.overview_report(sample_id)
+        overview_dict = self._get_overview_report(sample_id)
 
         return self._process_overview_report(
             observable, overview_dict, sample_id, entity_type
         )
+
+    def _get_overview_report(self, sample_id):
+        """Get the overview report, retrying on server errors (5xx)."""
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                return self.triage_client.overview_report(sample_id)
+            # An HTML 5xx body makes ServerError() raise requests' JSONDecodeError
+            except (ServerError, RequestException) as err:
+                status = getattr(err, "status", None)
+                if (
+                    status is not None and status < 500
+                ) or attempt == self.max_attempts:
+                    raise
+                self.helper.connector_logger.warning(
+                    "Overview report request failed, retrying...",
+                    meta={
+                        "sample_id": sample_id,
+                        "status": status,
+                        "attempt": attempt,
+                        "max_attempts": self.max_attempts,
+                    },
+                )
+                time.sleep(RETRY_DELAY_SECONDS)
+
+    def _get_task_file(self, sample_id, task_id, filename):
+        """Download a task file, retrying while unavailable or on server errors (5xx).
+
+        Return None if the file cannot be retrieved.
+        """
+        for attempt in range(1, self.max_attempts + 1):
+            status = None
+            try:
+                file_contents = self.triage_client.sample_task_file(
+                    sample_id, task_id, filename
+                )
+            except RequestException as err:
+                response = getattr(err, "response", None)
+                if response is not None:
+                    status = response.status_code
+                if status is not None and status < 500:
+                    self.helper.connector_logger.warning(
+                        "Extracted file request rejected, skipping file",
+                        meta={
+                            "sample_id": sample_id,
+                            "task_id": task_id,
+                            "filename": filename,
+                            "status": status,
+                        },
+                    )
+                    return None
+            else:
+                if not _is_triage_error_body(file_contents):
+                    return file_contents
+            self.helper.connector_logger.warning(
+                "Extracted file not available, retrying...",
+                meta={
+                    "sample_id": sample_id,
+                    "task_id": task_id,
+                    "filename": filename,
+                    "status": status,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+        return None
 
     def _search_for_analysis(self, search_query):
         sample_id = None
@@ -522,7 +661,7 @@ class HatchingTriageSandboxConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        if entity_type in ["artifact", "url"]:
+        if entity_type in ["artifact", "stixfile", "url"]:
             return self._process_observable(observable, entity_type)
         else:
             if not data.get("event_type"):
@@ -533,23 +672,95 @@ class HatchingTriageSandboxConnector:
                 )
 
     def _wait_for_analysis(self, sample_id):
-        """Wait for an analysis to finish."""
-        for events in self.triage_client.sample_events(sample_id):
-            if events["status"] == "pending":
-                self.helper.connector_logger.info(
-                    f"Analysis {sample_id} has status \"{events['status']}\"."
-                )
-            elif events["status"] == "reported":
-                self.helper.connector_logger.info(f"Analysis {sample_id} has finished.")
-                break
-            elif events["status"] == "failed":
-                raise ValueError(f"Analysis {sample_id} failed.")
+        """Wait for an analysis to finish, restarting the event stream if it breaks."""
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                for events in self.triage_client.sample_events(sample_id):
+                    status = events.get("status")
+                    if status is None:
+                        # An error body (e.g. a JSON 502) has no status
+                        reason = f"Event without a status: {events}"
+                        break
+                    if status == "pending":
+                        self.helper.connector_logger.info(
+                            f'Analysis {sample_id} has status "{status}".'
+                        )
+                    elif status == "reported":
+                        self.helper.connector_logger.info(
+                            f"Analysis {sample_id} has finished."
+                        )
+                        return
+                    elif status == "failed":
+                        raise ValueError(f"Analysis {sample_id} failed.")
+                else:
+                    reason = "Event stream ended before the analysis was reported"
+            except ServerError as err:
+                if err.status < 500:
+                    raise
+                reason = str(err)
+            # A proxy error page (e.g. 502) is not JSON
+            except (json.JSONDecodeError, RequestException) as err:
+                reason = str(err)
+            self.helper.connector_logger.warning(
+                "Analysis event stream interrupted, retrying...",
+                meta={
+                    "sample_id": sample_id,
+                    "reason": reason,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+        raise ValueError(
+            f"Analysis {sample_id} did not finish after {self.max_attempts} attempts."
+        )
 
     def _get_sha256(self, contents):
         """Return sha256 of bytes."""
         sha256obj = sha256()
         sha256obj.update(contents)
         return sha256obj.hexdigest()
+
+    def _get_hash_candidates_from_observable(self, observable):
+        """Return supported hash candidates in a priority order for Hatching lookups."""
+        hashes = observable.get("hashes") or []
+        candidates = []
+
+        if isinstance(hashes, dict):
+            hashes = [
+                {"algorithm": key, "hash": value} for key, value in hashes.items()
+            ]
+
+        for file_hash in hashes:
+            algorithm = (file_hash.get("algorithm") or "").lower()
+            value = file_hash.get("hash")
+            if not algorithm or not value:
+                continue
+
+            normalized_algorithm = algorithm.replace("-", "")
+            if normalized_algorithm in ["sha256", "sha1", "md5", "sha512"]:
+                candidates.append((normalized_algorithm, value))
+
+        ordered_algorithms = ["sha256", "sha1", "md5", "sha512"]
+        normalized = []
+        seen = set()
+        for algorithm in ordered_algorithms:
+            for candidate_algorithm, candidate_hash in candidates:
+                if candidate_algorithm == algorithm and candidate_hash not in seen:
+                    normalized.append((candidate_algorithm, candidate_hash))
+                    seen.add(candidate_hash)
+        return normalized
+
+    def _search_for_analysis_by_hashes(self, observable):
+        """Try the supported file hash values in priority order and return the first match."""
+        for algorithm, hash_value in self._get_hash_candidates_from_observable(
+            observable
+        ):
+            sample_id = self._search_for_analysis(f"{algorithm}:{hash_value}")
+            if sample_id is not None:
+                return sample_id
+        return None
 
     def _is_ipv4_address(self, ip):
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)

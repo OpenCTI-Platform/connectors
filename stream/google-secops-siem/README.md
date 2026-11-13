@@ -255,7 +255,7 @@ graph LR
 | metadata.product_entity_id          | Indicator `identifier` value                     |
 | metadata.description                | Indicator `description` value                    |
 | metadata.interval.start_time        | Indicator `valid_from` value                     |
-| metadata.interval.end_time          | Indicator `valid_until` value                    |
+| metadata.interval.end_time          | Indicator `valid_until` value (omitted if unset) |
 | metadata.entity_type                | Mapped from observable type                      |
 | metadata.threat.confidence_details  | Indicator `confidence` value                     |
 | metadata.threat.confidence_score    | Indicator `confidence` value                     |

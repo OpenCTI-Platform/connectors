@@ -1,7 +1,7 @@
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
 )
 from pydantic import Field
 
@@ -26,9 +26,9 @@ class TemplateConfig(BaseConfigModel):
     api_key: str = Field(description="API key for authentication.")
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalImportFileConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `InternalImportFileConnectorConfig` and `TemplateConfig`.
+    Override `BaseInternalImportFileConnectorSettings` to include `InternalImportFileConnectorConfig` and `TemplateConfig`.
     """
 
     connector: InternalImportFileConnectorConfig = Field(

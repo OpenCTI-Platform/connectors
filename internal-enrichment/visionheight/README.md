@@ -55,14 +55,15 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default                  | Mandatory | Description                                                                          |
-| --------------- | ---------- | --------------------------- | ------------------------ | --------- | ------------------------------------------------------------------------------------ |
-| Connector ID    | id         | `CONNECTOR_ID`              | /                        | Yes       | A unique `UUIDv4` identifier for this connector instance.                            |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT`    | Yes       | The connector type. Defaults to `INTERNAL_ENRICHMENT`.                    |
-| Connector Name  | name       | `CONNECTOR_NAME`            | `VisionHeight`           | Yes       | Name of the connector as shown in OpenCTI.                                           |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | `IPv4-Addr,Domain-Name`  | Yes       | The observable types this connector enriches.                        |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `info`                   | Yes       | Verbosity of logs. Options: `debug`, `info`, `warn`, or `error`.                     |
-| Connector Auto  | auto       | `CONNECTOR_AUTO`            | `false`                  | No        | If `true`, every newly created IP/domain in OpenCTI is automatically enriched.       |
+| Parameter       | config.yml | Docker environment variable | Default                                | Mandatory | Description                                                                                                                                                                                              |
+| --------------- | ---------- | --------------------------- | -------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connector ID    | id         | `CONNECTOR_ID`              | `72de5a27-4619-4189-a66b-ad89819b200a` | No        | A `UUIDv4` identifying this connector instance. Falls back on the connector's own UUID, so it can be deployed from the OpenCTI catalog without configuration. Set your own value when running several instances side by side. |
+| Connector Type  | type       | `CONNECTOR_TYPE`            | `INTERNAL_ENRICHMENT`                  | No        | The connector type. Always `INTERNAL_ENRICHMENT` for this connector.                                                                                                                                     |
+| Connector Name  | name       | `CONNECTOR_NAME`            | `VisionHeight`                         | No        | Name of the connector as shown in OpenCTI.                                                                                                                                                               |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | `IPv4-Addr,Domain-Name`                | No        | Comma-separated list of the observable types this connector enriches, parsed into a list of strings.                                                                                                     |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | `error`                                | No        | Verbosity of logs. Options: `debug`, `info`, `warn`, `warning`, or `error`.                                                                                                                              |
+| Connector Auto  | auto       | `CONNECTOR_AUTO`            | `false`                                | No        | If `true`, every newly created IP/domain in OpenCTI is automatically enriched.                                                                                                                           |
+| Max TLP         | max_tlp    | `CONNECTOR_MAX_TLP`         | `TLP:AMBER+STRICT`                     | No        | Maximum TLP of the observables the connector will enrich. Observables with a marking above this cause the enrichment to abort with an error logged. One of `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED` (case and `TLP:` prefix optional). Replaces the deprecated `VISIONHEIGHT_MAX_TLP_LEVEL`. |
 
 ### Connector extra parameters environment variables
 
@@ -72,7 +73,6 @@ Below are the VisionHeight-specific parameters:
 | ------------------ | ---------------- | ------------------------------- | -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
 | API Base URL       | `api_base_url`   | `VISIONHEIGHT_API_BASE_URL`     | `https://api.visionheight.com`   | No        | VisionHeight API base URL. Override for staging or white-label endpoints.                                         |
 | API Key            | `api_key`        | `VISIONHEIGHT_API_KEY`          | /                                | Yes       | VisionHeight API key, sent as the `x-api-key` header on every request.                                            |
-| Max TLP Level      | `max_tlp_level`  | `VISIONHEIGHT_MAX_TLP_LEVEL`    | `amber+strict`                   | No        | Maximum TLP level the connector will enrich. Observables with a marking above this cause the enrichment to abort with an error logged. One of `clear`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
@@ -157,7 +157,7 @@ The connector mutates the original observable in place: the score is replaced wi
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level via `CONNECTOR_LOG_LEVEL` (`debug`, `info`, `warn`, or `error`).
+The connector can be debugged by setting the appropriate log level via `CONNECTOR_LOG_LEVEL` (`debug`, `info`, `warn`, `warning`, or `error`). The default is `error`, so raise it to `info` or `debug` when investigating an enrichment.
 
 Internally, all log messages use structured logging via `self.helper.connector_logger.{level}(message, context_dict)`. Context fields included on every enrichment include the observable type, value, and (on errors) the API status code and response body.
 
@@ -165,4 +165,4 @@ Internally, all log messages use structured logging via `self.helper.connector_l
 
 - The VisionHeight API returns HTTP 400 for invalid input (bogons, malformed IPs/domains). Be aware that, depending on the customer's plan, these requests may count against API quota.
 - On non-2xx API responses, the connector logs the error and returns the original bundle unchanged so playbook chains are preserved.
-- The `max_tlp_level` setting hard-limits which observables the connector will process; observables with a marking above this level cause the enrichment to abort with an error logged.
+- The `CONNECTOR_MAX_TLP` setting hard-limits which observables the connector will process; observables with a marking above this level cause the enrichment to abort with an error logged.

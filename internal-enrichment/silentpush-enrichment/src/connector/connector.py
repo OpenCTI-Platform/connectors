@@ -117,7 +117,7 @@ class SilentpushConnector:
                     self.tlp = marking_definition["definition"]
 
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.silentpush.max_tlp
+            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
         )
 
         if not valid_max_tlp:

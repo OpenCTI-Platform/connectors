@@ -11,7 +11,7 @@ class PureSignalScoutConnectorConfig:
     def __init__(self, config):
         self.api_base_url = config.pure_signal_scout.api_url.rstrip("/")
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
-        self.max_tlp = config.pure_signal_scout.max_tlp
+        self.max_tlp = f"TLP:{config.connector.max_tlp.upper()}"
 
 
 class PureSignalScoutConnector:
@@ -59,7 +59,7 @@ class PureSignalScoutConnector:
                     self.tlp = marking_definition.get("definition")
 
         valid_max_tlp = self.helper.check_max_tlp(
-            self.tlp, self.config.pure_signal_scout.max_tlp
+            self.tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
         )
 
         if not valid_max_tlp:

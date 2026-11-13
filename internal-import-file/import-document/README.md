@@ -232,6 +232,7 @@ Observables are extracted using regex patterns and the `ioc_finder` library:
 | File (MD5) | `File.hashes.MD5` | ✅ |         |
 | File (SHA-1) | `File.hashes.SHA-1` | ✅ |         |
 | File (SHA-256) | `File.hashes.SHA-256` | ✅ |         |
+| File (SHA-512) | `File.hashes.SHA-512` | ✅ |         |
 | IPv4 Address | `IPv4-Addr.value` | ✅ |         |
 | IPv6 Address | `IPv6-Addr.value` | ✅ |         |
 | MAC Address | `Mac-Addr.value` | ✅ |         |

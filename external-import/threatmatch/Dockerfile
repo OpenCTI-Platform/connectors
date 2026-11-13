@@ -6,10 +6,11 @@ COPY src /opt/opencti-connector-threatmatch
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev && \
     cd /opt/opencti-connector-threatmatch && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 WORKDIR /opt/opencti-connector-threatmatch
 CMD ["python3", "main.py"]

@@ -58,9 +58,9 @@ An external import connector is made of four pieces:
 
 | Piece                             | Base class (from `connectors-sdk`)         | Responsibility                                                        |
 | --------------------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
-| `ConnectorSettings`               | `BaseConnectorSettings`                    | Validate configuration (env vars / `config.yml`) with Pydantic       |
+| `ConnectorSettings`               | `BaseExternalImportConnectorSettings`      | Validate configuration (env vars / `config.yml`) with Pydantic       |
 | `ConnectorState`                  | `ExternalImportConnectorState`             | Persist lightweight checkpoints between runs (cursors, timestamps)   |
-| One or more `...Processor`        | `BaseDataProcessor`                        | Fetch (`collect`) and convert (`transform`) **one data type** to STIX |
+| One or more `...Processor`        | `BaseDataProcessor[ConnectorSettings, ConnectorState]` | Fetch (`collect`) and convert (`transform`) **one data type** to STIX |
 | The connector itself              | `ExternalImportConnector`                  | Orchestrate everything: schedule, state, work, bundle sending        |
 
 > [!TIP]
@@ -76,12 +76,15 @@ A **processor** is a self-contained unit responsible for a single data type. You
 ```python
 from __future__ import annotations
 
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import BaseIdentifiedObject, OrganizationAuthor, TLPMarking, Report
 from my_client import MyClient
 
 
-class ReportsProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class ReportsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """Fetches and converts one data type (here, reports) to STIX."""
 
     work_name = "Reports import"  # human-readable name of the work created in OpenCTI
@@ -116,6 +119,11 @@ class ReportsProcessor(BaseDataProcessor):
         return []
 ```
 
+The brackets after `BaseDataProcessor` tell the type checker which settings and state types the
+connector uses, so `self.settings` and `self.state` are typed without redeclaring them. Every
+processor of a connector must declare the same pair (see the
+[TDR](../connectors-sdk/TDRs/2026-11-03-Generic_data_processor_and_external_import_connector.md)).
+
 The base class calls these methods for you, in order, on every run:
 
 ```text
@@ -140,7 +148,7 @@ import traceback
 
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import ReportsProcessor
-from connectors_sdk import ExternalImportConnector
+from connectors_sdk import BaseDataProcessor, ExternalImportConnector
 
 if __name__ == "__main__":
     try:
@@ -148,7 +156,7 @@ if __name__ == "__main__":
         state = ConnectorState()
 
         # One processor per data type / feature flag you support.
-        data_processors = []
+        data_processors: list[BaseDataProcessor[ConnectorSettings, ConnectorState]] = []
         if settings.my_connector.import_reports:
             data_processors.append(ReportsProcessor())
 
@@ -246,7 +254,7 @@ def collect(self) -> list:
         self.logger.info("First run of connector")
         since = self.settings.my_connector.import_since
     else:
-        self.logger.info("Connector last run", {"last_run": str(self.state.last_run)})
+        self.logger.info("Connector last run", meta={"last_run": str(self.state.last_run)})
         since = self.state.last_run
 
     return self.client.get_reports(since=since)
@@ -267,7 +275,7 @@ The only thing you control is the work's friendly name, via the processor's `wor
 attribute:
 
 ```python
-class ReportsProcessor(BaseDataProcessor):
+class ReportsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     work_name = "Reports import"  # shown in the OpenCTI UI
 ```
 
@@ -376,7 +384,7 @@ produce STIX, and `transform()` must not fetch from the network.
 def collect(self) -> list:
     """Fetch raw data from the external source. No STIX conversion here."""
     since = self.state.last_run or self.settings.my_connector.import_since
-    self.logger.info("Collecting intelligence", {"since": str(since)})
+    self.logger.info("Collecting intelligence", meta={"since": str(since)})
     return self.client.get_threat_data(since=since)
 
 
@@ -389,7 +397,7 @@ def transform(self, data: list) -> list[BaseIdentifiedObject]:
         except Exception as e:
             self.logger.warning(
                 "Failed to convert item, skipping",
-                {"item_id": item.get("id"), "error": str(e)},
+                meta={"item_id": item.get("id"), "error": str(e)},
             )
     if stix_objects:
         # Author and marking must be part of every bundle.
@@ -427,7 +435,7 @@ def transform(self, pages: Generator[list, None, None]) -> Generator[list, None,
         self.state.vulnerabilities_current_page = None
     except Exception as e:
         # Keep the last completed page so the next run resumes here.
-        self.logger.error("Pagination interrupted", {"error": str(e)})
+        self.logger.exception("Pagination interrupted", meta={"error": str(e)})
         self.state.vulnerabilities_current_page = current_page
 ```
 
@@ -510,7 +518,7 @@ def transform(self, pages: Generator[list, None, None]) -> Generator[list, None,
         # Import finished cleanly — clear the resume marker.
         self.state.import_current_page = None
     except Exception as e:
-        self.logger.error("Import interrupted", {"page": current_page, "error": str(e)})
+        self.logger.exception("Import interrupted", meta={"page": current_page, "error": str(e)})
         raise
 ```
 
@@ -956,7 +964,7 @@ def transform(self, data: list) -> list[BaseIdentifiedObject]:
             last_processed = item
         except Exception as e:
             # One bad item must not fail the whole run.
-            self.logger.warning("Failed to convert item, skipping", {"error": str(e)})
+            self.logger.warning("Failed to convert item, skipping", meta={"error": str(e)})
 
     if stix_objects and last_processed:
         # Checkpoint only from the last successfully converted item, so a failure
@@ -976,12 +984,12 @@ def collect(self) -> dict:
     try:
         data["primary"] = self.client.get_primary_feed()
     except Exception as e:
-        self.logger.error("Primary feed failed", {"error": str(e)})  # continue
+        self.logger.exception("Primary feed failed", meta={"error": str(e)})  # continue
 
     try:
         data["secondary"] = self.client.get_secondary_feed()
     except Exception as e:
-        self.logger.error("Secondary feed failed", {"error": str(e)})
+        self.logger.exception("Secondary feed failed", meta={"error": str(e)})
 
     return data
 
@@ -1035,14 +1043,14 @@ import time
 
 
 def transform(self, data: list) -> list[BaseIdentifiedObject]:
-    self.logger.info("Starting conversion", {"items": len(data)})
+    self.logger.info("Starting conversion", meta={"items": len(data)})
     start_time = time.time()
 
     stix_objects = [self._convert_item(item) for item in data]
 
     self.logger.info(
         "Conversion completed",
-        {
+        meta={
             "objects_collected": len(stix_objects),
             "duration_seconds": round(time.time() - start_time, 2),
         },
@@ -1095,8 +1103,8 @@ from datetime import datetime, timedelta, timezone
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     DatetimeFromIsoString,
     ListFromString,
 )
@@ -1135,7 +1143,7 @@ class MyConnectorConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseExternalImportConnectorSettings):
     """Aggregates all configuration sections."""
 
     connector: ExternalImportConnectorConfig = Field(
@@ -1163,8 +1171,8 @@ class ConnectorState(ExternalImportConnectorState):
 ```python
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
     BaseIdentifiedObject,
@@ -1174,20 +1182,14 @@ from connectors_sdk.models import (
 )
 from my_client import MyClient
 
-if TYPE_CHECKING:
-    from connector.settings import ConnectorSettings
-    from connector.state import ConnectorState
-
 
 class ThreatConversionError(Exception):
     """Raised when a single raw item cannot be converted to STIX."""
 
 
-class ThreatsProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class ThreatsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """Fetches threats from the external API and converts them to STIX."""
-
-    settings: ConnectorSettings
-    state: ConnectorState
 
     work_name = "My Threat Feed - Threats import"
 
@@ -1207,7 +1209,7 @@ class ThreatsProcessor(BaseDataProcessor):
             or self.state.last_run
             or self.settings.my_connector.import_since
         )
-        self.logger.info("Collecting intelligence", {"since": str(since)})
+        self.logger.info("Collecting intelligence", meta={"since": str(since)})
         return self.client.get_threat_data(since=since)
 
     def transform(self, data: list) -> list[BaseIdentifiedObject]:
@@ -1221,7 +1223,7 @@ class ThreatsProcessor(BaseDataProcessor):
             except ThreatConversionError as e:
                 self.logger.warning(
                     "Failed to convert item, skipping",
-                    {"item_id": item.get("id"), "error": str(e)},
+                    meta={"item_id": item.get("id"), "error": str(e)},
                 )
 
         if stix_objects and last:

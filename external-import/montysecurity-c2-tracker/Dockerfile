@@ -26,10 +26,8 @@ FROM python:3.12-alpine AS runner
 WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
 
 # Install runtime dependencies
-RUN apk --no-cache add \
-    libmagic \
-    libxml2 \
-    libxslt \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add \
     libffi
 
 # Create an unprivileged runtime user used by COPY --chown and final process.

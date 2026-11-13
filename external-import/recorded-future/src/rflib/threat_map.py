@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from urllib import parse
 
 from .constants import THREAT_MAP_TYPE_MAPPER
+from .rf_to_stix2 import ConversionError, IntrusionSet
 
 
 class ThreatMap(threading.Thread):
@@ -77,16 +78,42 @@ class ThreatMap(threading.Thread):
                                 _type = entity_with_links["entity"]["type"].replace(
                                     "type:", ""
                                 )
+                                entity_kwargs = {"tlp": self.tlp}
+                                if threat_map_type["class"] is IntrusionSet:
+                                    # Map Recorded Future "AKA" alias data so OpenCTI
+                                    # can deduplicate Intrusion Sets across feeds
+                                    entity_kwargs["aliases"] = (
+                                        self.rfapi.get_entity_aliases(
+                                            entity_with_links["entity"]["id"]
+                                        )
+                                    )
                                 entity_to_stix2 = threat_map_type["class"](
-                                    _name, _type, tlp=self.tlp
+                                    _name, _type, **entity_kwargs
                                 )
 
-                                # Map data with related entities
-                                entity_to_stix2.map_data(entity_with_links, self.tlp)
+                                try:
+                                    # Map data with related entities
+                                    entity_to_stix2.map_data(
+                                        entity_with_links, self.tlp
+                                    )
 
-                                # Create bundle
-                                entity_to_stix2.build_bundle(entity_to_stix2)
-                                bundle = entity_to_stix2.to_stix_bundle()
+                                    # Create bundle
+                                    entity_to_stix2.build_bundle(entity_to_stix2)
+                                    bundle = entity_to_stix2.to_stix_bundle()
+                                except ConversionError as err:
+                                    # Skip this entity only, so one unsupported
+                                    # related entity does not abort the whole run
+                                    total_mapped_entities -= 1
+                                    self.helper.connector_logger.warning(
+                                        "[THREAT MAPS] Skipping entity that could not be converted",
+                                        meta={
+                                            "entity": _name,
+                                            "type": _type,
+                                            "threat_map": threat_map["type"],
+                                            "error": str(err),
+                                        },
+                                    )
+                                    continue
 
                                 self.helper.connector_logger.info(
                                     "[THREAT MAPS] Sending Bundle to server with "

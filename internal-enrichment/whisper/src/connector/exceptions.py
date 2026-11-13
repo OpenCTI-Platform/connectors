@@ -19,7 +19,7 @@ class StixMappingError(Exception):
 
 
 class WhisperTlpError(Exception):
-    """Raised when an observable's TLP marking exceeds ``whisper.max_tlp``.
+    """Raised when an observable's TLP marking exceeds ``connector.max_tlp``.
 
     The connector must refuse to enrich beyond the configured TLP ceiling
     — the connector's API key effectively grants access to whatever the

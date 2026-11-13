@@ -57,6 +57,9 @@ class BaseRFConnector:
         self.analyst_notes_guess_relationships = (
             self.config.recorded_future.analyst_notes_guess_relationships
         )
+        self.analyst_notes_include_context_entities = (
+            self.config.recorded_future.analyst_notes_include_context_entities
+        )
 
         self.rfapi = RFClient(
             self.rf_token,
@@ -215,6 +218,7 @@ class RFConnector:
                     self.RF.risk_as_score,
                     self.RF.risk_threshold,
                     self.RF.analyst_notes_guess_relationships,
+                    self.RF.analyst_notes_include_context_entities,
                 )
                 self.analyst_notes.start()
                 threads.append(self.analyst_notes)

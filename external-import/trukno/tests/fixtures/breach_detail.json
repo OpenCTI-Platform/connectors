@@ -1,6 +1,8 @@
 {
-  "id": "b1",
+  "_id": "b1",
   "title": "Example breach",
-  "publishedAt": "2026-04-20T12:00:00Z",
-  "summary": "Summary"
+  "date": "2026-04-20T12:00:00Z",
+  "description": "Summary",
+  "relatedTTPs": [],
+  "relatedMalware": []
 }

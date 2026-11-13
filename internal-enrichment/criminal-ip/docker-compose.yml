@@ -10,6 +10,6 @@ services:
       #- CONNECTOR_SCOPE=IPv4-Addr,Domain-Name # Optional (default: 'IPv4-Addr,Domain-Name')
       #- CONNECTOR_AUTO=false # Optional (default: false)
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      #- CONNECTOR_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
       - CRIMINAL_IP_TOKEN=ChangeMe
-      #- CRIMINAL_IP_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
     restart: always

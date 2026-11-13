@@ -10,6 +10,14 @@ from typing import Any, Dict, List, Optional
 import requests
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
+# SIEM rule severity for each minimum OpenCTI score, from the highest
+SEVERITY_THRESHOLDS = (
+    (80, "critical"),
+    (60, "high"),
+    (40, "medium"),
+    (0, "low"),
+)
+
 
 class ElasticApiHandlerError(Exception):
     def __init__(self, msg, metadata=None):
@@ -153,6 +161,7 @@ class ElasticApiHandler:
 
             # Convert pattern to Elastic query
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
+            risk_score = self._get_rule_risk_score(indicator_data)
 
             # Build the rule
             rule = {
@@ -160,8 +169,8 @@ class ElasticApiHandler:
                 "description": indicator_data.get(
                     "description", "Rule created from OpenCTI threat indicator"
                 ),
-                "risk_score": self._calculate_risk_score(indicator_data),
-                "severity": self._get_severity(indicator_data),
+                "risk_score": risk_score,
+                "severity": self._get_severity(risk_score),
                 "type": "query",
                 "query": query_config["query"],
                 "language": query_config["language"],
@@ -245,6 +254,7 @@ class ElasticApiHandler:
 
             # Convert pattern to Elastic query
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
+            risk_score = self._get_rule_risk_score(indicator_data)
 
             # Build the update
             rule_update = {
@@ -253,8 +263,8 @@ class ElasticApiHandler:
                 "description": indicator_data.get(
                     "description", "Rule created from OpenCTI threat indicator"
                 ),
-                "risk_score": self._calculate_risk_score(indicator_data),
-                "severity": self._get_severity(indicator_data),
+                "risk_score": risk_score,
+                "severity": self._get_severity(risk_score),
                 "query": query_config["query"],
                 "language": query_config["language"],
             }
@@ -355,24 +365,24 @@ class ElasticApiHandler:
             self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
             return None
 
-    def _calculate_risk_score(self, indicator_data: dict) -> int:
-        """Calculate risk score based on indicator confidence and severity"""
-        confidence = indicator_data.get("confidence", 50)
-        # Map confidence (0-100) to risk score (0-100)
-        return min(100, max(1, confidence))
+    @staticmethod
+    def _get_rule_risk_score(indicator_data: dict) -> int:
+        """Rule risk score: the OpenCTI score, which every indicator has"""
+        return OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", indicator_data
+        )
 
-    def _get_severity(self, indicator_data: dict) -> str:
-        """Get severity level for the rule"""
-        confidence = indicator_data.get("confidence", 50)
-
-        if confidence >= 80:
-            return "critical"
-        elif confidence >= 60:
-            return "high"
-        elif confidence >= 40:
-            return "medium"
-        else:
-            return "low"
+    @staticmethod
+    def _get_severity(risk_score: int) -> str:
+        """Get the rule severity from its risk score"""
+        return next(
+            (
+                severity
+                for min_score, severity in SEVERITY_THRESHOLDS
+                if risk_score >= min_score
+            ),
+            "low",
+        )
 
     def _build_threat_mapping(self, indicator_data: dict) -> List[dict]:
         """Build MITRE ATT&CK threat mapping from kill chain phases"""
@@ -462,6 +472,14 @@ class ElasticApiHandler:
             },
         }
 
+        # OpenCTI score: ECS has no score field, so use the vendor field of the
+        # official Elastic OpenCTI integration (threat.indicator.sightings is a count)
+        score = OpenCTIConnectorHelper.get_attribute_in_extension(
+            "score", observable_data
+        )
+        if score is not None:
+            ecs_doc["opencti"] = {"indicator": {"score": score}}
+
         # Core threat.indicator fields (ECS compliant)
         threat_indicator = ecs_doc["threat"]["indicator"]
 
@@ -482,10 +500,6 @@ class ElasticApiHandler:
         threat_indicator["first_seen"] = created
         threat_indicator["last_seen"] = modified
         threat_indicator["modified_at"] = modified
-
-        # Sightings (using OpenCTI score if available)
-        if "x_opencti_score" in observable_data:
-            threat_indicator["sightings"] = observable_data["x_opencti_score"]
 
         # Reference (OpenCTI source) - use proper URL format with /id/{ID}
         threat_indicator["reference"] = f"{self.opencti_url}/dashboard/id/{opencti_id}"
@@ -1434,6 +1448,13 @@ class ElasticApiHandler:
                                     "hosts": {"type": "keyword"},
                                     "hash": {"type": "keyword"},
                                     "user": {"type": "keyword"},
+                                }
+                            },
+                            "opencti": {
+                                "properties": {
+                                    "indicator": {
+                                        "properties": {"score": {"type": "long"}}
+                                    }
                                 }
                             },
                             # Store raw STIX for reference

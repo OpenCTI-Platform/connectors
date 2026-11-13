@@ -8,14 +8,14 @@ COPY src ${CONNECTOR_DIR}
 
 WORKDIR ${CONNECTOR_DIR}
 
-RUN apk --no-cache --virtual .build-deps add \
+RUN apk --no-cache upgrade \
+    && apk --no-cache --virtual .build-deps add \
         git \
         build-base \
         libxslt-dev \
         libxml2-dev \
         python3-dev \
         libffi-dev \
-    && apk --no-cache add libmagic \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
     && apk del .build-deps \

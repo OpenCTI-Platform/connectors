@@ -7,8 +7,9 @@ WORKDIR /opt/opencti-connector-citalid
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 CMD ["python3", "main.py"]

@@ -8,11 +8,11 @@ WORKDIR /opt/opencti-connector-intel471-hunt
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 RUN pip3 install --no-cache-dir . && \
-    apk del git build-base && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev && \
     rm -rf /var/cache/apk/*
 
 # The cache lives on a dedicated subdirectory so a mounted volume never shadows

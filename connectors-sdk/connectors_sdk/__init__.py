@@ -12,14 +12,55 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit
-from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.exceptions.connector_errors import (
+    ConfigurationError,
+    ConfigurationInvalidError,
+    ConnectorError,
+    Criticity,
+    DataConversionError,
+    DataError,
+    DataInvalidValueError,
+    DataMissingDataError,
+    DataNotFoundError,
+    DataOutOfScopeError,
+    DataTlpExceededError,
+    DataUnsupportedTypeError,
+    LegacyError,
+    OctiAuthenticationError,
+    OctiError,
+    OctiUnreachableError,
+    OctiVersionIncompatibleError,
+    ProviderApiAuthenticationError,
+    ProviderApiAuthorizationError,
+    ProviderApiConnectionError,
+    ProviderApiError,
+    ProviderApiInvalidResponseError,
+    ProviderApiNotFoundError,
+    ProviderApiRateLimitError,
+    ProviderApiServerError,
+    ProviderApiTimeoutError,
+    ProviderApiUnknownError,
+    TargetAuthenticationError,
+    TargetAuthorizationError,
+    TargetError,
+    TargetRateLimitError,
+    TargetRejectedError,
+    TargetUnreachableError,
+    UnknownError,
+)
+from connectors_sdk.exceptions.error_store import ErrorStore
+from connectors_sdk.exceptions.swallow import swallow_connector_errors
+from connectors_sdk.logger import (
+    ConnectorLoggerAdapter,
+    configure_logging,
+    get_logger,
+)
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -28,10 +69,15 @@ from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    BaseInternalExportFileConnectorSettings,
     BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -44,6 +90,10 @@ from connectors_sdk.settings.exceptions import (
 from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
+    # Logger
+    "ConnectorLoggerAdapter",
+    "configure_logging",
+    "get_logger",
     # HTTP Client
     "BaseClientApi",
     "RateLimit",
@@ -55,6 +105,11 @@ __all__ = [
     "ApiUnauthorizedError",
     # Base Settings
     "BaseConnectorSettings",
+    "BaseExternalImportConnectorSettings",
+    "BaseInternalEnrichmentConnectorSettings",
+    "BaseInternalExportFileConnectorSettings",
+    "BaseInternalImportFileConnectorSettings",
+    "BaseStreamConnectorSettings",
     # Base Configs
     "BaseConfigModel",
     "BaseExternalImportConnectorConfig",
@@ -65,6 +120,43 @@ __all__ = [
     # Exceptions
     "ConfigError",
     "ConfigValidationError",
+    # Standardized connector errors
+    "Criticity",
+    "ConnectorError",
+    "UnknownError",
+    "ConfigurationError",
+    "ConfigurationInvalidError",
+    "ProviderApiError",
+    "ProviderApiAuthenticationError",
+    "ProviderApiAuthorizationError",
+    "ProviderApiNotFoundError",
+    "ProviderApiRateLimitError",
+    "ProviderApiServerError",
+    "ProviderApiTimeoutError",
+    "ProviderApiConnectionError",
+    "ProviderApiInvalidResponseError",
+    "ProviderApiUnknownError",
+    "OctiError",
+    "OctiAuthenticationError",
+    "OctiVersionIncompatibleError",
+    "OctiUnreachableError",
+    "TargetError",
+    "TargetAuthenticationError",
+    "TargetAuthorizationError",
+    "TargetRateLimitError",
+    "TargetUnreachableError",
+    "TargetRejectedError",
+    "DataError",
+    "DataNotFoundError",
+    "DataConversionError",
+    "DataInvalidValueError",
+    "DataUnsupportedTypeError",
+    "DataOutOfScopeError",
+    "DataTlpExceededError",
+    "DataMissingDataError",
+    "LegacyError",
+    "ErrorStore",
+    "swallow_connector_errors",
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
@@ -75,7 +167,5 @@ __all__ = [
     "ExternalImportConnectorState",
     # Connector base classes
     "ExternalImportConnector",
-    "ConnectorLogger",
     "BaseDataProcessor",
-    "WorkManager",
 ]

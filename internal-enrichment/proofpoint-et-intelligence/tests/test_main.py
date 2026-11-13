@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector import ConnectorSettings, ProofpointEtIntelligenceConnector
+from connectors_sdk.models.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 
 
@@ -20,11 +21,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "ProofPoint ET Intelligence",
                     "scope": "IPv4-Addr,Domain-Name,StixFile",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER+STRICT",
                 },
                 "proofpoint_et_intelligence": {
                     "api_base_url": "https://api.emergingthreats.net/v1/",
                     "api_key": "test-api-key",
-                    "max_tlp": "TLP:AMBER+STRICT",
                     "import_last_seen_time_window": "P30D",
                 },
             }
@@ -71,4 +72,4 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
         connector.config.proofpoint_et_intelligence.api_key.get_secret_value()
         == "test-api-key"
     )
-    assert connector.config.proofpoint_et_intelligence.max_tlp == "TLP:AMBER+STRICT"
+    assert connector.config.connector.max_tlp == TLPLevel.AMBER_STRICT

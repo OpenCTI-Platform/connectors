@@ -15,7 +15,11 @@ from connector.util.config import (
 )
 from connector.util.cpe import parse_cpe_uri
 from connector.util.memory_usage import log_memory_usage
-from connector.util.nvd import build_nvd2_query_params, check_vuln_description
+from connector.util.nvd import (
+    build_nvd2_query_params,
+    check_vuln_description,
+    get_vulncheck_ssvc_properties,
+)
 from connector.util.source_logger import SourceLogger
 from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
@@ -200,6 +204,8 @@ def _create_vuln(
         if entity.metrics.cvss_metric_v40 is not None:
             cvss_data = entity.metrics.cvss_metric_v40[0].cvss_data
             custom_props.update(_get_cvss_v4_properties(cvss_data))
+
+        custom_props.update(get_vulncheck_ssvc_properties(entity.metrics.ssvc))
 
         if entity.metrics.epss is not None:
             epss = entity.metrics.epss

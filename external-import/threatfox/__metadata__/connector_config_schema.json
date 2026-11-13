@@ -12,11 +12,13 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Abuse.ch | ThreatFox",
       "description": "Name of the connector.",
+      "minLength": 1,
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -25,6 +27,7 @@
       ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
+        "minLength": 1,
         "type": "string"
       },
       "type": "array"
@@ -50,6 +53,7 @@
     "THREATFOX_CSV_URL": {
       "default": "https://threatfox.abuse.ch/export/csv/recent/",
       "description": "The Threat Fox URL",
+      "minLength": 1,
       "type": "string"
     },
     "THREATFOX_IMPORT_OFFLINE": {
@@ -95,6 +99,7 @@
     "THREATFOX_IOC_TO_IMPORT": {
       "default": "all_types",
       "description": "List of IOC types to retrieve, available parameters: all_types, ip:port, domain, url, md5_hash, sha1_hash, sha256_hash",
+      "minLength": 1,
       "type": "string"
     }
   },

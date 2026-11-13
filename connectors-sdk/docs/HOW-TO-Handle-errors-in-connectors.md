@@ -67,6 +67,168 @@
 
     → Ensures **essential finalization and state recording** happen even if an error occurs.
 
+## Standardized connector errors
+
+The SDK defines a shared set of errors so that every connector describes a failure the same way. Each error carries a standardized `code` and a `criticity`:
+
+| Criticity | Value | Meaning |
+|---|---|---|
+| `Criticity.CRITICAL` | 50 | The run fails and will keep failing until someone intervenes |
+| `Criticity.ERROR` | 40 | The run fails, but a later attempt may succeed |
+| `Criticity.WARNING` | 30 | One item fails; the run skips it and continues |
+
+The values are the matching `logging` levels.
+
+All errors derive from `ConnectorError`, grouped into categories:
+
+| Category | Error | Code | Criticity |
+|---|---|---|---|
+| `ConfigurationError` | `ConfigurationInvalidError` | `config.invalid` | CRITICAL |
+| `ProviderApiError` (the source the connector reads) | `ProviderApiAuthenticationError` | `api.authentication` | CRITICAL |
+| | `ProviderApiAuthorizationError` | `api.authorization` | CRITICAL |
+| | `ProviderApiNotFoundError` | `api.not_found` | CRITICAL |
+| | `ProviderApiRateLimitError` | `api.rate_limit` | ERROR |
+| | `ProviderApiServerError` | `api.server` | ERROR |
+| | `ProviderApiTimeoutError` | `api.timeout` | ERROR |
+| | `ProviderApiConnectionError` | `api.connection` | ERROR |
+| | `ProviderApiInvalidResponseError` | `api.invalid_response` | ERROR |
+| | `ProviderApiUnknownError` | `api.unknown` | ERROR |
+| `OctiError` | `OctiAuthenticationError` | `octi.authentication` | CRITICAL |
+| | `OctiVersionIncompatibleError` | `octi.version_incompatible` | CRITICAL |
+| | `OctiUnreachableError` | `octi.unreachable` | ERROR |
+| `TargetError` (stream targets) | `TargetAuthenticationError` | `target.authentication` | CRITICAL |
+| | `TargetAuthorizationError` | `target.authorization` | CRITICAL |
+| | `TargetRateLimitError` | `target.rate_limit` | ERROR |
+| | `TargetUnreachableError` | `target.unreachable` | ERROR |
+| | `TargetRejectedError` | `target.rejected` | WARNING |
+| `DataError` (one item) | `DataNotFoundError` | `data.not_found` | WARNING |
+| | `DataConversionError` | `data.conversion` | WARNING |
+| | `DataInvalidValueError` | `data.invalid_value` | WARNING |
+| | `DataUnsupportedTypeError` | `data.unsupported_type` | WARNING |
+| | `DataOutOfScopeError` | `data.out_of_scope` | WARNING |
+| | `DataTlpExceededError` | `data.tlp_exceeded` | WARNING |
+| | `DataMissingDataError` | `data.missing_data` | WARNING |
+| none | `UnknownError` | `other.unknown` | CRITICAL |
+| `LegacyError` (the older SDK errors) | see below | `*.legacy` | ERROR |
+
+- **Raise the concrete errors, catch the categories**
+
+    → `ConnectorError` and the categories are abstract: instantiating them raises a `TypeError`. Use them only in `except` clauses to handle a whole family.
+
+    ```python
+    from connectors_sdk import DataError, DataConversionError, ProviderApiError
+
+    for item in items:
+        try:
+            stix_objects.extend(converter.convert(item))
+        except DataError as err:  # one item fails: log it, skip it, keep going
+            logger.warning("Skipping item", {"code": err.code, "error": str(err)})
+
+
+    def convert(item):
+        try:
+            ...
+        except KeyError as err:
+            raise DataConversionError(f"Missing field in {item['id']}") from err
+    ```
+
+- **Specialize a standard error rather than inventing a code**
+
+    → A subclass of a concrete error keeps its code and criticity (`class MyFeedTimeoutError(ProviderApiTimeoutError): ...`). A new concrete subclass of a category must declare both `code` and `criticity`, or the class definition raises a `TypeError`.
+
+- **Raise `ConfigurationInvalidError` in Pydantic validators**
+
+    → `ConfigurationInvalidError` is also a `ValueError`, so Pydantic handles it like any validation failure: it is collected with the other invalid fields into one `ValidationError`, as a `value_error`, with the original error in the `ctx` of the error details. `BaseConnectorSettings` then raises its usual `ConfigValidationError` from that `ValidationError`.
+
+    ```python
+    from connectors_sdk import BaseConfigModel, ConfigurationInvalidError
+    from pydantic import field_validator
+
+
+    class MyFeedConfig(BaseConfigModel):
+        url: str
+
+        @field_validator("url")
+        @classmethod
+        def check_scheme(cls, value: str) -> str:
+            if not value.startswith("https://"):
+                raise ConfigurationInvalidError("url must use https")
+            return value
+    ```
+
+    Outside a validator, it behaves like the other standard errors. Note that an `except ValueError` clause catches it too.
+
+- **The older SDK errors are `LegacyError`s**
+
+    → `BaseClientApi` still raises `ApiClientError` and its subclasses, and connectors still raise `ConfigError`, `DataRetrievalError` and `UseCaseError`. These older errors are concrete subclasses of the abstract `LegacyError` category, so they are `ConnectorError`s that can be recorded and reported. Their names, modules, constructors and parent classes don't change, so existing `except` clauses keep working. `except LegacyError` catches all of them, and none of the standard categories does.
+
+    | Older error | Code | Criticity |
+    |---|---|---|
+    | `ApiClientError` | `api.unknown.legacy` | ERROR |
+    | `ApiUnauthorizedError` | `api.authentication.legacy` | ERROR |
+    | `ApiForbiddenError` | `api.authorization.legacy` | ERROR |
+    | `ApiNotFoundError` | `api.not_found.legacy` | ERROR |
+    | `ApiRateLimitError` | `api.rate_limit.legacy` | ERROR |
+    | `ApiServerError` | `api.server.legacy` | ERROR |
+    | `ConfigError`, `ConfigValidationError` | `config.invalid.legacy` | ERROR |
+    | `DataRetrievalError` | `api.retrieval.legacy` | ERROR |
+    | `UseCaseError` | `data.conversion.legacy` | ERROR |
+
+    A connector's own subclass of an older error inherits its code and criticity. Every older error reports ERROR, even when the matching standard error is CRITICAL (`config.invalid`, `api.authentication`…) or WARNING. Migrate to the standard errors to give your failures the right criticity.
+
+### Reporting errors to OpenCTI
+
+`ErrorStore()` always returns the same store, so any part of the connector can record a handled error without passing an object around. At the end of a scheduled run, return the recorded errors from the callback given to `helper.schedule_process`: pycti sends them to OpenCTI with the connector's ping.
+
+```python
+from connectors_sdk import DataConversionError, ErrorStore
+
+
+def process_message(self):
+    store = ErrorStore()
+    store.clear()  # a run starts with an empty store
+    for item in items:
+        try:
+            ...
+        except DataConversionError as err:
+            store.record_error(err)  # handled: the run skips the item and continues
+    return [error.convert_to_pycti_format() for error in store.get_errors()]
+```
+
+- `record_error` accepts `ConnectorError` instances only, older SDK errors included. Anything else raises a `TypeError`.
+- `get_errors` returns the recorded error objects, in order. `convert_to_pycti_format()` turns each one into the `{"code", "message", "criticity"}` dict pycti expects.
+- **Clear the store at the start of each run**: otherwise the errors of previous runs are reported again. The SDK base classes (`ExternalImportConnector`) don't do it for you yet.
+- pycti keeps **one error per code** (the last one recorded wins) and **20 errors at most**, the most critical first.
+- The store is shared by the threads of a process, not across processes.
+
+### Skipping a failed item with `swallow_connector_errors`
+
+`@swallow_connector_errors(default=...)` replaces the `try / except ConnectorError / record_error / return a fallback` block. When the decorated function raises a `ConnectorError`, the decorator records it in `ErrorStore` and returns `default` instead. Decorate the function called for **one item**, with `default=[]`, and iterate over its result with `yield from`: a failed item yields nothing and the loop goes on with the next one.
+
+```python
+from collections.abc import Iterator
+
+from connectors_sdk import DataConversionError, swallow_connector_errors
+
+
+class Converter:
+    @swallow_connector_errors(default=[])
+    def convert(self, item: dict) -> list[Stix]:
+        if "id" not in item:
+            raise DataConversionError("Missing id")
+        return [...]
+
+    def convert_all(self, items: list[dict]) -> Iterator[Stix]:
+        for item in items:
+            yield from self.convert(item)  # a failed item yields nothing
+```
+
+- **Use it with parentheses**: `@swallow_connector_errors()` returns `None` on error, `@swallow_connector_errors(default=[])` returns an empty list. `@swallow_connector_errors` alone raises a `TypeError`. Type checkers see the fallback: with `default=None`, a function returning `list[Stix]` becomes `list[Stix] | None`.
+- **Never decorate a generator**: the code of a generator, an async generator or a coroutine runs after the decorator returns, so the decorator could not catch its errors, and a generator can't be resumed once an exception has left it. Decorating one of these functions raises a `TypeError` on import, and a decorated function that returns an iterator (a generator expression, `map`, `filter`, `iter(...)`) raises a `TypeError` on call. Return a list, or decorate the per-item function as above.
+- **Each swallowed call returns a shallow copy of `default`**: a `[]` or `{}` default is never shared between calls. A default holding mutable objects shares them.
+- **Every `ConnectorError` is swallowed, whatever its criticity**: a `ProviderApiAuthenticationError` (bad API key) is swallowed too, and then repeats for every item. Decorate only the functions whose failures concern one item, and let the errors that stop the run be raised elsewhere. The older SDK errors are `ConnectorError`s and are swallowed too: replace them with the standard errors before adding the decorator. Every other exception (`ValueError`, `KeyboardInterrupt`…) propagates unchanged.
+- **Swallowed errors aren't logged yet**: they are only recorded in `ErrorStore` and reach OpenCTI with the ping. Log them yourself if you need them in the connector's logs.
+
 ## Example
 
 Non working example of error handling in a connector:
@@ -196,7 +358,7 @@ class ClientAPI:
             sys.exit(0)
         except Exception as err: 
             # Log error in Error Handler
-            self.logger.error("Unexpected error.", {"error": str(err)})
+            self.logger.error("Unexpected error.", meta={"error": str(err)})
             # display error message in the OpenCTI UI            
             self.helper.api.work.report_expectation(
                 work_id=self.work_id, error={"error": error_message, "source": "CONNECTOR"}

@@ -1,9 +1,9 @@
-import os
 import sys
 import time
 from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ExternalImportConnector:
@@ -15,78 +15,41 @@ class ExternalImportConnector:
 
     Attributes:
         helper (OpenCTIConnectorHelper): The helper to use.
-        interval (str): The interval to use. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively.
-        update_existing_data (str): Whether to update existing data or not in OpenCTI.
+        interval (int): The interval between two runs, in seconds (from `CONNECTOR_DURATION_PERIOD`).
     """
 
     def __init__(self):
-        self.helper = OpenCTIConnectorHelper({})
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Specific connector attributes for external import connectors
-        try:
-            self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
-            self.helper.log_info(
-                f"Verifying integrity of the CONNECTOR_RUN_EVERY value: '{self.interval}'"
-            )
-            unit = self.interval[-1]
-            if unit not in ["d", "h", "m", "s"]:
-                raise TypeError
-            int(self.interval[:-1])
-        except TypeError as _:
-            msg = f"Error ({_}) when grabbing CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. It SHOULD be a string in the format '7d', '12h', '10m', '30s' where the final letter SHOULD be one of 'd', 'h', 'm', 's' standing for day, hour, minute, second respectively. "
-            self.helper.log_error(msg)
-            raise ValueError(msg)
-
-        update_existing_data = os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
-        if isinstance(update_existing_data, str) and update_existing_data.lower() in [
-            "true",
-            "false",
-        ]:
-            self.update_existing_data = (
-                True if update_existing_data.lower() == "true" else False
-            )
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
-            True,
-            False,
-        ]:
-            self.update_existing_data = update_existing_data
-        else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
-            self.helper.log_warning(msg)
-            self.update_existing_data = "false"
+        self.interval = int(self.config.connector.duration_period.total_seconds())
 
     def _collect_intelligence(self) -> list:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
-    def _get_interval(self) -> int:
-        """Returns the interval to use for the connector
+    def _get_state_updates(self) -> dict:
+        """State values to store after a successful run, in addition to last_run.
 
-        This SHOULD return always the interval in seconds. If the connector is execting that the parameter is received as hoursUncomment as necessary.
+        Called only when collecting and sending the bundle did not fail, so
+        connector-specific progress (e.g. a cursor) is not advanced on errors.
         """
-        unit = self.interval[-1:]
-        value = self.interval[:-1]
+        return {}
 
-        try:
-            if unit == "d":
-                # In days:
-                return int(value) * 60 * 60 * 24
-            elif unit == "h":
-                # In hours:
-                return int(value) * 60 * 60
-            elif unit == "m":
-                # In minutes:
-                return int(value) * 60
-            elif unit == "s":
-                # In seconds:
-                return int(value)
-        except Exception as e:
-            self.helper.log_error(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
-            raise ValueError(
-                f"Error when converting CONNECTOR_RUN_EVERY environment variable: '{self.interval}'. {str(e)}"
-            )
+    def _store_state(self, timestamp: int, state_updates: dict) -> None:
+        """Store last_run, plus any state updates from a successful run."""
+        self.helper.log_debug(
+            f"Grabbing current state and update it with last_run: {timestamp}"
+        )
+        current_state = self.helper.get_state() or {}
+        current_state["last_run"] = timestamp
+        current_state.update(state_updates)
+        self.helper.set_state(current_state)
+
+    def _get_interval(self) -> int:
+        """Returns the interval to use for the connector, in seconds."""
+        return self.interval
 
     def run(self) -> None:
         # Main procedure
@@ -127,6 +90,7 @@ class ExternalImportConnector:
                         self.helper.connect_id, friendly_name
                     )
 
+                    state_updates = {}
                     try:
                         # Performing the collection of intelligence
                         bundle_objects = self._collect_intelligence(
@@ -143,6 +107,7 @@ class ExternalImportConnector:
                                 work_id=work_id,
                                 cleanup_inconsistent_bundle=True,
                             )
+                        state_updates = self._get_state_updates()
 
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -154,15 +119,7 @@ class ExternalImportConnector:
                     )
                     self.helper.log_info(message)
 
-                    self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {timestamp}"
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = timestamp
-                    else:
-                        current_state = {"last_run": timestamp}
-                    self.helper.set_state(current_state)
+                    self._store_state(timestamp, state_updates)
 
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(

@@ -22,7 +22,7 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 > library forbids a Sighting referencing an observable).
 
 ## Behavior & safety
-- **Custom TLP check** (not `helper.check_max_tlp`) — skips observables above `METRAS_MAX_TLP`.
+- **Custom TLP check** (not `helper.check_max_tlp`) — skips observables above `CONNECTOR_MAX_TLP`.
 - **Refangs** values before querying Metras.
 - **Partial results**: each lookup is wrapped; if at least one succeeds, results are sent.
   If *all* lookups fail, a `ValueError` is raised so the failure is visible in the OpenCTI UI.
@@ -40,10 +40,10 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 | `CONNECTOR_SCOPE` | no | `IPv4-Addr,StixFile` | Observable types to enrich |
 | `CONNECTOR_AUTO` | no | `false` | Auto-enrich on observable creation |
 | `CONNECTOR_LOG_LEVEL` | no | `error` | Log level |
+| `CONNECTOR_MAX_TLP` | no | `TLP:AMBER+STRICT` | Max TLP to enrich (`TLP:CLEAR`/`TLP:WHITE`/`TLP:GREEN`/`TLP:AMBER`/`TLP:AMBER+STRICT`/`TLP:RED`). Replaces the deprecated `METRAS_MAX_TLP` |
 | `METRAS_API_BASE_URL` | no | `https://api.metras.sa/api` | Metras API base URL |
 | `METRAS_API_KEY` | yes | — | Metras API key |
 | `METRAS_VERIFY_SSL` | no | `true` | Verify TLS certificates |
-| `METRAS_MAX_TLP` | no | `amber+strict` | Max TLP to enrich (`clear`/`white`/`green`/`amber`/`amber+strict`/`red`) |
 
 ## Usage
 Right-click an IPv4 or file-hash observable → **Enrich** → *Metras-Enrichment*, or set

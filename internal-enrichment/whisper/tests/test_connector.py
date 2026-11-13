@@ -1365,7 +1365,7 @@ def test_tlp_check_refuses_when_marking_exceeds_max_tlp(helper, client, make_con
     # max_tlp — build a fresh instance via the make_config factory with
     # the lowered TLP ceiling, then feed it a TLP:RED observable. The
     # connector must refuse to enrich, log a warning, and NOT call Whisper.
-    config = make_config(max_tlp="TLP:AMBER")
+    config = make_config(connector_overrides={"max_tlp": "TLP:AMBER"})
     connector = WhisperConnector(helper=helper, config=config, client=client)
     observable = {
         "id": "ipv4--x",
@@ -1374,7 +1374,7 @@ def test_tlp_check_refuses_when_marking_exceeds_max_tlp(helper, client, make_con
         "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}],
     }
     result = connector._process_message(_v7_payload(observable))
-    assert "exceeds whisper.max_tlp" in result
+    assert "exceeds connector.max_tlp" in result
     helper.send_stix2_bundle.assert_not_called()
     helper.connector_logger.warning.assert_called()
 

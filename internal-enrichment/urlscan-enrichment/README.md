@@ -62,6 +62,7 @@ This connector enriches URLs and IP addresses by submitting them to URLScan for 
 | `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url` (submission), `domain-name` (submission), `hostname` (submission), `ipv4-addr` (search), `ipv6-addr` (search) |
 | `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment                                                                                                   |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`)                                                                           |
+| `connector_max_tlp` | `CONNECTOR_MAX_TLP` | No | Maximum TLP of the entities to enrich (default: `TLP:AMBER`). Replaces the deprecated `URLSCAN_ENRICHMENT_MAX_TLP` |
 
 ### URLScan Configuration
 
@@ -71,7 +72,6 @@ This connector enriches URLs and IP addresses by submitting them to URLScan for 
 | `urlscan_import_screenshot` | `URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT` | No | Import screenshot (default: true) |
 | `urlscan_visibility` | `URLSCAN_ENRICHMENT_VISIBILITY` | No | Scan visibility (default: public) |
 | `urlscan_search_filtered_by_date` | `URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE` | No | Search date filter (default: >now-1d) |
-| `urlscan_max_tlp` | `URLSCAN_ENRICHMENT_MAX_TLP` | No | Maximum TLP for processing |
 | `urlscan_create_indicator` | `URLSCAN_ENRICHMENT_CREATE_INDICATOR` | No | Create indicator (default: true) |
 
 ---

@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'crt.sh'
+  # scope: 'crtsh'
+  # log_level: 'error'
+  # duration_period: 'PT1H' # ISO8601 format in String, start with 'P...' for Period
+
+crtsh:
+  domain: 'ChangeMe'
+  # labels: 'crtsh,osint'
+  # marking_refs: 'TLP:WHITE' # No marking if not set
+  # is_expired: false
+  # is_wildcard: false

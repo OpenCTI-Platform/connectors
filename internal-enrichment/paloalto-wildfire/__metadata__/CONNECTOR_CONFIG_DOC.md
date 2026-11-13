@@ -4,18 +4,19 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
-| PALOALTO_WILDFIRE_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Palo Alto Networks WildFire API key. |
-| CONNECTOR_NAME | `string` |  | string | `"Palo Alto Networks WildFire"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "Artifact"]` | The scope of the connector (observable types to enrich). |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| PALOALTO_WILDFIRE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://wildfire.paloaltonetworks.com/publicapi"` | WildFire API base URL (cloud region or appliance). |
-| PALOALTO_WILDFIRE_SUBMIT_UNKNOWN | `boolean` |  | boolean | `false` | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Disabled by default (opt-in): submission uploads the sample to WildFire. |
-| PALOALTO_WILDFIRE_MAX_FILE_SIZE | `integer` |  | integer | `33554432` | Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to WildFire. |
-| PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT | `integer` |  | integer | `600` | Maximum time (in seconds) to wait for a submitted file's verdict before giving up. |
-| PALOALTO_WILDFIRE_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Maximum TLP of the observable the connector is allowed to enrich. |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| PALOALTO_WILDFIRE_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Palo Alto Networks WildFire API key. |
+| CONNECTOR_NAME | `string` |  | string |  | `"Palo Alto Networks WildFire"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["StixFile", "Artifact"]` | The scope of the connector (observable types to enrich). |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
+| CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_MAX_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"amber"` | The highest TLP of the entities the connector is allowed to enrich. Entities marked with a higher TLP are skipped and never sent to the external source. |
+| PALOALTO_WILDFIRE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://wildfire.paloaltonetworks.com/publicapi"` | WildFire API base URL (cloud region or appliance). |
+| PALOALTO_WILDFIRE_SUBMIT_UNKNOWN | `boolean` |  | boolean |  | `false` | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Disabled by default (opt-in): submission uploads the sample to WildFire. |
+| PALOALTO_WILDFIRE_MAX_FILE_SIZE | `integer` |  | integer |  | `33554432` | Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to WildFire. |
+| PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT | `integer` |  | integer |  | `600` | Maximum time (in seconds) to wait for a submitted file's verdict before giving up. |
+| PALOALTO_WILDFIRE_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

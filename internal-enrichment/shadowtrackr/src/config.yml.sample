@@ -10,10 +10,10 @@ connector:
   scope: 'IPv4-Addr,IPv6-Addr,Indicator'
 #   auto: true # Enable/disable auto-enrichment of observables
 #   log_level: 'error'
+#   max_tlp: "TLP:AMBER"
 
 shadowtrackr:
   api_key: 'ChangeMe'
-#   max_tlp: "TLP:AMBER"
 #   replace_with_lower_score: true
 #   replace_valid_to_date: true
 

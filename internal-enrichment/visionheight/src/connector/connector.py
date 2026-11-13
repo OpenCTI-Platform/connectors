@@ -26,10 +26,7 @@ class VisionHeightConnector:
             base_url=str(self.config.visionheight.api_base_url),
             api_key=self.config.visionheight.api_key.get_secret_value(),
         )
-        self.converter_to_stix = ConverterToStix(
-            self.helper,
-            tlp_level=self.config.visionheight.max_tlp_level,
-        )
+        self.converter_to_stix = ConverterToStix(self.helper)
 
         # Bundle of STIX objects accumulated for the current enrichment job.
         self.stix_objects_list: list = []
@@ -101,10 +98,12 @@ class VisionHeightConnector:
             if marking["definition_type"] == "TLP":
                 tlp = marking["definition"]
 
-        if not self.helper.check_max_tlp(tlp, self.config.visionheight.max_tlp_level):
+        if not self.helper.check_max_tlp(
+            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        ):
             raise ValueError(
                 "[CONNECTOR] TLP of the observable exceeds the connector's "
-                "max_tlp_level; refusing to enrich."
+                "max TLP; refusing to enrich."
             )
 
     # ------------------------------------------------------------------ #

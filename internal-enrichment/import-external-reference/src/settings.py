@@ -4,7 +4,9 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field
+from pydantic.json_schema import SkipJsonSchema
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -22,6 +24,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The scope (MIME types) handled by the connector.",
         default=["External-Reference"],
     )
+    # Hidden from the config schema: external references carry no TLP marking to compare
+    # with, so a max TLP would protect nothing. The field stays inherited from the SDK
+    # base config.
+    max_tlp: SkipJsonSchema[TLPLevel] = Field(default=TLPLevel.RED)
 
 
 class ImportExternalReferenceConfig(BaseConfigModel):

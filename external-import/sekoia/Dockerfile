@@ -7,9 +7,8 @@ COPY src/requirements.txt /opt/opencti-connector-sekoia/src/requirements.txt
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
+RUN apk --no-cache upgrade && \
     apk --no-cache add --virtual .build-dependencies git build-base && \
-    apk --no-cache add libmagic wget && \
     pip3 install --no-cache-dir -r /opt/opencti-connector-sekoia/src/requirements.txt && \
     apk del .build-dependencies && \
     rm -rf /var/cache/apk/*

@@ -6,11 +6,12 @@ COPY src /opt/opencti-connector-visionheight
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev
+RUN apk --no-cache upgrade && \
+    apk --no-cache add git build-base libffi-dev
 
 RUN cd /opt/opencti-connector-visionheight && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /

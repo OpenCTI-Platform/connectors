@@ -5,12 +5,11 @@ by connectors-sdk's `BaseConnectorSettings`. The nested field name sets the
 environment-variable prefix, so `hunter.api_key` is `HUNTER_API_KEY`.
 """
 
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -84,20 +83,22 @@ class HunterConfig(BaseConfigModel):
         default=24,
         gt=0,
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="The maximal TLP of the entity being enriched.",
-        default="TLP:AMBER",
     )
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        # The SDK declares `id` as required with no default, which would force
+        # every catalog deployment to supply one by hand. This connector-specific
+        # UUID v4 keeps CONNECTOR_ID optional for manager-supported deployments.
+        default="925c878a-d754-4ecd-b5d4-fcf8b22c767d",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Intel 471 Hunter",

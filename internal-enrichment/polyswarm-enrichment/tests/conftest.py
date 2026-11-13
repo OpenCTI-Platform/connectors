@@ -76,7 +76,6 @@ class StubConfig:
         self.api_key = os.environ.get("POLYSWARM_API_KEY", "test-key-placeholder")
         self.community = "default"
         self.polykg_api_url = "http://fake-polykg:8000"
-        self.max_tlp = ""
         self.replace_with_lower_score = True
         self.max_polling_time = 120
         self.ioc_enabled = True
@@ -96,6 +95,19 @@ def stub_helper():
 @pytest.fixture()
 def stub_config():
     return StubConfig()
+
+
+@pytest.fixture(autouse=True)
+def stub_startup_api_access_check(monkeypatch):
+    """Keep the ``ConnectorClient`` startup access check off the live API.
+
+    ``_validate_api_access`` sends a HEAD request through ``PolyswarmAPI.exists``
+    whenever a client is built, outside any VCR cassette. Tests of the check
+    itself replace the SDK with a mock and are not affected.
+    """
+    monkeypatch.setattr(
+        "polyswarm_api.api.PolyswarmAPI.exists", lambda _self, *_args, **_kw: True
+    )
 
 
 # ---------------------------------------------------------------------------

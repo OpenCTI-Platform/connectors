@@ -37,13 +37,13 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "Url,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
                     "organization_code": "ACM",
-                    "max_tlp": "TLP:CLEAR",
                 },
             }
         )

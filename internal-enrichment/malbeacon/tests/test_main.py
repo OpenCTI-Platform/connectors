@@ -27,12 +27,12 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "IPv4-Addr,IPv6-Addr,Domain-Name",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "malbeacon": {
                     "api_key": "test-api-key",
                     "api_base_url": "https://api.malbeacon.com/v1/",
                     "indicator_score_level": 50,
-                    "max_tlp": "TLP:AMBER",
                 },
             }
         )

@@ -44,11 +44,12 @@ from connector.settings import ConnectorSettings  # noqa: E402
 from connector.whisper_client import WhisperClient  # noqa: E402
 
 
-def _test_config(**whisper_overrides) -> dict:
+def _test_config(connector_overrides: dict | None = None, **whisper_overrides) -> dict:
     """Build the fixed in-memory config dict the settings stubs load from.
 
-    ``whisper_overrides`` are merged into the ``whisper:`` block so a caller
-    can do ``_test_config(max_tlp="TLP:AMBER")``.
+    ``connector_overrides`` are merged into the ``connector:`` block so a
+    caller can do ``_test_config(connector_overrides={"max_tlp": "TLP:AMBER"})``,
+    and ``whisper_overrides`` into the ``whisper:`` block.
     """
     return {
         "opencti": {"url": "http://localhost:8080", "token": "test-token"},
@@ -58,11 +59,12 @@ def _test_config(**whisper_overrides) -> dict:
             "scope": "IPv4-Addr,IPv6-Addr,Domain-Name,Autonomous-System",
             "log_level": "error",
             "auto": False,
+            "max_tlp": "TLP:RED",
+            **(connector_overrides or {}),
         },
         "whisper": {
             "api_url": "https://api.whisper.test",
             "api_key": "test-key",
-            "max_tlp": "TLP:RED",
             **whisper_overrides,
         },
     }
@@ -92,17 +94,21 @@ class StubConnectorSettings(ConnectorSettings):
         return handler(cls._config)
 
 
-def build_settings(**whisper_overrides) -> ConnectorSettings:
+def build_settings(
+    connector_overrides: dict | None = None, **whisper_overrides
+) -> ConnectorSettings:
     """Construct a ``ConnectorSettings`` from a fixed in-memory config dict.
 
-    ``whisper_overrides`` are merged into the ``whisper:`` block so a test can
-    do ``build_settings(max_tlp="TLP:AMBER")``. A throwaway subclass carries
-    the override-merged dict so ``StubConnectorSettings`` itself stays
-    immutable (its own ``_config`` is the no-overrides default).
+    ``connector_overrides`` are merged into the ``connector:`` block and
+    ``whisper_overrides`` into the ``whisper:`` block, so a test can do
+    ``build_settings(connector_overrides={"max_tlp": "TLP:AMBER"})``. A
+    throwaway subclass carries the override-merged dict so
+    ``StubConnectorSettings`` itself stays immutable (its own ``_config`` is
+    the no-overrides default).
     """
 
     class _StubSettings(StubConnectorSettings):
-        _config: ClassVar[dict] = _test_config(**whisper_overrides)
+        _config: ClassVar[dict] = _test_config(connector_overrides, **whisper_overrides)
 
     return _StubSettings()
 
@@ -141,13 +147,17 @@ def client():
 
 @pytest.fixture
 def make_config():
-    """Factory for ``ConnectorSettings`` instances. Default ``max_tlp=TLP:RED``
-    keeps every test observable below the ceiling unless a test overrides.
-    Override ``whisper:`` fields via ``make_config(max_tlp="TLP:AMBER")`` etc.
+    """Factory for ``ConnectorSettings`` instances. Default
+    ``connector.max_tlp=TLP:RED`` keeps every test observable below the
+    ceiling unless a test overrides it via
+    ``make_config(connector_overrides={"max_tlp": "TLP:AMBER"})``.
+    Override ``whisper:`` fields via keyword arguments.
     """
 
-    def _factory(**overrides) -> ConnectorSettings:
-        return build_settings(**overrides)
+    def _factory(
+        connector_overrides: dict | None = None, **overrides
+    ) -> ConnectorSettings:
+        return build_settings(connector_overrides, **overrides)
 
     return _factory
 

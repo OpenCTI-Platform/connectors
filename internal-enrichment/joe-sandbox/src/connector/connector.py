@@ -667,8 +667,33 @@ class JoeSandboxConnector:
                 bundle_objects.append(relationship)
         return bundle_objects
 
+    @staticmethod
+    def _extract_tlp(entity: dict) -> str | None:
+        """Return the TLP marking definition of the entity, or None if it has none."""
+        for marking in entity.get("objectMarking") or []:
+            if marking.get("definition_type") == "TLP":
+                return marking.get("definition")
+        return None
+
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
+        entity_tlp = self._extract_tlp(observable)
+        if not OpenCTIConnectorHelper.check_max_tlp(
+            entity_tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
+        ):
+            self.helper.connector_logger.warning(
+                "Skipping enrichment: entity TLP is above the max TLP",
+                {
+                    "entity_tlp": entity_tlp,
+                    "max_tlp": f"TLP:{self.config.connector.max_tlp.upper()}",
+                },
+            )
+            if not data.get("event_type"):
+                # Playbook message: send the bundle back unchanged so the playbook goes on
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(data["stix_objects"])
+                )
+            return "Skipping enrichment: entity TLP is above the max TLP"
         return self._process_observable(observable)
 
     def run(self):

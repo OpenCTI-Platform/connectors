@@ -2,6 +2,7 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk.models.enums import TLPLevel
 from pure_signal_scout.settings import ConnectorSettings
 
 
@@ -20,11 +21,11 @@ from pure_signal_scout.settings import ConnectorSettings
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             id="full_valid_settings_dict",
@@ -86,11 +87,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
                     "api_token": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             "opencti.url",
@@ -108,10 +109,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "pure_signal_scout": {
                     "api_url": "https://taxii.cymru.com/api/scout",
-                    "max_tlp": "TLP:AMBER",
                 },
             },
             "pure_signal_scout.api_token",
@@ -147,3 +148,34 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     # Then
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_pure_signal_scout_max_tlp_to_connector_max_tlp():
+    """
+    Test that the deprecated `pure_signal_scout.max_tlp` (`PURE_SIGNAL_SCOUT_MAX_TLP`)
+    is migrated to `connector.max_tlp` (`CONNECTOR_MAX_TLP`).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {},
+                    "pure_signal_scout": {
+                        "api_token": "SecretStr",
+                        "max_tlp": "TLP:RED",
+                    },
+                }
+            )
+
+    # Given
+    # A config dict that still sets max_tlp in the pure_signal_scout section.
+
+    # When
+    with pytest.warns(UserWarning, match="pure_signal_scout.max_tlp"):
+        settings = FakeConnectorSettings()
+
+    # Then
+    assert settings.connector.max_tlp == TLPLevel.RED

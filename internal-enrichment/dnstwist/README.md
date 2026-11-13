@@ -115,6 +115,8 @@ Select a Domain-Name observable, then click the enrichment button and choose DNS
 
 The connector uses DNSTwist to generate domain permutations and checks DNS resolution, creating a network of related domains.
 
+Domains marked with a TLP above `CONNECTOR_MAX_TLP` (default: `TLP:RED`, no limit) are skipped, so no DNS lookup is made for them.
+
 ### Data Flow
 
 ```mermaid

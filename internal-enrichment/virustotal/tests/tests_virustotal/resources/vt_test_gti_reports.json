@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "report--23-00005535",
+      "type": "collection",
+      "attributes": {
+        "name": "Lumma Stealer actively deployed in multiple campaigns",
+        "collection_type": "report",
+        "description": "Intrinsec writeup on Lumma Stealer infrastructure.",
+        "creation_date": 1700000000,
+        "origin": "Crowdsourced"
+      },
+      "links": {
+        "self": "https://www.virustotal.com/api/v3/collections/report--23-00005535"
+      }
+    }
+  ],
+  "links": {
+    "self": "https://www.virustotal.com/api/v3/ip_addresses/144.76.173.247/reports?limit=40"
+  }
+}

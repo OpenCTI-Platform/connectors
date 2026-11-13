@@ -265,7 +265,7 @@ class TestProcessMessage:
         obj.client = MagicMock()
         obj.client.get_profile.return_value = None
         obj.client.query_polyswarm.return_value = None
-        obj.max_tlp = None
+        obj.max_tlp = "TLP:RED"
         obj.replace_with_lower_score = True
         obj.ioc_enabled = False
         return obj
@@ -830,7 +830,7 @@ class TestProcessMessageScoreUpdate:
         )
         obj.client = MagicMock()
         obj.client.get_profile.return_value = None
-        obj.max_tlp = None
+        obj.max_tlp = "TLP:RED"
         obj.replace_with_lower_score = True
         obj.ioc_enabled = False
         return obj

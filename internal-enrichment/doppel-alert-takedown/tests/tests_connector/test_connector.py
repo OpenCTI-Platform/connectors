@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 from connector.connector import DoppelConnector
 from connector.converter_to_stix import ConverterToStix
+from connectors_sdk.models.enums import TLPLevel
 from doppel_client import DoppelClientError
 
 
@@ -27,7 +28,7 @@ def connector():
     instance.config.connector.auto = False
     instance.config.connector.auto_update = False
     instance.config.doppel_alert_takedown.takedown_comment = "Confirmed by OpenCTI."
-    instance.config.doppel_alert_takedown.max_tlp = "TLP:RED"
+    instance.config.connector.max_tlp = TLPLevel.RED
     instance.config.doppel_alert_takedown.tags = []
     instance.client = MagicMock()
     instance.client.get_alert.return_value = {

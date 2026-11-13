@@ -7,7 +7,6 @@ connector:
   id: 'ChangeMe'
   name: 'Splunk SOAR Push'
   scope: 'splunk-soar-push'
-  confidence_level: 100
   log_level: 'info'
   live_stream_id: 'ChangeMe' # ID of the live stream created in OpenCTI
   live_stream_listen_delete: true

@@ -28,8 +28,8 @@ The Criminal IP connector enriches **IPv4 addresses** and **domain names** with 
 | Connector Scope          | `CONNECTOR_SCOPE`      | `connector.scope`     | `IPv4-Addr,Domain-Name` | No    |
 | Connector Auto           | `CONNECTOR_AUTO`       | `connector.auto`      | `false`               | No       |
 | Connector Log Level      | `CONNECTOR_LOG_LEVEL`  | `connector.log_level` | `error`               | No       |
+| Connector Max TLP (replaces the deprecated `CRIMINAL_IP_MAX_TLP`) | `CONNECTOR_MAX_TLP` | `connector.max_tlp` | `TLP:AMBER` | No |
 | Criminal IP API Token    | `CRIMINAL_IP_TOKEN`    | `criminal_ip.token`   |                       | Yes      |
-| Max TLP                  | `CRIMINAL_IP_MAX_TLP`  | `criminal_ip.max_tlp` | `TLP:AMBER`           | No       |
 
 ## Installation
 

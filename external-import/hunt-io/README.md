@@ -62,9 +62,27 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description                                                                                                               |
 |--------------|--------------|-----------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------------------|
+| API version  | api_version  | `HUNT_IO_API_VERSION`       | v2      | No        | Which Hunt.io C2 feed API to target. Valid values: `v2`, `v3`. Must be changed together with `api_base_url` — see below.  |
 | API base URL | api_base_url | `HUNT_IO_API_BASE_URL`      |         | Yes       |                                                                                                                           |
 | API key      | api_key      | `HUNT_IO_API_KEY`           |         | Yes       |                                                                                                                           |
 | TLP level    | tlp_level    | `HUNT_IO_TLP_LEVEL`         | amber   | No        | The Traffic Light Protocol level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
+
+#### Choosing an API version
+
+The two Hunt.io APIs use mutually exclusive authentication, so `api_version` and `api_base_url` must
+always be set together:
+
+| `api_version` | `api_base_url`                     | Authentication                    | Key format     |
+|---------------|------------------------------------|-----------------------------------|----------------|
+| `v2` (default)| `https://api.hunt.io/v1/feeds/c2`  | `token` header                    | any            |
+| `v3`          | `https://a.hunt.io/feeds/c2`       | `Authorization: Bearer`           | `ak_`-prefixed |
+
+> **Changing only the base URL will not work.** Pointing `HUNT_IO_API_BASE_URL` at the V3 endpoint
+> while leaving `HUNT_IO_API_VERSION` at `v2` keeps sending the `token` header, and V3 answers with
+> an HTTP 401 that is indistinguishable from a missing key. The same applies in reverse.
+
+Existing deployments are unaffected: `api_version` defaults to `v2`, which is the behaviour prior to
+this setting being introduced.
 
 ## Deployment
 
@@ -88,6 +106,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=Hunt.io
       - CONNECTOR_SCOPE=hunt-io
       - CONNECTOR_LOG_LEVEL=info
+      - HUNT_IO_API_VERSION=v2
       - HUNT_IO_API_BASE_URL=ChangeMe
       - HUNT_IO_API_KEY=ChangeMe
     restart: always

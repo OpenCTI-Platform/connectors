@@ -81,6 +81,18 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         description="Prefix for OpenCTI tags in MISP.",
     )
 
+    # Marking conversion configuration
+    marking_types_to_convert: str = Field(
+        default="TLP,PAP",
+        alias="MISP_MARKING_TYPES_TO_CONVERT",
+        description=(
+            "Comma-separated list of marking definition types (case-insensitive, "
+            "e.g. TLP, PAP) whose container markings are converted to MISP event tags. "
+            "This only controls tag conversion, it does not filter which containers "
+            "or objects are exported."
+        ),
+    )
+
     # Deletion configuration
     hard_delete: bool = Field(
         default=True,
@@ -108,6 +120,18 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
     def clean_url(cls, value: str) -> str:
         """Remove trailing slashes from the URL."""
         return value.rstrip("/")
+
+    def get_marking_types_allowlist(self) -> set:
+        """
+        Parse marking_types_to_convert into a normalized (upper-case) set.
+
+        :return: Set of allowed definition_type values, upper-cased.
+        """
+        return {
+            marking_type.strip().upper()
+            for marking_type in self.marking_types_to_convert.split(",")
+            if marking_type.strip()
+        }
 
 
 class _ConfigLoaderProxy(ConfigBaseSettings):

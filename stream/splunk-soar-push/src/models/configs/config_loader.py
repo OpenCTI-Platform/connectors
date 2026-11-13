@@ -114,7 +114,6 @@ class ConfigLoader(ConfigBaseSettings):
                 "type": self.connector.type,
                 "name": self.connector.name,
                 "scope": self.connector.scope,
-                "confidence_level": self.connector.confidence_level,
                 "log_level": self.connector.log_level,
                 "live_stream_id": self.connector.live_stream_id,
                 "live_stream_listen_delete": self.connector.live_stream_listen_delete,

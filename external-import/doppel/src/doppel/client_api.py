@@ -1,5 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import requests
 from doppel.constants import DOPPEL_ATTRIBUTION_HEADERS, RETRYABLE_REQUEST_ERRORS
@@ -15,6 +14,10 @@ from tenacity import (
 if TYPE_CHECKING:
     from doppel import ConnectorSettings
     from pycti import OpenCTIConnectorHelper
+
+
+class ResultWindowExceededError(requests.HTTPError):
+    """Raised when Doppel requires a narrower alert activity window."""
 
 
 class ConnectorClient:
@@ -124,7 +127,31 @@ class ConnectorClient:
             response.raise_for_status()
             return response
         except requests.HTTPError as http_err:
-            if http_err.response.status_code == 504:
+            try:
+                error_json = http_err.response.json()
+                error_msg = error_json.get("message", http_err.response.text)
+            except Exception:
+                error_json = {}
+                error_msg = http_err.response.text or str(http_err)
+
+            if (
+                http_err.response.status_code == 422
+                and error_json.get("code") == "result_window_exceeded"
+            ):
+                self.helper.connector_logger.warning(
+                    "[API] Alert result window exceeded; narrowing activity range",
+                    {
+                        "url": api_url,
+                        "maximum_results": error_json.get("maximum_results"),
+                        "params": params,
+                    },
+                )
+                raise ResultWindowExceededError(
+                    error_msg,
+                    response=http_err.response,
+                    request=http_err.request,
+                ) from http_err
+            elif http_err.response.status_code == 504:
                 self.helper.connector_logger.warning(
                     "[API] Gateway Timeout, retrying...",
                     {"url": api_url, "params": params},
@@ -137,12 +164,6 @@ class ConnectorClient:
                 )
                 raise
             else:
-                try:
-                    error_json = http_err.response.json()
-                    error_msg = error_json.get("message", http_err.response.text)
-                except Exception:
-                    error_msg = http_err.response.text or str(http_err)
-
                 self.helper.connector_logger.error(
                     "[API] HTTP error during fetch",
                     {
@@ -163,27 +184,23 @@ class ConnectorClient:
             )
             raise
 
-    def _get_alerts(
-        self, url: str, params: dict[str, Any], page: int, total_pages: int
-    ) -> list:
-        self.helper.connector_logger.info(
-            "[DoppelConnector] Fetching page {}/{}".format(page, total_pages)
-        )
-        response = self._request_data(url, params={**params, "page": page})
-        data = response.json()
-        alerts = data.get("alerts", [])
-        self.helper.connector_logger.info(
-            "[DoppelConnector] Successfully fetched page {}/{} with {} alerts".format(
-                page, total_pages, len(alerts)
-            )
-        )
-        return alerts
-
     def get_alerts(
-        self, last_activity_timestamp: str, page: int = 0, page_size: int = 100
-    ) -> list:
+        self,
+        last_activity_timestamp: str,
+        last_activity_before: str,
+        page: int = 0,
+        page_size: int = 100,
+    ) -> tuple[list, int, int]:
         """
-        Retrieve alerts from api
+        Retrieve one page of alerts.
+
+        Requests bound the window with ``last_activity_before`` and sort by the
+        external value ``last_activity`` (not ``last_activity_timestamp``)
+        ascending so the connector can checkpoint the newest activity time on
+        the page without skipping older alerts.
+
+        :return: alerts, ``total_pages``, and the window's total ``count`` from
+            that single response
         """
         alerts_endpoint = self.config.doppel.alerts_endpoint.lstrip("/")
         for prefix in ("v1/", "v2/"):
@@ -200,34 +217,32 @@ class ConnectorClient:
 
         params = {
             "last_activity_timestamp": last_activity_timestamp,
+            "last_activity_before": last_activity_before,
+            "sort_type": "last_activity",
+            "sort_order": "asc",
             "page": page,
             "page_size": page_size,
         }
 
         self.helper.connector_logger.info(
-            "[DoppelConnector] Fetching first page of alerts",
+            "[DoppelConnector] Fetching alerts page",
             {"url": url, "params": params},
         )
 
         response = self._request_data(url, params=params)
         data = response.json()
         metadata = data.get("metadata", {})
-        res = data.get("alerts", [])
+        alerts = data.get("alerts") or []
+        total_pages = metadata.get("total_pages", 0)
+        total_count = metadata.get("count", 0)
 
         self.helper.connector_logger.info(
-            "[DoppelConnector] Fetched first page of alerts",
-            {"url": url, "params": params, "metadata": metadata},
+            "[DoppelConnector] Fetched alerts page",
+            {
+                "url": url,
+                "params": params,
+                "metadata": metadata,
+                "alert_count": len(alerts),
+            },
         )
-        total_pages = metadata.get("total_pages", 0)
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(
-                    self._get_alerts, url, params, current_page, total_pages
-                )
-                # Doppel pagination is zero-indexed and total_pages is a count,
-                # so the final valid page is total_pages - 1.
-                for current_page in range(page + 1, total_pages)
-            ]
-            for future in as_completed(futures):
-                res.extend(future.result())
-        return res
+        return alerts, total_pages, total_count

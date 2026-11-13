@@ -2,7 +2,21 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseInternalEnrichmentConnectorSettings,
+    ConfigValidationError,
+)
+
+
+def test_settings_should_be_internal_enrichment_connector_settings():
+    """
+    Test that `ConnectorSettings` is an implementation of `BaseInternalEnrichmentConnectorSettings`
+    (from `connectors-sdk`), the settings base class dedicated to `INTERNAL_ENRICHMENT` connectors.
+    """
+    assert (
+        issubclass(ConnectorSettings, BaseInternalEnrichmentConnectorSettings) is True
+    )
 
 
 @pytest.mark.parametrize(
@@ -20,11 +34,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             id="full_valid_settings_dict",
@@ -97,11 +111,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "opencti.url",
@@ -118,11 +132,11 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:CLEAR",
                 },
                 "template": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
-                    "max_tlp_level": "clear",
                 },
             },
             "connector.id",

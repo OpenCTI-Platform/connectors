@@ -18,4 +18,5 @@ services:
       - GOOGLE_DTM_IMPORT_START_DATE=P10D
       - GOOGLE_DTM_ALERT_SEVERITY=
       - GOOGLE_DTM_ALERT_TYPE=
+      - GOOGLE_DTM_IMPORT_PASSWORDS=true
     restart: always

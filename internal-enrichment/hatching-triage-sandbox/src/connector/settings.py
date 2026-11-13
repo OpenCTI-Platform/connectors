@@ -1,12 +1,11 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, PositiveInt, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -25,7 +24,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Artifact", "Url"],
+        default=["Artifact", "StixFile", "Url"],
     )
 
 
@@ -61,15 +60,15 @@ class HatchingTriageSandboxConfig(BaseConfigModel):
         description="Label color for all other labels.",
         default="#54483b",
     )
-    max_tlp: Literal[
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_attempts: PositiveInt = Field(
+        description="Maximum number of attempts to fetch the overview report, wait for an analysis or download an extracted file when the Triage API returns an error (e.g. 502) or the file is not available yet.",
+        default=5,
+    )
+    max_tlp: str | None = DeprecatedField(
+        deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="max_tlp",
         description="Maximum TLP marking for observable submission.",
-        default="TLP:AMBER",
     )
 
 

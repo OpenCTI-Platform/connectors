@@ -34,11 +34,11 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "test, connector",
                     "log_level": "error",
                     "auto": True,
+                    "max_tlp": "TLP:AMBER",
                 },
                 "kaspersky": {
                     "api_base_url": "https://tip.kaspersky.com",
                     "api_key": "SecretStr",
-                    "max_tlp": "TLP:AMBER",
                     "zone_octi_score_mapping": "red:100,orange:80,yellow:60,gray:20,green:0",
                     "file_sections": "LicenseInfo,Zone,FileGeneralInfo",
                     "ipv4_sections": "LicenseInfo,Zone,IpGeneralInfo",

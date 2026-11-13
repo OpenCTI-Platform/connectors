@@ -75,11 +75,10 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 COPY --from=builder /python-libs /usr/local
 COPY --from=builder /usr/local/lib/libolm* /usr/local/lib/
 
-# Runtime native dependencies. ``libstdc++`` is required by libolm and
-# ``libmagic`` is required by the OpenCTI helper.
+# Runtime native dependencies. ``libstdc++`` is required by libolm.
 # hadolint ignore=DL3018
-RUN apk add --no-cache \
-        libmagic \
+RUN apk --no-cache upgrade && \
+    apk add --no-cache \
         libstdc++
 
 # Copy the connector source.
