@@ -34,6 +34,15 @@ class PolySwarmConfig(BaseConfigModel):
         default=ps_settings.DEFAULT_COMMUNITY,
         description="PolySwarm community (default or private).",
     )
+    allow_public_community: bool = Field(
+        default=False,
+        description=(
+            "Allow file uploads to the public PolySwarm community ('default'). "
+            "Uploaded files become visible to the PolySwarm community, so this is off "
+            "by default: set POLYSWARM_COMMUNITY to your private community, or set "
+            "this to true to submit publicly."
+        ),
+    )
     timeout: int = Field(
         default=ps_settings.DEFAULT_HTTP_TIMEOUT,
         description="HTTP timeout for PolySwarm API calls in seconds.",

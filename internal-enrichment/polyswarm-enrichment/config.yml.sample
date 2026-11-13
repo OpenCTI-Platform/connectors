@@ -6,8 +6,9 @@ connector:
   id: 'ChangeMe'  # Valid UUIDv4
   type: 'INTERNAL_ENRICHMENT'
   name: 'PolySwarm Hash Enrichment'
-  scope: 'StixFile,Artifact'
-  auto: true
+  scope: 'StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr'
+  # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
+  auto: false
   confidence_level: 80
   log_level: 'info'
   # max_tlp: 'TLP:RED'  # Refuse enrichment above this TLP (default: 'TLP:RED', no limit)
@@ -17,6 +18,24 @@ polyswarm:
   community: 'default'        # 'default' or 'private' (enables dual-community)
   max_polling_time: 120
   # replace_with_lower_score: true  # Set false to keep higher existing scores
+  # rescan_older_than_days: 0           # Rescan samples PolySwarm holds when the last scan is older than N days (0 = never; spends scan quota)
+  # rescan_timeout: 300                  # Seconds to wait for a rescan; on timeout the previous result is used
+  # download_sample: false              # WARNING: true stores LIVE MALWARE in OpenCTI as an Artifact (spends download quota)
+  # download_max_size_mb: 20             # Largest sample to download
+  # network_related_files_max: 10        # Related file hashes per IP/domain (0 = disabled)
+  # network_indicator_min_detections: 2  # Malicious engines needed for a URL/domain/IP Indicator
+  # network_url_send_query: false        # Send URL query strings and fragments (off: scheme, host, path only)
+  # quota_warn_below: 100                # Warn when remaining quota is below this (0 = no warnings)
+  # pivot_imphash_max: 0                 # Other files with the same imphash to import per file (0 = off, e.g. 10)
+  # pivot_ttp_max: 0                     # Files to import per Attack-Pattern (0 = off, e.g. 10); above 0 adds Attack-Pattern to the default scope
+  # If you set scope above yourself, add Attack-Pattern (technique pivot) and
+  # Indicator (YARA hunts) to it, or OpenCTI will not offer this connector for them.
+  # YARA hunting: creates hunts in your PolySwarm account, spends hunt quota,
+  # sends the rule text to PolySwarm. Adds Indicator to the default scope when true.
+  # yara_hunt_enabled: false
+  # yara_hunt_window_days: 30     # 30, 60, 90 or 180
+  # yara_hunt_timeout: 300        # Seconds to wait before reporting the hunt as running
+  # yara_hunt_max_results: 50     # Matched files imported per hunt
 
 # Optional: polykg knowledge graph for advanced profile enrichment
 # Leave commented out to run without polykg (basic enrichment still works)

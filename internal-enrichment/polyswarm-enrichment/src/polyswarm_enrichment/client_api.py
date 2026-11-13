@@ -1,12 +1,36 @@
+import io
 import ipaddress
+import logging
+import socket
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import requests
+from dateutil import parser as dateutil_parser
 from polyswarm_enrichment.polyswarm_client import PolyswarmAPI, polyswarm_exceptions
+from polyswarm_enrichment.quota import is_quota_exhausted_error
+
+# OpenCTI entity types enriched by URL search (and IOC search for IPs/domains)
+NETWORK_OBSERVABLE_TYPES = ("Url", "Domain-Name", "IPv4-Addr", "IPv6-Addr")
+
+# A scan result that looks unfinished counts as running only when it is at most
+# this old (or the configured rescan timeout, if longer). The default rescan
+# wait is 300 seconds, so a day leaves a wide margin for a slow scan or for an
+# enrichment run again after a rescan timed out.
+RUNNING_SCAN_MAX_AGE = timedelta(days=1)
+
+# Suffixes of names that only resolve inside a private network
+_INTERNAL_DOMAIN_SUFFIXES = (
+    ".local",
+    ".internal",
+    ".lan",
+    ".corp",
+    ".home.arpa",
+    ".localhost",
+)
 
 
 def _is_private_or_noise(ip_str: str) -> bool:
@@ -21,6 +45,164 @@ def _is_private_or_noise(ip_str: str) -> bool:
         )
     except ValueError:
         return False
+
+
+# RFC 6598 shared address space (carrier-grade NAT), not globally routable
+_SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
+
+# Characters of a legacy numeric IPv4 form (127.1, 0x7f.0.0.1, 2130706433)
+_LEGACY_IPV4_CHARS = frozenset("0123456789abcdefx.")
+
+
+def _is_non_public_ip(ip_str: str) -> bool:
+    """Private or noise IPs, plus reserved, shared and unspecified, or not an IP."""
+    value = ip_str.strip()
+    # Exactly one pair of brackets ([2001:db8::1]); anything else is malformed
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
+    try:
+        addr = ipaddress.ip_address(value)
+    except ValueError:
+        # CIDR ranges, legacy numeric forms and malformed values are never looked up
+        return True
+    # IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 it carries
+    if addr.version == 6 and addr.ipv4_mapped:
+        addr = addr.ipv4_mapped
+    return (
+        _is_private_or_noise(str(addr))
+        or addr.is_reserved
+        or addr.is_unspecified
+        or not addr.is_global
+        or (addr.version == 4 and addr in _SHARED_ADDRESS_SPACE)
+    )
+
+
+def _is_legacy_ipv4(host: str) -> bool:
+    """True for a numeric IPv4 host that is not a canonical dotted quad.
+
+    Resolvers accept forms like ``127.1``, ``10.1``, ``0x7f.0.0.1`` and
+    ``2130706433``; ``socket.inet_aton`` normalises them. They are never
+    sent, whatever address they normalise to.
+    """
+    if not host or not set(host.lower()) <= _LEGACY_IPV4_CHARS:
+        return False
+    try:
+        canonical = socket.inet_ntoa(socket.inet_aton(host))
+    except (OSError, ValueError):
+        return False
+    return canonical != host
+
+
+def _is_non_public_host(host: str) -> bool:
+    """Check a domain or URL host: IP literals as IPs, everything else as a name."""
+    name = host.strip().rstrip(".").lower()
+    if not name or _is_legacy_ipv4(name):
+        return True
+    if ":" in name or name.startswith("["):
+        # IPv6 literal (brackets already removed by urlparse for URLs)
+        return _is_non_public_ip(name)
+    try:
+        ipaddress.ip_address(name)
+    except ValueError:
+        return _is_non_public_domain(name)
+    return _is_non_public_ip(name)
+
+
+def _is_non_public_domain(domain: str) -> bool:
+    """Single-label names and internal-only suffixes (.local, .corp, ...)."""
+    name = domain.strip().rstrip(".").lower()
+    if "." not in name:
+        return True
+    return f".{name}".endswith(_INTERNAL_DOMAIN_SUFFIXES)
+
+
+def _parse_url(value: str):
+    """urlparse that also accepts a scheme-less URL (example.com/path)."""
+    return urlparse(value if "://" in value else f"//{value}")
+
+
+def url_has_userinfo(value: str) -> bool:
+    """True when a URL carries a username or password (user:pass@host)."""
+    try:
+        parsed = _parse_url(value)
+        return bool(parsed.username or parsed.password or "@" in parsed.netloc)
+    except ValueError:
+        return False
+
+
+def url_for_lookup(value: str, send_query: bool = False) -> str:
+    """The URL sent to PolySwarm: without query string and fragment unless opted in."""
+    if send_query:
+        return value
+    parts = urlsplit(value.strip())
+    if not parts.scheme or not parts.netloc:
+        return value.strip().split("#", 1)[0].split("?", 1)[0]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
+def loggable_network_value(value: str, observable_type: str) -> str:
+    """Value safe to log: a URL is reduced to its scheme and host."""
+    if observable_type != "Url":
+        return value
+    try:
+        parsed = _parse_url(value)
+        host = parsed.hostname or ""
+    except ValueError:
+        return "<unparseable URL>"
+    if ":" in host:
+        host = f"[{host}]"
+    return f"{parsed.scheme}://{host}" if parsed.scheme else host
+
+
+def is_non_public_network_value(value: str, observable_type: str) -> bool:
+    """Return True when a URL, domain or IP value must not be sent to PolySwarm."""
+    if observable_type in ("IPv4-Addr", "IPv6-Addr"):
+        return _is_non_public_ip(value)
+    if observable_type == "Domain-Name":
+        return _is_non_public_host(value)
+    if observable_type == "Url":
+        try:
+            hostname = _parse_url(value).hostname
+        except ValueError:
+            return True
+        if not hostname:
+            return True
+        return _is_non_public_host(hostname)
+    return True
+
+
+def _parse_scan_date(value: Any) -> datetime | None:
+    """Parse a scan timestamp into an aware UTC datetime (None if unusable)."""
+    if not value:
+        return None
+    try:
+        parsed = (
+            value if isinstance(value, datetime) else dateutil_parser.parse(str(value))
+        )
+    except (ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+class _TooLarge(Exception):
+    """Raised by _CappedBuffer to stop a download that passes the size limit."""
+
+
+class _CappedBuffer(io.BytesIO):
+    """In-memory download target that aborts once more than ``limit`` bytes arrive."""
+
+    def __init__(self, limit: int) -> None:
+        super().__init__()
+        self.limit = limit
+        self.exceeded = False
+
+    def write(self, data) -> int:
+        if self.tell() + len(data) > self.limit:
+            self.exceeded = True
+            raise _TooLarge("download passed the size limit")
+        return super().write(data)
 
 
 class CircuitBreaker:
@@ -101,6 +283,10 @@ class ConnectorClient:
         """
         self.helper = helper
         self.config = config
+
+        # The SDK logs every searched value (full URLs, query strings included)
+        # at INFO; keep only its warnings so lookups don't leak into connector logs
+        logging.getLogger("polyswarm_api").setLevel(logging.WARNING)
 
         # PolySwarm SDK Initialization
         api_key = config.api_key
@@ -329,6 +515,8 @@ class ConnectorClient:
                 "poly_unite": [malware_family] if malware_family else [],
                 "tag_link_families": tag_link_families,
                 "filenames": [result.filename] if result.filename else [],
+                "size": getattr(result, "size", None),
+                "last_scanned_dt": getattr(result, "last_scanned", None),
                 "detections": {"malicious": positives, "total": total},
             }
 
@@ -374,9 +562,8 @@ class ConnectorClient:
             )
 
         elif (
-            "429" in error_str
-            or "quota" in error_str.lower()
-            or "rate" in error_str.lower()
+            isinstance(error, polyswarm_exceptions.UsageLimitsExceededException)
+            or "429" in error_str
         ):
             error_info["error_type"] = "quota_exceeded"
             error_info["error_code"] = 429
@@ -445,21 +632,45 @@ class ConnectorClient:
                 f"Searching PolySwarm ({community_name}) for hash: {hash_value}"
             )
 
-            results = polyswarm_instance.search(hash_value)
-
-            for result in results:
+            # Read lazily and stop at the first usable result; the full list is
+            # only read when nothing usable exists, or when the usable result is
+            # old enough for a paid rescan (a running scan may be listed after it)
+            results = []
+            data = None
+            found = iter(polyswarm_instance.search(hash_value))
+            for result in found:
+                results.append(result)
                 data = self._parse_result(result, community_name)
                 if data:
-                    # Success - reset circuit breaker
-                    if circuit:
-                        circuit.record_success()
+                    # Kept for the opt-in rescan decision, removed before returning:
+                    # the scan used, and the other results read
+                    data["_source_result"] = result
+                    if self._rescan_reason([result], data, result):
+                        try:
+                            results.extend(found)
+                        except polyswarm_exceptions.NoResultsException:
+                            pass  # an empty next page (204) is the end of the list
+                        except Exception as err:
+                            # Unsure whether a scan is running: no paid rescan
+                            data["_other_results_incomplete"] = True
+                            self.helper.connector_logger.warning(
+                                f"[CLIENT] Could not read all PolySwarm "
+                                f"({community_name}) results: {type(err).__name__}"
+                            )
+                    data["_other_results"] = [r for r in results if r is not result]
+                    break
 
-                    self.helper.connector_logger.info(
-                        f"[CLIENT] PolySwarm ({community_name}) data: "
-                        f"SHA256={data['sha256']}, Score={data['x_opencti_score']}, "
-                        f"Last Seen={data['last_seen']}"
-                    )
-                    return data, None
+            if data:
+                # Success - reset circuit breaker
+                if circuit:
+                    circuit.record_success()
+
+                self.helper.connector_logger.info(
+                    f"[CLIENT] PolySwarm ({community_name}) data: "
+                    f"SHA256={data['sha256']}, Score={data['x_opencti_score']}, "
+                    f"Last Seen={data['last_seen']}"
+                )
+                return data, None
 
             # No results found (but no error) - this is not a failure
             self.helper.connector_logger.info(
@@ -474,6 +685,9 @@ class ConnectorClient:
                 "is_quota_error": False,
                 "is_no_results": True,
             }
+            if results:
+                # PolySwarm holds the sample but nothing usable finished scanning
+                error_info["held_results"] = results
             return None, error_info
 
         except polyswarm_exceptions.NoResultsException:
@@ -550,7 +764,7 @@ class ConnectorClient:
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
-    def query_polyswarm(self, hash_value: str) -> dict[str, Any]:
+    def _search_communities(self, hash_value: str) -> dict[str, Any]:
         """
         Query PolySwarm API with circuit breaker protection.
 
@@ -631,6 +845,15 @@ class ConnectorClient:
                                     "error_message": str(e),
                                     "is_no_results": False,
                                 }
+
+                result["_held"] = [
+                    (name, err["held_results"])
+                    for name, err in (
+                        ("private", private_error),
+                        ("default", default_error),
+                    )
+                    if err and err.get("held_results")
+                ]
 
                 # Collect reportable errors (not just "no results")
                 if private_error and not private_error.get("is_no_results"):
@@ -713,6 +936,10 @@ class ConnectorClient:
                     hash_value, self.polyswarm, self.polyswarm_community
                 )
 
+                if error and error.get("held_results"):
+                    result["_held"] = [
+                        (self.polyswarm_community, error["held_results"])
+                    ]
                 if data:
                     result["data"] = data
                     result["primary"] = data
@@ -742,6 +969,223 @@ class ConnectorClient:
                 }
             )
             return result
+
+    # ------------------------------------------------------------------
+    # Rescan (opt-in)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _scan_time(result) -> datetime | None:
+        """When a scan result was produced (None if the result doesn't say)."""
+        stamp = getattr(result, "last_scanned", None) or getattr(
+            result, "created", None
+        )
+        return _parse_scan_date(stamp)
+
+    def _still_running(self, results) -> bool:
+        """True when any of these scan results is genuinely still running.
+
+        The SDK leaves window_closed as None when the API omits it, so a result
+        that only looks unfinished counts only when it was created recently:
+        within RUNNING_SCAN_MAX_AGE, or the configured rescan timeout if
+        longer. An older (or undated) one is treated as finished, so it can
+        never block a rescan forever. Timestamps decide, not list order.
+        """
+        timeout = getattr(getattr(self, "config", None), "rescan_timeout", 0) or 0
+        # Capped so an absurd setting cannot overflow timedelta
+        timeout = min(int(timeout), 36500 * 86400)
+        max_age = max(RUNNING_SCAN_MAX_AGE, timedelta(seconds=timeout))
+        now = datetime.now(timezone.utc)
+        for r in results:
+            if getattr(r, "failed", False) or getattr(r, "window_closed", True):
+                continue
+            # An in-flight rescan can carry the artifact's previous last_scanned,
+            # so take the later of its own creation time and last_scanned
+            stamps = [
+                _parse_scan_date(getattr(r, "created", None)),
+                _parse_scan_date(getattr(r, "last_scanned", None)),
+            ]
+            stamps = [t for t in stamps if t is not None]
+            if stamps and now - max(stamps) <= max_age:
+                return True
+        return False
+
+    def _rescan_reason(self, held: list, data: dict | None, source=None) -> str | None:
+        """Why a held sample should be rescanned, or None to leave it alone.
+
+        ``source`` is the scan result ``data`` was built from, so the age is
+        that of the scan actually used.
+        """
+        days = getattr(getattr(self, "config", None), "rescan_older_than_days", 0)
+        if not days or days <= 0:
+            return None
+        if days > timedelta.max.days:
+            # Too large to be a real threshold (and too large for timedelta):
+            # treat it as "never rescan" rather than crash the enrichment.
+            return None
+        if data is None:
+            # PolySwarm holds the sample but nothing usable finished scanning.
+            # A scan that is still running is left to finish, never doubled.
+            return None if self._still_running(held) else "no completed scan"
+        scanned = (
+            self._scan_time(source) if source is not None else None
+        ) or _parse_scan_date(data.get("last_scanned_dt"))
+        if scanned is None:
+            return None
+        age = datetime.now(timezone.utc) - scanned
+        if age > timedelta(days=days):
+            # Compare the real age, not whole days: a scan 31 hours old is older
+            # than a 1-day limit.
+            unit = "day" if age.days == 1 else "days"
+            limit_unit = "day" if days == 1 else "days"
+            return f"latest scan is {age.days} {unit} old, limit {days} {limit_unit}"
+        return None
+
+    def _instance_for(self, community_name: str) -> PolyswarmAPI:
+        """The SDK instance bound to a community."""
+        if community_name != self.polyswarm_community and self.polyswarm_default:
+            return self.polyswarm_default
+        return self.polyswarm
+
+    def _run_rescan(
+        self, sha256: str, instance: PolyswarmAPI, community_name: str, reason: str
+    ) -> tuple[dict | None, dict]:
+        """Rescan in one community and wait. Returns (fresh data or None, outcome).
+
+        Nothing is uploaded: PolySwarm rescans its own copy. Timeouts and errors
+        never fail the enrichment; ``outcome`` records what happened.
+        """
+        timeout = getattr(self.config, "rescan_timeout", 300)
+        self.helper.connector_logger.info(
+            f"[CLIENT] Rescanning in PolySwarm ({community_name}): {reason}"
+        )
+        outcome = {"reason": reason, "status": "failed", "timeout": timeout}
+        fresh = None
+        try:
+            started = instance.rescan(sha256, hash_type="sha256")
+            done = instance.wait_for(started, timeout=timeout)
+            fresh = self._parse_result(done, community_name)
+            outcome["status"] = "completed" if fresh else "no_result"
+        except polyswarm_exceptions.TimeoutException:
+            outcome["status"] = "timed_out"
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Rescan did not finish within {timeout}s ({community_name})"
+            )
+        except Exception as e:  # quota, auth, network: never fail the enrichment
+            outcome["error"] = type(e).__name__
+            if is_quota_exhausted_error(e):
+                outcome["quota_exhausted"] = True
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Rescan failed ({community_name}): {type(e).__name__}"
+            )
+        return fresh, outcome
+
+    def query_polyswarm(
+        self, hash_value: str, allow_rescan: bool = True
+    ) -> dict[str, Any]:
+        """Query PolySwarm (both communities in private mode), then rescan once.
+
+        The opt-in rescan is decided after the primary result is chosen, so at
+        most one rescan runs per enrichment, in the community of the result the
+        enrichment uses. See ``_search_communities`` for the result shape; a
+        top-level ``rescan`` key is set when a rescan was due but no result
+        exists to carry it.
+        """
+        result = self._search_communities(hash_value)
+        held = result.pop("_held", [])
+        try:
+            if not allow_rescan:
+                return result
+            data = result.get("data")
+            source = data.get("_source_result") if data else None
+            if not data and not held:
+                return result
+            # Unfinished scans in every community: the held ones, and the other
+            # results read with the primary and secondary results
+            pending = [r for _, results in held for r in results]
+            incomplete = False
+            for entry in (result.get("primary"), result.get("secondary")):
+                if entry:
+                    pending.extend(entry.get("_other_results") or [])
+                    incomplete |= bool(entry.get("_other_results_incomplete"))
+            if incomplete or self._still_running(pending):
+                # A scan (e.g. an earlier rescan that timed out) is still
+                # running: let it finish instead of paying for another one
+                return result
+            if data:
+                held_results = [source] if source is not None else []
+                community = data.get("community") or self.polyswarm_community
+            else:
+                community, held_results = held[0]
+            reason = self._rescan_reason(held_results, data, source)
+            if reason:
+                sha256 = data["sha256"] if data else held_results[0].sha256
+                fresh, outcome = self._run_rescan(
+                    sha256, self._instance_for(community), community, reason
+                )
+                if fresh:
+                    fresh["rescan"] = outcome
+                    result["data"] = result["primary"] = fresh
+                    result["errors"] = [
+                        e for e in result["errors"] if not e.get("is_no_results")
+                    ]
+                elif data:
+                    data["rescan"] = outcome
+                else:
+                    result["rescan"] = outcome
+        finally:
+            for entry in (
+                result.get("data"),
+                result.get("primary"),
+                result.get("secondary"),
+            ):
+                if entry:
+                    entry.pop("_source_result", None)
+                    entry.pop("_other_results", None)
+                    entry.pop("_other_results_incomplete", None)
+        return result
+
+    # ------------------------------------------------------------------
+    # Sample download (opt-in)
+    # ------------------------------------------------------------------
+
+    def download_sample(self, data: dict) -> tuple[bytes | None, str | None]:
+        """Download the sample PolySwarm holds for ``data`` (opt-in, spends quota).
+
+        Returns (bytes, None) or (None, reason). When PolySwarm reports the size
+        it is checked against POLYSWARM_DOWNLOAD_MAX_SIZE_MB before anything is
+        downloaded; otherwise the download is aborted as soon as the bytes
+        received pass the limit. The sample is held in memory only.
+        """
+        max_mb = getattr(self.config, "download_max_size_mb", 20)
+        sha256 = data.get("sha256")
+        if not sha256:
+            return None, "no SHA-256 for the sample"
+        size = data.get("size")
+        if size is not None and size > max_mb * 1024 * 1024:
+            return None, f"sample is {size} bytes, over the {max_mb} MB limit"
+        community = data.get("community") or self.polyswarm_community
+        instance = (
+            self.polyswarm_default
+            if community == "default" and self.polyswarm_default
+            else self.polyswarm
+        )
+        limit = max_mb * 1024 * 1024
+        handle = _CappedBuffer(limit)
+        try:
+            instance.download_to_handle(sha256, handle, hash_type="sha256")
+        except Exception as e:
+            if handle.exceeded:
+                return None, f"sample is over the {max_mb} MB limit (download stopped)"
+            # Only the exception type is logged: request errors can carry a
+            # presigned download URL with a query string.
+            self.helper.connector_logger.warning(
+                f"[CLIENT] Sample download failed: {type(e).__name__}"
+            )
+            return None, f"download failed ({type(e).__name__})"
+        if handle.exceeded:
+            return None, f"sample is over the {max_mb} MB limit (download stopped)"
+        return handle.getvalue(), None
 
     # ------------------------------------------------------------------
     # polykg — malware family profiles
@@ -947,3 +1391,265 @@ class ConnectorClient:
         except polyswarm_exceptions.RequestException as e:
             self.helper.connector_logger.warning(f"[CLIENT] IOC fetch API error: {e}")
             return None
+
+    # ------------------------------------------------------------------
+    # URL, domain and IP observable lookups (search only, nothing uploaded)
+    # ------------------------------------------------------------------
+
+    def _parse_url_scan(self, result, community_name: str) -> dict[str, Any] | None:
+        """Parse a URL-type scan result into a data dictionary."""
+        try:
+            data = result.json or {}
+            detections = data.get("detections") or {}
+            malicious = int(detections.get("malicious") or 0)
+            total = int(detections.get("total") or 0)
+            benign = detections.get("benign")
+            benign = int(benign) if benign is not None else max(total - malicious, 0)
+            raw_date = data.get("last_scanned") or data.get("created")
+            scan_date = _parse_scan_date(raw_date)
+            permalink = data.get("permalink") or getattr(result, "permalink", None)
+
+            # Score from the engine verdicts (malicious / total)
+            score = round(100 * malicious / total) if total > 0 else None
+
+            return {
+                "community": community_name,
+                "malicious": malicious,
+                "benign": benign,
+                "total": total,
+                "x_opencti_score": score,
+                "scan_date": scan_date.isoformat() if scan_date else None,
+                "scan_date_dt": scan_date,
+                "window_closed": data.get("window_closed"),
+                "permalink": permalink or None,
+                "polyswarm_id": str(data["id"]) if data.get("id") else None,
+            }
+        except (AttributeError, TypeError, ValueError) as e:
+            self.helper.connector_logger.error(
+                "[CLIENT] Error parsing PolySwarm URL scan",
+                {"community": community_name, "error": str(e)},
+            )
+            return None
+
+    def _search_url_single_community(
+        self,
+        value: str,
+        polyswarm_instance: PolyswarmAPI,
+        community_name: str,
+        log_value: str | None = None,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """
+        Search the latest URL-type scan of a value in one community.
+
+        ``log_value`` is what gets logged instead of the value (a URL is
+        reduced to scheme and host). Returns: (scan_dict, error_info), same
+        contract as ``_query_single_community``.
+        """
+        log_value = log_value if log_value is not None else value
+        circuit = self._circuit_breakers.get(community_name)
+        if circuit:
+            can_execute, reason = circuit.can_execute()
+            if not can_execute:
+                self.helper.connector_logger.warning(
+                    "[CLIENT] Circuit breaker OPEN",
+                    {"community": community_name, "reason": reason},
+                )
+                return None, {
+                    "community": community_name,
+                    "error_type": "circuit_breaker_open",
+                    "error_code": None,
+                    "error_message": f"Circuit breaker open for {community_name}. {reason}",
+                    "is_access_error": False,
+                    "is_quota_error": False,
+                    "is_no_results": False,
+                    "is_circuit_breaker": True,
+                }
+
+        no_results = {
+            "community": community_name,
+            "error_type": "no_results",
+            "error_code": None,
+            "error_message": f"No scan found in {community_name} community",
+            "is_access_error": False,
+            "is_quota_error": False,
+            "is_no_results": True,
+        }
+
+        try:
+            self.helper.connector_logger.info(
+                "[CLIENT] Searching PolySwarm URL scans",
+                {"community": community_name, "value": log_value},
+            )
+            # Take the first (latest) scan only
+            for result in polyswarm_instance.search_url(value):
+                scan = self._parse_url_scan(result, community_name)
+                if circuit:
+                    circuit.record_success()
+                if scan:
+                    return scan, None
+                break
+            return None, no_results
+
+        except polyswarm_exceptions.NoResultsException:
+            if circuit:
+                circuit.record_success()
+            self.helper.connector_logger.info(
+                "[CLIENT] No PolySwarm URL scan found",
+                {"community": community_name, "value": log_value},
+            )
+            return None, no_results
+
+        except polyswarm_exceptions.RequestException as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.error(
+                "[CLIENT] PolySwarm API error on URL search",
+                {"community": community_name, "error": str(e)},
+            )
+            return None, self._parse_api_error(e, community_name)
+
+        except (ConnectionError, TimeoutError, OSError) as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.error(
+                "[CLIENT] Network error on URL search",
+                {"community": community_name, "error": str(e)},
+            )
+            return None, {
+                "community": community_name,
+                "error_type": "network_error",
+                "error_code": None,
+                "error_message": f"Network error: {str(e)}",
+                "is_access_error": False,
+                "is_quota_error": False,
+                "is_no_results": False,
+            }
+
+    def _search_related_files(
+        self,
+        ioc_kind: str,
+        value: str,
+        polyswarm_instance: PolyswarmAPI,
+        community_name: str,
+        limit: int,
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """
+        Return up to ``limit`` SHA-256 hashes of files linked to an IP or domain.
+
+        Returns: (hashes, error_info). error_info is set when the search
+        failed with an API or network error, so it is not reported as a
+        clean "no related files" result.
+        """
+        circuit = self._circuit_breakers.get(community_name)
+        if circuit and not circuit.can_execute()[0]:
+            return [], None
+
+        hashes: list[str] = []
+        try:
+            for item in polyswarm_instance.search_by_ioc(**{ioc_kind: value}):
+                # The SDK yields IOC resources whose .json is the SHA-256 string
+                sha256 = item if isinstance(item, str) else getattr(item, "json", "")
+                sha256 = (sha256 if isinstance(sha256, str) else "").strip().lower()
+                if (
+                    len(sha256) == 64
+                    and all(c in "0123456789abcdef" for c in sha256)
+                    and sha256 not in hashes
+                ):
+                    hashes.append(sha256)
+                if len(hashes) >= limit:
+                    break
+            if circuit:
+                circuit.record_success()
+        except polyswarm_exceptions.NoResultsException:
+            pass
+        except polyswarm_exceptions.RequestException as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.warning(
+                "[CLIENT] Related file search failed",
+                {"community": community_name, "error": str(e)},
+            )
+            return hashes, self._parse_api_error(e, community_name)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.warning(
+                "[CLIENT] Related file search failed",
+                {"community": community_name, "error": str(e)},
+            )
+            return hashes, {
+                "community": community_name,
+                "error_type": "network_error",
+                "error_code": None,
+                "error_message": f"Network error on related file search: {str(e)}",
+                "is_access_error": False,
+                "is_quota_error": False,
+                "is_no_results": False,
+            }
+        return hashes, None
+
+    def lookup_network_observable(
+        self, value: str, observable_type: str, related_files_max: int = 0
+    ) -> dict[str, Any]:
+        """
+        Look up a URL, domain or IP in PolySwarm. Search only: nothing is
+        submitted or uploaded.
+
+        Runs ``search_url`` in each configured community (private + default in
+        dual-community mode) and keeps the most recent scan. For IPs and
+        domains, also runs ``search_by_ioc`` for up to ``related_files_max``
+        related file SHA-256 hashes (0 disables it).
+
+        Returns a dict with:
+        - "scan": parsed scan dict (or None when no scan exists)
+        - "related_files": list of SHA-256 strings
+        - "errors": reportable error_info dicts (never "no results")
+        """
+        result: dict[str, Any] = {"scan": None, "related_files": [], "errors": []}
+        log_value = loggable_network_value(value, observable_type)
+
+        communities = [(self.polyswarm, self.polyswarm_community)]
+        if self.polyswarm_community.lower() == "private" and self.polyswarm_default:
+            communities.append((self.polyswarm_default, "default"))
+
+        scans = []
+        for polyswarm_instance, community_name in communities:
+            scan, error = self._search_url_single_community(
+                value, polyswarm_instance, community_name, log_value
+            )
+            if scan:
+                scans.append(scan)
+            elif error and not error.get("is_no_results"):
+                result["errors"].append(error)
+
+        if scans:
+            oldest = datetime.min.replace(tzinfo=timezone.utc)
+            result["scan"] = max(scans, key=lambda s: s["scan_date_dt"] or oldest)
+
+        ioc_kind = {"IPv4-Addr": "ip", "IPv6-Addr": "ip", "Domain-Name": "domain"}.get(
+            observable_type
+        )
+        if ioc_kind and related_files_max > 0:
+            for polyswarm_instance, community_name in communities:
+                remaining = related_files_max - len(result["related_files"])
+                if remaining <= 0:
+                    break
+                hashes, error = self._search_related_files(
+                    ioc_kind, value, polyswarm_instance, community_name, remaining
+                )
+                if error:
+                    result["errors"].append(error)
+                for sha256 in hashes:
+                    if sha256 not in result["related_files"]:
+                        result["related_files"].append(sha256)
+
+        self.helper.connector_logger.info(
+            "[CLIENT] Network observable lookup done",
+            {
+                "value": log_value,
+                "scan_found": result["scan"] is not None,
+                "related_files": len(result["related_files"]),
+                "errors": len(result["errors"]),
+            },
+        )
+        return result
