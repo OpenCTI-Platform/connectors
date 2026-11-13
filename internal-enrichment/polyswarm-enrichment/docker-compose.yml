@@ -10,14 +10,18 @@ services:
       - CONNECTOR_ID=${CONNECTOR_ID}
       # - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       # - CONNECTOR_NAME=PolySwarm Hash Enrichment
-      # - CONNECTOR_SCOPE=StixFile,Artifact
-      # - CONNECTOR_AUTO=true
+      # - CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,IPv4-Addr,IPv6-Addr
+      # Keep false: auto-enrichment would send every in-scope URL, domain and IP to PolySwarm
+      # - CONNECTOR_AUTO=false
       # - CONNECTOR_LOG_LEVEL=info
       # - CONNECTOR_MAX_TLP=TLP:RED
 
       # ========== PolySwarm Configuration ==========
       - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
-      # - POLYSWARM_ENRICHMENT_COMMUNITY=default
-      # - POLYSWARM_ENRICHMENT_MAX_POLLING_TIME=120
-      # - POLYSWARM_ENRICHMENT_POLYKG_API_URL=
+      # - POLYSWARM_COMMUNITY=default
+      # - POLYSWARM_MAX_POLLING_TIME=120
+      # - POLYSWARM_POLYKG_API_URL=
+      # - POLYSWARM_NETWORK_RELATED_FILES_MAX=10
+      # - POLYSWARM_NETWORK_INDICATOR_MIN_DETECTIONS=2
+      # - POLYSWARM_NETWORK_URL_SEND_QUERY=false
     restart: always

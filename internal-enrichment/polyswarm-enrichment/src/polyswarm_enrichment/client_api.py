@@ -1,12 +1,28 @@
 import ipaddress
+import logging
+import socket
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import requests
+from dateutil import parser as dateutil_parser
 from polyswarm_enrichment.polyswarm_client import PolyswarmAPI, polyswarm_exceptions
+
+# OpenCTI entity types enriched by URL search (and IOC search for IPs/domains)
+NETWORK_OBSERVABLE_TYPES = ("Url", "Domain-Name", "IPv4-Addr", "IPv6-Addr")
+
+# Suffixes of names that only resolve inside a private network
+_INTERNAL_DOMAIN_SUFFIXES = (
+    ".local",
+    ".internal",
+    ".lan",
+    ".corp",
+    ".home.arpa",
+    ".localhost",
+)
 
 
 def _is_private_or_noise(ip_str: str) -> bool:
@@ -21,6 +37,145 @@ def _is_private_or_noise(ip_str: str) -> bool:
         )
     except ValueError:
         return False
+
+
+# RFC 6598 shared address space (carrier-grade NAT), not globally routable
+_SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
+
+# Characters of a legacy numeric IPv4 form (127.1, 0x7f.0.0.1, 2130706433)
+_LEGACY_IPV4_CHARS = frozenset("0123456789abcdefx.")
+
+
+def _is_non_public_ip(ip_str: str) -> bool:
+    """Private or noise IPs, plus reserved, shared and unspecified, or not an IP."""
+    value = ip_str.strip()
+    # Exactly one pair of brackets ([2001:db8::1]); anything else is malformed
+    if value.startswith("[") and value.endswith("]"):
+        value = value[1:-1]
+    try:
+        addr = ipaddress.ip_address(value)
+    except ValueError:
+        # CIDR ranges, legacy numeric forms and malformed values are never looked up
+        return True
+    # IPv4-mapped IPv6 (::ffff:10.0.0.1) is checked as the IPv4 it carries
+    if addr.version == 6 and addr.ipv4_mapped:
+        addr = addr.ipv4_mapped
+    return (
+        _is_private_or_noise(str(addr))
+        or addr.is_reserved
+        or addr.is_unspecified
+        or not addr.is_global
+        or (addr.version == 4 and addr in _SHARED_ADDRESS_SPACE)
+    )
+
+
+def _is_legacy_ipv4(host: str) -> bool:
+    """True for a numeric IPv4 host that is not a canonical dotted quad.
+
+    Resolvers accept forms like ``127.1``, ``10.1``, ``0x7f.0.0.1`` and
+    ``2130706433``; ``socket.inet_aton`` normalises them. They are never
+    sent, whatever address they normalise to.
+    """
+    if not host or not set(host.lower()) <= _LEGACY_IPV4_CHARS:
+        return False
+    try:
+        canonical = socket.inet_ntoa(socket.inet_aton(host))
+    except (OSError, ValueError):
+        return False
+    return canonical != host
+
+
+def _is_non_public_host(host: str) -> bool:
+    """Check a domain or URL host: IP literals as IPs, everything else as a name."""
+    name = host.strip().rstrip(".").lower()
+    if not name or _is_legacy_ipv4(name):
+        return True
+    if ":" in name or name.startswith("["):
+        # IPv6 literal (brackets already removed by urlparse for URLs)
+        return _is_non_public_ip(name)
+    try:
+        ipaddress.ip_address(name)
+    except ValueError:
+        return _is_non_public_domain(name)
+    return _is_non_public_ip(name)
+
+
+def _is_non_public_domain(domain: str) -> bool:
+    """Single-label names and internal-only suffixes (.local, .corp, ...)."""
+    name = domain.strip().rstrip(".").lower()
+    if "." not in name:
+        return True
+    return f".{name}".endswith(_INTERNAL_DOMAIN_SUFFIXES)
+
+
+def _parse_url(value: str):
+    """urlparse that also accepts a scheme-less URL (example.com/path)."""
+    return urlparse(value if "://" in value else f"//{value}")
+
+
+def url_has_userinfo(value: str) -> bool:
+    """True when a URL carries a username or password (user:pass@host)."""
+    try:
+        parsed = _parse_url(value)
+        return bool(parsed.username or parsed.password or "@" in parsed.netloc)
+    except ValueError:
+        return False
+
+
+def url_for_lookup(value: str, send_query: bool = False) -> str:
+    """The URL sent to PolySwarm: without query string and fragment unless opted in."""
+    if send_query:
+        return value
+    parts = urlsplit(value.strip())
+    if not parts.scheme or not parts.netloc:
+        return value.strip().split("#", 1)[0].split("?", 1)[0]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+
+
+def loggable_network_value(value: str, observable_type: str) -> str:
+    """Value safe to log: a URL is reduced to its scheme and host."""
+    if observable_type != "Url":
+        return value
+    try:
+        parsed = _parse_url(value)
+        host = parsed.hostname or ""
+    except ValueError:
+        return "<unparseable URL>"
+    if ":" in host:
+        host = f"[{host}]"
+    return f"{parsed.scheme}://{host}" if parsed.scheme else host
+
+
+def is_non_public_network_value(value: str, observable_type: str) -> bool:
+    """Return True when a URL, domain or IP value must not be sent to PolySwarm."""
+    if observable_type in ("IPv4-Addr", "IPv6-Addr"):
+        return _is_non_public_ip(value)
+    if observable_type == "Domain-Name":
+        return _is_non_public_host(value)
+    if observable_type == "Url":
+        try:
+            hostname = _parse_url(value).hostname
+        except ValueError:
+            return True
+        if not hostname:
+            return True
+        return _is_non_public_host(hostname)
+    return True
+
+
+def _parse_scan_date(value: Any) -> datetime | None:
+    """Parse a scan timestamp into an aware UTC datetime (None if unusable)."""
+    if not value:
+        return None
+    try:
+        parsed = (
+            value if isinstance(value, datetime) else dateutil_parser.parse(str(value))
+        )
+    except (ValueError, OverflowError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
 
 
 class CircuitBreaker:
@@ -101,6 +256,10 @@ class ConnectorClient:
         """
         self.helper = helper
         self.config = config
+
+        # The SDK logs every searched value (full URLs, query strings included)
+        # at INFO; keep only its warnings so lookups don't leak into connector logs
+        logging.getLogger("polyswarm_api").setLevel(logging.WARNING)
 
         # PolySwarm SDK Initialization
         api_key = config.api_key
@@ -947,3 +1106,265 @@ class ConnectorClient:
         except polyswarm_exceptions.RequestException as e:
             self.helper.connector_logger.warning(f"[CLIENT] IOC fetch API error: {e}")
             return None
+
+    # ------------------------------------------------------------------
+    # URL, domain and IP observable lookups (search only, nothing uploaded)
+    # ------------------------------------------------------------------
+
+    def _parse_url_scan(self, result, community_name: str) -> dict[str, Any] | None:
+        """Parse a URL-type scan result into a data dictionary."""
+        try:
+            data = result.json or {}
+            detections = data.get("detections") or {}
+            malicious = int(detections.get("malicious") or 0)
+            total = int(detections.get("total") or 0)
+            benign = detections.get("benign")
+            benign = int(benign) if benign is not None else max(total - malicious, 0)
+            raw_date = data.get("last_scanned") or data.get("created")
+            scan_date = _parse_scan_date(raw_date)
+            permalink = data.get("permalink") or getattr(result, "permalink", None)
+
+            # Score from the engine verdicts (malicious / total)
+            score = round(100 * malicious / total) if total > 0 else None
+
+            return {
+                "community": community_name,
+                "malicious": malicious,
+                "benign": benign,
+                "total": total,
+                "x_opencti_score": score,
+                "scan_date": scan_date.isoformat() if scan_date else None,
+                "scan_date_dt": scan_date,
+                "window_closed": data.get("window_closed"),
+                "permalink": permalink or None,
+                "polyswarm_id": str(data["id"]) if data.get("id") else None,
+            }
+        except (AttributeError, TypeError, ValueError) as e:
+            self.helper.connector_logger.error(
+                "[CLIENT] Error parsing PolySwarm URL scan",
+                {"community": community_name, "error": str(e)},
+            )
+            return None
+
+    def _search_url_single_community(
+        self,
+        value: str,
+        polyswarm_instance: PolyswarmAPI,
+        community_name: str,
+        log_value: str | None = None,
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+        """
+        Search the latest URL-type scan of a value in one community.
+
+        ``log_value`` is what gets logged instead of the value (a URL is
+        reduced to scheme and host). Returns: (scan_dict, error_info), same
+        contract as ``_query_single_community``.
+        """
+        log_value = log_value if log_value is not None else value
+        circuit = self._circuit_breakers.get(community_name)
+        if circuit:
+            can_execute, reason = circuit.can_execute()
+            if not can_execute:
+                self.helper.connector_logger.warning(
+                    "[CLIENT] Circuit breaker OPEN",
+                    {"community": community_name, "reason": reason},
+                )
+                return None, {
+                    "community": community_name,
+                    "error_type": "circuit_breaker_open",
+                    "error_code": None,
+                    "error_message": f"Circuit breaker open for {community_name}. {reason}",
+                    "is_access_error": False,
+                    "is_quota_error": False,
+                    "is_no_results": False,
+                    "is_circuit_breaker": True,
+                }
+
+        no_results = {
+            "community": community_name,
+            "error_type": "no_results",
+            "error_code": None,
+            "error_message": f"No scan found in {community_name} community",
+            "is_access_error": False,
+            "is_quota_error": False,
+            "is_no_results": True,
+        }
+
+        try:
+            self.helper.connector_logger.info(
+                "[CLIENT] Searching PolySwarm URL scans",
+                {"community": community_name, "value": log_value},
+            )
+            # Take the first (latest) scan only
+            for result in polyswarm_instance.search_url(value):
+                scan = self._parse_url_scan(result, community_name)
+                if circuit:
+                    circuit.record_success()
+                if scan:
+                    return scan, None
+                break
+            return None, no_results
+
+        except polyswarm_exceptions.NoResultsException:
+            if circuit:
+                circuit.record_success()
+            self.helper.connector_logger.info(
+                "[CLIENT] No PolySwarm URL scan found",
+                {"community": community_name, "value": log_value},
+            )
+            return None, no_results
+
+        except polyswarm_exceptions.RequestException as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.error(
+                "[CLIENT] PolySwarm API error on URL search",
+                {"community": community_name, "error": str(e)},
+            )
+            return None, self._parse_api_error(e, community_name)
+
+        except (ConnectionError, TimeoutError, OSError) as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.error(
+                "[CLIENT] Network error on URL search",
+                {"community": community_name, "error": str(e)},
+            )
+            return None, {
+                "community": community_name,
+                "error_type": "network_error",
+                "error_code": None,
+                "error_message": f"Network error: {str(e)}",
+                "is_access_error": False,
+                "is_quota_error": False,
+                "is_no_results": False,
+            }
+
+    def _search_related_files(
+        self,
+        ioc_kind: str,
+        value: str,
+        polyswarm_instance: PolyswarmAPI,
+        community_name: str,
+        limit: int,
+    ) -> tuple[list[str], dict[str, Any] | None]:
+        """
+        Return up to ``limit`` SHA-256 hashes of files linked to an IP or domain.
+
+        Returns: (hashes, error_info). error_info is set when the search
+        failed with an API or network error, so it is not reported as a
+        clean "no related files" result.
+        """
+        circuit = self._circuit_breakers.get(community_name)
+        if circuit and not circuit.can_execute()[0]:
+            return [], None
+
+        hashes: list[str] = []
+        try:
+            for item in polyswarm_instance.search_by_ioc(**{ioc_kind: value}):
+                # The SDK yields IOC resources whose .json is the SHA-256 string
+                sha256 = item if isinstance(item, str) else getattr(item, "json", "")
+                sha256 = (sha256 if isinstance(sha256, str) else "").strip().lower()
+                if (
+                    len(sha256) == 64
+                    and all(c in "0123456789abcdef" for c in sha256)
+                    and sha256 not in hashes
+                ):
+                    hashes.append(sha256)
+                if len(hashes) >= limit:
+                    break
+            if circuit:
+                circuit.record_success()
+        except polyswarm_exceptions.NoResultsException:
+            pass
+        except polyswarm_exceptions.RequestException as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.warning(
+                "[CLIENT] Related file search failed",
+                {"community": community_name, "error": str(e)},
+            )
+            return hashes, self._parse_api_error(e, community_name)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            if circuit:
+                circuit.record_failure()
+            self.helper.connector_logger.warning(
+                "[CLIENT] Related file search failed",
+                {"community": community_name, "error": str(e)},
+            )
+            return hashes, {
+                "community": community_name,
+                "error_type": "network_error",
+                "error_code": None,
+                "error_message": f"Network error on related file search: {str(e)}",
+                "is_access_error": False,
+                "is_quota_error": False,
+                "is_no_results": False,
+            }
+        return hashes, None
+
+    def lookup_network_observable(
+        self, value: str, observable_type: str, related_files_max: int = 0
+    ) -> dict[str, Any]:
+        """
+        Look up a URL, domain or IP in PolySwarm. Search only: nothing is
+        submitted or uploaded.
+
+        Runs ``search_url`` in each configured community (private + default in
+        dual-community mode) and keeps the most recent scan. For IPs and
+        domains, also runs ``search_by_ioc`` for up to ``related_files_max``
+        related file SHA-256 hashes (0 disables it).
+
+        Returns a dict with:
+        - "scan": parsed scan dict (or None when no scan exists)
+        - "related_files": list of SHA-256 strings
+        - "errors": reportable error_info dicts (never "no results")
+        """
+        result: dict[str, Any] = {"scan": None, "related_files": [], "errors": []}
+        log_value = loggable_network_value(value, observable_type)
+
+        communities = [(self.polyswarm, self.polyswarm_community)]
+        if self.polyswarm_community.lower() == "private" and self.polyswarm_default:
+            communities.append((self.polyswarm_default, "default"))
+
+        scans = []
+        for polyswarm_instance, community_name in communities:
+            scan, error = self._search_url_single_community(
+                value, polyswarm_instance, community_name, log_value
+            )
+            if scan:
+                scans.append(scan)
+            elif error and not error.get("is_no_results"):
+                result["errors"].append(error)
+
+        if scans:
+            oldest = datetime.min.replace(tzinfo=timezone.utc)
+            result["scan"] = max(scans, key=lambda s: s["scan_date_dt"] or oldest)
+
+        ioc_kind = {"IPv4-Addr": "ip", "IPv6-Addr": "ip", "Domain-Name": "domain"}.get(
+            observable_type
+        )
+        if ioc_kind and related_files_max > 0:
+            for polyswarm_instance, community_name in communities:
+                remaining = related_files_max - len(result["related_files"])
+                if remaining <= 0:
+                    break
+                hashes, error = self._search_related_files(
+                    ioc_kind, value, polyswarm_instance, community_name, remaining
+                )
+                if error:
+                    result["errors"].append(error)
+                for sha256 in hashes:
+                    if sha256 not in result["related_files"]:
+                        result["related_files"].append(sha256)
+
+        self.helper.connector_logger.info(
+            "[CLIENT] Network observable lookup done",
+            {
+                "value": log_value,
+                "scan_found": result["scan"] is not None,
+                "related_files": len(result["related_files"]),
+                "errors": len(result["errors"]),
+            },
+        )
+        return result

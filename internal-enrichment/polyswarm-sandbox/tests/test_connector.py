@@ -35,6 +35,7 @@ def _mock_polyswarm_config(**overrides):
         "api_key": MagicMock(get_secret_value=MagicMock(return_value="test-key")),
         "api_url": "https://api.polyswarm.network/v3",
         "community": "default",
+        "allow_public_community": True,
         "timeout": 300,
         "sandbox_enabled": False,
         "sandbox_provider": "cape",
@@ -151,6 +152,20 @@ class TestPydanticConfig:
         assert config.polyswarm.poll_interval == 30
         assert config.connector.type == "INTERNAL_ENRICHMENT"
         assert config.connector.max_tlp == TLPLevel.AMBER
+        assert config.polyswarm.allow_public_community is False
+
+    def test_allow_public_community_from_env(self, monkeypatch):
+        ConnectorSettings = pytest.importorskip(
+            "connector.models.configs.settings", reason="connectors_sdk unavailable"
+        ).ConnectorSettings
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "00000000-0000-0000-0000-000000000005")
+        monkeypatch.setenv("POLYSWARM_API_KEY", "test-key")
+        monkeypatch.setenv("POLYSWARM_ALLOW_PUBLIC_COMMUNITY", "true")
+
+        config = ConnectorSettings()
+        assert config.polyswarm.allow_public_community is True
 
     def test_deprecated_polyswarm_max_tlp_is_migrated(self, monkeypatch):
         """The deprecated POLYSWARM_MAX_TLP still works and becomes CONNECTOR_MAX_TLP."""
