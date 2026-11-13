@@ -186,7 +186,8 @@ class TestRescanTriggers:
 
     def test_scan_still_running_is_not_doubled(self):
         client = _client(
-            days=7, search=[_instance(assertions=False, window_closed=False)]
+            days=7,
+            search=[_instance(days_old=0, assertions=False, window_closed=False)],
         )
         _query(client)
         client.polyswarm.rescan.assert_not_called()
@@ -280,14 +281,16 @@ class TestRescanFailureModes:
         client = _client(
             days=30,
             search=[
-                _instance(assertions=False, failed=False, window_closed=False),
+                _instance(
+                    days_old=0, assertions=False, failed=False, window_closed=False
+                ),
                 _instance(days_old=400, polyscore=0.1),
             ],
         )
         result = client.query_polyswarm(SHA256)
         assert result["data"]["polyscore"] == 0.1
         client.polyswarm.rescan.assert_not_called()
-        assert "_newer_results" not in result["data"]
+        assert "_other_results" not in result["data"]
 
     def test_failed_scan_ahead_of_old_usable_scan_still_rescans(self):
         client = _client(
@@ -323,7 +326,9 @@ class TestRescanFailureModes:
     def test_dual_private_failed_default_running_is_not_rescanned(self):
         client, default_api = self._dual_held(
             private=_instance(assertions=False, failed=True, window_closed=True),
-            default=_instance(assertions=False, failed=False, window_closed=False),
+            default=_instance(
+                days_old=0, assertions=False, failed=False, window_closed=False
+            ),
         )
         client.query_polyswarm(SHA256)
         client.polyswarm.rescan.assert_not_called()
@@ -331,7 +336,9 @@ class TestRescanFailureModes:
 
     def test_dual_private_running_default_failed_is_not_rescanned(self):
         client, default_api = self._dual_held(
-            private=_instance(assertions=False, failed=False, window_closed=False),
+            private=_instance(
+                days_old=0, assertions=False, failed=False, window_closed=False
+            ),
             default=_instance(assertions=False, failed=True, window_closed=True),
         )
         client.query_polyswarm(SHA256)
@@ -349,7 +356,9 @@ class TestRescanFailureModes:
 
     def test_dual_running_held_private_blocks_rescan_of_old_default(self):
         client, default_api = self._dual_held(
-            private=_instance(assertions=False, failed=False, window_closed=False),
+            private=_instance(
+                days_old=0, assertions=False, failed=False, window_closed=False
+            ),
             default=_instance(days_old=400, polyscore=0.1),
         )
         result = client.query_polyswarm(SHA256)
@@ -360,7 +369,7 @@ class TestRescanFailureModes:
     def test_dual_running_scan_in_secondary_blocks_rescan_of_primary(self):
         client, default_api = self._dual(private_days=1, default_days=300)
         client.polyswarm.search.return_value = [
-            _instance(assertions=False, failed=False, window_closed=False),
+            _instance(days_old=0, assertions=False, failed=False, window_closed=False),
             _instance(days_old=400, polyscore=0.1),
         ]
         result = client.query_polyswarm(SHA256)
@@ -368,7 +377,7 @@ class TestRescanFailureModes:
         client.polyswarm.rescan.assert_not_called()
         default_api.rescan.assert_not_called()
         for key in ("primary", "secondary"):
-            assert "_newer_results" not in result[key]
+            assert "_other_results" not in result[key]
 
     def test_dual_failed_held_private_still_rescans_old_default(self):
         client, default_api = self._dual_held(
@@ -378,6 +387,81 @@ class TestRescanFailureModes:
         client.query_polyswarm(SHA256)
         client.polyswarm.rescan.assert_not_called()
         default_api.rescan.assert_called_once()
+
+    @pytest.mark.parametrize("window_closed", [False, None])
+    def test_old_scan_that_only_looks_unfinished_does_not_block_rescan(
+        self, window_closed
+    ):
+        # The SDK sets window_closed to None when the API omits it
+        client = _client(
+            days=30,
+            search=[
+                _instance(days_old=3, assertions=False, window_closed=window_closed),
+                _instance(days_old=400, polyscore=0.1),
+            ],
+            rescan=_instance(days_old=0, assertions=False, window_closed=False),
+            wait_for=lambda *_a, **_k: _instance(days_old=0, polyscore=0.9),
+        )
+        result = client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_called_once()
+        assert result["data"]["polyscore"] == 0.9
+
+    def test_longer_rescan_timeout_widens_the_running_bound(self):
+        client = _client(
+            days=30,
+            timeout=3 * 86400,
+            search=[
+                _instance(days_old=2, assertions=False, window_closed=False),
+                _instance(days_old=400, polyscore=0.1),
+            ],
+        )
+        client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_not_called()
+
+    def test_old_unfinished_only_scan_still_gets_a_rescan(self):
+        client = _client(
+            days=7,
+            search=[_instance(days_old=3, assertions=False, window_closed=None)],
+            rescan=_instance(days_old=0, assertions=False, window_closed=False),
+            wait_for=lambda *_a, **_k: _instance(days_old=0),
+        )
+        result = client.query_polyswarm(SHA256)
+        client.polyswarm.rescan.assert_called_once()
+        assert result["data"]["rescan"]["reason"] == "no completed scan"
+
+    def test_running_scan_listed_after_old_usable_scan_blocks_rescan(self):
+        client = _client(
+            days=30,
+            search=[
+                _instance(days_old=400, polyscore=0.1),
+                _instance(days_old=0, assertions=False, window_closed=False),
+            ],
+        )
+        result = client.query_polyswarm(SHA256)
+        assert result["data"]["polyscore"] == 0.1
+        client.polyswarm.rescan.assert_not_called()
+
+    def test_fresh_usable_result_does_not_read_further(self):
+        def pages():
+            yield _instance(days_old=1)
+            raise AssertionError("search read past a fresh usable result")
+
+        client = _client(days=7)
+        client.polyswarm.search.return_value = pages()
+        data, error = _query(client)
+        assert error is None and data is not None
+
+    def test_unreadable_rest_after_old_result_skips_rescan(self):
+        def pages():
+            yield _instance(days_old=400, polyscore=0.1)
+            raise polyswarm_exceptions.RequestException("page 2 failed")
+
+        client = _client(days=7)
+        client.polyswarm.search.return_value = pages()
+        data, error = _query(client)
+        assert error is None and data["polyscore"] == 0.1
+        client.polyswarm.rescan.assert_not_called()
+        assert "_other_results_incomplete" not in data
 
     def test_no_completed_scan_and_failed_rescan_is_reported(self):
         client = _client(days=7, search=[_instance(assertions=False)])

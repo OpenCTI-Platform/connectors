@@ -16,6 +16,12 @@ from polyswarm_enrichment.quota import is_quota_exhausted_error
 # OpenCTI entity types enriched by URL search (and IOC search for IPs/domains)
 NETWORK_OBSERVABLE_TYPES = ("Url", "Domain-Name", "IPv4-Addr", "IPv6-Addr")
 
+# A scan result that looks unfinished counts as running only when it is at most
+# this old (or the configured rescan timeout, if longer). The default rescan
+# wait is 300 seconds, so a day leaves a wide margin for a slow scan or for an
+# enrichment run again after a rescan timed out.
+RUNNING_SCAN_MAX_AGE = timedelta(days=1)
+
 # Suffixes of names that only resolve inside a private network
 _INTERNAL_DOMAIN_SUFFIXES = (
     ".local",
@@ -627,17 +633,29 @@ class ConnectorClient:
             )
 
             # Read lazily and stop at the first usable result; the full list is
-            # only read when nothing usable exists
+            # only read when nothing usable exists, or when the usable result is
+            # old enough for a paid rescan (a running scan may be listed after it)
             results = []
             data = None
-            for result in polyswarm_instance.search(hash_value):
+            found = iter(polyswarm_instance.search(hash_value))
+            for result in found:
                 results.append(result)
                 data = self._parse_result(result, community_name)
                 if data:
                     # Kept for the opt-in rescan decision, removed before returning:
-                    # the scan used, and the unusable ones listed ahead of it
+                    # the scan used, and the other results read
                     data["_source_result"] = result
-                    data["_newer_results"] = results[:-1]
+                    if self._rescan_reason([result], data, result):
+                        try:
+                            results.extend(found)
+                        except Exception as err:
+                            # Unsure whether a scan is running: no paid rescan
+                            data["_other_results_incomplete"] = True
+                            self.helper.connector_logger.warning(
+                                f"[CLIENT] Could not read all PolySwarm "
+                                f"({community_name}) results: {type(err).__name__}"
+                            )
+                    data["_other_results"] = [r for r in results if r is not result]
                     break
 
             if data:
@@ -962,13 +980,27 @@ class ConnectorClient:
         )
         return _parse_scan_date(stamp)
 
-    @staticmethod
-    def _still_running(results) -> bool:
-        """True when any of these scan results has not finished yet."""
-        return any(
-            not getattr(r, "failed", False) and not getattr(r, "window_closed", True)
-            for r in results
-        )
+    def _still_running(self, results) -> bool:
+        """True when any of these scan results is genuinely still running.
+
+        The SDK leaves window_closed as None when the API omits it, so a result
+        that only looks unfinished counts only when it was created recently:
+        within RUNNING_SCAN_MAX_AGE, or the configured rescan timeout if
+        longer. An older (or undated) one is treated as finished, so it can
+        never block a rescan forever. Timestamps decide, not list order.
+        """
+        timeout = getattr(getattr(self, "config", None), "rescan_timeout", 0) or 0
+        # Capped so an absurd setting cannot overflow timedelta
+        timeout = min(int(timeout), 36500 * 86400)
+        max_age = max(RUNNING_SCAN_MAX_AGE, timedelta(seconds=timeout))
+        now = datetime.now(timezone.utc)
+        for r in results:
+            if getattr(r, "failed", False) or getattr(r, "window_closed", True):
+                continue
+            scanned = self._scan_time(r)
+            if scanned is not None and now - scanned <= max_age:
+                return True
+        return False
 
     def _rescan_reason(self, held: list, data: dict | None, source=None) -> str | None:
         """Why a held sample should be rescanned, or None to leave it alone.
@@ -1060,13 +1092,15 @@ class ConnectorClient:
             source = data.get("_source_result") if data else None
             if not data and not held:
                 return result
-            # Unfinished scans in every community: the held ones, and those
-            # listed ahead of the primary and secondary results
+            # Unfinished scans in every community: the held ones, and the other
+            # results read with the primary and secondary results
             pending = [r for _, results in held for r in results]
+            incomplete = False
             for entry in (result.get("primary"), result.get("secondary")):
                 if entry:
-                    pending.extend(entry.get("_newer_results") or [])
-            if self._still_running(pending):
+                    pending.extend(entry.get("_other_results") or [])
+                    incomplete |= bool(entry.get("_other_results_incomplete"))
+            if incomplete or self._still_running(pending):
                 # A scan (e.g. an earlier rescan that timed out) is still
                 # running: let it finish instead of paying for another one
                 return result
@@ -1099,7 +1133,8 @@ class ConnectorClient:
             ):
                 if entry:
                     entry.pop("_source_result", None)
-                    entry.pop("_newer_results", None)
+                    entry.pop("_other_results", None)
+                    entry.pop("_other_results_incomplete", None)
         return result
 
     # ------------------------------------------------------------------
