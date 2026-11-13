@@ -10,6 +10,11 @@ def test_root_public_api_is_valid():
     # Then it should all be present
     imports = {
         "BaseConnectorSettings",
+        "BaseExternalImportConnectorSettings",
+        "BaseInternalEnrichmentConnectorSettings",
+        "BaseInternalExportFileConnectorSettings",
+        "BaseInternalImportFileConnectorSettings",
+        "BaseStreamConnectorSettings",
         "BaseConfigModel",
         "BaseExternalImportConnectorConfig",
         "BaseInternalEnrichmentConnectorConfig",
