@@ -249,6 +249,7 @@ def _to_json(value: Any) -> Any:
         return {
             "indicator": _to_json(value.indicator),
             "malware": [_to_json(obj) for obj in value.malware],
+            "attack_patterns": [_to_json(obj) for obj in value.attack_patterns],
             "relationships": [_to_json(obj) for obj in value.relationships],
         }
     # stix2 objects: their STIX JSON, in stix2's property order.

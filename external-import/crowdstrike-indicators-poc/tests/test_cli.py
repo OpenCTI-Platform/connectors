@@ -456,6 +456,7 @@ def test_transform_prints_every_step(isolated, no_api, capsys):
     bundle = second["output"]
     assert bundle["indicator"] == first["output"]
     assert [m["name"] for m in bundle["malware"]] == SAMPLE_DOMAIN["malware_families"]
+    assert bundle["attack_patterns"] == []
     assert [r["relationship_type"] for r in bundle["relationships"]] == [
         "indicates"
     ] * len(SAMPLE_DOMAIN["malware_families"])

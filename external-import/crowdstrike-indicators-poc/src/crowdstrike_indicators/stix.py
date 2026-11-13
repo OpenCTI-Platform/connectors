@@ -8,7 +8,7 @@ from stix2.properties import (
     ListProperty,
     StringProperty,
 )
-from stix2.v21 import Indicator, Malware, Relationship
+from stix2.v21 import AttackPattern, Indicator, Malware, Relationship
 
 
 def _string_list() -> ListProperty:
@@ -63,4 +63,5 @@ class CrowdStrikeIndicatorBundle:
 
     indicator: CrowdStrikeStix2Indicator
     malware: list[Malware]
+    attack_patterns: list[AttackPattern]
     relationships: list[Relationship]
