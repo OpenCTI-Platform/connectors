@@ -109,6 +109,43 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 The connector fetches cases and alerts from TheHive and converts them to STIX 2.1 incidents and observables.
 
+## Traceability
+
+### Indicator original creation date
+
+Observables flagged as IOC in TheHive are promoted to indicators by OpenCTI itself. That promotion carries no
+date, so a promoted indicator is stamped with the ingest time: backfilling historical cases would give every
+indicator the same creation date.
+
+To avoid this, the connector also emits a lightweight indicator alongside each IOC observable, carrying the
+observable's TheHive creation date as **Original creation date**. It uses the same STIX pattern OpenCTI
+generates, so it upserts onto the promoted indicator instead of creating a second one. No configuration is
+needed, and observables that are not IOCs, or whose type has no pattern, are unaffected.
+
+`valid_from` is deliberately left to the platform, which rewrites it on every run.
+
+### Linking a case back to TheHive
+
+Imported cases carry TheHive's case number as an external reference, visible in the **External References**
+panel of the incident response case.
+
+To make that reference a working link, set a URL template:
+
+```bash
+THEHIVE_CASE_URL_TEMPLATE=https://thehive.example.com/index.html#!/case/{case_id}/details
+```
+
+Available placeholders are `{case_id}` (TheHive's internal `_id`) and `{case_number}`.
+
+When the template is not set, the connector detects TheHive's major version and uses the matching UI route
+(`/index.html#!/case/{case_id}/details` for TheHive 4, `/cases/{case_id}/details` for TheHive 5), appended to
+`THEHIVE_URL`. If the version cannot be determined, the external reference carries the case number without a
+link.
+
+> Set the template explicitly whenever analysts reach TheHive at a different address than the connector does —
+> for example when the connector uses an internal Docker network address, or TheHive sits behind a reverse
+> proxy. The connector cannot infer the analyst-facing address, and a wrong link is worse than none.
+
 ## Attachments import
 
 By default, attachments from TheHive cases are **not imported**.
