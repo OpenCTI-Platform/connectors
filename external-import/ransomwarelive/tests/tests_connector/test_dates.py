@@ -173,3 +173,30 @@ def test_collect_historic_intelligence_sends_victim_without_dates():
     assert any(obj.get("name") == "Acme Corp" for obj in sent_objects)
     assert not [obj for obj in sent_objects if obj.get("type") == "report"]
     assert connector.helper.send_stix2_bundle.called
+
+
+def test_create_bundle_list_keeps_attack_date_unknown_outside_the_report():
+    connector = _make_connector()
+    connector.config.ransomwarelive.create_threat_actor = True
+    item = {
+        "victim": "Acme Corp",
+        "group": "acme-ransomware",
+        "country": "",
+        "activity": "",
+        "domain": "",
+        "attackdate": "",
+        "discovered": "2026-10-02T08:00:00+00:00",
+    }
+
+    bundle_objects = connector.create_bundle_list(item, group_data=[])
+
+    # The disclosure date is only used as the Report published date
+    assert _report(bundle_objects)["published"] == datetime(
+        2026, 10, 2, 8, 0, tzinfo=timezone.utc
+    )
+    # The attack timeline stays unknown instead of claiming the disclosure date
+    relationships = [
+        obj for obj in bundle_objects if obj and obj.get("type") == "relationship"
+    ]
+    assert relationships
+    assert all("start_time" not in rel for rel in relationships)

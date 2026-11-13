@@ -290,10 +290,13 @@ class RansomwareAPIConnector:
         discovered = item.get("discovered")
         discovered_iso = safe_datetime(discovered)
 
-        # The attack date is sometimes empty in the API: fall back to the
-        # disclosure date, which the Report needs as its ``published`` date.
+        # The attack date is sometimes empty in the API: keep it unknown
+        # (``None``) for the attack timeline (Campaign ``first_seen``,
+        # relationship ``start_time``). Only the Report, which requires a
+        # ``published`` date, falls back to the disclosure date.
         attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date) or discovered_iso
+        attack_date_iso = safe_datetime(attack_date)
+        report_published_iso = attack_date_iso or discovered_iso
 
         # Build the canonical external-reference list ONCE up-front so
         # every emitted SDO (Threat Actor, Campaign, Report, …) sees the
@@ -609,7 +612,7 @@ class RansomwareAPIConnector:
         # makes the data flow much harder to follow. Building the full
         # ``object_refs`` list first and constructing the Report once
         # is the canonical stix2 idiom.
-        if self.config.ransomwarelive.create_report and attack_date_iso is None:
+        if self.config.ransomwarelive.create_report and report_published_iso is None:
             # A Report needs a ``published`` date: without an attack date or a
             # discovered date, skip the Report but keep the other objects.
             self.helper.connector_logger.warning(
@@ -620,7 +623,7 @@ class RansomwareAPIConnector:
             report = self.converter_to_stix.process_report(
                 report_name=item.get("group"),
                 victim_name=victim_name,
-                attack_date_iso=attack_date_iso,
+                attack_date_iso=report_published_iso,
                 description=item.get("description"),
                 object_refs=object_refs,
                 discovered_iso=discovered_iso,
