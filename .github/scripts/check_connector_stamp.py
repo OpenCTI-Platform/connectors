@@ -74,7 +74,7 @@ Anything outside the model is reported as "not supported" with the construct
 that stopped the analysis, never assumed to be fine: heredocs, variables the
 build does not define, a directory change or the start of python inside a
 conditional or a loop of the entry script, an entry point that is not a file
-of the model, a command outside the closed world above or acting on a path it
+of the model, a shell interpreter line with -c or with more than one word, a command outside the closed world above or acting on a path it
 cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
 exclusions, automatic discovery of a namespace package, build backends other
 than setuptools, packaging files a build command wrote, a module setuptools
@@ -258,6 +258,10 @@ def literal_globs(text):
 # substitution: it keeps a "$", so a path built from it is reported, and it
 # matches no variable reference.
 UNKNOWN = "${...}"
+# A conversion of a printf format (bash) and its letter; %% has none.
+PRINTF_CONVERSION = re.compile(
+    r"%(?:%|[-+ #0']*(?:\*|[0-9]+)?(?:\.(?:\*|[0-9]+)?)?(?:\([^)]*\))?[hlLqjzt]*([a-zA-Z]))"
+)
 VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}{VAR_SUBST}])(\\d+){VAR_END}")
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
 # read it, create something new, or change its owner. A command the model
@@ -362,7 +366,8 @@ PACKAGE_MANAGERS = {
     "dnf": frozenset({"--installroot"}),
     "dpkg": frozenset({"--root", "--instdir", "--admindir"}),
     "microdnf": frozenset({"--installroot"}),
-    "rpm": frozenset({"--root", "--dbpath"}),
+    # --prefix and --relocate move the files of a relocatable package.
+    "rpm": frozenset({"--root", "-r", "--dbpath", "--prefix", "--relocate"}),
     "yum": frozenset({"--installroot"}),
 }
 # Options of wget and curl the model reads: the ones naming a file they write
@@ -1840,7 +1845,12 @@ def interpreter_of(text, model=None, env=None, files=None, stage=None):
         # that may change what runs (-mNAME, -c) and where it is looked up.
         raise Unsupported(f"interpreter line '{text.splitlines()[0]}'")
     if posixpath.basename(interpreter[0]) in SHELLS:
-        check_shell_options(interpreter[1:])
+        rest = interpreter[1:]
+        # The kernel hands the shell the rest of the line as one argument; with
+        # -c the shell runs the path of the script as a command, not its body.
+        if len(rest) > 1 or (rest and rest[0][:1] in "-+" and "c" in rest[0][1:]):
+            raise Unsupported(f"interpreter line '{text.splitlines()[0]}'")
+        check_shell_options(rest)
     if posixpath.basename(interpreter[0]) == "env":
         # The kernel hands env the rest of the line as one argument: only a
         # lone program name is read as such (env -S splits it, and then the
@@ -2250,20 +2260,26 @@ class Shell:
         longer known to the commands after the list. A directory such a command
         created may be missing (see pending_dirs): a later cd into it may fail, a
         COPY into it is reported."""
+        self._forget_chain_changes()
+        if self.chain_partial:
+            self._uncertain(self.chain_dirs)
+        else:
+            self.pending_dirs |= self.chain_dirs
+        self.chain_dirs = set()
+        self.chain_partial = False
+
+    def _forget_chain_changes(self):
+        """The variables and the directory the commands of the current list changed
+        are no longer known: at its end, and at a || of it, whose command runs
+        when one before failed, so maybe before a change."""
         for key in self.chain_variables:
             self.variables[key] = UNKNOWN
         if self.chain_directory:
             self._unknown_directory(
                 "a directory change in an && list, a pipeline or a background job"
             )
-        if self.chain_partial:
-            self._uncertain(self.chain_dirs)
-        else:
-            self.pending_dirs |= self.chain_dirs
         self.chain_variables = set()
         self.chain_directory = False
-        self.chain_dirs = set()
-        self.chain_partial = False
 
     def exec_form(self, argv):
         """A command of the exec form: no shell reads it, so each word is an
@@ -2276,19 +2292,27 @@ class Shell:
         self._uncertain(self.pending_dirs)
         if before in ("||", "|") or after in ("||", "|", "&"):
             self.chain_partial = True
+        if before == "||":
+            self._forget_chain_changes()
         uncertain = before in ("&&", "|") or after in ("|", "&")
         if not uncertain:
             self._simple_command(words, writes, before, after, reads)
             return
         variables, cwd, dirs = dict(self.variables), self.cwd, set(self.stage.dirs)
+        exported, allexport = set(self.exported), self.allexport
         self._simple_command(words, writes, before, after, reads)
         self.chain_variables |= {
             key
             for key in {*variables, *self.variables}
             if variables.get(key) != self.variables.get(key)
-        }
+        } | (exported ^ self.exported)
         self.chain_directory = self.chain_directory or self.cwd != cwd
         self.chain_dirs |= self.stage.dirs - dirs
+        if before == "|" or after in ("|", "&"):
+            # A subshell: the other commands of the script see the variables
+            # (values, exports, set -a) of before.
+            self.variables, self.exported = variables, exported
+            self.allexport = allexport
 
     def _set_options(self, args):
         """set -a / +a (and -o / +o allexport): assignments exported or not."""
@@ -2662,11 +2686,27 @@ class Shell:
         """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
-        if name == "printf" and args and args[0].startswith("-v"):
-            # printf -v NAME (or -vNAME) sets a variable.
-            variable = args[0][2:] or (args[1] if len(args) > 1 else "")
-            self.variables[variable] = UNKNOWN
-            return
+        if name == "printf":
+            # bash: printf -v NAME (or -vNAME) sets a variable, and so does each
+            # argument a %n conversion of the format takes; NAME[0] is $NAME.
+            assigned = []
+            rest = args
+            if rest and rest[0].startswith("-v"):
+                assigned.append(rest[0][2:] or (rest[1] if len(rest) > 1 else ""))
+                rest = rest[1:] if rest[0][2:] else rest[2:]
+            if rest[:1] == ["--"]:
+                rest = rest[1:]
+            if rest and (
+                "$" in rest[0]
+                or any(m.group(1) == "n" for m in PRINTF_CONVERSION.finditer(rest[0]))
+            ):
+                assigned += rest[1:]
+            for word in assigned:
+                variable = re.match(r"[A-Za-z_][A-Za-z0-9_]*", word)
+                if variable:
+                    self.variables[variable.group()] = UNKNOWN
+            if args and args[0].startswith("-v"):
+                return
         if name == "mkdir":
             self._mkdir(args, uncertain=conditional)
             return

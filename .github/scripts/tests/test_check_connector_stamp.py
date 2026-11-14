@@ -1363,6 +1363,14 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         # Closed world: package managers, but not when they install below another root.
         ("RUN apk add --no-cache git && apt-get install -y curl", True),
         ("RUN apk add --root /opt/src git", False),
+        # Copilot review of 23:00 UTC: rpm --prefix and --relocate move the files
+        # of a relocatable package.
+        ("RUN rpm -i --prefix /opt/src /tmp/sample.rpm", False),
+        ("RUN rpm -i --prefix=/opt/src /tmp/sample.rpm", False),
+        ("RUN rpm -i --relocate /usr=/opt/src /tmp/sample.rpm", False),
+        ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
+        ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
+        ("RUN rpm -i /tmp/sample.rpm", True),
         ("RUN wget -O /opt/src/.connector_version.json https://example.com/x", False),
         ("RUN wget -P /tmp https://example.com/.connector_version.json", True),
         (
@@ -1547,6 +1555,33 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ),
         ("WORKDIR /opt/src\nRUN chmod 000 .connector_*.json", False),
         ("WORKDIR /opt/src\nRUN chmod 644 *.py", True),
+        # Copilot review of 23:00 UTC: each pipeline part runs in a subshell, so
+        # the next one sees the variables of before; a command after || may run
+        # although a change after && did not happen.
+        (
+            'ENV APP=/opt/src\nRUN export APP=/tmp | rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nRUN APP=/tmp | rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nRUN true | export APP=/tmp | rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nRUN false && APP=/tmp || rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN false && cd /tmp || rm -f .connector_version.json",
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nRUN true && APP=/tmp && rm -f "$APP/.connector_version.json"',
+            True,
+        ),
         # "." and ".." name the working directory and its parent.
         ("WORKDIR /opt/src\nRUN chmod -R 000 .", False),
         ("WORKDIR /opt/src/sub\nRUN chmod 000 ..", False),
@@ -3105,6 +3140,80 @@ def test_env_interpreter_line(tmp_path, line, reason):
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
         'COPY run.py /opt/sample/run.py\nWORKDIR /tmp\nCMD ["/opt/sample/run.py"]\n',
         "run.py": line + "\n",
+    }
+    assert single(tmp_path, files).reason == reason
+
+
+@pytest.mark.parametrize(
+    "script, covered",
+    [
+        # Copilot review of 23:00 UTC: bash printf sets the variable each %n
+        # conversion takes as argument (APP=0 here), with or without -v; an
+        # element NAME[0] is $NAME.
+        ('printf "%n" APP', False),
+        ('printf -v OUT "%n" APP', False),
+        ('printf "%s%5n" x APP', False),
+        ('printf "%n" "APP[0]"', False),
+        ('printf -v "APP[0]" 0', False),
+        ('printf "%%n" APP', True),
+        ('printf "%s" APP', True),
+    ],
+)
+def test_printf_assignments(tmp_path, script, covered):
+    removal = 'rm -f "/opt/src$APP/.connector_version.json"'
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src0\nENV APP=/tmp\n"
+        f"RUN bash -c '{script}; {removal}'\n"
+        'CMD ["python3", "/opt/src0/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "line, entrypoint, reason",
+    [
+        # Copilot review of 23:00 UTC: the kernel hands the shell of the
+        # interpreter line the rest of the line as one argument; with -c the
+        # shell runs the path of the script as a command, not its body.
+        (
+            "#!/bin/sh",
+            '["/entrypoint.sh"]',
+            "stamp at /opt/sample/.connector_version.json",
+        ),
+        (
+            "#!/bin/sh -e",
+            '["/entrypoint.sh"]',
+            "stamp at /opt/sample/.connector_version.json",
+        ),
+        (
+            "#!/bin/sh -c",
+            '["/entrypoint.sh"]',
+            "not supported: interpreter line '#!/bin/sh -c'",
+        ),
+        (
+            "#!/bin/sh -ec",
+            '["/entrypoint.sh"]',
+            "not supported: interpreter line '#!/bin/sh -ec'",
+        ),
+        (
+            "#!/bin/bash -e -x",
+            '["/entrypoint.sh"]',
+            "not supported: interpreter line '#!/bin/bash -e -x'",
+        ),
+        # A shell -c command reads its string as usual.
+        (
+            "#!/bin/sh",
+            '["sh", "-c", "exec python3 /opt/sample/main.py"]',
+            "stamp at /opt/sample/.connector_version.json",
+        ),
+    ],
+)
+def test_shell_interpreter_line(tmp_path, line, entrypoint, reason):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+        f"COPY entrypoint.sh /entrypoint.sh\nENTRYPOINT {entrypoint}\n",
+        "entrypoint.sh": f"{line}\nexec python3 /opt/sample/main.py\n",
     }
     assert single(tmp_path, files).reason == reason
 
