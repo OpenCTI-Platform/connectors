@@ -1,0 +1,23 @@
+services:
+  connector-report-article-fetcher:
+    image: opencti/connector-report-article-fetcher:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Report Article Fetcher
+      # - CONNECTOR_SCOPE=Report
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false # keep false: trigger it from a playbook or by manual enrichment
+      # - CONNECTOR_MAX_TLP=TLP:AMBER
+      # Parameters of the Report Article Fetcher, all optional
+      # - REPORT_ARTICLE_FETCHER_USER_AGENT=OpenCTI Report Article Fetcher
+      # - REPORT_ARTICLE_FETCHER_REQUEST_TIMEOUT=20
+      # - REPORT_ARTICLE_FETCHER_MAX_DOWNLOAD_SIZE=5000000
+      # - REPORT_ARTICLE_FETCHER_MIN_LENGTH=500
+      # - REPORT_ARTICLE_FETCHER_LENGTH_RATIO=1.5
+      # - REPORT_ARTICLE_FETCHER_MIN_TITLE_SIMILARITY=0.6
+      # - REPORT_ARTICLE_FETCHER_MATCH_SINGLE_REFERENCE=false
+    restart: always
