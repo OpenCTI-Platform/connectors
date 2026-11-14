@@ -2,7 +2,7 @@ pycti==7.261109.0
 validators==0.36.0
 dateparser==1.5.0
 requests==2.33.0
-pydantic==2.13.5
+pydantic==2.14.3
 pydantic-core==2.46.5
 pydantic-settings==2.16.2
 stix2==3.0.2
