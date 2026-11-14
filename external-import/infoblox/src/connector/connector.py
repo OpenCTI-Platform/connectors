@@ -133,9 +133,17 @@ class Infoblox:
             stix_objects.append(observable)
 
         elif object_type == "HOST":
-            pattern = f"[domain-name:value = '{threat['domain']}']"
+            # TIDE does not always send `domain` on HOST records; `host`
+            # carries the hostname then (#7400).
+            name = threat.get("domain") or threat.get("host")
+            if not name:
+                self.helper.connector_logger.warning(
+                    "Skipping Infoblox HOST threat without a domain or host value",
+                    {"threat_id": threat.get("id")},
+                )
+                return None
+            pattern = f"[domain-name:value = '{name}']"
             observable_type = "Domain-Name"
-            name = threat["domain"]
             observable = stix2.DomainName(
                 value=name,
                 object_marking_refs=[self.marking],
