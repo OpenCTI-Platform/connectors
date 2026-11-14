@@ -465,6 +465,44 @@ DOWNLOADER_CONFIGS = {
     "wget": ({".wgetrc", "wgetrc"}, ("WGETRC",)),
     "curl": ({".curlrc", "curlrc", "_curlrc"}, ("CURL_HOME", "XDG_CONFIG_HOME")),
 }
+GIT_CLONE_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "-b",
+        "--branch",
+        "-o",
+        "--origin",
+        "-c",
+        "--config",
+        "-u",
+        "--upload-pack",
+        "-j",
+        "--jobs",
+        "--depth",
+        "--reference",
+        "--reference-if-able",
+        "--template",
+        "--filter",
+        "--shallow-since",
+        "--shallow-exclude",
+        "--server-option",
+    }
+)
+# External images whose files a COPY --from may take, reviewed for what they
+# hold (by name, any tag or digest).
+AUDITED_IMAGES = {
+    "ghcr.io/astral-sh/uv": "the uv and uvx binaries, at the root of the image",
+}
+
+
+def audited_image(image):
+    """``image``, without its tag or digest, is one of AUDITED_IMAGES."""
+    name = image.split("@", 1)[0]
+    # A colon after the last slash starts the tag (before it, a registry port).
+    if name.rfind(":") > name.rfind("/"):
+        name = name[: name.rfind(":")]
+    return name in AUDITED_IMAGES
+
+
 # Programs of base images or packages whose effect was reviewed: they write no
 # connector file.
 AUDITED_PROGRAMS = {
@@ -872,6 +910,14 @@ class Stage:
     healthcheck: tuple = None
     # The external image the stage starts from, through the stages it builds on.
     base: str = None
+    # Directories below which a COPY put content the model does not know.
+    unknown_dirs: set = field(default_factory=set)
+
+    def written(self, path):
+        """``path`` holds what a build step wrote, with a content the model does not know."""
+        return path in self.replaced or any(
+            path == d or path.startswith(d.rstrip("/") + "/") for d in self.unknown_dirs
+        )
 
     def child(self):
         # ENV values are part of the image; ARG values end with their stage.
@@ -888,6 +934,7 @@ class Stage:
             replaced=set(self.replaced),
             healthcheck=self.healthcheck,
             base=self.base,
+            unknown_dirs=set(self.unknown_dirs),
         )
 
     def add_file(self, path, origin):
@@ -1372,14 +1419,32 @@ def env_prefix(words, assigned, unset):
     return words, assigned, unset
 
 
-def interpreter_of(text):
-    """Program named by the interpreter line of a script, or an empty string."""
+def interpreter_of(text, model=None, env=None, files=None, stage=None):
+    """Program named by the interpreter line of a script, or an empty string.
+    With the image model, the interpreter (and the program ``env`` looks up)
+    must not be a file the build wrote."""
     if not text or not text.startswith("#!"):
         return ""
     interpreter = text.splitlines()[0][2:].split()
-    if interpreter and posixpath.basename(interpreter[0]) == "env":
-        interpreter = [a for a in interpreter[1:] if not a.startswith("-")]
-    return posixpath.basename(interpreter[0]) if interpreter else ""
+    if not interpreter:
+        return ""
+    programs = [interpreter[0]]
+    if posixpath.basename(interpreter[0]) == "env":
+        rest = [
+            a
+            for a in interpreter[1:]
+            if not a.startswith("-") and not ASSIGNMENT.match(a)
+        ]
+        if not rest:
+            return ""
+        programs.append(rest[0])
+    if model is not None:
+        for program in programs:
+            if model.shadow(program, env or {}, files, stage, "/"):
+                raise Unsupported(
+                    f"interpreter {program} of a script is a file the build wrote"
+                )
+    return posixpath.basename(programs[-1])
 
 
 def shell_script(args, cwd, files, model):
@@ -1551,6 +1616,10 @@ class Shell:
                 VARIABLE.match(line, i) if char == "$" and quote != "'" else None
             )
             if reference:
+                if "$(" in reference.group(0) or "`" in reference.group(0):
+                    raise Unsupported(
+                        "a command substitution inside a parameter expansion"
+                    )
                 kind = VAR_QUOTED if quote == '"' else VAR_UNQUOTED
                 out.append(f"{kind}{len(self.references)}{VAR_END}")
                 self.references.append(reference.group(0))
@@ -1888,8 +1957,8 @@ class Shell:
             module, package = f"{entry}/{name}.py", f"{entry}/{name}"
             if module in self.files or f"{package}/__init__.py" in self.files:
                 return module if module in self.files else package
-            if module in self.stage.replaced or package in self.stage.replaced:
-                return module if module in self.stage.replaced else package
+            if self.stage.written(module) or self.stage.written(package):
+                return module if self.stage.written(module) else package
         return None
 
     def _python(self, words, env, conditional):
@@ -2003,8 +2072,17 @@ class Shell:
         if name in ("wget", "curl"):
             names, variables = DOWNLOADER_CONFIGS[name]
             written = (*self.files, *self.stage.replaced)
-            if any(posixpath.basename(p) in names for p in written) or any(
-                v in self.variables for v in variables
+            # The places the configuration is read from, in the home directory
+            # or in /etc, including below a directory a COPY filled.
+            places = [
+                f"{home}/{config}"
+                for home in ("/root", "/etc", self.variables.get("HOME", "/root"))
+                for config in names
+            ]
+            if (
+                any(posixpath.basename(p) in names for p in written)
+                or any(v in self.variables for v in variables)
+                or any(self.stage.written(place) for place in places)
             ):
                 # A configuration file of the build may add outputs.
                 raise Unsupported(f"{name} with a configuration file of the build")
@@ -2012,7 +2090,30 @@ class Shell:
                 self._forget(output)
             return
         if name == "git" and args[:1] == ["clone"]:
-            # A clone creates a new directory (git refuses a non-empty one).
+            # A clone creates a new directory (git refuses a non-empty one),
+            # whose content the model does not know.
+            operands = []
+            i = 1
+            while i < len(args):
+                if args[i] == "--separate-git-dir" or args[i].startswith(
+                    "--separate-git-dir="
+                ):
+                    raise Unsupported("git clone --separate-git-dir")
+                if args[i] in GIT_CLONE_OPTIONS_WITH_VALUE:
+                    i += 2
+                    continue
+                if not args[i].startswith("-"):
+                    operands.append(args[i])
+                i += 1
+            if not operands:
+                raise Unsupported("git clone without a repository")
+            target = (
+                operands[1]
+                if len(operands) > 1
+                else posixpath.basename(operands[0].rstrip("/")).removesuffix(".git")
+            )
+            path = image_path(self._tilde(target), self.cwd, "git clone directory")
+            self.stage.unknown_dirs.add(path)
             return
         raise Unsupported(
             f"'{name}' is not a command the model knows the effects of on the image files"
@@ -2056,7 +2157,7 @@ class Shell:
         command was one of these."""
         path = self.model.find_executable(words[0], self.cwd, env, self.files)
         text = self.model.context.read(self.files.get(path)) if path else None
-        program = interpreter_of(text)
+        program = interpreter_of(text, self.model, env, self.files, self.stage)
         if program in SHELLS:
             if not self.start and audited(text):
                 return True
@@ -2189,6 +2290,16 @@ class Shell:
             self.stage.replaced.add(posixpath.join(link, name))
 
     def _find(self, args):
+        # Options before the roots: -H, -L and -P (symbolic links), -D, -O.
+        while args and re.fullmatch(r"-[HLP]|-O\d*|-D", args[0]):
+            if args[0] in ("-H", "-L") and (
+                {"-delete", "-exec", "-execdir", "-ok", "-okdir"} & set(args)
+            ):
+                # Followed links lead to files the model does not place there.
+                raise Unsupported(f"find {args[0]} acting on what it finds")
+            args = args[2:] if args[0] == "-D" else args[1:]
+        if "-follow" in args and {"-delete", "-exec", "-execdir"} & set(args):
+            raise Unsupported("find -follow acting on what it finds")
         roots = []
         while args and not args[0].startswith("-") and args[0] not in ("(", "!", ")"):
             roots.append(args[0])
@@ -2535,6 +2646,17 @@ class ImageModel:
             if carried and keep_parents:
                 raise Unsupported("COPY --parents of files a build command wrote")
             stage.replaced.update(carried)
+        origin_image = (
+            str(from_values[-1])
+            if from_values and source_stage is None
+            else (source_stage.base if from_values else None)
+        )
+        if origin_image is not None and not (
+            KNOWN_BASE_IMAGE.match(origin_image) or audited_image(origin_image)
+        ):
+            # Files of an image whose content is not known: any of them, a
+            # wrapper named after a program included, may land there.
+            stage.unknown_dirs.add(dest_path)
 
         chmod = flags.get("chmod", [])
         unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
@@ -2867,7 +2989,7 @@ class ImageModel:
         text = self._read(files, path)
         if not text.startswith("#!"):
             raise Unsupported(f"entry point {path} has no interpreter line")
-        program = interpreter_of(text)
+        program = interpreter_of(text, self, env, files, self.final)
         if PYTHON.match(program):
             argv = [program, path, *words[1:]]
             return [(self.python_start(argv, cwd, env, files), dict(files))]
@@ -2912,17 +3034,17 @@ class ImageModel:
             if "$" in command or (cwd is None and not command.startswith("/")):
                 return None
             path = image_path(command, cwd)
-            return path if path in files or path in stage.replaced else None
+            return path if path in files or stage.written(path) else None
         for directory in env.get("PATH", DEFAULT_PATH).split(":"):
             candidate = posixpath.join(directory or ".", command)
             if not directory.startswith("/"):
                 # A relative PATH entry depends on the working directory.
-                if any(
+                if stage.unknown_dirs or any(
                     posixpath.basename(p) == command for p in (*files, *stage.replaced)
                 ):
                     raise Unsupported(f"'{command}' looked up in a relative PATH entry")
                 continue
-            if candidate in files or candidate in stage.replaced:
+            if candidate in files or stage.written(candidate):
                 return candidate
         return None
 
@@ -2985,7 +3107,7 @@ class ImageModel:
                             safe_path,
                             ignore_env,
                             no_site,
-                            self.final.replaced,
+                            self.final,
                         )
                         return self._readable(main_dir, cwd)
                     if letter in "WX":
@@ -3014,7 +3136,7 @@ class ImageModel:
 
     @staticmethod
     def _module_dir(
-        module, cwd, env, files, safe_path, ignore_env, no_site=False, replaced=()
+        module, cwd, env, files, safe_path, ignore_env, no_site=False, stage=None
     ):
         parts = module.split(".")
         if not all(part.isidentifier() for part in parts):
@@ -3044,7 +3166,9 @@ class ImageModel:
             portions = []
             for base in search:
                 path = posixpath.join(base, name)
-                if path in replaced or f"{path}.py" in replaced:
+                if stage is not None and (
+                    stage.written(path) or stage.written(f"{path}.py")
+                ):
                     raise Unsupported(
                         f"python -m {module}: {path} holds what a build command wrote"
                     )
