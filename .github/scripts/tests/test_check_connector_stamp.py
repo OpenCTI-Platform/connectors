@@ -3051,6 +3051,144 @@ def test_entry_point_after_a_link(tmp_path, command, covered):
         assert "climbs out of the link /opt/app/alias the build created" in image.reason
 
 
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 21:00 UTC: a sourced file without a '/' is searched
+        # on PATH, not in the working directory.
+        (". setup.sh", False),
+        ("source setup.sh", False),
+        (". ./setup.sh", True),
+    ],
+)
+def test_sourced_file_without_a_slash(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "COPY remove.sh /usr/local/bin/setup.sh\nWORKDIR /opt/src\n"
+        f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
+        "src/setup.sh": "true\n",
+        "remove.sh": "rm -f /opt/src/.connector_version.json\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "searched on PATH" in image.reason
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 21:00 UTC: a mkdir in a branch may not run, so a cd
+        # into its directory may fail and leave the shell where it was.
+        (
+            "if false; then mkdir /tmp/gone; fi; cd /tmp/gone; rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "test -d /tmp/gone || mkdir /tmp/gone; cd /tmp/gone; rm -f .connector_version.json",
+            False,
+        ),
+        ("mkdir /tmp/gone; cd /tmp/gone; rm -f .connector_version.json", True),
+    ],
+)
+def test_cd_into_a_directory_of_a_conditional_mkdir(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\n"
+        f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "unknown working directory" in image.reason
+
+
+@pytest.mark.parametrize(
+    "mkdir, covered",
+    [
+        # Where a copy lands depends on whether the directory exists.
+        ("if false; then mkdir /opt/app; fi", False),
+        ("mkdir /opt/app", True),
+    ],
+)
+def test_copy_into_a_directory_of_a_conditional_mkdir(tmp_path, mkdir, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nRUN {mkdir}\n"
+        "COPY src/main.py /opt/app\nCOPY src/.connector_version.json /opt/app\n"
+        'CMD ["python3", "/opt/app/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "a mkdir that may not run" in image.reason
+
+
+@pytest.mark.parametrize(
+    "removal, covered",
+    [
+        # Copilot review of 21:00 UTC: a wildcard expands through the links it
+        # reaches.
+        ("rm -f /opt/src/*/.connector_version.json", False),
+        ("rm -f /opt/src/l?nk/.connector_version.json", False),
+        ("rm -f /opt/src/*.pyc", True),
+    ],
+)
+def test_wildcard_through_a_link_of_the_build(tmp_path, removal, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        f"RUN ln -s /opt/src /opt/src/link && {removal}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "goes through the link /opt/src/link" in image.reason
+
+
+def test_wildcard_through_a_link_of_the_context(tmp_path):
+    # Copilot review of 21:00 UTC: with src/link -> ., the wildcard expands
+    # through /opt/src/link to the stamp.
+    connector = make_connector(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+                "RUN rm -f /opt/src/*/.connector_version.json\n"
+                'CMD ["python3", "/opt/src/main.py"]\n'
+            )
+        },
+    )
+    try:
+        (connector / "src/link").symlink_to(".", target_is_directory=True)
+    except OSError:
+        pytest.skip("symbolic links cannot be created here")
+    [image] = result(tmp_path, connector)
+    assert image.reason == (
+        "not supported: /opt/src/*/.connector_version.json goes through the link"
+        " /opt/src/link the build created"
+    )
+
+
+@pytest.mark.parametrize(
+    "base",
+    [
+        # Copilot review of 21:00 UTC: an onbuild image runs build triggers, and
+        # the UBI images other than ubi9/ubi-minimal are not the documented base.
+        "python:3.6-onbuild",
+        "docker.io/library/python:3.6-onbuild",
+        "registry.access.redhat.com/ubi9/ubi-init",
+        "registry.access.redhat.com/ubi9/ubi-micro",
+        "registry.access.redhat.com/ubi9/ubi",
+        "registry.access.redhat.com/ubi8/ubi-minimal",
+    ],
+)
+def test_base_images_outside_the_reviewed_ones(tmp_path, base):
+    dockerfile = (
+        f'FROM {base}\nCOPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n'
+    )
+    image = single(tmp_path, {"Dockerfile": dockerfile})
+    assert not image.covered, image.reason
+
+
 def test_workflow_watches_every_file_the_check_reads():
     # Copilot reviews of 21:40 and 23:37 UTC: any file of a connector (an entry
     # script has no fixed name) or of the shared build must run the check.

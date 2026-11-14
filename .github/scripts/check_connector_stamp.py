@@ -126,11 +126,13 @@ STAMP_PARENT_DEPTH = 4
 SITE_PACKAGES = "/<site-packages>"
 # Base images whose configuration is known (read from their published image
 # configuration): they start in "/" and declare no ENTRYPOINT, VOLUME or ONBUILD
-# trigger. The final image must start from one of them.
+# trigger. The final image must start from one of them. The onbuild variants of
+# the python image run build triggers, and of the UBI images only ubi-minimal is
+# documented for connectors.
 KNOWN_BASE_IMAGE = re.compile(
-    r"^(docker\.io/(library/)?)?(python|alpine|debian|ubuntu)([:@]|$)"
+    r"^(docker\.io/(library/)?)?(python|alpine|debian|ubuntu)(?![^@]*onbuild)([:@]|$)"
     r"|^(docker\.io/)?filigran/alpine-python-fips([:@]|$)"
-    r"|^registry\.access\.redhat\.com/ubi\d+/ubi(-minimal|-micro|-init)?([:@]|$)"
+    r"|^registry\.access\.redhat\.com/ubi9/ubi-minimal([:@]|$)"
 )
 # Directories of every base image: a file copied to one of them without a
 # trailing slash lands inside it.
@@ -1068,6 +1070,9 @@ class Stage:
     links: dict = field(default_factory=dict)
     # Directories below which a COPY put content the model does not know.
     unknown_dirs: set = field(default_factory=set)
+    # Directories only a mkdir that may not have run created (in a branch the
+    # model does not follow).
+    uncertain_dirs: set = field(default_factory=set)
 
     def written(self, path):
         """``path`` holds what a build step wrote, with a content the model does
@@ -1103,6 +1108,7 @@ class Stage:
             healthcheck=self.healthcheck,
             base=self.base,
             unknown_dirs=set(self.unknown_dirs),
+            uncertain_dirs=set(self.uncertain_dirs),
             links=dict(self.links),
         )
 
@@ -1113,7 +1119,14 @@ class Stage:
 
     def is_dir(self, path):
         prefix = path.rstrip("/") + "/"
-        return path in self.dirs or any(f.startswith(prefix) for f in self.files)
+        if path in self.dirs or any(f.startswith(prefix) for f in self.files):
+            return True
+        if path in self.uncertain_dirs:
+            # A copy lands inside it or replaces it: where its files go is not known.
+            raise Unsupported(
+                f"{path} is a directory only if a mkdir that may not run did"
+            )
+        return False
 
 
 def shell_glob_match(pattern, path):
@@ -1174,6 +1187,16 @@ def modelled_targets(target):
         # A parent of the installed packages, or a pattern that may reach them.
         return [target, SITE_PACKAGES]
     return [target]
+
+
+def pattern_reaches(pattern, path):
+    """The wildcard ``pattern`` (absolute) expands through ``path``: its first
+    components, as many as ``path`` has, match it."""
+    if not GLOB_CHARS.search(pattern):
+        return False
+    parts = pattern.split("/")
+    depth = len(path.rstrip("/").split("/"))
+    return len(parts) >= depth and shell_glob_match("/".join(parts[:depth]), path)
 
 
 def remove_files(files, target):
@@ -2382,7 +2405,7 @@ class Shell:
             if not conditional and before != "&&":
                 self.ended = True
         elif not self._executed_script(words, env, conditional):
-            self._other_command(words, literal_args, env)
+            self._other_command(words, literal_args, env, conditional)
 
     def _python_path(self, env):
         """The PYTHONPATH directories of a python process of the build, None for
@@ -2543,7 +2566,7 @@ class Shell:
             return
         raise Unsupported(f"'uv {' '.join(args[:1])}' is not modelled")
 
-    def _other_command(self, words, literal_args=None, env=None):
+    def _other_command(self, words, literal_args=None, env=None, conditional=False):
         """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
@@ -2553,7 +2576,7 @@ class Shell:
             self.variables[variable] = UNKNOWN
             return
         if name == "mkdir":
-            self._mkdir(args)
+            self._mkdir(args, uncertain=conditional)
             return
         if name == "touch":
             self._touch(args)
@@ -2745,6 +2768,12 @@ class Shell:
         deletions count."""
         if not args:
             raise Unsupported(f"'{name}' without a file")
+        if "/" not in args[0]:
+            # The shell searches PATH for it, not the working directory (bash also
+            # falls back to the working directory).
+            raise Unsupported(
+                f"sourced file '{args[0]}' without a '/', searched on PATH"
+            )
         path = self._path(args[0], "sourced file")
         text = self._read(path)
         if text is None:
@@ -2766,9 +2795,11 @@ class Shell:
         self.cwd = nested.cwd
         self.allexport = nested.allexport
 
-    def _mkdir(self, args):
+    def _mkdir(self, args, uncertain=False):
         """The directories mkdir creates: a later COPY puts a file inside them; a
-        mode that removes read or search permission hides what they will hold."""
+        mode that removes read or search permission hides what they will hold.
+        ``uncertain``: the mkdir may not run, so a later ``cd`` into them may fail
+        and leave the shell where it was."""
         mode = None
         operands = []
         i = 0
@@ -2793,7 +2824,10 @@ class Shell:
         for operand in operands:
             path = self._path(operand, "mkdir operand")
             for directory in self_and_parents(path):
-                self.stage.dirs.add(directory)
+                if not uncertain:
+                    self.stage.dirs.add(directory)
+                elif not self._is_dir(directory):
+                    self.stage.uncertain_dirs.add(directory)
             if mode is not None and not harmless_mode([mode], True):
                 self.stage.replaced.add(path)
 
@@ -2944,9 +2978,14 @@ class Shell:
 
     def _through_link(self, path):
         """Report an operation on ``path`` when it goes through a link the build
-        created to files of the model: it acts on them under another name."""
+        created to files of the model: it acts on them under another name. A
+        wildcard goes through every link its expansion can reach."""
         for link, target in self.stage.links.items():
-            if path != link and not path.startswith(link.rstrip("/") + "/"):
+            if (
+                path != link
+                and not path.startswith(link.rstrip("/") + "/")
+                and not pattern_reaches(path, link)
+            ):
                 continue
             if target is None or any(
                 f == target or f.startswith(target.rstrip("/") + "/")
@@ -3444,6 +3483,7 @@ class ImageModel:
             replaced=set(stage.replaced),
             links=dict(stage.links),
             unknown_dirs=set(stage.unknown_dirs),
+            uncertain_dirs=set(stage.uncertain_dirs),
         )
         shell = Shell(self, probe, files, stage.workdir, variables, start=False)
         if shell_form:
@@ -3466,12 +3506,14 @@ class ImageModel:
             probe.replaced,
             probe.links,
             probe.unknown_dirs,
+            probe.uncertain_dirs,
         ) != (
             stage.files,
             stage.dirs,
             stage.replaced,
             stage.links,
             stage.unknown_dirs,
+            stage.uncertain_dirs,
         ):
             raise Unsupported("the HEALTHCHECK command changes files of the image")
 
