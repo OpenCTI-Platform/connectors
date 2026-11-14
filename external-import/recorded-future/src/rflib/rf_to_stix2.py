@@ -243,7 +243,7 @@ class Indicator(RFStixEntity):
 
         # If there are related entities
         if related_entities_links and len(related_entities_links) > 0:
-            related_entities_hits = related_entities_links["hits"]
+            related_entities_hits = related_entities_links.get("hits")
             if (
                 related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
             ):  # Sometimes, hits is not empty but sections is
