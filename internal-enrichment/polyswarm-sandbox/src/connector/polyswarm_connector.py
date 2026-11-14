@@ -2,8 +2,10 @@
 
 Production implementation with real scan and sandbox submission.
 Supports multiple sandbox providers (cape, triage, both).
+Artifacts are scanned and detonated; Url observables are detonated.
 """
 
+import hashlib
 import json
 import threading
 import time
@@ -16,7 +18,51 @@ from connector.polyswarm_client import PolySwarmAPIError, PolySwarmClient
 from connector.sandbox_processor import SandboxProcessor
 from connector.scan_processor import ScanProcessor
 from connector.stix_builder import StixBuilder
-from pycti import OpenCTIConnectorHelper
+from connector.url_utils import (
+    is_non_public_url,
+    loggable_url,
+    url_for_submission,
+    url_has_query_or_fragment,
+    url_has_userinfo,
+)
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
+
+# Names that all mean PolySwarm's public community: an account's community list
+# shows it as "public", the API's default is "default", and task records say
+# "mainnet1".
+PUBLIC_COMMUNITY_NAMES = ("", "default", "public", "mainnet1")
+
+# Fixed STIX ids of the TLP markings, so a ref is resolved even when the
+# bundle does not carry its marking-definition object. TLP:WHITE and
+# TLP:CLEAR share one id. A bundle cannot redefine these ids.
+WELL_KNOWN_TLP_IDS = {
+    MarkingDefinition.generate_id("TLP", tlp): tlp
+    for tlp in ("TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED")
+}
+
+
+def tlp_of_marking(marking: dict) -> str | None:
+    """TLP name of a STIX marking-definition, or None when it is not a TLP.
+
+    Read in order: OpenCTI's x_opencti_definition (when its type is TLP),
+    then a name starting with "TLP:", then the definition when
+    definition_type is TLP (any case): the STIX 2.1 form {"tlp": "red"}
+    (or key "TLP"), or the OpenCTI API string form "TLP:RED".
+    """
+    if str(marking.get("x_opencti_definition_type") or "").upper() == "TLP":
+        if marking.get("x_opencti_definition"):
+            return str(marking["x_opencti_definition"]).upper()
+    name = str(marking.get("name") or "")
+    if name.upper().startswith("TLP:"):
+        return name.upper()
+    if str(marking.get("definition_type") or "").lower() == "tlp":
+        definition = marking.get("definition")
+        if isinstance(definition, dict):
+            definition = definition.get("tlp") or definition.get("TLP")
+        if isinstance(definition, str) and definition.strip():
+            tlp = definition.strip().upper()
+            return tlp if tlp.startswith("TLP:") else f"TLP:{tlp}"
+    return None
 
 
 class PolySwarmConnector:
@@ -230,7 +276,7 @@ class PolySwarmConnector:
                 [
                     "Retry the enrichment — this may be a transient issue.",
                     "Check the connector logs for full traceback details.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ],
             )
             self._send_original_bundle(stix_objects)
@@ -257,6 +303,7 @@ class PolySwarmConnector:
             "artifact": "artifact",
             "file": "file",
             "indicator": "indicator",
+            "url": "url",
         }
         normalized["type"] = type_mapping.get(entity_type, "file")
 
@@ -270,6 +317,10 @@ class PolySwarmConnector:
         normalized["name"] = opencti_entity.get("name") or opencti_entity.get(
             "observable_value", ""
         )
+        if normalized["type"] == "url":
+            normalized["value"] = opencti_entity.get("value") or opencti_entity.get(
+                "observable_value", ""
+            )
 
         # Extract hashes
         hashes = {}
@@ -332,6 +383,71 @@ class PolySwarmConnector:
                 if h.get("algorithm") == "SHA-256":
                     return h.get("hash")
         return None
+
+    def _tlp_skip(
+        self,
+        opencti_entity: dict[str, Any],
+        stix_objects: list,
+        entity: dict[str, Any] | None = None,
+    ) -> dict | None:
+        """Return a "skipped" result when the entity's TLP exceeds max_tlp (#38).
+
+        check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of marking
+        ids, so each TLP marking on the entity is checked (the #7955 fix).
+        ``entity`` is the STIX entity being enriched; its own
+        object_marking_refs are checked too.
+        """
+        max_tlp = self.max_tlp
+        if max_tlp:
+            # The limit is always evaluated, whether or not the message carries
+            # a STIX bundle. Markings come from the OpenCTI entity and, when
+            # present, from the bundle's TLP marking definitions the entity
+            # references. An entity with no resolvable marking is allowed, as
+            # on the file path.
+            tlp_levels = [
+                m["definition"]
+                for m in opencti_entity.get("objectMarking") or []
+                if isinstance(m, dict)
+                and m.get("definition_type") == "TLP"
+                and m.get("definition")
+            ]
+            by_id = dict(WELL_KNOWN_TLP_IDS)
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("type") == "marking-definition":
+                    tlp = tlp_of_marking(o)
+                    if tlp:
+                        by_id.setdefault(o.get("id"), tlp)
+            entity = entity if isinstance(entity, dict) else {}
+            entity_ids = {
+                i
+                for i in (
+                    opencti_entity.get("standard_id"),
+                    opencti_entity.get("id"),
+                    entity.get("id"),
+                )
+                if i
+            }
+            refs = list(entity.get("object_marking_refs") or [])
+            for o in stix_objects or []:
+                if isinstance(o, dict) and o.get("id") in entity_ids:
+                    refs += o.get("object_marking_refs") or []
+            tlp_levels += [by_id[r] for r in refs if r in by_id]
+            if any(not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels):
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
+                )
+                return {
+                    "status": "skipped",
+                    "message": f"TLP exceeds configured max_tlp ({max_tlp})",
+                }
+        return None
+
+    def _upload_community_allowed(self) -> bool:
+        """True unless uploads would go to the public community without opt-in."""
+        community = (self.config.polyswarm.community or "").strip().lower()
+        if community not in PUBLIC_COMMUNITY_NAMES:
+            return True
+        return self.config.polyswarm.allow_public_community is True
 
     def _send_error_note(
         self,
@@ -669,6 +785,52 @@ class PolySwarmConnector:
 
         return merged
 
+    def _process_sandbox_results(
+        self, sandbox_results: dict[str, dict | None]
+    ) -> tuple[dict[str, dict], dict[str, dict]]:
+        """Split raw sandbox results into processed successes and failures.
+
+        Per provider, no merge: dedup happens in stix_builder.
+        """
+        sandbox_processed: dict[str, dict] = {}
+        sandbox_failures: dict[str, dict] = {}
+        for provider, raw_result in sandbox_results.items():
+            if raw_result:
+                status = str(raw_result.get("status", "")).upper()
+                if PolySwarmClient.is_sandbox_success(status):
+                    processed = SandboxProcessor.process(raw_result)
+                    if processed:
+                        sandbox_processed[provider] = processed
+                        self.helper.connector_logger.info(
+                            f"[CONNECTOR] {provider.upper()} sandbox processed: "
+                            f"score={processed.get('score')}, "
+                            f"family={processed.get('family')}, "
+                            f"ttps={len(processed.get('ttps', []))}, "
+                            f"domains={len(processed.get('domains', []))}, "
+                            f"ips={len(processed.get('ips', []))}"
+                        )
+                elif PolySwarmClient.is_sandbox_failure(status):
+                    sandbox_failures[provider] = {
+                        "status": status,
+                        "raw_result": raw_result,
+                        "error": raw_result.get("error")
+                        or raw_result.get("message")
+                        or f"Sandbox execution {status.lower()}",
+                    }
+                    self.helper.connector_logger.warning(
+                        f"[CONNECTOR] {provider.upper()} sandbox failed: {status}"
+                    )
+                else:
+                    self.helper.connector_logger.warning(
+                        f"[CONNECTOR] {provider.upper()} sandbox has unknown status: {status}"
+                    )
+                    sandbox_failures[provider] = {
+                        "status": status or "UNKNOWN",
+                        "raw_result": raw_result,
+                        "error": f"Sandbox returned unexpected status: {status}",
+                    }
+        return sandbox_processed, sandbox_failures
+
     # ── Phase methods (decomposed from _enrich_file) ─────────────────────────
 
     def _phase_download(
@@ -694,12 +856,12 @@ class PolySwarmConnector:
             if "exceeds the maximum" in download_error:
                 cat, recs = "File Size Limit Exceeded", [
                     "Increase POLYSWARM_MAX_FILE_SIZE in your connector configuration.",
-                    "Contact sales@polyswarm.io for enterprise file size limits.",
+                    "Contact customersuccess@polyswarm.io for enterprise file size limits.",
                 ]
             elif "disabled" in download_error.lower():
                 cat, recs = "Artifact Download Disabled", [
                     "Set POLYSWARM_DOWNLOAD_ARTIFACTS=true in your connector configuration.",
-                    "Contact sales@polyswarm.io if you need help enabling this feature.",
+                    "Contact customersuccess@polyswarm.io if you need help enabling this feature.",
                 ]
             elif "empty" in download_error.lower():
                 cat, recs = "Empty File", [
@@ -715,7 +877,7 @@ class PolySwarmConnector:
                 cat, recs = "File Download Failed", [
                     "Retry the enrichment — this may be a transient storage issue.",
                     "Verify the file still exists in OpenCTI.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ]
             self._send_error_note(entity, cat, download_error, recs)
             raise ValueError(download_error)
@@ -730,7 +892,7 @@ class PolySwarmConnector:
                 [
                     "Upload a file to this artifact before running enrichment.",
                     "Verify the file exists in OpenCTI storage.",
-                    "Contact sales@polyswarm.io if you need help.",
+                    "Contact customersuccess@polyswarm.io if you need help.",
                 ],
             )
             raise ValueError(err_msg)
@@ -789,7 +951,7 @@ class PolySwarmConnector:
                     "Retry the enrichment in a few minutes.",
                     "Check your PolySwarm API key is valid and active.",
                     "Verify your scan quota at https://polyswarm.network.",
-                    "Contact sales@polyswarm.io for quota increases or plan upgrades.",
+                    "Contact customersuccess@polyswarm.io for quota increases or plan upgrades.",
                 ],
             )
             raise ValueError(
@@ -811,7 +973,7 @@ class PolySwarmConnector:
                         "Check that sandbox provider(s) ({}) are valid.".format(
                             ", ".join(providers)
                         ),
-                        "Contact sales@polyswarm.io to enable sandbox features or increase quota.",
+                        "Contact customersuccess@polyswarm.io to enable sandbox features or increase quota.",
                     ],
                 )
         return scan_id, sandbox_tasks
@@ -857,7 +1019,7 @@ class PolySwarmConnector:
                 [
                     f"Increase POLYSWARM_POLL_TIMEOUT (current: {poll_timeout}s).",
                     "Retry the enrichment later when the platform is less busy.",
-                    "Contact sales@polyswarm.io if scans consistently time out.",
+                    "Contact customersuccess@polyswarm.io if scans consistently time out.",
                 ],
             )
 
@@ -870,7 +1032,7 @@ class PolySwarmConnector:
                 [
                     "Try re-uploading the file and running enrichment again.",
                     "Verify the file is not corrupt or password-protected without providing the password.",
-                    "Contact sales@polyswarm.io if the issue persists.",
+                    "Contact customersuccess@polyswarm.io if the issue persists.",
                 ],
             )
 
@@ -917,7 +1079,7 @@ class PolySwarmConnector:
                     [
                         f"Increase POLYSWARM_SANDBOX_TIMEOUT (current: {sandbox_timeout}s).",
                         "Try a different sandbox provider (cape or triage).",
-                        "Contact sales@polyswarm.io for help with sandbox analysis.",
+                        "Contact customersuccess@polyswarm.io for help with sandbox analysis.",
                     ],
                 )
         return sandbox_results
@@ -1061,7 +1223,7 @@ class PolySwarmConnector:
                         f"The {source.upper()} AI-generated threat analysis report could not be retrieved. "
                         f"This is non-fatal — scan and sandbox results are still included.",
                         [
-                            "Your PolySwarm plan may not include LLM reports — contact sales@polyswarm.io to enable.",
+                            "Your PolySwarm plan may not include LLM reports, contact customersuccess@polyswarm.io to enable.",
                             "Set POLYSWARM_LLM_REPORT_ENABLED=false to disable LLM reports if not needed.",
                             f"Increase POLYSWARM_LLM_REPORT_TIMEOUT (current: {llm_timeout}s)"
                             " if reports are timing out.",
@@ -1093,7 +1255,7 @@ class PolySwarmConnector:
                     "Check the connector logs for detailed error information.",
                     "Verify your PolySwarm API key and quota at https://polyswarm.network.",
                     "Retry the enrichment in a few minutes.",
-                    "Contact sales@polyswarm.io for assistance.",
+                    "Contact customersuccess@polyswarm.io for assistance.",
                 ],
             )
             return
@@ -1119,7 +1281,7 @@ class PolySwarmConnector:
                 [
                     "This can be normal for benign files.",
                     "Try submitting to a different sandbox provider for deeper analysis.",
-                    "Contact sales@polyswarm.io if you believe this is an error.",
+                    "Contact customersuccess@polyswarm.io if you believe this is an error.",
                 ],
             )
             return
@@ -1224,6 +1386,10 @@ class PolySwarmConnector:
         Returns:
             None on success, or dict with {"status": "error", "error": "..."} on failure.
         """
+        # Url observables have no file: they are detonated by _enrich_url
+        if str(opencti_entity.get("entity_type", "")).lower() == "url":
+            return self._enrich_url(entity_id, entity, opencti_entity, stix_objects)
+
         file_data = None
         short_id = (entity_id or "unknown")[:12]
         self._enrich_ctx = f"[entity={short_id}]"
@@ -1236,27 +1402,33 @@ class PolySwarmConnector:
                 )
 
             # ── TLP CHECK (#38)
-            max_tlp = self.max_tlp
-            if max_tlp and stix_objects:
-                # check_max_tlp takes one TLP name ("TLP:GREEN"), not a list of
-                # marking ids, so check each TLP marking on the entity.
-                tlp_levels = [
-                    m["definition"]
-                    for m in opencti_entity.get("objectMarking") or []
-                    if isinstance(m, dict)
-                    and m.get("definition_type") == "TLP"
-                    and m.get("definition")
-                ]
-                if any(
-                    not self.helper.check_max_tlp(tlp, max_tlp) for tlp in tlp_levels
-                ):
-                    self.helper.connector_logger.info(
-                        f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
-                    )
-                    return {
-                        "status": "skipped",
-                        "message": f"TLP exceeds configured max_tlp ({max_tlp})",
-                    }
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
+            if tlp_skip:
+                return tlp_skip
+
+            # ── PUBLIC COMMUNITY GUARD: refuse to upload publicly unless allowed
+            if not self._upload_community_allowed():
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] {self._enrich_ctx} Upload refused: the community is "
+                    "the public 'default' community and POLYSWARM_ALLOW_PUBLIC_COMMUNITY "
+                    "is not true"
+                )
+                self._send_error_note(
+                    entity,
+                    "Upload Refused: Public Community",
+                    "The file was not uploaded. POLYSWARM_COMMUNITY is set to the public "
+                    "'default' community, where uploaded files become visible to the "
+                    "PolySwarm community, and POLYSWARM_ALLOW_PUBLIC_COMMUNITY is not true.",
+                    [
+                        "Set POLYSWARM_COMMUNITY to your private PolySwarm community.",
+                        "Or set POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true to submit files publicly.",
+                    ],
+                )
+                return {
+                    "status": "error",
+                    "error": "Upload to the public community refused "
+                    "(POLYSWARM_ALLOW_PUBLIC_COMMUNITY is not true)",
+                }
 
             # ── DOWNLOAD
             try:
@@ -1304,43 +1476,9 @@ class PolySwarmConnector:
                         f"family={scan_mapped.get('family')}"
                     )
 
-            sandbox_processed: dict[str, dict] = {}
-            sandbox_failures: dict[str, dict] = {}
-            for provider, raw_result in sandbox_results.items():
-                if raw_result:
-                    status = str(raw_result.get("status", "")).upper()
-                    if PolySwarmClient.is_sandbox_success(status):
-                        processed = SandboxProcessor.process(raw_result)
-                        if processed:
-                            sandbox_processed[provider] = processed
-                            self.helper.connector_logger.info(
-                                f"[CONNECTOR] {provider.upper()} sandbox processed: "
-                                f"score={processed.get('score')}, "
-                                f"family={processed.get('family')}, "
-                                f"ttps={len(processed.get('ttps', []))}, "
-                                f"domains={len(processed.get('domains', []))}, "
-                                f"ips={len(processed.get('ips', []))}"
-                            )
-                    elif PolySwarmClient.is_sandbox_failure(status):
-                        sandbox_failures[provider] = {
-                            "status": status,
-                            "raw_result": raw_result,
-                            "error": raw_result.get("error")
-                            or raw_result.get("message")
-                            or f"Sandbox execution {status.lower()}",
-                        }
-                        self.helper.connector_logger.warning(
-                            f"[CONNECTOR] {provider.upper()} sandbox failed: {status}"
-                        )
-                    else:
-                        self.helper.connector_logger.warning(
-                            f"[CONNECTOR] {provider.upper()} sandbox has unknown status: {status}"
-                        )
-                        sandbox_failures[provider] = {
-                            "status": status or "UNKNOWN",
-                            "raw_result": raw_result,
-                            "error": f"Sandbox returned unexpected status: {status}",
-                        }
+            sandbox_processed, sandbox_failures = self._process_sandbox_results(
+                sandbox_results
+            )
 
             # ── REPORTS (JSON, PDF, LLM)
             llm_reports = self._phase_reports(
@@ -1382,6 +1520,231 @@ class PolySwarmConnector:
             # PROD-02: Guarantee file_data is released regardless of success/failure
             file_data = None
             # PROD-16: Clear enrichment context
+            self._enrich_ctx = ""
+
+    # -- URL detonation
+
+    def _refuse_url(
+        self,
+        entity: dict[str, Any],
+        category: str,
+        detail: str,
+        recommendations: list[str],
+        error: str,
+    ) -> dict:
+        """Attach a refusal note to the Url observable; nothing is sent to PolySwarm."""
+        self.helper.connector_logger.warning(f"[CONNECTOR] {self._enrich_ctx} {error}")
+        self._send_error_note(entity, category, detail, recommendations)
+        return {"status": "error", "error": error}
+
+    def _submit_url_sandboxes(self, url: str) -> dict[str, str]:
+        """Submit a URL to each configured sandbox provider.
+
+        Returns a dict mapping provider name to task ID for successful
+        submissions. Providers with no VM that accepts URLs are skipped.
+        """
+        sandbox_tasks: dict[str, str] = {}
+        for provider in self._get_sandbox_providers():
+            vm_slug = self.polyswarm_client.get_url_vm_for_provider(
+                provider, preferred=self.config.polyswarm.sandbox_vm
+            )
+            if not vm_slug:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] {provider} lists no VM that accepts URLs, skipped"
+                )
+                continue
+            task_id = self.polyswarm_client.submit_sandbox_url_async(
+                url, provider=provider, vm_slug=vm_slug
+            )
+            if task_id:
+                sandbox_tasks[provider] = task_id
+            else:
+                self.helper.connector_logger.warning(
+                    f"[CONNECTOR] Failed to submit URL to {provider} sandbox"
+                )
+        return sandbox_tasks
+
+    def _enrich_url(
+        self,
+        entity_id: str | None,
+        entity: dict[str, Any],
+        opencti_entity: dict[str, Any],
+        stix_objects: list,
+    ) -> dict | None:
+        """Detonate a Url observable in the PolySwarm sandbox.
+
+        Refusals (credentials in the URL, private or internal host, public
+        community without opt-in, sandbox disabled) attach a note to the
+        observable and make no API call. The query string and fragment are
+        removed before submission unless POLYSWARM_SANDBOX_URL_SEND_QUERY is
+        true. Logs only show the URL's scheme and host.
+
+        Returns:
+            None on success, or dict with {"status": "error", "error": "..."} on failure.
+        """
+        short_id = (entity_id or "unknown")[:12]
+        value = str(
+            entity.get("value")
+            or opencti_entity.get("observable_value")
+            or opencti_entity.get("value")
+            or ""
+        ).strip()
+        self._enrich_ctx = f"[entity={short_id} url={loggable_url(value)}]"
+        try:
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] {self._enrich_ctx} Starting URL enrichment"
+            )
+
+            # -- TLP CHECK (#38)
+            tlp_skip = self._tlp_skip(opencti_entity, stix_objects, entity)
+            if tlp_skip:
+                return tlp_skip
+
+            if not value:
+                return self._refuse_url(
+                    entity,
+                    "No URL Value",
+                    "The Url observable has no value, so nothing was submitted.",
+                    ["Check the observable's value in OpenCTI."],
+                    "Url observable has no value, nothing sent to PolySwarm",
+                )
+
+            # URLs with a username or password are never sent (credentials)
+            if url_has_userinfo(value):
+                return self._refuse_url(
+                    entity,
+                    "Submission Refused: URL Contains Credentials",
+                    "The URL was not submitted. It contains a username or password, "
+                    "and URLs with credentials are never sent to PolySwarm.",
+                    [
+                        "Remove the username and password from the URL if it "
+                        "should be detonated.",
+                    ],
+                    "URL contains a username or password and is never sent to PolySwarm",
+                )
+
+            # Private and internal values never leave the platform
+            if is_non_public_url(value):
+                return self._refuse_url(
+                    entity,
+                    "Submission Refused: Private or Internal Host",
+                    "The URL was not submitted. Its host is missing, or is a "
+                    "private, loopback, link-local, shared (CGNAT), reserved or "
+                    "internal address or name, and private or internal values are "
+                    "never sent to PolySwarm.",
+                    ["Only URLs on public hosts can be detonated in the sandbox."],
+                    "Private or internal value is never sent to PolySwarm",
+                )
+
+            # -- PUBLIC COMMUNITY GUARD: same rule as file uploads
+            if not self._upload_community_allowed():
+                return self._refuse_url(
+                    entity,
+                    "Upload Refused: Public Community",
+                    "The URL was not submitted. POLYSWARM_COMMUNITY is set to the "
+                    "public 'default' community, where submissions become visible "
+                    "to the PolySwarm community, and POLYSWARM_ALLOW_PUBLIC_COMMUNITY "
+                    "is not true.",
+                    [
+                        "Set POLYSWARM_COMMUNITY to your private PolySwarm community.",
+                        "Or set POLYSWARM_ALLOW_PUBLIC_COMMUNITY=true to submit publicly.",
+                    ],
+                    "Upload to the public community refused "
+                    "(POLYSWARM_ALLOW_PUBLIC_COMMUNITY is not true)",
+                )
+
+            if not self.config.polyswarm.sandbox_enabled:
+                return self._refuse_url(
+                    entity,
+                    "Sandbox Disabled",
+                    "The URL was not submitted. URLs are only detonated in the "
+                    "sandbox, and POLYSWARM_SANDBOX_ENABLED is false.",
+                    ["Set POLYSWARM_SANDBOX_ENABLED=true to detonate URLs."],
+                    "URL not submitted: POLYSWARM_SANDBOX_ENABLED is false",
+                )
+
+            # -- SUBMIT
+            send_query = self.config.polyswarm.sandbox_url_send_query is True
+            submit_url = url_for_submission(value, send_query)
+            if not send_query and url_has_query_or_fragment(value):
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] {self._enrich_ctx} Query string and fragment "
+                    "removed before submission"
+                )
+            # The sandbox task's sha256 is the SHA-256 of the submitted URL
+            url_sha256 = hashlib.sha256(submit_url.encode("utf-8")).hexdigest()
+
+            sandbox_tasks = self._submit_url_sandboxes(submit_url)
+            if not sandbox_tasks:
+                providers = self._get_sandbox_providers()
+                self._send_error_note(
+                    entity,
+                    "Sandbox Submission Failed",
+                    "Failed to submit the URL to sandbox provider(s): "
+                    f"{', '.join(providers)}.",
+                    [
+                        "Verify your PolySwarm plan includes sandbox analysis.",
+                        "Check that sandbox provider(s) ({}) are valid.".format(
+                            ", ".join(providers)
+                        ),
+                        "Contact customersuccess@polyswarm.io to enable sandbox features or increase quota.",
+                    ],
+                )
+                return {
+                    "status": "error",
+                    "error": "URL sandbox submission to PolySwarm API failed",
+                }
+
+            # -- POLL SANDBOXES (same interval and timeout as files)
+            llm_task_ids: dict[str, str] = {}
+            sandbox_results = self._phase_poll_sandboxes(
+                entity,
+                sandbox_tasks,
+                self.config.polyswarm.poll_interval,
+                self.config.polyswarm.sandbox_timeout,
+                llm_task_ids,
+            )
+
+            # -- PROCESS
+            sandbox_processed, sandbox_failures = self._process_sandbox_results(
+                sandbox_results
+            )
+
+            # -- REPORTS (JSON, PDF, LLM): named from the URL's SHA-256, never the URL
+            llm_reports = self._phase_reports(
+                entity,
+                None,
+                None,
+                None,
+                sandbox_tasks,
+                sandbox_results,
+                llm_task_ids,
+                f"url_{url_sha256[:16]}",
+                url_sha256,
+            )
+
+            # -- STIX BUNDLE
+            self._phase_stix(
+                entity,
+                None,
+                None,
+                sandbox_processed,
+                sandbox_failures,
+                llm_reports,
+                stix_objects,
+            )
+            return None
+
+        except PolySwarmAPIError:
+            raise
+        except Exception as e:
+            # The exception text is not logged here: it could carry the URL
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] {self._enrich_ctx} URL enrichment failure: "
+                f"{type(e).__name__}"
+            )
+            raise
+        finally:
             self._enrich_ctx = ""
 
     def _debug_sandbox_structure(self, sandbox_res: dict) -> None:

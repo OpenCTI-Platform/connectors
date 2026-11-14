@@ -14,7 +14,8 @@ services:
       - CONNECTOR_ID=${CONNECTOR_ID:-22119d8d-5297-41b1-aa31-b8e317e7144c}
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=polyswarm_scan_sandbox_connector
-      - CONNECTOR_SCOPE=Artifact
+      # Artifact: scan and detonate the attached file. Url: detonate the URL.
+      - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_MAX_TLP=TLP:AMBER
@@ -30,6 +31,7 @@ services:
       # (matches PolySwarmConfig.api_url default in src/connector/models/configs/settings.py).
       - POLYSWARM_API_URL=https://api.polyswarm.network
       - POLYSWARM_COMMUNITY=default # Set to 'default' or your private community name based on your PolySwarm license
+      - POLYSWARM_ALLOW_PUBLIC_COMMUNITY=${POLYSWARM_ALLOW_PUBLIC_COMMUNITY:-false} # Uploads to the public 'default' community are refused unless true
       - POLYSWARM_TIMEOUT=300
       
       # ═══════════════════════════════════════════════════════════════════════
@@ -62,6 +64,9 @@ services:
       - POLYSWARM_SANDBOX_NETWORK_ENABLED=true
       # Sandbox execution timeout in seconds
       - POLYSWARM_SANDBOX_TIMEOUT=600
+      # Url observables: send the query string and fragment too (default false:
+      # only scheme, host and path are submitted)
+      - POLYSWARM_SANDBOX_URL_SEND_QUERY=false
       - POLYSWARM_POLL_INTERVAL=30
       - POLYSWARM_POLL_TIMEOUT=900
       
