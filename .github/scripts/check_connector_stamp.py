@@ -5471,7 +5471,7 @@ class ImageModel:
                         if value is None:
                             raise Unsupported(f"python -{letter} without a value")
                         if letter == "c":
-                            self._site_hooks(env, files, ignore_env, no_site)
+                            self._site_hooks(env, files, ignore_env, no_site, words[0])
                             return self._readable(None, cwd)
                         if not ignore_env and env.get("PYTHONSAFEPATH") == UNKNOWN:
                             raise Unsupported(
@@ -5489,7 +5489,7 @@ class ImageModel:
                             no_site,
                             self.final,
                         )
-                        self._site_hooks(env, files, ignore_env, no_site)
+                        self._site_hooks(env, files, ignore_env, no_site, words[0])
                         return self._readable(main_dir, cwd)
                     if letter in "WX":
                         if not cluster[position + 1 :]:
@@ -5505,11 +5505,27 @@ class ImageModel:
                 raise Unsupported(
                     f"python script {script} is not a file of the image model"
                 )
-            self._site_hooks(env, files, ignore_env, no_site)
+            self._site_hooks(env, files, ignore_env, no_site, words[0])
             return self._readable(posixpath.dirname(script), cwd)
         raise Unsupported("python started without a script or a module")
 
-    def _site_hooks(self, env, files, ignore_env, no_site):
+    @staticmethod
+    def _read_by(region, interpreter):
+        """``region`` may hold a library directory that ``interpreter`` reads at
+        startup: the base interpreter's below /usr, a venv's below its prefix."""
+        region = region.rstrip("/") or "/"
+        prefixes = ["/usr"]
+        if interpreter and interpreter.startswith("/"):
+            prefixes.append(posixpath.dirname(posixpath.dirname(interpreter)))
+        return any(
+            region == "/"
+            or region == prefix
+            or region.startswith(prefix + "/")
+            or prefix.startswith(region + "/")
+            for prefix in prefixes
+        )
+
+    def _site_hooks(self, env, files, ignore_env, no_site, interpreter=None):
         """The site initialisation of the connector's python runs before its
         code: a .pth file of site-packages, or a sitecustomize / usercustomize
         module the build wrote, may change its files (the stamp included)
@@ -5520,6 +5536,12 @@ class ImageModel:
             if SITE_STARTUP_FILE.search(path):
                 raise Unsupported(
                     f"the connector's python runs {path}, a file the build wrote, at startup"
+                )
+        for region in (*self.final.replaced, *self.final.unknown_dirs):
+            if holds_library_directory(region) and self._read_by(region, interpreter):
+                raise Unsupported(
+                    f"the connector's python: {region} holds content the model does"
+                    " not know, where python reads its startup files"
                 )
         if ignore_env:
             return

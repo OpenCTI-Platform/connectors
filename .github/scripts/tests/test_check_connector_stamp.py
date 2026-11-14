@@ -5443,6 +5443,56 @@ def test_runtime_site_initialisation(tmp_path, command, covered):
     assert image.covered is covered, image.reason
 
 
+def test_runtime_unknown_content_in_site_packages(tmp_path):
+    # Aikido review 5903175642: a COPY from an external image may put a .pth
+    # in site-packages that the model does not see.
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+                "COPY --from=other/image:1 /x /usr/local/lib/python3.12/site-packages/\n"
+                'WORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+            )
+        },
+    )
+    assert not image.covered
+    assert "where python reads its startup files" in image.reason, image.reason
+
+
+@pytest.mark.parametrize(
+    "destination, command, covered",
+    [
+        # A venv's site-packages is read only by that venv's python.
+        (
+            "/opt/venv/lib/python3.12/site-packages/",
+            '["/opt/venv/bin/python", "main.py"]',
+            False,
+        ),
+        ("/opt/venv/lib/python3.12/site-packages/", '["python3", "main.py"]', True),
+        (
+            "/usr/local/lib/python3.12/site-packages/",
+            '["python3", "-S", "main.py"]',
+            True,
+        ),
+    ],
+)
+def test_runtime_unknown_content_by_interpreter(
+    tmp_path, destination, command, covered
+):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+                f"COPY --from=other/image:1 /x {destination}\n"
+                f"WORKDIR /opt/sample\nCMD {command}\n"
+            )
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
 def test_runtime_sitecustomize_on_pythonpath(tmp_path):
     image = single(
         tmp_path,
