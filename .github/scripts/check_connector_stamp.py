@@ -36,8 +36,9 @@ looks. The model covers exactly this:
   punctuation stays an argument; each command expands its variables with the
   values the preceding ones left (an unquoted expansion is split into words,
   nothing expands inside single quotes; a variable set inside a branch is no
-  longer known). Commands joined by ``&&`` are followed as if each succeeds.
-  An output redirection takes its target out of the model.
+  longer known; an expansion that assigns one, ``${NAME:=word}`` or
+  ``${NAME=word}``, is reported). Commands joined by ``&&`` are followed as if
+  each succeeds. An output redirection takes its target out of the model.
 * Closed world: a command is accepted only when the model knows its effect on
   the files, otherwise the image is reported. Interpreted: ``cd``, ``rm``,
   ``unlink``, ``mv`` (sources and replaced destination), ``ln`` (literal and
@@ -189,6 +190,7 @@ SHELLS = frozenset({"sh", "bash", "dash", "ash"})
 VARIABLE = re.compile(
     r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(:?[-+])([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)"
 )
+ASSIGNING_EXPANSION = re.compile(r"(?<!\\)\$\{[A-Za-z_][A-Za-z0-9_]*:?=")
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
@@ -1471,6 +1473,25 @@ def continues_line(line):
     return False
 
 
+def braced_end(line, opening):
+    """Index of the "}" closing the "{" at ``opening``, nested braces counted and
+    escapes skipped; the last index of the line when it is not closed."""
+    depth = 0
+    i = opening
+    while i < len(line):
+        char = line[i]
+        if char == "\\":
+            i += 1
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return len(line) - 1
+
+
 def matching_parenthesis(line, opening):
     """Index of the ")" closing the "(" at ``opening``, quotes and escapes skipped."""
     depth = 0
@@ -1915,6 +1936,11 @@ class Shell:
                     c.isspace() for c in inner
                 ):
                     raise Unsupported("a brace expansion")
+            if quote != "'" and line.startswith("${", i):
+                expansion = line[i : braced_end(line, i + 1) + 1]
+                if ASSIGNING_EXPANSION.search(expansion):
+                    # ${NAME:=word} and ${NAME=word} set the variable as well.
+                    raise Unsupported("a parameter expansion that assigns a variable")
             reference = (
                 VARIABLE.match(line, i) if char == "$" and quote != "'" else None
             )
@@ -2890,8 +2916,25 @@ class Shell:
                 self._find_delete(modelled, kind, name, keep_predicates)
 
     def _find_delete(self, base, kind, name, understood):
-        """The files find deletes below ``base`` (-type / -name when understood)."""
+        """The files and directories find deletes below ``base`` (-type / -name
+        when understood): a later cd into a deleted directory fails."""
         prefix = base.rstrip("/") + "/"
+        for path in list(self.stage.dirs):
+            if not (path == base or path.startswith(prefix)):
+                continue
+            if (
+                not understood
+                or (kind in (None, "d") and name is None)
+                or (
+                    kind in (None, "d")
+                    and any(
+                        fnmatch.fnmatchcase(posixpath.basename(d), name)
+                        for d in self_and_parents(path)
+                        if d == base or d.startswith(prefix)
+                    )
+                )
+            ):
+                remove_dirs(self.stage.dirs, path)
         for path in list(self.files):
             if not (path == base or path.startswith(prefix)):
                 continue
