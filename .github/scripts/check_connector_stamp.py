@@ -1430,6 +1430,7 @@ def target_options(args):
             no_target = True
         elif re.fullmatch(r"-[a-zA-Z].*", arg):
             # Short options in a cluster; -t and -S take the rest, or the next word.
+            flags = ""
             for position, letter in enumerate(arg[1:], 2):
                 if letter == "T":
                     no_target = True
@@ -1441,6 +1442,11 @@ def target_options(args):
                     if letter == "t":
                         target = value
                     break
+                else:
+                    flags += letter
+            if flags:
+                # The other options of the cluster stay for the command (ln -s).
+                rest.append(f"-{flags}")
         else:
             rest.append(arg)
         i += 1
@@ -2170,7 +2176,7 @@ class Shell:
             # Truncated or rewritten: the file no longer holds what the model knows.
             [value] = self._expand(target, split=False)
             value = value.translate(PLAIN_GLOB)
-            path = image_path(self._tilde(value), self.cwd, "redirection target")
+            path = self._path(value, "redirection target")
             self._through_link(path)
             if path in DEVICE_FILES:
                 continue
@@ -2393,7 +2399,7 @@ class Shell:
             return
         script = python_script(args)
         if script is not None and module is None:
-            path = image_path(script, self.cwd, "python script")
+            path = self._path(script, "python script")
             self._audited_script(path)
             return
         raise Unsupported(
@@ -2436,7 +2442,7 @@ class Shell:
                 directories.append(options[i])
             i += 1
         for directory in directories:
-            path = image_path(self._tilde(directory), self.cwd, "venv directory")
+            path = self._path(directory, "venv directory")
             if clear:
                 remove_files(self.files, path)
 
@@ -2478,7 +2484,7 @@ class Shell:
             paths = literal_args if literal_args is not None else args
             operands = [a for a in paths if a not in CHMOD_OPTIONS][1:]
             for operand in operands:
-                path = image_path(self._tilde(operand), self.cwd, "chmod operand")
+                path = self._path(operand, "chmod operand")
                 # A directory also needs its search permission (a pattern may
                 # match one).
                 directory = self._is_dir(path) or (
@@ -2546,7 +2552,7 @@ class Shell:
                 if len(operands) > 1
                 else posixpath.basename(operands[0].rstrip("/")).removesuffix(".git")
             )
-            path = image_path(self._tilde(target), self.cwd, "git clone directory")
+            path = self._path(target, "git clone directory")
             self.stage.unknown_dirs.add(path)
             return
         raise Unsupported(
@@ -2576,7 +2582,7 @@ class Shell:
         if not create:
             return
         for operand in operands:
-            path = image_path(self._tilde(operand), self.cwd, "touched path")
+            path = self._path(operand, "touched path")
             if GLOB_CHARS.search(path):
                 # A pattern touches the files it matches; they keep their content.
                 continue
@@ -2613,7 +2619,7 @@ class Shell:
                 and not any(f.startswith(path + "/") for f in self.files)
             ):
                 return
-        path = image_path(self._tilde(candidate), self.cwd, "named path")
+        path = self._path(candidate, "named path")
         self._through_link(path)
         if path != "/":
             before = set(self.files)
@@ -2651,7 +2657,7 @@ class Shell:
         deletions count."""
         if not args:
             raise Unsupported(f"'{name}' without a file")
-        path = image_path(args[0], self.cwd, "sourced file")
+        path = self._path(args[0], "sourced file")
         text = self._read(path)
         if text is None:
             # A file the model does not know may do anything to the files.
@@ -2697,7 +2703,7 @@ class Shell:
                 operands.append(arg)
             i += 1
         for operand in operands:
-            path = image_path(self._tilde(operand), self.cwd, "mkdir operand")
+            path = self._path(operand, "mkdir operand")
             for directory in self_and_parents(path):
                 self.stage.dirs.add(directory)
             if mode is not None and not harmless_mode([mode], True):
@@ -2723,7 +2729,7 @@ class Shell:
         if env.get("CDPATH") and not target.startswith(("/", ".")):
             self._unknown_directory("a relative 'cd' searched in CDPATH")
             return
-        target = image_path(target, self.cwd, "'cd' target")
+        target = self._path(target, "'cd' target")
         if not self._is_dir(target):
             # The image may not have it: a failed cd leaves the shell where it was.
             if after != "&&":
@@ -2735,6 +2741,28 @@ class Shell:
             # shell may still be where it was.
             self.chain_directory = True
         self.cwd = target
+
+    def _path(self, value, what="path"):
+        """Absolute image path of an operand. A ``..`` after a link the build
+        created climbs from the target of the link, not from the link, so it is
+        reported before ``..`` is collapsed."""
+        value = self._tilde(value)
+        joined = (
+            value
+            if value.startswith("/") or self.cwd is None
+            else posixpath.join(self.cwd, value)
+        )
+        parts = joined.split("/")
+        for index, part in enumerate(parts):
+            if part != "..":
+                continue
+            prefix = posixpath.normpath("/".join(parts[:index]) or "/")
+            for link in self.stage.links:
+                if prefix == link or prefix.startswith(link.rstrip("/") + "/"):
+                    raise Unsupported(
+                        f"{what} '{value}' climbs out of the link {link} the build created"
+                    )
+        return image_path(value, self.cwd, what)
 
     def _tilde(self, value):
         if value == "~" or value.startswith("~/"):
@@ -2763,7 +2791,7 @@ class Shell:
         """The operands leave the model, with the directories among them when
         ``directories`` is set: a later cd into one of them fails."""
         for operand in operands:
-            target = image_path(self._tilde(operand), self.cwd, "deleted path")
+            target = self._path(operand, "deleted path")
             self._through_link(target)
             remove_files(self.files, target)
             if directories:
@@ -2776,10 +2804,10 @@ class Shell:
         if not sources:
             return
         destination = target_dir if target_dir else operands[-1]
-        destination = image_path(self._tilde(destination), self.cwd, "mv destination")
+        destination = self._path(destination, "mv destination")
         for path in (
             destination,
-            *(image_path(self._tilde(s), self.cwd, "mv source") for s in sources),
+            *(self._path(s, "mv source") for s in sources),
         ):
             self._through_link(path)
         if target_dir or (
@@ -2811,10 +2839,10 @@ class Shell:
             re.fullmatch(r"-[a-zA-Z]*s[a-zA-Z]*", a) or a == "--symbolic" for a in rest
         )
         if target_dir:
-            link = image_path(self._tilde(target_dir), self.cwd, "link directory")
+            link = self._path(target_dir, "link directory")
             targets = operands
         else:
-            link = image_path(self._tilde(operands[-1]), self.cwd, "link path")
+            link = self._path(operands[-1], "link path")
             targets = operands[:-1] or [operands[-1]]
             if no_target or len(operands) == 1 or not self._is_dir(link):
                 # The link is this path.
@@ -2841,7 +2869,7 @@ class Shell:
                 posixpath.join(posixpath.dirname(link), target)
             )
         else:
-            self.stage.links[link] = image_path(self._tilde(target), self.cwd)
+            self.stage.links[link] = self._path(target)
 
     def _through_link(self, path):
         """Report an operation on ``path`` when it goes through a link the build
@@ -2977,7 +3005,7 @@ class Shell:
             understood = False
             break
         for root in roots:
-            base = image_path(self._tilde(root), self.cwd, "find root")
+            base = self._path(root, "find root")
             if GLOB_CHARS.search(base):
                 raise Unsupported(f"find root '{root}' with a wildcard")
             self._through_link(base)
@@ -3167,7 +3195,7 @@ class Shell:
             value.startswith((".", "/")) or "/" in value or PIP_ARCHIVE.search(value)
         ):
             return None
-        return image_path(self._tilde(value), self.cwd, "pip install path")
+        return self._path(value, "pip install path")
 
     def _requirement_files(self, args, seen=None):
         """Local directories the requirement files of ``args`` (-r, -c) name,
@@ -3188,7 +3216,7 @@ class Shell:
             )
             if not value or "://" in value:
                 continue
-            path = image_path(self._tilde(value), self.cwd, "requirement file")
+            path = self._path(value, "requirement file")
             if path in seen:
                 continue
             seen.add(path)
@@ -4358,11 +4386,15 @@ def main(argv=None):
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     if args.connectors:
-        dirs = [
-            (root / connector).resolve()
+        missing = [
+            connector
             for connector in args.connectors
-            if (root / connector / "Dockerfile").is_file()
+            if not (root / connector / "Dockerfile").is_file()
         ]
+        if missing:
+            # A path that names no image would report a check that never ran.
+            parser.error(f"no Dockerfile in {', '.join(missing)}")
+        dirs = [(root / connector).resolve() for connector in args.connectors]
     else:
         dirs = list(connector_dirs(root))
     ubi9 = ubi9_connectors(root)
