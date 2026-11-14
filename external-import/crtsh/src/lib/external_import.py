@@ -29,6 +29,24 @@ class ExternalImportConnector:
         """Collect intelligence from the source"""
         raise NotImplementedError
 
+    def _get_state_updates(self) -> dict:
+        """State values to store after a successful run, in addition to last_run.
+
+        Called only when collecting and sending the bundle did not fail, so
+        connector-specific progress (e.g. a cursor) is not advanced on errors.
+        """
+        return {}
+
+    def _store_state(self, timestamp: int, state_updates: dict) -> None:
+        """Store last_run, plus any state updates from a successful run."""
+        self.helper.log_debug(
+            f"Grabbing current state and update it with last_run: {timestamp}"
+        )
+        current_state = self.helper.get_state() or {}
+        current_state["last_run"] = timestamp
+        current_state.update(state_updates)
+        self.helper.set_state(current_state)
+
     def _get_interval(self) -> int:
         """Returns the interval to use for the connector, in seconds."""
         return self.interval
@@ -72,6 +90,7 @@ class ExternalImportConnector:
                         self.helper.connect_id, friendly_name
                     )
 
+                    state_updates = {}
                     try:
                         # Performing the collection of intelligence
                         bundle_objects = self._collect_intelligence(
@@ -88,6 +107,7 @@ class ExternalImportConnector:
                                 work_id=work_id,
                                 cleanup_inconsistent_bundle=True,
                             )
+                        state_updates = self._get_state_updates()
 
                     except Exception as e:
                         self.helper.log_error(str(e))
@@ -99,15 +119,7 @@ class ExternalImportConnector:
                     )
                     self.helper.log_info(message)
 
-                    self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {timestamp}"
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = timestamp
-                    else:
-                        current_state = {"last_run": timestamp}
-                    self.helper.set_state(current_state)
+                    self._store_state(timestamp, state_updates)
 
                     self.helper.api.work.to_processed(work_id, message)
                     self.helper.log_info(

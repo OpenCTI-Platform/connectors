@@ -11,7 +11,7 @@ COPY src /opt/opencti-connector-beaconbeagle
 # are compiled.
 WORKDIR /opt/opencti-connector-beaconbeagle
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libxslt libxslt-dev libxml2 libxml2-dev whois && \
+    apk --no-cache add git build-base libxslt-dev libxml2-dev whois && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base libxslt-dev libxml2-dev
 

@@ -19,14 +19,14 @@ from pydantic import Field, field_validator
 class GTIThreatActorConfig(GTIBaseConfig):
     """Configuration for GTI threat actor imports."""
 
-    threat_actor_import_start_date: timedelta = Field(
-        default=timedelta(days=1),
-        description="ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
-    )
-
     import_threat_actors: bool = Field(
         default=False,
         description="Whether to enable importing threat actor data from GTI",
+    )
+
+    threat_actor_import_start_date: timedelta = Field(
+        default=timedelta(days=1),
+        description="ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
     )
 
     threat_actor_origins: ListFromString = Field(

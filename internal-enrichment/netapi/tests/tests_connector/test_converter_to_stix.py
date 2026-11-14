@@ -3,6 +3,7 @@
 import copy
 from datetime import datetime, timezone
 
+import pytest
 from connector.converter_to_stix import (
     EPOCH_ANCHOR,
     OWN_LABEL,
@@ -12,6 +13,7 @@ from connector.converter_to_stix import (
 )
 from connectors_sdk.models import TLPMarking
 from mock_responses import (
+    CHECK_IP_LISTED_PAST,
     CHECK_LISTED_NOW,
     CHECK_LISTED_PAST,
     CHECK_LISTED_VIA_DOMAIN,
@@ -20,6 +22,7 @@ from mock_responses import (
 )
 
 DOMAIN_ID = "domain-name--11111111-1111-4111-8111-111111111111"
+IP_ID = "ipv4-addr--22222222-2222-4222-8222-222222222222"
 
 
 def make_converter() -> ConverterToStix:
@@ -135,6 +138,20 @@ def test_note_of_a_past_listing_has_no_registrar_and_no_rank():
     assert "| Reported by | suspicious |" in content
 
 
+def test_note_of_a_past_ip_listing_names_the_attack_type():
+    note = make_converter().build_note(
+        IP_ID, "1.0.140.8", CHECK_IP_LISTED_PAST, None, [TLPMarking(level="clear")]
+    )
+    content = note.to_stix2_object()["content"]
+
+    assert note.abstract == "NetAPI - listed in the compromised feed in the past"
+    assert "**Status:** listed in the past (last seen 2026-10-30)" in content
+    assert "Registrar" not in content
+    assert "Top 1M" not in content
+    assert "| Attack type | NetAPI network sensors: brute force |" in content
+    assert "Reported by" not in content
+
+
 def test_table_cells_are_flattened_and_escaped():
     check = copy.deepcopy(CHECK_LISTED_NOW)
     check["block_reason"] = "a|b\nc\\d"
@@ -181,22 +198,43 @@ def test_current_listing_adds_the_label_reference_and_score():
     assert "x_opencti_score" not in entity
 
 
-def test_past_listing_keeps_every_label_and_the_score():
+@pytest.mark.parametrize(
+    "entity_type, entity_id, value, check, page",
+    [
+        (
+            "domain-name",
+            DOMAIN_ID,
+            "0-07.ru",
+            CHECK_LISTED_PAST,
+            "https://netapi.com/compromised-urls/",
+        ),
+        (
+            "ipv4-addr",
+            IP_ID,
+            "1.0.140.8",
+            CHECK_IP_LISTED_PAST,
+            "https://netapi.com/compromised-ips/",
+        ),
+    ],
+)
+def test_past_listing_keeps_every_label_and_the_score(
+    entity_type, entity_id, value, check, page
+):
     entity = {
-        "type": "domain-name",
-        "id": DOMAIN_ID,
-        "value": "0-07.ru",
+        "type": entity_type,
+        "id": entity_id,
+        "value": value,
         "x_opencti_score": 60,
         "x_opencti_labels": ["NetAPI-Compromised", "keep-me"],
         "labels": ["legacy"],
     }
 
-    enriched = make_converter().enrich_observable(entity, CHECK_LISTED_PAST, None)
+    enriched = make_converter().enrich_observable(entity, check, None)
 
     assert enriched["x_opencti_score"] == 60
     assert enriched["x_opencti_labels"] == ["NetAPI-Compromised", "keep-me", "legacy"]
     reference = enriched["x_opencti_external_references"][-1]
-    assert reference["url"] == "https://netapi.com/compromised-urls/"
+    assert reference["url"] == page
     # the reference is shared by every observable of the feed page: no status in it
     assert reference["description"] == (
         "NetAPI compromised feed (the status of this observable is in the NetAPI note)"

@@ -4,13 +4,13 @@ ENV CONNECTOR_TYPE=STREAM
 # Install needed packages
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Install needed python packages
 WORKDIR /opt/opencti-connector-arcsight
 COPY src/requirements.txt /opt/opencti-connector-arcsight/requirements.txt
 RUN pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/opencti-connector-arcsight

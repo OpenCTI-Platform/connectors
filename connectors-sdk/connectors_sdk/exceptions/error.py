@@ -1,7 +1,9 @@
 """Offers a collection of custom exceptions to develop connectors."""
 
+from connectors_sdk.exceptions.connector_errors import Criticity, LegacyError
 
-class DataRetrievalError(Exception):
+
+class DataRetrievalError(LegacyError):
     """Base class for data retrieval-related errors.
 
     This exception is raised when there is an issue with retrieving data from the source.
@@ -11,8 +13,11 @@ class DataRetrievalError(Exception):
     responsible for the encountered error, but rather the data source is.
     """
 
+    code = "api.retrieval.legacy"
+    criticity = Criticity.ERROR
 
-class UseCaseError(Exception):
+
+class UseCaseError(LegacyError):
     """Base class for processing-related errors.
 
     This exception is raised when there is an issue with processing the data.
@@ -21,3 +26,6 @@ class UseCaseError(Exception):
     especially if it is designed to iterate over entities.
     It signals a problem in the connector's logic or implementation that needs to be addressed.
     """
+
+    code = "data.conversion.legacy"
+    criticity = Criticity.ERROR
