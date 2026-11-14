@@ -14,6 +14,10 @@ check = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(check)
 
 ALPINE_SRC = 'FROM python:3.12-alpine\nCOPY src /opt/sample\nWORKDIR /opt/sample\nENTRYPOINT ["python", "main.py"]\n'
+# A wrapper that deletes the stamp, then runs the program it stands for.
+ENV_WRAPPER = (
+    '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/bin/env "$@"\n'
+)
 
 
 def make_connector(root, files, path="external-import/sample"):
@@ -972,6 +976,33 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 02:24 UTC: an arithmetic expansion may hold a
+        # command substitution; a sourced file the model does not know may do
+        # anything; chmod wildcards relative to the working directory.
+        (
+            "RUN echo $(( $(rm -f /opt/src/.connector_version.json; echo 1) ))",
+            False,
+        ),
+        (
+            "RUN printf '%s\\n' 'rm -f /opt/src/.connector_version.json' > /tmp/clean.sh && . /tmp/clean.sh",
+            False,
+        ),
+        ("WORKDIR /opt/src\nRUN chmod 000 .connector_*.json", False),
+        ("WORKDIR /opt/src\nRUN chmod 644 *.py", True),
+        # A function runs where it is called, under a name it may shadow.
+        (
+            "RUN cat() { rm -f .connector_version.json; }; cd /opt/src; cat main.py",
+            False,
+        ),
+        ("RUN function clean { rm -rf /opt/src; }; clean", False),
+        # bash: GLOBIGNORE makes wildcards match a leading dot; IFS changes
+        # word splitting.
+        ("RUN GLOBIGNORE=x; rm -rf /opt/src/*", False),
+        ("RUN IFS=_; D=/opt_src; rm -rf $D", False),
+        (
+            'ENV APP=/tmp\nRUN printf -vAPP %s /opt/src; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
         # Copilot review of 01:21 UTC: printf -v sets a variable.
         (
             'ENV APP=/tmp\nRUN printf -v APP %s /opt/src; rm -f "$APP/.connector_version.json"',
@@ -1327,6 +1358,30 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
         ),
+        # Copilot review of 02:24 UTC: env is a program found on PATH too.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /usr/local/bin/env\n"
+            'CMD ["env", "python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /usr/local/bin/env\n"
+            "CMD env python3 /opt/sample/main.py\n",
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        # Copilot review of 02:24 UTC: a chmod keeps the wrapper in place.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /usr/local/bin/python3\nRUN chmod 500 /usr/local/bin/python3\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        # Copilot review of 02:24 UTC: the SHELL of RUN, a file the build wrote.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY --chmod=755 wrapper.sh /opt/sh\n"
+            'SHELL ["/opt/sh", "-c"]\nRUN echo ready\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
         (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY clean.sh /usr/local/bin/rm\n"
             'RUN rm -f /tmp/cache\nCMD ["python3", "/opt/sample/main.py"]\n',
@@ -1337,6 +1392,95 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
 def test_programs_shadowed_on_the_path(tmp_path, dockerfile, extra):
     image = single(tmp_path, {"Dockerfile": dockerfile, **extra})
     assert not image.covered, image.reason
+
+
+def test_module_shadowed_by_a_file_of_the_build(tmp_path):
+    # Copilot review of 02:24 UTC: python -m compileall imports the working
+    # directory first.
+    files = {
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nWORKDIR /opt/sample\n"
+            'RUN python3 -m compileall .\nCMD ["python3", "/opt/sample/main.py"]\n'
+        ),
+        "src/compileall.py": "import os\nos.remove('.connector_version.json')\n",
+    }
+    image = single(tmp_path, files)
+    assert image.reason == (
+        "not supported: python -m compileall may run /opt/sample/compileall.py,"
+        " a file the build wrote, instead of the module of the interpreter"
+    )
+
+
+@pytest.mark.parametrize(
+    "command, covered",
+    [
+        # Copilot review of 02:24 UTC: a plain assignment is not exported.
+        ('["sh", "-c", "PYTHONPATH=/opt/connector; exec python3 -m src"]', False),
+        (
+            '["sh", "-c", "export PYTHONPATH=/opt/connector; exec python3 -m src"]',
+            True,
+        ),
+        (
+            '["sh", "-c", "PYTHONPATH=/opt/connector; export PYTHONPATH; exec python3 -m src"]',
+            True,
+        ),
+        (
+            '["sh", "-c", "set -a; PYTHONPATH=/opt/connector; exec python3 -m src"]',
+            True,
+        ),
+        ('["sh", "-c", "PYTHONPATH=/opt/connector exec python3 -m src"]', True),
+    ],
+)
+def test_only_exported_variables_reach_python(tmp_path, command, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/connector/src\n"
+                f"WORKDIR /tmp\nCMD {command}\n"
+            ),
+            "src/__main__.py": "",
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+def test_module_file_wins_over_a_namespace_directory(tmp_path):
+    # Copilot review of 02:24 UTC: pkg.py is imported before pkg/ without
+    # __init__.py, so its directory is the one pycti reads.
+    files = {
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nENV PYTHONPATH=/opt\nCOPY src /opt/pkg\n"
+            'COPY pkg.py /opt/pkg.py\nWORKDIR /tmp\nCMD ["python3", "-m", "pkg"]\n'
+        ),
+        "src/__main__.py": "",
+        "pkg.py": "",
+    }
+    assert not single(tmp_path, files).covered
+    del files["pkg.py"]
+    files["Dockerfile"] = files["Dockerfile"].replace("COPY pkg.py /opt/pkg.py\n", "")
+    image = single(tmp_path / "namespace", files)
+    assert image.reason == "stamp at /opt/pkg/.connector_version.json"
+
+
+def test_symbolic_links_of_the_context(tmp_path):
+    # Copilot review of 02:24 UTC: COPY keeps a link, which pycti resolves.
+    connector = make_connector(
+        tmp_path,
+        {
+            "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/app\nWORKDIR /tmp\nCMD ["python3", "/opt/app/main.py"]\n',
+            "src/nested/a/b/c/d/e/main.py": "",
+        },
+    )
+    (connector / "src/main.py").unlink()
+    try:
+        (connector / "src/main.py").symlink_to("nested/a/b/c/d/e/main.py")
+    except OSError:
+        pytest.skip("symbolic links cannot be created here")
+    [image] = result(tmp_path, connector)
+    assert image.reason == (
+        "not supported: python script /opt/app/main.py is not a file of the image model"
+    )
 
 
 @pytest.mark.parametrize(
