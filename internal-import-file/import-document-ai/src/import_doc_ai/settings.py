@@ -54,6 +54,15 @@ class ImportDocumentAIConfig(BaseConfigModel):
         description="Whether to flag extracted observables for indicator creation.",
         default=False,
     )
+    resolve_existing_entities: bool = Field(
+        description=(
+            "Whether to bind the entities extracted from the document to the "
+            "entities that already exist in OpenCTI (curationResolve query) "
+            "instead of creating duplicates. Skipped on OpenCTI versions "
+            "without curationResolve."
+        ),
+        default=True,
+    )
     api_base_url: str | None = Field(
         description="Base URL of the Import Document AI web service (legacy direct mode).",
         default=None,
