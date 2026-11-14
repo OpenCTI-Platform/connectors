@@ -5,6 +5,7 @@ import pytest
 import requests
 from connector.connector import HatchingTriageSandboxConnector, TriageClient
 from connectors_sdk.models.enums import TLPLevel
+from pycti import StixCoreRelationship
 from requests import RequestException
 from triage.client import ServerError
 
@@ -235,6 +236,58 @@ class TestProcessMessage:
         connector._search_for_analysis.assert_any_call("sha1:file-hash")
         connector._process_overview_report.assert_called_once_with(
             observable, {}, "sample-123", "stixfile"
+        )
+
+
+class TestProcessOverviewReportTtps:
+    """Observable -> Attack-Pattern relationships built from Triage signatures."""
+
+    @pytest.mark.parametrize(
+        "entity_type,standard_id,expected_type",
+        [
+            (
+                "artifact",
+                "artifact--1f8c3b2e-3c9a-4c55-9f53-6b1f1a2d4e01",
+                "uses",
+            ),
+            (
+                "stixfile",
+                "file--1f8c3b2e-3c9a-4c55-9f53-6b1f1a2d4e02",
+                "uses",
+            ),
+            (
+                "url",
+                "url--1f8c3b2e-3c9a-4c55-9f53-6b1f1a2d4e03",
+                "related-to",
+            ),
+        ],
+    )
+    def test_ttp_relationship_type_matches_observable_type(
+        self, connector, entity_type, standard_id, expected_type
+    ):
+        """The relationship type sent is the one its deterministic id uses."""
+        observable = {"id": "observable-id", "standard_id": standard_id}
+        overview_dict = {
+            "analysis": {},
+            "signatures": [{"name": "Input Capture", "ttp": ["T1056"]}],
+        }
+        connector.identity = "identity--7b8c3a1e-2d4f-4e6a-9b1c-3d5e7f9a1b2c"
+        connector._send_bundle = MagicMock(return_value="sent")
+
+        result = connector._process_overview_report(
+            observable, overview_dict, "sample-123", entity_type
+        )
+
+        assert result == "sent"
+        bundle_objects = connector._send_bundle.call_args.args[0]
+        relationships = [o for o in bundle_objects if o.type == "relationship"]
+        assert len(relationships) == 1
+        relationship = relationships[0]
+        assert relationship.relationship_type == expected_type
+        assert relationship.source_ref == standard_id
+        assert relationship.target_ref.startswith("attack-pattern--")
+        assert relationship.id == StixCoreRelationship.generate_id(
+            expected_type, standard_id, relationship.target_ref
         )
 
 
