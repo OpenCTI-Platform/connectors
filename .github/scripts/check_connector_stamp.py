@@ -341,6 +341,14 @@ SHELL_BUILTINS = frozenset(
 )
 # Python modules run with -m that only add files (venv is modelled: --clear).
 HARMLESS_PYTHON_MODULES = frozenset({"compileall", "ensurepip"})
+# Modules the site initialisation of python imports from its search path.
+PYTHON_STARTUP_HOOKS = ("sitecustomize", "usercustomize")
+# The files of a site-packages directory python runs at startup: a .pth file
+# (its import lines) and the startup hooks.
+SITE_STARTUP_FILE = re.compile(
+    rf"(?:^{re.escape(SITE_PACKAGES)}|/(?:site|dist)-packages)"
+    rf"/(?:[^/]+\.pth|(?:{'|'.join(PYTHON_STARTUP_HOOKS)})(?:\.py|/__init__\.py))$"
+)
 # System package managers write below their root (/usr, /etc, /var), never in a
 # connector directory; the options that move that root are reported.
 PACKAGE_MANAGERS = {
@@ -354,15 +362,18 @@ PACKAGE_MANAGERS = {
     "yum": frozenset({"--installroot"}),
 }
 # Options of wget and curl the model reads: the ones naming a file they write
-# ("file"), or the directory of the files named after the URL ("dir"), the ones
-# taking a value without writing a file, and the flags. Any other option is
-# reported: a configuration file, a cookie file or a recursive download may
-# write files the model does not see.
+# ("file"), among them the response bodies placed in the directory option
+# ("body"), the directory of the bodies and of the files named after the URL
+# ("dir"), the ones taking a value without writing a file, and the flags. Any
+# other option is reported: a configuration file, a cookie file or a recursive
+# download may write files the model does not see.
 DOWNLOADERS = {
     "wget": {
         "file": frozenset(
             {"-O", "--output-document", "-o", "--output-file", "-a", "--append-output"}
         ),
+        # wget -P places the files named after the URL only, never -O.
+        "body": frozenset(),
         "dir": frozenset({"-P", "--directory-prefix"}),
         "value": frozenset(
             {
@@ -414,6 +425,8 @@ DOWNLOADERS = {
                 "--stderr",
             }
         ),
+        # curl --output-dir places -o and -O, not the headers, traces or cookies.
+        "body": frozenset({"-o", "--output"}),
         "dir": frozenset({"--output-dir"}),
         "value": frozenset(
             {
@@ -499,7 +512,7 @@ DOWNLOADERS = {
 # Configuration files wget and curl read by default, and the variables that
 # move them.
 DOWNLOADER_CONFIGS = {
-    "wget": ({".wgetrc", "wgetrc"}, ("WGETRC",)),
+    "wget": ({".wgetrc", "wgetrc"}, ("WGETRC", "SYSTEM_WGETRC")),
     "curl": ({".curlrc", "curlrc", "_curlrc"}, ("CURL_HOME", "XDG_CONFIG_HOME")),
 }
 GIT_CLONE_OPTIONS_WITH_VALUE = frozenset(
@@ -705,19 +718,30 @@ def self_and_parents(path):
     return found
 
 
-def image_path(path, cwd, what="path"):
-    """Absolute image path of ``path``, relative to ``cwd``."""
+def image_path(path, cwd, what="path", links=()):
+    """Absolute image path of ``path``, relative to ``cwd``. A ``..`` after one of
+    ``links`` (the links the build created) climbs from the target of the link,
+    not from the link, so it is reported before ``..`` is collapsed."""
     if "$" in path or "`" in path:
         raise Unsupported(
             f"{what} '{path}' uses a variable or a command the build does not define"
         )
-    if path.startswith("/"):
-        return posixpath.normpath(path)
-    if cwd is None:
+    if not path.startswith("/") and cwd is None:
         raise Unsupported(
             f"{what} '{path}' is relative to an unknown working directory"
         )
-    return posixpath.normpath(posixpath.join(cwd, path))
+    joined = path if path.startswith("/") else posixpath.join(cwd, path)
+    parts = joined.split("/")
+    for index, part in enumerate(parts):
+        if part != "..":
+            continue
+        prefix = posixpath.normpath("/".join(parts[:index]) or "/")
+        for link in links:
+            if prefix == link or prefix.startswith(link.rstrip("/") + "/"):
+                raise Unsupported(
+                    f"{what} '{path}' climbs out of the link {link} the build created"
+                )
+    return posixpath.normpath(joined)
 
 
 def stamp_code_dir(connector_dir):
@@ -1587,7 +1611,7 @@ def download_outputs(program, args, cwd):
     """Files ``wget`` or ``curl`` write; a response body otherwise goes to stdout."""
     table = DOWNLOADERS[program]
     with_value = table["file"] | table["dir"] | table["value"]
-    outputs, urls = [], []
+    outputs, bodies, urls = [], [], []
     directory = None
     remote_name = program == "wget"
     i = 0
@@ -1629,7 +1653,7 @@ def download_outputs(program, args, cwd):
                 value = args[i]
                 i += 1
             if option in table["file"]:
-                outputs.append(value)
+                (bodies if option in table["body"] else outputs).append(value)
                 if program == "wget" and option in ("-O", "--output-document"):
                     remote_name = False
             elif option in table["dir"]:
@@ -1638,11 +1662,20 @@ def download_outputs(program, args, cwd):
                 urls.append(value)
     if remote_name:
         for url in urls:
-            name = (
+            bodies.append(
                 posixpath.basename(url.split("://", 1)[-1].split("?")[0])
                 or "index.html"
             )
-            outputs.append(posixpath.join(directory or ".", name))
+    # The directory applies whatever its place among the options.
+    for body in bodies:
+        if body == "-" or directory is None:
+            outputs.append(body)
+        elif body.startswith("/"):
+            raise Unsupported(
+                f"{program} {body} with an output directory: where it lands is not modelled"
+            )
+        else:
+            outputs.append(posixpath.join(directory, body))
     return [output for output in outputs if output != "-"]
 
 
@@ -1773,7 +1806,12 @@ def shell_script(args, cwd, files, model, stage=None):
     check_shell_options(args[:i])
     if i >= len(args):
         return None
-    path = image_path(args[i], cwd, "shell script")
+    path = image_path(
+        args[i],
+        cwd,
+        "shell script",
+        stage.links if stage is not None else model.final.links,
+    )
     # Below a mount or another path of unknown content, the file is not the
     # one the model has.
     unknown = stage is not None and stage.written(path)
@@ -2344,27 +2382,49 @@ class Shell:
             if not conditional and before != "&&":
                 self.ended = True
         elif not self._executed_script(words, env, conditional):
-            self._other_command(words, literal_args)
+            self._other_command(words, literal_args, env)
 
-    def _module_shadow(self, name, env):
-        """A file the build wrote that python -m ``name`` imports before the module
-        of the interpreter (the working directory and PYTHONPATH come first)."""
-        entries = [self.cwd, *env.get("PYTHONPATH", "").split(":")]
+    def _python_path(self, env):
+        """The PYTHONPATH directories of a python process of the build, None for
+        a relative one in an unknown working directory."""
+        value = env.get("PYTHONPATH", "")
+        if not value:
+            return []
+        entries = []
+        for entry in value.split(":"):
+            if "$" in entry:
+                # Set in a branch the model does not follow, or from a variable
+                # it does not know: any directory may come first.
+                raise Unsupported(
+                    "python run at build time with a PYTHONPATH the model does not resolve"
+                )
+            if not entry.startswith("/") and self.cwd is None:
+                entries.append(None)
+            else:
+                # An empty entry is the working directory.
+                entries.append(
+                    image_path(
+                        entry or ".", self.cwd, "PYTHONPATH entry", self.stage.links
+                    )
+                )
+        return entries
+
+    def _written_module(self, name, directories):
+        """A file the build wrote that imports as module ``name`` from one of
+        ``directories`` (None for a directory the model does not know)."""
         written = (*self.files, *self.stage.replaced)
-        if self.cwd is None and any(
-            posixpath.basename(p) in (name, f"{name}.py") for p in written
-        ):
-            return f"{name} in an unknown working directory"
-        for entry in entries:
-            if not entry or "$" in entry:
+        for directory in directories:
+            if directory is None:
+                if any(
+                    posixpath.basename(p) in (name, f"{name}.py")
+                    or p.endswith(f"/{name}/__init__.py")
+                    for p in written
+                ):
+                    return f"{name} in a directory the model does not know"
                 continue
-            if not entry.startswith("/"):
-                if self.cwd is None:
-                    continue
-                entry = posixpath.normpath(posixpath.join(self.cwd, entry))
             # A module file or a regular package; a directory without
             # __init__.py loses to the module of the interpreter.
-            module, package = f"{entry}/{name}.py", f"{entry}/{name}"
+            module, package = f"{directory}/{name}.py", f"{directory}/{name}"
             initializer = f"{package}/__init__.py"
             if module in self.files or initializer in self.files:
                 return module if module in self.files else package
@@ -2374,9 +2434,34 @@ class Shell:
                 return package
         return None
 
+    def _module_shadow(self, name, env):
+        """A file the build wrote that python -m ``name`` imports before the module
+        of the interpreter (the working directory and PYTHONPATH come first)."""
+        return self._written_module(name, [self.cwd, *self._python_path(env)])
+
+    def _check_startup_hooks(self, env):
+        """Before the code it is asked to run, python imports sitecustomize and
+        usercustomize from PYTHONPATH and site-packages, and runs the import lines
+        of the .pth files of site-packages: one the build wrote runs code the
+        model does not know. The working directory is not searched yet."""
+        directories = self._python_path(env)
+        for hook in PYTHON_STARTUP_HOOKS:
+            found = self._written_module(hook, directories)
+            if found:
+                raise Unsupported(
+                    f"python run at build time imports {found}, a file the build wrote, at startup"
+                )
+        for path in (*self.files, *self.stage.replaced):
+            if SITE_STARTUP_FILE.search(path):
+                raise Unsupported(
+                    f"python run at build time runs {path}, a file the build wrote, at startup"
+                )
+
     def _python(self, words, env, conditional):
         """python at build time or in a start script."""
         args = words[1:]
+        if not self.start:
+            self._check_startup_hooks(env)
         module, module_args = python_module(args)
         if module is not None and not self.start:
             shadow = self._module_shadow(module.split(".")[0], env)
@@ -2458,7 +2543,7 @@ class Shell:
             return
         raise Unsupported(f"'uv {' '.join(args[:1])}' is not modelled")
 
-    def _other_command(self, words, literal_args=None):
+    def _other_command(self, words, literal_args=None, env=None):
         """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
@@ -2519,9 +2604,10 @@ class Shell:
                 for home in ("/root", "/etc", self.variables.get("HOME", "/root"))
                 for config in names
             ]
+            # The environment of the command, prefix assignments and env included.
             if (
                 any(posixpath.basename(p) in names for p in written)
-                or any(v in self.variables for v in variables)
+                or any(v in self.variables or v in (env or {}) for v in variables)
                 or any(self.stage.written(place) for place in places)
             ):
                 # A configuration file of the build may add outputs.
@@ -2635,7 +2721,9 @@ class Shell:
         deletions count, and in a start script its python processes). A python
         script of the image is a python process of a start script. True when the
         command was one of these."""
-        path = self.model.find_executable(words[0], self.cwd, env, self.files)
+        path = self.model.find_executable(
+            words[0], self.cwd, env, self.files, self.stage.links
+        )
         text = self._read(path)
         program = interpreter_of(text, self.model, env, self.files, self.stage)
         if program in SHELLS:
@@ -2743,26 +2831,9 @@ class Shell:
         self.cwd = target
 
     def _path(self, value, what="path"):
-        """Absolute image path of an operand. A ``..`` after a link the build
-        created climbs from the target of the link, not from the link, so it is
-        reported before ``..`` is collapsed."""
-        value = self._tilde(value)
-        joined = (
-            value
-            if value.startswith("/") or self.cwd is None
-            else posixpath.join(self.cwd, value)
-        )
-        parts = joined.split("/")
-        for index, part in enumerate(parts):
-            if part != "..":
-                continue
-            prefix = posixpath.normpath("/".join(parts[:index]) or "/")
-            for link in self.stage.links:
-                if prefix == link or prefix.startswith(link.rstrip("/") + "/"):
-                    raise Unsupported(
-                        f"{what} '{value}' climbs out of the link {link} the build created"
-                    )
-        return image_path(value, self.cwd, what)
+        """Absolute image path of an operand (a ``..`` after a link the build
+        created is reported)."""
+        return image_path(self._tilde(value), self.cwd, what, self.stage.links)
 
     def _tilde(self, value):
         if value == "~" or value.startswith("~/"):
@@ -3071,6 +3142,9 @@ class Shell:
         """pip: ``install <path>`` records the installed packages; an option that
         writes a file (--report, --log) or into a directory takes it out of the
         model; ``uninstall`` removes installed packages."""
+        if not self.start:
+            # pip is a python program (uv pip runs the interpreter as well).
+            self._check_startup_hooks(env)
         # Global options come before the command.
         while args and args[0].startswith("-"):
             option, sep, attached = args[0].partition("=")
@@ -4018,12 +4092,12 @@ class ImageModel:
         return text
 
     @staticmethod
-    def find_executable(command, cwd, env, files):
+    def find_executable(command, cwd, env, files, links=()):
         """Image path of a command: a path, or a file of the model on PATH."""
         if "/" in command:
             if "$" in command or (cwd is None and not command.startswith("/")):
                 return None
-            return image_path(command, cwd)
+            return image_path(command, cwd, links=links)
         for directory in env.get("PATH", DEFAULT_PATH).split(":"):
             candidate = posixpath.join(directory, command)
             if directory.startswith("/") and candidate in files:
@@ -4038,7 +4112,7 @@ class ImageModel:
         if "/" in command:
             if "$" in command or (cwd is None and not command.startswith("/")):
                 return None
-            path = image_path(command, cwd)
+            path = image_path(command, cwd, links=stage.links)
             return path if path in files or stage.written(path) else None
         for directory in env.get("PATH", DEFAULT_PATH).split(":"):
             candidate = posixpath.join(directory or ".", command)
@@ -4055,8 +4129,8 @@ class ImageModel:
 
     def _executable(self, command, cwd, env, files):
         if "/" in command:
-            return image_path(command, cwd, "entry point")
-        path = self.find_executable(command, cwd, env, files)
+            return image_path(command, cwd, "entry point", self.final.links)
+        path = self.find_executable(command, cwd, env, files, self.final.links)
         if path is None:
             raise Unsupported(
                 f"entry point '{command}' is not a file of the image model"
@@ -4121,7 +4195,7 @@ class ImageModel:
                         break
                 i += 1
                 continue
-            script = image_path(arg, cwd, "python script")
+            script = image_path(arg, cwd, "python script", self.final.links)
             if script not in files:
                 # pycti resolves the script path: a file the model does not
                 # know (a symbolic link, a file of the base image) may live
@@ -4159,7 +4233,12 @@ class ImageModel:
                     raise Unsupported(
                         f"python -m {module} in an unknown working directory"
                     )
-                entry = image_path(entry or ".", cwd, "PYTHONPATH entry")
+                entry = image_path(
+                    entry or ".",
+                    cwd,
+                    "PYTHONPATH entry",
+                    stage.links if stage is not None else (),
+                )
             bases.append(entry)
         if not no_site:
             bases.append(SITE_PACKAGES)
