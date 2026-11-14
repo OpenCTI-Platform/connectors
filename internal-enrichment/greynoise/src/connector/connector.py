@@ -55,6 +55,8 @@ class GreyNoiseConnector:
         return self.indicator_score
 
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
+        # Reset so the TLP of a previous message is never reused
+        self.tlp = None
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 self.tlp = marking_definition["definition"]

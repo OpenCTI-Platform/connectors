@@ -42,6 +42,8 @@ class UrlscanConnector:
                                including "objectMarking", the marking that the observable uses.
         :return: A boolean
         """
+        # Reset so the TLP of a previous message is never reused
+        self.tlp = None
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 self.tlp = marking_definition["definition"]
