@@ -1209,7 +1209,8 @@ def test_assignment_prefix_reaches_python(tmp_path):
             "no COPY carries a stamp into the final image",
         ),
         (
-            "ln -s /usr/share/data /opt/sample",
+            # Into an existing directory, ln creates /opt/sample/data instead.
+            "rm -rf /opt/sample && ln -s /usr/share/data /opt/sample",
             '["python3", "/opt/sample/main.py"]',
             "not supported: python script /opt/sample/main.py is not a file of the image model",
         ),
@@ -1427,6 +1428,53 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
             {
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
+        ),
+        # Copilot review of 03:16 UTC: what lies below a moved or linked
+        # directory, a download under a bare name, an ADD archive, and the
+        # unknown directories a stage copy takes.
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /tmp/tools/python3\nRUN mv /tmp/tools /opt/tools\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /tmp/tools/python3\nRUN ln -s /tmp/tools /opt/tools\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "WORKDIR /opt/tools\nRUN curl -o python3 https://example.com/w && chmod 755 python3\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nADD tools.tar /usr/local/bin/\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"tools.tar": "not read: the extension makes it an archive"},
+        ),
+        (
+            "FROM python:3.12-alpine AS builder\n"
+            "RUN git clone https://example.com/tools.git /out\n"
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY --from=builder /out/ /usr/local/bin/\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
+        ),
+        # time is a program for sh.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /usr/local/bin/time\n"
+            "CMD time python3 /opt/sample/main.py\n",
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        # A copy below a link the build created writes where the link points.
+        (
+            "FROM python:3.12-alpine\nRUN mkdir /tmp/x && ln -s /tmp/x /opt/sample\n"
+            "COPY src /opt/sample\nRUN rm -f /tmp/x/.connector_version.json\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
         ),
         # Copilot review of 03:01 UTC: the interpreter line of a script, with
         # its path or through env.
