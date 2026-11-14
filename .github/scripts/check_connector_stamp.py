@@ -42,7 +42,8 @@ looks. The model covers exactly this:
 * Closed world: a command is accepted only when the model knows its effect on
   the files, otherwise the image is reported. Interpreted: ``cd``, ``rm``,
   ``unlink``, ``mv`` (sources and replaced destination), ``ln`` (literal and
-  wildcard operands, a wildcard never matching a leading dot), ``find``
+  wildcard operands, a wildcard never matching a leading dot), ``touch`` (a
+  file it creates is empty, a content the model does not know), ``find``
   (``-delete``, ``-exec rm`` and its operands; a grouped expression deletes
   everything below its roots), ``sh -c`` and shell scripts of the image,
   ``pip`` (``install <path>``, ``uninstall``, options writing a file),
@@ -257,6 +258,7 @@ VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}{VAR_SUBST}])(\\d+){VAR_EN
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
 # read it, create something new, or change its owner. A command the model
 # neither interprets nor lists here is reported.
+TOUCH_OPTIONS_WITH_VALUE = frozenset({"-d", "-r", "-t", "--date", "--reference"})
 HARMLESS_COMMANDS = frozenset(
     {
         ":",
@@ -2109,6 +2111,12 @@ class Shell:
         self.chain_variables = set()
         self.chain_directory = False
 
+    def exec_form(self, argv):
+        """A command of the exec form: no shell reads it, so each word is an
+        argument as written, wildcard characters and operators included."""
+        self._command([literal_globs(word) for word in argv], [], None, None)
+        self._end_chain()
+
     def _command(self, words, writes, before, after, reads=()):
         uncertain = before in ("&&", "|") or after in ("|", "&")
         if not uncertain:
@@ -2446,6 +2454,9 @@ class Shell:
         if name == "mkdir":
             self._mkdir(args)
             return
+        if name == "touch":
+            self._touch(args)
+            return
         if name in AUDITED_SUBCOMMANDS and (
             not args or args[0] not in AUDITED_SUBCOMMANDS[name]
         ):
@@ -2531,6 +2542,37 @@ class Shell:
         raise Unsupported(
             f"'{name}' is not a command the model knows the effects of on the image files"
         )
+
+    def _touch(self, args):
+        """touch: a file of the model, or a directory, keeps its content; a file
+        it creates is empty, a content the model does not know, which a COPY
+        --from of its directory carries (an empty program shadows the real one)."""
+        operands = []
+        create = True
+        options = True
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if options and arg == "--":
+                options = False
+            elif options and arg in TOUCH_OPTIONS_WITH_VALUE:
+                i += 1
+            elif options and arg.startswith("-") and arg != "-":
+                if arg == "--no-create" or re.fullmatch(r"-[acfhm]*c[acfhm]*", arg):
+                    create = False
+            else:
+                operands.append(arg)
+            i += 1
+        if not create:
+            return
+        for operand in operands:
+            path = image_path(self._tilde(operand), self.cwd, "touched path")
+            if GLOB_CHARS.search(path):
+                # A pattern touches the files it matches; they keep their content.
+                continue
+            self._through_link(path)
+            if path not in self.files and not self._is_dir(path):
+                self.stage.replaced.add(path)
 
     def _forget(self, candidate, created=False, record=True):
         """``candidate`` (and everything below it) may have been rewritten.
@@ -3283,9 +3325,8 @@ class ImageModel:
                 )
             check_shell_environment(stage.shell[0], variables)
             shell.run(command)
-        else:
-            # No shell reads the exec form: its wildcard characters are literal.
-            shell._statements([*(literal_globs(w) for w in command), "\n"])
+        elif command:
+            shell.exec_form(command)
         if (
             probe.files,
             probe.dirs,
@@ -3721,8 +3762,7 @@ class ImageModel:
             check_shell_environment(stage.shell[0], stage.variables)
             shell.run(command)
         elif command:
-            # No shell reads the exec form: its wildcard characters are literal.
-            shell._statements([*(literal_globs(w) for w in command), "\n"])
+            shell.exec_form(command)
 
     def check_packaging(self, files, install_dir):
         """Code of the repository that pip runs for ``install_dir``, whatever

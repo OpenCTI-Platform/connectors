@@ -1495,6 +1495,17 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             "WORKDIR /opt/src\nRUN python3 -m pip install requests",
             True,
         ),
+        # Copilot review of 13:37 UTC: no shell reads the exec form, so a
+        # separator there is an argument.
+        (
+            'RUN ["printf", "%s\\n", ";", "rm", "-f", "/opt/src/.connector_version.json"]',
+            True,
+        ),
+        (
+            'RUN ["printf", "%s\\n", "&&", "rm", "-f", "/opt/src/.connector_version.json"]',
+            True,
+        ),
+        ('RUN ["rm", "-f", "/opt/src/.connector_version.json"]', False),
         # A device holds no file, unless the build made it a link to one.
         ("RUN ls /opt/src > /dev/null 2> /dev/stderr", True),
         (
@@ -1877,6 +1888,14 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'HEALTHCHECK CMD ["ln", "-sf", "/tmp/wrapper", "/usr/local/bin/python3"]\n'
             'CMD ["python3", "/opt/src/main.py"]\n',
             "not supported: the HEALTHCHECK command changes files of the image",
+        ),
+        # Copilot review of 13:37 UTC: no shell reads the exec form, so a
+        # separator there is an argument.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            'HEALTHCHECK CMD ["printf", "%s", ";", "ln", "-sf", "/tmp/wrapper", "/usr/local/bin/python3"]\n'
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
         ),
         # Copilot review of 01:56 UTC: any blank ends a COPY flag.
         (
@@ -2643,6 +2662,39 @@ def test_list_continued_on_the_next_line(tmp_path, lines, covered):
         "cd /opt/sample\nexec python3 main.py\n",
     }
     assert single(tmp_path, files).covered is covered
+
+
+@pytest.mark.parametrize(
+    "builder, covered",
+    [
+        # Copilot review of 13:37 UTC: a COPY --from of a directory carries the
+        # files touch created there; an empty one shadows the program it names.
+        ("RUN mkdir /out && touch /out/python3 && chmod 755 /out/python3", False),
+        ("RUN mkdir /out && touch -- /out/python3", False),
+        ("RUN mkdir /out && touch -d 2020-01-01 /out/python3", False),
+        ("RUN mkdir /out && touch /out/marker", True),
+        ("RUN mkdir /out && touch -c /out/python3", True),
+        ("RUN mkdir /out && touch -r /etc/os-release /out/marker", True),
+    ],
+)
+def test_a_stage_copy_carries_the_files_touch_created(tmp_path, builder, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine AS builder\n{builder}\n"
+        "FROM python:3.12-alpine\nCOPY src /opt/src\nCOPY --from=builder /out/ /usr/local/bin/\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+def test_touch_keeps_the_content_of_a_file_of_the_model(tmp_path):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "RUN touch /opt/src/.connector_version.json /opt/src\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered, image.reason
 
 
 @pytest.mark.parametrize(
