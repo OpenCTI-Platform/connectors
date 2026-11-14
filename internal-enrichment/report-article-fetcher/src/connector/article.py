@@ -47,6 +47,7 @@ _META_REFRESH = re.compile(
     r"<meta[^>]+http-equiv=[\"']?refresh[^>]+url=['\"]?([^'\">\s]+)", re.IGNORECASE
 )
 _MAX_REDIRECTS = 5
+_REDIRECT_STATUSES = (301, 302, 303, 307, 308)
 
 
 class FetchError(Exception):
@@ -211,7 +212,9 @@ def fetch_html(
         except requests.RequestException as err:
             raise FetchError(f"Request failed: {err}") from err
         with response:
-            if response.is_redirect:
+            # requests' is_redirect is false on a 3xx without Location: test
+            # the status, so that such a reply is refused for what it is.
+            if response.status_code in _REDIRECT_STATUSES:
                 location = (response.headers.get("Location") or "").strip()
                 if not location:
                     raise FetchError("Redirect without Location")
