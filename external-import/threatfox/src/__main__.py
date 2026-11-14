@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import csv
+import http.client
 import io
 import os
 import ssl
 import sys
 import time
 import traceback
+import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import dataclass
@@ -30,6 +32,10 @@ ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
+class ThreatFoxDownloadError(Exception):
+    """Download of the ThreatFox export failed; the message never holds the URL."""
+
+
 # pylint:disable=too-many-instance-attributes
 class ThreatFox:
     """ThreatFox connector"""
@@ -42,7 +48,7 @@ class ThreatFox:
         self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
         # Extra config
-        self.threatfox_csv_url = self.config.threatfox.csv_url
+        self.threatfox_csv_url = self.config.threatfox.export_url
         self.threatfox_import_offline = self.config.threatfox.import_offline
         self.threatfox_interval = self.config.threatfox.interval
         self.create_indicators = self.config.threatfox.create_indicators
@@ -212,7 +218,13 @@ class ThreatFox:
                 )
 
         except Exception:  # pylint:disable=broad-exception-caught
+            # Keep `last_run` unchanged so the next loop retries instead of
+            # waiting a full interval, and report the work as failed.
             self.helper.log_error(traceback.format_exc())
+            self.helper.api.work.to_processed(
+                work_id, "Connector run failed, see connector logs", in_error=True
+            )
+            return
 
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"
@@ -233,11 +245,33 @@ class ThreatFox:
         """
 
         self.helper.log_info("Fetching Threat Fox dataset")
-        with urllib.request.urlopen(
-            self.threatfox_csv_url,
-            context=ssl.create_default_context(),
-        ) as response:
-            data: bytes = response.read()
+        # The export URL contains the Auth-Key, and some urlopen errors
+        # (InvalidURL, unknown url type) quote it. Re-raise without the
+        # original message and context so the logged traceback stays clean.
+        try:
+            with urllib.request.urlopen(
+                self.threatfox_csv_url,
+                context=ssl.create_default_context(),
+            ) as response:
+                data: bytes = response.read()
+        except urllib.error.HTTPError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: HTTP {err.code} {err.reason}"
+            ) from None
+        except urllib.error.URLError as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed: {err.reason}"
+            ) from None
+        except (http.client.InvalidURL, ValueError) as err:
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export URL is invalid ({type(err).__name__}): check "
+                "THREATFOX_AUTH_KEY or THREATFOX_CSV_URL for spaces or "
+                "unexpected characters"
+            ) from None
+        except Exception as err:  # pylint:disable=broad-exception-caught
+            raise ThreatFoxDownloadError(
+                f"ThreatFox export download failed ({type(err).__name__})"
+            ) from None
 
         try:
             zipped_file = io.BytesIO(data)

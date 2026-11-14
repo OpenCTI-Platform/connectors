@@ -62,7 +62,8 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter            | config.yml                    | Docker environment variable         | Default                                       | Mandatory | Description                                                                 |
 |----------------------|-------------------------------|-------------------------------------|-----------------------------------------------|-----------|-----------------------------------------------------------------------------|
-| CSV URL              | threatfox.csv_url             | `THREATFOX_CSV_URL`                 | https://threatfox.abuse.ch/export/csv/recent/ | No        | ThreatFox CSV feed URL.                                                     |
+| Auth-Key             | threatfox.auth_key            | `THREATFOX_AUTH_KEY`                |                                               | Yes       | abuse.ch Auth-Key, from https://auth.abuse.ch. Not needed if `THREATFOX_CSV_URL` is set. |
+| CSV URL              | threatfox.csv_url             | `THREATFOX_CSV_URL`                 | https://threatfox-api.abuse.ch/v2/files/exports/`<AUTH-KEY>`/recent.csv | No        | Override of the ThreatFox CSV export URL. Takes precedence over `THREATFOX_AUTH_KEY`. |
 | Import Offline       | threatfox.import_offline      | `THREATFOX_IMPORT_OFFLINE`          | true                                          | No        | Import IOCs marked as offline.                                              |
 | Create Indicators    | threatfox.create_indicators   | `THREATFOX_CREATE_INDICATORS`       | true                                          | No        | Create indicators in addition to observables.                               |
 | Default Score        | threatfox.default_x_opencti_score | `THREATFOX_DEFAULT_X_OPENCTI_SCORE` | 50                                        | No        | Default x_opencti_score for observables.                                    |
@@ -95,7 +96,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=ThreatFox
       - CONNECTOR_SCOPE=threatfox
       - CONNECTOR_LOG_LEVEL=error
-      - THREATFOX_CSV_URL=https://threatfox.abuse.ch/export/csv/recent/
+      - THREATFOX_AUTH_KEY=ChangeMe
       - THREATFOX_INTERVAL=3 # In days
       - THREATFOX_IMPORT_OFFLINE=true
       - THREATFOX_CREATE_INDICATORS=true
@@ -213,7 +214,8 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
-- **Public Feed**: ThreatFox data is publicly available without authentication
+- **Auth-Key**: abuse.ch requires an Auth-Key to download ThreatFox exports. Create an account on [abuse.ch Authentication Portal](https://auth.abuse.ch) to get one. The same key works for URLhaus. The export endpoint only accepts the key in the URL path, so the connector builds the URL from `THREATFOX_AUTH_KEY` and never logs it.
+- **Failed runs**: if the download fails, the work is marked as failed and the next attempt happens one minute later instead of after a full interval.
 - **IOC Freshness**: The `csv_recent` endpoint provides IOCs from the last 7 days
 - **Confidence Levels**: ThreatFox includes confidence levels that can be reflected in scores
 - **Reference**: [ThreatFox](https://threatfox.abuse.ch/)
