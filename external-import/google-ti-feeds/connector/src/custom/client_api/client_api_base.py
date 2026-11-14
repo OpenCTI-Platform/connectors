@@ -6,6 +6,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
+from connector.src.custom.client_api.inline_relationships import (
+    INLINE_RELATIONSHIPS_PARAM,
+)
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -169,6 +172,7 @@ class BaseClientAPI:
                         "filter": current_filter,
                         "limit": 40,
                         "order": "last_modification_date+",
+                        "relationships": INLINE_RELATIONSHIPS_PARAM,
                     },
                     "cursor": (
                         initial_state.get(cursor_key) if initial_state else None

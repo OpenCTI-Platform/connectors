@@ -4,6 +4,9 @@ import logging
 from typing import Any
 
 from connector.src.custom.client_api.client_api import ClientAPI
+from connector.src.custom.client_api.inline_relationships import (
+    is_subentity_call_needed,
+)
 from connector.src.custom.configs import GTIConfig
 from connector.src.octi.work_manager import WorkManager
 
@@ -137,6 +140,10 @@ class BaseOrchestrator:
         subentity types whose counter is explicitly ``0`` are removed from the
         list to avoid unnecessary API calls.
 
+        When the entity carries inline relationship descriptors (list call made
+        with ``relationships=``), subentity types that the descriptors prove
+        empty are removed too. See ``client_api/inline_relationships.py``.
+
         See: https://github.com/OpenCTI-Platform/connectors/issues/6562
 
         Args:
@@ -148,11 +155,16 @@ class BaseOrchestrator:
 
         """
         counters = getattr(getattr(entity, "attributes", None), "counters", None)
-        if counters is None:
-            return subentity_types
+        if counters is not None:
+            subentity_types = [
+                subentity_type
+                for subentity_type in subentity_types
+                if getattr(counters, subentity_type, None) != 0
+            ]
 
+        relationships = getattr(entity, "relationships", None)
         return [
             subentity_type
             for subentity_type in subentity_types
-            if getattr(counters, subentity_type, None) != 0
+            if is_subentity_call_needed(subentity_type, relationships)
         ]

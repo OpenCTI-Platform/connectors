@@ -290,6 +290,7 @@ class GTIReportData(BaseModel):
     links: Links
     attributes: ReportModel | None
     context_attributes: dict[str, Any]
+    relationships: dict[str, Any] | None = None
 
 
 class GTIReportResponse(BaseModel):
