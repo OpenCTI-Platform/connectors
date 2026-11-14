@@ -1982,6 +1982,8 @@ class Shell:
         values. Only the value of an unquoted expansion is split on blanks: the
         blanks of the rest of the word were quoted or escaped."""
         fields = [""]
+        # A field with a quoted expansion stays a word even when it is empty.
+        quoted = [False]
         unquoted = False
         position = 0
         for match in VAR_MARKER.finditer(word):
@@ -1995,6 +1997,7 @@ class Shell:
             if match.group(1) != VAR_UNQUOTED:
                 # The wildcard characters of a quoted expansion are literal.
                 fields[-1] += literal_globs(value)
+                quoted[-1] = True
                 continue
             unquoted = True
             if not split:
@@ -2006,8 +2009,11 @@ class Shell:
             pieces = IFS_BLANKS.split(value)
             fields[-1] += pieces[0]
             fields += pieces[1:]
+            quoted += [False] * (len(pieces) - 1)
         fields[-1] += word[position:]
-        return [field for field in fields if field] if split and unquoted else fields
+        if not (split and unquoted):
+            return fields
+        return [field for field, kept in zip(fields, quoted) if field or kept]
 
     def _nested(self, files, cwd, variables, start, conditional):
         """A shell run from this one; in a start script it adds its processes here."""
@@ -4193,7 +4199,9 @@ class ImageModel:
         roots = {".", "src", *self._roots_of(files, install_dir)}
         relative = module.replace(".", "/")
         candidates = [
-            files.get(posixpath.normpath(f"{install_dir}/{root}/{relative}{suffix}"))
+            files.get(
+                posixpath.normpath(posixpath.join(install_dir, root, relative + suffix))
+            )
             for root in roots
             for suffix in (".py", "/__init__.py")
         ]

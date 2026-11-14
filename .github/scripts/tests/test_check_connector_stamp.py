@@ -3778,15 +3778,32 @@ def test_volume_at_the_stamp(tmp_path):
     )
 
 
-def test_package_installed_from_the_root(tmp_path):
-    # Copilot review of 23:44 UTC: the packages of a project at / are found too.
+@pytest.mark.parametrize(
+    "packaging",
+    [
+        {
+            "pyproject.toml": "[tool.setuptools.package-data]\n"
+            'sample_connector = [".connector_version.json"]\n'
+        },
+        {
+            "setup.cfg": "[metadata]\nname = sample\n"
+            "version = attr: sample_connector.__version__\n"
+            "[options]\npackages = sample_connector\n"
+            "[options.package_data]\nsample_connector = .connector_version.json\n",
+            "sample_connector/__init__.py": "__version__ = '1.0'\n",
+        },
+    ],
+)
+def test_package_installed_from_the_root(tmp_path, packaging):
+    # Copilot review of 23:44 UTC: the packages of a project at / and the
+    # literal version of one of its modules are found too.
     dockerfile = (
         "FROM python:3.12-alpine\nCOPY . /\n"
         "RUN pip install / && rm -rf /sample_connector\n"
         'CMD ["python", "-m", "sample_connector"]\n'
     )
-    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
-    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile)
+    init = "sample_connector/__init__.py" not in packaging
+    image = packaged(tmp_path, packaging, dockerfile, init=init)
     assert image.covered, image.reason
     assert image.reason == (
         "stamp at /<site-packages>/sample_connector/.connector_version.json"
