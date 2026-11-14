@@ -1,0 +1,31 @@
+{
+  "created_at": "2026-04-09T15:17:53.027444+00:00",
+  "updated_at": "2026-04-09T15:17:53.027444+00:00",
+  "deleted_at": null,
+  "id": "b9b32441-2e02-573b-8a31-f7d787373067",
+  "data_id": "edb03922-77c5-5c6a-8074-550bbb1b7a3c",
+  "entity_id": -1,
+  "keyword_name": "Database Stolen from a Swiss Technology Company, Leaked",
+  "entity_type": 0,
+  "service": "flash_report",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "MEDIUM",
+  "updated_by_id": null,
+  "created_by": null,
+  "user_severity": "MEDIUM",
+  "risk_score": null,
+  "bucket_id": 0,
+  "bucket_name": "",
+  "data": {
+    "data": {
+      "for_company": 2,
+      "report_id": "94c9055ab0931ef1f548f11c"
+    }
+  },
+  "tags": []
+}

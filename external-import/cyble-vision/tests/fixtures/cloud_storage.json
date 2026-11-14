@@ -1,0 +1,41 @@
+{
+  "created_at": "2026-02-04T15:01:00.511544+00:00",
+  "updated_at": "2026-02-27T07:27:05.505+00:00",
+  "deleted_at": null,
+  "id": "75d6ab74-303c-5e63-b222-1bc7a65f25b0",
+  "data_id": "73469e60-ab3c-53c2-a14f-b30211405f3d",
+  "entity_id": 3437605,
+  "keyword_name": "example1.com",
+  "entity_type": 0,
+  "service": "cloud_storage",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "MEDIUM",
+  "updated_by_id": "3cb90972-78d3-50df-8eb2-2de52efacb2e",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": null,
+  "bucket_id": 11643,
+  "bucket": "example-bucket.s3.amazonaws.com",
+  "filename": "example1.com.png",
+  "bucket_name": "Example Bucket",
+  "processed_by_agentic_ai": true,
+  "agentic_ai_process_status": "completed",
+  "workflow_id": "ded29798-24c0-5f92-9802-587d03b05db9",
+  "data": {
+    "data": {
+      "bucket": "example-bucket.s3.amazonaws.com",
+      "bucketId": 253123,
+      "filename": "example1.com.png",
+      "fullPath": "log/example1.com.png",
+      "id": "5538975670",
+      "size": 25659,
+      "url": "https://example-bucket.s3.amazonaws.com/log/example1.com.png"
+    }
+  },
+  "tags": []
+}

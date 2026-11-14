@@ -1,0 +1,165 @@
+{
+  "created_at": "2026-03-30T14:57:42.397564+00:00",
+  "updated_at": "2026-03-31T08:43:54.650+00:00",
+  "deleted_at": null,
+  "id": "ede1e7f3-4161-5e9e-a6c3-6decd11f9432",
+  "data_id": "eff0bddf-53c3-5fa3-8359-62d4a339d85f",
+  "entity_id": -1,
+  "keyword_name": "example46.com",
+  "entity_type": 0,
+  "service": "domain_watchlist",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "LOW",
+  "updated_by_id": "157054ca-acaf-5ef8-9317-6621c0c770c6",
+  "created_by": null,
+  "user_severity": "LOW",
+  "risk_score": null,
+  "bucket_id": -1,
+  "updated_fields": [
+    "SOA Records"
+  ],
+  "bucket_name": "",
+  "data": {
+    "data": {
+      "new_dns_record": {
+        "a_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ip": "203.0.113.11",
+            "ttl": 3600
+          },
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ip": "203.0.113.12",
+            "ttl": 3600
+          }
+        ],
+        "aaa_records": null,
+        "domain": "example46.com",
+        "mx_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "priority": 0,
+            "target": ".",
+            "ttl": 3600
+          }
+        ],
+        "ns_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "target": "ns1.afternic.com.",
+            "ttl": 86400
+          },
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "target": "ns2.afternic.com.",
+            "ttl": 86400
+          }
+        ],
+        "soa_records": [
+          {
+            "class": "IN",
+            "expiry": "604800",
+            "host": "example46.com.",
+            "is_latest": false,
+            "m_name": "ns1.afternic.com.",
+            "r_name": "dns.jomax.net.",
+            "refresh": "28800",
+            "retry": "7200",
+            "serial": "1",
+            "ttl": 3600
+          }
+        ],
+        "txt_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ttl": 3600,
+            "txt": "v=spf1 -all"
+          }
+        ]
+      },
+      "old_dns_record": {
+        "a_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ip": "203.0.113.11",
+            "ttl": 3600
+          },
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ip": "203.0.113.12",
+            "ttl": 3600
+          }
+        ],
+        "aaa_records": null,
+        "domain": "example46.com",
+        "mx_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "priority": 0,
+            "target": ".",
+            "ttl": 3600
+          }
+        ],
+        "ns_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "target": "ns1.afternic.com.",
+            "ttl": 86400
+          },
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "target": "ns2.afternic.com.",
+            "ttl": 86400
+          }
+        ],
+        "soa_records": [
+          {
+            "class": "IN",
+            "expiry": "604800",
+            "host": "example46.com.",
+            "is_latest": false,
+            "m_name": "ns2.afternic.com.",
+            "r_name": "dns.jomax.net.",
+            "refresh": "28800",
+            "retry": "7200",
+            "serial": "1",
+            "ttl": 3600
+          }
+        ],
+        "txt_records": [
+          {
+            "class": "IN",
+            "host": "example46.com.",
+            "ttl": 3600,
+            "txt": "v=spf1 -all"
+          }
+        ]
+      },
+      "screenshot_data": {
+        "object_key": "34d4cef8a5de3560ab77e2db781f0549.png",
+        "timestamp": "2026-03-30T14:57:30.199295371Z"
+      },
+      "updated_fields": [
+        "SOA Records"
+      ]
+    }
+  },
+  "tags": []
+}
