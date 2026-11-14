@@ -89,7 +89,7 @@ import re
 import shlex
 import sys
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 STAMP = ".connector_version.json"
@@ -209,6 +209,10 @@ RESTORE = str.maketrans({v: k for k, v in PROTECT.items()})
 VAR_UNQUOTED, VAR_QUOTED, VAR_END = "\ue020", "\ue021", "\ue022"
 # A command substitution, whose output is not known.
 VAR_SUBST = "\ue023"
+# The value of a variable the model does not follow, or the output of a command
+# substitution: it keeps a "$", so a path built from it is reported, and it
+# matches no variable reference.
+UNKNOWN = "${...}"
 VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}{VAR_SUBST}])(\\d+){VAR_END}")
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
 # read it, create something new, or change its owner. A command the model
@@ -306,6 +310,155 @@ PACKAGE_MANAGERS = {
     "microdnf": frozenset({"--installroot"}),
     "rpm": frozenset({"--root", "--dbpath"}),
     "yum": frozenset({"--installroot"}),
+}
+# Options of wget and curl the model reads: the ones naming a file they write
+# ("file"), or the directory of the files named after the URL ("dir"), the ones
+# taking a value without writing a file, and the flags. Any other option is
+# reported: a configuration file, a cookie file or a recursive download may
+# write files the model does not see.
+DOWNLOADERS = {
+    "wget": {
+        "file": frozenset(
+            {"-O", "--output-document", "-o", "--output-file", "-a", "--append-output"}
+        ),
+        "dir": frozenset({"-P", "--directory-prefix"}),
+        "value": frozenset(
+            {
+                "-t",
+                "--tries",
+                "-T",
+                "--timeout",
+                "--header",
+                "-U",
+                "--user-agent",
+                "--progress",
+                "--user",
+                "--password",
+            }
+        ),
+        "flag": frozenset(
+            {
+                "-q",
+                "--quiet",
+                "-nv",
+                "--no-verbose",
+                "-nc",
+                "--no-clobber",
+                "-c",
+                "--continue",
+                "--no-check-certificate",
+                "--https-only",
+                "-S",
+                "--server-response",
+                "--show-progress",
+                "-4",
+                "--inet4-only",
+                "-6",
+                "--inet6-only",
+            }
+        ),
+    },
+    "curl": {
+        "file": frozenset(
+            {
+                "-o",
+                "--output",
+                "-D",
+                "--dump-header",
+                "-c",
+                "--cookie-jar",
+                "--trace",
+                "--trace-ascii",
+                "--stderr",
+            }
+        ),
+        "dir": frozenset({"--output-dir"}),
+        "value": frozenset(
+            {
+                "-H",
+                "--header",
+                "-X",
+                "--request",
+                "-d",
+                "--data",
+                "--data-raw",
+                "--data-binary",
+                "--data-urlencode",
+                "-T",
+                "--upload-file",
+                "-u",
+                "--user",
+                "-A",
+                "--user-agent",
+                "-e",
+                "--referer",
+                "-b",
+                "--cookie",
+                "-C",
+                "--continue-at",
+                "-m",
+                "--max-time",
+                "--connect-timeout",
+                "--retry",
+                "--retry-delay",
+                "--retry-max-time",
+                "--proto",
+                "--proto-redir",
+                "--max-filesize",
+                "--limit-rate",
+                "--url",
+            }
+        ),
+        "flag": frozenset(
+            {
+                "-f",
+                "--fail",
+                "--fail-with-body",
+                "-s",
+                "--silent",
+                "-S",
+                "--show-error",
+                "-L",
+                "--location",
+                "-k",
+                "--insecure",
+                "-I",
+                "--head",
+                "-v",
+                "--verbose",
+                "-#",
+                "--progress-bar",
+                "--no-progress-meter",
+                "--compressed",
+                "-O",
+                "--remote-name",
+                "--remote-name-all",
+                "-g",
+                "--globoff",
+                "-4",
+                "--ipv4",
+                "-6",
+                "--ipv6",
+                "--http1.1",
+                "--http2",
+                "--tlsv1.2",
+                "--tlsv1.3",
+                "--ssl-reqd",
+                "-N",
+                "--no-buffer",
+                "--create-dirs",
+                "--retry-all-errors",
+                "-q",
+                "--disable",
+            }
+        ),
+    },
+}
+# Configuration files wget and curl read by default, and the variables that
+# move them.
+DOWNLOADER_CONFIGS = {
+    "wget": ({".wgetrc", "wgetrc"}, ("WGETRC",)),
+    "curl": ({".curlrc", "curlrc", "_curlrc"}, ("CURL_HOME", "XDG_CONFIG_HOME")),
 }
 # Programs of base images or packages whose effect was reviewed: they write no
 # connector file.
@@ -526,6 +679,9 @@ def expand(value, variables):
         operator, word = match.group(2), match.group(3)
         known = name in variables
         current = variables.get(name)
+        if current == UNKNOWN:
+            # Set or not, to a value the model does not follow: no default applies.
+            return match.group(0)
         if operator in (":-", "-"):
             if known and (current or operator == "-"):
                 return current
@@ -593,12 +749,18 @@ def parse_command(value):
     return value, True
 
 
+def first_word(text):
+    """The first word of ``text`` and the rest, split on any blank."""
+    parts = text.split(None, 1)
+    return (parts[0], parts[1] if len(parts) > 1 else "") if parts else ("", "")
+
+
 def split_copy_args(arguments):
     """Flags (name -> list of values), sources and destination of a COPY / ADD."""
     flags = {}
     rest = arguments.strip()
     while rest.startswith("--"):
-        token, _, rest = rest.partition(" ")
+        token, rest = first_word(rest)
         name, _, value = token[2:].partition("=")
         flags.setdefault(name, []).append(value if value else True)
         rest = rest.strip()
@@ -683,6 +845,8 @@ class Stage:
     # Paths a build command wrote with content the model does not know (a link,
     # a moved file, a redirection target).
     replaced: set = field(default_factory=set)
+    # (command, shell form) of the HEALTHCHECK of the image, if any.
+    healthcheck: tuple = None
 
     def child(self):
         # ENV values are part of the image; ARG values end with their stage.
@@ -697,6 +861,7 @@ class Stage:
             cmd=self.cmd,
             volumes=list(self.volumes),
             replaced=set(self.replaced),
+            healthcheck=self.healthcheck,
         )
 
     def add_file(self, path, origin):
@@ -837,6 +1002,9 @@ class PackagingConfig:
             self.include = list(find.get("include", []))
             self.exclude = list(find.get("exclude", []))
             self.namespaces = bool(find.get("namespaces", True))
+        elif packages is None and ("py-modules" in tool or "py_modules" in tool):
+            # Modules named explicitly turn automatic discovery off: no package.
+            self.packages = []
         if tool.get("package-dir") or tool.get("package_dir"):
             self.unsupported = self.unsupported or "package-dir of setuptools"
 
@@ -877,6 +1045,9 @@ class PackagingConfig:
                         )
             elif raw:
                 self.packages = values(raw)
+        elif parser.has_option("options", "py_modules"):
+            # Modules named explicitly turn automatic discovery off: no package.
+            self.packages = []
         if parser.has_option("options", "package_dir"):
             self.unsupported = self.unsupported or "package_dir of setuptools"
 
@@ -1079,64 +1250,62 @@ def python_script(args):
 
 def download_outputs(program, args, cwd):
     """Files ``wget`` or ``curl`` write; a response body otherwise goes to stdout."""
+    table = DOWNLOADERS[program]
+    with_value = table["file"] | table["dir"] | table["value"]
     outputs, urls = [], []
     directory = None
     remote_name = program == "wget"
-    options = {
-        "wget": {
-            "-O": "file",
-            "--output-document": "file",
-            "-o": "file",
-            "--output-file": "file",
-            "-a": "file",
-            "--append-output": "file",
-            "-P": "dir",
-            "--directory-prefix": "dir",
-        },
-        "curl": {
-            "-o": "file",
-            "--output": "file",
-            "-D": "file",
-            "--dump-header": "file",
-            "-c": "file",
-            "--cookie-jar": "file",
-            "--trace": "file",
-            "--trace-ascii": "file",
-            "--stderr": "file",
-            "--output-dir": "dir",
-        },
-    }[program]
     i = 0
     while i < len(args):
         arg = args[i]
-        option, sep, attached = arg.partition("=")
-        if (
-            not sep
-            and not option.startswith("--")
-            and option[:2] in options
-            and len(option) > 2
-        ):
-            option, attached, sep = option[:2], option[2:], "attached"
-        kind = options.get(option)
-        if kind:
-            value = attached if sep else (args[i + 1] if i + 1 < len(args) else None)
-            i += 1 if sep else 2
-            if kind == "dir":
-                directory = value
-            elif value:
+        i += 1
+        if arg == "--":
+            urls.extend(args[i:])
+            break
+        if not arg.startswith("-") or arg == "-":
+            urls.append(arg)
+            continue
+        if arg.startswith("--"):
+            option, sep, value = arg.partition("=")
+            pairs = [(option, value if sep else None)]
+        elif arg in table["flag"] or arg in with_value:
+            pairs = [(arg, None)]
+        else:
+            # Short options in a cluster: one taking a value takes the rest.
+            pairs = []
+            for position, letter in enumerate(arg[1:], 2):
+                pairs.append((f"-{letter}", arg[position:] or None))
+                if f"-{letter}" in with_value:
+                    break
+                pairs[-1] = (f"-{letter}", None)
+        for option, value in pairs:
+            if option in table["flag"]:
+                if option in ("-O", "--remote-name", "--remote-name-all"):
+                    # curl: the file takes the name of the URL.
+                    remote_name = True
+                continue
+            if option not in with_value:
+                raise Unsupported(
+                    f"{program} {option}: its effect on the files is not known"
+                )
+            if value is None:
+                if i >= len(args):
+                    raise Unsupported(f"{program} {option} without a value")
+                value = args[i]
+                i += 1
+            if option in table["file"]:
                 outputs.append(value)
                 if program == "wget" and option in ("-O", "--output-document"):
                     remote_name = False
-            continue
-        if program == "curl" and arg in ("-O", "--remote-name", "--remote-name-all"):
-            remote_name = True
-        elif "://" in arg:
-            urls.append(arg)
-        i += 1
+            elif option in table["dir"]:
+                directory = value
+            elif option == "--url":
+                urls.append(value)
     if remote_name:
         for url in urls:
             name = (
-                posixpath.basename(url.split("://", 1)[1].split("?")[0]) or "index.html"
+                posixpath.basename(url.split("://", 1)[-1].split("?")[0])
+                or "index.html"
             )
             outputs.append(posixpath.join(directory or ".", name))
     return [output for output in outputs if output != "-"]
@@ -1247,7 +1416,7 @@ class Shell:
             nonlocal unquoted
             if match.group(1) == VAR_SUBST:
                 # Unknown output: a "$" stays, so a path built from it is reported.
-                return "$(...)"
+                return UNKNOWN
             unquoted = unquoted or match.group(1) == VAR_UNQUOTED
             return expand(self.references[int(match.group(2))], self.variables)
 
@@ -1329,6 +1498,14 @@ class Shell:
                 raise Unsupported("a backquoted command substitution")
             if quote is None and char in "<>" and line.startswith("(", i + 1):
                 raise Unsupported("a process substitution")
+            if quote is None and char == "{" and (i == 0 or line[i - 1] != "$"):
+                # bash (the sh of some base images) expands {a,b} and {1..3}.
+                end = line.find("}", i)
+                inner = line[i + 1 : end] if end > i else ""
+                if ("," in inner or ".." in inner) and not any(
+                    c.isspace() for c in inner
+                ):
+                    raise Unsupported("a brace expansion")
             reference = (
                 VARIABLE.match(line, i) if char == "$" and quote != "'" else None
             )
@@ -1415,7 +1592,7 @@ class Shell:
             if skip:
                 if skip == "for":
                     # The loop variable takes values the model does not follow.
-                    self.variables.pop(token, None)
+                    self.variables[token.translate(RESTORE)] = UNKNOWN
                     skip = True
                 self._substitute([token], True)
                 continue
@@ -1498,7 +1675,7 @@ class Shell:
                 # Assignments alone apply one after the other; in a branch the model
                 # does not follow, the variable is no longer known.
                 if conditional:
-                    self.variables.pop(key, None)
+                    self.variables[key] = UNKNOWN
                 else:
                     self.variables[key] = assigned[key]
             words = words[1:]
@@ -1547,17 +1724,22 @@ class Shell:
                     continue
                 if conditional:
                     # A branch the model does not follow may or may not have run.
-                    self.variables.pop(key, None)
+                    self.variables[key] = UNKNOWN
                 else:
                     self.variables[key] = value
             return
         if name == "unset":
             for arg in args:
-                if not arg.startswith("-"):
+                if arg.startswith("-"):
+                    continue
+                if conditional:
+                    self.variables[arg] = UNKNOWN
+                else:
                     self.variables.pop(arg, None)
             return
-        if name not in SHELL_BUILTINS and self.model.shadow(
-            words[0], env, self.files, self.stage
+        builtin = name in SHELL_BUILTINS and "/" not in words[0]
+        if not builtin and self.model.shadow(
+            words[0], env, self.files, self.stage, self.cwd
         ):
             # The file the build put on PATH under this name runs, not the
             # program the model knows by that name.
@@ -1567,7 +1749,7 @@ class Shell:
                 )
             return
         if name == "cd":
-            self._cd(args, conditional, in_pipeline)
+            self._cd(args, conditional, in_pipeline, env)
         elif name in ("pushd", "popd"):
             self._unknown_directory(f"'{name}'")
         elif name == "eval":
@@ -1677,7 +1859,7 @@ class Shell:
         args = words[1:]
         if name == "printf" and "-v" in args[:-1]:
             # printf -v NAME sets a variable.
-            self.variables.pop(args[args.index("-v") + 1], None)
+            self.variables[args[args.index("-v") + 1]] = UNKNOWN
             return
         if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
@@ -1702,6 +1884,13 @@ class Shell:
                     raise Unsupported(f"'{name} {arg}' installs below another root")
             return
         if name in ("wget", "curl"):
+            names, variables = DOWNLOADER_CONFIGS[name]
+            written = (*self.files, *self.stage.replaced)
+            if any(posixpath.basename(p) in names for p in written) or any(
+                v in self.variables for v in variables
+            ):
+                # A configuration file of the build may add outputs.
+                raise Unsupported(f"{name} with a configuration file of the build")
             for output in download_outputs(name, args, self.cwd):
                 self._forget(output)
             return
@@ -1786,7 +1975,7 @@ class Shell:
             raise Unsupported(f"working directory changed by {why} in the entry script")
         self.cwd = None
 
-    def _cd(self, args, conditional, in_pipeline):
+    def _cd(self, args, conditional, in_pipeline, env):
         if in_pipeline:
             return
         targets = [a for a in args if a not in ("-L", "-P", "--")]
@@ -1797,7 +1986,8 @@ class Shell:
             self._unknown_directory("a conditional 'cd'")
             return
         target = self._tilde(targets[0])
-        if self.variables.get("CDPATH") and not target.startswith(("/", ".")):
+        # CDPATH of the command: a prefix assignment applies to the builtin too.
+        if env.get("CDPATH") and not target.startswith(("/", ".")):
             self._unknown_directory("a relative 'cd' searched in CDPATH")
             return
         self.cwd = image_path(target, self.cwd, "'cd' target")
@@ -2101,20 +2291,33 @@ class ImageModel:
         if stage is None:
             raise Unsupported("no FROM instruction")
         self.final = stage
+        self._check_healthcheck(stage)
 
-    def _healthcheck(self, stage, arguments):
-        """The health check runs next to the connector: it must leave the files alone."""
+    @staticmethod
+    def _healthcheck(stage, arguments):
+        """HEALTHCHECK: the last one of the stage, or of the stage it starts from,
+        applies to the image (NONE removes it)."""
         rest = arguments
         while rest.startswith("--"):
-            rest = rest.partition(" ")[2].strip()
+            rest = first_word(rest)[1]
         if rest.upper() == "NONE":
+            stage.healthcheck = None
             return
-        if not rest.upper().startswith("CMD"):
+        instruction, rest = first_word(rest)
+        if instruction.upper() != "CMD":
             raise Unsupported("a HEALTHCHECK without CMD")
-        command, shell_form = parse_command(rest[3:].strip())
+        stage.healthcheck = parse_command(rest)
+
+    def _check_healthcheck(self, stage):
+        """The health check runs next to the connector, in the final image: it
+        must leave its files alone."""
+        if stage.healthcheck is None:
+            return
+        command, shell_form = stage.healthcheck
         files = dict(stage.files)
         variables = {"PATH": DEFAULT_PATH, **stage.env}
-        shell = Shell(self, stage, files, stage.workdir, variables, start=False)
+        probe = replace(stage, files=files, replaced=set(stage.replaced))
+        shell = Shell(self, probe, files, stage.workdir, variables, start=False)
         if shell_form:
             shell.run(command)
         else:
@@ -2173,7 +2376,7 @@ class ImageModel:
                 # but its files may replace ones of the model.
                 entries, opaque = [], True
             else:
-                entries = self._stage_entries(source_stage, sources)
+                entries, opaque = self._stage_entries(source_stage, sources)
         else:
             entries, opaque = self._context_entries(instruction, sources)
         dest_path = image_path(dest, stage.workdir, "COPY destination")
@@ -2287,10 +2490,17 @@ class ImageModel:
 
     @staticmethod
     def _stage_entries(source_stage, sources):
+        """Entries of a COPY --from a stage, and whether it may bring files the
+        model does not know: only a file of the model is copied for certain (a
+        directory or a pattern also takes the files of the base image and the
+        ones build commands created, such as ``touch``)."""
         entries = []
+        opaque = False
         for source in sources:
             # Docker reads COPY --from sources from the root of the stage, not its WORKDIR.
             path = image_path(source, "/", "COPY --from source")
+            if path not in source_stage.files:
+                opaque = True
             if GLOB_CHARS.search(path):
                 # Docker wildcards: unlike the shell, "*" matches a leading dot.
                 regex = glob_regex(path.lstrip("/"))
@@ -2328,12 +2538,11 @@ class ImageModel:
                 ]
                 if members:
                     entries.append(("dir", match, members))
-        return entries
+        return entries, opaque
 
     def _run(self, stage, arguments):
         while arguments.startswith("--"):
-            _, _, arguments = arguments.partition(" ")
-            arguments = arguments.strip()
+            arguments = first_word(arguments)[1]
         command, shell_form = parse_command(arguments)
         shell = Shell(
             self, stage, stage.files, stage.workdir, dict(stage.variables), start=False
@@ -2445,7 +2654,7 @@ class ImageModel:
                 f"start command '{words[0]}' uses a variable or a command the build does not define"
             )
         name = posixpath.basename(words[0])
-        shadow = self.shadow(words[0], env, files, self.final)
+        shadow = self.shadow(words[0], env, files, self.final, cwd)
         if shadow is None and PYTHON.match(name):
             return [(self.python_start(words, cwd, env, files), dict(files))]
         if shadow is None and name in SHELLS:
@@ -2494,12 +2703,15 @@ class ImageModel:
         return None
 
     @staticmethod
-    def shadow(command, env, files, stage):
-        """The path a bare command name resolves to on PATH when the build put a
-        file there (a file of the model, or one a command replaced): that file
-        runs, not the program the name stands for. None otherwise."""
+    def shadow(command, env, files, stage, cwd):
+        """The path a command resolves to (on PATH for a bare name) when the build
+        put a file there (a file of the model, or one a command replaced): that
+        file runs, not the program its name stands for. None otherwise."""
         if "/" in command:
-            return None
+            if "$" in command or (cwd is None and not command.startswith("/")):
+                return None
+            path = image_path(command, cwd)
+            return path if path in files or path in stage.replaced else None
         for directory in env.get("PATH", DEFAULT_PATH).split(":"):
             candidate = posixpath.join(directory or ".", command)
             if not directory.startswith("/"):
@@ -2558,6 +2770,10 @@ class ImageModel:
                             raise Unsupported(f"python -{letter} without a value")
                         if letter == "c":
                             return self._readable(None, cwd)
+                        if not ignore_env and env.get("PYTHONSAFEPATH") == UNKNOWN:
+                            raise Unsupported(
+                                "PYTHONSAFEPATH set to a value the model does not follow"
+                            )
                         if not ignore_env and env.get("PYTHONSAFEPATH"):
                             safe_path = True
                         main_dir = self._module_dir(

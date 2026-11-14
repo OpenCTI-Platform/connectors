@@ -622,6 +622,19 @@ def test_packaged_connector_ships_the_stamp_in_its_package(tmp_path):
                 '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
             )
         },
+        # Copilot review of 01:56 UTC: explicit modules turn package discovery off.
+        {
+            "pyproject.toml": (
+                '[tool.setuptools]\npy-modules = ["main"]\n'
+                '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+            )
+        },
+        {
+            "setup.cfg": (
+                "[options]\npy_modules = main\n"
+                "[options.package_data]\nsample_connector = .connector_version.json\n"
+            )
+        },
     ],
 )
 def test_package_data_that_does_not_select_the_stamp(tmp_path, packaging):
@@ -905,6 +918,22 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             "RUN for name in $(rm -f /opt/src/.connector_version.json); do :; done",
             False,
         ),
+        ('RUN sh -c "echo $(date) > /tmp/built"', True),
+        # Copilot review of 01:56 UTC: a variable the model no longer follows
+        # takes no default.
+        (
+            'ENV APP=/opt/src\nRUN if false; then APP=/tmp; fi; rm -f "${APP:-/tmp}/.connector_version.json"',
+            False,
+        ),
+        (
+            'RUN if false; then APP=/opt/src; fi; rm -f "${APP:-/tmp}/.connector_version.json"',
+            False,
+        ),
+        (
+            'RUN for APP in /opt/src; do rm -f "${APP:-/tmp}/.connector_version.json"; done',
+            False,
+        ),
+        ('RUN rm -f "${APP:-/tmp}/.connector_version.json"', True),
         # A for loop sets its variable.
         (
             'ENV APP=/tmp\nRUN for APP in /opt/src; do rm -f "$APP/.connector_version.json"; done',
@@ -927,6 +956,22 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN mv -T /tmp/new /opt/src", False),
         ("RUN mv /tmp/new /opt/src", True),
         ("RUN ln -sft/opt/src /tmp/.connector_version.json", False),
+        # Copilot review of 01:56 UTC: downloader options are a closed set.
+        ("RUN curl --config /tmp/curlrc https://example.com/x", False),
+        (
+            "RUN wget --save-cookies /opt/src/.connector_version.json https://example.com/x",
+            False,
+        ),
+        (
+            "RUN echo 'output = /opt/src/.connector_version.json' > /root/.curlrc && curl https://example.com/x",
+            False,
+        ),
+        ("RUN curl -fsSLo /tmp/x https://example.com/x", True),
+        ("RUN wget -qO- https://example.com/x > /tmp/x", True),
+        # Copilot review of 01:56 UTC: bash expands braces.
+        ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
+        ("RUN rm -rf /opt/{src,other}", False),
+        ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
         # Copilot review of 01:21 UTC: printf -v sets a variable.
         (
             'ENV APP=/tmp\nRUN printf -v APP %s /opt/src; rm -f "$APP/.connector_version.json"',
@@ -1192,6 +1237,38 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'CMD ["python3", "/opt/src/main.py"]\n',
             "stamp at /opt/src/.connector_version.json",
         ),
+        # Copilot review of 01:56 UTC: the health check runs in the final image.
+        (
+            "FROM python:3.12-alpine\nHEALTHCHECK CMD rm -f /opt/src/.connector_version.json\n"
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the HEALTHCHECK command changes files of the image",
+        ),
+        (
+            "FROM python:3.12-alpine AS base\nHEALTHCHECK CMD rm -f /opt/src/.connector_version.json\n"
+            'FROM base\nCOPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the HEALTHCHECK command changes files of the image",
+        ),
+        (
+            "FROM python:3.12-alpine AS base\nHEALTHCHECK CMD rm -f /opt/src/.connector_version.json\n"
+            "FROM base\nHEALTHCHECK NONE\nCOPY src /opt/src\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+        # Copilot review of 01:56 UTC: any blank ends a COPY flag.
+        (
+            "FROM python:3.12-alpine\nCOPY --exclude=**/*.json\t src /opt/src\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "no COPY carries a stamp into the final image",
+        ),
+        # Copilot review of 01:56 UTC: a stage copy may bring files the model
+        # does not know.
+        (
+            "FROM python:3.12-alpine AS builder\nRUN touch /tmp/empty\n"
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "COPY --from=builder /tmp/empty /opt/src/.connector_version.json\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "no COPY carries a stamp into the final image",
+        ),
         # Copilot review of 01:21 UTC: copied directories get the --chmod mode too.
         (
             "FROM python:3.12-alpine\nCOPY --chmod=644 src /opt/src\n"
@@ -1234,6 +1311,22 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
             'CMD ["python3", "main.py"]\n',
             {},
         ),
+        # Copilot review of 01:56 UTC: also when the path is written in full.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /usr/local/bin/python3\n"
+            "RUN /usr/local/bin/python3 -m compileall /opt/sample\n"
+            'CMD ["python3.12", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": "#!/bin/sh\nrm -rf /opt/sample\n"},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /usr/local/bin/python3\n"
+            'CMD ["/usr/local/bin/python3", "/opt/sample/main.py"]\n',
+            {
+                "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
+            },
+        ),
         (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY clean.sh /usr/local/bin/rm\n"
             'RUN rm -f /tmp/cache\nCMD ["python3", "/opt/sample/main.py"]\n',
@@ -1273,6 +1366,13 @@ def test_programs_shadowed_on_the_path(tmp_path, dockerfile, extra):
             '["sh", "-c", "cd /opt/connector && python3 -m src"]',
             True,
         ),
+        # Copilot review of 01:56 UTC: CDPATH assigned for the cd command only.
+        (
+            "UNUSED=1",
+            '["sh", "-c", "CDPATH=/elsewhere cd opt/connector && python3 -m src"]',
+            False,
+        ),
+        ("UNUSED=1", '["sh", "-c", "cd opt/connector && python3 -m src"]', True),
     ],
 )
 def test_python_search_path_and_cdpath(tmp_path, env, command, covered):
