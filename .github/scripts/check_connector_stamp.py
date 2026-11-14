@@ -215,6 +215,28 @@ SET_OPTION_NAMES = frozenset(
 EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo", "time"})
 # Builtins whose assignment arguments some shells expand as assignments.
 DECLARATIONS = frozenset({"export", "readonly", "local", "declare", "typeset"})
+# The POSIX special builtins (and source), whose prefix assignments persist in
+# some shells only.
+SPECIAL_BUILTINS = frozenset(
+    {
+        ":",
+        ".",
+        "break",
+        "continue",
+        "eval",
+        "exec",
+        "exit",
+        "export",
+        "readonly",
+        "return",
+        "set",
+        "shift",
+        "source",
+        "times",
+        "trap",
+        "unset",
+    }
+)
 REDIRECTIONS = frozenset({">", ">>", "<", ">&", "<&", "&>", "&>>", ">|", "<>"})
 # Longest first: shlex returns a run of punctuation such as ");" as one token.
 OPERATORS = (
@@ -2131,6 +2153,8 @@ class Shell:
         self.stack = []
         self.processes = []
         self.ended = False
+        # A build step whose exit or exec may have run: what follows may not.
+        self.maybe_ended = False
         # Variable references of the script, in the order the markers number them.
         self.references = []
         # Commands of the command substitutions, run once before their command.
@@ -2560,9 +2584,13 @@ class Shell:
         exported, allexport = set(self.exported), self.allexport
         files = dict(self.files)
         self._simple_command(words, writes, before, after, reads, exec_form)
-        if any(t not in ("(", "{") for t in self.stack) or before == "||":
-            # In a branch or a loop, or after ||, it may not have run: what it
-            # deleted may still be there.
+        if (
+            any(t not in ("(", "{") for t in self.stack)
+            or before == "||"
+            or self.maybe_ended
+        ):
+            # In a branch or a loop, after || or after an exit that may have
+            # run, it may not have run: what it deleted may still be there.
             self._uncertain_files([path for path in files if path not in self.files])
             self._uncertain(dirs - self.stage.dirs)
         if not uncertain:
@@ -2585,6 +2613,15 @@ class Shell:
             # (values, exports, set -a) of before.
             self.variables, self.exported = variables, exported
             self.allexport = allexport
+
+    def _end(self, conditional, ends_script):
+        """exit, or exec with a command: the script stops. In a build step, when
+        that may not happen, what follows may not run; in the entry script, the
+        connector does not start once it stops."""
+        if not conditional and ends_script:
+            self.ended = True
+        elif not self.start:
+            self.maybe_ended = True
 
     def _set_options(self, args):
         """set -a / +a (and -o / +o allexport): assignments exported or not. The
@@ -2635,7 +2672,7 @@ class Shell:
                     nested.run(script)
 
     def _simple_command(self, words, writes, before, after, reads=(), exec_form=False):
-        conditional = bool(self.stack) or before == "||"
+        conditional = bool(self.stack) or before == "||" or self.maybe_ended
         self.command_alongside = "|" in (before, after) or after == "&"
         self._substitute((*words, *writes, *reads), conditional)
         for target in writes:
@@ -2718,6 +2755,9 @@ class Shell:
             else:
                 break
         if not words:
+            if handed_over and assigned and not external_prefix:
+                # Shells differ on whether they persist, as for a special builtin.
+                raise Unsupported("an assignment before exec without a command")
             return
         in_pipeline = before == "|" or after == "|"
         # Commands taking paths read a literal wildcard character as such; the
@@ -2753,6 +2793,13 @@ class Shell:
             self._launch(words, env, conditional)
             self.ended = ends_script
             return
+        if handed_over:
+            # exec: the command replaces the shell of the build step.
+            self._end(conditional, ends_script)
+        if shell_command and name in SPECIAL_BUILTINS and assigned:
+            # POSIX keeps the assignments before a special builtin, bash outside
+            # its POSIX mode does not: shells differ.
+            raise Unsupported(f"an assignment before the special builtin '{name}'")
         if shell_command and name in DECLARATIONS and split_assignment:
             # Shells differ: some read such an argument as an assignment,
             # without field splitting, others split it.
@@ -2829,8 +2876,7 @@ class Shell:
         elif PYTHON.match(name):
             self._python(words, env, conditional)
         elif shell_command and name in ("exit", "return"):
-            if not conditional and ends_script:
-                self.ended = True
+            self._end(conditional, ends_script)
         elif not self._executed_script(words, env, conditional):
             self._other_command(words, literal_args, env, conditional)
 
@@ -4953,7 +4999,9 @@ class ImageModel:
         if nesting > 8:
             raise Unsupported("entry scripts nested too deeply")
         words = list(argv)
-        while words and posixpath.basename(words[0]) in (*COMMAND_PREFIXES, "env"):
+        # An argument vector has no shell: exec, command and builtin are not
+        # unwrapped, only the programs that start another one.
+        while words and posixpath.basename(words[0]) in ("env", "nohup", "time"):
             name = posixpath.basename(words[0])
             external = name in EXTERNAL_PREFIXES or "/" in words[0]
             if external and self.shadow(words[0], env, files, self.final, cwd):
