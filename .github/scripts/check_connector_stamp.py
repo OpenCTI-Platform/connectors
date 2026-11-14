@@ -1729,6 +1729,10 @@ def interpreter_of(text, model=None, env=None, files=None, stage=None):
     if not interpreter:
         return ""
     programs = [interpreter[0]]
+    if PYTHON.match(posixpath.basename(interpreter[0])) and len(interpreter) > 1:
+        # The kernel hands python the rest of the line as one argument, an option
+        # that may change what runs (-mNAME, -c) and where it is looked up.
+        raise Unsupported(f"interpreter line '{text.splitlines()[0]}'")
     if posixpath.basename(interpreter[0]) in SHELLS:
         check_shell_options(interpreter[1:])
     if posixpath.basename(interpreter[0]) == "env":
@@ -2198,6 +2202,7 @@ class Shell:
             # bash: a wildcard then also matches a leading dot.
             raise Unsupported("a wildcard with GLOBIGNORE set")
         handed_over = False
+        external_prefix = False
         unset = set()
         while words:
             name = posixpath.basename(words[0])
@@ -2216,8 +2221,10 @@ class Shell:
                 return
             if name in COMMAND_PREFIXES:
                 handed_over = handed_over or name == "exec"
+                external_prefix = external_prefix or external
                 words = words[1:]
             elif name == "env":
+                external_prefix = True
                 words, assigned, unset = env_prefix(words[1:], assigned, unset)
             elif name == "sudo":
                 raise Unsupported(
@@ -2235,6 +2242,9 @@ class Shell:
         assigned = {key: value.translate(PLAIN_GLOB) for key, value in assigned.items()}
         name = posixpath.basename(words[0])
         args = words[1:]
+        # Only a name the shell runs itself can be one of its builtins: a path,
+        # or a command env, nohup or time start, is a program of the image.
+        shell_command = "/" not in words[0] and not external_prefix
         # The shell looks the command up with all its variables; the command
         # receives the exported ones and its own assignments.
         lookup = {
@@ -2255,7 +2265,7 @@ class Shell:
             self._launch(words, env, conditional)
             self.ended = True
             return
-        if name == "export":
+        if shell_command and name == "export":
             for arg in args:
                 if arg.startswith("-"):
                     if arg != "-p":
@@ -2271,7 +2281,7 @@ class Shell:
                 else:
                     self.variables[key] = value
             return
-        if name == "unset":
+        if shell_command and name == "unset":
             for arg in args:
                 if arg.startswith("-"):
                     continue
@@ -2281,9 +2291,9 @@ class Shell:
                     self.variables.pop(arg, None)
                     self.exported.discard(arg)
             return
-        if name == "set":
+        if shell_command and name == "set":
             self._set_options(args)
-        builtin = name in SHELL_BUILTINS and "/" not in words[0]
+        builtin = shell_command and name in SHELL_BUILTINS
         if not builtin and self.model.shadow(
             words[0], lookup, self.files, self.stage, self.cwd
         ):
@@ -2294,13 +2304,13 @@ class Shell:
                     f"'{name}' resolves on PATH to a file the build wrote, which the model does not know"
                 )
             return
-        if name == "cd":
+        if shell_command and name == "cd":
             self._cd(args, conditional, in_pipeline, lookup, after)
-        elif name in ("pushd", "popd"):
+        elif shell_command and name in ("pushd", "popd"):
             self._unknown_directory(f"'{name}'")
-        elif name == "eval":
+        elif shell_command and name == "eval":
             raise Unsupported("'eval': the commands it runs are not known")
-        elif name in (".", "source"):
+        elif shell_command and name in (".", "source"):
             if self.start:
                 raise Unsupported(f"'{name}' in the entry script")
             self._source(name, args)
@@ -2324,7 +2334,7 @@ class Shell:
             self._uv(args, conditional, env)
         elif PYTHON.match(name):
             self._python(words, env, conditional)
-        elif name in ("exit", "return"):
+        elif shell_command and name in ("exit", "return"):
             if not conditional and before != "&&":
                 self.ended = True
         elif not self._executed_script(words, env, conditional):

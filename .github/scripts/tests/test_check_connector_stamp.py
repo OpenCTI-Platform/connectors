@@ -2752,6 +2752,31 @@ def test_tilde_prefixes(tmp_path, removal, covered):
         assert "tilde prefix" in image.reason
 
 
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 15:50 UTC: a builtin name given as a path, or started
+        # by env, nohup or time, runs a program of the image, not the builtin.
+        ("/opt/tools/export", False),
+        ("/opt/tools/unset X", False),
+        ("export X=1; unset X", True),
+        ("cd /tmp; rm -f .connector_version.json", True),
+        ("env cd /tmp; rm -f .connector_version.json", False),
+        ("nohup cd /tmp; rm -f .connector_version.json", False),
+    ],
+)
+def test_a_builtin_name_runs_the_builtin_only_as_a_bare_name(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "COPY clean.sh /opt/tools/export\nCOPY clean.sh /opt/tools/unset\n"
+        f"WORKDIR /opt/src\nRUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "clean.sh": "#!/bin/sh\nrm -f /opt/src/.connector_version.json\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
 def test_touch_keeps_the_content_of_a_file_of_the_model(tmp_path):
     files = {
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
@@ -2795,6 +2820,17 @@ def test_cd_into_a_removed_directory_in_an_entry_script(tmp_path, removal, cover
         (
             "#!/usr/bin/env PYTHONSAFEPATH=1 python3",
             "not supported: interpreter line '#!/usr/bin/env PYTHONSAFEPATH=1 python3'",
+        ),
+        # Copilot review of 15:50 UTC: python started by the kernel with an
+        # argument of the line may run another module than the script.
+        ("#!/usr/local/bin/python3", "stamp at /opt/sample/.connector_version.json"),
+        (
+            "#!/usr/local/bin/python3 -mother",
+            "not supported: interpreter line '#!/usr/local/bin/python3 -mother'",
+        ),
+        (
+            "#!/usr/local/bin/python3 -u",
+            "not supported: interpreter line '#!/usr/local/bin/python3 -u'",
         ),
     ],
 )
