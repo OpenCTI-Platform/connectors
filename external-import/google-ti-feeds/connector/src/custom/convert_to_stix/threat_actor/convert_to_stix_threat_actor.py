@@ -29,7 +29,7 @@ class ConvertToSTIXThreatActor(BaseConvertToSTIX):
 
         """
         try:
-            additional_deps = {}
+            additional_deps: dict[str, Any] = {"logger": self.logger}
             if hasattr(self.config, "enable_threat_actor_aliases"):
                 additional_deps["enable_threat_actor_aliases"] = (
                     self.config.enable_threat_actor_aliases

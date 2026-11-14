@@ -1,5 +1,6 @@
 """Composite mapper that handles threat actor to country locations, identity, intrusion set, and relationships conversion in one step."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -32,6 +33,7 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
         organization: OrganizationAuthor,
         tlp_marking: TLPMarking,
         enable_threat_actor_aliases: bool = False,
+        logger: logging.Logger | None = None,
     ) -> None:
         """Initialize the composite mapper.
 
@@ -40,12 +42,14 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             organization: The organization identity object
             tlp_marking: The TLP marking definition
             enable_threat_actor_aliases: Whether to enable importing threat actor aliases
+            logger: The connector logger
 
         """
         self.threat_actor = threat_actor
         self.organization = organization
         self.tlp_marking = tlp_marking
         self.enable_threat_actor_aliases = enable_threat_actor_aliases
+        self.logger = logger
 
     def to_stix(self) -> list[Any]:
         """Convert the GTI threat actor to a list of STIX objects (country locations, sectors, intrusion set, relationships).
@@ -79,6 +83,7 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
             organization=self.organization,
             tlp_marking=self.tlp_marking,
             enable_threat_actor_aliases=self.enable_threat_actor_aliases,
+            logger=self.logger,
         )
         intrusion_set = intrusion_set_mapper.to_stix()
         all_entities.append(intrusion_set)
