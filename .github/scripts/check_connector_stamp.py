@@ -31,21 +31,25 @@ looks. The model covers exactly this:
 * RUN commands and entry scripts, read as POSIX shell: quoted and escaped
   punctuation stays an argument; each command expands its variables with the
   values the preceding ones left (an unquoted expansion is split into words,
-  nothing expands inside single quotes). ``cd``, ``rm``, ``unlink``, ``mv``
-  (sources and the replaced destination) and ``ln`` (literal and wildcard
-  operands, a wildcard never matching a leading dot), ``find`` (``-delete``,
-  ``-exec`` and its operands; a grouped expression deletes everything below
-  its roots), ``sh -c``, shell scripts of the image that are run or sourced,
-  ``pip install <path>``. An output redirection takes its target out of the
-  model. Any other command takes out of the model every file it names - its
-  arguments, and in a code string or a script of the image it runs, the paths
-  and the quoted stamp names (relative ones against the working directory) -
-  and everything below a directory it names, unless it is a command that
-  cannot rewrite or delete a file (``ls``, ``cat``, ``mkdir``, ``chown``, a
-  ``chmod`` that keeps the file readable, ...). Commands joined
-  by ``&&`` are followed as if each succeeds. Build tools and interpreters
-  that work on their working directory (``git``, ``make``, ``npm``, ...) name
-  it implicitly; any other command that names no file is taken to change none.
+  nothing expands inside single quotes; a variable set inside a branch is no
+  longer known). Commands joined by ``&&`` are followed as if each succeeds.
+  An output redirection takes its target out of the model.
+* Closed world: a command is accepted only when the model knows its effect on
+  the files, otherwise the image is reported. Interpreted: ``cd``, ``rm``,
+  ``unlink``, ``mv`` (sources and replaced destination), ``ln`` (literal and
+  wildcard operands, a wildcard never matching a leading dot), ``find``
+  (``-delete``, ``-exec rm`` and its operands; a grouped expression deletes
+  everything below its roots), ``sh -c`` and shell scripts of the image,
+  ``pip`` (``install <path>``, ``uninstall``, options writing a file),
+  ``python -m venv`` (``--clear``), ``uv venv`` / ``uv pip``. Without effect
+  on a connector file: commands that only read or create (``ls``, ``cat``,
+  ``mkdir``, ``chown``, a ``chmod`` that keeps files readable, ...), system
+  package managers (not with an option that moves their root), ``git clone``,
+  ``python -m compileall``. Writing what they name: ``wget`` / ``curl``
+  outputs. Reviewed: the programs of ``AUDITED_PROGRAMS`` and the build-time
+  scripts of ``AUDITED_BUILD_SCRIPTS``, pinned by the digest of their text.
+  Anything else - another program, python code at build time, a python
+  process started after another one of the start command - is reported.
 * Packaged connectors: the installed package carries the stamp only when the
   stamp reached the package directory before ``pip install``, setuptools
   discovery installs the package (``packages``, ``packages.find`` with its
@@ -53,14 +57,17 @@ looks. The model covers exactly this:
   (``pyproject.toml`` or ``setup.cfg``, exclusions included) selects it.
 * Start command: the python interpreter with its script, its ``-m`` module
   (looked up in the working directory, ``PYTHONPATH`` and the installed
-  packages) or ``-c``, started directly or by a shell script of the image.
+  packages, as ``-I``, ``-P``, ``-E`` and ``-S`` allow) or ``-c``, started
+  directly or by a shell script of the image, with the environment ``env``
+  gives it. A deletion of a native site-packages path also applies to the
+  installed packages of the model.
 
 Anything outside the model is reported as "not supported" with the construct
 that stopped the analysis, never assumed to be fine: heredocs, variables the
 build does not define, a directory change or the start of python inside a
 conditional or a loop of the entry script, an entry point that is not a file
-of the model, a command acting on a path it cannot resolve, packaging the
-script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
+of the model, a command outside the closed world above or acting on a path it
+cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
 exclusions, automatic discovery of a namespace package, build backends other
 than setuptools).
 
@@ -74,6 +81,7 @@ Usage:
 import argparse
 import configparser
 import fnmatch
+import hashlib
 import json
 import os
 import posixpath
@@ -176,10 +184,9 @@ RESTORE = str.maketrans({v: k for k, v in PROTECT.items()})
 # split into words, as the shell does.
 VAR_UNQUOTED, VAR_QUOTED, VAR_END = "\ue020", "\ue021", "\ue022"
 VAR_MARKER = re.compile(f"([{VAR_UNQUOTED}{VAR_QUOTED}])(\\d+){VAR_END}")
-STRING_LITERAL = re.compile(r"""(['"])([^'"\n]*?)\1""")
 # Commands that cannot delete, truncate, move or rewrite a file they name: they
-# read it, create something new, or change its owner. Any other command the
-# model does not interpret takes every file it names out of the model.
+# read it, create something new, or change its owner. A command the model
+# neither interprets nor lists here is reported.
 HARMLESS_COMMANDS = frozenset(
     {
         ":",
@@ -227,32 +234,37 @@ HARMLESS_COMMANDS = frozenset(
         "whoami",
     }
 )
-# Python modules run with -m that only add files.
-HARMLESS_PYTHON_MODULES = frozenset({"compileall", "venv", "ensurepip"})
-# Programs that work on their working directory without naming it (git clean,
-# make clean, npm prune): the working directory counts as named. A python script
-# of the image is read instead: the paths its code names count.
-WORKING_DIRECTORY_PROGRAMS = frozenset(
-    {
-        "cargo",
-        "cmake",
-        "git",
-        "go",
-        "gradle",
-        "make",
-        "mvn",
-        "ninja",
-        "node",
-        "npm",
-        "npx",
-        "perl",
-        "php",
-        "pnpm",
-        "ruby",
-        "yarn",
-    }
-)
-PATH_IN_TEXT = re.compile(r"(?:~|\.{1,2})?/[^\s'\"`(),;:|&<>]*")
+# Python modules run with -m that only add files (venv is modelled: --clear).
+HARMLESS_PYTHON_MODULES = frozenset({"compileall", "ensurepip"})
+# System package managers write below their root (/usr, /etc, /var), never in a
+# connector directory; the options that move that root are reported.
+PACKAGE_MANAGERS = {
+    "apk": frozenset({"--root", "-p"}),
+    "apt": frozenset({"-o", "--option"}),
+    "apt-get": frozenset({"-o", "--option"}),
+    "dnf": frozenset({"--installroot"}),
+    "dpkg": frozenset({"--root", "--instdir", "--admindir"}),
+    "microdnf": frozenset({"--installroot"}),
+    "rpm": frozenset({"--root", "--dbpath"}),
+    "yum": frozenset({"--installroot"}),
+}
+# Programs of base images or packages whose effect was reviewed: they write no
+# connector file.
+AUDITED_PROGRAMS = {
+    "playwright": "downloads browsers into the cache of the user",
+    "unogenerator_start": "starts the LibreOffice listener of export-file-ods",
+}
+# Build-time scripts of the repository whose effect was reviewed, by the sha256
+# of their text (line endings normalised): any change to one of them is reported
+# until it is reviewed again and its new digest recorded here.
+AUDITED_BUILD_SCRIPTS = {
+    "62c482b06a4c57722abc457bc554f35aa66044a7143d2a7222a30e1833b89686": (
+        "internal-import-file/import-file-stix/src/stixmarx_warmup.py: pre-generates ~/.stixmarx"
+    ),
+    "04401404514018e9493a809bad20505ed868eed6919d4b6adb952b42cea6c75a": (
+        "external-import/matrix/build_and_install_libolm.sh: builds libolm in /tmp, installs it in /usr/local"
+    ),
+}
 PIP_OPTIONS_WITH_VALUE = frozenset(
     {
         "-r",
@@ -292,8 +304,10 @@ PIP_OPTIONS_WITH_VALUE = frozenset(
 )
 # Options that install somewhere else than the interpreter's site-packages.
 PIP_RELOCATING_OPTIONS = frozenset(
-    {"-t", "--target", "--prefix", "--root", "--user", "--home"}
+    {"-t", "--target", "--prefix", "--root", "--user", "--home", "--src"}
 )
+# Options whose value is a file pip writes.
+PIP_WRITE_OPTIONS = frozenset({"--report", "--log", "--log-file"})
 PYTHON_OPTIONS_WITH_VALUE = frozenset({"-W", "-X", "--check-hash-based-pycs"})
 
 
@@ -646,21 +660,59 @@ def shell_glob_match(pattern, path):
     return True
 
 
+# Where pip installs in the base images; the model keeps installed packages in SITE_PACKAGES.
+NATIVE_SITE_PACKAGES = re.compile(
+    r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)/lib(?:64)?/python3(?:\.\d+)?"
+    r"/(?:site|dist)-packages(?=/|$)"
+)
+NATIVE_SITE_ROOTS = ("/usr/local/lib/python3", "/usr/lib/python3", "/usr/lib64/python3")
+
+
+def modelled_targets(target):
+    """``target`` and, when it is a native path of the installed packages, the
+    place where the model keeps them."""
+    match = NATIVE_SITE_PACKAGES.match(target)
+    if match:
+        return [target, SITE_PACKAGES + target[match.end() :]]
+    literal = (
+        GLOB_CHARS.split(target, maxsplit=1)[0] if GLOB_CHARS.search(target) else None
+    )
+    above_site = any(
+        root.startswith(target.rstrip("/") + "/") or root == target
+        for root in NATIVE_SITE_ROOTS
+    )
+    if (
+        above_site
+        or "-packages" in target
+        or (
+            literal is not None
+            and any(
+                root.startswith(literal) or literal.startswith(root)
+                for root in NATIVE_SITE_ROOTS
+            )
+        )
+    ):
+        # A parent of the installed packages, or a pattern that may reach them.
+        return [target, SITE_PACKAGES]
+    return [target]
+
+
 def remove_files(files, target):
     """Delete ``target`` (absolute, wildcards allowed) and everything below it."""
-    if GLOB_CHARS.search(target):
+    for modelled in modelled_targets(target):
+        if GLOB_CHARS.search(modelled):
 
-        def matches(candidate):
-            return shell_glob_match(target, candidate)
+            def matches(candidate, pattern=modelled):
+                return shell_glob_match(pattern, candidate)
 
-    else:
+        else:
 
-        def matches(candidate):
-            return candidate == target
+            def matches(candidate, pattern=modelled):
+                return candidate == pattern
 
-    for path in list(files):
-        if any(matches(candidate) for candidate in self_and_parents(path)):
-            del files[path]
+        for path in list(files):
+            if any(matches(candidate) for candidate in self_and_parents(path)):
+                del files[path]
 
 
 class PackagingConfig:
@@ -836,6 +888,153 @@ def harmless_mode(args):
     )
 
 
+def script_digest(text):
+    return hashlib.sha256(text.replace("\r\n", "\n").encode("utf-8")).hexdigest()
+
+
+def audited(text):
+    return script_digest(text) in AUDITED_BUILD_SCRIPTS
+
+
+def python_module(args):
+    """The module of ``python -m``, or None."""
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-" or not arg.startswith("-"):
+            return None
+        if arg.startswith("--"):
+            i += 2 if arg in PYTHON_OPTIONS_WITH_VALUE else 1
+            continue
+        cluster = arg[1:]
+        for position, letter in enumerate(cluster):
+            rest = cluster[position + 1 :]
+            if letter == "c":
+                return None
+            if letter == "m":
+                return rest or (args[i + 1] if i + 1 < len(args) else None)
+            if letter in "WX":
+                if not rest:
+                    i += 1
+                break
+        i += 1
+    return None
+
+
+def python_script(args):
+    """The script of ``python [options] script``, or None (-m, -c, stdin)."""
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "-":
+            return None
+        if not arg.startswith("-"):
+            return arg
+        if arg.startswith("--"):
+            i += 2 if arg in PYTHON_OPTIONS_WITH_VALUE else 1
+            continue
+        cluster = arg[1:]
+        if "c" in cluster or "m" in cluster:
+            return None
+        i += 2 if cluster[-1:] in ("W", "X") and len(cluster) == 1 else 1
+    return None
+
+
+def download_outputs(program, args, cwd):
+    """Files ``wget`` or ``curl`` write; a response body otherwise goes to stdout."""
+    outputs, urls = [], []
+    directory = None
+    remote_name = program == "wget"
+    options = {
+        "wget": {
+            "-O": "file",
+            "--output-document": "file",
+            "-o": "file",
+            "--output-file": "file",
+            "-a": "file",
+            "--append-output": "file",
+            "-P": "dir",
+            "--directory-prefix": "dir",
+        },
+        "curl": {
+            "-o": "file",
+            "--output": "file",
+            "-D": "file",
+            "--dump-header": "file",
+            "-c": "file",
+            "--cookie-jar": "file",
+            "--trace": "file",
+            "--trace-ascii": "file",
+            "--stderr": "file",
+            "--output-dir": "dir",
+        },
+    }[program]
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        option, sep, attached = arg.partition("=")
+        if (
+            not sep
+            and not option.startswith("--")
+            and option[:2] in options
+            and len(option) > 2
+        ):
+            option, attached, sep = option[:2], option[2:], "attached"
+        kind = options.get(option)
+        if kind:
+            value = attached if sep else (args[i + 1] if i + 1 < len(args) else None)
+            i += 1 if sep else 2
+            if kind == "dir":
+                directory = value
+            elif value:
+                outputs.append(value)
+                if program == "wget" and option in ("-O", "--output-document"):
+                    remote_name = False
+            continue
+        if program == "curl" and arg in ("-O", "--remote-name", "--remote-name-all"):
+            remote_name = True
+        elif "://" in arg:
+            urls.append(arg)
+        i += 1
+    if remote_name:
+        for url in urls:
+            name = (
+                posixpath.basename(url.split("://", 1)[1].split("?")[0]) or "index.html"
+            )
+            outputs.append(posixpath.join(directory or ".", name))
+    return [output for output in outputs if output != "-"]
+
+
+def env_prefix(words, assigned, unset):
+    """``env [-u NAME] [NAME=value] command``: the environment of the command."""
+    assigned = dict(assigned)
+    unset = set(unset)
+    while words and (ASSIGNMENT.match(words[0]) or words[0].startswith("-")):
+        option = words[0]
+        if option in ("-C", "--chdir") or option.startswith("--chdir="):
+            raise Unsupported("env --chdir")
+        if option in ("-i", "--ignore-environment", "-"):
+            raise Unsupported("env -i: the environment of the command is not modelled")
+        if ASSIGNMENT.match(option):
+            key, _, value = option.partition("=")
+            assigned[key] = value
+            unset.discard(key)
+            words = words[1:]
+        elif option in ("-u", "--unset"):
+            if len(words) > 1:
+                unset.add(words[1])
+                assigned.pop(words[1], None)
+            words = words[2:]
+        elif option.startswith("--unset="):
+            name = option.partition("=")[2]
+            unset.add(name)
+            assigned.pop(name, None)
+            words = words[1:]
+        else:
+            words = words[1:]
+    return words, assigned, unset
+
+
 def interpreter_of(text):
     """Program named by the interpreter line of a script, or an empty string."""
     if not text or not text.startswith("#!"):
@@ -888,8 +1087,6 @@ class Shell:
         self.ended = False
         # Variable references of the script, in the order the markers number them.
         self.references = []
-        # Whether the command being run kept a shell variable unexpanded.
-        self.unresolved = False
 
     def run(self, script):
         if self.nesting > 8:
@@ -910,12 +1107,7 @@ class Shell:
         def substitute(match):
             nonlocal unquoted
             unquoted = unquoted or match.group(1) == VAR_UNQUOTED
-            reference = self.references[int(match.group(2))]
-            value = expand(reference, self.variables)
-            if VARIABLE.search(value):
-                # A shell variable the build does not define stays unexpanded.
-                self.unresolved = True
-            return value
+            return expand(self.references[int(match.group(2))], self.variables)
 
         value = VAR_MARKER.sub(substitute, word)
         return value.split() if split and unquoted else [value]
@@ -939,6 +1131,10 @@ class Shell:
         if conditional:
             raise Unsupported(
                 "the connector started inside a conditional or a loop of the entry script"
+            )
+        if self.model.foreign_effects:
+            raise Unsupported(
+                "a python process starts after another one whose effects on the files are not modelled"
             )
         self.processes.extend(
             self.model.launch(words, self.cwd, env, self.files, self.nesting + 1)
@@ -1095,7 +1291,7 @@ class Shell:
             self._command(words, writes, before, None)
 
     def _command(self, words, writes, before, after):
-        self.unresolved = False
+        conditional = bool(self.stack) or before == "||"
         for target in writes:
             # Truncated or rewritten: the file no longer holds what the model knows.
             [value] = self._expand(target, split=False)
@@ -1105,9 +1301,13 @@ class Shell:
         while words and ASSIGNMENT.match(words[0]):
             key, _, value = words[0].partition("=")
             [assigned[key]] = self._expand(value, split=False)
-            if len(words) == 1 or all(ASSIGNMENT.match(w) for w in words):
-                # Assignments alone apply one after the other.
-                self.variables[key] = assigned[key]
+            if all(ASSIGNMENT.match(w) for w in words):
+                # Assignments alone apply one after the other; in a branch the model
+                # does not follow, the variable is no longer known.
+                if conditional:
+                    self.variables.pop(key, None)
+                else:
+                    self.variables[key] = assigned[key]
             words = words[1:]
         if not words:
             return
@@ -1115,22 +1315,17 @@ class Shell:
         if not words:
             return
         handed_over = False
+        unset = set()
         while words:
             name = posixpath.basename(words[0])
+            if name == "command" and words[1:2] and words[1] in ("-v", "-V"):
+                # command -v: a lookup, nothing runs.
+                return
             if name in COMMAND_PREFIXES:
                 handed_over = handed_over or name == "exec"
                 words = words[1:]
             elif name == "env":
-                words = words[1:]
-                while words and (
-                    ASSIGNMENT.match(words[0]) or words[0].startswith("-")
-                ):
-                    if words[0] in ("-C", "--chdir"):
-                        raise Unsupported("env --chdir")
-                    if ASSIGNMENT.match(words[0]):
-                        key, _, value = words[0].partition("=")
-                        assigned[key] = value
-                    words = words[2:] if words[0] in ("-u", "--unset") else words[1:]
+                words, assigned, unset = env_prefix(words[1:], assigned, unset)
             elif name == "sudo":
                 words = words[1:]
                 while words and words[0].startswith("-"):
@@ -1139,11 +1334,14 @@ class Shell:
                 break
         if not words:
             return
-        conditional = bool(self.stack) or before == "||"
         in_pipeline = before == "|" or after == "|"
         name = posixpath.basename(words[0])
         args = words[1:]
-        env = {**self.variables, **assigned}
+        env = {
+            key: value
+            for key, value in {**self.variables, **assigned}.items()
+            if key not in unset
+        }
         if self.start and handed_over:
             # exec: the command replaces the script.
             self._launch(words, env, conditional)
@@ -1152,12 +1350,18 @@ class Shell:
         if name == "export":
             for arg in args:
                 key, sep, value = arg.partition("=")
-                if sep:
+                if not sep:
+                    continue
+                if conditional:
+                    # A branch the model does not follow may or may not have run.
+                    self.variables.pop(key, None)
+                else:
                     self.variables[key] = value
             return
         if name == "unset":
             for arg in args:
-                self.variables.pop(arg, None)
+                if not arg.startswith("-"):
+                    self.variables.pop(arg, None)
             return
         if name == "cd":
             self._cd(args, conditional, in_pipeline)
@@ -1175,89 +1379,135 @@ class Shell:
             self._link(args)
         elif name == "find":
             self._find(args)
-        elif name == "xargs":
-            if any(posixpath.basename(a) in ("rm", "unlink", "mv") for a in args):
-                raise Unsupported("files deleted through xargs")
         elif name in SHELLS:
             self._nested_shell(args, conditional, env)
         elif PIP.match(name):
             self._pip(args, conditional)
-        elif PYTHON.match(name) and args[:2] == ["-m", "pip"]:
-            self._pip(args[2:], conditional)
+        elif name == "uv":
+            self._uv(args, conditional)
         elif PYTHON.match(name):
-            if self.start:
-                self._launch(words, env, conditional)
-            self._named_files(words, env)
+            self._python(words, env, conditional)
         elif name in ("exit", "return"):
             if not conditional and before != "&&":
                 self.ended = True
         elif not self._executed_script(words, env, conditional):
-            self._named_files(words, env)
+            self._other_command(words)
 
-    def _named_files(self, words, env):
-        """A command the model does not interpret may rewrite or delete any file
-        it names - in its arguments, in the code string or the script it runs:
-        each of them, and everything below a named directory, leaves the model."""
+    def _python(self, words, env, conditional):
+        """python at build time or in a start script."""
+        args = words[1:]
+        module = python_module(args)
+        if module == "pip":
+            index = args.index("pip") if "pip" in args else len(args)
+            self._pip(args[index + 1 :], conditional)
+            return
+        if self.start:
+            self._launch(words, env, conditional)
+            # What this process does to the files, for the ones started after it, is not known.
+            self.model.foreign_effects = True
+            return
+        if module == "venv":
+            self._venv(args)
+            return
+        if module in HARMLESS_PYTHON_MODULES:
+            return
+        script = python_script(args)
+        if script is not None and module is None:
+            path = image_path(script, self.cwd, "python script")
+            self._audited_script(path)
+            return
+        raise Unsupported(
+            "python code run at build time"
+            + (f" (-m {module})" if module else " (-c)" if "-c" in args else "")
+            + " has effects on the files the model does not know"
+        )
+
+    def _audited_script(self, path):
+        text = self.model.context.read(self.files.get(path))
+        if text is None:
+            raise Unsupported(
+                f"build-time script {path} is not a file of the image model"
+            )
+        digest = script_digest(text)
+        if digest not in AUDITED_BUILD_SCRIPTS:
+            raise Unsupported(
+                f"build-time script {path} is not an audited script (sha256 {digest}):"
+                " review what it does to the files and add it to AUDITED_BUILD_SCRIPTS"
+            )
+
+    def _venv(self, args):
+        """``python -m venv [--clear] DIR``: --clear empties an existing DIR."""
+        index = args.index("venv") + 1 if "venv" in args else len(args)
+        options = args[index:]
+        clear = "--clear" in options
+        directories = []
+        i = 0
+        while i < len(options):
+            if options[i] == "--prompt":
+                i += 2
+                continue
+            if not options[i].startswith("-"):
+                directories.append(options[i])
+            i += 1
+        for directory in directories:
+            path = image_path(self._tilde(directory), self.cwd, "venv directory")
+            if clear:
+                remove_files(self.files, path)
+
+    def _uv(self, args, conditional):
+        if args[:1] == ["pip"]:
+            self._pip(args[1:], conditional)
+            return
+        if args[:1] == ["venv"]:
+            # uv venv replaces an existing environment directory.
+            targets = [a for a in args[1:] if not a.startswith("-")]
+            for target in targets or [".venv"]:
+                self._forget(target)
+            return
+        raise Unsupported(f"'uv {' '.join(args[:1])}' is not modelled")
+
+    def _other_command(self, words):
+        """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
-        if name in HARMLESS_COMMANDS or (name == "chmod" and harmless_mode(args)):
+        if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
-        if PYTHON.match(name) and args[:1] == ["-m"] and args[1:2]:
-            if args[1] in HARMLESS_PYTHON_MODULES:
-                return
-        texts = list(args)
-        sources = [words[0]]
-        if PYTHON.match(name):
-            sources += [a for a in args if not a.startswith("-")][:1]
-        for source in sources:
-            path = self.model.find_executable(source, self.cwd, env, self.files)
-            if path is None and "/" not in source and self.cwd and PYTHON.match(name):
-                path = posixpath.join(self.cwd, source)
-            text = self.model.context.read(self.files.get(path)) if path else None
-            if text:
-                texts.append(text)
-        # Shell words (no blank) are paths as written; in code - a code string or a
-        # script - a "$" is regular expression or template syntax, not a variable.
-        words_named, code_named = set(), set()
-        for text in texts:
-            if not any(char.isspace() for char in text):
-                words_named.add(text)
-                words_named.update(text.split("=")[1:])
-                continue
-            if (
-                self.unresolved
-                and text in args
-                and VARIABLE.search(text)
-                and ("/" in text or STAMP in text)
-            ):
-                raise Unsupported(
-                    f"'{name}' runs code with a shell variable the build does not define"
-                )
-            code_named.update(PATH_IN_TEXT.findall(text))
-            # Quoted paths of code, relative ones resolved against the working directory.
-            code_named.update(
-                literal
-                for _, literal in STRING_LITERAL.findall(text)
-                if STAMP in literal or "/" in literal
-            )
-        if name in WORKING_DIRECTORY_PROGRAMS:
-            if self.cwd is None:
-                raise Unsupported(f"'{name}' in an unknown working directory")
-            words_named.add(self.cwd)
-        for candidate in words_named:
-            self._forget(candidate.strip(), strict=True)
-        for candidate in code_named:
-            self._forget(candidate.strip(), strict=False)
+        if name == "chmod":
+            if not harmless_mode(args):
+                # Files a non-root user may no longer read.
+                operands = [a for a in args if a not in CHMOD_OPTIONS][1:]
+                for operand in operands:
+                    self._forget(operand)
+            return
+        if name in PACKAGE_MANAGERS:
+            relocating = PACKAGE_MANAGERS[name]
+            for arg in args:
+                if arg.split("=", 1)[0] in relocating or any(
+                    arg.startswith(option) and len(arg) > len(option)
+                    for option in relocating
+                    if not option.startswith("--")
+                ):
+                    raise Unsupported(f"'{name} {arg}' installs below another root")
+            return
+        if name in ("wget", "curl"):
+            for output in download_outputs(name, args, self.cwd):
+                self._forget(output)
+            return
+        if name == "git" and args[:1] == ["clone"]:
+            # A clone creates a new directory (git refuses a non-empty one).
+            return
+        raise Unsupported(
+            f"'{name}' is not a command the model knows the effects of on the image files"
+        )
 
-    def _forget(self, candidate, strict=True):
+    def _forget(self, candidate):
+        """``candidate`` (and everything below it) may have been rewritten."""
         if not candidate or candidate.startswith("-") or "\n" in candidate:
             return
         if "$" in candidate or "`" in candidate:
-            if strict and ("/" in candidate or STAMP in candidate):
-                raise Unsupported(
-                    f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
-                )
-            return
+            raise Unsupported(
+                f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
+            )
         if not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate:
             # A bare word is a file only when the model has it in the working directory.
             if self.cwd is None:
@@ -1282,15 +1532,15 @@ class Shell:
         text = self.model.context.read(self.files.get(path)) if path else None
         program = interpreter_of(text)
         if program in SHELLS:
+            if not self.start and audited(text):
+                return True
             nested = self._nested(
                 self.files, self.cwd, dict(env), self.start, conditional
             )
             nested.run(text)
             return True
         if PYTHON.match(program):
-            if self.start:
-                self._launch([program, path, *words[1:]], env, conditional)
-            self._named_files([program, path, *words[1:]], env)
+            self._python([program, path, *words[1:]], env, conditional)
             return True
         return False
 
@@ -1435,9 +1685,9 @@ class Shell:
             ):
                 continue
             else:
-                # Another program may rewrite the matched files and any file it names.
-                deletes = True
-                self._named_files(command, self.variables)
+                raise Unsupported(
+                    f"find -exec {program}: its effect on the matched files is not modelled"
+                )
         if not deletes:
             return
         kind, name = None, None
@@ -1497,37 +1747,51 @@ class Shell:
 
     def _nested_shell(self, args, conditional, env):
         script = shell_script(args, self.cwd, self.files, self.model)
-        if script is not None:
-            self._nested(self.files, self.cwd, dict(env), self.start, conditional).run(
-                script
-            )
+        if script is None or (not self.start and audited(script)):
+            return
+        self._nested(self.files, self.cwd, dict(env), self.start, conditional).run(
+            script
+        )
 
     def _pip(self, args, conditional):
-        if self.start or not args or args[0] != "install":
+        """pip: ``install <path>`` records the installed packages; an option that
+        writes a file (--report, --log) or into a directory takes it out of the
+        model; ``uninstall`` removes installed packages."""
+        if not args:
             return
-        args = args[1:]
+        command, args = args[0], args[1:]
         relocated = False
         editable = False
         targets = []
         i = 0
         while i < len(args):
             arg = args[i]
-            option = arg.split("=", 1)[0]
+            option, sep, attached = arg.partition("=")
+            value = attached if sep else (args[i + 1] if i + 1 < len(args) else None)
+            if option in PIP_WRITE_OPTIONS or option in PIP_RELOCATING_OPTIONS:
+                relocated = relocated or option in PIP_RELOCATING_OPTIONS
+                if option == "--user":
+                    i += 1
+                    continue
+                if value:
+                    self._forget(value)
+                i += 1 if sep else 2
+                continue
             if option in ("-e", "--editable"):
                 editable = True
-            if option in PIP_RELOCATING_OPTIONS:
-                relocated = True
-                i += 1 if "=" in arg or option in ("--user",) else 2
-                continue
             if option in PIP_OPTIONS_WITH_VALUE:
-                i += 1 if "=" in arg else 2
+                i += 1 if sep else 2
                 continue
             if arg.startswith("-"):
                 i += 1
                 continue
             targets.append(arg)
             i += 1
-        if editable or conditional:
+        if command == "uninstall":
+            # Which files a distribution owns is not modelled: none of the installed packages is kept.
+            remove_files(self.files, SITE_PACKAGES)
+            return
+        if command != "install" or self.start or editable or conditional:
             return
         for target in targets:
             path = re.sub(r"\[[^\]]*\]$", "", target)
@@ -1553,6 +1817,8 @@ class ImageModel:
             connector_dir, dockerignore_rules(ignore_file(connector_dir, dockerfile))
         )
         self.build_args = build_args
+        # Set once a python process of the start command ran: what it did to the files is not known.
+        self.foreign_effects = False
         self.global_args = {}
         self.stages = []
         self.named = {}
@@ -1573,9 +1839,11 @@ class ImageModel:
             elif instruction == "ARG":
                 self._arg(stage, arguments)
             elif instruction == "ENV":
+                # Docker expands every value of one ENV with the variables before it.
+                before = dict(stage.variables)
                 for key, value in assignments(arguments).items():
                     if value is not None:
-                        value = expand(value, stage.variables)
+                        value = expand(value, before)
                         stage.variables[key] = value
                         stage.env[key] = value
             elif instruction == "WORKDIR":
@@ -1629,13 +1897,14 @@ class ImageModel:
         return stage
 
     def _arg(self, stage, arguments):
+        before = dict(stage.variables)
         for key, value in assignments(arguments).items():
             if key in self.build_args:
                 value = self.build_args[key]
             elif value is None:
                 value = self.global_args.get(key)
             else:
-                value = expand(value, stage.variables)
+                value = expand(value, before)
             if value is not None:
                 stage.variables[key] = value
 
@@ -1773,12 +2042,14 @@ class ImageModel:
             # Docker reads COPY --from sources from the root of the stage, not its WORKDIR.
             path = image_path(source, "/", "COPY --from source")
             if GLOB_CHARS.search(path):
+                # Docker wildcards: unlike the shell, "*" matches a leading dot.
+                regex = glob_regex(path.lstrip("/"))
                 matched = sorted(
                     {
                         candidate
                         for f in source_stage.files
                         for candidate in self_and_parents(f)
-                        if shell_glob_match(path, candidate)
+                        if candidate != "/" and regex.match(candidate.lstrip("/"))
                     }
                 )
             else:
@@ -1876,6 +2147,7 @@ class ImageModel:
         """Python processes of the start command: (directories pycti reads,
         files of the image when the process starts) for each."""
         stage = self.final
+        self.foreign_effects = False
         argv = self._start_argv(stage)
         env = {"PATH": DEFAULT_PATH, **stage.env}
         return self.launch(argv, stage.workdir, env, dict(stage.files))
@@ -1909,15 +2181,13 @@ class ImageModel:
         while words and posixpath.basename(words[0]) in (*COMMAND_PREFIXES, "env"):
             name = posixpath.basename(words[0])
             words = words[1:]
-            while (
-                name == "env"
-                and words
-                and (ASSIGNMENT.match(words[0]) or words[0].startswith("-"))
-            ):
-                if ASSIGNMENT.match(words[0]):
-                    key, _, value = words[0].partition("=")
-                    env = {**env, key: value}
-                words = words[1:]
+            if name == "env":
+                words, assigned, unset = env_prefix(words, {}, set())
+                env = {
+                    key: value
+                    for key, value in {**env, **assigned}.items()
+                    if key not in unset
+                }
         if not words:
             raise Unsupported("empty start command")
         if "$" in words[0] or "`" in words[0]:
@@ -1988,6 +2258,7 @@ class ImageModel:
         args = words[1:]
         isolated = False
         ignore_env = False
+        no_site = False
         i = 0
         while i < len(args):
             arg = args[i]
@@ -2002,8 +2273,11 @@ class ImageModel:
                 for position, letter in enumerate(cluster):
                     if letter in "IP":
                         isolated = True
-                    if letter == "E":
+                    if letter in "EI":
                         ignore_env = True
+                    if letter == "S":
+                        # No site initialisation: the installed packages are not importable.
+                        no_site = True
                     if letter in "cm":
                         rest = cluster[position + 1 :]
                         value = rest or (args[i + 1] if i + 1 < len(args) else None)
@@ -2011,8 +2285,10 @@ class ImageModel:
                             raise Unsupported(f"python -{letter} without a value")
                         if letter == "c":
                             return self._readable(None, cwd)
+                        if not ignore_env and env.get("PYTHONSAFEPATH"):
+                            isolated = True
                         main_dir = self._module_dir(
-                            value, cwd, env, files, isolated, ignore_env
+                            value, cwd, env, files, isolated, ignore_env, no_site
                         )
                         return self._readable(main_dir, cwd)
                     if letter in "WX":
@@ -2040,7 +2316,7 @@ class ImageModel:
         return sorted(set(anchors))
 
     @staticmethod
-    def _module_dir(module, cwd, env, files, isolated, ignore_env):
+    def _module_dir(module, cwd, env, files, isolated, ignore_env, no_site=False):
         parts = module.split(".")
         if not all(part.isidentifier() for part in parts):
             raise Unsupported(f"python -m {module}")
@@ -2053,7 +2329,8 @@ class ImageModel:
                 bases += [
                     p for p in env.get("PYTHONPATH", "").split(":") if p.startswith("/")
                 ]
-        bases.append(SITE_PACKAGES)
+        if not no_site:
+            bases.append(SITE_PACKAGES)
         for base in bases:
             path = posixpath.join(base, *parts)
             if f"{path}/__main__.py" in files:
