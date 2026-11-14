@@ -125,7 +125,11 @@ def check_public_url(url: str) -> None:
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         raise FetchError(f"Unsupported URL: {url}")
     try:
-        infos = socket.getaddrinfo(parsed.hostname, parsed.port or None)
+        port = parsed.port
+    except ValueError as err:
+        raise FetchError(f"Invalid port in URL: {url}") from err
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, port or None)
     except socket.gaierror as err:
         raise FetchError(f"Cannot resolve {parsed.hostname}") from err
     for info in infos:
@@ -208,19 +212,25 @@ def fetch_html(
             raise FetchError(f"Request failed: {err}") from err
         with response:
             if response.is_redirect:
-                url = urljoin(url, response.headers.get("Location", ""))
+                location = (response.headers.get("Location") or "").strip()
+                if not location:
+                    raise FetchError("Redirect without Location")
+                url = urljoin(url, location)
                 continue
             if response.status_code != 200:
                 raise FetchError(f"HTTP {response.status_code}")
             content_type = response.headers.get("Content-Type", "").lower()
             if not content_type.startswith(_HTML_TYPES):
                 raise FetchError(f"Not an HTML page: {content_type or 'unknown'}")
-            body = b""
+            declared_size = response.headers.get("Content-Length", "")
+            if declared_size.isdigit() and int(declared_size) > max_size:
+                raise FetchError(f"Page larger than {max_size} bytes")
+            body = bytearray()
             for chunk in response.iter_content(65536):
-                body += chunk
+                body.extend(chunk)
                 if len(body) > max_size:
                     raise FetchError(f"Page larger than {max_size} bytes")
-            html = _decode(body, content_type)
+            html = _decode(bytes(body), content_type)
             refresh = _META_REFRESH.search(html) if len(html) < 4096 else None
             if refresh:
                 url = urljoin(url, refresh.group(1))

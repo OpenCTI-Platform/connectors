@@ -36,7 +36,7 @@ class ReportArticleFetcherConnector:
 
     def _check_markings(self, opencti_entity: dict) -> None:
         tlp = None
-        for marking_definition in opencti_entity.get("objectMarking", []):
+        for marking_definition in opencti_entity.get("objectMarking") or []:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
         if not self.helper.check_max_tlp(
