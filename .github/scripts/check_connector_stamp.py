@@ -1199,6 +1199,11 @@ NATIVE_LIBRARY_ENTRY = re.compile(
 )
 
 
+# A path in a site-packages directory (any copy of it), with its top-level
+# entry when it lies below it.
+SITE_PACKAGES_ENTRY = re.compile(r"/(?:site|dist)-packages(?:/+(?P<top>[^/]+))?(?=/|$)")
+
+
 def holds_library_directory(region):
     """``region`` is a library directory of the interpreter (the standard
     library or a site-packages directory) or holds one."""
@@ -4709,6 +4714,21 @@ class ImageModel:
             if elsewhere:
                 raise Unsupported(
                     f"python -m {module}: a module {parts[0]} also lies in {posixpath.dirname(elsewhere[0])}"
+                )
+            regions = (
+                (*stage.replaced, *stage.unknown_dirs) if stage is not None else ()
+            )
+            for region in sorted(regions):
+                entry = SITE_PACKAGES_ENTRY.search(region)
+                if entry is None or not (
+                    entry.group("top") is None
+                    or entry.group("top").split(".", 1)[0] == parts[0]
+                    or GLOB_CHARS.search(entry.group("top"))
+                ):
+                    continue
+                raise Unsupported(
+                    f"python -m {module}: {region} holds what a build command"
+                    " wrote, where python finds site-packages"
                 )
         missing = Unsupported(f"module {module} is not a file of the image model")
 
