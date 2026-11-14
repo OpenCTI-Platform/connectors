@@ -618,8 +618,16 @@ def test_variables_in_paths(tmp_path):
             "COPY destination '${APP_DIR}' uses a variable",
         ),
         (
-            'FROM python:3.12-alpine\nRUN <<EOF\nrm -rf /opt\nEOF\nCMD ["python3", "/opt/main.py"]\n',
+            'FROM python:3.12-alpine\nCOPY src /opt\nRUN cat <<EOF > /opt/x\nrm -rf /opt\nEOF\nCMD ["python3", "/opt/main.py"]\n',
             "a here-document in RUN",
+        ),
+        (
+            'FROM python:3.12-alpine\nCOPY src /opt\nRUN <<EOF\n#!/usr/bin/env python3\nprint(1)\nEOF\nCMD ["python3", "/opt/main.py"]\n',
+            "a here-document with an interpreter line in RUN",
+        ),
+        (
+            'FROM python:3.12-alpine\nCOPY src /opt\nRUN <<EOF\ntrue\nCMD ["python3", "/opt/main.py"]\n',
+            "a here-document without its end EOF",
         ),
         (
             'FROM my/base\nCOPY src app\nCMD ["python3", "app/main.py"]\n',
@@ -5296,3 +5304,88 @@ def test_main_reports_and_fails_on_an_uncovered_image(tmp_path, capsys):
     )
     assert "1 of 2 connector images carry the stamp" in output
     assert check.main(["--root", str(tmp_path), "stream/good"]) == 0
+
+
+# The shared UBI9 Dockerfile of master (Nov 2026): a RUN given as a
+# here-document, which removes the packages it installed through sort, comm
+# and xargs, and runs POST_INSTALL through sh -c.
+UBI9_HEREDOC = (
+    "FROM registry.access.redhat.com/ubi9/ubi-minimal\n"
+    'ARG CONNECTOR_CMD="main.py"\nARG CONNECTOR_WORKDIR="/opt/connector/src"\nARG POST_INSTALL=""\n'
+    "ENV CONNECTOR_CMD=${CONNECTOR_CMD}\nCOPY src /opt/connector/src\n"
+    "RUN <<EOT\n"
+    "    set -eux\n"
+    "    rpm -qa --qf '%{NAME}\\n' | sort > /tmp/packages-before\n"
+    "    microdnf -y install python3.12-pip git-core\n"
+    "    pip3.12 install --no-cache-dir -r /opt/connector/src/requirements.txt\n"
+    '    if [ -n "${POST_INSTALL}" ]; then sh -c "${POST_INSTALL}"; fi\n'
+    "    rpm -qa --qf '%{NAME}\\n' | sort | comm -13 /tmp/packages-before - | xargs microdnf -y remove\n"
+    "    microdnf clean all\n"
+    "EOT\n"
+    "WORKDIR ${CONNECTOR_WORKDIR}\n"
+    'CMD ["sh", "-c", "exec python3.12 ${CONNECTOR_CMD}"]\n'
+)
+
+
+@pytest.mark.parametrize(
+    "build_env, covered",
+    [
+        ("", True),
+        # export-report-pdf: a cd through a wildcard, then names of the
+        # pillow libraries only.
+        (
+            'POST_INSTALL="cd /usr/local/lib64/python3*/site-packages/pillow.libs && '
+            'rm libbrotlicommon-* && ln -sf /usr/lib64/libbrotlidec.so.1 libbrotlidec-*"\n',
+            True,
+        ),
+        # The same with a name the model has: the stamp may be the target.
+        (
+            'POST_INSTALL="cd /usr/local/lib64/python3*/x && rm .connector_*"\n',
+            False,
+        ),
+        ('POST_INSTALL="cd /usr/x* && rm main.*"\n', False),
+    ],
+)
+def test_ubi9_here_document(tmp_path, build_env, covered):
+    (tmp_path / "Dockerfile_ubi9").write_text(UBI9_HEREDOC, encoding="utf-8")
+    connector = make_connector(
+        tmp_path,
+        {"Dockerfile": ALPINE_SRC, ".build.env": build_env, "src/requirements.txt": ""},
+    )
+    images = {
+        image.image: image
+        for image in result(tmp_path, connector, ubi9=["external-import/sample"])
+    }
+    ubi9 = images["external-import/sample (ubi9)"]
+    assert ubi9.covered is covered, ubi9.reason
+    if covered:
+        assert ubi9.reason == "stamp at /opt/connector/src/.connector_version.json"
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        ("RUN <<EOT\nset -eux\nrm -f /opt/sample/.connector_version.json\nEOT", False),
+        ("RUN <<-EOT\n\trm -f /opt/sample/.connector_version.json\n\tEOT", False),
+        ('RUN <<"EOT"\necho ok\nEOT', True),
+        ("RUN ls | xargs apk del", True),
+        ("RUN ls | xargs rm -f", False),
+        ("RUN ls | xargs -I{} apk del {}", False),
+        ("RUN ls /opt | sort -o /opt/sample/.connector_version.json", False),
+        ("RUN ls | sort | comm -13 /tmp/a -", True),
+        ("RUN git config --global http.postBuffer 524288000", True),
+        ("RUN git config http.postBuffer 524288000", False),
+        ("RUN cd /opt/sample && ln -sf /usr/lib/x.so main.*", False),
+    ],
+)
+def test_build_commands_of_master(tmp_path, run, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+                f'{run}\nWORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+            )
+        },
+    )
+    assert image.covered is covered, image.reason

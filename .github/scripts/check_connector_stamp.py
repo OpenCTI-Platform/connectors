@@ -217,6 +217,15 @@ ASSIGNING_EXPANSION = re.compile(r"(?<!\\)\$\{[A-Za-z_][A-Za-z0-9_]*:?=")
 ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
+# A RUN line whose script is a single here-document (BuildKit): the lines up
+# to its delimiter are the shell script of the RUN.
+RUN_HEREDOC_LINE = re.compile(
+    r"^RUN\s(?:.*\s)?<<(-?)([\"']?)([A-Za-z_][A-Za-z0-9_]*)\2$", re.IGNORECASE
+)
+# The script of such a RUN once the lines are joined (options taken out).
+RUN_HEREDOC_SCRIPT = re.compile(
+    r"<<(-?)([\"']?)([A-Za-z_][A-Za-z0-9_]*)\2\n(.*)", re.DOTALL
+)
 COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
 # The set -o options that only stop the shell on errors, trace it or export
 # its assignments.
@@ -426,6 +435,18 @@ PACKAGE_MANAGERS = {
     "rpm": frozenset({"--root", "-r", "--dbpath", "--prefix", "--relocate"}),
     "yum": frozenset({"--installroot", "-c", "--config"}),
 }
+# The package removals xargs may feed: the names it reads are packages, and a
+# package manager writes below its root only (the relocating options above are
+# still read on the words of the command line).
+XARGS_PACKAGE_REMOVALS = {
+    "apk": frozenset({"del"}),
+    "apt-get": frozenset({"remove", "purge"}),
+    "dnf": frozenset({"remove", "erase"}),
+    "microdnf": frozenset({"remove"}),
+    "yum": frozenset({"remove", "erase"}),
+}
+# xargs options whose value is a separate word.
+XARGS_OPTIONS_WITH_VALUE = frozenset({"-n", "-L", "-P", "-d", "-E", "-s"})
 # The modes of rpm and dpkg that install or unpack a package file.
 PACKAGE_INSTALL_MODES = {
     "rpm": re.compile(r"-[iUF][A-Za-z]*|--(?:install|upgrade|freshen|reinstall)"),
@@ -1006,7 +1027,8 @@ def logical_lines(text):
     lines = []
     current = ""
     directives = True
-    for raw in text.splitlines():
+    raws = iter(text.splitlines())
+    for raw in raws:
         stripped = raw.strip()
         # Parser directives come first ("# syntax=...", "# escape=..."), until
         # the first line that is not one.
@@ -1025,8 +1047,24 @@ def logical_lines(text):
         if stripped.endswith("\\"):
             current += stripped[:-1] + " "
             continue
-        lines.append(current + stripped)
+        line = current + stripped
         current = ""
+        heredoc = RUN_HEREDOC_LINE.match(line)
+        if heredoc:
+            # The body follows verbatim up to the delimiter; <<- strips the
+            # leading tabs of every line, the delimiter included.
+            strip_tabs, delimiter = heredoc.group(1) == "-", heredoc.group(3)
+            body = []
+            for raw_body in raws:
+                if strip_tabs:
+                    raw_body = raw_body.lstrip("\t")
+                if raw_body == delimiter:
+                    break
+                body.append(raw_body)
+            else:
+                raise Unsupported(f"a here-document without its end {delimiter}")
+            line += "\n" + "\n".join(body)
+        lines.append(line)
     if current:
         lines.append(current)
     return lines
@@ -3177,6 +3215,38 @@ class Shell:
             raise Unsupported(f"'{' '.join([name, *args[:1]])}' is not modelled")
         if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
+        if name in ("sort", "comm"):
+            # Both only read their operands; sort -o writes its output file.
+            if name == "sort" and any(
+                a.startswith(("-o", "--output")) or re.fullmatch(r"-[^-]*o.*", a)
+                for a in args
+            ):
+                raise Unsupported("sort -o: the file it writes is not modelled")
+            return
+        if name == "xargs":
+            self._xargs(args, env, conditional)
+            return
+        if name == "git" and args[:1] == ["config"]:
+            # git config writes its configuration file only; a later git
+            # clone sees it written (GIT_PLACES, GIT_HOME_PLACES).
+            options = args[1:]
+            if any(
+                o in ("-f", "--file", "--blob") or o.startswith("--file=")
+                for o in options
+            ):
+                raise Unsupported(
+                    "git config --file: the file it writes is not modelled"
+                )
+            if "--system" in options:
+                self._forget("/etc/gitconfig", created=True)
+            elif "--global" in options:
+                self._forget(
+                    posixpath.join(self._home("git config"), ".gitconfig"), created=True
+                )
+            else:
+                # The configuration of the repository of the working directory.
+                raise Unsupported("git config of a repository is not modelled")
+            return
         if name == "chmod":
             recursive = any(a in ("-R", "--recursive") for a in args)
             paths = literal_args if literal_args is not None else args
@@ -3567,6 +3637,8 @@ class Shell:
         """The files among the operands leave the model, and the directories as
         ``removes`` says (see ``rm_removes``): a later cd into one of them fails."""
         for operand in operands:
+            if self.cwd is None and self._bare_misses_model(operand):
+                continue
             target = self._path(operand, "deleted path")
             self._through_link(target)
             remove_files(self.files, target, descendants=removes == "tree")
@@ -3585,6 +3657,24 @@ class Shell:
                             )
                         ]
                     )
+
+    def _bare_misses_model(self, operand):
+        """``operand``, a bare name (wildcards allowed) in a working directory
+        the model does not know, names no file, directory or link of the model
+        wherever that directory is: it acts only on files the model does not
+        know."""
+        if (
+            not operand
+            or "/" in operand
+            or operand.startswith((".", TILDE, "-"))
+            or "$" in operand
+            or "`" in operand
+        ):
+            return False
+        names = {STAMP}
+        for path in (*self.files, *self.stage.dirs, *self.stage.links):
+            names.update(part for part in path.strip("/").split("/") if part)
+        return not any(shell_glob_match("/" + operand, "/" + name) for name in names)
 
     def _remove_empty_dirs(self, dirs):
         """The directories among ``dirs`` that nothing lies below leave the
@@ -3629,6 +3719,34 @@ class Shell:
         # not modelled.
         self._delete(sources, "tree")
 
+    def _xargs(self, args, env, conditional):
+        """``xargs``: the arguments it reads are not known, so only a command
+        whose effect does not depend on them is accepted: a package manager
+        removing packages, which writes below its root only."""
+        while args and args[0].startswith("-"):
+            option = args[0]
+            if option.startswith(("-I", "-i", "-a", "--replace", "--arg-file")):
+                raise Unsupported(f"xargs {option}: the command line it builds")
+            if option in XARGS_OPTIONS_WITH_VALUE:
+                args = args[2:]
+            else:
+                args = args[1:]
+        if not args:
+            # echo, by default.
+            return
+        name = posixpath.basename(args[0])
+        if name not in XARGS_PACKAGE_REMOVALS or not any(
+            word in XARGS_PACKAGE_REMOVALS[name] for word in args[1:]
+        ):
+            raise Unsupported(
+                f"xargs {name}: the effect of a command on arguments it reads is not modelled"
+            )
+        if self.model.shadow(
+            args[0], env or self.variables, self.files, self.stage, self.cwd
+        ):
+            raise Unsupported(f"xargs {args[0]}: a file the build wrote")
+        self._other_command(args, env=env, conditional=conditional)
+
     def _is_dir(self, path):
         prefix = path.rstrip("/") + "/"
         return path in self.stage.dirs or any(f.startswith(prefix) for f in self.files)
@@ -3638,6 +3756,21 @@ class Shell:
         target_dir, no_target, rest = target_options(args)
         operands = self._operands(rest)
         if not operands:
+            return
+        link_name = operands[-1] if not target_dir and len(operands) > 1 else None
+        if (
+            link_name is not None
+            and GLOB_CHARS.search(LITERAL_WILDCARD.sub("", link_name))
+            and not any(
+                GLOB_CHARS.search(LITERAL_WILDCARD.sub("", operand)) or "$" in operand
+                for operand in operands[:-1]
+            )
+        ):
+            # Only the link path is a wildcard: the links replace what it
+            # matches, and stand for targets outside the model.
+            if self.cwd is None and self._bare_misses_model(link_name):
+                return
+            self._forget(link_name)
             return
         if any(
             GLOB_CHARS.search(LITERAL_WILDCARD.sub("", operand))
@@ -4242,7 +4375,8 @@ class ImageModel:
             if instruction not in KNOWN_INSTRUCTIONS:
                 # ONBUILD triggers, for example, run in another stage.
                 raise Unsupported(f"the {instruction} instruction")
-            if instruction in ("RUN", "COPY", "ADD") and HEREDOC.search(arguments):
+            # A RUN script given as a here-document is read in _run_command.
+            if instruction in ("COPY", "ADD") and HEREDOC.search(arguments):
                 raise Unsupported(f"a here-document in {instruction}")
             if instruction == "FROM":
                 stage = self._from(arguments)
@@ -4836,8 +4970,19 @@ class ImageModel:
                     f"RUN through the shell {stage.shell[0]}, a file the build wrote"
                 )
             check_shell_environment(stage.shell[0], stage.variables)
+            heredoc = RUN_HEREDOC_SCRIPT.fullmatch(command)
+            if heredoc:
+                command = heredoc.group(4)
+                if command.startswith("#!"):
+                    # BuildKit runs such a body with its own interpreter.
+                    raise Unsupported("a here-document with an interpreter line in RUN")
+            elif HEREDOC.search(command):
+                # Several here-documents, or one fed to a command.
+                raise Unsupported("a here-document in RUN")
             shell.run(command)
         elif command:
+            if any(HEREDOC.search(word) for word in command):
+                raise Unsupported("a here-document in RUN")
             shell.exec_form(command)
 
     def check_packaging(self, files, install_dir):
