@@ -1006,6 +1006,34 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 05:25 UTC: what goes through a link the build
+        # created acts on the files it stands for.
+        (
+            "RUN ln -s /opt/src /tmp/app; cd /tmp/app; rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "RUN ln /opt/src/.connector_version.json /tmp/h && echo x > /tmp/h",
+            False,
+        ),
+        (
+            "RUN ln -s /usr/bin/python3 /usr/local/bin/py && rm -f /usr/local/bin/py",
+            True,
+        ),
+        # Copilot review of 05:25 UTC: -execdir resolves operands from each match.
+        (
+            "RUN touch /opt/src/marker.txt && find /opt/src -name marker.txt -execdir rm -f .connector_version.json \\;",
+            False,
+        ),
+        # Copilot review of 05:25 UTC: a quoted or escaped wildcard is literal,
+        # also in the exec form and in a quoted expansion; sh -c reads its
+        # script again.
+        ("RUN rm -f '/opt/src/.connector_version.*'", True),
+        ("RUN rm -f /opt/src/.connector_version.\\*", True),
+        ('RUN ["rm", "-f", "/opt/src/.connector_version.*"]', True),
+        ('ENV P=/opt/src/.connector_version.*\nRUN rm -f "$P"', True),
+        ("ENV P=/opt/src/.connector_version.*\nRUN rm -f $P", False),
+        ("RUN sh -c 'rm -f /opt/src/.connector_version.*'", False),
         # Copilot review of 04:29 UTC: pip commands, variables and configuration
         # files form a closed set too.
         ("RUN pip wheel /opt/src", False),
@@ -1359,6 +1387,17 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             "# syntax=docker/dockerfile:1\n# escape=`\nFROM python:3.12-alpine\n"
             'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: the escape parser directive",
+        ),
+        # Copilot review of 05:25 UTC: ENTRYPOINT clears an inherited CMD only.
+        (
+            'FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\nCMD ["main.py"]\n'
+            'ENTRYPOINT ["python3"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+        (
+            'FROM python:3.12-alpine AS base\nCMD ["main.py"]\nFROM base\nCOPY src /opt/src\n'
+            'WORKDIR /opt/src\nENTRYPOINT ["python3"]\n',
+            "not supported: python started without a script or a module",
         ),
         # bash runs the file of BASH_ENV before each script.
         (
@@ -1863,6 +1902,23 @@ def test_build_semantics_of_docker_and_pip(tmp_path, files, reason):
             "RUN pip install -r /opt/src/requirements.txt",
             {"src/requirements.txt": "requests\n"},
             True,
+        ),
+        # Copilot review of 05:25 UTC: attached option values, on the command
+        # line and in requirement files.
+        ("RUN pip install -e/opt/src/tools", {"src/tools/setup.py": ""}, False),
+        (
+            "WORKDIR /opt/src\nRUN pip install -r requirements.txt",
+            {"src/requirements.txt": "-e./tools\n", "src/tools/setup.py": ""},
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN pip install -rrequirements.txt",
+            {
+                "src/requirements.txt": "-rnested.txt\n",
+                "src/nested.txt": "--editable=./tools\n",
+                "src/tools/setup.py": "",
+            },
+            False,
         ),
         # A local wheel or source archive: its content is not read.
         ("RUN pip install /opt/src/dist/sample-1.0-py3-none-any.whl", {}, False),
