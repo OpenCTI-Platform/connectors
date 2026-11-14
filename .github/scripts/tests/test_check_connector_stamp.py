@@ -600,6 +600,22 @@ def test_installed_package_reads_no_stamp_above_site_packages(tmp_path):
     assert not image.covered, image.reason
 
 
+def test_module_also_in_the_user_site_packages(tmp_path):
+    # The user site-packages comes before the installed packages.
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD",
+        "COPY sample_connector /root/.local/lib/python3.12/site-packages/sample_connector\nCMD",
+    )
+    pyproject = {
+        "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    }
+    image = packaged(tmp_path, pyproject, dockerfile)
+    assert image.reason == (
+        "not supported: python -m sample_connector: a module sample_connector also"
+        " lies in /root/.local/lib/python3.12/site-packages/sample_connector"
+    )
+
+
 def test_packaged_connector_ships_the_stamp_in_its_package(tmp_path):
     image = packaged(
         tmp_path,
@@ -990,6 +1006,15 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 04:29 UTC: pip commands, variables and configuration
+        # files form a closed set too.
+        ("RUN pip wheel /opt/src", False),
+        ("RUN pip download -d /tmp requests", False),
+        ("RUN pip config set global.target /opt/src", False),
+        ("RUN pip freeze > /tmp/requirements.txt && pip check", True),
+        ("ENV PIP_TARGET=/opt/elsewhere\nRUN pip install requests", False),
+        ("ENV PIP_NO_CACHE_DIR=1\nRUN pip install requests", True),
+        ("RUN echo '[global]' > /etc/pip.conf && pip install requests", False),
         # Copilot review of 04:10 UTC: env options, a command after && that may
         # not run, pip global options.
         ("RUN env -S 'rm -f /opt/src/.connector_version.json' true", False),
@@ -1328,6 +1353,12 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             "# syntax=docker/dockerfile:1\n# escape=`\nFROM python:3.12-alpine\n"
             'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: the escape parser directive",
+        ),
+        # bash runs the file of BASH_ENV before each script.
+        (
+            'FROM python:3.12-alpine\nENV BASH_ENV=/opt/env.sh\nSHELL ["/bin/bash", "-c"]\n'
+            'COPY src /opt/src\nRUN true\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: bash with BASH_ENV set",
         ),
         # Copilot review of 04:10 UTC: shell options that change what a command
         # does (bash dotglob makes * match the stamp).
