@@ -1836,6 +1836,19 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN rpm -i --relocate /usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
+        # Copilot review of 07:22 UTC: shells differ on whether an assignment
+        # argument of export splits.
+        (
+            "RUN D='/tmp/x /opt/src/.connector_version.json'; export APP=$D; rm -f $APP",
+            False,
+        ),
+        (
+            "RUN D='/tmp/x /opt/src/.connector_version.json'"
+            " && command export APP=$D && rm -f $APP",
+            False,
+        ),
+        ("RUN D='/tmp/x /tmp/y'; export APP=\"$D\"; rm -f $APP", True),
+        ("RUN D=/tmp/x; export APP=$D; rm -f $APP", True),
         # Copilot review of 06:28 UTC: umask changes the modes of what the build
         # creates, which the model does not follow.
         ("RUN umask 077 && mkdir -p /opt/private", False),
@@ -2240,6 +2253,34 @@ def test_build_steps(tmp_path, instructions, covered):
                 f"FROM python:3.12-alpine\nCOPY src /opt/src\n{instructions}\n"
                 'COPY src/main.py /opt/src/main.py\nCMD ["python3", "/opt/src/main.py"]\n'
             )
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "instruction, covered",
+    [
+        # Copilot review of 07:22 UTC: without a shell, the first word names a
+        # program on PATH, the one the build copied there included.
+        ('RUN ["cd", "/tmp"]', False),
+        ('HEALTHCHECK CMD ["cd", "/tmp"]', False),
+        ('RUN ["exec", "cd", "/tmp"]', False),
+        ('RUN ["APP=1", "true"]', False),
+        ("RUN cd /tmp", True),
+        ('RUN ["true"]', True),
+    ],
+)
+def test_exec_form_runs_programs(tmp_path, instruction, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+                f"COPY cd /usr/local/bin/cd\n{instruction}\n"
+                'CMD ["python3", "/opt/src/main.py"]\n'
+            ),
+            "cd": "#!/bin/sh\nrm -f /opt/src/.connector_version.json\n",
         },
     )
     assert image.covered is covered, image.reason
