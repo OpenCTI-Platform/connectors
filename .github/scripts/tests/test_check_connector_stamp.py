@@ -2,7 +2,12 @@ import gzip
 import importlib.util
 import io
 import json
+import os
+import posixpath
 import re
+import shutil
+import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -11,6 +16,12 @@ import pytest
 SCRIPT = Path(__file__).resolve().parents[1] / "check_connector_stamp.py"
 WORKFLOW = (
     Path(__file__).resolve().parents[2] / "workflows" / "ci-check-connector-stamp.yml"
+)
+ACTION = (
+    Path(__file__).resolve().parents[2]
+    / "actions"
+    / "build-connector-image"
+    / "action.yml"
 )
 spec = importlib.util.spec_from_file_location("check_connector_stamp", SCRIPT)
 check = importlib.util.module_from_spec(spec)
@@ -1746,15 +1757,43 @@ def test_symbolic_links(tmp_path, run, command, reason):
     assert image.reason == reason
 
 
-def test_entry_point_found_on_an_extended_path(tmp_path):
+@pytest.mark.parametrize(
+    "path, tools",
+    [
+        ("/opt/tools/bin:$PATH", "/usr/local/bin"),
+        # Copilot review of 22:03 UTC: a PATH entry resolves "." and ".." as any
+        # other path, and two leading slashes as one.
+        ("/opt/tools/.:$PATH", "/opt/tools"),
+        ("/opt/other/../tools:$PATH", "/opt/tools"),
+        ("//opt/tools:$PATH", "/opt/tools"),
+    ],
+)
+def test_entry_point_found_on_an_extended_path(tmp_path, path, tools):
     files = {
         "Dockerfile": (
-            "FROM python:3.12-alpine\nENV PATH=/opt/tools/bin:$PATH\nCOPY src /opt/sample\n"
-            'COPY start.sh /usr/local/bin/start-connector\nENTRYPOINT ["start-connector"]\n'
+            f"FROM python:3.12-alpine\nENV PATH={path}\nCOPY src /opt/sample\n"
+            f'COPY start.sh {tools}/start-connector\nENTRYPOINT ["start-connector"]\n'
         ),
         "start.sh": "#!/bin/sh\ncd /opt/sample\nexec python3 main.py\n",
     }
-    assert single(tmp_path, files).covered
+    image = single(tmp_path, files)
+    assert image.covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "pythonpath", ["/opt/connector/.", "/opt/other/../connector", "//opt/connector"]
+)
+def test_module_found_through_an_unnormalized_pythonpath(tmp_path, pythonpath):
+    files = {
+        "Dockerfile": (
+            f"FROM python:3.12-alpine\nENV PYTHONPATH={pythonpath}\nCOPY src /opt/connector/src\n"
+            'WORKDIR /tmp\nCMD ["python3", "-m", "src"]\n'
+        ),
+        "src/__main__.py": "",
+    }
+    image = single(tmp_path, files)
+    assert image.covered, image.reason
+    assert image.reason == "stamp at /opt/connector/src/.connector_version.json"
 
 
 def test_shell_form_entrypoint_ignores_cmd(tmp_path):
@@ -2254,6 +2293,18 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
         (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY --chmod=755 wrapper.sh /opt/sh\n"
             'SHELL ["/opt/sh", "-c"]\nHEALTHCHECK CMD true\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        # Copilot review of 22:03 UTC: a PATH entry with "." or ".." names the
+        # directory it resolves to.
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools/.:$PATH\nCOPY src /opt/sample\n"
+            'COPY wrapper.sh /opt/tools/python3\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/x/../tools:$PATH\nCOPY src /opt/sample\n"
+            'COPY wrapper.sh /opt/tools/python3\nCMD ["python3", "/opt/sample/main.py"]\n',
             {"wrapper.sh": ENV_WRAPPER},
         ),
     ],
@@ -3270,6 +3321,82 @@ def test_workflow_watches_every_file_the_check_reads():
             ".github/scripts/check_connector_stamp.py",
         ):
             assert name in paths, f"{event} does not watch {name}"
+
+
+def stamp_step_script():
+    """The script of the "Write connector version stamp" step of the build action."""
+    lines = ACTION.read_text(encoding="utf-8").splitlines()
+    start = lines.index("    - name: Write connector version stamp")
+    end = next(
+        (i for i in range(start + 1, len(lines)) if lines[i].startswith("    - ")),
+        len(lines),
+    )
+    run = lines.index("      run: |", start, end)
+    body = [line[8:] for line in lines[run + 1 : end]]
+    assert all(
+        not line.strip() or line.startswith("        ") for line in lines[run + 1 : end]
+    )
+    return "\n".join(body) + "\n"
+
+
+@pytest.mark.parametrize(
+    "files, code_dir",
+    [
+        ({"src/main.py": ""}, "src"),
+        ({"src/__main__.py": ""}, "src"),
+        (
+            {
+                "pyproject.toml": "",
+                "sample_connector/__init__.py": "",
+                "sample_connector/__main__.py": "",
+            },
+            "sample_connector",
+        ),
+        ({"main.py": ""}, None),
+    ],
+)
+def test_build_action_writes_the_stamps_the_check_expects(tmp_path, files, code_dir):
+    # Copilot review of 22:03 UTC: the check counts the stamps the build step
+    # writes; the step itself, run as the build runs it, must write them there.
+    bash = shutil.which("bash") if sys.platform != "win32" else None
+    if bash is None or shutil.which("jq") is None:
+        if os.environ.get("GITHUB_ACTIONS"):
+            pytest.fail("the CI runner must run the stamp step of the build action")
+        pytest.skip("the stamp step of the build action needs bash and jq")
+    connector = make_connector(
+        tmp_path,
+        {**files, "__metadata__/connector_manifest.json": '{"slug": "sample-slug"}'},
+        src=False,
+    )
+    inputs = {
+        "connector_path": str(connector),
+        "connector_name": "sample",
+        "build_mode": "release",
+        "variant": "ubi9",
+        "image_tags": "7.0.1-ubi9,latest-ubi9",
+    }
+    script = re.sub(
+        r"\$\{\{\s*inputs\.(\w+)\s*\}\}",
+        lambda m: inputs[m.group(1)],
+        stamp_step_script(),
+    )
+    assert "${{" not in script
+    before = {p for p in connector.rglob("*") if p.is_file()}
+    subprocess.run([bash, "-c", script], check=True, capture_output=True)
+    written = {
+        p.relative_to(connector).as_posix()
+        for p in connector.rglob("*")
+        if p.is_file() and p not in before
+    }
+    assert written == set(check.written_stamps(connector))
+    assert check.stamp_code_dir(connector) == code_dir
+    for name in written:
+        assert posixpath.basename(name) == check.STAMP
+        assert json.loads((connector / name).read_text(encoding="utf-8")) == {
+            "version": "7.0.1",
+            "slug": "sample-slug",
+            "build_mode": "release",
+        }
 
 
 def test_main_reports_and_fails_on_an_uncovered_image(tmp_path, capsys):

@@ -743,7 +743,20 @@ def image_path(path, cwd, what="path", links=()):
                 raise Unsupported(
                     f"{what} '{path}' climbs out of the link {link} the build created"
                 )
-    return posixpath.normpath(joined)
+    normalized = posixpath.normpath(joined)
+    # Linux reads two leading slashes as one; normpath keeps them.
+    return "/" + normalized.lstrip("/")
+
+
+def path_candidates(command, value, links=()):
+    """Image paths PATH ``value`` gives a bare ``command``, in lookup order, with
+    ``.`` and ``..`` resolved as for any other path; None for an entry the model
+    does not resolve (relative, or built from a value it does not know)."""
+    for directory in value.split(":"):
+        if not directory.startswith("/") or "$" in directory or "`" in directory:
+            yield None
+            continue
+        yield image_path(posixpath.join(directory, command), "/", "PATH entry", links)
 
 
 def stamp_code_dir(connector_dir):
@@ -4195,9 +4208,8 @@ class ImageModel:
             if "$" in command or (cwd is None and not command.startswith("/")):
                 return None
             return image_path(command, cwd, links=links)
-        for directory in env.get("PATH", DEFAULT_PATH).split(":"):
-            candidate = posixpath.join(directory, command)
-            if directory.startswith("/") and candidate in files:
+        for candidate in path_candidates(command, env.get("PATH", DEFAULT_PATH), links):
+            if candidate is not None and candidate in files:
                 return candidate
         return None
 
@@ -4211,14 +4223,18 @@ class ImageModel:
                 return None
             path = image_path(command, cwd, links=stage.links)
             return path if path in files or stage.written(path) else None
-        for directory in env.get("PATH", DEFAULT_PATH).split(":"):
-            candidate = posixpath.join(directory or ".", command)
-            if not directory.startswith("/"):
-                # A relative PATH entry depends on the working directory.
+        value = env.get("PATH", DEFAULT_PATH)
+        for directory, candidate in zip(
+            value.split(":"), path_candidates(command, value, stage.links)
+        ):
+            if candidate is None:
+                # A relative PATH entry depends on the working directory; one
+                # built from an unknown value may be any directory.
                 if stage.unknown_dirs or any(
                     posixpath.basename(p) == command for p in (*files, *stage.replaced)
                 ):
-                    raise Unsupported(f"'{command}' looked up in a relative PATH entry")
+                    kind = "relative" if not directory.startswith("/") else "unresolved"
+                    raise Unsupported(f"'{command}' looked up in a {kind} PATH entry")
                 continue
             if candidate in files or stage.written(candidate):
                 return candidate
@@ -4324,19 +4340,17 @@ class ImageModel:
             entries += env["PYTHONPATH"].split(":")
         bases = []
         for entry in entries:
-            if not entry.startswith("/"):
+            if not entry.startswith("/") and cwd is None:
                 # The working directory, or a path relative to it.
-                if cwd is None:
-                    raise Unsupported(
-                        f"python -m {module} in an unknown working directory"
-                    )
-                entry = image_path(
+                raise Unsupported(f"python -m {module} in an unknown working directory")
+            bases.append(
+                image_path(
                     entry or ".",
-                    cwd,
+                    cwd or "/",
                     "PYTHONPATH entry",
                     stage.links if stage is not None else (),
                 )
-            bases.append(entry)
+            )
         if not no_site:
             bases.append(SITE_PACKAGES)
             # The user site-packages, and any other copy of site-packages, come
