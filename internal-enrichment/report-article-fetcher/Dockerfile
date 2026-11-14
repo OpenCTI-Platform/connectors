@@ -21,5 +21,10 @@ WORKDIR /opt/opencti-connector-report-article-fetcher
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
+# Run as an unprivileged user: the connector only reads its code and opens
+# outbound connections
+RUN addgroup -S connector && adduser -S -G connector -H connector
+USER connector
+
 # Expose and entrypoint
 ENTRYPOINT ["python", "main.py"]
