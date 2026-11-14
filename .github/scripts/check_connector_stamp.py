@@ -1334,8 +1334,9 @@ def pattern_reaches(pattern, path):
     return len(parts) >= depth and shell_glob_match("/".join(parts[:depth]), path)
 
 
-def remove_files(files, target):
-    """Delete ``target`` (absolute, wildcards allowed) and everything below it."""
+def remove_files(files, target, descendants=True):
+    """Delete ``target`` (absolute, wildcards allowed), and everything below it
+    unless ``descendants`` is unset: a plain rm leaves a directory in place."""
     for modelled in modelled_targets(target):
         if GLOB_CHARS.search(modelled):
 
@@ -1348,7 +1349,8 @@ def remove_files(files, target):
                 return candidate == pattern
 
         for path in list(files):
-            if any(matches(candidate) for candidate in self_and_parents(path)):
+            candidates = self_and_parents(path) if descendants else [path]
+            if any(matches(candidate) for candidate in candidates):
                 del files[path]
 
 
@@ -1368,21 +1370,20 @@ def remove_dirs(dirs, target):
                 dirs.discard(path)
 
 
-def removes_directories(args):
-    """rm -r, -R or -d (or their long forms) removes directories too; a plain rm
-    fails on a directory and leaves it in place."""
+def rm_removes(args):
+    """What rm removes besides files: "tree" with -r / -R (a directory and what
+    lies below it), "empty" with -d (an empty directory), None for a plain rm,
+    which fails on a directory and leaves it in place."""
+    removes = None
     for arg in args:
         if arg == "--":
             break
-        if arg in ("--recursive", "--dir"):
-            return True
-        if (
-            arg.startswith("-")
-            and not arg.startswith("--")
-            and set(arg[1:]) & set("rRd")
-        ):
-            return True
-    return False
+        short = arg.startswith("-") and not arg.startswith("--")
+        if arg == "--recursive" or (short and set(arg[1:]) & set("rR")):
+            return "tree"
+        if arg == "--dir" or (short and "d" in arg[1:]):
+            removes = "empty"
+    return removes
 
 
 def literal_assignment(text, name):
@@ -2786,7 +2787,7 @@ class Shell:
         elif name in ("rm", "unlink"):
             self._delete(
                 self._operands(literal_args),
-                directories=name == "rm" and removes_directories(literal_args),
+                rm_removes(literal_args) if name == "rm" else None,
             )
         elif name == "mv":
             self._move(literal_args)
@@ -3421,15 +3422,43 @@ class Shell:
                 operands.append(arg)
         return operands
 
-    def _delete(self, operands, directories=False):
-        """The operands leave the model, with the directories among them when
-        ``directories`` is set: a later cd into one of them fails."""
+    def _delete(self, operands, removes):
+        """The files among the operands leave the model, and the directories as
+        ``removes`` says (see ``rm_removes``): a later cd into one of them fails."""
         for operand in operands:
             target = self._path(operand, "deleted path")
             self._through_link(target)
-            remove_files(self.files, target)
-            if directories:
+            remove_files(self.files, target, descendants=removes == "tree")
+            if removes == "tree":
                 remove_dirs(self.stage.dirs, target)
+            elif removes == "empty":
+                for modelled in modelled_targets(target):
+                    self._remove_empty_dirs(
+                        [
+                            d
+                            for d in self.stage.dirs
+                            if (
+                                shell_glob_match(modelled, d)
+                                if GLOB_CHARS.search(modelled)
+                                else d == modelled
+                            )
+                        ]
+                    )
+
+    def _remove_empty_dirs(self, dirs):
+        """The directories among ``dirs`` that nothing lies below leave the
+        model; one that may hold what a build step wrote may be gone."""
+        for directory in dirs:
+            prefix = directory.rstrip("/") + "/"
+            if any(p.startswith(prefix) for p in (*self.files, *self.stage.dirs)):
+                continue
+            if any(
+                region == directory or region.startswith(prefix)
+                for region in (*self.stage.replaced, *self.stage.unknown_dirs)
+            ):
+                self._uncertain([directory])
+            else:
+                self.stage.dirs.discard(directory)
 
     def _move(self, args):
         target_dir, no_target, rest = target_options(args)
@@ -3457,7 +3486,7 @@ class Shell:
             self.stage.replaced.add(destination)
         # The moved files and directories leave their place; where they land is
         # not modelled.
-        self._delete(sources, directories=True)
+        self._delete(sources, "tree")
 
     def _is_dir(self, path):
         prefix = path.rstrip("/") + "/"
@@ -3551,7 +3580,9 @@ class Shell:
             roots.append(args[0])
             args = args[1:]
         roots = roots or ["."]
-        deletes = "-delete" in args
+        # What each deleting action removes of a match (as rm_removes says, or
+        # "delete" for -delete), and whether it may not run at all.
+        actions = [("delete", False)] * args.count("-delete")
         for index, arg in enumerate(args):
             if arg.startswith(("-fprint", "-fls")) and index + 1 < len(args):
                 # find writes this file.
@@ -3596,12 +3627,18 @@ class Shell:
                 ):
                     # Resolved from the directory of each match.
                     raise Unsupported(f"find {arg} {program} with a relative operand")
-                # Operands other than the matched path are deleted as well.
-                deletes = True
-                self._delete(
-                    self._operands(explicit),
-                    directories=program == "rm" and removes_directories(explicit),
+                removes = rm_removes(explicit) if program == "rm" else None
+                if "{}" in command[1:]:
+                    # -ok asks first, and a build answers nothing.
+                    actions.append((removes, arg in ("-ok", "-okdir")))
+                # It runs once for each match, so maybe never: what its other
+                # operands name may still be there.
+                files, dirs = dict(self.files), set(self.stage.dirs)
+                self._delete(self._operands(explicit), removes)
+                self._uncertain_files(
+                    [path for path in files if path not in self.files]
                 )
+                self._uncertain(dirs - self.stage.dirs)
             elif program in ("mkdir", "touch"):
                 if arg in ("-execdir", "-okdir") and any(
                     not operand.startswith("/") for operand in self._operands(explicit)
@@ -3622,94 +3659,164 @@ class Shell:
                 raise Unsupported(
                     f"find -exec {program}: its effect on the matched files is not modelled"
                 )
-        if not deletes:
+        if not actions:
             return
-        kind, name = None, None
-        understood = True
-        # find evaluates left to right: a test after an action never narrows
-        # what the action did (-name a -delete -name b deletes every a).
+        tests = self._find_tests(args) if len(actions) == 1 else None
+        removes, uncertain = actions[0]
+        for root in roots:
+            base = self._path(root, "find root")
+            if GLOB_CHARS.search(base):
+                raise Unsupported(f"find root '{root}' with a wildcard")
+            self._through_link(base)
+            # -name tests a starting point by its name as written.
+            root_name = posixpath.basename(root.rstrip("/")) or root
+            # The installed packages are also reached by their native path; the
+            # tests hold as such only when the mapping is exact.
+            exact = bool(NATIVE_SITE_PACKAGES.match(base))
+            for modelled in modelled_targets(base):
+                self._find_delete(
+                    modelled,
+                    root_name,
+                    tests if modelled == base or exact else None,
+                    removes,
+                    uncertain,
+                )
+
+    @staticmethod
+    def _find_tests(args):
+        """(-type, -name, -mindepth, -maxdepth) that select what the deleting
+        action of ``args`` acts on, or None when other tests or actions do."""
+        kind, name, mindepth, maxdepth = None, None, 0, None
+        # find evaluates left to right: a test after the action never narrows
+        # what it did (-name a -delete -name b deletes every a). The depth
+        # options hold for the whole expression.
         acted = False
         i = 0
         while i < len(args):
             arg = args[i]
-            if arg in (
-                "-type",
-                "-name",
-                "-mindepth",
-                "-maxdepth",
-                "-fprint",
-                "-fls",
-            ) and i + 1 < len(args):
-                if arg == "-type" and not acted:
-                    kind = args[i + 1]
-                elif arg == "-name" and not acted:
-                    name = args[i + 1]
+            value = args[i + 1] if i + 1 < len(args) else None
+            if arg in ("-mindepth", "-maxdepth") and value is not None:
+                if not value.isdigit():
+                    return None
+                if arg == "-mindepth":
+                    mindepth = int(value)
+                else:
+                    maxdepth = int(value)
                 i += 2
+                continue
+            if arg in ("-type", "-name") and value is not None:
+                if not acted:
+                    if arg == "-type":
+                        if kind is not None or value not in ("f", "d"):
+                            return None
+                        kind = value
+                    else:
+                        if name is not None:
+                            return None
+                        name = value
+                i += 2
+                continue
+            if arg in ("-fprint", "-fls") and value is not None:
+                i += 2
+                continue
+            if arg in ("-print", "-print0"):
+                i += 1
                 continue
             if arg == "-delete":
                 acted = True
                 i += 1
                 continue
             if arg in ("-exec", "-execdir", "-ok", "-okdir"):
-                acted = True
-                while i < len(args) and args[i] not in (";", "+"):
-                    i += 1
-                i += 1
-                continue
-            understood = False
-            break
-        for root in roots:
-            base = self._path(root, "find root")
-            if GLOB_CHARS.search(base):
-                raise Unsupported(f"find root '{root}' with a wildcard")
-            self._through_link(base)
-            # The installed packages are also reached by their native path; the
-            # predicates hold as such only when the mapping is exact.
-            exact = bool(NATIVE_SITE_PACKAGES.match(base))
-            for modelled in modelled_targets(base):
-                keep_predicates = understood and (modelled == base or exact)
-                self._find_delete(modelled, kind, name, keep_predicates)
-
-    def _find_delete(self, base, kind, name, understood):
-        """The files and directories find deletes below ``base`` (-type / -name
-        when understood): a later cd into a deleted directory fails."""
-        prefix = base.rstrip("/") + "/"
-        for path in list(self.stage.dirs):
-            if not (path == base or path.startswith(prefix)):
-                continue
-            if (
-                not understood
-                or (kind in (None, "d") and name is None)
-                or (
-                    kind in (None, "d")
-                    and any(
-                        fnmatch.fnmatchcase(posixpath.basename(d), name)
-                        for d in self_and_parents(path)
-                        if d == base or d.startswith(prefix)
-                    )
+                end = i + 1
+                while end < len(args) and args[end] not in (";", "+"):
+                    end += 1
+                command = args[i + 1 : end]
+                deleting = (
+                    bool(command)
+                    and posixpath.basename(command[0]) in ("rm", "unlink")
+                    and "{}" in command[1:]
                 )
-            ):
-                remove_dirs(self.stage.dirs, path)
-        for path in list(self.files):
-            if not (path == base or path.startswith(prefix)):
+                if not acted and not deleting:
+                    # Its exit status decides whether the action after it runs.
+                    return None
+                acted = acted or deleting
+                i = end + 1
                 continue
-            if not understood or name is None:
-                del self.files[path]
-                continue
+            return None
+        return kind, name, mindepth, maxdepth
+
+    def _find_delete(self, base, root_name, tests, removes, uncertain):
+        """What find deletes from ``base`` down: each entry it visits that
+        ``tests`` select loses a file, and a directory as ``removes`` says
+        ("delete": once it is empty, after what it held; otherwise as
+        ``rm_removes`` says). With ``uncertain``, or with tests the model does not
+        follow (None), what it may delete becomes unknown instead."""
+        prefix = base.rstrip("/") + "/"
+
+        def inside(path):
+            return path == base or path.startswith(prefix)
+
+        files = [path for path in self.files if inside(path)]
+        dirs = {d for d in self.stage.dirs if inside(d)}
+        # A directory that holds files is there, made by the build or not.
+        for path in files:
+            dirs.update(
+                d for d in self_and_parents(posixpath.dirname(path)) if inside(d)
+            )
+        if tests is None:
+            self._uncertain_files(files)
+            self._uncertain(dirs & self.stage.dirs)
+            return
+        kind, name, mindepth, maxdepth = tests
+
+        def selected(path, is_dir):
+            depth = 0 if path == base else path[len(prefix) :].count("/") + 1
+            if depth < mindepth or (maxdepth is not None and depth > maxdepth):
+                return False
+            if kind is not None and kind != ("d" if is_dir else "f"):
+                return False
             # find -name follows fnmatch: a wildcard matches a leading dot.
-            file_hit = kind in (None, "f") and fnmatch.fnmatchcase(
-                posixpath.basename(path), name
-            )
-            dirs = [
-                d
-                for d in self_and_parents(posixpath.dirname(path))
-                if d == base or d.startswith(prefix)
-            ]
-            dir_hit = kind in (None, "d") and any(
-                fnmatch.fnmatchcase(posixpath.basename(d), name) for d in dirs
-            )
-            if file_hit or dir_hit:
-                del self.files[path]
+            entry = root_name if path == base else posixpath.basename(path)
+            return name is None or fnmatch.fnmatchcase(entry, name)
+
+        gone_files = {path for path in files if selected(path, False)}
+        gone_dirs, unknown_dirs = set(), set()
+        if removes == "tree":
+            for directory in dirs:
+                if selected(directory, True):
+                    below = directory.rstrip("/") + "/"
+                    gone_dirs |= {
+                        d for d in dirs if d == directory or d.startswith(below)
+                    }
+                    gone_files |= {path for path in files if path.startswith(below)}
+        elif removes in ("delete", "empty"):
+            # -delete goes depth first: a directory goes once what it held is
+            # gone. rm -d gets a directory before what it holds.
+            left_files = set(files) - gone_files if removes == "delete" else set(files)
+            left_dirs = set(dirs)
+            for directory in sorted(dirs, key=lambda d: d.count("/"), reverse=True):
+                if not selected(directory, True):
+                    continue
+                below = directory.rstrip("/") + "/"
+                if any(p.startswith(below) for p in (*left_files, *left_dirs)):
+                    continue
+                if any(
+                    region == directory or region.startswith(below)
+                    for region in (*self.stage.replaced, *self.stage.unknown_dirs)
+                ):
+                    unknown_dirs.add(directory)
+                    continue
+                gone_dirs.add(directory)
+                if removes == "delete":
+                    left_dirs.discard(directory)
+        if uncertain:
+            self._uncertain_files(sorted(gone_files))
+            self._uncertain((gone_dirs | unknown_dirs) & self.stage.dirs)
+            return
+        for path in gone_files:
+            del self.files[path]
+        self.stage.dirs -= gone_dirs
+        self._uncertain(unknown_dirs & self.stage.dirs)
 
     def _nested_shell(self, args, conditional, env):
         script = shell_script(args, self.cwd, self.files, self.model, self.stage)
