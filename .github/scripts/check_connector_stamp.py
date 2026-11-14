@@ -363,12 +363,13 @@ PACKAGE_MANAGERS = {
     "apk": frozenset({"--root", "-p"}),
     "apt": frozenset({"-o", "--option"}),
     "apt-get": frozenset({"-o", "--option"}),
-    "dnf": frozenset({"--installroot"}),
+    # A configuration file, like --setopt=installroot=..., may set the root.
+    "dnf": frozenset({"--installroot", "-c", "--config"}),
     "dpkg": frozenset({"--root", "--instdir", "--admindir"}),
-    "microdnf": frozenset({"--installroot"}),
+    "microdnf": frozenset({"--installroot", "--config"}),
     # --prefix and --relocate move the files of a relocatable package.
     "rpm": frozenset({"--root", "-r", "--dbpath", "--prefix", "--relocate"}),
-    "yum": frozenset({"--installroot"}),
+    "yum": frozenset({"--installroot", "-c", "--config"}),
 }
 # Options of wget and curl the model reads: the ones naming a file they write
 # ("file"), among them the response bodies placed in the directory option
@@ -2741,11 +2742,20 @@ class Shell:
             return
         if name in PACKAGE_MANAGERS:
             relocating = PACKAGE_MANAGERS[name]
-            for arg in args:
-                if arg.split("=", 1)[0] in relocating or any(
-                    arg.startswith(option) and len(arg) > len(option)
-                    for option in relocating
-                    if not option.startswith("--")
+            for index, arg in enumerate(args):
+                # --setopt=NAME=VALUE or --setopt NAME=VALUE (dnf, yum, microdnf).
+                setting = arg.partition("=")[2] if arg.startswith("--setopt=") else ""
+                if arg == "--setopt":
+                    setting = "".join(args[index + 1 : index + 2])
+                key = setting.split("=", 1)[0].strip().rsplit(".", 1)[-1]
+                if (
+                    key == "installroot"
+                    or arg.split("=", 1)[0] in relocating
+                    or any(
+                        arg.startswith(option) and len(arg) > len(option)
+                        for option in relocating
+                        if not option.startswith("--")
+                    )
                 ):
                     raise Unsupported(f"'{name} {arg}' installs below another root")
             return
