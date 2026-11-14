@@ -307,6 +307,12 @@
       "description": "Maximum number of indicators ingested in a single run of the connector. CrowdStrike can return up to ~1.5M IoCs for the last 30 days, which would overwhelm the OpenCTI ingestion pipeline; pagination stops when this cap is reached. Set to 0 (or a negative number) to disable the cap and fetch every available indicator.",
       "type": "integer"
     },
+    "CROWDSTRIKE_INDICATOR_BUNDLE_SIZE": {
+      "default": 500,
+      "description": "Number of indicators grouped in one STIX bundle sent to OpenCTI. Objects shared by these indicators (author, marking, malware, attack patterns...) are sent once per bundle instead of once per indicator. Set to 1 to send one bundle per indicator.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
     "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT": {
       "default": true,
       "description": "Whether to trigger import without file dependencies.",

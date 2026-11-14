@@ -48,6 +48,7 @@ class IndicatorImporterConfig(NamedTuple):
     scopes: set[str]
     attack_lookup: Optional[AttackTechniqueLookup]
     max_records_per_run: Optional[int] = None
+    bundle_size: int = 1
 
 
 class IndicatorImporter(BaseImporter):
@@ -108,6 +109,11 @@ class IndicatorImporter(BaseImporter):
             if config.max_records_per_run and config.max_records_per_run > 0
             else None
         )
+        self.bundle_size = max(1, config.bundle_size)
+        # Objects of the indicators processed since the last send, by STIX ID,
+        # so that objects shared by several indicators are sent once.
+        self._pending_objects: Dict[str, Any] = {}
+        self._pending_indicators = 0
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
@@ -508,6 +514,8 @@ class IndicatorImporter(BaseImporter):
             ):
                 latest_updated_datetime = updated_date
 
+        self._send_pending_bundle()
+
         imported = indicator_count - failed
         total = imported + failed
 
@@ -532,12 +540,29 @@ class IndicatorImporter(BaseImporter):
             self._warning("Discarding indicator {0} bundle", indicator["id"])
             return False
 
-        # with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
-        #     f.write(indicator_bundle.serialize(pretty=True))
-
-        self._send_bundle(indicator_bundle)
+        for stix_object in indicator_bundle.objects:
+            self._pending_objects.setdefault(stix_object["id"], stix_object)
+        self._pending_indicators += 1
+        if self._pending_indicators >= self.bundle_size:
+            self._send_pending_bundle()
 
         return True
+
+    def _send_pending_bundle(self) -> None:
+        """Send the objects of the pending indicators as one bundle."""
+        if not self._pending_objects:
+            return
+        bundle = Bundle(objects=list(self._pending_objects.values()), allow_custom=True)
+        self.helper.connector_logger.info(
+            "Sending indicator bundle",
+            {
+                "indicators": self._pending_indicators,
+                "objects": len(self._pending_objects),
+            },
+        )
+        self._pending_objects = {}
+        self._pending_indicators = 0
+        self._send_bundle(bundle)
 
     def _is_indicator_too_old(self, indicator: dict) -> bool:
         indicator_type = indicator.get("type", "")
