@@ -893,7 +893,7 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ),
         ("RUN pip install --log=/opt/src/.connector_version.json requests", False),
         (
-            "RUN pip install --no-cache-dir --log /tmp/pip.log -r /opt/src/requirements.txt",
+            "RUN pip install --no-cache-dir --log /tmp/pip.log requests",
             True,
         ),
         # Copilot review of 00:37 UTC: one ENV expands with the values before it.
@@ -978,6 +978,11 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 03:54 UTC: <> may write its target; a wildcard
+        # chmod that matches a directory needs its search permission.
+        ("RUN printf '{}' 1<> /opt/src/.connector_version.json", False),
+        ("RUN chmod 644 /opt/*", False),
+        ("RUN chmod 755 /opt/*", True),
         # Copilot review of 03:33 UTC: an arithmetic expansion that assigns; an
         # ENV value wins over a later ARG.
         (
@@ -1091,6 +1096,17 @@ def test_installed_package_deleted_by_its_native_path(tmp_path):
         "&& rm -rf /opt/build /usr/local/lib/python3*/site-packages/sample_*",
     )
     assert not packaged(tmp_path / "glob", pyproject, dockerfile=wildcard).covered
+    # Copilot review of 03:54 UTC: find reaches them by their native path too.
+    found = PACKAGED_DOCKERFILE.replace(
+        "&& rm -rf /opt/build",
+        "&& rm -rf /opt/build && find /usr/local/lib/python3.12/site-packages/sample_connector -name '*.json' -delete",
+    )
+    assert not packaged(tmp_path / "find", pyproject, dockerfile=found).covered
+    above = PACKAGED_DOCKERFILE.replace(
+        "&& rm -rf /opt/build",
+        "&& rm -rf /opt/build && find /usr/local/lib -name '.connector_*' -delete",
+    )
+    assert not packaged(tmp_path / "above", pyproject, dockerfile=above).covered
     # Copilot review of 00:37 UTC: python -S does not import the installed packages.
     no_site = PACKAGED_DOCKERFILE.replace('"python", "-m"', '"python", "-S", "-m"')
     image = packaged(tmp_path / "nosite", pyproject, dockerfile=no_site)
@@ -1153,6 +1169,8 @@ def test_entry_script_handing_over_to_another_script(tmp_path):
     [
         "#!/bin/sh\npython3 /usr/local/share/warmup.py\ncd /opt/sample\nexec python3 main.py\n",
         "#!/bin/sh\ncd /opt/sample\npython3 warmup.py\npython3 main.py\n",
+        # Copilot review of 03:54 UTC: exec in a nested shell ends that shell only.
+        "#!/bin/sh\ncd /opt/sample\nsh -c 'exec python3 warmup.py'\nexec python3 main.py\n",
     ],
 )
 def test_python_process_after_another_one_is_reported(tmp_path, script):
@@ -1280,6 +1298,18 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             "# syntax=docker/dockerfile:1\n# escape=`\nFROM python:3.12-alpine\n"
             'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: the escape parser directive",
+        ),
+        # Copilot review of 03:54 UTC: another frontend may read the
+        # instructions differently.
+        (
+            "# syntax=example.com/frontend:1\nFROM python:3.12-alpine\n"
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the Dockerfile frontend example.com/frontend:1",
+        ),
+        (
+            "# syntax=docker.io/docker/dockerfile:1.27-labs\nFROM python:3.12-alpine\n"
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
         ),
         (
             "# A comment ends the directives.\n# escape=`\nFROM python:3.12-alpine\n"
@@ -1717,6 +1747,54 @@ def test_build_semantics_of_docker_and_pip(tmp_path, files, reason):
     assert single(tmp_path, files).reason == reason
 
 
+@pytest.mark.parametrize(
+    "run, extra, covered",
+    [
+        # The local packages of a requirement file are installed too, and run
+        # their packaging code, editable or not.
+        (
+            # ./tools is read from the working directory of pip.
+            "WORKDIR /opt/src\nRUN pip install -r requirements.txt",
+            {"src/requirements.txt": "requests\n./tools\n", "src/tools/setup.py": ""},
+            False,
+        ),
+        (
+            "RUN pip install -e /opt/src/tools",
+            {"src/tools/setup.py": ""},
+            False,
+        ),
+        (
+            "RUN pip install -r /opt/src/requirements.txt",
+            {"src/requirements.txt": "requests\n"},
+            True,
+        ),
+        # A requirement file the model cannot read.
+        ("RUN pip install -r /usr/share/requirements.txt", {}, False),
+        # A bind mount of the context shows its files at the target.
+        (
+            "RUN --mount=type=bind,source=src/requirements.txt,target=/tmp/requirements.txt "
+            "pip install -r /tmp/requirements.txt",
+            {"src/requirements.txt": "requests\n"},
+            True,
+        ),
+        (
+            "RUN --mount=type=cache,target=/tmp/requirements pip install -r /tmp/requirements/all.txt",
+            {},
+            False,
+        ),
+    ],
+)
+def test_pip_install_targets(tmp_path, run, extra, covered):
+    files = {
+        "Dockerfile": (
+            f"FROM python:3.12-alpine\nCOPY src /opt/src\n{run}\n"
+            'CMD ["python3", "/opt/src/main.py"]\n'
+        ),
+        **extra,
+    }
+    assert single(tmp_path, files).covered is covered
+
+
 def test_add_extracts_an_archive_whatever_its_name(tmp_path):
     # Docker recognises a tar archive, compressed or not, by its content.
     connector = make_connector(
@@ -1738,6 +1816,25 @@ def test_add_extracts_an_archive_whatever_its_name(tmp_path):
     (connector / "payload.bin").write_bytes(b"not an archive")
     [image] = result(tmp_path, connector)
     assert image.covered, image.reason
+
+
+def test_stamp_written_through_a_link(tmp_path):
+    # Copilot review of 03:54 UTC: the build step writes through the link.
+    connector = make_connector(
+        tmp_path,
+        {"Dockerfile": ALPINE_SRC, "real/main.py": ""},
+    )
+    for name in ("main.py",):
+        (connector / "src" / name).unlink()
+    (connector / "src").rmdir()
+    try:
+        (connector / "src").symlink_to("real", target_is_directory=True)
+    except OSError:
+        pytest.skip("symbolic links cannot be created here")
+    [image] = result(tmp_path, connector)
+    assert image.reason == (
+        "not supported: the stamp src/.connector_version.json is written through a symbolic link"
+    )
 
 
 def test_symbolic_links_of_the_context(tmp_path):
