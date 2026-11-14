@@ -15,6 +15,7 @@ on:
   merge_group:
     branches:
       - master
+      - 'release/*'
       - lts/**
     types: [checks_requested]
   workflow_dispatch:
