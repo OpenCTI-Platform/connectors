@@ -120,14 +120,14 @@ CONNECTOR_TYPES = (
 )
 UBI9_DOCKERFILE = "Dockerfile_ubi9"
 UBI9_CONNECTORS = ".github/ubi9-connectors.json"
-# Directories whose files the result depends on: the workflow runs the check
-# whenever one of their files changes.
-WATCHED_DIRECTORIES = (*CONNECTOR_TYPES, "templates")
 # pycti reads the anchor directory and its first four parents.
 STAMP_PARENT_DEPTH = 4
 # Abstract location of the installed packages: the real path depends on the
 # Python version of the base image, and pycti only needs the package directory.
 SITE_PACKAGES = "/<site-packages>"
+# Where python -m looks between PYTHONPATH and site-packages: the standard
+# library and lib-dynload of the interpreter.
+STANDARD_LIBRARY = "/<standard-library>"
 # Base images whose configuration is known (read from their published image
 # configuration): they start in "/" and declare no ENTRYPOINT, VOLUME or ONBUILD
 # trigger. The final image must start from one of them. The onbuild variants of
@@ -249,6 +249,8 @@ VAR_SUBST = "\ue023"
 QUOTED_GLOB = {"*": "\ue030", "?": "\ue031", "[": "\ue032"}
 PLAIN_GLOB = str.maketrans({v: k for k, v in QUOTED_GLOB.items()})
 LITERAL_GLOB = str.maketrans({v: f"[{k}]" for k, v in QUOTED_GLOB.items()})
+# A wildcard character taken literally, as LITERAL_GLOB writes it.
+LITERAL_WILDCARD = re.compile(r"\[[*?\[]\]")
 
 
 def literal_globs(text):
@@ -1217,6 +1219,31 @@ def in_standard_library(path):
         and (match.group("area") or match.group("top"))
         not in ("site-packages", "dist-packages")
     )
+
+
+def library_entry_of(path, name):
+    """``path`` lies in a library directory of the interpreter, in an entry that
+    can hold module ``name``: a package, a module, its bytecode or an extension
+    module, or a wildcard (a path where mv put what it matched)."""
+    match = NATIVE_LIBRARY_ENTRY.match(path)
+    if match is None:
+        return False
+    top = match.group("top")
+    return top.split(".", 1)[0] == name or bool(GLOB_CHARS.search(top))
+
+
+def standard_library_module(name, files, regions):
+    """What the build wrote that python may import as module ``name`` from the
+    standard library or lib-dynload of an interpreter, or a region of unknown
+    content holding the standard library; None when there is none."""
+    for path in (*files, *regions):
+        if in_standard_library(path) and library_entry_of(path, name):
+            return path
+    for region in regions:
+        region = region.rstrip("/") or "/"
+        if region in ("/", "/opt") or NATIVE_SITE_PARENT.match(region):
+            return region
+    return None
 
 
 def modelled_targets(target):
@@ -2670,9 +2697,7 @@ class Shell:
         if name in sys.stdlib_module_names:
             return None
         for path in (*self.files, *self.stage.replaced, *self.stage.unknown_dirs):
-            match = NATIVE_LIBRARY_ENTRY.match(path)
-            # A package, a module, its bytecode or an extension module.
-            if match is not None and match.group("top").split(".", 1)[0] == name:
+            if library_entry_of(path, name):
                 return path
         return None
 
@@ -2689,7 +2714,11 @@ class Shell:
                     f"python run at build time imports {found}, a file the build wrote, at startup"
                 )
         for path in (*self.files, *self.stage.replaced):
-            if SITE_STARTUP_FILE.search(path):
+            entry = NATIVE_LIBRARY_ENTRY.match(path)
+            # A wildcard: where mv put what it matched, a .pth file included.
+            if SITE_STARTUP_FILE.search(path) or (
+                entry and GLOB_CHARS.search(entry.group("top"))
+            ):
                 raise Unsupported(
                     f"python run at build time runs {path}, a file the build wrote, at startup"
                 )
@@ -3205,6 +3234,13 @@ class Shell:
         operands = self._operands(rest)
         if not operands:
             return
+        if any(
+            GLOB_CHARS.search(LITERAL_WILDCARD.sub("", operand))
+            for operand in (*operands, target_dir or "")
+        ):
+            # Where the links land and what they stand for depend on what the
+            # wildcard matches in the image.
+            raise Unsupported("ln with a wildcard operand")
         symbolic = any(
             re.fullmatch(r"-[a-zA-Z]*s[a-zA-Z]*", a) or a == "--symbolic" for a in rest
         )
@@ -4656,6 +4692,8 @@ class ImageModel:
                     stage.links if stage is not None else (),
                 )
             )
+        # The standard library and lib-dynload, searched with or without site.
+        bases.append(STANDARD_LIBRARY)
         if not no_site:
             bases.append(SITE_PACKAGES)
             # The user site-packages, and any other copy of site-packages, come
@@ -4681,6 +4719,24 @@ class ImageModel:
             name, rest = names[0], names[1:]
             portions = []
             for base in search:
+                if base == STANDARD_LIBRARY:
+                    regions = (
+                        (*stage.replaced, *stage.unknown_dirs)
+                        if stage is not None
+                        else ()
+                    )
+                    found = standard_library_module(name, files, regions)
+                    if found in files:
+                        raise Unsupported(
+                            f"python -m {module} may run {found}, a file the build"
+                            " wrote, from the standard library"
+                        )
+                    if found:
+                        raise Unsupported(
+                            f"python -m {module}: {found} holds what a build command"
+                            " wrote, where python finds its standard library"
+                        )
+                    continue
                 path = posixpath.join(base, name)
                 if stage is not None and (
                     stage.written(path)

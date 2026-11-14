@@ -1464,6 +1464,19 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             "RUN ln -s /usr/bin/python3 /usr/local/bin/py && rm -f /usr/local/bin/py",
             True,
         ),
+        # Copilot review of 03:32 UTC: what a wildcard operand of ln matches
+        # decides the links and what they stand for.
+        (
+            "RUN ln /opt/src/.connector_*.json /tmp/h; printf '{}' > /tmp/h",
+            False,
+        ),
+        ("RUN ln -s /opt/src/.connector_v* /tmp/h; printf '{}' > /tmp/h", False),
+        (
+            "RUN ln /opt/src/.connector_*.json /tmp/ && rm -f /tmp/.connector_version.json",
+            False,
+        ),
+        ("RUN ln -t /tmp /opt/src/.connector_?ersion.json && : > /tmp/x", False),
+        ("RUN ln -s '/opt/src/.connector_*.json' /tmp/h; printf '{}' > /tmp/h", True),
         # Copilot review of 05:25 UTC: -execdir resolves operands from each match.
         (
             "RUN touch /opt/src/marker.txt && find /opt/src -name marker.txt -execdir rm -f .connector_version.json \\;",
@@ -3609,22 +3622,20 @@ def test_base_images_outside_the_reviewed_ones(tmp_path, base):
 def test_workflow_watches_every_file_the_check_reads():
     # Copilot reviews of 21:40 and 23:37 UTC: any file of a connector (an entry
     # script has no fixed name) or of the shared build must run the check.
+    # Copilot review of 03:32 UTC: a path filter only sees the first 300 changed
+    # files, so neither trigger has one.
     text = WORKFLOW.read_text(encoding="utf-8")
-    sections = re.split(r"^  (push|pull_request|merge_group):", text, flags=re.M)
-    filters = {sections[i]: sections[i + 1] for i in range(1, len(sections) - 1, 2)}
-    for event in ("push", "pull_request"):
-        paths = set(re.findall(r"^\s+- '([^']+)'", filters[event], flags=re.M))
-        for directory in check.WATCHED_DIRECTORIES:
-            assert f"{directory}/**" in paths, f"{event} does not watch {directory}"
-        for name in (
-            check.UBI9_DOCKERFILE,
-            # Copilot review of 00:11 UTC: the ignore file the shared Dockerfile reads.
-            f"{check.UBI9_DOCKERFILE}.dockerignore",
-            check.UBI9_CONNECTORS,
-            ".github/actions/build-connector-image/**",
-            ".github/scripts/check_connector_stamp.py",
-        ):
-            assert name in paths, f"{event} does not watch {name}"
+    sections = re.split(
+        r"^  (push|pull_request|merge_group|workflow_dispatch):", text, flags=re.M
+    )
+    triggers = {sections[i]: sections[i + 1] for i in range(1, len(sections) - 1, 2)}
+    for event in ("push", "pull_request", "merge_group"):
+        assert not re.search(
+            r"^    paths(-ignore)?:", triggers[event], flags=re.M
+        ), f"{event} filters paths"
+    branches = re.findall(r"^      - '?([^'\n]+)'?$", triggers["push"], flags=re.M)
+    assert branches == ["master", "release/*", "lts/*"]
+    assert not re.search(r"^    branches", triggers["pull_request"], flags=re.M)
 
 
 def stamp_step_script():
@@ -3843,6 +3854,23 @@ def test_package_installed_from_the_root(tmp_path, packaging):
             "not supported: python run at build time: /usr/local/lib/python3.12"
             " holds what a build command wrote, where python reads its startup files",
         ),
+        # Copilot review of 03:32 UTC: mv puts what a wildcard matched there.
+        (
+            "COPY remove.py /opt/extra/\n"
+            "RUN mv -t /usr/local/lib/python3.12/site-packages /opt/extra/*"
+            " && pip install requests",
+            "not supported: python run at build time runs"
+            " /usr/local/lib/python3.12/site-packages/*, a file the build wrote,"
+            " at startup",
+        ),
+        (
+            "COPY remove.py /opt/extra/\n"
+            "RUN mv -t /usr/local/lib/python3.12/site-packages /opt/extra/*.py"
+            " && python3 -m pip install requests",
+            "not supported: python run at build time runs"
+            " /usr/local/lib/python3.12/site-packages/*.py, a file the build wrote,"
+            " at startup",
+        ),
         (
             "COPY --from=example/tools:1 /lib /usr/local/lib/python3.12/site-packages\n"
             "RUN pip install requests",
@@ -3954,6 +3982,59 @@ def test_installed_package_keeps_its_identity_files(
             "pyproject.toml": pyproject,
             "sample_connector/__metadata__/connector_manifest.json": manifest,
         },
+    )
+    assert image.reason == reason
+
+
+@pytest.mark.parametrize(
+    "copy, reason",
+    [
+        # Copilot review of 03:32 UTC: at start, python -m searches the standard
+        # library and lib-dynload before site-packages.
+        (
+            "COPY lib/sample_connector.py /usr/local/lib/python3.12/",
+            "not supported: python -m sample_connector may run"
+            " /usr/local/lib/python3.12/sample_connector.py, a file the build"
+            " wrote, from the standard library",
+        ),
+        (
+            "COPY lib/sample_connector.py"
+            " /usr/local/lib/python3.12/lib-dynload/sample_connector.py",
+            "not supported: python -m sample_connector may run"
+            " /usr/local/lib/python3.12/lib-dynload/sample_connector.py, a file"
+            " the build wrote, from the standard library",
+        ),
+        (
+            "COPY --from=example/tools:1 /lib /usr/local/lib/python3.12",
+            "not supported: python -m sample_connector:"
+            " /usr/local/lib/python3.12 holds what a build command wrote, where"
+            " python finds its standard library",
+        ),
+        (
+            "COPY lib/sample_connector.py /opt/extra/\n"
+            "RUN mv -t /usr/local/lib/python3.12 /opt/extra/*.py",
+            "not supported: python -m sample_connector:"
+            " /usr/local/lib/python3.12/*.py holds what a build command wrote,"
+            " where python finds its standard library",
+        ),
+        (
+            "COPY lib/sample_connector.py /usr/local/lib/python3.12/other.py",
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+    ],
+)
+def test_module_of_the_standard_library_at_start(tmp_path, copy, reason):
+    dockerfile = (
+        "FROM python:3.12-alpine\nCOPY --exclude=lib . /opt/build\n"
+        "RUN pip install /opt/build && rm -rf /opt/build\n"
+        f"{copy}\nWORKDIR /srv\n"
+        'CMD ["python", "-m", "sample_connector"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(
+        tmp_path,
+        {"pyproject.toml": data, "lib/sample_connector.py": ""},
+        dockerfile=dockerfile,
     )
     assert image.reason == reason
 
