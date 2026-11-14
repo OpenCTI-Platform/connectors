@@ -284,6 +284,12 @@ class RansomwareAPIConnector:
 
         # 1. Creating Victim object
         victim_name = item.get("victim")
+        if not isinstance(victim_name, str) or not victim_name.strip():
+            self.helper.connector_logger.warning(
+                "Missing victim name, victim skipped",
+                {"group": item.get("group"), "discovered": item.get("discovered")},
+            )
+            return []
         victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
