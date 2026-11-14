@@ -680,6 +680,8 @@ PIP_ARCHIVE = re.compile(r"\.(whl|zip|tar(\.\w+)?|tgz|tbz|txz|tlz)$", re.IGNOREC
 SETUPTOOLS_BACKENDS = frozenset(
     {"setuptools.build_meta", "setuptools.build_meta:__legacy__"}
 )
+# The files of a project that tell setuptools what to install.
+PACKAGING_FILES = ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in")
 PYTHON_OPTIONS_WITH_VALUE = frozenset({"-W", "-X", "--check-hash-based-pycs"})
 
 
@@ -3137,9 +3139,10 @@ class Shell:
                 ):
                     # Resolved from the directory of each match.
                     raise Unsupported(f"find {arg} {program} with a relative operand")
-                # What it creates is in the model, as when the build runs it.
+                # It runs once for each match, so maybe never: a directory it
+                # creates may be missing.
                 if program == "mkdir":
-                    self._mkdir(explicit)
+                    self._mkdir(explicit, uncertain=True)
                 else:
                     self._touch(explicit)
             elif program in HARMLESS_COMMANDS or (
@@ -3328,6 +3331,11 @@ class Shell:
         for path in local:
             if self.stage.written(path):
                 raise Unsupported(f"pip install of {path}, which holds unknown content")
+            for name in PACKAGING_FILES:
+                if self.stage.written(posixpath.join(path, name)):
+                    raise Unsupported(
+                        f"pip install of {path}, whose {name} a build command wrote"
+                    )
             if path in self.files or PIP_ARCHIVE.search(path):
                 # A wheel or a source archive of the repository: its content is
                 # not read (a source archive runs its setup.py).
@@ -4039,7 +4047,7 @@ class ImageModel:
         """``pip install <install_dir>``: the packages it puts in site-packages.
         ``stage`` gives the directories the build made, an empty one included."""
         texts = {}
-        for name in ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in"):
+        for name in PACKAGING_FILES:
             origin = files.get(posixpath.join(install_dir, name))
             if origin is not None:
                 texts[name] = self.context.read(origin) or ""
@@ -4063,6 +4071,13 @@ class ImageModel:
             src_layout = src_dir in stage.dirs or any(
                 path.startswith(src_dir + "/") for path in files
             )
+            if not src_layout and any(
+                d == src_dir or d.startswith(src_dir + "/")
+                for d in stage.uncertain_dirs
+            ):
+                raise Unsupported(
+                    f"automatic discovery in {install_dir}, whose src exists only if a mkdir that may not run did"
+                )
         roots = (
             ["src"]
             if src_layout
