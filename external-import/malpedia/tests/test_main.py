@@ -110,3 +110,58 @@ def test_connector_is_instantiated(mock_opencti_connector_helper, mock_malpedia_
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_start_survives_unreachable_api():
+    connector = MagicMock()
+    connector.work_id = "previous-run"
+    connector.api_client.current_version.side_effect = ConnectionError(
+        "Malpedia API unreachable (get/version)"
+    )
+
+    MalpediaConnector.start(connector)
+
+    connector.helper.connector_logger.error.assert_called_once()
+    connector._run_malpedia_process.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+
+
+def test_start_closes_work_in_error_when_run_fails():
+    connector = MagicMock()
+    connector.utils.is_scheduled.return_value = True
+    connector.utils.check_version.return_value = True
+    connector.utils.initiate_work_id.return_value = "work-1"
+    connector._run_malpedia_process.side_effect = RuntimeError("families failed")
+    connector.helper.api.work.to_processed.side_effect = Exception("opencti down")
+
+    MalpediaConnector.start(connector)
+
+    connector.helper.api.work.to_processed.assert_called_once_with(
+        "work-1", "families failed", in_error=True
+    )
+    assert connector.helper.connector_logger.error.call_count == 2
+    connector.helper.set_state.assert_not_called()
+
+
+def test_start_keeps_processed_work_when_state_save_fails():
+    connector = MagicMock()
+    connector.utils.is_scheduled.return_value = True
+    connector.utils.check_version.return_value = True
+    connector.utils.initiate_work_id.return_value = "work-1"
+    connector.helper.set_state.side_effect = RuntimeError("state save failed")
+
+    MalpediaConnector.start(connector)
+
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert "in_error" not in connector.helper.api.work.to_processed.call_args.kwargs
+
+
+def test_run_sends_only_objects_from_current_run():
+    connector = MagicMock()
+    connector.stix_objects = ["stale-object"]
+    connector.stix_relationships = ["stale-relationship"]
+    connector.converter.generate_malpedia_stix_identity.return_value = "identity"
+
+    MalpediaConnector._run_malpedia_process(connector)
+
+    connector.helper.stix2_create_bundle.assert_called_once_with(["identity"])
