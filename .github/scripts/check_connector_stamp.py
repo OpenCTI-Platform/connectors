@@ -382,6 +382,26 @@ PACKAGE_MANAGERS = {
     "rpm": frozenset({"--root", "-r", "--dbpath", "--prefix", "--relocate"}),
     "yum": frozenset({"--installroot", "-c", "--config"}),
 }
+# The modes of rpm and dpkg that install or unpack a package file.
+PACKAGE_INSTALL_MODES = {
+    "rpm": re.compile(r"-[iUF][A-Za-z]*|--(?:install|upgrade|freshen|reinstall)"),
+    "dpkg": re.compile(r"-[ixXR][A-Za-z]*|--(?:install|unpack|extract|vextract)"),
+}
+# Options of the package managers whose separate value is not a package.
+PACKAGE_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "-X",
+        "--repository",
+        "--repofrompath",
+        "--enablerepo",
+        "--disablerepo",
+        "--releasever",
+        "-t",
+        "--target-release",
+        "--virtual",
+        "--setopt",
+    }
+)
 # Options of wget and curl the model reads: the ones naming a file they write
 # ("file"), among them the response bodies placed in the directory option
 # ("body"), the directory of the bodies and of the files named after the URL
@@ -2469,8 +2489,11 @@ class Shell:
         exported, allexport = set(self.exported), self.allexport
         files = dict(self.files)
         self._simple_command(words, writes, before, after, reads)
+        # The paths it wrote or deleted.
         self.chain_files |= {
-            path for path, origin in self.files.items() if files.get(path) != origin
+            path
+            for path in {*files, *self.files}
+            if files.get(path) != self.files.get(path)
         }
         self.chain_variables |= {
             key
@@ -2963,6 +2986,19 @@ class Shell:
                     )
                 ):
                     raise Unsupported(f"'{name} {arg}' installs below another root")
+            # A package of the repositories is taken as published; a package
+            # file or URL brings a payload and installation scripts the model
+            # does not read.
+            mode = PACKAGE_INSTALL_MODES.get(name)
+            for index, arg in enumerate(args):
+                if arg.startswith("-"):
+                    if mode and mode.fullmatch(arg):
+                        raise Unsupported(f"'{name} {arg}': a package file")
+                    continue
+                if index and args[index - 1] in PACKAGE_OPTIONS_WITH_VALUE:
+                    continue
+                if "/" in arg or arg.endswith((".rpm", ".deb", ".apk")):
+                    raise Unsupported(f"'{name} {arg}': a package file or URL")
             return
         if name in ("wget", "curl"):
             names, variables = DOWNLOADER_CONFIGS[name]

@@ -1144,6 +1144,33 @@ def test_reinstall_without_the_stamp(tmp_path, steps, reason):
 
 
 @pytest.mark.parametrize(
+    "steps, covered",
+    [
+        # Copilot review of 06:11 UTC: a deletion after && may be skipped when a
+        # later command runs; when the list ends the RUN, a skip fails the build.
+        (
+            "RUN false && rm -f /opt/src/__metadata__/connector_manifest.json; true",
+            False,
+        ),
+        ("RUN rm -f /opt/src/__metadata__/connector_manifest.json & wait", False),
+        ("RUN true && rm -f /opt/src/__metadata__/connector_manifest.json", True),
+        ("RUN rm -f /opt/src/__metadata__/connector_manifest.json; true", True),
+    ],
+)
+def test_deletion_that_may_be_skipped(tmp_path, steps, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "COPY __metadata__ /opt/src/__metadata__\n"
+        f'{steps}\nCMD ["python3", "/opt/src/main.py"]\n',
+        "__metadata__/connector_manifest.json": '{"container_version": "rolling"}',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if covered:
+        assert image.reason == "stamp at /opt/src/.connector_version.json"
+
+
+@pytest.mark.parametrize(
     "source, destination, covered",
     [
         # Copilot review of 05:48 UTC: what pip installed in a stage is only
@@ -1626,7 +1653,18 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN rpm -i --relocate /usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i --relocate=/usr=/opt/src /tmp/sample.rpm", False),
         ("RUN rpm -i -r /opt/src /tmp/sample.rpm", False),
-        ("RUN rpm -i /tmp/sample.rpm", True),
+        # Copilot review of 06:11 UTC: a package file or URL brings a payload and
+        # installation scripts the model does not read.
+        ("RUN rpm -i /tmp/sample.rpm", False),
+        ("RUN rpm -Uvh https://example.com/sample.rpm", False),
+        ("RUN dpkg -i /tmp/sample.deb", False),
+        ("RUN dpkg -x /tmp/sample.deb /opt", False),
+        ("RUN apt-get install -y ./sample.deb", False),
+        ("RUN microdnf install -y https://example.com/sample.rpm", False),
+        ("RUN apk add --allow-untrusted sample.apk", False),
+        ("RUN apk add --no-cache -X https://example.com/alpine/edge git", True),
+        ("RUN apt-get install -y libmagic1", True),
+        ("RUN rpm -qa", True),
         # dnf, yum and microdnf: the root set by --setopt or a configuration file.
         ("RUN microdnf -y --setopt=installroot=/opt/src install git", False),
         ("RUN dnf -y --setopt installroot=/opt/src install git", False),
