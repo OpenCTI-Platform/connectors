@@ -1,0 +1,74 @@
+name: Connector Image Stamp
+
+# Every image must carry .connector_version.json (version and catalog slug) where
+# pycti reads it at registration: the platform identifies the connector with it.
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/*'
+      - 'lts/*'
+    paths:
+      - '**/Dockerfile'
+      - '**/Dockerfile_fips'
+      - 'Dockerfile_ubi9'
+      - '**/.dockerignore'
+      - '**/entrypoint.sh'
+      - '**/.build.env'
+      - '**/pyproject.toml'
+      - '**/__main__.py'
+      - '.github/ubi9-connectors.json'
+      - '.github/actions/build-connector-image/**'
+      - '.github/scripts/check_connector_stamp.py'
+      - '.github/scripts/tests/test_check_connector_stamp.py'
+      - '.github/workflows/ci-check-connector-stamp.yml'
+  pull_request:
+    paths:
+      - '**/Dockerfile'
+      - '**/Dockerfile_fips'
+      - 'Dockerfile_ubi9'
+      - '**/.dockerignore'
+      - '**/entrypoint.sh'
+      - '**/.build.env'
+      - '**/pyproject.toml'
+      - '**/__main__.py'
+      - '.github/ubi9-connectors.json'
+      - '.github/actions/build-connector-image/**'
+      - '.github/scripts/check_connector_stamp.py'
+      - '.github/scripts/tests/test_check_connector_stamp.py'
+      - '.github/workflows/ci-check-connector-stamp.yml'
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
+  workflow_dispatch:
+
+concurrency:
+  group: check-connector-stamp-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-connector-stamp:
+    name: Check connector image stamp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Test the stamp check
+        run: |
+          python -m pip install --quiet pytest
+          python -m pytest .github/scripts/tests/test_check_connector_stamp.py -q
+
+      - name: Check that every image carries the stamp where pycti reads it
+        run: python .github/scripts/check_connector_stamp.py
