@@ -1144,6 +1144,72 @@ def test_reinstall_without_the_stamp(tmp_path, steps, reason):
 
 
 @pytest.mark.parametrize(
+    "source, destination, covered",
+    [
+        # Copilot review of 05:48 UTC: what pip installed in a stage is only
+        # known at the place the model keeps it; copied from its physical
+        # place, or as an identity file of any name, it is unknown content.
+        (
+            "/usr/local/lib/python3.12/site-packages/sample_connector/.connector_version.json",
+            "/opt/app/.connector_version.json",
+            False,
+        ),
+        (
+            "/usr/local/lib/python3.12/site-packages/sample_connector/.connector_version.json",
+            "/opt/app/",
+            False,
+        ),
+        (
+            "/usr/local/lib/python3.12/site-packages/sample_connector",
+            "/opt/app/",
+            False,
+        ),
+        ("/tmp/.connector_version.json", "/opt/app/.connector_version.json", False),
+        ("/usr/local/lib/python3.12/site-packages/sample_connector", "/opt/lib", True),
+        ("/opt/build/sample_connector/__init__.py", "/opt/app/other.py", True),
+    ],
+)
+def test_stage_copy_of_installed_files(tmp_path, source, destination, covered):
+    dockerfile = (
+        "FROM python:3.12-alpine AS build\nCOPY . /opt/build\nRUN pip install /opt/build\n"
+        "FROM python:3.12-alpine\nCOPY sample_connector /opt\n"
+        f"COPY --from=build {source} {destination}\n"
+        "COPY sample_connector/__main__.py /opt/app/main.py\n"
+        'CMD ["python3", "/opt/app/main.py"]\n'
+    )
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile=dockerfile)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "requirement, covered",
+    [
+        # Copilot review of 05:48 UTC: pip expands ${NAME} of a requirement file
+        # from its environment before it reads the line.
+        ("${LOCAL_PROJECT}", False),
+        ("-e ${LOCAL_PROJECT}", False),
+        ("requests==${VERSION}", False),
+        ("requests", True),
+    ],
+)
+def test_requirement_with_an_environment_variable(tmp_path, requirement, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "ENV LOCAL_PROJECT=/opt/src/tools VERSION=2.32.3\n"
+        "COPY requirements.txt /opt/requirements.txt\n"
+        "RUN pip install -r /opt/requirements.txt\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "requirements.txt": f"{requirement}\n",
+        "src/tools/setup.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "uses an environment variable" in image.reason
+
+
+@pytest.mark.parametrize(
     "requirements",
     [
         # Copilot review of 04:27 UTC: an editable requirement stays a link to
@@ -3269,6 +3335,33 @@ def test_literal_tilde(tmp_path, steps, covered):
     ],
 )
 def test_hash_inside_a_word(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\n"
+        f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 05:48 UTC: a find value the model does not resolve
+        # may match the stamp.
+        (
+            "if true; then PATTERN=.connector_version.json; fi;"
+            ' find /opt/src -name "$PATTERN" -delete',
+            False,
+        ),
+        ('find /opt/src -name "$(echo .connector_version.json)" -delete', False),
+        (
+            "if true; then KIND=f; fi; find /opt/src -type \"$KIND\" -name '.c*' -delete",
+            False,
+        ),
+        ("find /opt/src -name '*.pyc' -delete", True),
+    ],
+)
+def test_find_with_an_unresolved_value(tmp_path, run, covered):
     files = {
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\n"
         f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
