@@ -54,8 +54,34 @@ class AnyrunFeed:
             enable_requests=True,
             integration=self.VERSION,
         ) as feeds_connector:
-            feeds_connector.check_authorization()
+            if not self._check_authorization(feeds_connector):
+                return
             self._run_once(feeds_connector, is_delta=is_delta)
+
+    def _check_authorization(self, connector: FeedsConnector) -> bool:
+        """
+        Check the ANY.RUN credentials before starting a work.
+
+        When the TAXII endpoint answers with a body that is not JSON (an
+        outage page, a proxy error), anyrun-sdk fails while formatting its own
+        error and raises an unrelated TypeError. Any failure here is logged as
+        a readable error and the run is skipped until the next schedule,
+        instead of escaping to the scheduler with a misleading stack trace.
+
+        :param connector: ANY.RUN connector instance
+        :return: True when the run can go on
+        """
+        try:
+            connector.check_authorization()
+        except Exception as exc:
+            self.helper.connector_logger.error(
+                "ANY.RUN authorization check failed: the TAXII feed did not "
+                "answer as expected. Check the API key and the ANY.RUN service "
+                "status; the run is skipped until the next schedule.",
+                {"error": f"{type(exc).__name__}: {exc}"},
+            )
+            return False
+        return True
 
     def run(self) -> None:
         """Run the main process with the pycti scheduler."""
