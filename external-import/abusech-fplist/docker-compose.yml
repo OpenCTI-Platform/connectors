@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-abusech-fplist:
+    image: opencti/connector-abusech-fplist:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # - OPENCTI_SSL_VERIFY=true # optional (default: true)
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=AbusechFplist # optional (default: 'AbusechFplist')
+      # - CONNECTOR_SCOPE=indicator # optional (default: 'indicator')
+      # - CONNECTOR_LOG_LEVEL=info # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=P1D # optional, interval in ISO-8601 format between two runs (default: 'P1D')
+      - ABUSECH_FPLIST_API_KEY=ChangeMe
+      # - ABUSECH_FPLIST_API_BASE_URL=https://hunting-api.abuse.ch/api/v1/ # optional (default: 'https://hunting-api.abuse.ch/api/v1/')
+      # - ABUSECH_FPLIST_DRY_RUN=false # optional (default: false)
+    restart: always
