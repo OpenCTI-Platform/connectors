@@ -146,6 +146,20 @@ def test_ignores_markings_that_are_not_tlp(fetched):
     helper.check_max_tlp.assert_called_once_with("TLP:GREEN", "TLP:AMBER")
 
 
+def test_checks_every_tlp_of_the_report(fetched):
+    connector, helper = _connector(max_tlp="green")
+    helper.check_max_tlp.side_effect = lambda tlp, _: tlp != "TLP:RED"
+    markings = [
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {"definition_type": "TLP", "definition": "TLP:CLEAR"},
+    ]
+
+    message = connector.process_message(_message(markings=markings))
+
+    assert message.startswith("Not enriched: TLP")
+    helper.send_stix2_bundle.assert_not_called()
+
+
 def test_refuses_an_entity_that_is_not_a_report(fetched):
     connector, helper = _connector()
     note = {"id": "note--1", "type": "note"}

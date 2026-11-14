@@ -35,16 +35,18 @@ class ReportArticleFetcherConnector:
         self.settings = config.report_article_fetcher
 
     def _check_markings(self, opencti_entity: dict) -> None:
-        tlp = None
-        for marking_definition in opencti_entity.get("objectMarking") or []:
-            if marking_definition["definition_type"] == "TLP":
-                tlp = marking_definition["definition"]
-        if not self.helper.check_max_tlp(
-            tlp, f"TLP:{self.config.connector.max_tlp.upper()}"
-        ):
-            raise ValueError(
-                "TLP of the report is greater than the connector's max TLP"
-            )
+        """Refuse the report if any of its TLP markings is above the max TLP."""
+        max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
+        tlps = [
+            marking_definition["definition"]
+            for marking_definition in opencti_entity.get("objectMarking") or []
+            if marking_definition.get("definition_type") == "TLP"
+        ]
+        for tlp in tlps or [None]:
+            if not self.helper.check_max_tlp(tlp, max_tlp):
+                raise ValueError(
+                    "TLP of the report is greater than the connector's max TLP"
+                )
 
     def _enrich(self, report: dict) -> tuple[dict | None, str]:
         """Return the report with its content filled, or None and why not."""

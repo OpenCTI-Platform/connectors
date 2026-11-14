@@ -273,7 +273,9 @@ def extract_article(url: str, html: str) -> Article | None:
         "include_tables": True,
         "include_formatting": True,
         "include_links": True,
-        "include_images": True,
+        # No images: their URLs would be fetched by whatever renders the
+        # content later (the PDF export), outside the public-address checks.
+        "include_images": False,
         "include_comments": False,
         "favor_recall": True,
     }
@@ -382,7 +384,11 @@ def article_match(report_name: str, article: Article) -> float:
     scores = []
     if article.title:
         title = _normalise_title(article.title)
-        if title and (name in title or title in name):
+        # A page title inside the report name counts only when it is a
+        # title of its own, not a generic word ("Blog", "News").
+        if title and (
+            name in title or (title in name and len(_tokens(article.title)) >= 3)
+        ):
             return 1.0
         scores.append(SequenceMatcher(None, name, title).ratio())
     name_tokens = _tokens(report_name)

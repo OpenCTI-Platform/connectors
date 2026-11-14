@@ -217,6 +217,23 @@ def test_strip_document_keeps_the_body_inside():
     assert _strip_document(" <p>a</p> ") == "<p>a</p>"
 
 
+def test_a_generic_page_title_is_not_a_match():
+    article = Article(
+        url="https://example.com/news", title="Ransomware", html="", text=""
+    )
+    assert article_match("Akira ransomware targets VPN appliances", article) < 0.6
+
+
+def test_a_page_title_inside_the_report_name_is_a_match():
+    article = Article(
+        url="https://example.com/p/1",
+        title="Akira ransomware targets VPN",
+        html="",
+        text="",
+    )
+    assert article_match("Akira ransomware targets VPN appliances", article) == 1.0
+
+
 def test_an_empty_report_name_matches_nothing():
     article = Article(url="https://example.com/a", title="Title", html="", text="")
     assert article_match("", article) == 0.0
