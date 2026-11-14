@@ -7,8 +7,12 @@ The shared image build (step "Write connector version stamp" of
 (``src/``, or the top-level package of a packaged connector). At registration,
 pycti (``pycti/connector/opencti_connector_build.py``) looks for a file of that
 exact name in the directory of the ``__main__`` file, of ``sys.path[0]`` and in
-the working directory, each with up to four parent directories. The platform
-then shows the connector with the logo and the title of its catalog entry.
+the working directory, each with up to four parent directories; in each
+directory it reads the connector manifest of a source checkout
+(``__metadata__/connector_manifest.json``) first, and it keeps the first file
+that gives a version, so the stamp must be the first such file it meets. The
+platform then shows the connector with the logo and the title of its catalog
+entry.
 
 For every image the pipeline builds (the connector ``Dockerfile``, its
 ``Dockerfile_fips``, and the shared ``Dockerfile_ubi9`` for the connectors of
@@ -1162,6 +1166,39 @@ def remove_files(files, target):
                 del files[path]
 
 
+def remove_dirs(dirs, target):
+    """Delete the directory ``target`` (absolute, wildcards allowed) and every
+    directory below it."""
+    for modelled in modelled_targets(target):
+        for path in list(dirs):
+            if any(
+                (
+                    shell_glob_match(modelled, candidate)
+                    if GLOB_CHARS.search(modelled)
+                    else candidate == modelled
+                )
+                for candidate in self_and_parents(path)
+            ):
+                dirs.discard(path)
+
+
+def removes_directories(args):
+    """rm -r, -R or -d (or their long forms) removes directories too; a plain rm
+    fails on a directory and leaves it in place."""
+    for arg in args:
+        if arg == "--":
+            break
+        if arg in ("--recursive", "--dir"):
+            return True
+        if (
+            arg.startswith("-")
+            and not arg.startswith("--")
+            and set(arg[1:]) & set("rRd")
+        ):
+            return True
+    return False
+
+
 class PackagingConfig:
     """What setuptools installs from a source directory."""
 
@@ -2234,7 +2271,10 @@ class Shell:
                 raise Unsupported(f"'{name}' in the entry script")
             self._source(name, args)
         elif name in ("rm", "unlink"):
-            self._delete(self._operands(literal_args))
+            self._delete(
+                self._operands(literal_args),
+                directories=name == "rm" and removes_directories(literal_args),
+            )
         elif name == "mv":
             self._move(literal_args)
         elif name == "ln":
@@ -2275,10 +2315,13 @@ class Shell:
             # A module file or a regular package; a directory without
             # __init__.py loses to the module of the interpreter.
             module, package = f"{entry}/{name}.py", f"{entry}/{name}"
-            if module in self.files or f"{package}/__init__.py" in self.files:
+            initializer = f"{package}/__init__.py"
+            if module in self.files or initializer in self.files:
                 return module if module in self.files else package
-            if self.stage.written(module) or self.stage.written(package):
-                return module if self.stage.written(module) else package
+            if self.stage.written(module):
+                return module
+            if self.stage.written(package) or self.stage.written(initializer):
+                return package
         return None
 
     def _python(self, words, env, conditional):
@@ -2632,11 +2675,15 @@ class Shell:
                 operands.append(arg)
         return operands
 
-    def _delete(self, operands):
+    def _delete(self, operands, directories=False):
+        """The operands leave the model, with the directories among them when
+        ``directories`` is set: a later cd into one of them fails."""
         for operand in operands:
             target = image_path(self._tilde(operand), self.cwd, "deleted path")
             self._through_link(target)
             remove_files(self.files, target)
+            if directories:
+                remove_dirs(self.stage.dirs, target)
 
     def _move(self, args):
         target_dir, no_target, rest = target_options(args)
@@ -2662,8 +2709,9 @@ class Shell:
         else:
             remove_files(self.files, destination)
             self.stage.replaced.add(destination)
-        # The moved files leave their place; where they land is not modelled.
-        self._delete(sources)
+        # The moved files and directories leave their place; where they land is
+        # not modelled.
+        self._delete(sources, directories=True)
 
     def _is_dir(self, path):
         prefix = path.rstrip("/") + "/"
@@ -2781,7 +2829,10 @@ class Shell:
                     raise Unsupported(f"find {arg} {program} with a relative operand")
                 # Operands other than the matched path are deleted as well.
                 deletes = True
-                self._delete(self._operands(explicit))
+                self._delete(
+                    self._operands(explicit),
+                    directories=program == "rm" and removes_directories(explicit),
+                )
             elif program in HARMLESS_COMMANDS or (
                 program == "chmod" and harmless_mode(explicit, True)
             ):
@@ -3995,7 +4046,9 @@ class ImageModel:
             for base in search:
                 path = posixpath.join(base, name)
                 if stage is not None and (
-                    stage.written(path) or stage.written(f"{path}.py")
+                    stage.written(path)
+                    or stage.written(f"{path}.py")
+                    or stage.written(f"{path}/__init__.py")
                 ):
                     raise Unsupported(
                         f"python -m {module}: {path} holds what a build command wrote"

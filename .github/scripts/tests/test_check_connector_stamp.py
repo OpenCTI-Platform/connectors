@@ -739,6 +739,32 @@ def test_automatic_discovery_takes_the_src_layout(tmp_path, find, reason):
 
 
 @pytest.mark.parametrize(
+    "copies, reason",
+    [
+        # Copilot review of 12:40 UTC: a package of the working directory whose
+        # initializer a build step wrote is imported before the installed one.
+        (
+            "COPY --from=python:3.12-alpine /etc/os-release /opt/app/sample_connector/__init__.py\n",
+            "not supported: python -m sample_connector: /opt/app/sample_connector holds"
+            " what a build command wrote",
+        ),
+        # Without an initializer it is a namespace portion: the installed
+        # package wins.
+        ("", "stamp at /<site-packages>/sample_connector/.connector_version.json"),
+    ],
+)
+def test_module_with_an_unknown_initializer(tmp_path, copies, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD",
+        "COPY sample_connector/__main__.py /opt/app/sample_connector/__main__.py\n"
+        f"{copies}WORKDIR /opt/app\nCMD",
+    )
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile)
+    assert image.reason == reason
+
+
+@pytest.mark.parametrize(
     "build, reason",
     [
         # Copilot review of 09:21 UTC: an empty src/ directory the build made
@@ -1413,6 +1439,35 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ),
         ("RUN find /opt/src -name '*.pyc' -exec mv {} /tmp \\;", False),
         ("RUN find /opt/src -name '*.pyc' -exec rm -f {} +", True),
+        # Copilot review of 12:40 UTC: a recursive rm, or a mv, takes its
+        # directories away, so a later cd into one fails and stays where it was.
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; rm -rf /tmp/gone; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; mv /tmp/gone /tmp/moved; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN mkdir /tmp/gone; rm -f /tmp/gone; cd /tmp/gone;"
+            " rm -f .connector_version.json",
+            True,
+        ),
+        # Copilot review of 12:40 UTC: the initializer of a package that python
+        # -m imports first may hold what a build step wrote.
+        (
+            "COPY --from=python:3.12-alpine /etc/os-release /opt/src/pip/__init__.py\n"
+            "WORKDIR /opt/src\nRUN python3 -m pip install requests",
+            False,
+        ),
+        (
+            "COPY --from=python:3.12-alpine /etc/os-release /opt/src/tools/__init__.py\n"
+            "WORKDIR /opt/src\nRUN python3 -m pip install requests",
+            True,
+        ),
         # A device holds no file, unless the build made it a link to one.
         ("RUN ls /opt/src > /dev/null 2> /dev/stderr", True),
         (
@@ -2559,6 +2614,26 @@ def test_list_continued_on_the_next_line(tmp_path, lines, covered):
         "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
         "entrypoint.sh": f'#!/bin/sh\n{lines}rm -f "$APP/.connector_version.json"\n'
         "cd /opt/sample\nexec python3 main.py\n",
+    }
+    assert single(tmp_path, files).covered is covered
+
+
+@pytest.mark.parametrize(
+    "removal, covered",
+    [
+        # Copilot review of 12:40 UTC: the directory a recursive rm removed is
+        # gone, the cd fails and the shell stays in /opt/app.
+        ("rm -rf /tmp/gone", False),
+        ("rm -r -- /tmp/gone", False),
+        ("rm -f /tmp/gone", True),
+    ],
+)
+def test_cd_into_a_removed_directory_in_an_entry_script(tmp_path, removal, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/app\nRUN mkdir /tmp/gone\n"
+        'COPY entrypoint.sh /\nWORKDIR /opt/app\nENTRYPOINT ["/entrypoint.sh"]\n',
+        "entrypoint.sh": f"#!/bin/sh\n{removal}\ncd /tmp/gone\n"
+        "rm -f .connector_version.json\nexec python3 /opt/app/main.py\n",
     }
     assert single(tmp_path, files).covered is covered
 
