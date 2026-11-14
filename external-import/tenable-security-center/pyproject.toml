@@ -18,7 +18,7 @@ classifiers = [
 dependencies = [
     "pycti==7.261109.0",
     "validators~=0.36.0",
-    "pydantic==2.14.0",
+    "pydantic==2.14.3",
     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
     "restfly==1.5.1",

@@ -3,7 +3,7 @@ datefinder
 idna
 pika
 pycti==7.261109.0
-pydantic==2.14.0
+pydantic==2.14.3
 pydantic-settings>=2.0
 python-dateutil
 pytz
