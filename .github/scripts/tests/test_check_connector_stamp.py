@@ -1014,6 +1014,12 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN pip freeze > /tmp/requirements.txt && pip check", True),
         ("ENV PIP_TARGET=/opt/elsewhere\nRUN pip install requests", False),
         ("ENV PIP_NO_CACHE_DIR=1\nRUN pip install requests", True),
+        # Copilot review of 04:56 UTC: the environment of the command counts.
+        ("RUN PIP_REPORT=/opt/src/.connector_version.json pip install requests", False),
+        (
+            "RUN env PIP_LOG=/opt/src/.connector_version.json python3 -m pip install requests",
+            False,
+        ),
         ("RUN echo '[global]' > /etc/pip.conf && pip install requests", False),
         # Copilot review of 04:10 UTC: env options, a command after && that may
         # not run, pip global options.
@@ -1486,6 +1492,16 @@ def test_base_images_of_the_final_stage(tmp_path, base, covered):
         (
             "FROM node:20 AS tools\nFROM python:3.12-alpine\nCOPY src /opt/src\n"
             "COPY --from=tools /usr/local/bin/ /usr/local/bin/\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        # Copilot review of 04:56 UTC: in a stage built on such an image, even
+        # the files of the model may have been rewritten by its programs.
+        (
+            "FROM ghcr.io/example/base:1 AS builder\nCOPY src /opt/src\n"
+            "RUN python3 -m compileall /opt/src\n"
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "COPY --from=builder /opt/src/.connector_version.json /opt/src/.connector_version.json\n"
             'CMD ["python3", "/opt/src/main.py"]\n',
             False,
         ),
