@@ -281,6 +281,10 @@ def test_stamp_restored_after_the_code_directory_is_removed(tmp_path):
         ),
         ("find /opt/src -name '*.json' -exec sed -i s/a/b/ {} +", False),
         ("find /opt/src -type f -exec chmod +r {} +", True),
+        # Copilot review of 05:48 UTC: a test after an action does not narrow it.
+        ("find /opt/src -name '*.json' -delete -name '*.pyc'", False),
+        ("find /opt/src -name '*.json' -exec rm {} \\; -name '*.pyc'", False),
+        ("find /opt/src -name '*.pyc' -delete -name '*.json'", True),
         # Copilot review of 23:37 UTC: truncation and rewriting by redirection.
         (": > /opt/src/.connector_version.json", False),
         ("echo '{}' >> /opt/src/.connector_version.json", False),
@@ -688,10 +692,32 @@ def test_package_data_that_does_not_select_the_stamp(tmp_path, packaging):
         {
             "setup.cfg": "[options.package_data]\nsample_connector =\n    .connector_version.json\n    *.txt\n"
         },
+        {
+            "pyproject.toml": (
+                '[build-system]\nbuild-backend = "setuptools.build_meta"\n'
+                '[tool.setuptools.package-data]\n"*" = [".connector_version.json"]\n'
+            )
+        },
     ],
 )
 def test_package_data_that_selects_the_stamp(tmp_path, packaging):
     assert packaged(tmp_path, packaging).covered
+
+
+def test_local_project_of_another_build_backend_is_reported(tmp_path):
+    # Copilot review of 05:48 UTC: pip runs the backend, and its build hooks,
+    # for every local install, even when the stamp lies outside any package.
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/src\nRUN pip install /opt/src\n"
+                'CMD ["python3", "/opt/src/main.py"]\n'
+            ),
+            "src/pyproject.toml": '[build-system]\nbuild-backend = "hatchling.build"\n',
+        },
+    )
+    assert image.reason == "not supported: /opt/src: the build backend hatchling.build"
 
 
 @pytest.mark.parametrize(
@@ -702,7 +728,7 @@ def test_package_data_that_selects_the_stamp(tmp_path, packaging):
                 "pyproject.toml": '[build-system]\nbuild-backend = "hatchling.build"\n',
                 "setup.cfg": "[options.package_data]\nsample_connector = .connector_version.json\n",
             },
-            "package data of the build backend hatchling.build",
+            "/opt/build: the build backend hatchling.build",
         ),
         (
             {
@@ -1464,6 +1490,23 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'CMD ["python3", "/opt/src/main.py"]\n',
             "stamp at /opt/src/.connector_version.json",
         ),
+        # Copilot review of 05:48 UTC: the shell form of HEALTHCHECK runs with the
+        # SHELL of the image, as RUN does.
+        (
+            'FROM python:3.12-alpine\nENV BASH_ENV=/opt/env.sh\nSHELL ["/bin/bash", "-c"]\n'
+            'COPY src /opt/src\nHEALTHCHECK CMD true\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: bash with BASH_ENV set",
+        ),
+        (
+            'FROM python:3.12-alpine\nENV BASH_ENV=/opt/env.sh\nSHELL ["/bin/bash", "-c"]\n'
+            'COPY src /opt/src\nHEALTHCHECK CMD ["true"]\nCMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+        (
+            'FROM python:3.12-alpine\nSHELL ["/usr/bin/pwsh", "-c"]\nCOPY src /opt/src\n'
+            'HEALTHCHECK CMD true\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: HEALTHCHECK through the shell /usr/bin/pwsh",
+        ),
         # Copilot review of 01:56 UTC: any blank ends a COPY flag.
         (
             "FROM python:3.12-alpine\nCOPY --exclude=**/*.json\t src /opt/src\n"
@@ -1762,6 +1805,12 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
             'RUN rm -f /tmp/cache\nCMD ["python3", "/opt/sample/main.py"]\n',
             {"clean.sh": "#!/bin/sh\n/bin/rm -rf /opt/sample\n"},
         ),
+        # Copilot review of 05:48 UTC: the SHELL of a shell-form HEALTHCHECK.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY --chmod=755 wrapper.sh /opt/sh\n"
+            'SHELL ["/opt/sh", "-c"]\nHEALTHCHECK CMD true\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER},
+        ),
     ],
 )
 def test_programs_shadowed_on_the_path(tmp_path, dockerfile, extra):
@@ -1922,6 +1971,23 @@ def test_build_semantics_of_docker_and_pip(tmp_path, files, reason):
         ),
         # A local wheel or source archive: its content is not read.
         ("RUN pip install /opt/src/dist/sample-1.0-py3-none-any.whl", {}, False),
+        # Copilot review of 05:48 UTC: pip takes an archive name as a local file,
+        # without a slash too, on the command line and in a requirement file.
+        (
+            "WORKDIR /opt/src\nRUN pip install payload.tar.gz",
+            {"src/payload.tar.gz": ""},
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN pip install Payload.ZIP",
+            {"src/Payload.ZIP": ""},
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN pip install -r requirements.txt",
+            {"src/requirements.txt": "payload.tbz\n", "src/payload.tbz": ""},
+            False,
+        ),
         # A requirement file the model cannot read.
         ("RUN pip install -r /usr/share/requirements.txt", {}, False),
         # A bind mount of the context shows its files at the target.
@@ -2008,6 +2074,73 @@ def test_symbolic_links_of_the_context(tmp_path):
     [image] = result(tmp_path, connector)
     assert image.reason == (
         "not supported: python script /opt/app/main.py is not a file of the image model"
+    )
+
+
+@pytest.mark.parametrize(
+    "instructions, reason",
+    [
+        # Copilot review of 05:48 UTC: COPY writes through a link of the build.
+        (
+            "RUN ln -s /usr/local/bin /alias\nCOPY wrapper.sh /alias/python3",
+            "not supported: COPY to /alias/python3 goes through the link /alias the build created",
+        ),
+        (
+            "RUN ln -s /usr/local/bin /alias\nCOPY wrapper.sh /alias/",
+            "not supported: COPY to /alias/wrapper.sh goes through the link /alias the build created",
+        ),
+        (
+            "RUN ln -s /usr/local/bin /alias\nCOPY wrapper.sh /opt/wrapper.sh",
+            "stamp at /opt/sample/.connector_version.json",
+        ),
+        # Copilot review of 05:48 UTC: a link a stage created stays a link in the
+        # stage that copies it.
+        (
+            "RUN ln -s /opt/sample /opt/sample/link\nFROM python:3.12-alpine\n"
+            "COPY --from=0 /opt/sample /opt/sample\n"
+            "RUN rm -f /opt/sample/link/.connector_version.json",
+            "not supported: /opt/sample/link/.connector_version.json goes through the link"
+            " /opt/sample/link the build created",
+        ),
+        (
+            "RUN ln -s /opt/sample /opt/sample/link\nFROM python:3.12-alpine\n"
+            "COPY --from=0 /opt/sample /opt/sample",
+            "stamp at /opt/sample/.connector_version.json",
+        ),
+    ],
+)
+def test_copies_through_links_of_the_build(tmp_path, instructions, reason):
+    files = {
+        "Dockerfile": (
+            f"FROM python:3.12-alpine\nCOPY src /opt/sample\n{instructions}\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n'
+        ),
+        "wrapper.sh": ENV_WRAPPER,
+    }
+    assert single(tmp_path, files).reason == reason
+
+
+def test_operations_through_a_link_of_the_context(tmp_path):
+    # Copilot review of 05:48 UTC: a copied link of the context is a link whose
+    # target is not modelled.
+    connector = make_connector(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/app\n"
+                "RUN rm -f /opt/app/link/.connector_version.json\n"
+                'CMD ["python3", "/opt/app/main.py"]\n'
+            )
+        },
+    )
+    try:
+        (connector / "src/link").symlink_to(".", target_is_directory=True)
+    except OSError:
+        pytest.skip("symbolic links cannot be created here")
+    [image] = result(tmp_path, connector)
+    assert image.reason == (
+        "not supported: /opt/app/link/.connector_version.json goes through the link"
+        " /opt/app/link the build created"
     )
 
 
