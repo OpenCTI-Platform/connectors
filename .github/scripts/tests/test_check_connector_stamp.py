@@ -3810,6 +3810,140 @@ def test_package_installed_from_the_root(tmp_path, packaging):
     )
 
 
+@pytest.mark.parametrize(
+    "instructions, reason",
+    [
+        # Copilot review of 03:00 UTC: python -m also imports from the library
+        # directories of the interpreter, the standard library before
+        # site-packages.
+        (
+            "COPY remove.py /usr/local/lib/python3.12/compileall.py\n"
+            "RUN python3 -m compileall -q /opt/src",
+            "not supported: python -m compileall may run"
+            " /usr/local/lib/python3.12/compileall.py, a file the build wrote,"
+            " instead of the module of the interpreter",
+        ),
+        (
+            "COPY remove.py /usr/local/lib/python3.12/site-packages/pip/__main__.py\n"
+            "RUN python3 -m pip install requests",
+            "not supported: python -m pip may run"
+            " /usr/local/lib/python3.12/site-packages/pip/__main__.py, a file the"
+            " build wrote, instead of the module of the interpreter",
+        ),
+        (
+            "COPY --from=example/tools:1 /lib /usr/local/lib/python3.12\n"
+            "RUN python3 -m compileall -q /opt/src",
+            "not supported: python -m compileall: /usr/local/lib/python3.12 holds"
+            " what a build command wrote",
+        ),
+        (
+            "COPY remove.py /usr/local/lib/python3.12/site-packages/compileall.py\n"
+            "RUN python3 -m compileall -q /opt/src",
+            "stamp at /opt/src/.connector_version.json",
+        ),
+    ],
+)
+def test_modules_of_the_interpreter_library_at_build_time(
+    tmp_path, instructions, reason
+):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\n{instructions}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "remove.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    assert single(tmp_path, files).reason == reason
+
+
+@pytest.mark.parametrize(
+    "instructions, covered",
+    [
+        # Copilot review of 03:00 UTC: a cd sets PWD and OLDPWD, a shell starts
+        # with PWD at its working directory, and a cd that may not run leaves
+        # them unknown.
+        (
+            "ENV PWD=/tmp\nRUN cd /tmp && cd /opt/src"
+            ' && rm -f "$PWD/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV PWD=/tmp\nWORKDIR /opt/src\nRUN rm -f "$PWD/.connector_version.json"',
+            False,
+        ),
+        (
+            "ENV PWD=/tmp\nWORKDIR /opt/src\nRUN if [ -d /x ]; then cd /tmp; fi;"
+            ' rm -f "$PWD/.connector_version.json"',
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN cd /tmp"
+            ' && rm -f "$OLDPWD/.connector_version.json"',
+            False,
+        ),
+        ('WORKDIR /opt/src\nRUN cd /tmp && rm -f "$PWD/.connector_version.json"', True),
+        ('WORKDIR /opt/src\nRUN rm -f "$PWD/main.pyc"', True),
+    ],
+)
+def test_pwd_follows_the_working_directory(tmp_path, instructions, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\n{instructions}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "package_data, exclude, reason",
+    [
+        # Copilot review of 03:00 UTC: an installed package keeps every identity
+        # file its package data ships, and pycti reads the manifest first.
+        (
+            '[".connector_version.json", "__metadata__/*.json"]',
+            None,
+            "pycti reads /<site-packages>/sample_connector/__metadata__/"
+            "connector_manifest.json (sample_connector/__metadata__/"
+            "connector_manifest.json of the build context, version '6.0.0')"
+            " before any build stamp",
+        ),
+        (
+            '["**/*.json", ".connector_version.json"]',
+            None,
+            "pycti reads /<site-packages>/sample_connector/__metadata__/"
+            "connector_manifest.json (sample_connector/__metadata__/"
+            "connector_manifest.json of the build context, version '6.0.0')"
+            " before any build stamp",
+        ),
+        (
+            '[".connector_version.json", "__metadata__/*.json"]',
+            '["__metadata__/*"]',
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+        (
+            '[".connector_version.json"]',
+            None,
+            "stamp at /<site-packages>/sample_connector/.connector_version.json",
+        ),
+    ],
+)
+def test_installed_package_keeps_its_identity_files(
+    tmp_path, package_data, exclude, reason
+):
+    pyproject = f"[tool.setuptools.package-data]\nsample_connector = {package_data}\n"
+    if exclude:
+        pyproject += (
+            f"[tool.setuptools.exclude-package-data]\nsample_connector = {exclude}\n"
+        )
+    manifest = '{"container_version": "6.0.0", "slug": "other"}'
+    image = packaged(
+        tmp_path,
+        {
+            "pyproject.toml": pyproject,
+            "sample_connector/__metadata__/connector_manifest.json": manifest,
+        },
+    )
+    assert image.reason == reason
+
+
 def test_main_reports_and_fails_on_an_uncovered_image(tmp_path, capsys):
     make_connector(tmp_path, {"Dockerfile": ALPINE_SRC}, path="stream/good")
     make_connector(
