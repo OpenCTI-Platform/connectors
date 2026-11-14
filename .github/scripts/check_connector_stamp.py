@@ -531,6 +531,12 @@ DOWNLOADER_CONFIGS = {
     "wget": ({".wgetrc", "wgetrc"}, ("WGETRC", "SYSTEM_WGETRC")),
     "curl": ({".curlrc", "curlrc", "_curlrc"}, ("CURL_HOME", "XDG_CONFIG_HOME")),
 }
+CURL_URL_GLOB = re.compile(r"[{\[]")
+CURL_GLOB_REFERENCE = re.compile(r"#\d")
+# Where git reads the configuration and the template of a clone, whose hooks
+# run; GIT_ variables name any other place.
+GIT_PLACES = ("/etc/gitconfig", "/usr/share/git-core/templates")
+GIT_HOME_PLACES = (".gitconfig", ".config/git")
 GIT_CLONE_OPTIONS_WITH_VALUE = frozenset(
     {
         "-b",
@@ -1771,6 +1777,7 @@ def download_outputs(program, args, cwd):
     outputs, bodies, urls = [], [], []
     directory = None
     remote_name = program == "wget"
+    globbing = program == "curl"
     i = 0
     while i < len(args):
         arg = args[i]
@@ -1799,6 +1806,8 @@ def download_outputs(program, args, cwd):
                 if option in ("-O", "--remote-name", "--remote-name-all"):
                     # curl: the file takes the name of the URL.
                     remote_name = True
+                elif option in ("-g", "--globoff"):
+                    globbing = False
                 continue
             if option not in with_value:
                 raise Unsupported(
@@ -1817,6 +1826,16 @@ def download_outputs(program, args, cwd):
                 directory = value
             elif option == "--url":
                 urls.append(value)
+    # curl expands {a,b} and [1-3] of a URL into several transfers, and #N of
+    # an output name into the text the Nth glob matched.
+    if globbing and (
+        any(CURL_URL_GLOB.search(url) for url in urls)
+        and (remote_name or any(o != "-" for o in (*outputs, *bodies)))
+        or any(CURL_GLOB_REFERENCE.search(o) for o in (*outputs, *bodies))
+    ):
+        raise Unsupported(
+            f"{program} with a URL glob: the files it writes are not modelled"
+        )
     if remote_name:
         for url in urls:
             bodies.append(
@@ -2932,7 +2951,7 @@ class Shell:
             # or in /etc, including below a directory a COPY filled.
             places = [
                 posixpath.join(home, config)
-                for home in ("/root", "/etc", self.variables.get("HOME", "/root"))
+                for home in ("/root", "/etc", self._home(name))
                 for config in names
             ]
             # The environment of the command, prefix assignments and env included.
@@ -2948,14 +2967,46 @@ class Shell:
             return
         if name == "git" and args[:1] == ["clone"]:
             # A clone creates a new directory (git refuses a non-empty one),
-            # whose content the model does not know.
+            # whose content the model does not know. Its post-checkout hook, from
+            # a template or a hooks path, runs any command.
+            written = (*self.files, *self.stage.replaced)
+            places = [
+                *GIT_PLACES,
+                *(posixpath.join(self._home("git clone"), p) for p in GIT_HOME_PLACES),
+                *(posixpath.join("/root", p) for p in GIT_HOME_PLACES),
+            ]
+            if (
+                any(
+                    v.startswith("GIT_") or v == "XDG_CONFIG_HOME"
+                    for v in (*self.variables, *(env or {}))
+                )
+                or any(self.stage.written(place) for place in places)
+                or any(
+                    path == place or path.startswith(place + "/")
+                    for path in (*written, *self.stage.unknown_dirs)
+                    for place in places
+                )
+            ):
+                raise Unsupported(
+                    "git clone with a configuration or a template of the build"
+                )
             operands = []
             i = 1
             while i < len(args):
-                if args[i] == "--separate-git-dir" or args[i].startswith(
-                    "--separate-git-dir="
-                ):
-                    raise Unsupported("git clone --separate-git-dir")
+                # git takes a unique prefix of a long option, and a short option
+                # with its value attached or in a cluster.
+                option = args[i].split("=", 1)[0]
+                if args[i].startswith("--") and len(option) > 2:
+                    for name in ("--separate-git-dir", "--template", "--config"):
+                        if name.startswith(option):
+                            raise Unsupported(
+                                f"git clone {name}: the place of the repository, its "
+                                "hooks or its configuration are not modelled"
+                            )
+                elif args[i].startswith("-") and "c" in args[i]:
+                    raise Unsupported(
+                        "git clone -c: its configuration may run any command"
+                    )
                 if args[i] in GIT_CLONE_OPTIONS_WITH_VALUE:
                     i += 2
                     continue
@@ -3189,9 +3240,19 @@ class Shell:
         created is reported)."""
         return image_path(self._tilde(value), self.cwd, what, self.stage.links)
 
+    def _home(self, what):
+        """HOME of the shell; after a USER other than root, Docker takes it from
+        the account database of the image, which the model does not read."""
+        home = self.variables.get("HOME", "/root")
+        if home == UNKNOWN:
+            raise Unsupported(
+                f"{what} uses HOME, which the model does not know after a USER"
+            )
+        return home
+
     def _tilde(self, value):
         if value == "~" or value.startswith("~/"):
-            return self.variables.get("HOME", "/root") + value[1:]
+            return self._home(f"path '{value}'") + value[1:]
         if value.startswith("~"):
             # ~NAME is the home directory of NAME in the account database of the
             # image, ~+ and ~- the current and the previous directory.
@@ -3630,7 +3691,7 @@ class Shell:
                 "/etc/xdg/pip",
                 "/root/.pip",
                 "/root/.config/pip",
-                posixpath.join(self.variables.get("HOME", "/root"), ".config/pip"),
+                posixpath.join(self._home("pip"), ".config/pip"),
             )
             for name in ("pip.conf", "pip.ini")
         ]
@@ -3757,6 +3818,16 @@ class ImageModel:
                         value = expand(value, before)
                         stage.variables[key] = value
                         stage.env[key] = value
+            elif instruction == "USER":
+                # Docker takes HOME from the account of a user other than root,
+                # unless an ENV sets it.
+                user = expand(arguments, stage.variables).split(":", 1)[0].strip()
+                for table in (stage.env, stage.variables):
+                    if table.get("HOME", UNKNOWN) == UNKNOWN:
+                        if user in ("root", "0"):
+                            table.pop("HOME", None)
+                        else:
+                            table["HOME"] = UNKNOWN
             elif instruction == "WORKDIR":
                 stage.workdir = image_path(
                     expand(arguments, stage.variables), stage.workdir, "WORKDIR"
