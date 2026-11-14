@@ -17,3 +17,4 @@ luminar:
   client_secret: 'ChangeMe'
   create_observable: True
   initial_fetch_date: 'YYYY-MM-DD'
+  mask_credentials: False # True: store leaked credentials as first+last character only (e.g. 'c******e')

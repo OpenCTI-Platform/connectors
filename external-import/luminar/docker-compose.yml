@@ -16,4 +16,5 @@ services:
       - LUMINAR_CLIENT_SECRET=ChangeMe
       - LUMINAR_INITIAL_FETCH_DATE=YYYY-MM-DD
       - LUMINAR_CREATE_OBSERVABLE=true
+      - LUMINAR_MASK_CREDENTIALS=false
     restart: always
