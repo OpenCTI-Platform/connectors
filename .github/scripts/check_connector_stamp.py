@@ -317,7 +317,6 @@ HARMLESS_COMMANDS = frozenset(
         "touch",
         "true",
         "type",
-        "umask",
         "uname",
         "useradd",
         "wait",
@@ -717,6 +716,8 @@ PIP_OPTIONS_WITH_VALUE = frozenset(
 PIP_RELOCATING_OPTIONS = frozenset(
     {"-t", "--target", "--prefix", "--root", "--user", "--home", "--src"}
 )
+# The ones that may put packages on the path ahead of site-packages.
+PIP_SHADOWING_OPTIONS = frozenset({"-t", "--target", "--root", "--user", "--home"})
 # Options whose value is a file pip writes.
 PIP_WRITE_OPTIONS = frozenset({"--report", "--log", "--log-file"})
 # The archive names pip takes as a local file, slash or not (its ARCHIVE_EXTENSIONS).
@@ -2482,13 +2483,17 @@ class Shell:
         if before == "||":
             self._forget_chain_changes()
         uncertain = before in ("&&", "|") or after in ("|", "&")
-        if not uncertain:
-            self._simple_command(words, writes, before, after, reads)
-            return
         variables, cwd, dirs = dict(self.variables), self.cwd, set(self.stage.dirs)
         exported, allexport = set(self.exported), self.allexport
         files = dict(self.files)
         self._simple_command(words, writes, before, after, reads)
+        if any(t not in ("(", "{") for t in self.stack) or before == "||":
+            # In a branch or a loop, or after ||, it may not have run: what it
+            # deleted may still be there.
+            self._uncertain_files([path for path in files if path not in self.files])
+            self._uncertain(dirs - self.stage.dirs)
+        if not uncertain:
+            return
         # The paths it wrote or deleted.
         self.chain_files |= {
             path
@@ -3670,6 +3675,17 @@ class Shell:
             arg = args[i]
             option, sep, attached = arg.partition("=")
             value = attached if sep else (args[i + 1] if i + 1 < len(args) else None)
+            if command == "install" and (
+                option in PIP_SHADOWING_OPTIONS or re.fullmatch(r"-t.+", arg)
+            ):
+                # The user site comes before the system site-packages, and a
+                # target or a root may be any directory on the path, the
+                # script directory included: what lands there, published
+                # packages included, comes before what the model keeps.
+                shown = option if option.startswith("--") else "-t"
+                raise Unsupported(
+                    f"pip install {shown}: packages ahead of the installed ones"
+                )
             if option in PIP_WRITE_OPTIONS or option in PIP_RELOCATING_OPTIONS:
                 relocated = relocated or option in PIP_RELOCATING_OPTIONS
                 if option == "--user":
