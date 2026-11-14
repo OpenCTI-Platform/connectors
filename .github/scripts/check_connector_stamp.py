@@ -202,6 +202,11 @@ ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
 COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
+# The set -o options that only stop the shell on errors, trace it or export
+# its assignments.
+SET_OPTION_NAMES = frozenset(
+    {"allexport", "errexit", "nounset", "pipefail", "verbose", "xtrace"}
+)
 # Prefixes that are programs found on PATH, not shell builtins (time is a
 # keyword of bash, a program for sh).
 EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo", "time"})
@@ -730,6 +735,8 @@ SETUPTOOLS_BACKENDS = frozenset(
 )
 # The files of a project that tell setuptools what to install.
 PACKAGING_FILES = ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in")
+# The build requirements that bring no setuptools file finder.
+BUILD_REQUIREMENTS = frozenset({"setuptools", "wheel"})
 PYTHON_OPTIONS_WITH_VALUE = frozenset({"-W", "-X", "--check-hash-based-pycs"})
 
 
@@ -1421,20 +1428,65 @@ class PackagingConfig:
             # setup() can override discovery, package data and directories.
             self.unsupported = self.unsupported or "packaging declared in setup.py"
         manifest = texts.get("MANIFEST.in")
-        if manifest is not None and re.search(
-            r"^\s*(exclude|recursive-exclude|global-exclude|prune)\b", manifest, re.M
-        ):
-            self.unsupported = self.unsupported or "exclusions of MANIFEST.in"
+        if manifest is not None and re.search(r"^\s*[^#\s]", manifest, re.M):
+            # With include-package-data, the files of the project's file list
+            # that lie in a package are installed with it, whatever its
+            # package data says.
+            self.unsupported = (
+                self.unsupported
+                or "MANIFEST.in, whose files setuptools may install as package data"
+            )
+
+    def _file_list(self, requirements, license_files, referenced=()):
+        """Build requirements whose file finders, license files and the readme
+        or license file of the metadata add to the file list that
+        include-package-data installs from."""
+        for path in referenced:
+            if "/" in str(path).strip().strip("./"):
+                self.unsupported = (
+                    self.unsupported
+                    or f"the file {path} of the metadata, which setuptools may install as package data"
+                )
+        for requirement in requirements:
+            match = re.match(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)", str(requirement))
+            name = re.sub(r"[-_.]+", "-", match.group(1)).lower() if match else ""
+            if name not in BUILD_REQUIREMENTS:
+                self.unsupported = (
+                    self.unsupported
+                    or f"the build requirement {requirement}, whose file finders may add package data"
+                )
+        if license_files:
+            self.unsupported = (
+                self.unsupported
+                or "license files, which setuptools may install as package data"
+            )
 
     def _read_pyproject(self, text):
         try:
             data = tomllib.loads(text)
         except tomllib.TOMLDecodeError as error:
             raise Unsupported(f"pyproject.toml not readable: {error}") from error
-        backend = data.get("build-system", {}).get("build-backend")
+        build_system = data.get("build-system", {})
+        backend = build_system.get("build-backend")
         if backend is not None and backend not in SETUPTOOLS_BACKENDS:
             self.unsupported = f"package data of the build backend {backend}"
         tool = data.get("tool", {}).get("setuptools", {})
+        project = data.get("project", {})
+        readme = project.get("readme")
+        referenced = [readme] if isinstance(readme, str) else []
+        dynamic_readme = tool.get("dynamic", {}).get("readme")
+        for value in (readme, project.get("license"), dynamic_readme):
+            if isinstance(value, dict):
+                files = value.get("file", [])
+                referenced += [files] if isinstance(files, str) else list(files)
+        requires = build_system.get("requires", [])
+        self._file_list(
+            requires if isinstance(requires, list) else [requires],
+            project.get("license-files")
+            or tool.get("license-files")
+            or tool.get("license_files"),
+            referenced,
+        )
         for key in ("package-data", "package_data"):
             for package, patterns in tool.get(key, {}).items():
                 self.package_data.setdefault(package, []).extend(patterns)
@@ -1469,6 +1521,18 @@ class PackagingConfig:
 
         def values(raw):
             return [v.strip() for v in re.split(r"[,\n]", raw) if v.strip()]
+
+        description = parser.get("metadata", "long_description", fallback="")
+        self._file_list(
+            values(parser.get("options", "setup_requires", fallback="")),
+            parser.get("metadata", "license_files", fallback="").strip()
+            or parser.get("metadata", "license_file", fallback="").strip(),
+            (
+                values(description.strip()[len("file:") :])
+                if description.strip().startswith("file:")
+                else []
+            ),
+        )
 
         if parser.has_section("options.package_data"):
             for package, raw in parser.items("options.package_data"):
@@ -2514,12 +2578,31 @@ class Shell:
             self.allexport = allexport
 
     def _set_options(self, args):
-        """set -a / +a (and -o / +o allexport): assignments exported or not."""
-        for index, arg in enumerate(args):
-            if arg in ("-o", "+o") and args[index + 1 : index + 2] == ["allexport"]:
-                self.allexport = arg == "-o"
-            elif re.fullmatch(r"[-+][a-zA-Z]+", arg) and "a" in arg:
-                self.allexport = arg.startswith("-")
+        """set -a / +a (and -o / +o allexport): assignments exported or not. The
+        options that stop the shell on errors or trace it are accepted; the
+        others (noglob, noclobber, noexec...) change what commands do."""
+        index = 0
+        while index < len(args):
+            arg = args[index]
+            if not re.fullmatch(r"[-+][a-zA-Z]+", arg):
+                # "--", "-" or an operand: the rest are positional parameters,
+                # whose values the model does not know.
+                return
+            on = arg.startswith("-")
+            if not re.fullmatch(r"[aeuxv]*o?[aeuxv]*", arg[1:]):
+                raise Unsupported(f"shell option set {arg}")
+            if "a" in arg:
+                self.allexport = on
+            if "o" not in arg:
+                index += 1
+                continue
+            # -o (alone or with other flags) names an option in the next word.
+            name = args[index + 1] if index + 1 < len(args) else None
+            if name is not None and name not in SET_OPTION_NAMES:
+                raise Unsupported(f"shell option set {arg} {name}")
+            if name == "allexport":
+                self.allexport = on
+            index += 2
 
     def _substitute(self, words, conditional):
         """Run the command substitutions of ``words``: their commands run before
@@ -4626,6 +4709,21 @@ class ImageModel:
             if src_layout
             else ["."] + [r for r in self._roots(texts) if r != "."]
         )
+        # setuptools reuses the file list of an egg-info directory at the base
+        # of the project, which include-package-data installs from.
+        bases = [
+            posixpath.normpath(posixpath.join(install_dir, root)).rstrip("/") + "/"
+            for root in (".", *roots)
+        ]
+        egg_info = any(
+            stage.written(base + "project.egg-info")
+            or any(
+                path.startswith(base)
+                and path[len(base) :].split("/")[0].endswith(".egg-info")
+                for path in (*files, *stage.replaced, *stage.unknown_dirs)
+            )
+            for base in bases
+        )
         for root in roots:
             base = posixpath.normpath(posixpath.join(install_dir, root))
             prefix = base.rstrip("/") + "/"
@@ -4639,7 +4737,13 @@ class ImageModel:
                 }
             )
             for package in names:
-                config = config or PackagingConfig(texts)
+                if config is None:
+                    config = PackagingConfig(texts)
+                    if egg_info:
+                        config.unsupported = (
+                            config.unsupported
+                            or f"an egg-info directory in {install_dir}, whose file list setuptools may install as package data"
+                        )
                 package_dir = prefix + package
                 has_init = f"{package_dir}/__init__.py" in files
                 if (
