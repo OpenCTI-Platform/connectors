@@ -895,6 +895,40 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             "RUN curl -fsSL -o /opt/src/.connector_version.json https://example.com/x",
             False,
         ),
+        # Copilot review of 01:21 UTC: the commands of a substitution run too.
+        ('RUN echo "$(rm -f /opt/src/.connector_version.json)"', False),
+        ("RUN echo $(rm -f /opt/src/.connector_version.json)", False),
+        ('RUN VERSION="$(cat /opt/src/main.py)" && echo "$VERSION $((1 + 2))"', True),
+        ("RUN echo `rm -f /opt/src/.connector_version.json`", False),
+        (
+            "RUN for name in $(rm -f /opt/src/.connector_version.json); do :; done",
+            False,
+        ),
+        # A for loop sets its variable.
+        (
+            'ENV APP=/tmp\nRUN for APP in /opt/src; do rm -f "$APP/.connector_version.json"; done',
+            False,
+        ),
+        ("RUN cat <(rm -f /opt/src/.connector_version.json)", False),
+        # Copilot review of 01:21 UTC: case arms, eval and a script read from stdin.
+        ("RUN case x in x) rm -f /opt/src/.connector_version.json;; esac", False),
+        ("RUN eval 'rm -f /opt/src/.connector_version.json'", False),
+        ("RUN echo 'rm -f /opt/src/.connector_version.json' | sh", False),
+        # Copilot review of 01:21 UTC: a directory needs its search permission.
+        ("RUN chmod 644 /opt/src", False),
+        ("RUN chmod -R 644 /opt/src", False),
+        ("RUN chmod 755 /opt/src && chmod 644 /opt/src/main.py", True),
+        # Copilot review of 01:21 UTC: target directory options written attached.
+        ("RUN mv -t/opt/src /tmp/.connector_version.json", False),
+        ("RUN mv --target-directory=/opt/src /tmp/.connector_version.json", False),
+        ("RUN mv -T /tmp/new /opt/src", False),
+        ("RUN mv /tmp/new /opt/src", True),
+        ("RUN ln -sft/opt/src /tmp/.connector_version.json", False),
+        # Copilot review of 01:21 UTC: printf -v sets a variable.
+        (
+            'ENV APP=/tmp\nRUN printf -v APP %s /opt/src; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
     ],
 )
 def test_build_steps(tmp_path, instructions, covered):
@@ -1113,6 +1147,135 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
         },
     )
     assert image.covered
+
+
+@pytest.mark.parametrize(
+    "dockerfile, reason",
+    [
+        # Copilot review of 01:21 UTC: any blank ends the instruction name.
+        (
+            "FROM python:3.12-alpine\nCOPY\tsrc /opt/src\n"
+            "RUN\trm -f /opt/src/.connector_version.json\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "no COPY carries a stamp into the final image",
+        ),
+        # Copilot review of 01:21 UTC: ONBUILD triggers run in another stage.
+        (
+            "FROM python:3.12-alpine AS base\nONBUILD RUN rm -rf /opt/src\n"
+            'FROM base\nCOPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the ONBUILD instruction",
+        ),
+        # Copilot review of 01:21 UTC: the escape directive after another directive.
+        (
+            "# syntax=docker/dockerfile:1\n# escape=`\nFROM python:3.12-alpine\n"
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the escape parser directive",
+        ),
+        (
+            "# A comment ends the directives.\n# escape=`\nFROM python:3.12-alpine\n"
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+        # The health check runs while the connector runs.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "HEALTHCHECK --interval=5m CMD rm -f /opt/src/.connector_version.json\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: the HEALTHCHECK command changes files of the image",
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "HEALTHCHECK --interval=5m CMD pgrep -f main.py > /dev/null || exit 1\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+        # Copilot review of 01:21 UTC: copied directories get the --chmod mode too.
+        (
+            "FROM python:3.12-alpine\nCOPY --chmod=644 src /opt/src\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "no COPY carries a stamp into the final image",
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY --chmod=755 src /opt/src\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
+    ],
+)
+def test_dockerfile_syntax(tmp_path, dockerfile, reason):
+    image = single(tmp_path, {"Dockerfile": dockerfile})
+    assert image.reason == reason
+
+
+@pytest.mark.parametrize(
+    "dockerfile, extra",
+    [
+        # Copilot review of 01:21 UTC: a file on PATH under the name of python runs.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /usr/local/bin/python3\nWORKDIR /opt/sample\n"
+            'CMD ["python3", "main.py"]\n',
+            {"wrapper.sh": '#!/bin/sh\ncd /tmp\nexec /usr/local/bin/python3.12 "$@"\n'},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "RUN ln -sf /usr/bin/env /usr/local/bin/python3\nWORKDIR /opt/sample\n"
+            'CMD ["python3", "main.py"]\n',
+            {},
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY clean.sh /usr/local/bin/rm\n"
+            'RUN rm -f /tmp/cache\nCMD ["python3", "/opt/sample/main.py"]\n',
+            {"clean.sh": "#!/bin/sh\n/bin/rm -rf /opt/sample\n"},
+        ),
+    ],
+)
+def test_programs_shadowed_on_the_path(tmp_path, dockerfile, extra):
+    image = single(tmp_path, {"Dockerfile": dockerfile, **extra})
+    assert not image.covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "env, command, covered",
+    [
+        # Copilot review of 01:21 UTC: -P keeps PYTHONPATH, -I ignores it.
+        ("PYTHONPATH=/opt/connector", '["python3", "-P", "-m", "src"]', True),
+        ("PYTHONPATH=/opt/connector", '["python3", "-I", "-m", "src"]', False),
+        (
+            "PYTHONSAFEPATH=1",
+            '["sh", "-c", "cd /opt/connector && python3 -m src"]',
+            False,
+        ),
+        (
+            "PYTHONSAFEPATH=",
+            '["sh", "-c", "cd /opt/connector && python3 -m src"]',
+            True,
+        ),
+        # Copilot review of 01:21 UTC: a relative cd is searched in CDPATH.
+        (
+            "CDPATH=/elsewhere",
+            '["sh", "-c", "cd opt/connector && python3 -m src"]',
+            False,
+        ),
+        (
+            "CDPATH=/elsewhere",
+            '["sh", "-c", "cd /opt/connector && python3 -m src"]',
+            True,
+        ),
+    ],
+)
+def test_python_search_path_and_cdpath(tmp_path, env, command, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                f"FROM python:3.12-alpine\nENV {env}\nCOPY src /opt/connector/src\n"
+                f"WORKDIR /\nCMD {command}\n"
+            ),
+            "src/__main__.py": "",
+        },
+    )
+    assert image.covered is covered, image.reason
 
 
 def test_workflow_watches_every_file_the_check_reads():
