@@ -1,4 +1,4 @@
-pycti==7.261109.0
+pycti==7.261109.3
 maec==4.1.0.17
 stix2-elevator==4.1.7
 typing-extensions==4.16.0
