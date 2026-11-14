@@ -2687,6 +2687,71 @@ def test_a_stage_copy_carries_the_files_touch_created(tmp_path, builder, covered
     assert image.covered is covered, image.reason
 
 
+def stamp_copied_after(tmp_path, run):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src/main.py /opt/main.py\nRUN {run}\n"
+        "COPY src/.connector_version.json /opt/.connector_version.json\n"
+        'CMD ["python3", "/opt/main.py"]\n',
+    }
+    return single(tmp_path, files)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # Copilot review of 14:15 UTC: what find -exec mkdir or touch creates is
+        # in the model, as when the build runs the command itself.
+        "mkdir /opt/.connector_version.json",
+        "mkdir -p /opt/cache",
+        "touch /usr/local/bin/python3",
+        "touch /opt/marker",
+    ],
+)
+def test_find_exec_creates_what_the_command_creates(tmp_path, command):
+    direct = stamp_copied_after(tmp_path / "direct", command)
+    found = stamp_copied_after(
+        tmp_path / "found", f"find /tmp -maxdepth 0 -exec {command} \\;"
+    )
+    assert (found.covered, found.reason) == (direct.covered, direct.reason)
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # The COPY puts the stamp inside the directory find created.
+        ("find /tmp -maxdepth 0 -exec mkdir /opt/.connector_version.json \\;", False),
+        ("find /tmp -maxdepth 0 -exec mkdir -p /opt/cache \\;", True),
+        ("find /tmp -maxdepth 0 -exec mkdir {}/x \\;", False),
+        ("find /tmp -maxdepth 0 -execdir touch marker \\;", False),
+    ],
+)
+def test_find_exec_mkdir_and_touch(tmp_path, run, covered):
+    image = stamp_copied_after(tmp_path, run)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "removal, covered",
+    [
+        # Copilot review of 14:15 UTC: ~NAME is the home directory of NAME in
+        # the account database of the image, which the model does not read.
+        ("rm -f ~root/.connector_version.json", False),
+        ("rm -f ~+/.connector_version.json", False),
+        ("rm -f ~/.connector_version.json", False),
+        ("rm -f ~/other.json", True),
+    ],
+)
+def test_tilde_prefixes(tmp_path, removal, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /root\nRUN {removal}\n"
+        'CMD ["python3", "/root/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if removal.startswith("rm -f ~root") or removal.startswith("rm -f ~+"):
+        assert "tilde prefix" in image.reason
+
+
 def test_touch_keeps_the_content_of_a_file_of_the_model(tmp_path):
     files = {
         "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"

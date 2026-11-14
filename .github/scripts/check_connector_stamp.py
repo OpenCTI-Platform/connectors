@@ -2729,6 +2729,12 @@ class Shell:
     def _tilde(self, value):
         if value == "~" or value.startswith("~/"):
             return self.variables.get("HOME", "/root") + value[1:]
+        if value.startswith("~"):
+            # ~NAME is the home directory of NAME in the account database of the
+            # image, ~+ and ~- the current and the previous directory.
+            raise Unsupported(
+                f"path '{value}' starts with a tilde prefix the image model does not resolve"
+            )
         return value
 
     def _operands(self, args):
@@ -2901,6 +2907,21 @@ class Shell:
                     self._operands(explicit),
                     directories=program == "rm" and removes_directories(explicit),
                 )
+            elif program in ("mkdir", "touch"):
+                if any("{}" in word for word in explicit):
+                    raise Unsupported(
+                        f"find {arg} {program} on a path built from the match"
+                    )
+                if arg in ("-execdir", "-okdir") and any(
+                    not operand.startswith("/") for operand in self._operands(explicit)
+                ):
+                    # Resolved from the directory of each match.
+                    raise Unsupported(f"find {arg} {program} with a relative operand")
+                # What it creates is in the model, as when the build runs it.
+                if program == "mkdir":
+                    self._mkdir(explicit)
+                else:
+                    self._touch(explicit)
             elif program in HARMLESS_COMMANDS or (
                 program == "chmod" and harmless_mode(explicit, True)
             ):
