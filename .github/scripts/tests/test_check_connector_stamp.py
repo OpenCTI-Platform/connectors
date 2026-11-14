@@ -889,6 +889,68 @@ def test_packaging_files_a_build_command_wrote(tmp_path, build, reason):
     assert image.reason == reason
 
 
+DYNAMIC_VERSION = (
+    '[project]\nname = "sample"\ndynamic = ["version"]\n'
+    "[tool.setuptools.dynamic]\n"
+    'version = {attr = "sample_connector.__version__"}\n'
+)
+IMPORTED = (
+    "not supported: /opt/build: setuptools imports sample_connector"
+    " to read sample_connector.__version__"
+)
+INSTALLED = "stamp at /<site-packages>/sample_connector/.connector_version.json"
+
+
+@pytest.mark.parametrize(
+    "pyproject, setup_cfg, init, reason",
+    [
+        # setuptools reads an attr: value assigned as a literal without importing
+        # the module; otherwise it imports it, and a command class too: code of
+        # the project that runs during pip install.
+        (DYNAMIC_VERSION, None, '__version__ = "1.0.0"\n', INSTALLED),
+        (DYNAMIC_VERSION, None, '__version__: str = "1.0.0"\n', INSTALLED),
+        (DYNAMIC_VERSION, None, "__version__ = read_version()\n", IMPORTED),
+        (
+            DYNAMIC_VERSION,
+            None,
+            '__version__ = read_version()\n__version__ = "1.0.0"\n',
+            IMPORTED,
+        ),
+        (DYNAMIC_VERSION, None, "", IMPORTED),
+        (
+            None,
+            "[metadata]\nversion = attr: sample_connector.__version__\n",
+            "__version__ = read_version()\n",
+            IMPORTED,
+        ),
+        (
+            None,
+            "[metadata]\nversion = attr: sample_connector.__version__\n",
+            '__version__ = "1.0.0"\n',
+            INSTALLED,
+        ),
+        (
+            '[tool.setuptools.cmdclass]\nbuild_py = "sample_connector.build:Build"\n',
+            None,
+            "",
+            "not supported: /opt/build: a command class of setuptools",
+        ),
+    ],
+)
+def test_modules_setuptools_imports(tmp_path, pyproject, setup_cfg, init, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    packaging = {"sample_connector/__init__.py": init}
+    if pyproject is not None:
+        packaging["pyproject.toml"] = pyproject + data
+    if setup_cfg is not None:
+        packaging["setup.cfg"] = (
+            setup_cfg
+            + "[options.package_data]\nsample_connector = .connector_version.json\n"
+        )
+    image = packaged(tmp_path, packaging, init=False)
+    assert image.reason == reason
+
+
 @pytest.mark.parametrize(
     "find, covered, reason",
     [

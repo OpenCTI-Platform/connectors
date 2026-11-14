@@ -77,7 +77,8 @@ conditional or a loop of the entry script, an entry point that is not a file
 of the model, a command outside the closed world above or acting on a path it
 cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
 exclusions, automatic discovery of a namespace package, build backends other
-than setuptools).
+than setuptools, packaging files a build command wrote, a module setuptools
+imports for a command class or an ``attr:`` value that is not a literal).
 
 Usage:
     python3 .github/scripts/check_connector_stamp.py
@@ -87,6 +88,7 @@ Usage:
 """
 
 import argparse
+import ast
 import configparser
 import fnmatch
 import hashlib
@@ -1265,6 +1267,29 @@ def removes_directories(args):
             and not arg.startswith("--")
             and set(arg[1:]) & set("rRd")
         ):
+            return True
+    return False
+
+
+def literal_assignment(text, name):
+    """The first module-level assignment to ``name`` in the python ``text`` is a
+    literal, which setuptools reads without importing the module."""
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return False
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+        else:
+            continue
+        if any(isinstance(t, ast.Name) and t.id == name for t in targets):
+            try:
+                ast.literal_eval(node.value)
+            except (ValueError, TypeError, SyntaxError, MemoryError, RecursionError):
+                return False
             return True
     return False
 
@@ -4022,9 +4047,11 @@ class ImageModel:
 
     def check_packaging(self, files, install_dir):
         """Code of the repository that pip runs for ``install_dir``, whatever
-        package it finds: a setup.py, an in-tree build backend."""
+        package it finds: a setup.py, an in-tree build backend, a module
+        setuptools imports."""
         if posixpath.join(install_dir, "setup.py") in files:
             raise Unsupported("packaging declared in setup.py")
+        self._check_setuptools_imports(files, install_dir)
         origin = files.get(posixpath.join(install_dir, "pyproject.toml"))
         text = self.context.read(origin) if origin else None
         if not text:
@@ -4042,6 +4069,75 @@ class ImageModel:
             # Its file selection and build hooks, which may run code of the
             # repository, are not modelled.
             raise Unsupported(f"{install_dir}: the build backend {backend}")
+
+    def _check_setuptools_imports(self, files, install_dir):
+        """setuptools imports a module of the project for a command class, and for
+        an ``attr:`` value it does not find assigned as a literal in the module
+        (its static reading takes the first module-level assignment)."""
+        attributes = []
+        package_dir = False
+        origin = files.get(posixpath.join(install_dir, "pyproject.toml"))
+        text = self.context.read(origin) if origin else None
+        if text:
+            try:
+                tool = tomllib.loads(text).get("tool", {}).get("setuptools", {})
+            except tomllib.TOMLDecodeError as error:
+                raise Unsupported(f"pyproject.toml not readable: {error}") from error
+            if tool.get("cmdclass"):
+                raise Unsupported(f"{install_dir}: a command class of setuptools")
+            package_dir = bool(tool.get("package-dir") or tool.get("package_dir"))
+            for value in tool.get("dynamic", {}).values():
+                if isinstance(value, dict) and "attr" in value:
+                    attributes.append(str(value["attr"]).strip())
+        origin = files.get(posixpath.join(install_dir, "setup.cfg"))
+        text = self.context.read(origin) if origin else None
+        if text:
+            parser = configparser.ConfigParser(interpolation=None)
+            try:
+                parser.read_string(text)
+            except configparser.Error as error:
+                raise Unsupported(f"setup.cfg not readable: {error}") from error
+            if parser.has_option("options", "cmdclass"):
+                raise Unsupported(f"{install_dir}: a command class of setuptools")
+            package_dir = package_dir or parser.has_option("options", "package_dir")
+            for section in parser.sections():
+                for _, raw in parser.items(section):
+                    if raw.strip().startswith("attr:"):
+                        attributes.append(raw.strip()[len("attr:") :].strip())
+        for attribute in attributes:
+            module, _, name = attribute.rpartition(".")
+            # A package-dir moves the module where the model does not look.
+            if package_dir or not self._literal_attribute(
+                files, install_dir, module, name
+            ):
+                raise Unsupported(
+                    f"{install_dir}: setuptools imports {module or attribute} to read {attribute}"
+                )
+
+    def _literal_attribute(self, files, install_dir, module, name):
+        """Every file of ``module`` setuptools may read (at the top of the project
+        or below src/ or a find root) assigns ``name`` a literal first."""
+        if not module or not name:
+            return False
+        roots = {".", "src", *self._roots_of(files, install_dir)}
+        relative = module.replace(".", "/")
+        candidates = [
+            files.get(posixpath.normpath(f"{install_dir}/{root}/{relative}{suffix}"))
+            for root in roots
+            for suffix in (".py", "/__init__.py")
+        ]
+        texts = [self.context.read(origin) for origin in candidates if origin]
+        return bool(texts) and all(
+            text is not None and literal_assignment(text, name) for text in texts
+        )
+
+    def _roots_of(self, files, install_dir):
+        texts = {}
+        for name in PACKAGING_FILES:
+            origin = files.get(posixpath.join(install_dir, name))
+            if origin is not None:
+                texts[name] = self.context.read(origin) or ""
+        return self._roots(texts)
 
     def install_package(self, files, install_dir, stage):
         """``pip install <install_dir>``: the packages it puts in site-packages.
