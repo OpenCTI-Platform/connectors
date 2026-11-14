@@ -42,6 +42,7 @@ def _make_connector() -> RansomwareAPIConnector:
     connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
     connector.author = connector.converter_to_stix.author
     connector.processed_groups = set()
+    connector.country_cache = {}
     return connector
 
 
