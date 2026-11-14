@@ -110,10 +110,13 @@ STAMP_PARENT_DEPTH = 4
 # Abstract location of the installed packages: the real path depends on the
 # Python version of the base image, and pycti only needs the package directory.
 SITE_PACKAGES = "/<site-packages>"
-# Official images set no WORKDIR: a stage built on them starts in "/".
-ROOT_WORKDIR_IMAGE = re.compile(
+# Base images whose configuration is known (read from their published image
+# configuration): they start in "/" and declare no ENTRYPOINT, VOLUME or ONBUILD
+# trigger. The final image must start from one of them.
+KNOWN_BASE_IMAGE = re.compile(
     r"^(docker\.io/(library/)?)?(python|alpine|debian|ubuntu)([:@]|$)"
-    r"|^registry\.access\.redhat\.com/ubi\d+/"
+    r"|^(docker\.io/)?filigran/alpine-python-fips([:@]|$)"
+    r"|^registry\.access\.redhat\.com/ubi\d+/ubi(-minimal|-micro|-init)?([:@]|$)"
 )
 # Directories of every base image: a file copied to one of them without a
 # trailing slash lands inside it.
@@ -827,6 +830,20 @@ class BuildContext:
             return None
         return (self.root / origin[1]).read_text(encoding="utf-8", errors="replace")
 
+    def is_archive(self, rel):
+        """ADD extracts a local tar archive, compressed or not, whatever its name:
+        Docker tells it by its content."""
+        origin = self.files.get(rel)
+        if origin is None or origin[0] == "stamp":
+            return False
+        if origin[0] == "link":
+            # The archive test reads the file the link points to.
+            return True
+        with open(self.root / rel, "rb") as handle:
+            head = handle.read(265)
+        compressed = head.startswith((b"\x1f\x8b", b"BZh", b"\xfd7zXZ\x00"))
+        return compressed or head[257:262] == b"ustar"
+
     def ignored_stamps(self):
         return [
             f"{stamp} (pattern '{rule}')"
@@ -853,6 +870,8 @@ class Stage:
     replaced: set = field(default_factory=set)
     # (command, shell form) of the HEALTHCHECK of the image, if any.
     healthcheck: tuple = None
+    # The external image the stage starts from, through the stages it builds on.
+    base: str = None
 
     def child(self):
         # ENV values are part of the image; ARG values end with their stage.
@@ -868,6 +887,7 @@ class Stage:
             volumes=list(self.volumes),
             replaced=set(self.replaced),
             healthcheck=self.healthcheck,
+            base=self.base,
         )
 
     def add_file(self, path, origin):
@@ -1211,12 +1231,13 @@ def audited(text):
 
 
 def python_module(args):
-    """The module of ``python -m``, or None."""
+    """The module of ``python -m`` (also written ``-mNAME``) and the arguments
+    after it, or (None, [])."""
     i = 0
     while i < len(args):
         arg = args[i]
         if arg == "-" or not arg.startswith("-"):
-            return None
+            return None, []
         if arg.startswith("--"):
             i += 2 if arg in PYTHON_OPTIONS_WITH_VALUE else 1
             continue
@@ -1224,15 +1245,19 @@ def python_module(args):
         for position, letter in enumerate(cluster):
             rest = cluster[position + 1 :]
             if letter == "c":
-                return None
+                return None, []
             if letter == "m":
-                return rest or (args[i + 1] if i + 1 < len(args) else None)
+                if rest:
+                    return rest, args[i + 1 :]
+                if i + 1 < len(args):
+                    return args[i + 1], args[i + 2 :]
+                return None, []
             if letter in "WX":
                 if not rest:
                     i += 1
                 break
         i += 1
-    return None
+    return None, []
 
 
 def python_script(args):
@@ -1741,9 +1766,9 @@ class Shell:
             elif name == "env":
                 words, assigned, unset = env_prefix(words[1:], assigned, unset)
             elif name == "sudo":
-                words = words[1:]
-                while words and words[0].startswith("-"):
-                    words = words[1:]
+                raise Unsupported(
+                    "sudo: the environment, PATH and working directory of the command are not modelled"
+                )
             else:
                 break
         if not words:
@@ -1870,7 +1895,7 @@ class Shell:
     def _python(self, words, env, conditional):
         """python at build time or in a start script."""
         args = words[1:]
-        module = python_module(args)
+        module, module_args = python_module(args)
         if module is not None and not self.start:
             shadow = self._module_shadow(module.split(".")[0], env)
             if shadow:
@@ -1878,8 +1903,7 @@ class Shell:
                     f"python -m {module} may run {shadow}, a file the build wrote, instead of the module of the interpreter"
                 )
         if module == "pip":
-            index = args.index("pip") if "pip" in args else len(args)
-            self._pip(args[index + 1 :], conditional)
+            self._pip(module_args, conditional)
             return
         if self.start:
             self._launch(words, env, conditional)
@@ -1887,7 +1911,7 @@ class Shell:
             self.model.foreign_effects = True
             return
         if module == "venv":
-            self._venv(args)
+            self._venv(module_args)
             return
         if module in HARMLESS_PYTHON_MODULES:
             return
@@ -1915,10 +1939,9 @@ class Shell:
                 " review what it does to the files and add it to AUDITED_BUILD_SCRIPTS"
             )
 
-    def _venv(self, args):
-        """``python -m venv [--clear] DIR``: --clear empties an existing DIR."""
-        index = args.index("venv") + 1 if "venv" in args else len(args)
-        options = args[index:]
+    def _venv(self, options):
+        """``python -m venv [--clear] DIR`` (``options`` follow the module):
+        --clear empties an existing DIR."""
         clear = "--clear" in options
         directories = []
         i = 0
@@ -2185,6 +2208,18 @@ class Shell:
                 command.append(word)
             if not command:
                 continue
+            relative = "/" in command[0] and not command[0].startswith("/")
+            if arg in ("-execdir", "-okdir") and relative:
+                # Resolved from the directory of each match.
+                raise Unsupported(f"find {arg} {command[0]}")
+            # find runs the program it finds with its own environment.
+            environment = {
+                k: v for k, v in self.variables.items() if k in self.exported
+            }
+            if self.model.shadow(
+                command[0], environment, self.files, self.stage, self.cwd
+            ):
+                raise Unsupported(f"find {arg} {command[0]}: a file the build wrote")
             program = posixpath.basename(command[0])
             if program in SHELLS or program == "xargs":
                 raise Unsupported("a shell or xargs started from find")
@@ -2394,6 +2429,10 @@ class ImageModel:
         if stage is None:
             raise Unsupported("no FROM instruction")
         self.final = stage
+        if not KNOWN_BASE_IMAGE.match(stage.base or ""):
+            raise Unsupported(
+                f"base image {stage.base}: its entry point, volumes and ONBUILD triggers are not known"
+            )
         self._check_healthcheck(stage)
 
     @staticmethod
@@ -2441,7 +2480,8 @@ class ImageModel:
             # Every base image sets PATH; ENV PATH=/x:$PATH extends it.
             stage.variables["PATH"] = DEFAULT_PATH
             stage.env["PATH"] = DEFAULT_PATH
-            if not ROOT_WORKDIR_IMAGE.match(image):
+            stage.base = image
+            if not KNOWN_BASE_IMAGE.match(image):
                 # The working directory of another base image is not known.
                 stage.workdir = None
         self.stages.append(stage)
@@ -2485,10 +2525,16 @@ class ImageModel:
         dest_path = image_path(dest, stage.workdir, "COPY destination")
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
+        into_dir = dest_is_dir or stage.is_dir(dest_path)
         if opaque:
             # Content the model does not know (external image, URL, archive) may
             # replace the destination, or anything below a destination directory.
             remove_files(stage.files, dest_path)
+        if from_values and source_stage is not None:
+            carried = self._carried_writes(source_stage, sources, dest_path, into_dir)
+            if carried and keep_parents:
+                raise Unsupported("COPY --parents of files a build command wrote")
+            stage.replaced.update(carried)
 
         chmod = flags.get("chmod", [])
         unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
@@ -2570,7 +2616,9 @@ class ImageModel:
                     else []
                 )
             for match in matches:
-                if instruction == "ADD" and TARBALL.search(match):
+                if instruction == "ADD" and (
+                    TARBALL.search(match) or self.context.is_archive(match)
+                ):
                     # A local archive is extracted: its content is not modelled.
                     opaque = True
                     continue
@@ -2597,6 +2645,40 @@ class ImageModel:
                         )
                     )
         return entries, opaque
+
+    @staticmethod
+    def _carried_writes(source_stage, sources, dest_path, into_dir):
+        """Where the paths a build command wrote in ``source_stage`` (a link, a
+        redirection target, a download) land when a COPY --from takes them: they
+        keep a content the model does not know."""
+        targets = set()
+        for source in sources:
+            path = image_path(source, "/", "COPY --from source")
+            regex = glob_regex(path.lstrip("/")) if GLOB_CHARS.search(path) else None
+            for written in source_stage.replaced:
+                for candidate in self_and_parents(written):
+                    if regex:
+                        matched = candidate != "/" and regex.match(
+                            candidate.lstrip("/")
+                        )
+                    else:
+                        matched = candidate == path
+                    if not matched:
+                        continue
+                    if candidate == written:
+                        # The source itself: into the directory, or as the destination.
+                        name = posixpath.basename(written)
+                        targets.add(
+                            posixpath.join(dest_path, name) if into_dir else dest_path
+                        )
+                    else:
+                        # Inside a copied directory, whose content lands in the destination.
+                        relative = posixpath.relpath(written, candidate)
+                        targets.add(
+                            posixpath.normpath(posixpath.join(dest_path, relative))
+                        )
+                    break
+        return targets
 
     @staticmethod
     def _stage_entries(source_stage, sources):
