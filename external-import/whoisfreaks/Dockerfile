@@ -26,4 +26,8 @@ RUN git config --global http.postBuffer 524288000 && \
 
 # main.py is a top-level entry script (not part of an installed package).
 COPY src/main.py .
+# The src/ tree, and the stamp the CI writes in it, is deleted above: the
+# connector root carries a copy. The `[n]` makes this copy optional: the stamp
+# is absent from local builds, and a plain COPY would fail there.
+COPY .connector_version.jso[n] ./
 ENTRYPOINT ["python", "main.py"]
