@@ -631,6 +631,60 @@ def test_stamp_too_far_above_the_entry_point(tmp_path):
     assert "pycti reads" in image.reason
 
 
+WHOLE_CONTEXT_DOCKERFILE = (
+    "FROM python:3.12-alpine\nCOPY . /opt\n{copy}WORKDIR /opt/src\n"
+    'CMD ["python3", "main.py"]\n'
+)
+OTHER_STAMP = '{"version": "6.1.0", "slug": "other-connector"}'
+
+
+@pytest.mark.parametrize(
+    "copy, files, reason",
+    [
+        # Copilot review of 12:15 UTC: pycti keeps the first identity file it
+        # reads, a nearer one the build stamp does not stand for included.
+        (
+            "COPY wrong.json /opt/src/.connector_version.json\n",
+            {"wrong.json": OTHER_STAMP},
+            "pycti reads /opt/src/.connector_version.json (wrong.json of the build"
+            " context, version '6.1.0') before any build stamp",
+        ),
+        (
+            "COPY --from=python:3.12-alpine /etc/os-release /opt/src/.connector_version.json\n",
+            {},
+            "pycti reads /opt/src/.connector_version.json before any build stamp,"
+            " and a build step put content the model does not know there",
+        ),
+        # A file pycti skips (not JSON, no usable version) does not stop it.
+        (
+            "COPY wrong.json /opt/src/.connector_version.json\n",
+            {"wrong.json": "not json"},
+            "stamp at /opt/.connector_version.json",
+        ),
+        (
+            "COPY wrong.json /opt/src/.connector_version.json\n",
+            {"wrong.json": '{"version": "unknown", "slug": "other-connector"}'},
+            "stamp at /opt/.connector_version.json",
+        ),
+        ("", {}, "stamp at /opt/src/.connector_version.json"),
+        # In each directory pycti reads the manifest of a source checkout first.
+        (
+            "COPY __metadata__ /opt/src/__metadata__\n",
+            {
+                "__metadata__/connector_manifest.json": '{"container_version": "rolling"}'
+            },
+            "pycti reads /opt/src/__metadata__/connector_manifest.json"
+            " (__metadata__/connector_manifest.json of the build context, version"
+            " 'rolling') before any build stamp",
+        ),
+    ],
+)
+def test_pycti_keeps_the_first_identity_file(tmp_path, copy, files, reason):
+    dockerfile = WHOLE_CONTEXT_DOCKERFILE.format(copy=copy)
+    image = single(tmp_path, {"Dockerfile": dockerfile, **files})
+    assert image.reason == reason
+
+
 def test_stamp_file_name_is_checked(tmp_path):
     # Copilot review of 21:40 UTC: pycti only opens .connector_version.json.
     image = single(
@@ -1557,7 +1611,8 @@ def test_assignment_prefix_reaches_python(tmp_path):
         (
             "ln -sf /dev/null /opt/sample/.connector_version.json",
             '["python3", "/opt/sample/main.py"]',
-            "no COPY carries a stamp into the final image",
+            "pycti reads /opt/sample/.connector_version.json before any build stamp,"
+            " and a build step put content the model does not know there",
         ),
         (
             # Into an existing directory, ln creates /opt/sample/data instead.
@@ -1754,7 +1809,8 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             "FROM python:3.12-alpine\nCOPY src /opt/src\n"
             "COPY --from=builder /tmp/empty /opt/src/.connector_version.json\n"
             'CMD ["python3", "/opt/src/main.py"]\n',
-            "no COPY carries a stamp into the final image",
+            "pycti reads /opt/src/.connector_version.json before any build stamp,"
+            " and a build step put content the model does not know there",
         ),
         # Copilot review of 01:21 UTC: copied directories get the --chmod mode too.
         (
