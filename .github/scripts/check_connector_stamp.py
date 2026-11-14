@@ -46,8 +46,10 @@ looks. The model covers exactly this:
   ``mkdir``, ``chown``, a ``chmod`` that keeps files readable, ...), system
   package managers (not with an option that moves their root), ``git clone``,
   ``python -m compileall``. Writing what they name: ``wget`` / ``curl``
-  outputs. Reviewed: the programs of ``AUDITED_PROGRAMS`` and the build-time
-  scripts of ``AUDITED_BUILD_SCRIPTS``, pinned by the digest of their text.
+  outputs. Reviewed: the programs of ``AUDITED_PROGRAMS`` (only the
+  subcommands of ``AUDITED_SUBCOMMANDS`` where it lists the program) and the
+  build-time scripts of ``AUDITED_BUILD_SCRIPTS``, pinned by the digest of
+  their text.
   Anything else - another program, python code at build time, a python
   process started after another one of the start command - is reported.
 * Packaged connectors: the installed package carries the stamp only when the
@@ -529,6 +531,9 @@ AUDITED_PROGRAMS = {
     "playwright": "downloads browsers into the cache of the user",
     "unogenerator_start": "starts the LibreOffice listener of export-file-ods",
 }
+# The only subcommands of an audited program the review covers: the others
+# (playwright pdf, screenshot...) write files where they are told.
+AUDITED_SUBCOMMANDS = {"playwright": {"install"}}
 # Build-time scripts of the repository whose effect was reviewed, by the sha256
 # of their text (line endings normalised): any change to one of them is reported
 # until it is reviewed again and its new digest recorded here.
@@ -1930,6 +1935,9 @@ class Shell:
         arguments."""
         words = []
         writes = []
+        # Targets read or duplicated, not written: their command substitutions
+        # still run before the command.
+        reads = []
         before = None
         skip = False
         redirect = None
@@ -1940,13 +1948,15 @@ class Shell:
                     redirect == ">&" and not target.isdigit() and target != "-"
                 ):
                     writes.append(target)
+                else:
+                    reads.append(target)
                 redirect = None
                 continue
             redirect = None
             if token in SEPARATORS:
-                if (words or writes) and not skip:
-                    self._command(words, writes, before, token)
-                words, writes, skip = [], [], False
+                if (words or writes or reads) and not skip:
+                    self._command(words, writes, before, token, reads)
+                words, writes, reads, skip = [], [], [], False
                 before = token if token != "\n" else None
                 if token not in ("&&", "||", "|"):
                     self._end_chain()
@@ -1973,9 +1983,9 @@ class Shell:
                     # name() { ...; }: the body runs where the function is called,
                     # with that working directory, under a name it may shadow.
                     raise Unsupported("a shell function")
-                if words or writes:
-                    self._command(words, writes, before, token)
-                    words, writes = [], []
+                if words or writes or reads:
+                    self._command(words, writes, before, token, reads)
+                    words, writes, reads = [], [], []
                 if token == "(":
                     self.stack.append("(")
                 elif self.stack:
@@ -2003,8 +2013,8 @@ class Shell:
                 if token == "function":
                     raise Unsupported("a shell function")
             words.append(token.translate(RESTORE))
-        if (words or writes) and not skip:
-            self._command(words, writes, before, None)
+        if (words or writes or reads) and not skip:
+            self._command(words, writes, before, None, reads)
         self._end_chain()
 
     def _end_chain(self):
@@ -2020,13 +2030,13 @@ class Shell:
         self.chain_variables = set()
         self.chain_directory = False
 
-    def _command(self, words, writes, before, after):
+    def _command(self, words, writes, before, after, reads=()):
         uncertain = before in ("&&", "|") or after in ("|", "&")
         if not uncertain:
-            self._simple_command(words, writes, before, after)
+            self._simple_command(words, writes, before, after, reads)
             return
         variables, cwd = dict(self.variables), self.cwd
-        self._simple_command(words, writes, before, after)
+        self._simple_command(words, writes, before, after, reads)
         self.chain_variables |= {
             key
             for key in {*variables, *self.variables}
@@ -2062,9 +2072,9 @@ class Shell:
                     nested.allexport = self.allexport
                     nested.run(script)
 
-    def _simple_command(self, words, writes, before, after):
+    def _simple_command(self, words, writes, before, after, reads=()):
         conditional = bool(self.stack) or before == "||"
-        self._substitute((*words, *writes), conditional)
+        self._substitute((*words, *writes, *reads), conditional)
         for target in writes:
             # Truncated or rewritten: the file no longer holds what the model knows.
             [value] = self._expand(target, split=False)
@@ -2349,6 +2359,10 @@ class Shell:
         if name == "mkdir":
             self._mkdir(args)
             return
+        if name in AUDITED_SUBCOMMANDS and (
+            not args or args[0] not in AUDITED_SUBCOMMANDS[name]
+        ):
+            raise Unsupported(f"'{' '.join([name, *args[:1]])}' is not modelled")
         if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
         if name == "chmod":
@@ -2927,7 +2941,7 @@ class Shell:
                 raise Unsupported(
                     "pip install into another directory than site-packages"
                 )
-            self.model.install_package(self.files, path)
+            self.model.install_package(self.files, path, self.stage)
 
     def _check_pip_configuration(self, env):
         """pip also reads options from the environment (PIP_*) and from pip.conf:
@@ -3596,8 +3610,9 @@ class ImageModel:
             # repository, are not modelled.
             raise Unsupported(f"{install_dir}: the build backend {backend}")
 
-    def install_package(self, files, install_dir):
-        """``pip install <install_dir>``: the packages it puts in site-packages."""
+    def install_package(self, files, install_dir, stage):
+        """``pip install <install_dir>``: the packages it puts in site-packages.
+        ``stage`` gives the directories the build made, an empty one included."""
         texts = {}
         for name in ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in"):
             origin = files.get(posixpath.join(install_dir, name))
@@ -3608,11 +3623,21 @@ class ImageModel:
         self.check_packaging(files, install_dir)
         config = None
         # Automatic discovery takes the packages of src/ when the project has
-        # that directory (the src layout), and none of the top level.
-        src_prefix = posixpath.join(install_dir, "src") + "/"
-        src_layout = self._automatic(texts) and any(
-            path.startswith(src_prefix) for path in files
-        )
+        # that directory (the src layout), even an empty one, and none of the
+        # top level. The build context holds no empty directory: git keeps none.
+        src_dir = posixpath.join(install_dir, "src")
+        src_layout = False
+        if self._automatic(texts):
+            if stage.written(src_dir) or any(
+                region.startswith(src_dir + "/")
+                for region in (*stage.replaced, *stage.unknown_dirs)
+            ):
+                raise Unsupported(
+                    f"automatic discovery in {install_dir}, whose src holds what a build command wrote"
+                )
+            src_layout = src_dir in stage.dirs or any(
+                path.startswith(src_dir + "/") for path in files
+            )
         roots = (
             ["src"]
             if src_layout

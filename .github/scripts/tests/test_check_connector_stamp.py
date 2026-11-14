@@ -685,6 +685,43 @@ def test_automatic_discovery_takes_the_src_layout(tmp_path, find, reason):
 
 
 @pytest.mark.parametrize(
+    "build, reason",
+    [
+        # Copilot review of 09:21 UTC: an empty src/ directory the build made
+        # selects the src layout as well.
+        (
+            "RUN mkdir /opt/build/src && pip install /opt/build && rm -rf /opt/build",
+            "not supported: module sample_connector is not a file of the image model",
+        ),
+        (
+            "RUN mkdir -p /opt/build/src/inner && pip install /opt/build",
+            "not supported: module sample_connector is not a file of the image model",
+        ),
+        # What a build command wrote there is not known: its layout neither.
+        (
+            "RUN ln -s /tmp /opt/build/src && pip install /opt/build",
+            "not supported: automatic discovery in /opt/build, whose src holds what a build command wrote",
+        ),
+        (
+            "RUN mkdir /opt/build/other && pip install /opt/build && rm -rf /opt/build",
+            None,
+        ),
+    ],
+)
+def test_automatic_discovery_reads_the_build_directories(tmp_path, build, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "RUN pip install /opt/build && rm -rf /opt/build", build
+    )
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile)
+    if reason:
+        assert not image.covered
+        assert image.reason == reason
+    else:
+        assert image.covered, image.reason
+
+
+@pytest.mark.parametrize(
     "find, covered, reason",
     [
         # Copilot review of 23:37 UTC: without __init__.py the directory is a
@@ -1299,6 +1336,21 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             'ENV APP=/tmp\nRUN printf -v APP %s /opt/src; rm -f "$APP/.connector_version.json"',
             False,
         ),
+        # Copilot review of 09:21 UTC: the command substitutions of a target
+        # that is read or duplicated run before the command too.
+        (
+            'RUN true < "$(rm -f /opt/src/.connector_version.json; printf /dev/null)"',
+            False,
+        ),
+        ("RUN true 0<&$(rm -f /opt/src/.connector_version.json; echo 0)", False),
+        ("RUN < $(rm -f /opt/src/.connector_version.json; echo /dev/null)", False),
+        ("RUN cat < /opt/src/main.py > /tmp/main.py 2>&1", True),
+        # Copilot review of 09:21 UTC: playwright is reviewed for installing
+        # browsers; its other subcommands write where they are told.
+        ("RUN playwright install chromium --with-deps --only-shell", True),
+        ("RUN playwright pdf about:blank /opt/src/.connector_version.json", False),
+        ("RUN playwright screenshot about:blank /tmp/page.png", False),
+        ("RUN playwright", False),
     ],
 )
 def test_build_steps(tmp_path, instructions, covered):
