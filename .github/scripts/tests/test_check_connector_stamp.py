@@ -1,3 +1,4 @@
+import gzip
 import importlib.util
 import io
 import json
@@ -22,12 +23,24 @@ ENV_WRAPPER = (
 )
 
 
+def tar_archive(*names):
+    """A tar archive holding an empty file under each name."""
+    payload = io.BytesIO()
+    with tarfile.open(fileobj=payload, mode="w") as archive:
+        for name in names:
+            archive.addfile(tarfile.TarInfo(name), io.BytesIO(b""))
+    return payload.getvalue()
+
+
 def make_connector(root, files, path="external-import/sample"):
     connector = root / path
     for name, content in {"src/main.py": "", **files}.items():
         target = connector / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
+        if isinstance(content, bytes):
+            target.write_bytes(content)
+        else:
+            target.write_text(content, encoding="utf-8")
     (connector / "src").mkdir(parents=True, exist_ok=True)
     return connector
 
@@ -147,6 +160,16 @@ def test_entrypoint_script_run_directly_with_a_conditional_without_cd(tmp_path):
             "a here-document in a shell script",
         ),
         ("cd /opt/sample\npython3 main.py\n", "has no interpreter line"),
+        # Copilot review of 07:32 UTC: a cd that may fail leaves the shell where
+        # it was.
+        (
+            "#!/bin/sh\ncd /opt/sample/missing\nexec python3 ../main.py\n",
+            "a 'cd' to a directory the image model does not know",
+        ),
+        (
+            "#!/bin/sh\ncd /opt/sample/missing && exec python3 ../main.py\n",
+            "a directory change in an && list",
+        ),
     ],
 )
 def test_entry_scripts_outside_the_model_are_reported(tmp_path, script, reason):
@@ -160,6 +183,40 @@ def test_entry_scripts_outside_the_model_are_reported(tmp_path, script, reason):
     assert not image.covered
     assert image.reason.startswith("not supported: ")
     assert reason in image.reason
+
+
+@pytest.mark.parametrize(
+    "script, covered",
+    [
+        # Copilot review of 07:32 UTC: a line ending with an escaped backslash,
+        # or with a backslash in a comment, does not go on with the next one.
+        (
+            "#!/bin/sh\necho ready \\\\\nrm -f /opt/sample/.connector_version.json\nexec python3 main.py\n",
+            False,
+        ),
+        (
+            "#!/bin/sh\n# clean up \\\nrm -f /opt/sample/.connector_version.json\nexec python3 main.py\n",
+            False,
+        ),
+        (
+            "#!/bin/sh\necho ready \\\nrm -f /opt/sample/.connector_version.json\nexec python3 main.py\n",
+            True,
+        ),
+        (
+            '#!/bin/sh\necho "ready \\\nrm -f /opt/sample/.connector_version.json"\nexec python3 main.py\n',
+            True,
+        ),
+    ],
+)
+def test_entry_script_line_continuations(tmp_path, script, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nWORKDIR /opt/sample\nENTRYPOINT ["/entrypoint.sh"]\n',
+            "entrypoint.sh": script,
+        },
+    )
+    assert image.covered is covered, image.reason
 
 
 def test_script_carried_by_a_directory_copy_is_read(tmp_path):
@@ -374,6 +431,9 @@ def test_deletions_with_unknown_operands_are_reported(tmp_path, command):
         (".*\nsrc/.*\n", False),
         ("**/.*\n!**/.connector_version.json\n", True),
         ("**/__metadata__\n**/.env\n", True),
+        # Copilot review of 07:32 UTC: Go negates a class with "^" only.
+        ("src/.connector_version.jso[!x]\n", True),
+        ("src/.connector_version.jso[^x]\n", False),
     ],
 )
 def test_dockerignore_rules(tmp_path, ignore, covered):
@@ -428,6 +488,17 @@ def test_dockerfile_specific_ignore_file_wins(tmp_path):
             "COPY src /opt/sample\nCOPY --from=python:3.12-alpine /usr/bin/env /usr/local/bin/env",
             True,
         ),
+        # Copilot review of 07:32 UTC: ADD copies a file that is not an archive
+        # as it is, whatever its name.
+        ("COPY src /opt/sample\nADD notes.tar.gz /opt/sample/", True),
+        # Copilot review of 07:32 UTC: explicit clauses that keep files readable
+        # and directories searchable.
+        ("COPY --chmod=u=rwx,go=rx src /opt/sample", True),
+        ("COPY --chmod=a=rX src /opt/sample", True),
+        ("COPY --chmod=u=rw,go=r src /opt/sample", False),
+        ("COPY --chmod=u=rwx,go= src /opt/sample", False),
+        ("COPY --chmod=a+rX,o-r src /opt/sample", False),
+        ("COPY --chmod=g=u src /opt/sample", False),
     ],
 )
 def test_permissions_and_volumes(tmp_path, instructions, covered):
@@ -435,7 +506,31 @@ def test_permissions_and_volumes(tmp_path, instructions, covered):
         tmp_path,
         {
             "Dockerfile": f'FROM python:3.12-alpine\n{instructions}\nWORKDIR /opt/sample\nCMD ["python3", "main.py"]\n',
-            "payload.tar": "",
+            "payload.tar": tar_archive("main.py"),
+            "notes.tar.gz": "release notes, not an archive",
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "source, covered",
+    [
+        # Copilot review of 07:32 UTC: COPY sources follow Go's filepath.Match,
+        # where "[!x]" matches "!" or "x" and only "^" negates a class.
+        ("src/.connector_version.jso[!x]", False),
+        ("src/.connector_version.jso[^x]", True),
+    ],
+)
+def test_copy_source_bracket_classes(tmp_path, source, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                f"FROM python:3.12-alpine\nCOPY src/main.py /opt/sample/\nCOPY {source} /opt/sample/\n"
+                'WORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+            ),
+            "src/.connector_version.jsox": "",
         },
     )
     assert image.covered is covered, image.reason
@@ -1087,6 +1182,13 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
             False,
         ),
         ("WORKDIR /opt/src\nRUN cd /tmp && rm -f .connector_version.json", True),
+        # Copilot review of 07:32 UTC: a cd that may fail leaves the shell where
+        # it was.
+        ("WORKDIR /opt/src\nRUN cd /opt/missing; rm -f .connector_version.json", False),
+        (
+            "WORKDIR /opt/src\nRUN cd /opt/missing && rm -f .connector_version.json; true",
+            True,
+        ),
         ("RUN pip --log /opt/src/.connector_version.json install requests", False),
         (
             "RUN python3 -m pip --log /opt/src/.connector_version.json install requests",
@@ -1696,7 +1798,7 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
         (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\nADD tools.tar /usr/local/bin/\n"
             'CMD ["python3", "/opt/sample/main.py"]\n',
-            {"tools.tar": "not read: the extension makes it an archive"},
+            {"tools.tar": tar_archive("python3")},
         ),
         (
             "FROM python:3.12-alpine AS builder\n"
@@ -2033,6 +2135,21 @@ def test_add_extracts_an_archive_whatever_its_name(tmp_path):
     (connector / "payload.bin").write_bytes(payload.getvalue())
     [image] = result(tmp_path, connector)
     assert not image.covered
+    # Copilot review of 07:32 UTC: by content only - a tar header without the
+    # ustar magic and a zstd stream are archives, compressed text is a file.
+    old_tar = bytearray(tar_archive(".connector_version.json"))
+    old_tar[257:265] = bytes(8)
+    old_tar[148:156] = b" " * 8
+    old_tar[148:155] = b"%06o\x00" % sum(old_tar[:512])
+    (connector / "payload.bin").write_bytes(bytes(old_tar))
+    [image] = result(tmp_path, connector)
+    assert not image.covered
+    (connector / "payload.bin").write_bytes(b"\x28\xb5\x2f\xfd" + bytes(16))
+    [image] = result(tmp_path, connector)
+    assert not image.covered
+    (connector / "payload.bin").write_bytes(gzip.compress(b"not an archive"))
+    [image] = result(tmp_path, connector)
+    assert image.covered, image.reason
     (connector / "payload.bin").write_bytes(b"not an archive")
     [image] = result(tmp_path, connector)
     assert image.covered, image.reason
