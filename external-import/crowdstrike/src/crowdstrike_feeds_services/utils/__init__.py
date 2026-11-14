@@ -20,6 +20,10 @@ from typing import (
 )
 
 import stix2
+from crowdstrike_feeds_services.utils.attack_lookup import (
+    AttackTechniqueLookup,
+    normalize_mitre_id,
+)
 from lxml.html import fromstring
 from pycti import (
     AttackPattern,
@@ -425,10 +429,25 @@ def create_attack_pattern(
     confidence: Optional[int] = None,
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
+    attack_lookup: Optional[AttackTechniqueLookup] = None,
 ) -> stix2.AttackPattern:
-    """Create an attack pattern."""
+    """Create an attack pattern.
+
+    Every code path sends a technique with the same name and `x_mitre_id`: the name and
+    external ID of the MITRE ATT&CK dataset when the technique is found in it, and the
+    external ID in upper case otherwise. Each importer used to send its own spelling (the
+    technique ID as name, the CrowdStrike API name, the label name, a lower-case ID), and
+    every alternation renamed the technique on the platform.
+    """
+    mitre_id = normalize_mitre_id(mitre_id)
+    technique = (
+        attack_lookup.lookup_technique_by_mitre_id(mitre_id) if attack_lookup else None
+    )
+    if technique is not None:
+        name = technique.name
+        mitre_id = technique.mitre_id
     attack_pattern_id = AttackPattern.generate_id(name, mitre_id)
-    custom_properties = {"x_mitre_id": mitre_id}
+    custom_properties = {"x_mitre_id": mitre_id} if mitre_id else {}
 
     return stix2.AttackPattern(
         id=attack_pattern_id,

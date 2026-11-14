@@ -134,7 +134,7 @@ class CrowdStrike:
 
             self.helper.log_info(
                 f"Loaded ATT&CK Enterprise dataset ({attack_version}) from {self.attack_lookup.enterprise_attack_url} "
-                f"with {len(self.attack_lookup.attack_techniques)} techniques"
+                f"with {len(self.attack_lookup.attack_techniques_by_mitre_id)} techniques"
             )
         except AttackTechniqueLookupError as e:
             # Degraded mode: label parser will skip ATT&CK technique resolution if lookup is unavailable.
@@ -156,6 +156,7 @@ class CrowdStrike:
                 author,
                 actor_start_timestamp,
                 tlp_marking,
+                attack_lookup=self.attack_lookup,
             )
 
             importers.append(actor_importer)
@@ -271,6 +272,7 @@ class CrowdStrike:
                 author,
                 malware_start_timestamp,
                 tlp_marking,
+                attack_lookup=self.attack_lookup,
             )
 
             importers.append(malware_importer)

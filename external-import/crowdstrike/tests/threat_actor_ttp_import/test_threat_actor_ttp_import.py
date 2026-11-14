@@ -13,7 +13,37 @@ from crowdstrike_feeds_connector.actor.builder import ActorBundleBuilder
 from crowdstrike_feeds_connector.actor.importer import ActorImporter
 from crowdstrike_feeds_connector.settings import ConnectorSettings
 from crowdstrike_feeds_services.client.actors import ActorsAPI
+from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
+
+
+def _attack_lookup_for(ttps_response: dict) -> AttackTechniqueLookup:
+    """Return an ATT&CK lookup that resolves every technique of the TTPs response."""
+    technique_ids = {
+        ttp_id.split("_")[2]
+        for ttp_id in ttps_response.get("resources", [])
+        if len(ttp_id.split("_")) >= 3
+    }
+    dataset = {
+        "type": "bundle",
+        "objects": [
+            {
+                "type": "attack-pattern",
+                "name": f"Technique {technique_id}",
+                "external_references": [
+                    {"source_name": "mitre-attack", "external_id": technique_id}
+                ],
+            }
+            for technique_id in technique_ids
+        ],
+    }
+    with patch.object(
+        AttackTechniqueLookup,
+        "_load_enterprise_attack_techniques",
+        lambda self: self._parse_attack_json(dataset),
+    ):
+        return AttackTechniqueLookup(attack_version="latest")
+
 
 # =====================
 # Fixtures
@@ -338,6 +368,7 @@ def _when_system_imports_threat_actor(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
+            attack_lookup=_attack_lookup_for(ttps_response),
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -419,6 +450,7 @@ def _when_system_imports_actor_without_ttps(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
+            attack_lookup=_attack_lookup_for(empty_response),
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -545,6 +577,7 @@ def _when_system_processes_ttp_data(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
+            attack_lookup=_attack_lookup_for({"resources": technique_ids}),
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
@@ -596,6 +629,7 @@ def _given_system_has_intrusion_set_and_attack_patterns(
             author=author,
             default_latest_timestamp=0,
             tlp_marking=tlp_marking,
+            attack_lookup=_attack_lookup_for(ttps_response),
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
