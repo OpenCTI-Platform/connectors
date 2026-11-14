@@ -212,6 +212,8 @@ OPERATORS = (
 SEPARATORS = frozenset({";", "&&", "||", "|", "&", ";;", "\n"})
 # Redirections that may write their target (<> opens it for reading and writing).
 OUTPUT_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
+# Devices that discard or print what is written to them: they hold no file.
+DEVICE_FILES = frozenset({"/dev/null", "/dev/stdout", "/dev/stderr"})
 # Quoted or escaped shell punctuation is an argument, not an operator: it is
 # carried through shlex as a private-use character and restored afterwards.
 PUNCTUATION = "();<>|&"
@@ -1741,12 +1743,21 @@ class Shell:
     def run(self, script):
         if self.nesting > 8:
             raise Unsupported("shell scripts nested too deeply")
+        tokens = []
         for line in self._lines(script):
             if HEREDOC.search(line):
                 raise Unsupported("a here-document in a shell script")
-            self._statements(self._tokens(line) + ["\n"])
+            tokens += self._tokens(line)
+            # A list or a pipeline whose operator ends the line goes on with the
+            # next line, as with a backslash.
+            if tokens and tokens[-1] in ("&&", "||", "|"):
+                continue
+            self._statements(tokens + ["\n"])
+            tokens = []
             if self.ended:
                 break
+        if tokens:
+            self._statements(tokens + ["\n"])
         return self.processes
 
     def _expand(self, word, split=True):
@@ -2081,6 +2092,8 @@ class Shell:
             value = value.translate(PLAIN_GLOB)
             path = image_path(self._tilde(value), self.cwd, "redirection target")
             self._through_link(path)
+            if path in DEVICE_FILES:
+                continue
             remove_files(self.files, path)
             self.stage.replaced.add(path)
         assigned = {}
@@ -2753,7 +2766,9 @@ class Shell:
             if program in SHELLS or program == "xargs":
                 raise Unsupported("a shell or xargs started from find")
             explicit = [word for word in command[1:] if word != "{}"]
-            if program in ("rm", "unlink", "mv"):
+            # mv is not one of them: what it puts at its destination, a match
+            # through {} included, is not followed.
+            if program in ("rm", "unlink"):
                 if arg in ("-execdir", "-okdir") and any(
                     not operand.startswith("/") for operand in self._operands(explicit)
                 ):
@@ -3144,7 +3159,18 @@ class ImageModel:
         command, shell_form = stage.healthcheck
         files = dict(stage.files)
         variables = {"PATH": DEFAULT_PATH, **stage.env}
-        probe = replace(stage, files=files, replaced=set(stage.replaced))
+        # The probe runs on its own copy of everything a command may change.
+        probe = replace(
+            stage,
+            files=files,
+            dirs=set(stage.dirs),
+            variables=dict(stage.variables),
+            env=dict(stage.env),
+            volumes=list(stage.volumes),
+            replaced=set(stage.replaced),
+            links=dict(stage.links),
+            unknown_dirs=set(stage.unknown_dirs),
+        )
         shell = Shell(self, probe, files, stage.workdir, variables, start=False)
         if shell_form:
             # The shell form runs with the SHELL of the image, in its environment.
@@ -3161,7 +3187,19 @@ class ImageModel:
         else:
             # No shell reads the exec form: its wildcard characters are literal.
             shell._statements([*(literal_globs(w) for w in command), "\n"])
-        if files != stage.files:
+        if (
+            probe.files,
+            probe.dirs,
+            probe.replaced,
+            probe.links,
+            probe.unknown_dirs,
+        ) != (
+            stage.files,
+            stage.dirs,
+            stage.replaced,
+            stage.links,
+            stage.unknown_dirs,
+        ):
             raise Unsupported("the HEALTHCHECK command changes files of the image")
 
     def _from(self, arguments):
