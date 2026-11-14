@@ -77,10 +77,13 @@ that stopped the analysis, never assumed to be fine: heredocs, variables the
 build does not define, a directory change or the start of python inside a
 conditional or a loop of the entry script, an entry point that is not a file
 of the model, a shell interpreter line with -c or with more than one word, a command outside the closed world above or acting on a path it
-cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
-exclusions, automatic discovery of a namespace package, build backends other
-than setuptools, packaging files a build command wrote, a module setuptools
-imports for a command class or an ``attr:`` value that is not a literal).
+cannot resolve, packaging the script does not read (``setup.py``, ``package-dir``,
+automatic discovery of a namespace package, build backends other than
+setuptools, packaging files a build command wrote, a module setuptools imports
+for a command class or an ``attr:`` value that is not a literal, and, for an
+identity file in a package, what adds to the file list include-package-data
+installs from: ``MANIFEST.in``, file finders of build requirements, license
+files, a readme or license file below the project root, an egg-info directory).
 
 Usage:
     python3 .github/scripts/check_connector_stamp.py
