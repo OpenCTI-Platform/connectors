@@ -1,0 +1,28 @@
+{
+  "title": "DECTRAX Autonomous Deception",
+  "slug": "dectrax",
+  "description": "Imports verified attacker IP telemetry, active decoy sensor engagements (RDP, LDAP, Modbus, SCADA), and automated firewall interdiction feeds from DECTRAX into OpenCTI as STIX 2.1 bundles with direct MITRE ATT&CK mapping.",
+  "short_description": "Ingests high-fidelity deception indicators and attacker telemetry from DECTRAX sensors into OpenCTI.",
+  "logo": "external-import/dectrax/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "support@dectrax.io",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 95,
+  "support_version": ">=6.0.0",
+  "subscription_link": "https://dectrax.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dectrax",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dectrax",
+  "container_type": "EXTERNAL_IMPORT"
+}
