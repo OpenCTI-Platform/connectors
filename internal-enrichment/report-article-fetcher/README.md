@@ -1,5 +1,7 @@
 # OpenCTI Report Article Fetcher
 
+<img src="__metadata__/logo.png" alt="Report Article Fetcher" width="96">
+
 Fills the **Content** of a report with the full article behind its external
 reference. Its main use is the reports an RSS feed ingestion creates, which
 only carry the feed's teaser: by default, only those are enriched
@@ -9,6 +11,7 @@ reference).
 | Type | Internal enrichment, scope `Report` |
 |---|---|
 | Playbook | Compatible: always sends the report back, filled or unchanged |
+| Connector manager | Supported (`__metadata__/connector_config_schema.json`) |
 
 ## What it does
 
@@ -21,8 +24,9 @@ reference).
 2. **Fetches the page over plain HTTP.** Every address the host resolves to must
    be public (no loopback, private, link-local or metadata address), at each
    redirect, and so must the address the connection actually reaches, which
-   defeats DNS rebinding. HTML only, 5 MB at most, 20 s timeout, `<meta refresh>` stubs
-   followed.
+   defeats DNS rebinding. HTML only, 5 MB at most (a larger `Content-Length` is
+   refused before reading), 20 s timeout, 5 redirects at most, a redirect
+   without `Location` refused, `<meta refresh>` stubs followed.
 3. **Keeps the article body** with [trafilatura](https://trafilatura.readthedocs.io)
    (Apache-2.0): no menus, footers, cookie banners or comments; tables, lists,
    code and links kept.
@@ -38,6 +42,15 @@ reference).
 5. **Writes the body to the report's content** through a bundle, so confidence
    levels and playbooks apply. The description is left as it is.
 
+## Confidence of the connector's user
+
+The report goes back as an upsert of the existing report, and the platform
+replaces a filled content only when the confidence of the connector's user is
+at least the report's confidence. Give the connector's user (or its group) a
+max confidence level at least as high as the reports it enriches, for instance
+the confidence of the RSS ingestion's user; otherwise a report whose content is
+already filled keeps it. An empty content is always filled.
+
 ## Trigger it
 
 Through a playbook (*report created*, filtered on the feed's author or the
@@ -46,6 +59,8 @@ ingestion's user, then this connector) or by manual enrichment. Keep
 
 ## Configuration
 
+The full list of variables, generated from the settings model, is in
+[`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.md).
 The generic `OPENCTI_*` and `CONNECTOR_*` variables are those of every internal
 enrichment connector (see `docker-compose.yml`). The connector's own settings,
 all optional, use the `REPORT_ARTICLE_FETCHER_` prefix:
