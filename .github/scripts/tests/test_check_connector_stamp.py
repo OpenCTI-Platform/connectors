@@ -5389,3 +5389,106 @@ def test_build_commands_of_master(tmp_path, run, covered):
         },
     )
     assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "copies, covered",
+    [
+        # Aikido review 5903100495: on python:3.12-slim /bin is a link to
+        # /usr/bin, so the second COPY replaces the stamp of the first.
+        (
+            "COPY .connector_version.json /bin/.connector_version.json\n"
+            "COPY src/decoy.json /usr/bin/.connector_version.json\n",
+            False,
+        ),
+        ("COPY .connector_version.json /bin/\n", True),
+    ],
+)
+def test_usr_merge_aliases_are_one_directory(tmp_path, copies, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                f"FROM python:3.12-slim\n{copies}COPY src/main.py /usr/bin/main.py\n"
+                'WORKDIR /srv\nCMD ["python3", "/usr/bin/main.py"]\n'
+            ),
+            ".connector_version.json": "{}",
+            "src/decoy.json": "{}",
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "command, covered",
+    [
+        # Aikido review 5903108802: the site initialisation runs a .pth of
+        # site-packages before the connector, which may remove the stamp.
+        ('["python3", "main.py"]', False),
+        ('["python3", "-S", "main.py"]', True),
+    ],
+)
+def test_runtime_site_initialisation(tmp_path, command, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+                "COPY src/x.pth /usr/local/lib/python3.12/site-packages/x.pth\n"
+                f"WORKDIR /opt/sample\nCMD {command}\n"
+            ),
+            "src/x.pth": "import os; os.remove('/opt/sample/.connector_version.json')\n",
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+def test_runtime_sitecustomize_on_pythonpath(tmp_path):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nENV PYTHONPATH=/opt/hooks\nCOPY src /opt/sample\n"
+                "COPY src/hook.py /opt/hooks/sitecustomize.py\n"
+                'WORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+            ),
+            "src/hook.py": "",
+        },
+    )
+    assert not image.covered
+    assert "sitecustomize.py" in image.reason
+
+
+def test_identity_file_in_physical_site_packages(tmp_path):
+    # Aikido review 5903109209: pycti walks up from the installed package
+    # through the physical site-packages, where the model keeps nothing.
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD",
+        "COPY .connector_version.json /usr/local/lib/python3.12/site-packages/\nCMD",
+    )
+    image = packaged(tmp_path, {"pyproject.toml": data}, dockerfile=dockerfile)
+    assert not image.covered
+    assert image.reason.startswith(
+        "stamp at /usr/local/lib/python3.12/site-packages/.connector_version.json:"
+    ), image.reason
+
+
+@pytest.mark.parametrize(
+    "rules, path, excluded",
+    [
+        # Docker (moby/patternmatcher MatchesOrParentMatches, the BuildKit
+        # walker) re-includes a file below an excluded directory when a later
+        # exception matches it: the last matching rule wins.
+        (["src", "!src/.connector_version.json"], "src/.connector_version.json", False),
+        (["src"], "src/.connector_version.json", True),
+        (["!src/.connector_version.json", "src"], "src/.connector_version.json", True),
+    ],
+)
+def test_dockerignore_exception_below_an_excluded_directory(
+    tmp_path, rules, path, excluded
+):
+    ignore = tmp_path / ".dockerignore"
+    ignore.write_text("\n".join(rules), encoding="utf-8")
+    parsed = check.dockerignore_rules(ignore)
+    assert bool(check.ignored_by(path, parsed)) is excluded

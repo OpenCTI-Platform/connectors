@@ -154,6 +154,22 @@ KNOWN_BASE_IMAGE = re.compile(
     r"|^(docker\.io/)?filigran/alpine-python-fips([:@]|$)"
     r"|^registry\.access\.redhat\.com/ubi9/ubi-minimal([:@]|$)"
 )
+# Top-level directories that usr-merged base images (python:*-slim, UBI9) make
+# links to their /usr counterpart, and Alpine keeps apart.
+USR_MERGE_ALIASES = ("/bin", "/sbin", "/lib", "/lib32", "/lib64", "/libx32")
+
+
+def usr_merged(path):
+    """``path`` with a usr-merge alias replaced by its /usr directory. On a
+    usr-merged base what lands below /bin replaces the file of /usr/bin; on
+    Alpine the two stay apart, and one name for both can only make the check
+    report more, never accept a stamp a decoy replaced."""
+    for alias in USR_MERGE_ALIASES:
+        if path == alias or path.startswith(alias + "/"):
+            return "/usr" + path
+    return path
+
+
 # Directories of every base image: a file copied to one of them without a
 # trailing slash lands inside it.
 BASE_DIRECTORIES = frozenset(
@@ -4577,6 +4593,7 @@ class ImageModel:
         else:
             entries, opaque = self._context_entries(instruction, sources)
         dest_path = image_path(dest, stage.workdir, "COPY destination")
+        dest_path = usr_merged(dest_path)
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
         into_dir = dest_is_dir or stage.is_dir(dest_path)
@@ -5454,6 +5471,7 @@ class ImageModel:
                         if value is None:
                             raise Unsupported(f"python -{letter} without a value")
                         if letter == "c":
+                            self._site_hooks(env, files, ignore_env, no_site)
                             return self._readable(None, cwd)
                         if not ignore_env and env.get("PYTHONSAFEPATH") == UNKNOWN:
                             raise Unsupported(
@@ -5471,6 +5489,7 @@ class ImageModel:
                             no_site,
                             self.final,
                         )
+                        self._site_hooks(env, files, ignore_env, no_site)
                         return self._readable(main_dir, cwd)
                     if letter in "WX":
                         if not cluster[position + 1 :]:
@@ -5486,8 +5505,35 @@ class ImageModel:
                 raise Unsupported(
                     f"python script {script} is not a file of the image model"
                 )
+            self._site_hooks(env, files, ignore_env, no_site)
             return self._readable(posixpath.dirname(script), cwd)
         raise Unsupported("python started without a script or a module")
+
+    def _site_hooks(self, env, files, ignore_env, no_site):
+        """The site initialisation of the connector's python runs before its
+        code: a .pth file of site-packages, or a sitecustomize / usercustomize
+        module the build wrote, may change its files (the stamp included)
+        before pycti reads them. -S skips it; -I / -E ignore PYTHONPATH."""
+        if no_site:
+            return
+        for path in (*files, *self.final.replaced):
+            if SITE_STARTUP_FILE.search(path):
+                raise Unsupported(
+                    f"the connector's python runs {path}, a file the build wrote, at startup"
+                )
+        if ignore_env:
+            return
+        python_path = env.get("PYTHONPATH") or ""
+        if python_path == UNKNOWN:
+            raise Unsupported("PYTHONPATH set to a value the model does not follow")
+        for directory in filter(None, python_path.split(":")):
+            for hook in PYTHON_STARTUP_HOOKS:
+                for name in (f"{hook}.py", f"{hook}/__init__.py"):
+                    path = posixpath.join(directory, name)
+                    if path in files or self.final.written(path):
+                        raise Unsupported(
+                            f"the connector's python imports {path}, a file the build wrote, at startup"
+                        )
 
     @staticmethod
     def _readable(main_dir, cwd):
@@ -5696,6 +5742,38 @@ def coverage(image, model, anchors, files):
             None,
         )
 
+    if any(
+        anchor == SITE_PACKAGES or anchor.startswith(SITE_PACKAGES + "/")
+        for anchor in anchors
+    ):
+        # pycti walks up from the package through the physical site-packages
+        # and its parents, which the model folds into SITE_PACKAGES: an identity
+        # file the build put there may be read before the stamp.
+        for path in sorted({*files, *model.final.replaced}):
+            directory = posixpath.dirname(path)
+            # The interpreter of the known base images installs below /usr;
+            # a venv of /opt is its own prefix, read through the model.
+            if (
+                posixpath.basename(path) in IDENTITY_FILES
+                and directory.startswith("/usr")
+                and (
+                    NATIVE_SITE_PACKAGES.fullmatch(directory)
+                    or NATIVE_SITE_PARENT.fullmatch(directory)
+                )
+            ):
+                origin = files.get(path)
+                if origin and origin[0] == "stamp":
+                    reason = (
+                        f"stamp at {path}: pycti reads it only from the site-packages"
+                        " below it, a path the image model does not know; ship the"
+                        " stamp in the package"
+                    )
+                else:
+                    reason = (
+                        f"not supported: {path} lies where pycti walks up from the"
+                        " installed package, above what the model keeps"
+                    )
+                return Result(image, False, reason)
     for directory in (d for anchor in anchors for d in ancestors(anchor)):
         for name in IDENTITY_FILES:
             path = posixpath.join(directory, name)
