@@ -80,7 +80,7 @@
     },
     "CHECKFIRST_FORCE_REPROCESS": {
       "default": false,
-      "description": "If true, ignore any saved connector state and start from page 1. Useful for debugging or re-importing all data.",
+      "description": "If true, ignore any saved connector cursor and restart from the beginning of the filtered result set. Useful for debugging or re-importing all data.",
       "type": "boolean"
     },
     "CHECKFIRST_TLP_LEVEL": {
@@ -100,6 +100,29 @@
       "default": null,
       "description": "Skip any API row larger than this approximate number of bytes.",
       "type": "integer"
+    },
+    "CHECKFIRST_CONVERT_WORKERS": {
+      "default": 1,
+      "description": "Number of processes used for Row \u2192 STIX conversion. 1 keeps conversion in the main process (default). Values > 1 use a process pool; HTTP fetch and watermark stay serial.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CHECKFIRST_CONVERT_BATCH_SIZE": {
+      "default": 32,
+      "description": "How many articles to convert together when convert_workers > 1. Larger batches improve process-pool efficiency; keep modest to limit memory.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CHECKFIRST_BUNDLE_SIZE": {
+      "default": 10000,
+      "description": "Max unique OpenCTI/STIX objects accumulated before prepare+send. Smaller values send more often (shorter stalls, more OpenCTI work items); larger values batch more aggressively. Does not change entity IDs or final data, only how work is chunked.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CHECKFIRST_LOG_FILE": {
+      "default": null,
+      "description": "If set, also write connector logs to this file path (JSON lines). Mount the parent directory as a Docker volume to keep them on the host.",
+      "type": "string"
     }
   },
   "required": [

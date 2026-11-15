@@ -474,3 +474,119 @@ class TestCrtSHClient:
     #     for item in uniq_stix_objects:
     #         assert item.labels == [DEFAULT_LABEL]
     #         assert item.object_marking_refs == [TLP_WHITE.id]
+
+
+# ── get_stix_objects: incremental import by crt.sh certificate id ────────────
+
+
+def _certificates(objects):
+    return [obj for obj in objects if isinstance(obj, X509Certificate)]
+
+
+def test_get_stix_objects_without_last_cert_id_imports_every_certificate(
+    client: CrtSHClient, mocker
+):
+    """On a first run (no last_cert_id), every certificate is imported."""
+    data = load_fixture(f"{DEFAULT_DOMAIN}.json")
+    mocker.patch.object(client, "_request_data", return_value=data)
+
+    stix_objects, next_last_cert_id = client.get_stix_objects()
+
+    assert next_last_cert_id == max(item["id"] for item in data)
+    imported_serials = {cert.serial_number for cert in _certificates(stix_objects)}
+    assert imported_serials == {item["serial_number"] for item in data}
+
+
+def test_get_stix_objects_only_imports_certificates_newer_than_last_cert_id(
+    client: CrtSHClient, mocker
+):
+    """Certificates with an id lower than or equal to last_cert_id are skipped."""
+    data = load_fixture(f"{DEFAULT_DOMAIN}.json")
+    mocker.patch.object(client, "_request_data", return_value=data)
+    newest, second_newest = sorted(data, key=lambda item: item["id"])[-1:-3:-1]
+
+    stix_objects, next_last_cert_id = client.get_stix_objects(
+        last_cert_id=second_newest["id"]
+    )
+
+    assert next_last_cert_id == newest["id"]
+    certificates = _certificates(stix_objects)
+    assert [cert.serial_number for cert in certificates] == [newest["serial_number"]]
+
+
+def test_get_stix_objects_with_nothing_new_keeps_last_cert_id(
+    client: CrtSHClient, mocker
+):
+    data = load_fixture(f"{DEFAULT_DOMAIN}.json")
+    mocker.patch.object(client, "_request_data", return_value=data)
+    highest_id = max(item["id"] for item in data)
+
+    stix_objects, next_last_cert_id = client.get_stix_objects(last_cert_id=highest_id)
+
+    assert stix_objects == []
+    assert next_last_cert_id == highest_id
+
+
+@pytest.mark.parametrize("response", [None, {"error": "unexpected"}, "not json"])
+def test_get_stix_objects_keeps_last_cert_id_when_response_is_unusable(
+    client: CrtSHClient, mocker, response
+):
+    """A failed request or an unexpected payload must not move last_cert_id."""
+    mocker.patch.object(client, "_request_data", return_value=response)
+
+    assert client.get_stix_objects(last_cert_id=123) == ([], 123)
+
+
+def test_get_stix_objects_skips_entries_without_a_valid_id(client: CrtSHClient, mocker):
+    valid = load_fixture(f"{DEFAULT_DOMAIN}.json")[0]
+    without_id = {key: value for key, value in valid.items() if key != "id"}
+    bad_id = {**valid, "id": "not-an-id", "serial_number": "ffff"}
+    mocker.patch.object(
+        client, "_request_data", return_value=[without_id, bad_id, "garbage", valid]
+    )
+
+    stix_objects, next_last_cert_id = client.get_stix_objects()
+
+    assert next_last_cert_id == valid["id"]
+    certificates = _certificates(stix_objects)
+    assert [cert.serial_number for cert in certificates] == [valid["serial_number"]]
+
+
+def test_get_stix_objects_skips_a_certificate_that_fails_and_keeps_the_rest(
+    client: CrtSHClient, mocker
+):
+    """One certificate failing must not drop the others or leave partial objects."""
+    data = sorted(load_fixture(f"{DEFAULT_DOMAIN}.json"), key=lambda i: i["id"])[-2:]
+    failing, working = data
+    mocker.patch.object(client, "_request_data", return_value=data)
+    original_process_name_value = client.process_name_value
+
+    def process_name_value(item, stix_objects, certificate_id):
+        if item["id"] == failing["id"]:
+            raise ValueError("boom")
+        return original_process_name_value(item, stix_objects, certificate_id)
+
+    mocker.patch.object(client, "process_name_value", side_effect=process_name_value)
+
+    stix_objects, next_last_cert_id = client.get_stix_objects()
+
+    # The failing certificate's id still counts, so it is not retried forever
+    assert next_last_cert_id == max(failing["id"], working["id"])
+    # Its certificate object (created before the failure) is not sent
+    certificates = _certificates(stix_objects)
+    assert [cert.serial_number for cert in certificates] == [working["serial_number"]]
+
+
+@pytest.mark.parametrize("stored_value", ["not-a-number", -1, True])
+def test_get_stix_objects_with_invalid_last_cert_id_imports_every_certificate(
+    client: CrtSHClient, mocker, stored_value
+):
+    """A corrupted last_cert_id in the state is ignored instead of breaking the run."""
+    data = load_fixture(f"{DEFAULT_DOMAIN}.json")
+    mocker.patch.object(client, "_request_data", return_value=data)
+
+    stix_objects, next_last_cert_id = client.get_stix_objects(last_cert_id=stored_value)
+
+    assert next_last_cert_id == max(item["id"] for item in data)
+    imported_serials = {cert.serial_number for cert in _certificates(stix_objects)}
+    assert imported_serials == {item["serial_number"] for item in data}

@@ -96,4 +96,5 @@ class RansomwareAPIProClient(BaseClientApi):
         return self._get_feed("/victims/recent")
 
     def get_victims(self, year: int, month: int) -> list[dict]:
-        return self._get_feed("/victims", {"year": year, "month": month})
+        # The trailing slash is required: API Pro answers 404 on "/victims"
+        return self._get_feed("/victims/", {"year": year, "month": month})

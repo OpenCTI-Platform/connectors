@@ -175,3 +175,14 @@ def test_x509_certificate_to_stix2_object(
         certificate_policies="",
         policy_mappings="",
     )
+
+
+def test_x509_certificate_without_hashes() -> None:
+    """Test that a X509Certificate can be created without hashes."""
+    # Given a X509Certificate with only a serial number
+    x509_certificate = X509Certificate(serial_number="123456789")
+    # When converting it to a STIX object
+    stix2_obj = x509_certificate.to_stix2_object()
+    # Then it has no hashes, and its id comes from its serial number
+    assert "hashes" not in stix2_obj
+    assert stix2_obj.id == stix2.X509Certificate(serial_number="123456789").id

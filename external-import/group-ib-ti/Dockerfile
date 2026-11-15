@@ -9,13 +9,14 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 # image installed first. Upstream's connector template does the same (DL3017).
 # hadolint ignore=DL3003,DL3017,DL3018
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/connector/src
 WORKDIR /opt/connector/src
 
-RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt
+RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 RUN rm -rf /var/cache/apk/*
 
 

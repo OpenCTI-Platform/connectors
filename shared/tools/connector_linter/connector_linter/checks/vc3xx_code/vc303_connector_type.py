@@ -5,6 +5,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
 
+from connector_linter.checks._sdk_bases import (
+    SDK_CONNECTOR_CONFIG_BASE_NAMES,
+    SDK_CONNECTOR_SETTINGS_BASE_NAMES,
+)
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -22,15 +26,13 @@ _CONNECTOR_TYPES = frozenset(t.value for t in ConnectorType)
 
 # ---------------------------------------------------------------------------
 # connectors-sdk base config classes — each one hardcodes a connector type,
-# so inheriting from one is the preferred way to set the type.
+# so inheriting from one is the preferred way to set the type. The per-type
+# Base<Type>ConnectorSettings classes embed the matching config as their
+# default ``connector`` field, so inheriting from them sets the type as well,
+# as long as the subclass does not redefine that field.
 # ---------------------------------------------------------------------------
-_SDK_BASE_CONFIG_CLASSES = {
-    "BaseExternalImportConnectorConfig",
-    "BaseInternalEnrichmentConnectorConfig",
-    "BaseStreamConnectorConfig",
-    "BaseInternalExportFileConnectorConfig",
-    "BaseInternalImportFileConnectorConfig",
-}
+_SDK_BASE_CONFIG_CLASSES = frozenset(SDK_CONNECTOR_CONFIG_BASE_NAMES)
+_SDK_BASE_SETTINGS_CLASSES = frozenset(SDK_CONNECTOR_SETTINGS_BASE_NAMES)
 
 
 @dataclass
@@ -66,7 +68,7 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
     # 4-way detection: scan AST for each pattern in priority order.
     #
     #   env_hit      — ANTI-PATTERN: reading CONNECTOR_TYPE from env/config
-    #   sdk_hit      — PREFERRED: inheriting from SDK Base*ConnectorConfig
+    #   sdk_hit      — PREFERRED: inheriting from SDK Base*ConnectorConfig/Settings
     #   hardcoded_hit — LEGACY OK: config["connector"]["type"] = "EXTERNAL_IMPORT"
     #   pydantic_hit — CUSTOM OK: type: Literal["EXTERNAL_IMPORT"] or Field(...)
     # ---------------------------------------------------------------------------
@@ -84,14 +86,9 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
                 env_hit = _Hit(file_path=file_path, line=node.lineno)
 
             # Preferred: SDK base config class (inherits type automatically)
-            if (
-                sdk_hit is None
-                and isinstance(node, ast.ClassDef)
-                and any(
-                    _base_name(base) in _SDK_BASE_CONFIG_CLASSES for base in node.bases
-                )
-            ):
-                sdk_hit = _Hit(file_path=file_path, line=node.lineno)
+            if sdk_hit is None and isinstance(node, ast.ClassDef):
+                if _sets_type_via_sdk(node):
+                    sdk_hit = _Hit(file_path=file_path, line=node.lineno)
 
             # Legacy pycti-style: config["connector"]["type"] = "EXTERNAL_IMPORT"
             # or dict literal: {"connector": {"type": "EXTERNAL_IMPORT"}}
@@ -189,6 +186,46 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
             ),
         ),
     ]
+
+
+def _sets_type_via_sdk(node: ast.ClassDef) -> bool:
+    """Check if a class gets its connector type from a connectors-sdk base.
+
+    A Base<Type>ConnectorConfig base always sets the type. A
+    Base<Type>ConnectorSettings base sets it only through its default
+    ``connector`` field, so a body that redefines ``connector`` does not count.
+    """
+    base_names = {_base_name(base) for base in node.bases}
+    if base_names & _SDK_BASE_CONFIG_CLASSES:
+        return True
+    return bool(base_names & _SDK_BASE_SETTINGS_CLASSES) and not _redefines_connector(
+        node
+    )
+
+
+def _redefines_connector(node: ast.ClassDef) -> bool:
+    """Check if a class body assigns its own ``connector`` field.
+
+    Matches both ``connector: X = ...`` (or a bare ``connector: X``) and the
+    plain ``connector = ...``. Only the class body counts, not nested classes
+    or methods. A field annotated with an SDK config class (for example
+    ``connector: BaseExternalImportConnectorConfig = Field(...)``) keeps the
+    connector type, so it is not a redefinition.
+    """
+    for stmt in node.body:
+        if isinstance(stmt, ast.AnnAssign):
+            if (
+                isinstance(stmt.target, ast.Name)
+                and stmt.target.id == "connector"
+                and _base_name(stmt.annotation) not in _SDK_BASE_CONFIG_CLASSES
+            ):
+                return True
+        elif isinstance(stmt, ast.Assign):
+            if any(
+                isinstance(t, ast.Name) and t.id == "connector" for t in stmt.targets
+            ):
+                return True
+    return False
 
 
 def _base_name(base: ast.expr) -> str:
