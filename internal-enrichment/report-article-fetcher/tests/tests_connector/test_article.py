@@ -1,12 +1,17 @@
 import re
 import socket
+import sys
 import threading
+from html import unescape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import lxml.etree
+import lxml.html
 import pytest
 from connector.article import (
     Article,
     FetchError,
+    _code_lines,
     article_match,
     check_public_url,
     extract_article,
@@ -239,6 +244,160 @@ def test_never_self_closes_an_element():
     )
     article = extract_article(RSS_REFERENCE["url"], html)
     assert not _NON_VOID_SELF_CLOSED.search(article.html)
+
+
+# A hunting query shown by a syntax highlighter: the second line is
+# indented, the third is empty.
+QUERY = [
+    "config case_sensitive = false",
+    "    | dataset = xdr_data",
+    "",
+    '| filter action_process_image_name ~= "php"',
+]
+
+
+def _post(block: str, after: str = "") -> str:
+    return (
+        f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
+        + "".join(
+            f"<p>Paragraph {i} of the threat brief and its hunting queries.</p>"
+            for i in range(20)
+        )
+        + f"<h2>Hunting queries</h2>{block}{after}"
+        + "<p>Closing words of the article.</p></article></body></html>"
+    )
+
+
+def _crayon(lines: list[str]) -> str:
+    """Crayon (WordPress): a <div> per number, a <div> per line of code."""
+    numbers = "".join(
+        f'<div class="crayon-num" data-line="c-{n}">{n}</div>'
+        for n in range(1, len(lines) + 1)
+    )
+    code = "".join(
+        f'<div class="crayon-line" id="c-{n}">'
+        + (
+            "&nbsp;"
+            if not line
+            else line.replace(" ", '<span class="crayon-h"> </span>', 1)
+        )
+        + "</div>"
+        for n, line in enumerate(lines, 1)
+    )
+    return (
+        '<div class="crayon-syntax"><div class="crayon-main">'
+        '<table class="crayon-table"><tbody><tr class="crayon-row">'
+        f'<td class="crayon-nums"><div class="crayon-nums-content">{numbers}</div></td>'
+        f'<td class="crayon-code"><div class="crayon-pre">{code}</div></td>'
+        "</tr></tbody></table></div></div>"
+    )
+
+
+def _pygments(lines: list[str]) -> str:
+    """Pygments / SyntaxHighlighter: the numbers and the code in two <pre>."""
+    numbers = "\n".join(str(n) for n in range(1, len(lines) + 1))
+    code = "\n".join(f'<span class="k">{line[:6]}</span>{line[6:]}' for line in lines)
+    return (
+        '<div class="highlight"><table class="highlighttable"><tr>'
+        f'<td class="linenos"><div class="linenodiv"><pre>{numbers}</pre></div></td>'
+        f'<td class="code"><div class="highlight"><pre>{code}\n</pre></div></td>'
+        "</tr></table></div>"
+    )
+
+
+def _github(lines: list[str]) -> str:
+    """GitHub-style blob table: one row per line, the number in an attribute."""
+    rows = "".join(
+        f'<tr><td id="L{n}" class="blob-num" data-line-number="{n}"></td>'
+        f'<td class="blob-code">{line}</td></tr>'
+        for n, line in enumerate(lines, 1)
+    )
+    return f'<table class="highlight"><tbody>{rows}</tbody></table>'
+
+
+def _code_blocks(html: str) -> list[str]:
+    return re.findall(r"<pre><code>(.*?)</code></pre>", html, re.DOTALL)
+
+
+@pytest.mark.parametrize("markup", [_crayon, _pygments, _github])
+def test_turns_a_line_numbered_code_table_into_one_code_block(markup):
+    article = extract_article(RSS_REFERENCE["url"], _post(markup(QUERY)))
+    blocks = _code_blocks(article.html)
+    assert len(blocks) == 1
+    assert unescape(blocks[0]) == "\n".join(QUERY)
+    assert "<table" not in article.html
+    assert "<p>1</p>" not in article.html
+
+
+def test_keeps_each_code_block_of_a_page_apart():
+    """A threat brief with two hunting queries of 117 and 12 lines."""
+    first = (QUERY * 30)[:117]
+    second = ["dataset = panw_ngfw_threat_raw", '  | filter sub_type = "vuln"'] * 6
+    article = extract_article(
+        RSS_REFERENCE["url"], _post(_crayon(first), _crayon(second))
+    )
+    blocks = [unescape(block) for block in _code_blocks(article.html)]
+    assert blocks == ["\n".join(first), "\n".join(second)]
+    assert "<p>117</p>" not in article.html
+
+
+def test_keeps_a_table_whose_first_column_counts_the_rows():
+    table = (
+        "<table><tr><th>#</th><th>Indicator</th></tr>"
+        "<tr><td>1</td><td>194.87.128.243</td></tr>"
+        "<tr><td>2</td><td>malicious-domain.example</td></tr>"
+        "<tr><td>3</td><td>3768f470934a111f1c3e3d098eb1392a</td></tr></table>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(table))
+    assert "<table" in article.html
+    assert "194.87.128.243" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_keeps_a_two_cell_table_whose_numbers_do_not_match_the_code():
+    table = (
+        "<table><tr><td>1<br>2<br>3</td>"
+        "<td>194.87.128.243<br>malicious-domain.example</td></tr></table>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(table))
+    assert "194.87.128.243" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_keeps_an_unmarked_two_cell_table_whose_numbers_match_its_lines():
+    """Same shape as a gutter table, but no highlighter class and no <pre>."""
+    table = (
+        "<table><tr><td>1<br>2</td>"
+        '<td><a href="https://malicious-domain.example/">194.87.128.243</a>'
+        "<br><b>malicious-domain.example</b></td></tr></table>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(table))
+    assert "194.87.128.243" in article.html
+    assert "malicious-domain.example" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_keeps_an_unmarked_table_with_line_number_attributes():
+    rows = "".join(
+        f'<tr><td data-line-number="{n}"></td><td>{value}</td></tr>'
+        for n, value in enumerate(
+            ["194.87.128.243", "malicious-domain.example", "3768f470934a"], 1
+        )
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(f"<table>{rows}</table>"))
+    assert "194.87.128.243" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_reads_a_deeply_nested_code_cell_without_recursion():
+    """A code cell nested deeper than the recursion limit is still read."""
+    cell = lxml.html.Element("td")
+    node = lxml.etree.SubElement(cell, "div")
+    for _ in range(sys.getrecursionlimit() * 2):
+        node = lxml.etree.SubElement(node, "span")
+    node.text = "select 1"
+    lxml.etree.SubElement(cell, "div").text = "select 2"
+    assert _code_lines(cell) == ["select 1", "select 2"]
 
 
 # The shape of an Adobe AEM blog post: the article is a run of sibling
