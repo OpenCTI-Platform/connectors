@@ -12,6 +12,7 @@ from connector.article import (
     Article,
     FetchError,
     _code_lines,
+    _restore_code_elements,
     article_match,
     check_public_url,
     extract_article,
@@ -387,6 +388,106 @@ def test_keeps_an_unmarked_table_with_line_number_attributes():
     article = extract_article(RSS_REFERENCE["url"], _post(f"<table>{rows}</table>"))
     assert "194.87.128.243" in article.html
     assert not _code_blocks(article.html)
+
+
+HASH = "de8d4e2bd3a6a3ab9e22e19c6c1c4f8f5e1c7a7f2c5a1e3b2d9f8e7c6b5aabf4"
+
+
+def _section(html: str) -> str:
+    """The extracted HTML between the code section's heading and the end."""
+    return html[html.index("<h2>Hunting queries</h2>") : html.index("Closing words")]
+
+
+def test_keeps_inline_code_of_a_paragraph_inline():
+    article = extract_article(
+        RSS_REFERENCE["url"], _post(f"<p>(SHA256 hash: <code>{HASH}</code>)</p>")
+    )
+    assert f"<p>(SHA256 hash: <code>{HASH}</code>)</p>" in article.html
+    assert "<pre" not in _section(article.html)
+
+
+def test_keeps_two_inline_codes_in_one_paragraph():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post(
+            "<p>from the default web user <code>www-data</code> to <code>root</code></p>"
+        ),
+    )
+    assert (
+        "<p>from the default web user <code>www-data</code> to <code>root</code></p>"
+        in article.html
+    )
+    assert "<pre" not in _section(article.html)
+
+
+def test_keeps_inline_code_in_table_cells_and_list_items():
+    table = (
+        "<table><tr><th>Function</th><th>File</th></tr>"
+        "<tr><td><code>exec()</code></td><td><code>a.dll</code></td></tr>"
+        "<tr><td><code>system()</code></td><td><code>b.exe</code></td></tr></table>"
+        "<ul><li>run <code>whoami</code> first</li><li><code>ls</code></li></ul>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(table))
+    section = _section(article.html)
+    assert "<table>" in section
+    for value in ("exec()", "a.dll", "system()", "b.exe"):
+        assert f"<td><code>{value}</code></td>" in section
+    assert "<li>run <code>whoami</code> first</li>" in section
+    assert "<li><code>ls</code></li>" in section
+    assert "<pre" not in section
+
+
+def test_writes_a_code_block_as_pre_code_without_backticks():
+    rule = 'rule X {\n  strings:\n    $a = "y"\n  condition:\n    $a\n}'
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post(
+            f"<pre><code>{rule}</code></pre><pre><code>Get-Process\nStop-Process</code></pre>"
+        ),
+    )
+    blocks = [unescape(block) for block in _code_blocks(article.html)]
+    assert blocks == [rule, "Get-Process\nStop-Process"]
+    assert "`" not in _section(article.html)
+
+
+def test_keeps_the_backticks_of_the_code_itself():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post(
+            "<pre><code>echo `whoami` &gt; out\ncat out</code></pre>"
+            "<p>run <code>echo `id`</code> now</p>"
+        ),
+    )
+    assert _code_blocks(article.html) == ["echo `whoami` &gt; out\ncat out"]
+    assert "<p>run <code>echo `id`</code> now</p>" in article.html
+
+
+@pytest.mark.parametrize(
+    "markup, code",
+    [
+        ("<pre>```yara\nrule X {\n}\n```</pre>", "rule X {\n}"),
+        ("<pre><pre>```\nselect 1\nselect 2\n```</pre></pre>", "select 1\nselect 2"),
+        ("<pre>`rule X { condition: true }`</pre>", "rule X { condition: true }"),
+        ("<pre>``rule `X` {}``</pre>", "rule `X` {}"),
+        ("<pre>```\nrule <b>X</b>\n```</pre>", "rule X"),
+    ],
+)
+def test_drops_the_backtick_fence_around_a_code_block(markup, code):
+    tree = lxml.html.fromstring(f"<div><h2>Code</h2>{markup}</div>")
+    _restore_code_elements(tree)
+    blocks = tree.xpath("//pre")
+    assert len(blocks) == 1 and [child.tag for child in blocks[0]] == ["code"]
+    assert blocks[0][0].text_content() == code
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["echo `id`", "`a` and `b`", "x = 1 # `", "``", "`"],
+)
+def test_keeps_backticks_that_do_not_fence_the_whole_code(text):
+    tree = lxml.html.fromstring(f"<div><h2>Code</h2><pre>{text}\nline 2</pre></div>")
+    _restore_code_elements(tree)
+    assert tree.xpath("//pre/code")[0].text == f"{text}\nline 2"
 
 
 def test_reads_a_deeply_nested_code_cell_without_recursion():
