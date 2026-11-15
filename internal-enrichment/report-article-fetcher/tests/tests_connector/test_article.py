@@ -241,6 +241,108 @@ def test_never_self_closes_an_element():
     assert not _NON_VOID_SELF_CLOSED.search(article.html)
 
 
+# The shape of an Adobe AEM blog post: the article is a run of sibling
+# div.text blocks, each holding one div.cmp-text, with figures between them,
+# under the page's menus, related posts and footer.
+AEM_URL = "https://www.example.com/en-us/blog/akira-ransomware-vpn-appliances/"
+
+
+def _aem_block(index: int, paragraphs: int) -> str:
+    return (
+        '<div class="text text--blog-content">'
+        f'<div class="cmp-text" id="text-{index:04d}" data-cmp-name="cmp-text-">'
+        '<span style=" ">'
+        + (f"<h2>Part {index}</h2>" if index else "")
+        + "".join(
+            f"<p>Block {index} paragraph {i}: the operators reused the VPN "
+            "appliance access to stage their tooling before encryption.</p>"
+            for i in range(paragraphs)
+        )
+        + "</span></div></div>"
+    )
+
+
+def _aem_page(sizes: list[int]) -> str:
+    figures = (
+        '<div class="image"><div class="cmp-image"><img src="https://cdn.example/f.png"'
+        ' alt="Figure"><span class="cmp-image__title">Figure of the part</span>'
+        "</div></div>"
+    )
+    menu = "".join(
+        f'<li><a href="/en-us/blog/post-{i}/">Another post number {i} of the blog'
+        "</a> Nov 0{i % 9 + 1}, 2026</li>"
+        for i in range(40)
+    )
+    related = "".join(
+        f'<div class="card"><a href="/en-us/blog/related-{i}/">Related post {i}'
+        "</a><p>Short teaser of a related post.</p></div>"
+        for i in range(3)
+    )
+    blocks = figures.join(_aem_block(i, size) for i, size in enumerate(sizes))
+    return (
+        f"<html><head><title>{NAME}</title></head><body>"
+        f'<header><nav><ul class="menu">{menu}</ul></nav></header>'
+        '<main><div class="aem-Grid">'
+        f'<div class="headline"><h1>{NAME}</h1><p>November 04, 2026</p></div>'
+        f'<div class="container-wp"><div class="cmp-container-wp">{blocks}</div></div>'
+        f'<div class="relatedcontent">{related}</div>'
+        "</div></main><footer><p>Copyright 2026. Privacy. Contact us.</p>"
+        "</footer></body></html>"
+    )
+
+
+@pytest.mark.parametrize("sizes", [[4, 3, 9, 7], [10, 6, 5]])
+def test_keeps_every_block_of_an_article_split_across_siblings(sizes):
+    article = extract_article(AEM_URL, _aem_page(sizes))
+    starts = [article.text.find(f"Block {i} paragraph 0:") for i in range(len(sizes))]
+    assert -1 not in starts, starts
+    assert starts == sorted(starts)
+    last = len(sizes) - 1
+    assert f"Block {last} paragraph {sizes[last] - 1}:" in article.text
+    assert "cmp-text" not in article.html
+    assert "data-report-article-body" not in article.html
+    assert ' id="' not in article.html and " class=" not in article.html
+    assert "Another post number" not in article.text
+    assert judge(article, NAME, "", 500, 1.5, 0.6).accepted
+
+
+def test_leaves_a_single_block_article_unchanged():
+    page = _aem_page([12])
+    article = extract_article(AEM_URL, page)
+    assert article.body_length == 0
+    assert "Block 0 paragraph 11:" in article.text
+
+
+def test_refuses_an_extraction_that_kept_part_of_the_article_body():
+    article = _article("word " * 400)
+    article.body_length = 5000
+    verdict = judge(article, NAME, "", 500, 1.5, 0.6)
+    assert not verdict.accepted
+    assert "partial article" in verdict.reason
+
+
+def test_retries_on_the_article_body_when_the_extraction_is_partial(monkeypatch):
+    from connector import article as module
+
+    extract = module._extract
+    calls = []
+
+    def first_partial(html, url):
+        calls.append(html)
+        document = extract(html, url)
+        if len(calls) == 1:
+            # Keep the first paragraph only, as trafilatura did on such pages
+            for paragraph in list(document.body.iter("p"))[1:]:
+                paragraph.getparent().remove(paragraph)
+        return document
+
+    monkeypatch.setattr(module, "_extract", first_partial)
+    article = extract_article(AEM_URL, _aem_page([4, 3, 9, 7]))
+    assert len(calls) == 2
+    assert "Block 3 paragraph 6:" in article.text
+    assert article.title == NAME
+
+
 def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):
     """DNS rebinding: the check before the request passed, the socket did not."""
 

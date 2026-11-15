@@ -37,9 +37,16 @@ reference).
    In-page anchors (`<a id>` or `<a name>` before a heading, links to `#part`
    of the page) are unwrapped, their text kept, and the body is written with
    HTML rules, so no empty link is left open in the report's content.
+   An article laid out as a run of sibling blocks of the same kind, figures
+   between them (Adobe AEM `div.cmp-text`), is gathered into one body first, so
+   every block is kept in order; the page's layout attributes (`class`, `id`,
+   `style`, `data-*`) are not written to the content.
 4. **Checks it is the article**: not an anti-bot or consent page, at least 500
    characters, and matching the report (page title, the report name's words at
-   the top of the text, or the URL slug). When the report's content is already
+   the top of the text, or the URL slug). When the article body was found as a
+   run of blocks, the extraction must keep at least 60% of its text: it is
+   retried on that body alone, then refused as a partial article, never
+   written partial. When the report's content is already
    filled, the article must also be 1.5 times longer than it, so a full text is
    never replaced by less; an empty content replaces nothing.
 5. **Writes the body to the report's content** through a bundle, so confidence
