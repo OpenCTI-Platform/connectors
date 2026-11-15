@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from connector_linter.checks._sdk_bases import SDK_SETTINGS_BASE_NAMES
 from connector_linter.models import (
     CheckFinding,
     ConnectorContext,
@@ -65,7 +66,7 @@ _LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "criti
 # test_sdk_logger_classes_match_connectors_sdk.
 _SDK_LOGGER_CLASSES = {
     "BaseClientApi",
-    "BaseConnectorSettings",
+    *SDK_SETTINGS_BASE_NAMES,
     "BaseConnectorState",
     "BaseDataProcessor",
     "ExternalImportConnector",

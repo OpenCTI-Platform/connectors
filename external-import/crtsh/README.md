@@ -172,6 +172,11 @@ graph LR
 
 5. **Author Identity**: All objects reference a "crtsh" organization identity as creator
 
+6. **Incremental Import**:
+   - crt.sh assigns certificate ids in increasing order, so the connector stores the highest id it has imported as `last_cert_id` in its state and only imports certificates with a higher id on the next run
+   - `last_cert_id` is only updated after the bundle has been sent, so a failed run is retried with the same certificates
+   - Without `last_cert_id` (first run, or after resetting the state), every certificate returned by the search is imported
+
 ## Debugging
 
 Enable verbose logging:

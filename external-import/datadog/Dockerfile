@@ -16,7 +16,6 @@ RUN apk --no-cache upgrade \
         libxml2-dev \
         python3-dev \
         libffi-dev \
-    && apk --no-cache add libmagic \
     && pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
     && apk del .build-deps \

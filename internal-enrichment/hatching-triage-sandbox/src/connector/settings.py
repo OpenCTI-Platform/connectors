@@ -5,7 +5,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, PositiveInt, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -59,6 +59,10 @@ class HatchingTriageSandboxConfig(BaseConfigModel):
     tag_color: str = Field(
         description="Label color for all other labels.",
         default="#54483b",
+    )
+    max_attempts: PositiveInt = Field(
+        description="Maximum number of attempts to fetch the overview report, wait for an analysis or download an extracted file when the Triage API returns an error (e.g. 502) or the file is not available yet.",
+        default=5,
     )
     max_tlp: str | None = DeprecatedField(
         deprecated="Use 'CONNECTOR_MAX_TLP' in the 'connector' section instead.",

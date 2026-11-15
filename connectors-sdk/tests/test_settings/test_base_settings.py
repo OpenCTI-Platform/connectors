@@ -10,8 +10,16 @@ from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
+    BaseInternalExportFileConnectorConfig,
+    BaseInternalExportFileConnectorSettings,
+    BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
@@ -708,3 +716,139 @@ def test_base_internal_enrichment_connector_config_json_schema_exposes_max_tlp()
     max_tlp = schema["properties"]["CONNECTOR_MAX_TLP"]
     assert max_tlp["default"] == "amber"
     assert "amber+strict" in max_tlp["enum"]
+
+
+# (settings class, config class, connector type, type-specific env var, extra env vars)
+PER_TYPE_SETTINGS = [
+    pytest.param(
+        BaseExternalImportConnectorSettings,
+        BaseExternalImportConnectorConfig,
+        "EXTERNAL_IMPORT",
+        "CONNECTOR_DURATION_PERIOD",
+        {},
+        id="external-import",
+    ),
+    pytest.param(
+        BaseInternalEnrichmentConnectorSettings,
+        BaseInternalEnrichmentConnectorConfig,
+        "INTERNAL_ENRICHMENT",
+        "CONNECTOR_MAX_TLP",
+        {},
+        id="internal-enrichment",
+    ),
+    pytest.param(
+        BaseStreamConnectorSettings,
+        BaseStreamConnectorConfig,
+        "STREAM",
+        "CONNECTOR_LIVE_STREAM_ID",
+        {"CONNECTOR_LIVE_STREAM_ID": "stream--uid"},
+        id="stream",
+    ),
+    # This config adds no field of its own: `CONNECTOR_TYPE` is the type-specific
+    # variable checked.
+    pytest.param(
+        BaseInternalExportFileConnectorSettings,
+        BaseInternalExportFileConnectorConfig,
+        "INTERNAL_EXPORT_FILE",
+        "CONNECTOR_TYPE",
+        {},
+        id="internal-export-file",
+    ),
+    pytest.param(
+        BaseInternalImportFileConnectorSettings,
+        BaseInternalImportFileConnectorConfig,
+        "INTERNAL_IMPORT_FILE",
+        "CONNECTOR_AUTO",
+        {},
+        id="internal-import-file",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_should_narrow_connector_field(
+    settings_class, config_class, connector_type, env_var, extra_env
+):
+    """Test that each per-type settings class types `connector` as its config class."""
+
+    # Given/When: A per-type settings class
+    annotation = settings_class.model_fields["connector"].annotation
+
+    # Then: The `connector` field is annotated with the matching config class
+    assert annotation is config_class
+    assert issubclass(settings_class, BaseConnectorSettings)
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_should_load_matching_connector_config(
+    mock_environment,
+    monkeypatch,
+    settings_class,
+    config_class,
+    connector_type,
+    env_var,
+    extra_env,
+):
+    """Test that each per-type settings class loads a `connector` of the matching type."""
+
+    # Given: Valid connector settings in the environment (plus type-specific ones)
+    for name, value in extra_env.items():
+        monkeypatch.setenv(name, value)
+
+    # When: The per-type settings class is instantiated
+    settings = settings_class()
+
+    # Then: `connector` is an instance of the matching config class, with its type
+    assert isinstance(settings.connector, config_class)
+    assert settings.connector.type == connector_type
+    assert settings.connector.id == "connector-poc--uid"
+
+
+def test_base_external_import_connector_settings_should_load_duration_period(
+    mock_environment,
+):
+    """Test that `BaseExternalImportConnectorSettings` exposes `duration_period` (required, no default)."""
+
+    # Given: CONNECTOR_DURATION_PERIOD is set to PT5M in the environment
+    # When: The external import settings are instantiated
+    settings = BaseExternalImportConnectorSettings()
+
+    # Then: duration_period is a timedelta of 5 minutes
+    assert settings.connector.duration_period.total_seconds() == 300
+
+
+def test_base_external_import_connector_settings_should_require_duration_period(
+    mock_environment, monkeypatch
+):
+    """Test that `BaseExternalImportConnectorSettings` requires `CONNECTOR_DURATION_PERIOD`."""
+
+    # Given: CONNECTOR_DURATION_PERIOD is not set
+    monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
+
+    # When/Then: Instantiating the settings raises a ConfigValidationError
+    with pytest.raises(ConfigValidationError):
+        BaseExternalImportConnectorSettings()
+
+
+@pytest.mark.parametrize(
+    "settings_class, config_class, connector_type, env_var, extra_env",
+    PER_TYPE_SETTINGS,
+)
+def test_per_type_connector_settings_config_json_schema_exposes_type_specific_vars(
+    settings_class, config_class, connector_type, env_var, extra_env
+):
+    """Test that the config JSON schema of each per-type settings class exposes its type-specific vars."""
+
+    # Given: A per-type settings class
+    # When: The config JSON schema is generated
+    schema = settings_class.config_json_schema(connector_name="test-connector")
+
+    # Then: The type-specific env var and the connector type are exposed
+    assert env_var in schema["properties"]
+    assert schema["properties"]["CONNECTOR_TYPE"]["default"] == connector_type

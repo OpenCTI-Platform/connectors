@@ -5,9 +5,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from crtsh import CrtSHClient
+from lib.external_import import ExternalImportConnector
 from main import CrtshConnector
 from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
+from stix2 import TLP_WHITE
 
 
 class StubConnectorSettings(ConnectorSettings):
@@ -144,3 +146,116 @@ def test_connector_should_not_mark_objects_when_marking_refs_is_unset(
 
     assert connector.marking_refs is None
     assert connector.api.marking_refs is None
+
+
+# ── last_cert_id state handling ──────────────────────────────────────────────
+
+
+def _run_once(monkeypatch, state, send_error=None, crtsh_result=([MagicMock()], 200)):
+    """Run one connector cycle with a mocked helper and crt.sh client."""
+    monkeypatch.setattr("lib.external_import.ConnectorSettings", StubConnectorSettings)
+    monkeypatch.setattr("lib.external_import.OpenCTIConnectorHelper", MagicMock())
+    connector = CrtshConnector()
+    connector.helper.connect_run_and_terminate = True
+    connector.helper.get_state.return_value = state
+    if send_error:
+        connector.helper.send_stix2_bundle.side_effect = send_error
+    connector.api = MagicMock()
+    connector.api.get_stix_objects.return_value = crtsh_result
+
+    with pytest.raises(SystemExit):
+        connector.run()
+
+    return connector
+
+
+def test_run_imports_after_last_cert_id_and_stores_the_new_one(monkeypatch):
+    connector = _run_once(monkeypatch, state={"last_run": 1, "last_cert_id": 100})
+
+    connector.api.get_stix_objects.assert_called_once_with(last_cert_id=100)
+    saved_state = connector.helper.set_state.call_args.args[0]
+    assert saved_state["last_cert_id"] == 200
+    assert saved_state["last_run"] > 1
+
+
+def test_run_without_last_cert_id_imports_everything(monkeypatch):
+    """Upgrading from a state that only has last_run behaves like a first run."""
+    connector = _run_once(monkeypatch, state={"last_run": 1})
+
+    connector.api.get_stix_objects.assert_called_once_with(last_cert_id=None)
+    assert connector.helper.set_state.call_args.args[0]["last_cert_id"] == 200
+
+
+def test_run_does_not_advance_last_cert_id_when_sending_fails(monkeypatch):
+    """If the bundle is not sent, the same certificates are imported next run."""
+    connector = _run_once(
+        monkeypatch,
+        state={"last_run": 1, "last_cert_id": 100},
+        send_error=RuntimeError("OpenCTI unavailable"),
+    )
+
+    assert connector.helper.set_state.call_args.args[0]["last_cert_id"] == 100
+
+
+def test_run_without_any_certificate_id_does_not_store_last_cert_id(monkeypatch):
+    """If crt.sh returns nothing usable on a first run, no last_cert_id is stored."""
+    connector = _run_once(monkeypatch, state={"last_run": 1}, crtsh_result=([], None))
+
+    assert "last_cert_id" not in connector.helper.set_state.call_args.args[0]
+
+
+def test_base_connector_has_no_extra_state_updates_by_default():
+    assert ExternalImportConnector._get_state_updates(MagicMock()) == {}
+
+
+# ── Marking definition in the bundle ─────────────────────────────────────────
+
+
+def _collect_with_one_certificate(monkeypatch):
+    """Run _collect_intelligence with the real client on one crt.sh entry."""
+    monkeypatch.setattr("lib.external_import.ConnectorSettings", StubConnectorSettings)
+    monkeypatch.setattr("lib.external_import.OpenCTIConnectorHelper", MagicMock())
+    connector = CrtshConnector()
+    connector.helper.get_state.return_value = {}
+    entry = {
+        "issuer_ca_id": 1,
+        "issuer_name": "C=US, O=Example CA, CN=Example CA",
+        "common_name": "example.com",
+        "name_value": "example.com\nwww.example.com",
+        "id": 12345,
+        "not_before": "2026-01-01T00:00:00",
+        "not_after": "2026-04-01T00:00:00",
+        "serial_number": "0a1b2c3d",
+    }
+    monkeypatch.setattr(connector.api, "_request_data", lambda: [entry])
+    return connector, connector._collect_intelligence()
+
+
+def test_collected_objects_include_the_configured_marking_definition(monkeypatch):
+    """Objects reference the marking, so it must be sent in the same bundle."""
+    connector, stix_objects = _collect_with_one_certificate(monkeypatch)
+
+    marking = connector.api.marking_refs
+    assert marking == TLP_WHITE
+    assert marking in stix_objects
+    marked_objects = [obj for obj in stix_objects if obj.get("object_marking_refs")]
+    assert marked_objects
+    assert all(marking.id in obj["object_marking_refs"] for obj in marked_objects)
+
+
+def test_collected_objects_have_no_marking_definition_when_none_is_configured(
+    monkeypatch,
+):
+    monkeypatch.setattr("lib.external_import.ConnectorSettings", StubConnectorSettings)
+    monkeypatch.setattr("lib.external_import.OpenCTIConnectorHelper", MagicMock())
+    connector = CrtshConnector()
+    connector.helper.get_state.return_value = {}
+    connector.api.marking_refs = None
+    monkeypatch.setattr(
+        connector.api, "get_stix_objects", lambda last_cert_id: ([MagicMock()], 1)
+    )
+
+    stix_objects = connector._collect_intelligence()
+
+    assert stix_objects[-1] is connector.api.author
+    assert len(stix_objects) == 2

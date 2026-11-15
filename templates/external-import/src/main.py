@@ -38,6 +38,7 @@ import traceback
 
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import ReportsProcessor, VulnerabilitiesProcessor
+from connectors_sdk import BaseDataProcessor
 from connectors_sdk import ExternalImportConnector as TemplateConnector
 
 if __name__ == "__main__":
@@ -46,7 +47,7 @@ if __name__ == "__main__":
         state = ConnectorState()
 
         # TODO: add one entry per processor/feature flag you implement.
-        data_processors = []
+        data_processors: list[BaseDataProcessor[ConnectorSettings, ConnectorState]] = []
         if settings.template.import_vulnerabilities:
             data_processors.append(VulnerabilitiesProcessor())
         if settings.template.import_reports:
