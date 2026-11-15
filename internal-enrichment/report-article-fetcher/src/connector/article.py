@@ -559,7 +559,8 @@ def _pipe_tables(tree: lxml.etree._Element) -> bool:
     as a paragraph of raw pipes. Such a block becomes a <table> with a <tr>
     per line; a separator line (|---|---|) after the first line makes that
     line a header row of <th>. Links and inline formatting stay in their
-    cell, and a pipe inside one of them (inline code) is not a separator.
+    cell, and a pipe inside one of them (inline code) or an escaped pipe
+    (\\|) in the text is not a separator but a literal pipe of the cell.
     Only a block made of such lines alone is changed: every line starts and
     ends with a pipe, has at least two cells and as many as the others.
     Lines are separated by line breaks or <br>. Returns whether a block
@@ -606,8 +607,11 @@ def _pipe_rows(block: lxml.etree._Element):
         if not isinstance(piece, str):
             lines[-1].append(piece)
             continue
-        for token in re.split(r"(\n|\|)", piece):
-            if token == "\n":
+        for token in re.split(r"(\\\||\n|\|)", piece):
+            if token == "\\|":
+                # An escaped pipe (\|) is a literal pipe in the cell text.
+                lines[-1].append("|")
+            elif token == "\n":
                 lines.append([])
             elif token == "|":
                 lines[-1].append(_PIPE)

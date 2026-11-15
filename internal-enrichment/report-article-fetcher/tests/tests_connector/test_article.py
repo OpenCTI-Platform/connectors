@@ -456,6 +456,16 @@ def test_a_pipe_in_inline_code_is_not_a_cell_separator():
     assert f"<td>{CODE}a|b</code></td>" in article.html
 
 
+def test_an_escaped_pipe_is_a_literal_pipe_of_the_cell():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post("<p>| a \\| b | c |\n| d | e |</p>"),
+    )
+    assert _tables(article.html) == [
+        [[("td", "a | b"), ("td", "c")], [("td", "d"), ("td", "e")]]
+    ]
+
+
 @pytest.mark.parametrize(
     "block",
     [
