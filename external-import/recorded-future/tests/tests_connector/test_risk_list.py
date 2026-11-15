@@ -386,7 +386,11 @@ def test_run_keeps_state_keys_saved_by_other_modules_meanwhile():
     assert saved_state["last_analyst_notes_run"] == "2026-11-05 09:00:00"
     assert saved_state["last_threat_maps_run"] == "2026-11-05 09:00:00"
     assert saved_state["last_risk_lists_run"] != "2026-11-01 00:00:00"
+
+
 # ── Tests for per-row error handling in RiskList.run() ───────────────────────
+
+
 def _risk_list_row(name):
     return {
         "Name": name,
@@ -396,14 +400,22 @@ def _risk_list_row(name):
         "RuleCriticality": "[3]",
         "RiskRules": '["Test Rule"]',
         "Links": "{}",
+    }
+
+
 def _mock_stix_obj():
     stix_obj = MagicMock()
     stix_obj.to_stix_bundle.return_value = MagicMock(
         objects=[1], serialize=MagicMock(return_value="{}")
     )
     return stix_obj
+
+
 # Scenario: one row that fails to convert does not abort the rest of the risk list
 def test_failing_row_is_skipped_and_remaining_rows_are_processed():
+    helper = _mock_helper()
+    risk_list = _build_risk_list(helper=helper)
+
     bad_obj = _mock_stix_obj()
     bad_obj.map_data.side_effect = KeyError("hits")
     good_obj = _mock_stix_obj()
@@ -412,10 +424,14 @@ def test_failing_row_is_skipped_and_remaining_rows_are_processed():
             "class": MagicMock(side_effect=[bad_obj, good_obj]),
             "path": "/public/opencti/default_ip.csv",
         }
+    }
     rows = [_risk_list_row("1.1.1.1"), _risk_list_row("2.2.2.2")]
+
     with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", ip_mapper), patch(
         "csv.DictReader", return_value=iter(rows)
     ):
+        risk_list.run()
+
     # The good row is still sent and the run completes
     helper.send_stix2_bundle.assert_called_once()
     helper.api.work.to_processed.assert_called_once()
@@ -424,6 +440,9 @@ def test_failing_row_is_skipped_and_remaining_rows_are_processed():
     # The bad row is reported as a warning, not as a run-level error
     helper.connector_logger.warning.assert_called_once()
     assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
+    helper.connector_logger.error.assert_not_called()
+
+
 # Scenario: a row with malformed fields is skipped and the next row is still sent
 @pytest.mark.parametrize(
     "bad_fields",
@@ -433,15 +452,21 @@ def test_failing_row_is_skipped_and_remaining_rows_are_processed():
     ],
 )
 def test_row_with_malformed_fields_is_skipped_and_next_row_is_processed(bad_fields):
+    helper = _mock_helper()
+    risk_list = _build_risk_list(helper=helper)
+
     stix_class = MagicMock(return_value=_mock_stix_obj())
     ip_mapper = {"IP": {"class": stix_class, "path": "/public/opencti/default_ip.csv"}}
     rows = [
         {**_risk_list_row("1.1.1.1"), **bad_fields},
         _risk_list_row("2.2.2.2"),
     ]
+
     with patch("rflib.risk_list.RISK_LIST_TYPE_MAPPER", ip_mapper), patch(
         "csv.DictReader", return_value=iter(rows)
     ):
+        risk_list.run()
+
     # Only the valid row is converted and sent, and the run completes
     stix_class.assert_called_once()
     assert stix_class.call_args.args[0] == "2.2.2.2"
@@ -449,3 +474,4 @@ def test_row_with_malformed_fields_is_skipped_and_next_row_is_processed(bad_fiel
     helper.set_state.assert_called_once()
     helper.connector_logger.warning.assert_called_once()
     assert "1.1.1.1" in str(helper.connector_logger.warning.call_args)
+    helper.connector_logger.error.assert_not_called()
