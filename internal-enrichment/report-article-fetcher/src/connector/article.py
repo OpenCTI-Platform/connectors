@@ -326,6 +326,7 @@ def extract_article(url: str, html: str) -> Article | None:
     _drop_page_anchors(tree, url)
     _restore_code_elements(tree)
     _drop_layout_attributes(tree)
+    _shield_code_elements(tree)
     # HTML serialisation, not XML: an empty element is written <a ...></a>,
     # never <a .../>, which an HTML parser reads as an unclosed tag.
     body = normalize_unicode(
@@ -469,6 +470,20 @@ def _restore_code_elements(tree: lxml.etree._Element) -> None:
             inner.extend(list(block))
             block.append(inner)
         _strip_fence(inner)
+
+
+def _shield_code_elements(tree: lxml.etree._Element) -> None:
+    """Write every code element <code translate="no">, never a bare <code>.
+
+    The report goes to the platform through pycti, whose import of a report
+    rewrites each bare <code>...</code> of its content as markdown backticks
+    (OpenCTIStix2.convert_markdown): inline code would reach the report as
+    `www-data` text and a code block as <pre>`...`</pre>. That rewrite only
+    matches the bare tag, so an attribute keeps the element as it is; and
+    translate="no" is what code means anyway: never translate it.
+    """
+    for code in tree.iter("code"):
+        code.set("translate", "no")
 
 
 def _inline_code(block: lxml.etree._Element, inner) -> bool:
