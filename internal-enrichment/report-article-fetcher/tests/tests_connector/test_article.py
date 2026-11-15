@@ -1,3 +1,4 @@
+import re
 import socket
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -169,6 +170,75 @@ def test_keeps_tables_inside_embed_blocks():
     article = extract_article(RSS_REFERENCE["url"], html)
     assert "<table" in article.html
     assert "194.87.128.243" in article.html
+
+
+# The shape of a vendor blog post whose headings carry in-page anchors: an
+# <a id> or <a name> with no href before the heading text.
+ANCHORED_POST = (
+    f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
+    + "".join(
+        f"<p>Paragraph {i} of the analysis of the intrusion and its tooling.</p>"
+        for i in range(20)
+    )
+    + '<h2><a id="overview"></a>Overview</h2>'
+    + "<p>The operators gained access through an unpatched appliance.</p>"
+    + '<h3><a name="tooling"></a>Tooling</h3>'
+    + "<p>They deployed a loader described in "
+    + '<a href="https://intel.example.org/loader">this analysis</a>.</p>'
+    + '<h2><a href="#iocs">Indicators of Compromise</a></h2>'
+    + "<ul><li>194.87.128.243</li><li>malicious-domain.example</li></ul>"
+    + "<p>Closing words of the article.</p></article></body></html>"
+)
+
+_NON_VOID_SELF_CLOSED = re.compile(
+    r"<(?!(?:area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)\b)"
+    r"[a-z][a-z0-9]*\b[^>]*/>",
+    re.IGNORECASE,
+)
+
+
+def test_drops_empty_heading_anchors():
+    article = extract_article(RSS_REFERENCE["url"], ANCHORED_POST)
+    assert "<h2>Overview</h2>" in article.html
+    assert "<h3>Tooling</h3>" in article.html
+    assert '<a href=""' not in article.html
+    assert not _NON_VOID_SELF_CLOSED.search(article.html)
+
+
+def test_drops_fragment_links_and_keeps_real_links():
+    article = extract_article(RSS_REFERENCE["url"], ANCHORED_POST)
+    assert '<a href="https://intel.example.org/loader">this analysis</a>' in (
+        article.html
+    )
+    assert 'href="#' not in article.html
+    assert "Indicators of Compromise" in article.html
+    assert "194.87.128.243" in article.html
+
+
+def test_keeps_an_explicit_link_to_a_fragment_of_the_site_root():
+    html = ANCHORED_POST.replace(
+        "<p>Closing words of the article.</p>",
+        '<p>See <a href="https://blog.example.com/#about">the team</a>.</p>'
+        "<p>Closing words of the article.</p>",
+    )
+    article = extract_article(RSS_REFERENCE["url"], html)
+    assert 'href="https://blog.example.com/#about"' in article.html
+    assert "blog.example.com#iocs" not in article.html
+    assert "blog.example.com/#iocs" not in article.html
+
+
+def test_never_self_closes_an_element():
+    html = (
+        f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
+        + "".join(
+            f"<p>Paragraph {i} of the report on the campaign.<span></span></p>"
+            for i in range(20)
+        )
+        + "<table><tr><td></td><td>2026-02-07</td></tr></table>"
+        + "<p>Closing words.</p></article></body></html>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], html)
+    assert not _NON_VOID_SELF_CLOSED.search(article.html)
 
 
 def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):

@@ -10,14 +10,14 @@ import socket
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from html import unescape
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import lxml.etree
 import lxml.html
 import requests
 import trafilatura
 from requests.adapters import HTTPAdapter
-from trafilatura.htmlprocessing import build_html_output
+from trafilatura.htmlprocessing import convert_to_html
 from trafilatura.utils import normalize_unicode
 from trafilatura.xml import xmltotxt
 from urllib3.connection import HTTPConnection, HTTPSConnection
@@ -312,10 +312,72 @@ def extract_article(url: str, html: str) -> Article | None:
         return None
     # The text first: building the HTML output converts the body in place.
     text = normalize_unicode(xmltotxt(document.body, True))
-    body = normalize_unicode(build_html_output(document))
+    tree = convert_to_html(document.body)
+    _drop_page_anchors(tree, url)
+    # HTML serialisation, not XML: an empty element is written <a ...></a>,
+    # never <a .../>, which an HTML parser reads as an unclosed tag.
+    body = normalize_unicode(
+        lxml.html.tostring(
+            tree, method="html", pretty_print=True, encoding="unicode"
+        ).strip()
+    )
     if not body:
         return None
     return Article(url=url, title=document.title, html=_strip_document(body), text=text)
+
+
+def _same_page(href: str, url: str) -> bool:
+    """The link points at the page itself: empty, or a fragment of the page.
+
+    A bare in-page link "#part" never reaches this point with its href:
+    _prepare drops it, since trafilatura would rewrite it against the site
+    root ("https://site#part"), where it could not be told apart from an
+    explicit link to the root page, which is kept.
+    """
+    href = href.strip()
+    if not href:
+        return True
+    target, fragment = urldefrag(href)
+    if not fragment and not href.endswith("#"):
+        return False
+    if not target:
+        return True
+    page = urldefrag(url)[0]
+    return target.rstrip("/") == page.rstrip("/")
+
+
+def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
+    """Unwrap the links that lead nowhere, keeping their text and children.
+
+    Headings often carry an in-page anchor (<a id="part"></a>, <a name>):
+    trafilatura keeps it as a link with an empty href, which the report's
+    content would render as a link reloading the page. Links to another
+    page are kept: indicators often sit in them.
+    """
+    for link in list(tree.iter("a")):
+        if _same_page(link.get("href") or "", url):
+            _unwrap(link)
+
+
+def _unwrap(element: lxml.etree._Element) -> None:
+    """Replace the element with its content: text, children and tail."""
+    parent = element.getparent()
+    if parent is None:
+        return
+    children = list(element)
+    leading = element.text or ""
+    trailing = element.tail or ""
+    if children:
+        children[-1].tail = (children[-1].tail or "") + trailing
+    else:
+        leading += trailing
+    previous = element.getprevious()
+    if previous is not None:
+        previous.tail = (previous.tail or "") + leading
+    else:
+        parent.text = (parent.text or "") + leading
+    index = parent.index(element)
+    parent[index : index + 1] = children
 
 
 # One indicator alone in an element: a hash, an IPv4, a URL or a domain,
@@ -341,12 +403,19 @@ def _prepare(html: str) -> str:
       class is dropped from the ancestors of each table.
     - Indicators listed one per bare <div> (AhnLab ASEC): trafilatura takes
       the short blocks for page chrome. Such a run of <div>s becomes a list.
+    - In-page links ("#part"): trafilatura rewrites them against the site
+      root, so their href is dropped here, while it is still recognisable,
+      and _drop_page_anchors unwraps them after the extraction.
     """
     try:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
     changed = False
+    for link in document.iter("a"):
+        if (link.get("href") or "").strip().startswith("#"):
+            del link.attrib["href"]
+            changed = True
     for table in list(document.iter("table")):
         wrapper = table.getparent()
         while (
