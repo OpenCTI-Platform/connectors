@@ -65,6 +65,10 @@ class Article:
     title: str | None
     html: str
     text: str
+    # Characters of text in the page's article body when _prepare found it
+    # (a run of sibling content blocks), 0 when unknown: judge refuses an
+    # extraction that kept too little of it.
+    body_length: int = 0
 
 
 @dataclass
@@ -294,7 +298,54 @@ def extract_article(url: str, html: str) -> Article | None:
     the whole extraction again for each output format).
     """
     html = _prepare(html)
-    document = trafilatura.bare_extraction(
+    document = _extract(html, url)
+    if document is None or document.body is None:
+        return None
+    body_length = 0
+    container = _article_body(html)
+    if container is not None:
+        # The body is known: an extraction that kept only a part of it is
+        # retried on the body alone, and judge refuses it if still partial.
+        body_length = _length(container.text_content())
+        if _length(xmltotxt(document.body, False)) < _BODY_SHARE * body_length:
+            retry = _extract(
+                "<html><body>"
+                + lxml.html.tostring(container, encoding="unicode")
+                + "</body></html>",
+                url,
+            )
+            if retry is not None and retry.body is not None:
+                if _length(xmltotxt(retry.body, False)) > _length(
+                    xmltotxt(document.body, False)
+                ):
+                    retry.title = document.title
+                    document = retry
+    # The text first: building the HTML output converts the body in place.
+    text = normalize_unicode(xmltotxt(document.body, True))
+    tree = convert_to_html(document.body)
+    _drop_page_anchors(tree, url)
+    _drop_layout_attributes(tree)
+    # HTML serialisation, not XML: an empty element is written <a ...></a>,
+    # never <a .../>, which an HTML parser reads as an unclosed tag.
+    body = normalize_unicode(
+        lxml.html.tostring(
+            tree, method="html", pretty_print=True, encoding="unicode"
+        ).strip()
+    )
+    if not body:
+        return None
+    return Article(
+        url=url,
+        title=document.title,
+        html=_strip_document(body),
+        text=text,
+        body_length=body_length,
+    )
+
+
+def _extract(html: str, url: str):
+    """One trafilatura extraction of the page, as a document."""
+    return trafilatura.bare_extraction(
         html,
         url=url,
         output_format="html",
@@ -308,22 +359,40 @@ def extract_article(url: str, html: str) -> Article | None:
         include_comments=False,
         favor_recall=True,
     )
-    if document is None or document.body is None:
+
+
+def _length(text: str) -> int:
+    """Characters of text, whitespace runs counted as one."""
+    return len(re.sub(r"\s+", " ", text).strip())
+
+
+def _article_body(html: str) -> lxml.etree._Element | None:
+    """The element _prepare marked as the article body, if any."""
+    if _BODY_MARK not in html:
         return None
-    # The text first: building the HTML output converts the body in place.
-    text = normalize_unicode(xmltotxt(document.body, True))
-    tree = convert_to_html(document.body)
-    _drop_page_anchors(tree, url)
-    # HTML serialisation, not XML: an empty element is written <a ...></a>,
-    # never <a .../>, which an HTML parser reads as an unclosed tag.
-    body = normalize_unicode(
-        lxml.html.tostring(
-            tree, method="html", pretty_print=True, encoding="unicode"
-        ).strip()
-    )
-    if not body:
+    try:
+        document = lxml.html.fromstring(html)
+    except (lxml.etree.ParserError, ValueError):
         return None
-    return Article(url=url, title=document.title, html=_strip_document(body), text=text)
+    bodies = document.xpath(f"//*[@{_BODY_MARK}]")
+    if not bodies:
+        return None
+    # The largest one: a page holds one article.
+    return max(bodies, key=lambda element: _length(element.text_content()))
+
+
+def _drop_layout_attributes(tree: lxml.etree._Element) -> None:
+    """Drop the page's layout attributes: class, id, style and data-*.
+
+    They mean nothing in the report's content and only carry the page's
+    component names (<div class="cmp-text" id="text-4b5f">).
+    """
+    for element in tree.iter():
+        if not isinstance(element.tag, str):
+            continue
+        for name in list(element.attrib):
+            if name in ("class", "id", "style") or name.startswith("data-"):
+                del element.attrib[name]
 
 
 def _same_page(href: str, url: str) -> bool:
@@ -391,6 +460,70 @@ _INDICATOR = re.compile(
 )
 
 
+# _prepare marks the article body it rebuilt from sibling blocks with this
+# attribute, so extract_article can check how much of it was kept.
+_BODY_MARK = "data-report-article-body"
+# Share of the article body's text an extraction must keep: below it, the
+# extraction is retried on the body alone, then refused by judge.
+_BODY_SHARE = 0.6
+# A content block: at least this many characters of paragraph text.
+_BLOCK_TEXT = 200
+
+
+def _paragraph_length(element: lxml.etree._Element) -> int:
+    return sum(_length(p.text_content()) for p in element.iter("p"))
+
+
+def _join_sibling_blocks(document: lxml.etree._Element) -> bool:
+    """Gather an article split across sibling blocks into one element.
+
+    Some sites lay an article out as a run of sibling blocks of the same
+    kind, figures between them (Adobe AEM: several div.cmp-text). trafilatura
+    keeps one candidate subtree, so all but one block were lost. The run
+    holding the most paragraph text in the page (at least two blocks of
+    _BLOCK_TEXT characters each, and most of the page's paragraph text) is
+    moved, with whatever sits between its
+    blocks, into one <div> marked _BODY_MARK, in place of the first block.
+    """
+    best = None
+    for parent in document.iter():
+        if not isinstance(parent.tag, str):
+            continue
+        groups: dict[tuple, list] = {}
+        for child in parent:
+            if not isinstance(child.tag, str) or not child.get("class"):
+                continue
+            if _paragraph_length(child) < _BLOCK_TEXT:
+                continue
+            key = (child.tag, " ".join(sorted(child.get("class").split())))
+            groups.setdefault(key, []).append(child)
+        for blocks in groups.values():
+            if len(blocks) < 2:
+                continue
+            total = sum(_paragraph_length(block) for block in blocks)
+            if best is None or total > best[0]:
+                best = (total, parent, blocks)
+    # The run must hold most of the page's paragraph text: a list of
+    # comments or related posts under a one-block article is left alone.
+    if best is None or best[0] < 0.5 * _paragraph_length(document):
+        return False
+    _, parent, blocks = best
+    first, last = parent.index(blocks[0]), parent.index(blocks[-1])
+    run = list(parent)[first : last + 1]
+    body = lxml.etree.Element("div")
+    # The first block's class keeps whatever made the extractor pick it.
+    body.set("class", blocks[0].get("class"))
+    body.set(_BODY_MARK, "")
+    body.tail = run[-1].tail
+    parent.insert(first, body)
+    for element in run:
+        element.tail = None
+        if element in blocks:
+            del element.attrib["class"]
+        body.append(element)
+    return True
+
+
 def _prepare(html: str) -> str:
     """Rework the layouts that make trafilatura drop indicators.
 
@@ -406,12 +539,15 @@ def _prepare(html: str) -> str:
     - In-page links ("#part"): trafilatura rewrites them against the site
       root, so their href is dropped here, while it is still recognisable,
       and _drop_page_anchors unwraps them after the extraction.
+    - An article split across sibling blocks (Adobe AEM): trafilatura keeps
+      one of them. The blocks are gathered into one element
+      (_join_sibling_blocks).
     """
     try:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
-    changed = False
+    changed = _join_sibling_blocks(document)
     for link in document.iter("a"):
         if (link.get("href") or "").strip().startswith("#"):
             del link.attrib["href"]
@@ -524,6 +660,14 @@ def judge(
         return Verdict(False, f"blocked page ({blocked!r})")
     if length < min_length:
         return Verdict(False, f"too short ({length} characters)")
+    if article.body_length and _length(article.text) < (
+        _BODY_SHARE * article.body_length
+    ):
+        return Verdict(
+            False,
+            f"partial article ({_length(article.text)} of"
+            f" {article.body_length} characters of the article body)",
+        )
     if current_content and length < length_ratio * len(current_content):
         return Verdict(
             False,
