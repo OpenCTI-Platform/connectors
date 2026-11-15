@@ -34,6 +34,9 @@ reference).
    wrapper `<div>`s (Google Docs exports) are lifted out, the `embed` classes
    around tables (Webflow) are dropped, and indicators listed one per `<div>`
    become a list.
+   In-page anchors (`<a id>` or `<a name>` before a heading, links to `#part`
+   of the page) are unwrapped, their text kept, and the body is written with
+   HTML rules, so no empty link is left open in the report's content.
 4. **Checks it is the article**: not an anti-bot or consent page, at least 500
    characters, and matching the report (page title, the report name's words at
    the top of the text, or the URL slug). When the report's content is already

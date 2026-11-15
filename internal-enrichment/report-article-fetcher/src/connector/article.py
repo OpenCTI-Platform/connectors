@@ -10,14 +10,14 @@ import socket
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from html import unescape
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import lxml.etree
 import lxml.html
 import requests
 import trafilatura
 from requests.adapters import HTTPAdapter
-from trafilatura.htmlprocessing import build_html_output
+from trafilatura.htmlprocessing import convert_to_html
 from trafilatura.utils import normalize_unicode
 from trafilatura.xml import xmltotxt
 from urllib3.connection import HTTPConnection, HTTPSConnection
@@ -312,10 +312,72 @@ def extract_article(url: str, html: str) -> Article | None:
         return None
     # The text first: building the HTML output converts the body in place.
     text = normalize_unicode(xmltotxt(document.body, True))
-    body = normalize_unicode(build_html_output(document))
+    tree = convert_to_html(document.body)
+    _drop_page_anchors(tree, url)
+    # HTML serialisation, not XML: an empty element is written <a ...></a>,
+    # never <a .../>, which an HTML parser reads as an unclosed tag.
+    body = normalize_unicode(
+        lxml.html.tostring(
+            tree, method="html", pretty_print=True, encoding="unicode"
+        ).strip()
+    )
     if not body:
         return None
     return Article(url=url, title=document.title, html=_strip_document(body), text=text)
+
+
+def _same_page(href: str, url: str) -> bool:
+    """The link points at the page itself: empty, or a fragment of the page.
+
+    trafilatura rewrites an in-page link "#part" against the site root
+    ("https://site#part"), so the root counts as the page too.
+    """
+    href = href.strip()
+    if not href:
+        return True
+    target, fragment = urldefrag(href)
+    if not fragment and not href.endswith("#"):
+        return False
+    if not target:
+        return True
+    page = urldefrag(url)[0]
+    parsed = urlparse(page)
+    root = f"{parsed.scheme}://{parsed.netloc}"
+    return target.rstrip("/") in {page.rstrip("/"), root}
+
+
+def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
+    """Unwrap the links that lead nowhere, keeping their text and children.
+
+    Headings often carry an in-page anchor (<a id="part"></a>, <a name>):
+    trafilatura keeps it as a link with an empty href, which the report's
+    content would render as a link reloading the page. Links to another
+    page are kept: indicators often sit in them.
+    """
+    for link in list(tree.iter("a")):
+        if _same_page(link.get("href") or "", url):
+            _unwrap(link)
+
+
+def _unwrap(element: lxml.etree._Element) -> None:
+    """Replace the element with its content: text, children and tail."""
+    parent = element.getparent()
+    if parent is None:
+        return
+    children = list(element)
+    leading = element.text or ""
+    trailing = element.tail or ""
+    if children:
+        children[-1].tail = (children[-1].tail or "") + trailing
+    else:
+        leading += trailing
+    previous = element.getprevious()
+    if previous is not None:
+        previous.tail = (previous.tail or "") + leading
+    else:
+        parent.text = (parent.text or "") + leading
+    index = parent.index(element)
+    parent[index : index + 1] = children
 
 
 # One indicator alone in an element: a hash, an IPv4, a URL or a domain,
