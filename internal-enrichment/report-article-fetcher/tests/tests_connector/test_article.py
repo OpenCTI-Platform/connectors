@@ -12,6 +12,7 @@ from connector.article import (
     Article,
     FetchError,
     _code_lines,
+    _drop_empty_headings,
     _restore_code_elements,
     article_match,
     check_public_url,
@@ -396,6 +397,121 @@ def test_keeps_an_unmarked_table_with_line_number_attributes():
 
 
 HASH = "de8d4e2bd3a6a3ab9e22e19c6c1c4f8f5e1c7a7f2c5a1e3b2d9f8e7c6b5aabf4"
+
+
+def _tables(html: str) -> list[list[list[tuple[str, str]]]]:
+    """Each table of the HTML: its rows, each a list of (cell tag, text)."""
+    document = lxml.html.fromstring(html)
+    return [
+        [
+            [(cell.tag, cell.text_content().strip()) for cell in row]
+            for row in table.iter("tr")
+        ]
+        for table in document.iter("table")
+    ]
+
+
+def test_turns_a_markdown_pipe_paragraph_into_a_table():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post(
+            '<p>| <a href="https://msrc.example.com/CVE-2026-1">CVE-2026-1</a>'
+            " | Title one | <em>Detected</em> | 9.0 |\n"
+            '| <a href="https://msrc.example.com/CVE-2026-2">CVE-2026-2</a>'
+            " | Title two | N/A | 7.5 |</p>"
+        ),
+    )
+    assert "| " not in _section(article.html)
+    assert _tables(article.html) == [
+        [
+            [("td", "CVE-2026-1"), ("td", "Title one"), ("td", "Detected")]
+            + [("td", "9.0")],
+            [("td", "CVE-2026-2"), ("td", "Title two"), ("td", "N/A")]
+            + [("td", "7.5")],
+        ]
+    ]
+    assert '<td><a href="https://msrc.example.com/CVE-2026-1">CVE-2026-1</a></td>' in (
+        article.html
+    )
+    assert "<td><i>Detected</i></td>" in article.html
+
+
+def test_turns_the_line_before_a_separator_into_a_header_row():
+    article = extract_article(
+        RSS_REFERENCE["url"], _post("<p>| A | B |\n|---|:---:|\n| 1 | 2 |</p>")
+    )
+    assert _tables(article.html) == [
+        [[("th", "A"), ("th", "B")], [("td", "1"), ("td", "2")]]
+    ]
+
+
+def test_a_pipe_in_inline_code_is_not_a_cell_separator():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post("<p>| <code>a|b</code> | c |\n| d | e |</p>"),
+    )
+    assert _tables(article.html) == [
+        [[("td", "a|b"), ("td", "c")], [("td", "d"), ("td", "e")]]
+    ]
+    assert f"<td>{CODE}a|b</code></td>" in article.html
+
+
+@pytest.mark.parametrize(
+    "block",
+    [
+        "<p>Chain the commands with a | b to read the output.</p>",
+        "<p>| one cell |\n| other |</p>",
+        "<p>| a | b |\n| c | d | e |</p>",
+        "<p>| a | b |\nand some prose after the rows.</p>",
+    ],
+)
+def test_leaves_a_paragraph_that_is_not_a_pipe_table(block):
+    article = extract_article(RSS_REFERENCE["url"], _post(block))
+    assert "<table" not in article.html
+    # The paragraph is kept as text (its line breaks joined, as before).
+    text = " ".join(lxml.html.fromstring(block).text_content().split())
+    assert f"<p>{text}</p>" in unescape(article.html)
+
+
+def test_leaves_pipe_lines_of_a_code_block():
+    article = extract_article(
+        RSS_REFERENCE["url"], _post("<pre><code>| a | b |\n| c | d |</code></pre>")
+    )
+    assert "<table" not in article.html
+    assert _code_blocks(article.html) == ["| a | b |\n| c | d |"]
+
+
+def test_drops_a_heading_whose_section_held_only_images():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post(
+            "<p>Queries of the brief.</p>"
+            '<h2>Summary charts</h2><p><img src="https://cdn.example.com/a.png"></p>'
+            '<span><img src="https://cdn.example.com/b.png"></span>'
+            "<h2>Summary tables</h2><h3>Apps</h3><p>Apps text.</p>"
+        ),
+    )
+    assert "Summary charts" not in article.html
+    assert "<h2>Summary tables</h2>" in article.html
+    assert "<h3>Apps</h3>" in article.html
+    assert "<h2>Hunting queries</h2>" in article.html
+
+
+@pytest.mark.parametrize(
+    ("markup", "kept"),
+    [
+        ("<h2>A</h2><p>x</p><h2>B</h2>", ["A"]),
+        ("<h2>A</h2><h3>B</h3><h2>C</h2><p>x</p>", ["C"]),
+        ("<h2>A</h2><h3>B</h3><p>x</p><h2>C</h2>", ["A", "B"]),
+        ("<h2>A</h2><div><p>x</p></div>", ["A"]),
+        ("<h2>A</h2>tail text<h2>B</h2><p>x</p>", ["A", "B"]),
+    ],
+)
+def test_drops_only_the_headings_with_nothing_under_them(markup, kept):
+    tree = lxml.html.fromstring(f"<div>{markup}</div>")
+    _drop_empty_headings(tree)
+    assert [heading.text for heading in tree.xpath("//h2|//h3")] == kept
+    assert "x" in tree.text_content()
 
 
 def _section(html: str) -> str:
