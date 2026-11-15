@@ -416,21 +416,110 @@ def _same_page(href: str, url: str) -> bool:
     return target.rstrip("/") == page.rstrip("/")
 
 
-def _restore_code_elements(tree: lxml.etree._Element) -> None:
-    """Write a code block <pre><code>, as the page had it.
+# Parents in which a code element is a piece of a line of text, never a
+# block of its own: paragraphs, list items, table cells, headings and the
+# inline formatting elements.
+_INLINE_PARENTS = frozenset(
+    {"p", "li", "td", "th", "h1", "h2", "h3", "h4", "h5", "h6", "a", "span"}
+    | {"b", "strong", "i", "em", "u", "del", "sub", "sup", "small", "mark"}
+)
+# A backtick fence opening a code text: ``` with an optional language word
+# and its line break, or one or two backticks.
+_FENCE_OPEN = re.compile(r"\s*(?:(`{3,})[\w+#.-]*[ \t]*\n|(`{1,2})(?!`))")
 
-    trafilatura reads <pre><code> as one code element and writes it back
-    as a <pre> inside a <pre>: the inner one becomes the <code> again.
+
+def _restore_code_elements(tree: lxml.etree._Element) -> None:
+    """Write code back as the page had it: inline <code> or <pre><code>.
+
+    trafilatura reads every code element, inline or block, as one internal
+    code element and writes each one back as a <pre>:
+    - A <pre> that was inline code (in a paragraph, a list item, a table
+      cell, a heading, or with text beside it) becomes a <code> again, so
+      the paragraph or the table is not broken into blocks.
+    - Any other <pre> is a code block, written <pre><code>: trafilatura
+      writes <pre><code> back as a <pre> inside a <pre>, whose inner one
+      becomes the <code> again, and a bare <pre> gets a <code> inside.
+    A backtick fence wrapping the whole code text (```yara ... ```, `...`)
+    is markdown, not code: it is dropped. A backtick inside the code stays.
     """
     for block in list(tree.iter("pre")):
+        if block.getparent() is None or block.xpath("ancestor::pre"):
+            continue
         inner = block[0] if len(block) == 1 else None
         if (
             inner is not None
-            and inner.tag == "pre"
+            and inner.tag in ("pre", "code")
             and not (block.text or "").strip()
             and not (inner.tail or "").strip()
         ):
             inner.tag = "code"
+            inner.tail = None
+            block.text = None
+        else:
+            inner = None
+        if _inline_code(block, inner):
+            if inner is not None:
+                _unwrap(inner)
+            block.tag = "code"
+            _strip_fence(block)
+            continue
+        if inner is None:
+            inner = lxml.etree.Element("code")
+            inner.text, block.text = block.text, None
+            inner.extend(list(block))
+            block.append(inner)
+        _strip_fence(inner)
+
+
+def _inline_code(block: lxml.etree._Element, inner) -> bool:
+    """Whether a <pre> written by trafilatura was inline code on the page:
+    one line of text, in an inline parent or with text beside it."""
+    code = inner if inner is not None else block
+    if len(code) or "\n" in (code.text or "").strip():
+        return False
+    parent = block.getparent()
+    if parent.tag in _INLINE_PARENTS:
+        return True
+    previous = block.getprevious()
+    before = previous.tail if previous is not None else parent.text
+    return bool((before or "").strip() or (block.tail or "").strip())
+
+
+def _strip_fence(code: lxml.etree._Element) -> None:
+    """Drop a backtick fence wrapping the whole text of a code element.
+
+    The fence must open the code's first text and close its last text with
+    the same backticks, and the code between them must hold no run of
+    backticks as long as the fence, so a backtick of the code itself (a
+    shell command substitution, a closing ` of the code) is never taken.
+    """
+    first = code.text or ""
+    opening = _FENCE_OPEN.match(first)
+    if opening is None:
+        return
+    fence = opening.group(1) or opening.group(2)
+    last_holder = code[-1] if len(code) else None
+    last = (last_holder.tail if last_holder is not None else first) or ""
+    closing = re.search(r"(?<!`)" + fence + r"\s*$", last)
+    if closing is None:
+        return
+    if last_holder is None and closing.start() < opening.end():
+        return
+    whole = "".join(code.itertext())
+    after_fence = len(whole) - (len(last) - closing.start())
+    middle = whole[opening.end() : after_fence]
+    if not middle.strip() or fence in middle:
+        return
+    if last_holder is None:
+        code.text = _trim_fence_line(first[opening.end() : closing.start()])
+        return
+    code.text = first[opening.end() :].lstrip("\n")
+    last_holder.tail = last[: closing.start()].rstrip(" \t").removesuffix("\n")
+
+
+def _trim_fence_line(text: str) -> str:
+    """The code between two fences, without the line breaks next to them."""
+    return text.removeprefix("\n").rstrip(" \t").removesuffix("\n")
 
 
 def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
