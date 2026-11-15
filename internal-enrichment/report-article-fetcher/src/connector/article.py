@@ -314,6 +314,7 @@ def extract_article(url: str, html: str) -> Article | None:
     text = normalize_unicode(xmltotxt(document.body, True))
     tree = convert_to_html(document.body)
     _drop_page_anchors(tree, url)
+    _restore_code_elements(tree)
     # HTML serialisation, not XML: an empty element is written <a ...></a>,
     # never <a .../>, which an HTML parser reads as an unclosed tag.
     body = normalize_unicode(
@@ -344,6 +345,23 @@ def _same_page(href: str, url: str) -> bool:
         return True
     page = urldefrag(url)[0]
     return target.rstrip("/") == page.rstrip("/")
+
+
+def _restore_code_elements(tree: lxml.etree._Element) -> None:
+    """Write a code block <pre><code>, as the page had it.
+
+    trafilatura reads <pre><code> as one code element and writes it back
+    as a <pre> inside a <pre>: the inner one becomes the <code> again.
+    """
+    for block in list(tree.iter("pre")):
+        inner = block[0] if len(block) == 1 else None
+        if (
+            inner is not None
+            and inner.tag == "pre"
+            and not (block.text or "").strip()
+            and not (inner.tail or "").strip()
+        ):
+            inner.tag = "code"
 
 
 def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
@@ -391,9 +409,124 @@ _INDICATOR = re.compile(
 )
 
 
+# Elements that hold one line of code each in a highlighter's markup (a
+# <div> per line, a <pre> holding the whole text).
+_LINE_BLOCKS = frozenset({"div", "p", "li", "pre"})
+
+
+def _text_lines(element: lxml.etree._Element) -> list[str]:
+    """The lines of an element's text, <br> read as a line break."""
+    parts: list[str] = []
+
+    def walk(node: lxml.etree._Element) -> None:
+        if node.tag == "br":
+            parts.append("\n")
+        elif isinstance(node.tag, str) and node.text:
+            parts.append(node.text)
+        for child in node:
+            walk(child)
+            if child.tail:
+                parts.append(child.tail)
+
+    walk(element)
+    return "".join(parts).replace("\xa0", " ").split("\n")
+
+
+def _code_lines(cell: lxml.etree._Element) -> list[str]:
+    """The lines of code a highlighter's cell holds, indentation kept.
+
+    Each innermost line element (one without line elements inside: a
+    <div class="crayon-line">, a <div class="line">, a <pre>) gives its
+    lines; a cell without one gives its own text, split on <br> and
+    newlines. Trailing spaces and the final empty line of a <pre> are
+    dropped.
+    """
+    leaves = [
+        element
+        for element in cell.iterdescendants()
+        if element.tag in _LINE_BLOCKS
+        and not any(inner.tag in _LINE_BLOCKS for inner in element.iterdescendants())
+    ]
+    lines: list[str] = []
+    for leaf in leaves or [cell]:
+        text = _text_lines(leaf)
+        if leaf.tag == "pre" and len(text) > 1 and not text[-1].strip():
+            text = text[:-1]
+        lines.extend(line.rstrip() for line in text)
+    if not leaves:
+        while lines and not lines[0]:
+            lines.pop(0)
+        while lines and not lines[-1]:
+            lines.pop()
+    return lines
+
+
+def _consecutive(numbers: list[str]) -> bool:
+    """Line numbers: at least two, all digits, each one more than the last."""
+    if len(numbers) < 2 or not all(number.isdigit() for number in numbers):
+        return False
+    first = int(numbers[0])
+    return all(int(number) == first + i for i, number in enumerate(numbers))
+
+
+def _row_cells(row: lxml.etree._Element) -> list[lxml.etree._Element]:
+    return [cell for cell in row if cell.tag in ("td", "th")]
+
+
+def _gutter_code(table: lxml.etree._Element) -> list[str] | None:
+    """The code of a highlighter table with a line-number gutter, or None.
+
+    Two layouts are recognised:
+    - One row of two cells (Crayon, SyntaxHighlighter, Pygments and Rouge
+      line numbers): the first cell holds only the numbers N..N+k, one per
+      element or line, and the second cell holds exactly as many lines.
+    - One row per line (GitHub, highlight.js line numbers): the first cell
+      of each row carries its number in a data-line-number attribute (on
+      itself or inside it) and holds no other text.
+    Any other table, a data table whose first column counts the rows
+    included, is not code and gives None.
+    """
+    rows = [
+        row for row in table.iter("tr") if row.xpath("ancestor::table[1]")[0] is table
+    ]
+    if len(rows) == 1:
+        cells = _row_cells(rows[0])
+        if len(cells) != 2:
+            return None
+        numbers = " ".join(_code_lines(cells[0])).split()
+        code = _code_lines(cells[1])
+        if _consecutive(numbers) and len(code) == len(numbers):
+            return code
+        return None
+    numbers, code = [], []
+    for row in rows:
+        cells = _row_cells(row)
+        if len(cells) != 2 or cells[0].text_content().strip():
+            return None
+        marked = cells[0].xpath("descendant-or-self::*[@data-line-number]")
+        if not marked:
+            return None
+        numbers.append(marked[0].get("data-line-number").strip())
+        code.append("\n".join(_code_lines(cells[1])))
+    return code if _consecutive(numbers) else None
+
+
+def _code_block(lines: list[str], tail: str | None) -> lxml.etree._Element:
+    block = lxml.html.Element("pre")
+    code = lxml.etree.SubElement(block, "code")
+    code.text = "\n".join(lines)
+    block.tail = tail
+    return block
+
+
 def _prepare(html: str) -> str:
     """Rework the layouts that make trafilatura drop indicators.
 
+    - Code shown by a syntax highlighter with a line-number gutter (Crayon,
+      SyntaxHighlighter, Pygments, GitHub...) is a <table>: trafilatura
+      kept the numbers as a column of paragraphs and each line of code as
+      a paragraph of its own, indentation lost. Each such table becomes a
+      single <pre><code> block of its code lines.
     - Tables inside a chain of <div>s that only wrap them (Google Docs
       exports): trafilatura drops tables that deep, and the indicators of
       the Google Threat Intelligence posts were lost that way. Each table
@@ -412,6 +545,13 @@ def _prepare(html: str) -> str:
     except (lxml.etree.ParserError, ValueError):
         return html
     changed = False
+    for table in list(document.iter("table")):
+        if table.getparent() is None or table.xpath("ancestor::table"):
+            continue
+        lines = _gutter_code(table)
+        if lines is not None:
+            table.getparent().replace(table, _code_block(lines, table.tail))
+            changed = True
     for link in document.iter("a"):
         if (link.get("href") or "").strip().startswith("#"):
             del link.attrib["href"]
