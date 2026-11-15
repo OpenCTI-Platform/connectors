@@ -316,8 +316,13 @@ def _github(lines: list[str]) -> str:
     return f'<table class="highlight"><tbody>{rows}</tbody></table>'
 
 
+# The connector writes every code element <code translate="no">, so pycti's
+# import does not rewrite it as markdown backticks.
+CODE = '<code translate="no">'
+
+
 def _code_blocks(html: str) -> list[str]:
-    return re.findall(r"<pre><code>(.*?)</code></pre>", html, re.DOTALL)
+    return re.findall(r'<pre><code translate="no">(.*?)</code></pre>', html, re.DOTALL)
 
 
 @pytest.mark.parametrize("markup", [_crayon, _pygments, _github])
@@ -402,7 +407,7 @@ def test_keeps_inline_code_of_a_paragraph_inline():
     article = extract_article(
         RSS_REFERENCE["url"], _post(f"<p>(SHA256 hash: <code>{HASH}</code>)</p>")
     )
-    assert f"<p>(SHA256 hash: <code>{HASH}</code>)</p>" in article.html
+    assert f"<p>(SHA256 hash: {CODE}{HASH}</code>)</p>" in article.html
     assert "<pre" not in _section(article.html)
 
 
@@ -414,7 +419,7 @@ def test_keeps_two_inline_codes_in_one_paragraph():
         ),
     )
     assert (
-        "<p>from the default web user <code>www-data</code> to <code>root</code></p>"
+        f"<p>from the default web user {CODE}www-data</code> to {CODE}root</code></p>"
         in article.html
     )
     assert "<pre" not in _section(article.html)
@@ -431,9 +436,9 @@ def test_keeps_inline_code_in_table_cells_and_list_items():
     section = _section(article.html)
     assert "<table>" in section
     for value in ("exec()", "a.dll", "system()", "b.exe"):
-        assert f"<td><code>{value}</code></td>" in section
-    assert "<li>run <code>whoami</code> first</li>" in section
-    assert "<li><code>ls</code></li>" in section
+        assert f"<td>{CODE}{value}</code></td>" in section
+    assert f"<li>run {CODE}whoami</code> first</li>" in section
+    assert f"<li>{CODE}ls</code></li>" in section
     assert "<pre" not in section
 
 
@@ -459,7 +464,7 @@ def test_keeps_the_backticks_of_the_code_itself():
         ),
     )
     assert _code_blocks(article.html) == ["echo `whoami` &gt; out\ncat out"]
-    assert "<p>run <code>echo `id`</code> now</p>" in article.html
+    assert f"<p>run {CODE}echo `id`</code> now</p>" in article.html
 
 
 @pytest.mark.parametrize(
