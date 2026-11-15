@@ -17,6 +17,9 @@ import lxml.html
 import requests
 import trafilatura
 from requests.adapters import HTTPAdapter
+from trafilatura.htmlprocessing import build_html_output
+from trafilatura.utils import normalize_unicode
+from trafilatura.xml import xmltotxt
 from urllib3.connection import HTTPConnection, HTTPSConnection
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
@@ -186,12 +189,12 @@ class _PublicAdapter(HTTPAdapter):
         }
 
 
-def fetch_html(
-    url: str, user_agent: str, timeout: int, max_size: int
-) -> tuple[str, str]:
-    """Download an HTML page over plain HTTP. Returns (final URL, HTML).
+def new_session(user_agent: str) -> requests.Session:
+    """An HTTP session that only connects to public addresses.
 
-    Redirects are followed by hand so that every hop is checked.
+    A worker keeps one session for all its reports, so the connections to a
+    site stay open between articles (no new TCP and TLS handshake for each
+    article of the same feed). A session is never shared between workers.
     """
     session = requests.Session()
     session.mount("http://", _PublicAdapter())
@@ -203,6 +206,25 @@ def fetch_html(
             "Accept-Language": "en-US,en;q=0.9",
         }
     )
+    return session
+
+
+def fetch_html(
+    url: str,
+    user_agent: str,
+    timeout: int,
+    max_size: int,
+    session: requests.Session | None = None,
+) -> tuple[str, str]:
+    """Download an HTML page over plain HTTP. Returns (final URL, HTML).
+
+    Redirects are followed by hand so that every hop is checked. With a
+    session, its open connections are reused; its cookies are cleared first,
+    so that one site's cookies never reach the next article.
+    """
+    if session is None:
+        session = new_session(user_agent)
+    session.cookies.clear()
     for _ in range(_MAX_REDIRECTS + 1):
         check_public_url(url)
         try:
@@ -266,26 +288,34 @@ def extract_article(url: str, html: str) -> Article | None:
 
     Tables, lists, code blocks and links are kept: indicators often sit
     there.
+
+    The page is parsed and extracted once: the HTML body, the text and the
+    title all come from the same extraction (trafilatura.extract would run
+    the whole extraction again for each output format).
     """
     html = _prepare(html)
-    options = {
-        "url": url,
-        "include_tables": True,
-        "include_formatting": True,
-        "include_links": True,
+    document = trafilatura.bare_extraction(
+        html,
+        url=url,
+        output_format="html",
+        with_metadata=True,
+        include_tables=True,
+        include_formatting=True,
+        include_links=True,
         # No images: their URLs would be fetched by whatever renders the
         # content later (the PDF export), outside the public-address checks.
-        "include_images": False,
-        "include_comments": False,
-        "favor_recall": True,
-    }
-    body = trafilatura.extract(html, output_format="html", **options)
+        include_images=False,
+        include_comments=False,
+        favor_recall=True,
+    )
+    if document is None or document.body is None:
+        return None
+    # The text first: building the HTML output converts the body in place.
+    text = normalize_unicode(xmltotxt(document.body, True))
+    body = normalize_unicode(build_html_output(document))
     if not body:
         return None
-    text = trafilatura.extract(html, output_format="txt", **options) or ""
-    metadata = trafilatura.extract_metadata(html, default_url=url)
-    title = metadata.title if metadata else None
-    return Article(url=url, title=title, html=_strip_document(body), text=text)
+    return Article(url=url, title=document.title, html=_strip_document(body), text=text)
 
 
 # One indicator alone in an element: a hash, an IPv4, a URL or a domain,
