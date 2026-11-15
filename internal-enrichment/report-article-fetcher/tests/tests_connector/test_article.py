@@ -1,17 +1,12 @@
 import re
 import socket
-import sys
 import threading
-from html import unescape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-import lxml.etree
-import lxml.html
 import pytest
 from connector.article import (
     Article,
     FetchError,
-    _code_lines,
     article_match,
     check_public_url,
     extract_article,
@@ -246,158 +241,106 @@ def test_never_self_closes_an_element():
     assert not _NON_VOID_SELF_CLOSED.search(article.html)
 
 
-# A hunting query shown by a syntax highlighter: the second line is
-# indented, the third is empty.
-QUERY = [
-    "config case_sensitive = false",
-    "    | dataset = xdr_data",
-    "",
-    '| filter action_process_image_name ~= "php"',
-]
+# The shape of an Adobe AEM blog post: the article is a run of sibling
+# div.text blocks, each holding one div.cmp-text, with figures between them,
+# under the page's menus, related posts and footer.
+AEM_URL = "https://www.example.com/en-us/blog/akira-ransomware-vpn-appliances/"
 
 
-def _post(block: str, after: str = "") -> str:
+def _aem_block(index: int, paragraphs: int) -> str:
     return (
-        f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
+        '<div class="text text--blog-content">'
+        f'<div class="cmp-text" id="text-{index:04d}" data-cmp-name="cmp-text-">'
+        '<span style=" ">'
+        + (f"<h2>Part {index}</h2>" if index else "")
         + "".join(
-            f"<p>Paragraph {i} of the threat brief and its hunting queries.</p>"
-            for i in range(20)
+            f"<p>Block {index} paragraph {i}: the operators reused the VPN "
+            "appliance access to stage their tooling before encryption.</p>"
+            for i in range(paragraphs)
         )
-        + f"<h2>Hunting queries</h2>{block}{after}"
-        + "<p>Closing words of the article.</p></article></body></html>"
+        + "</span></div></div>"
     )
 
 
-def _crayon(lines: list[str]) -> str:
-    """Crayon (WordPress): a <div> per number, a <div> per line of code."""
-    numbers = "".join(
-        f'<div class="crayon-num" data-line="c-{n}">{n}</div>'
-        for n in range(1, len(lines) + 1)
+def _aem_page(sizes: list[int]) -> str:
+    figures = (
+        '<div class="image"><div class="cmp-image"><img src="https://cdn.example/f.png"'
+        ' alt="Figure"><span class="cmp-image__title">Figure of the part</span>'
+        "</div></div>"
     )
-    code = "".join(
-        f'<div class="crayon-line" id="c-{n}">'
-        + (
-            "&nbsp;"
-            if not line
-            else line.replace(" ", '<span class="crayon-h"> </span>', 1)
-        )
-        + "</div>"
-        for n, line in enumerate(lines, 1)
+    menu = "".join(
+        f'<li><a href="/en-us/blog/post-{i}/">Another post number {i} of the blog'
+        "</a> Nov 0{i % 9 + 1}, 2026</li>"
+        for i in range(40)
     )
+    related = "".join(
+        f'<div class="card"><a href="/en-us/blog/related-{i}/">Related post {i}'
+        "</a><p>Short teaser of a related post.</p></div>"
+        for i in range(3)
+    )
+    blocks = figures.join(_aem_block(i, size) for i, size in enumerate(sizes))
     return (
-        '<div class="crayon-syntax"><div class="crayon-main">'
-        '<table class="crayon-table"><tbody><tr class="crayon-row">'
-        f'<td class="crayon-nums"><div class="crayon-nums-content">{numbers}</div></td>'
-        f'<td class="crayon-code"><div class="crayon-pre">{code}</div></td>'
-        "</tr></tbody></table></div></div>"
+        f"<html><head><title>{NAME}</title></head><body>"
+        f'<header><nav><ul class="menu">{menu}</ul></nav></header>'
+        '<main><div class="aem-Grid">'
+        f'<div class="headline"><h1>{NAME}</h1><p>November 04, 2026</p></div>'
+        f'<div class="container-wp"><div class="cmp-container-wp">{blocks}</div></div>'
+        f'<div class="relatedcontent">{related}</div>'
+        "</div></main><footer><p>Copyright 2026. Privacy. Contact us.</p>"
+        "</footer></body></html>"
     )
 
 
-def _pygments(lines: list[str]) -> str:
-    """Pygments / SyntaxHighlighter: the numbers and the code in two <pre>."""
-    numbers = "\n".join(str(n) for n in range(1, len(lines) + 1))
-    code = "\n".join(f'<span class="k">{line[:6]}</span>{line[6:]}' for line in lines)
-    return (
-        '<div class="highlight"><table class="highlighttable"><tr>'
-        f'<td class="linenos"><div class="linenodiv"><pre>{numbers}</pre></div></td>'
-        f'<td class="code"><div class="highlight"><pre>{code}\n</pre></div></td>'
-        "</tr></table></div>"
-    )
+@pytest.mark.parametrize("sizes", [[4, 3, 9, 7], [10, 6, 5]])
+def test_keeps_every_block_of_an_article_split_across_siblings(sizes):
+    article = extract_article(AEM_URL, _aem_page(sizes))
+    starts = [article.text.find(f"Block {i} paragraph 0:") for i in range(len(sizes))]
+    assert -1 not in starts, starts
+    assert starts == sorted(starts)
+    last = len(sizes) - 1
+    assert f"Block {last} paragraph {sizes[last] - 1}:" in article.text
+    assert "cmp-text" not in article.html
+    assert "data-report-article-body" not in article.html
+    assert ' id="' not in article.html and " class=" not in article.html
+    assert "Another post number" not in article.text
+    assert judge(article, NAME, "", 500, 1.5, 0.6).accepted
 
 
-def _github(lines: list[str]) -> str:
-    """GitHub-style blob table: one row per line, the number in an attribute."""
-    rows = "".join(
-        f'<tr><td id="L{n}" class="blob-num" data-line-number="{n}"></td>'
-        f'<td class="blob-code">{line}</td></tr>'
-        for n, line in enumerate(lines, 1)
-    )
-    return f'<table class="highlight"><tbody>{rows}</tbody></table>'
+def test_leaves_a_single_block_article_unchanged():
+    page = _aem_page([12])
+    article = extract_article(AEM_URL, page)
+    assert article.body_length == 0
+    assert "Block 0 paragraph 11:" in article.text
 
 
-def _code_blocks(html: str) -> list[str]:
-    return re.findall(r"<pre><code>(.*?)</code></pre>", html, re.DOTALL)
+def test_refuses_an_extraction_that_kept_part_of_the_article_body():
+    article = _article("word " * 400)
+    article.body_length = 5000
+    verdict = judge(article, NAME, "", 500, 1.5, 0.6)
+    assert not verdict.accepted
+    assert "partial article" in verdict.reason
 
 
-@pytest.mark.parametrize("markup", [_crayon, _pygments, _github])
-def test_turns_a_line_numbered_code_table_into_one_code_block(markup):
-    article = extract_article(RSS_REFERENCE["url"], _post(markup(QUERY)))
-    blocks = _code_blocks(article.html)
-    assert len(blocks) == 1
-    assert unescape(blocks[0]) == "\n".join(QUERY)
-    assert "<table" not in article.html
-    assert "<p>1</p>" not in article.html
+def test_retries_on_the_article_body_when_the_extraction_is_partial(monkeypatch):
+    from connector import article as module
 
+    extract = module._extract
+    calls = []
 
-def test_keeps_each_code_block_of_a_page_apart():
-    """A threat brief with two hunting queries of 117 and 12 lines."""
-    first = (QUERY * 30)[:117]
-    second = ["dataset = panw_ngfw_threat_raw", '  | filter sub_type = "vuln"'] * 6
-    article = extract_article(
-        RSS_REFERENCE["url"], _post(_crayon(first), _crayon(second))
-    )
-    blocks = [unescape(block) for block in _code_blocks(article.html)]
-    assert blocks == ["\n".join(first), "\n".join(second)]
-    assert "<p>117</p>" not in article.html
+    def first_partial(html, url):
+        calls.append(html)
+        document = extract(html, url)
+        if len(calls) == 1:
+            # Keep the first paragraph only, as trafilatura did on such pages
+            for paragraph in list(document.body.iter("p"))[1:]:
+                paragraph.getparent().remove(paragraph)
+        return document
 
-
-def test_keeps_a_table_whose_first_column_counts_the_rows():
-    table = (
-        "<table><tr><th>#</th><th>Indicator</th></tr>"
-        "<tr><td>1</td><td>194.87.128.243</td></tr>"
-        "<tr><td>2</td><td>malicious-domain.example</td></tr>"
-        "<tr><td>3</td><td>3768f470934a111f1c3e3d098eb1392a</td></tr></table>"
-    )
-    article = extract_article(RSS_REFERENCE["url"], _post(table))
-    assert "<table" in article.html
-    assert "194.87.128.243" in article.html
-    assert not _code_blocks(article.html)
-
-
-def test_keeps_a_two_cell_table_whose_numbers_do_not_match_the_code():
-    table = (
-        "<table><tr><td>1<br>2<br>3</td>"
-        "<td>194.87.128.243<br>malicious-domain.example</td></tr></table>"
-    )
-    article = extract_article(RSS_REFERENCE["url"], _post(table))
-    assert "194.87.128.243" in article.html
-    assert not _code_blocks(article.html)
-
-
-def test_keeps_an_unmarked_two_cell_table_whose_numbers_match_its_lines():
-    """Same shape as a gutter table, but no highlighter class and no <pre>."""
-    table = (
-        "<table><tr><td>1<br>2</td>"
-        '<td><a href="https://malicious-domain.example/">194.87.128.243</a>'
-        "<br><b>malicious-domain.example</b></td></tr></table>"
-    )
-    article = extract_article(RSS_REFERENCE["url"], _post(table))
-    assert "194.87.128.243" in article.html
-    assert "malicious-domain.example" in article.html
-    assert not _code_blocks(article.html)
-
-
-def test_keeps_an_unmarked_table_with_line_number_attributes():
-    rows = "".join(
-        f'<tr><td data-line-number="{n}"></td><td>{value}</td></tr>'
-        for n, value in enumerate(
-            ["194.87.128.243", "malicious-domain.example", "3768f470934a"], 1
-        )
-    )
-    article = extract_article(RSS_REFERENCE["url"], _post(f"<table>{rows}</table>"))
-    assert "194.87.128.243" in article.html
-    assert not _code_blocks(article.html)
-
-
-def test_reads_a_deeply_nested_code_cell_without_recursion():
-    """A code cell nested deeper than the recursion limit is still read."""
-    cell = lxml.html.Element("td")
-    node = lxml.etree.SubElement(cell, "div")
-    for _ in range(sys.getrecursionlimit() * 2):
-        node = lxml.etree.SubElement(node, "span")
-    node.text = "select 1"
-    lxml.etree.SubElement(cell, "div").text = "select 2"
-    assert _code_lines(cell) == ["select 1", "select 2"]
+    monkeypatch.setattr(module, "_extract", first_partial)
+    article = extract_article(AEM_URL, _aem_page([4, 3, 9, 7]))
+    assert len(calls) == 2
+    assert "Block 3 paragraph 6:" in article.text
+    assert article.title == NAME
 
 
 def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):
