@@ -329,8 +329,10 @@ def extract_article(url: str, html: str) -> Article | None:
 def _same_page(href: str, url: str) -> bool:
     """The link points at the page itself: empty, or a fragment of the page.
 
-    trafilatura rewrites an in-page link "#part" against the site root
-    ("https://site#part"), so the root counts as the page too.
+    A bare in-page link "#part" never reaches this point with its href:
+    _prepare drops it, since trafilatura would rewrite it against the site
+    root ("https://site#part"), where it could not be told apart from an
+    explicit link to the root page, which is kept.
     """
     href = href.strip()
     if not href:
@@ -341,9 +343,7 @@ def _same_page(href: str, url: str) -> bool:
     if not target:
         return True
     page = urldefrag(url)[0]
-    parsed = urlparse(page)
-    root = f"{parsed.scheme}://{parsed.netloc}"
-    return target.rstrip("/") in {page.rstrip("/"), root}
+    return target.rstrip("/") == page.rstrip("/")
 
 
 def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
@@ -403,12 +403,19 @@ def _prepare(html: str) -> str:
       class is dropped from the ancestors of each table.
     - Indicators listed one per bare <div> (AhnLab ASEC): trafilatura takes
       the short blocks for page chrome. Such a run of <div>s becomes a list.
+    - In-page links ("#part"): trafilatura rewrites them against the site
+      root, so their href is dropped here, while it is still recognisable,
+      and _drop_page_anchors unwraps them after the extraction.
     """
     try:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
     changed = False
+    for link in document.iter("a"):
+        if (link.get("href") or "").strip().startswith("#"):
+            del link.attrib["href"]
+            changed = True
     for table in list(document.iter("table")):
         wrapper = table.getparent()
         while (

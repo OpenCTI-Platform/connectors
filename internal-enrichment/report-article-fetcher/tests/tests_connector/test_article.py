@@ -215,6 +215,18 @@ def test_drops_fragment_links_and_keeps_real_links():
     assert "194.87.128.243" in article.html
 
 
+def test_keeps_an_explicit_link_to_a_fragment_of_the_site_root():
+    html = ANCHORED_POST.replace(
+        "<p>Closing words of the article.</p>",
+        '<p>See <a href="https://blog.example.com/#about">the team</a>.</p>'
+        "<p>Closing words of the article.</p>",
+    )
+    article = extract_article(RSS_REFERENCE["url"], html)
+    assert 'href="https://blog.example.com/#about"' in article.html
+    assert "blog.example.com#iocs" not in article.html
+    assert "blog.example.com/#iocs" not in article.html
+
+
 def test_never_self_closes_an_element():
     html = (
         f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
