@@ -4,10 +4,12 @@ import threading
 from html import unescape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+import lxml.etree
 import pytest
 from connector.article import (
     Article,
     FetchError,
+    _text_lines,
     article_match,
     check_public_url,
     extract_article,
@@ -358,6 +360,17 @@ def test_keeps_a_two_cell_table_whose_numbers_do_not_match_the_code():
     article = extract_article(RSS_REFERENCE["url"], _post(table))
     assert "194.87.128.243" in article.html
     assert not _code_blocks(article.html)
+
+
+def test_reads_the_lines_of_a_deeply_nested_cell_without_recursion():
+    """A fetched page nested far deeper than the recursion limit."""
+    cell = lxml.etree.Element("td")
+    node = cell
+    for _ in range(5000):
+        node = lxml.etree.SubElement(node, "span")
+    node.text = "first"
+    lxml.etree.SubElement(node, "br").tail = "second"
+    assert _text_lines(cell) == ["first", "second"]
 
 
 def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):

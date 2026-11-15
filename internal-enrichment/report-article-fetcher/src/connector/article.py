@@ -415,20 +415,20 @@ _LINE_BLOCKS = frozenset({"div", "p", "li", "pre"})
 
 
 def _text_lines(element: lxml.etree._Element) -> list[str]:
-    """The lines of an element's text, <br> read as a line break."""
+    """The lines of an element's text, <br> read as a line break.
+
+    Walked with iterwalk, not recursion: a deeply nested fetched page
+    cannot exhaust the stack.
+    """
     parts: list[str] = []
-
-    def walk(node: lxml.etree._Element) -> None:
-        if node.tag == "br":
-            parts.append("\n")
-        elif isinstance(node.tag, str) and node.text:
-            parts.append(node.text)
-        for child in node:
-            walk(child)
-            if child.tail:
-                parts.append(child.tail)
-
-    walk(element)
+    for event, node in lxml.etree.iterwalk(element, events=("start", "end")):
+        if event == "start":
+            if node.tag == "br":
+                parts.append("\n")
+            elif isinstance(node.tag, str) and node.text:
+                parts.append(node.text)
+        elif node is not element and node.tail:
+            parts.append(node.tail)
     return "".join(parts).replace("\xa0", " ").split("\n")
 
 
