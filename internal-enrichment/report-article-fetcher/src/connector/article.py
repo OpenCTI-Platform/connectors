@@ -414,11 +414,21 @@ _INDICATOR = re.compile(
 _LINE_BLOCKS = frozenset({"div", "p", "li", "pre"})
 
 
+# Class or id words of the markup syntax highlighters and code viewers write
+# around a line-numbered table (Crayon, Pygments, SyntaxHighlighter, Rouge,
+# highlight.js, Prism, EnlighterJS, GitHub blobs).
+_HIGHLIGHTER = re.compile(
+    r"crayon|highlight|syntax|lineno|line-?num|gutter|blob-(?:num|code)"
+    r"|hljs|prism|enlighter|rouge|sourcecode|code",
+    re.IGNORECASE,
+)
+
+
 def _text_lines(element: lxml.etree._Element) -> list[str]:
     """The lines of an element's text, <br> read as a line break.
 
-    Walked with iterwalk, not recursion: a deeply nested fetched page
-    cannot exhaust the stack.
+    The walk is iterative, so a deeply nested page cannot exhaust the
+    interpreter's recursion limit.
     """
     parts: list[str] = []
     for event, node in lxml.etree.iterwalk(element, events=("start", "end")):
@@ -441,12 +451,18 @@ def _code_lines(cell: lxml.etree._Element) -> list[str]:
     newlines. Trailing spaces and the final empty line of a <pre> are
     dropped.
     """
-    leaves = [
-        element
-        for element in cell.iterdescendants()
-        if element.tag in _LINE_BLOCKS
-        and not any(inner.tag in _LINE_BLOCKS for inner in element.iterdescendants())
+    blocks = [
+        element for element in cell.iterdescendants() if element.tag in _LINE_BLOCKS
     ]
+    # The elements holding a line element, found in one pass up from each
+    # line element, so the cost stays linear in the size of the cell.
+    holders: set[lxml.etree._Element] = set()
+    for block in blocks:
+        parent = block.getparent()
+        while parent is not None and parent is not cell and parent not in holders:
+            holders.add(parent)
+            parent = parent.getparent()
+    leaves = [block for block in blocks if block not in holders]
     lines: list[str] = []
     for leaf in leaves or [cell]:
         text = _text_lines(leaf)
@@ -473,6 +489,21 @@ def _row_cells(row: lxml.etree._Element) -> list[lxml.etree._Element]:
     return [cell for cell in row if cell.tag in ("td", "th")]
 
 
+def _highlighter_markup(table: lxml.etree._Element) -> bool:
+    """Whether the table carries a code marker: a highlighter class or id on
+    the table, one of its rows or cells or one of its three nearest
+    ancestors (the highlighter's wrappers), or a <pre> or <code> element
+    inside it."""
+    if table.xpath(".//pre | .//code"):
+        return True
+    ancestors = list(table.iterancestors())[:3]
+    candidates = [table, *ancestors, *table.iter("tr", "td", "th")]
+    return any(
+        _HIGHLIGHTER.search(" ".join((node.get("class") or "", node.get("id") or "")))
+        for node in candidates
+    )
+
+
 def _gutter_code(table: lxml.etree._Element) -> list[str] | None:
     """The code of a highlighter table with a line-number gutter, or None.
 
@@ -483,9 +514,12 @@ def _gutter_code(table: lxml.etree._Element) -> list[str] | None:
     - One row per line (GitHub, highlight.js line numbers): the first cell
       of each row carries its number in a data-line-number attribute (on
       itself or inside it) and holds no other text.
-    Any other table, a data table whose first column counts the rows
-    included, is not code and gives None.
+    Either layout must also carry a code marker (_highlighter_markup). Any
+    other table, a data table whose first column counts the rows or an
+    unmarked two-column table included, is not code and gives None.
     """
+    if not _highlighter_markup(table):
+        return None
     rows = [
         row for row in table.iter("tr") if row.xpath("ancestor::table[1]")[0] is table
     ]

@@ -1,15 +1,17 @@
 import re
 import socket
+import sys
 import threading
 from html import unescape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import lxml.etree
+import lxml.html
 import pytest
 from connector.article import (
     Article,
     FetchError,
-    _text_lines,
+    _code_lines,
     article_match,
     check_public_url,
     extract_article,
@@ -362,15 +364,40 @@ def test_keeps_a_two_cell_table_whose_numbers_do_not_match_the_code():
     assert not _code_blocks(article.html)
 
 
-def test_reads_the_lines_of_a_deeply_nested_cell_without_recursion():
-    """A fetched page nested far deeper than the recursion limit."""
-    cell = lxml.etree.Element("td")
-    node = cell
-    for _ in range(5000):
+def test_keeps_an_unmarked_two_cell_table_whose_numbers_match_its_lines():
+    """Same shape as a gutter table, but no highlighter class and no <pre>."""
+    table = (
+        "<table><tr><td>1<br>2</td>"
+        '<td><a href="https://malicious-domain.example/">194.87.128.243</a>'
+        "<br><b>malicious-domain.example</b></td></tr></table>"
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(table))
+    assert "194.87.128.243" in article.html
+    assert "malicious-domain.example" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_keeps_an_unmarked_table_with_line_number_attributes():
+    rows = "".join(
+        f'<tr><td data-line-number="{n}"></td><td>{value}</td></tr>'
+        for n, value in enumerate(
+            ["194.87.128.243", "malicious-domain.example", "3768f470934a"], 1
+        )
+    )
+    article = extract_article(RSS_REFERENCE["url"], _post(f"<table>{rows}</table>"))
+    assert "194.87.128.243" in article.html
+    assert not _code_blocks(article.html)
+
+
+def test_reads_a_deeply_nested_code_cell_without_recursion():
+    """A code cell nested deeper than the recursion limit is still read."""
+    cell = lxml.html.Element("td")
+    node = lxml.etree.SubElement(cell, "div")
+    for _ in range(sys.getrecursionlimit() * 2):
         node = lxml.etree.SubElement(node, "span")
-    node.text = "first"
-    lxml.etree.SubElement(node, "br").tail = "second"
-    assert _text_lines(cell) == ["first", "second"]
+    node.text = "select 1"
+    lxml.etree.SubElement(cell, "div").text = "select 2"
+    assert _code_lines(cell) == ["select 1", "select 2"]
 
 
 def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):
