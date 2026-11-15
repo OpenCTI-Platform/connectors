@@ -607,8 +607,12 @@ def _pipe_rows(block: lxml.etree._Element):
         if not isinstance(piece, str):
             lines[-1].append(piece)
             continue
-        for token in re.split(r"(\\\||\n|\|)", piece):
-            if token == "\\|":
+        # An escaped backslash (\\) is read first, so the pipe after an even
+        # run of backslashes stays a cell separator.
+        for token in re.split(r"(\\\\|\\\||\n|\|)", piece):
+            if token == "\\\\":
+                lines[-1].append("\\")
+            elif token == "\\|":
                 # An escaped pipe (\|) is a literal pipe in the cell text.
                 lines[-1].append("|")
             elif token == "\n":

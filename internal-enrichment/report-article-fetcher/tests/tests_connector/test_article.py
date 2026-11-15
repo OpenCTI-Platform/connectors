@@ -466,6 +466,16 @@ def test_an_escaped_pipe_is_a_literal_pipe_of_the_cell():
     ]
 
 
+def test_a_pipe_after_an_escaped_backslash_is_a_cell_separator():
+    article = extract_article(
+        RSS_REFERENCE["url"],
+        _post("<p>| C:\\\\ | c |\n| d \\\\\\| e | f |</p>"),
+    )
+    assert _tables(article.html) == [
+        [[("td", "C:\\"), ("td", "c")], [("td", "d \\| e"), ("td", "f")]]
+    ]
+
+
 @pytest.mark.parametrize(
     "block",
     [
