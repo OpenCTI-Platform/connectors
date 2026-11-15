@@ -1,4 +1,5 @@
 import copy
+import queue
 import threading
 import time
 from collections.abc import Callable
@@ -194,6 +195,10 @@ def run_workers(
     reports. Each worker therefore gets a helper of its own: its own queue
     consumer, OpenCTI clients and message context, exactly like a replica of
     the connector. Nothing mutable is shared between workers.
+
+    A worker whose loop raises stops the whole process with that error, as a
+    replica would exit: the orchestrator restarts it with every worker, and the
+    process never keeps running with fewer consumers than configured.
     """
     workers = settings.report_article_fetcher.max_workers
     helpers = [make_helper()]
@@ -214,11 +219,23 @@ def run_workers(
     if len(connectors) == 1:
         connectors[0].run()
         return
+    finished: queue.Queue = queue.Queue()
+
+    def work(connector: ReportArticleFetcherConnector) -> None:
+        try:
+            connector.run()
+        except BaseException as error:  # reported to the main thread below
+            finished.put(error)
+        else:
+            finished.put(None)
+
     threads = [
-        threading.Thread(target=c.run, name=f"worker-{i}", daemon=True)
+        threading.Thread(target=work, args=(c,), name=f"worker-{i}", daemon=True)
         for i, c in enumerate(connectors)
     ]
     for thread in threads:
         thread.start()
-    for thread in threads:
-        thread.join()
+    for _ in threads:
+        error = finished.get()
+        if error is not None:
+            raise RuntimeError(f"A worker stopped: {error!r}") from error

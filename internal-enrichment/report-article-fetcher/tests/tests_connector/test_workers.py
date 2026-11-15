@@ -162,6 +162,24 @@ def test_several_workers_require_amqp():
         run_workers(_settings(2), lambda: helper)
 
 
+def test_a_failed_worker_stops_the_process_with_its_error():
+    def make_helper():
+        helper = FakeHelper(queue.Queue(), [], threading.Lock())
+        if not helpers:
+            helper.listen = MagicMock(side_effect=ConnectionError("AMQP closed"))
+        else:
+            # a healthy worker: keeps consuming until the process stops
+            helper.listen = lambda message_callback: time.sleep(30)
+        helpers.append(helper)
+        return helper
+
+    helpers: list = []
+    started = time.monotonic()
+    with pytest.raises(RuntimeError, match="AMQP closed"):
+        run_workers(_settings(3), make_helper)
+    assert time.monotonic() - started < 5
+
+
 def test_one_summary_line_per_report_with_timings(slow_fetch):
     helper = FakeHelper(queue.Queue(), [], threading.Lock())
     connector = ReportArticleFetcherConnector(_settings(), helper)
