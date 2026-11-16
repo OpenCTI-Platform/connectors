@@ -96,7 +96,7 @@ docker compose up -d --build
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 cp ../config.yml.sample ../config.yml   # then edit
 python main.py
 ```

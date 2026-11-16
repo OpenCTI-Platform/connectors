@@ -51,7 +51,7 @@ git clone https://github.com/OpenCTI-Platform/connectors.git
 cd /root/opencti/running-connectors/
 python3 -m venv --prompt "OCTI Connectors" /root/opencti/running-connectors/.octi_con_venv
 source /root/opencti/running-connectors/.octi_con_venv/bin/activate
-pip3 install -r /root/raw_src/connectors/external-import/beaconbeagle/src/requirements.txt
+pip3 install -r /root/raw_src/connectors/external-import/beaconbeagle/requirements.txt
 nano /root/opencti/running-connectors/connector_beaconbeagle.sh
 ```
 

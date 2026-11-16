@@ -68,7 +68,7 @@ The connector's own logic is compatible with **both OpenCTI 6.x and 7.x**. The o
 * The **official, pre-built connector image** published by Filigran is locked to the **OpenCTI 7.x** platform (`pycti` is pinned to a 7.x release). It will **not** work out-of-the-box against OpenCTI 6.x.
 * The legacy **Titan-only** releases of this connector are fully compatible with **OpenCTI 6.x**.
 
-If you run **OpenCTI 6.x** and want the Verity471-enabled connector, you can build a compatible image yourself — the connector source code stays exactly the same, you only need to align the platform libraries in [`src/requirements.txt`](src/requirements.txt) to your instance:
+If you run **OpenCTI 6.x** and want the Verity471-enabled connector, you can build a compatible image yourself — the connector source code stays exactly the same, you only need to align the platform libraries in [`requirements.txt`](requirements.txt) to your instance:
 
 1. Set `pycti` to the version matching your OpenCTI release (e.g. `pycti==6.9.x`).
 2. Pin `connectors-sdk` to the matching platform tag (e.g. `...connectors.git@6.9.x#subdirectory=connectors-sdk`), since it also depends on `pycti`.
@@ -154,11 +154,11 @@ For the general installation process, please refer to [OpenCTI's documentation o
 ### Stand-alone
 
 This connector can run as a stand-alone Python program. It does require access to the running OpenCTI API instance
-and the RabbitMQ queue. Provide configuration in `src/config.yaml`, install Python [dependencies](src/requirements.txt) and run it by calling [main.py](src/main.py).
+and the RabbitMQ queue. Provide configuration in `src/config.yaml`, install Python [dependencies](requirements.txt) and run it by calling [main.py](src/main.py).
 
 ### Docker
 
-Build a Docker Image using the provided `Dockerfile`. Example: `docker build . -t connector-intel471:latest`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`. Example: `docker build . -t connector-intel471:latest`.
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.
 Then, start the docker container with the provided `docker-compose.yml` or integrate it into the global `docker-compose.yml` file of OpenCTI.
 

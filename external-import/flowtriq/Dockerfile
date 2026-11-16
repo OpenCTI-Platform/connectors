@@ -6,6 +6,7 @@ RUN apk --no-cache upgrade && \
     apk --no-cache add libffi
 
 # Copy the connector
+COPY requirements.txt /opt/flowtriq/requirements.txt
 COPY src /opt/flowtriq
 WORKDIR /opt/flowtriq
 

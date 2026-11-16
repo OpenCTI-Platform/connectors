@@ -3,7 +3,7 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy requirements
 WORKDIR /opt/opencti-connector-greynoise-vuln
-COPY src/requirements.txt .
+COPY requirements.txt .
 
 # Install Python modules
 # hadolint ignore=DL3003

@@ -70,7 +70,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-export-file-stix:latest .
+./build.sh internal-export-file/export-file-stix latest
 ```
 
 Configure the connector in `docker-compose.yml`:

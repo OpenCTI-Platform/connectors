@@ -15,5 +15,5 @@
 # Importing ``main.py`` pulls in ``stix2``, ``pycti`` and
 # ``mattermostdriver``, so we install the same pinned versions used in
 # production.
--r ../src/requirements.txt
+-r ../requirements.txt
 pytest

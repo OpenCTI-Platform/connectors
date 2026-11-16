@@ -84,7 +84,7 @@ Configuration options are set in `docker-compose.yml` (for Docker) or in `config
 2.  **Update Configuration**: Replace the placeholder values in `config.yml` with your environment's configurations.
 3.  **Install Dependencies** (preferably in a virtual environment):
     ```shell
-    pip install -r src/requirements.txt
+    pip install -r requirements.txt
     ```
 4.  **Run the connector**:
     ```shell

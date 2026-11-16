@@ -4,11 +4,12 @@ ENV NTI_PACKAGE_TYPE=updated
 
 WORKDIR /opt/opencti/NTI-connector
 
+COPY requirements.txt ./requirements.txt
 COPY ./src ./src
 
 RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev && \
-    pip3 install --no-cache-dir -r ./src/requirements.txt && \
+    pip3 install --no-cache-dir -r ./requirements.txt && \
     apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 COPY ./entrypoint.sh /entrypoint.sh

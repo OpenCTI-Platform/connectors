@@ -313,8 +313,7 @@ my-connector/
 │   │   ├── __init__.py
 │   │   ├── api_client.py         # API interaction logic
 │   │   └── models.py             # Raw API response models
-│   ├── main.py                   # Entry point (wires settings/state/processors)
-│   └── requirements.txt          # Python dependencies
+│   └── main.py                   # Entry point (wires settings/state/processors)
 ├── tests/                        # Test suite
 │   ├── tests_connector/
 │   │   ├── data_processors/
@@ -325,8 +324,8 @@ my-connector/
 ├── .dockerignore             
 ├── config.yml.sample             # Sample configuration
 ├── docker-compose.yml            # Docker Compose configuration
-├── Dockerfile                    # Container definition
-├── entrypoint.sh                 # Container entry point
+├── requirements.txt              # Python dependencies
+├── .build.env                    # Optional: build arguments of the shared Dockerfile_alpine
 └── README.md                     # Connector documentation
 ```
 

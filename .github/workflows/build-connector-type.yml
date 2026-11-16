@@ -75,6 +75,8 @@ jobs:
             .github
             shared
             connectors-sdk
+            Dockerfile_alpine
+            Dockerfile_debian
             ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
           sparse-checkout-cone-mode: false
 
@@ -152,6 +154,8 @@ jobs:
             .github
             shared
             connectors-sdk
+            Dockerfile_alpine
+            Dockerfile_debian
             ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
           sparse-checkout-cone-mode: false
 

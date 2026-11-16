@@ -103,7 +103,7 @@ Key features:
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example `docker-compose.yml`:
 
@@ -141,7 +141,7 @@ networks:
 
 1. Clone the repository
 2. Copy `config.yml.sample` to `config.yml` and configure
-3. Install dependencies: `pip install -r src/requirements.txt`
+3. Install dependencies: `pip install -r requirements.txt`
 4. Run: `cd src && python main.py`
 
 ---
@@ -329,7 +329,6 @@ During cooldown, enrichment continues with reduced data rather than blocking.
 
 ```
 polyswarm-enrichment/
-├── Dockerfile
 ├── docker-compose.yml
 ├── config.yml.sample
 ├── README.md

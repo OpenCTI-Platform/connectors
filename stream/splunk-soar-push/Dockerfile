@@ -2,6 +2,7 @@ FROM python:3.11-alpine
 ENV CONNECTOR_TYPE=STREAM
 
 # Copy the connector source code
+COPY requirements.txt /opt/opencti-connector-splunk-soar-push/requirements.txt
 COPY src /opt/opencti-connector-splunk-soar-push
 
 # Install system dependencies

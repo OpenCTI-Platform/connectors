@@ -80,7 +80,7 @@ services:
 ### Manual
 
 ```bash
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 cd src && python main.py
 ```
 

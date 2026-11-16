@@ -10,7 +10,7 @@ help:
 	@echo "  docker-down  - Stop docker-compose"
 
 install:
-	pip install -r src/requirements.txt
+	pip install -r requirements.txt
 
 run:
 	cd src && python main.py

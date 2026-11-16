@@ -29,10 +29,10 @@ RABBITMQ_URL=amqp://portspoof:password@localhost:5672/
 
 ### Manual Installation
 
-The connector's dependencies live in `src/requirements.txt` (matching the Dockerfile's `cd src && pip install -r requirements.txt` build step). Either install from there directly or `cd src` first:
+The connector's dependencies live in `requirements.txt`:
 
 ```bash
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 python src/main.py
 ```
 
@@ -128,7 +128,7 @@ PortSpoofPro Host:
 ### Build Image
 
 ```bash
-docker build . -t opencti/connector-portspoof:latest
+./build.sh external-import/portspoof latest
 ```
 
 ### Docker Compose

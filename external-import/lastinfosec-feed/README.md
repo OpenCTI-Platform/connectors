@@ -77,10 +77,10 @@ LastInfoSec (now part of Gatewatcher) provides comprehensive threat intelligence
 
 ### Docker Deployment
 
-Build a Docker image using the provided Dockerfile:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```bash
-docker build -t opencti/connector-lastinfosec-feed:latest .
+./build.sh external-import/lastinfosec-feed latest
 ```
 
 Example `docker-compose.yml` (CTI feed enabled):

@@ -3,6 +3,7 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Copy the worker
 WORKDIR /opt/opencti-connector-greynoise
+COPY requirements.txt requirements.txt
 COPY src .
 
 # Install Python modules

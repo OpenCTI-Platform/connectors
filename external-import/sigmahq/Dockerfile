@@ -6,7 +6,7 @@ WORKDIR /opt/opencti-connector-sigmahq
 RUN apk --no-cache upgrade && \
     apk --no-cache add --virtual .build-deps \
         git build-base libffi-dev libxml2-dev libxslt-dev
-RUN --mount=type=bind,source=./src/requirements.txt,target=requirements.txt \
+RUN --mount=type=bind,source=./requirements.txt,target=requirements.txt \
     pip3 install --no-cache-dir -r requirements.txt
 RUN apk del .build-deps
 

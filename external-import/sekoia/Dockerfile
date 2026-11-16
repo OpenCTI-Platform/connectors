@@ -3,13 +3,13 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 WORKDIR /opt/opencti-connector-sekoia
 
-COPY src/requirements.txt /opt/opencti-connector-sekoia/src/requirements.txt
+COPY requirements.txt /opt/opencti-connector-sekoia/requirements.txt
 
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
     apk --no-cache add --virtual .build-dependencies git build-base && \
-    pip3 install --no-cache-dir -r /opt/opencti-connector-sekoia/src/requirements.txt && \
+    pip3 install --no-cache-dir -r /opt/opencti-connector-sekoia/requirements.txt && \
     apk del .build-dependencies && \
     rm -rf /var/cache/apk/*
 

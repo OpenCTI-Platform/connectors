@@ -78,7 +78,7 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-lia-file-feed:latest .
+./build.sh external-import/lia-file-feed latest
 ```
 
 Configure the connector in `docker-compose.yml`:

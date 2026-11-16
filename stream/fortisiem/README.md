@@ -76,10 +76,10 @@ environment variables.
 
 ### Docker Deployment
 
-Build a Docker image using the provided `Dockerfile`:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```shell
-docker build . -t opencti/connector-fortisiem:latest
+./build.sh stream/fortisiem latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
@@ -95,7 +95,7 @@ Create a `src/config.yml` file based on the provided `config.yml.sample` and fil
 
 ```shell
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

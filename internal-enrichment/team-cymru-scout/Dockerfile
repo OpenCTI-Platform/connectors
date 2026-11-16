@@ -4,7 +4,7 @@ FROM python:3.12-alpine
 WORKDIR /opt/opencti-connector-team-cymru-scout
 
 # Copy requirements
-COPY src/requirements.txt .
+COPY requirements.txt .
 
 # Install dependencies
 RUN apk --no-cache upgrade && \

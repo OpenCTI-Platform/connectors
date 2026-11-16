@@ -43,9 +43,8 @@ jobs:
             for connector in "$dir"/*/; do
               connector="${connector%/}"
               # A connector is scannable if it declares dependencies via a
-              # requirements.txt or a pyproject.toml (root or src/).
-              [ -f "$connector/src/requirements.txt" ] \
-                || [ -f "$connector/requirements.txt" ] \
+              # requirements.txt or a pyproject.toml.
+              [ -f "$connector/requirements.txt" ] \
                 || [ -f "$connector/pyproject.toml" ] \
                 || [ -f "$connector/src/pyproject.toml" ] \
                 || continue

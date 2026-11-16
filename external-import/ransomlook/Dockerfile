@@ -6,7 +6,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT \
     PYTHONUNBUFFERED=1
 
 WORKDIR /opt/opencti-connector-ransomlook
-COPY src/requirements.txt ./requirements.txt
+COPY requirements.txt ./requirements.txt
 RUN apk --no-cache upgrade && \
     apk --no-cache add --virtual .build-deps \
         git \

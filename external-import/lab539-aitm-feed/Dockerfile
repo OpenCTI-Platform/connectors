@@ -9,7 +9,7 @@ WORKDIR /app
 
 RUN apk --no-cache upgrade
 
-COPY src/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 RUN apk add --no-cache --virtual .build-deps build-base libffi-dev git && \
     python -m pip install --no-cache-dir -r requirements.txt && \

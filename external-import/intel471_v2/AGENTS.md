@@ -6,7 +6,7 @@ minimal and match the surrounding style.
 ## Golden rule: changelog + version
 
 Every **user-facing change** (new/changed behaviour, new config option, bug fix)
-and every **dependency upgrade** (`src/requirements.txt`) must, in the same commit:
+and every **dependency upgrade** (`requirements.txt`) must, in the same commit:
 
 1. Add an entry to [`changelog.md`](changelog.md) under a **new version section**
    at the top of the file.

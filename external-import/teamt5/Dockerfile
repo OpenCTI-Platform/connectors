@@ -29,7 +29,7 @@ RUN apk --no-cache upgrade
 # BuildKit enabled, which is not guaranteed across CI / local Docker
 # Compose setups still using the legacy builder. Reverting to plain
 # ``COPY`` keeps the build green on every Docker version we ship.
-COPY src/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 
 # Install dependencies. ``--virtual .build-deps`` groups the build-only
 # toolchain so the entire bundle (``git`` included — see the comment

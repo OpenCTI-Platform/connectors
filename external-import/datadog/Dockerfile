@@ -4,6 +4,7 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT \
     CONNECTOR_DIR=/opt/opencti-connector-datadog \
     PIP_BREAK_SYSTEM_PACKAGES=1
 
+COPY requirements.txt ${CONNECTOR_DIR}/requirements.txt
 COPY src ${CONNECTOR_DIR}
 
 WORKDIR ${CONNECTOR_DIR}

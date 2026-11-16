@@ -144,7 +144,7 @@ optimisations that stop the connector being woken for events it would discard an
 Build the image locally if needed:
 
 ```shell
-docker build . -t opencti/connector-malanta-attribution:latest
+./build.sh stream/malanta-attribution latest
 ```
 
 Set the environment variables in `docker-compose.yml`, then:
@@ -159,7 +159,7 @@ Copy `config.yml.sample` to `config.yml` and fill it in, then:
 
 ```shell
 cd src
-pip3 install -r requirements.txt
+pip3 install -r ../requirements.txt
 python3 main.py
 ```
 

@@ -91,7 +91,7 @@ this setting being introduced.
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-hunt-io:latest .
+./build.sh external-import/hunt-io latest
 ```
 
 Configure the connector in `docker-compose.yml`:

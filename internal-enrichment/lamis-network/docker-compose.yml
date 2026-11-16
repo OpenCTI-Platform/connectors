@@ -4,7 +4,9 @@ services:
     image: opencti/connector-lamis-network:latest
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: ../../Dockerfile_alpine
+      args:
+        CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost

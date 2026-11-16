@@ -55,7 +55,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-import-file-stix:latest .
+./build.sh internal-import-file/import-file-stix latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -60,12 +60,12 @@ CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
 CONNECTOR_CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
 
-# Where a connector may declare its pycti pin, checked in order. Most
-# connectors use `src/requirements.txt`; some (uv/pyproject-based, or older
-# ones) pin it in a root `requirements.txt` or in `pyproject.toml` instead.
+# Where a connector may declare its pycti pin, checked in order: its
+# `requirements.txt` (still under `src/` for anyrun-lookup, anyrun-task and
+# attribution-tools), or its `pyproject.toml` for the uv/pyproject-based ones.
 CONNECTOR_REQUIREMENTS_CANDIDATES = (
-    Path("src") / "requirements.txt",
     Path("requirements.txt"),
+    Path("src") / "requirements.txt",
     Path("pyproject.toml"),
 )
 

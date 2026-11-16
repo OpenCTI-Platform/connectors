@@ -63,12 +63,12 @@ Before building the Docker container, you need to set the version of pycti in `r
 version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example:
 
 ```shell
-docker build . -t ransomfeed-connector
+./build.sh external-import/ransomfeed latest
 docker run --rm ransomfeed-connector
 ```
 

@@ -87,7 +87,7 @@ Register for API credentials in the AWS Marketplace. Instructions can be found i
 
 ### Docker Deployment
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 Example `docker-compose.yml`:
 

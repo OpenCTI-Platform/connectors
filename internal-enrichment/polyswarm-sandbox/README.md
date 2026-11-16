@@ -63,8 +63,7 @@ CONNECTOR_ID=generate-a-uuid-v4
 ### 3. Deploy with Docker
 ```bash
 # Build the image
-docker build -t polyswarm-scan-and-sandbox-v1.5:latest .
-
+./build.sh internal-enrichment/polyswarm-sandbox latest
 # Start the connector
 docker-compose up -d
 
@@ -238,7 +237,6 @@ polyswarm-sandbox/
 │           └── settings.py         # Pydantic config (connectors_sdk)
 ├── tests/                       # 62+ unit tests
 ├── .dockerignore
-├── Dockerfile
 ├── docker-compose.yml
 └── README.md
 ```

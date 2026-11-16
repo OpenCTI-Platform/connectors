@@ -5,7 +5,7 @@ FROM python:3.12-alpine
 WORKDIR /opt/opencti-connector-vxvault
 RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev
-RUN --mount=type=bind,source=./src/requirements.txt,target=requirements.txt \
+RUN --mount=type=bind,source=./requirements.txt,target=requirements.txt \
     pip3 install --no-cache-dir -r requirements.txt
 RUN apk del git build-base libffi-dev
 

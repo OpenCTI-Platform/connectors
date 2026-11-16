@@ -24,10 +24,10 @@ The API key is issued from the isMalicious dashboard (Account → Team Managemen
 
 ### Docker
 
-Build a Docker Image using the provided `Dockerfile`.
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`.
 
 ```bash
-docker build . -t opencti/connector-ismalicious:latest
+./build.sh internal-enrichment/ismalicious latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.
@@ -40,7 +40,7 @@ docker compose up -d
 
 ```bash
 cd src
-pip install -r requirements.txt
+pip install -r ../requirements.txt
 python main.py
 ```
 

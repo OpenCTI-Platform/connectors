@@ -152,7 +152,6 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 2. **Install dependencies**:
 
 ```bash
-cd src
 # Using pip
 pip install -r requirements.txt
 
@@ -212,8 +211,7 @@ my-connector/
 │   ├── my_client/
 │   │   ├── __init__.py
 │   │   └── api_client.py
-│   ├── main.py
-│   └── requirements.txt
+│   └── main.py
 ├── tests/
 │   ├── test_connector/
 │   │   └── test_settings.py
@@ -223,8 +221,8 @@ my-connector/
 ├── config.yml.sample
 ├── .env.sample
 ├── docker-compose.yml
-├── Dockerfile
-├── entrypoint.sh
+├── requirements.txt
+├── .build.env
 └── README.md
 ```
 
@@ -243,7 +241,7 @@ my-connector/
 | `tests/`                             | Unit and integration tests                                |
 | `config.yml.sample`                  | Sample configuration for users                            |
 | `.env.sample`                        | Sample environment variables for users                    |
-| `Dockerfile`                         | Container image definition                                |
+| `.build.env`                         | Optional build arguments of the shared `Dockerfile_alpine` |
 | `docker-compose.yml`                 | Docker Compose service definition                         |
 
 ---

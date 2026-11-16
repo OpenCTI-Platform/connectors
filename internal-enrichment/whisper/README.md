@@ -84,7 +84,7 @@ file (manual deployment). See [`config.yml.sample`](config.yml.sample).
 Build the image and run it with the environment variables above:
 
 ```shell
-docker build . -t opencti/connector-whisper:latest
+./build.sh internal-enrichment/whisper latest
 ```
 
 Or use the provided [`docker-compose.yml`](docker-compose.yml): set the
@@ -93,7 +93,7 @@ variables and run `docker compose up -d`.
 ### Manual Deployment
 
 ```shell
-pip3 install -r src/requirements.txt
+pip3 install -r requirements.txt
 cp config.yml.sample config.yml   # then edit config.yml
 cd src && python3 main.py
 ```

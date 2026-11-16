@@ -113,7 +113,7 @@ The platform tracks ransomware groups' activities, including victim announcement
 Build the Docker image:
 
 ```bash
-docker build -t opencti-connector-dep .
+./build.sh external-import/digintlab-dep latest
 ```
 
 Use the following `docker-compose.yml`:
@@ -152,7 +152,7 @@ services:
 ### Manual Deployment
 
 1. Clone the repository and navigate to the connector directory.
-2. Install dependencies: `pip install -r src/requirements.txt`
+2. Install dependencies: `pip install -r requirements.txt`
 3. Configure `src/config.yml` using `src/config.yml.sample`.
 4. Run: `python src/main.py`
 

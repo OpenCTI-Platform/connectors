@@ -105,7 +105,7 @@ Before building the Docker container, ensure you have set the version of `pycti`
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-crowdsec-import:latest .
+./build.sh external-import/crowdsec-import latest
 ```
 
 Configure the connector in `docker-compose.yml`:

@@ -51,7 +51,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-accenture-acti:latest .
+./build.sh external-import/accenture-acti latest
 ```
 
 Configure the connector in `docker-compose.yml`:

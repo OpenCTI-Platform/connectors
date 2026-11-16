@@ -92,10 +92,10 @@ This connector integrates with the Luminar TAXII 2 server to import three distin
 
 ### Docker Deployment
 
-Build a Docker image using the provided Dockerfile:
+Build the Docker image from the repository root, with the shared `Dockerfile_alpine`:
 
 ```bash
-docker build -t opencti/connector-luminar:latest .
+./build.sh external-import/luminar latest
 ```
 
 Example `docker-compose.yml`:

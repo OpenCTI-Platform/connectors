@@ -113,9 +113,9 @@ def resolve_requirements(
     [project.dependencies] of a pyproject.toml, so connectors that declare their
     dependencies there are covered too.
     """
-    for req in (connector / "src" / "requirements.txt", connector / "requirements.txt"):
-        if req.is_file():
-            return req, req
+    req = connector / "requirements.txt"
+    if req.is_file():
+        return req, req
 
     for pyproject in (
         connector / "pyproject.toml",
