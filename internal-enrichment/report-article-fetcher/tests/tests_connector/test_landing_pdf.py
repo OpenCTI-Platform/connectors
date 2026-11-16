@@ -19,7 +19,8 @@ from connector.article import (
 from connector.connector import STIX_EXT_OCTI, ReportArticleFetcherConnector
 from pdf_builder import build_pdf
 from test_article_fixtures import PAGES as LONG_PAGES
-from test_fetch import (  # noqa: F401 pylint: disable=unused-import (pytest fixtures)
+# pytest fixtures used by name in the tests below
+from test_fetch import (  # noqa: F401 pylint: disable=unused-import
     ROUTES,
     checked,
     server,
