@@ -175,7 +175,7 @@ def test_make_ipv4_and_ipv6_have_correct_type():
 
 def test_network_observable_for_picks_ipv6_by_colon():
     assert network_observable_for("8.8.8.8", "ip", "amber")["type"] == "ipv4-addr"
-    assert network_observable_for("2001:db8::1", "ip", "amber")["type"] == "ipv6-addr"
+    assert network_observable_for("2620:fe::fe", "ip", "amber")["type"] == "ipv6-addr"
     assert (
         network_observable_for("evil.com", "hostname", "amber")["type"] == "domain-name"
     )
@@ -368,8 +368,27 @@ def test_file_sco_rejects_bad_sha256_and_drops_bad_optional_hashes():
     "value, want_type, want_value",
     [
         ("1.2.3.4", "ipv4-addr", "1.2.3.4"),
-        ("2001:DB8::1", "ipv6-addr", "2001:db8::1"),
+        ("2606:4700:4700::1111", "ipv6-addr", "2606:4700:4700::1111"),
+        ("2606:4700:4700:0::1111", "ipv6-addr", "2606:4700:4700::1111"),
         ("1.2.3.4:80", None, None),
+        # Addresses that are not publicly routable say nothing about a file
+        # or a domain: strings in malware and sinkholed DNS answers are full
+        # of them.
+        ("127.0.0.1", None, None),
+        ("0.0.0.0", None, None),
+        ("224.0.0.1", None, None),
+        ("239.255.255.250", None, None),
+        ("ff02::1", None, None),
+        ("fec0::1", None, None),
+        ("4000::1", None, None),
+        ("3fff::1", None, None),
+        ("::ffff:8.8.8.8", None, None),
+        ("10.1.2.3", None, None),
+        ("192.168.0.1", None, None),
+        ("169.254.1.1", None, None),
+        ("::1", None, None),
+        ("fe80::1", None, None),
+        ("2001:db8::1", None, None),
         ("999.1.1.1", None, None),
         ("not an ip", None, None),
         ("", None, None),
@@ -478,6 +497,18 @@ def test_asset_identity_is_keyed_by_its_stable_token():
         ("example..com", None),
         ("localhost", None),
         ("", None),
+        # Dotted strings from file contents that are not host names: an
+        # address, a version number, a file name.
+        ("1.2.3.4", None),
+        ("0.0.0.0", None),
+        ("6.1.7601", None),
+        ("kernel32.dll", None),
+        ("readme.txt", None),
+        ("invoice.pdf", None),
+        ("svchost.exe", None),
+        ("example.123", None),
+        ("example.c_m", None),
+        ("example.xn--p1ai", "example.xn--p1ai"),
         pytest.param("a." * 130 + "com", None, id="overlong"),
     ],
 )

@@ -7,7 +7,6 @@ RUN addgroup -S connector && adduser -S connector -G connector
 
 RUN apk --no-cache upgrade && \
     apk add --no-cache --virtual .build-deps git build-base libffi-dev && \
-    apk add --no-cache libmagic && \
     rm -rf /var/cache/apk/*
 
 COPY src/requirements.txt /opt/opencti-connector/

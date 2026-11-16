@@ -21,14 +21,14 @@ from pydantic import Field, field_validator
 class GTIReportConfig(GTIBaseConfig):
     """Configuration for GTI report imports."""
 
-    report_import_start_date: timedelta = Field(
-        default=timedelta(days=1),
-        description="ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
-    )
-
     import_reports: bool = Field(
         default=True,
         description="Whether to enable importing report data from GTI",
+    )
+
+    report_import_start_date: timedelta = Field(
+        default=timedelta(days=1),
+        description="ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
     )
 
     report_types: ListFromString = Field(

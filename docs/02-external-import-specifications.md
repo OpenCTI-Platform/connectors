@@ -58,9 +58,9 @@ An external import connector is made of four pieces:
 
 | Piece                             | Base class (from `connectors-sdk`)         | Responsibility                                                        |
 | --------------------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
-| `ConnectorSettings`               | `BaseConnectorSettings`                    | Validate configuration (env vars / `config.yml`) with Pydantic       |
+| `ConnectorSettings`               | `BaseExternalImportConnectorSettings`      | Validate configuration (env vars / `config.yml`) with Pydantic       |
 | `ConnectorState`                  | `ExternalImportConnectorState`             | Persist lightweight checkpoints between runs (cursors, timestamps)   |
-| One or more `...Processor`        | `BaseDataProcessor`                        | Fetch (`collect`) and convert (`transform`) **one data type** to STIX |
+| One or more `...Processor`        | `BaseDataProcessor[ConnectorSettings, ConnectorState]` | Fetch (`collect`) and convert (`transform`) **one data type** to STIX |
 | The connector itself              | `ExternalImportConnector`                  | Orchestrate everything: schedule, state, work, bundle sending        |
 
 > [!TIP]
@@ -76,12 +76,15 @@ A **processor** is a self-contained unit responsible for a single data type. You
 ```python
 from __future__ import annotations
 
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import BaseIdentifiedObject, OrganizationAuthor, TLPMarking, Report
 from my_client import MyClient
 
 
-class ReportsProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class ReportsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """Fetches and converts one data type (here, reports) to STIX."""
 
     work_name = "Reports import"  # human-readable name of the work created in OpenCTI
@@ -116,6 +119,11 @@ class ReportsProcessor(BaseDataProcessor):
         return []
 ```
 
+The brackets after `BaseDataProcessor` tell the type checker which settings and state types the
+connector uses, so `self.settings` and `self.state` are typed without redeclaring them. Every
+processor of a connector must declare the same pair (see the
+[TDR](../connectors-sdk/TDRs/2026-11-03-Generic_data_processor_and_external_import_connector.md)).
+
 The base class calls these methods for you, in order, on every run:
 
 ```text
@@ -140,7 +148,7 @@ import traceback
 
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import ReportsProcessor
-from connectors_sdk import ExternalImportConnector
+from connectors_sdk import BaseDataProcessor, ExternalImportConnector
 
 if __name__ == "__main__":
     try:
@@ -148,7 +156,7 @@ if __name__ == "__main__":
         state = ConnectorState()
 
         # One processor per data type / feature flag you support.
-        data_processors = []
+        data_processors: list[BaseDataProcessor[ConnectorSettings, ConnectorState]] = []
         if settings.my_connector.import_reports:
             data_processors.append(ReportsProcessor())
 
@@ -267,7 +275,7 @@ The only thing you control is the work's friendly name, via the processor's `wor
 attribute:
 
 ```python
-class ReportsProcessor(BaseDataProcessor):
+class ReportsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     work_name = "Reports import"  # shown in the OpenCTI UI
 ```
 
@@ -1095,8 +1103,8 @@ from datetime import datetime, timedelta, timezone
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     DatetimeFromIsoString,
     ListFromString,
 )
@@ -1135,7 +1143,7 @@ class MyConnectorConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseExternalImportConnectorSettings):
     """Aggregates all configuration sections."""
 
     connector: ExternalImportConnectorConfig = Field(
@@ -1163,8 +1171,8 @@ class ConnectorState(ExternalImportConnectorState):
 ```python
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from connector.settings import ConnectorSettings
+from connector.state import ConnectorState
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
     BaseIdentifiedObject,
@@ -1174,20 +1182,14 @@ from connectors_sdk.models import (
 )
 from my_client import MyClient
 
-if TYPE_CHECKING:
-    from connector.settings import ConnectorSettings
-    from connector.state import ConnectorState
-
 
 class ThreatConversionError(Exception):
     """Raised when a single raw item cannot be converted to STIX."""
 
 
-class ThreatsProcessor(BaseDataProcessor):
+# Tells the type checker which settings and state this processor uses.
+class ThreatsProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     """Fetches threats from the external API and converts them to STIX."""
-
-    settings: ConnectorSettings
-    state: ConnectorState
 
     work_name = "My Threat Feed - Threats import"
 

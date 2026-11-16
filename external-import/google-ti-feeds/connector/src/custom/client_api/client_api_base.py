@@ -6,6 +6,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
+from connector.src.custom.client_api.inline_relationships import (
+    inline_relationships_param,
+)
 from connector.src.custom.configs.fetcher_config import FETCHER_CONFIGS
 from connector.src.utils.api_engine.aio_http_client import AioHttpClient
 from connector.src.utils.api_engine.api_client import ApiClient
@@ -142,6 +145,13 @@ class BaseClientAPI:
         if "All" in origins:
             origins = ["All"]
 
+        subentity_types = getattr(
+            self.config, f"{collection_type.replace('-', '_')}_subentities", None
+        )
+        relationships = inline_relationships_param(
+            subentity_types if isinstance(subentity_types, list) else None
+        )
+
         filter_configs = []
 
         for item_type in types:
@@ -164,12 +174,16 @@ class BaseClientAPI:
                 for extra_filter in extra_filters:
                     current_filter += f" {extra_filter}"
 
+                params = {
+                    "filter": current_filter,
+                    "limit": 40,
+                    "order": "last_modification_date+",
+                }
+                if relationships:
+                    params["relationships"] = relationships
+
                 config = {
-                    "params": {
-                        "filter": current_filter,
-                        "limit": 40,
-                        "order": "last_modification_date+",
-                    },
+                    "params": params,
                     "cursor": (
                         initial_state.get(cursor_key) if initial_state else None
                     ),

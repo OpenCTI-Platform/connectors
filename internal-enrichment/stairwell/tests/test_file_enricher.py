@@ -1149,7 +1149,7 @@ def test_note_lists_exactly_the_network_values_that_became_observables():
     metadata = {
         "mal_eval": {"probability_bucket": "PROBABILITY_HIGH"},
         "network_indicators": {
-            "ip_addresses": ["8.8.8.8", "999.1.1.1", "2001:DB8::1"],
+            "ip_addresses": ["8.8.8.8", "999.1.1.1", "2620:FE::FE", "127.0.0.1"],
             "hostnames": ["C2.Example.com"],
             "urls": ["http://c2.example.com/x", "http://user@", "http://h:0/"],
         },
@@ -1171,7 +1171,7 @@ def test_note_lists_exactly_the_network_values_that_became_observables():
     }
     assert observed == {
         "8.8.8.8",
-        "2001:db8::1",
+        "2620:fe::fe",
         "c2.example.com",
         "http://c2.example.com/x",
     }
