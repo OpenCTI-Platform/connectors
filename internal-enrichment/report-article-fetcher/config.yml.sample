@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'Report Article Fetcher' # optional
+  scope: 'Report' # optional (default: 'Report')
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional; prefer a playbook or trigger filters on RSS reports
+  max_tlp: 'TLP:AMBER' # optional (default: 'TLP:AMBER')
+
+report_article_fetcher:
+  user_agent: 'OpenCTI Report Article Fetcher' # optional
+  request_timeout: 20 # optional, seconds
+  max_download_size: 5000000 # optional, bytes
+  min_length: 500 # optional, characters of article text
+  length_ratio: 1.5 # optional, the article must be this many times longer than the report text
+  min_title_similarity: 0.6 # optional, 0 to 1
+  match_single_reference: false # optional, also accept non-RSS reports with exactly one external reference

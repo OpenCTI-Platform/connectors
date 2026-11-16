@@ -69,10 +69,15 @@ from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    BaseInternalExportFileConnectorSettings,
     BaseInternalImportFileConnectorConfig,
+    BaseInternalImportFileConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -100,6 +105,11 @@ __all__ = [
     "ApiUnauthorizedError",
     # Base Settings
     "BaseConnectorSettings",
+    "BaseExternalImportConnectorSettings",
+    "BaseInternalEnrichmentConnectorSettings",
+    "BaseInternalExportFileConnectorSettings",
+    "BaseInternalImportFileConnectorSettings",
+    "BaseStreamConnectorSettings",
     # Base Configs
     "BaseConfigModel",
     "BaseExternalImportConnectorConfig",

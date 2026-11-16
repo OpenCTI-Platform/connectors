@@ -61,3 +61,24 @@ def test_process_catches_expected_errors(
 ) -> None:
     mocker.patch.object(connector, "process_message", side_effect=exception)
     assert connector.process() == expected
+
+
+def test_process_should_finalize_work_in_error_when_processing_fails(
+    connector: Connector, mocker: MagicMock
+) -> None:
+    """A failed run must not leave its Work "In Progress" nor advance the state."""
+    mocker.patch.object(
+        connector, "process_data", side_effect=RuntimeError("Graph unreachable")
+    )
+    finalize_work = mocker.spy(connector, "finalize_work")
+
+    result = connector.process()
+
+    assert result == "Unexpected error. See connector logs for details."
+    connector.helper.api.work.to_processed.assert_called_once_with(
+        work_id="work-id",
+        message="Connector run failed: Graph unreachable",
+        in_error=True,
+    )
+    finalize_work.assert_not_called()
+    connector.helper.send_stix2_bundle.assert_not_called()

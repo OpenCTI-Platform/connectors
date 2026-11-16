@@ -1,8 +1,11 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
-from connector.connector import HatchingTriageSandboxConnector
+import requests
+from connector.connector import HatchingTriageSandboxConnector, TriageClient
 from connectors_sdk.models.enums import TLPLevel
+from requests import RequestException
 from triage.client import ServerError
 
 
@@ -17,12 +20,13 @@ def connector(mock_opencti_connector_helper):
     config.hatching_triage_sandbox.botnet_color = "#f79e00"
     config.hatching_triage_sandbox.campaign_color = "#7a01e5"
     config.hatching_triage_sandbox.tag_color = "#54483b"
+    config.hatching_triage_sandbox.max_attempts = 3
     config.connector.max_tlp = TLPLevel.AMBER
 
     helper = MagicMock()
     helper.api.identity.create.return_value = {"standard_id": "identity--fake"}
 
-    with patch("connector.connector.Client"):
+    with patch("connector.connector.TriageClient"):
         instance = HatchingTriageSandboxConnector(config, helper)
 
     return instance
@@ -271,3 +275,373 @@ class TestBuildReportUrl:
         connector.base_url = base_url
 
         assert connector._build_report_url("sample-123") == expected
+
+
+def _server_error(status_code):
+    http_error = MagicMock()
+    http_error.response.status_code = status_code
+    http_error.response.json.return_value = {}
+    return ServerError(http_error)
+
+
+def _html_response(status_code):
+    response = requests.Response()
+    response.status_code = status_code
+    response._content = b"<html><h1>Bad Gateway</h1></html>"
+    return response
+
+
+def _http_error(status_code):
+    return requests.HTTPError(response=_html_response(status_code))
+
+
+@patch("connector.connector.time.sleep")
+class TestRetries:
+    def test_overview_report_retries_on_server_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = [
+            _server_error(502),
+            {"analysis": {}},
+        ]
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        assert connector.triage_client.overview_report.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_overview_report_raises_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(502)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 3
+
+    def test_overview_report_does_not_retry_client_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = _server_error(404)
+
+        with pytest.raises(ServerError):
+            connector._get_overview_report("sample-123")
+
+        assert connector.triage_client.overview_report.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_overview_report_retries_on_html_bad_gateway(self, mock_sleep, connector):
+        response = requests.Response()
+        response.status_code = 502
+        response._content = b"<html><body><h1>502 Bad Gateway</h1></body></html>"
+        calls = iter([requests.HTTPError(response=response), None])
+
+        def overview_report(_sample_id):
+            http_error = next(calls)
+            if http_error is None:
+                return {"analysis": {}}
+            raise ServerError(http_error)
+
+        connector.triage_client.overview_report.side_effect = overview_report
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        mock_sleep.assert_called_once()
+
+    def test_overview_report_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.overview_report.side_effect = [
+            requests.ConnectionError("connection dropped"),
+            {"analysis": {}},
+        ]
+
+        result = connector._get_overview_report("sample-123")
+
+        assert result == {"analysis": {}}
+        assert connector.triage_client.overview_report.call_count == 2
+
+    def test_task_file_retries_until_available(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            b'{"error":"NOT_AVAILABLE"}',
+            b'{"error":"NOT_AVAILABLE"}',
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 3
+
+    def test_task_file_returns_none_after_max_attempts(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.return_value = (
+            b'{"error":"NOT_AVAILABLE"}'
+        )
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    @pytest.mark.parametrize(
+        "error_body",
+        [
+            b'{"error": "BAD_GATEWAY", "message": "upstream timeout"}',
+            b'{"error":"NOT_AVAILABLE"}',
+            b"NOT_AVAILABLE\n",
+        ],
+    )
+    def test_task_file_retries_on_any_triage_error_body(
+        self, mock_sleep, connector, error_body
+    ):
+        connector.triage_client.sample_task_file.side_effect = [
+            error_body,
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+
+    @pytest.mark.parametrize(
+        "content",
+        [
+            b'{"error": "x", "data": [1, 2]}',
+            b'{"error": "Login failed", "message": "bad password"}',
+            b'{"error": true}',
+            b'{"error": "CODE", "message": 42}',
+            b'{"message": "hello"}',
+            b"NOT_AVAILABLE is the first line of this real file",
+            b'{"config": {"c2": "1.2.3.4"}}',
+            b"<html><body>dropped phishing page</body></html>",
+            b"{" + b" " * 5000 + b'"error": "x"}',
+            b"{\xff not json",
+        ],
+    )
+    def test_task_file_keeps_real_file_content(self, mock_sleep, connector, content):
+        connector.triage_client.sample_task_file.return_value = content
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == content
+        mock_sleep.assert_not_called()
+
+    def test_task_file_retries_on_bad_gateway(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            _http_error(502),
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_task_file_returns_none_after_max_attempts_on_server_error(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_task_file.side_effect = _http_error(502)
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 3
+        assert mock_sleep.call_count == 2
+
+    def test_task_file_skips_without_retry_on_client_error(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = _http_error(404)
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result is None
+        assert connector.triage_client.sample_task_file.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_task_file_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.sample_task_file.side_effect = [
+            requests.ConnectionError("connection dropped"),
+            b"file-content",
+        ]
+
+        result = connector._get_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+        assert connector.triage_client.sample_task_file.call_count == 2
+
+    def test_wait_for_analysis_retries_on_invalid_json(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            _raise_json_error(),
+            iter([{"status": "pending"}, {"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_retries_on_connection_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            RequestException("connection reset"),
+            iter([{"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+
+    def test_wait_for_analysis_retries_on_event_without_status(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = [
+            iter([{"error": "BAD_GATEWAY", "message": "upstream timeout"}]),
+            iter([{"status": "pending"}, {"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_retries_on_server_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = [
+            _server_error(503),
+            iter([{"status": "reported"}]),
+        ]
+
+        connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 2
+        mock_sleep.assert_called_once()
+
+    def test_wait_for_analysis_does_not_retry_client_error(self, mock_sleep, connector):
+        connector.triage_client.sample_events.side_effect = _server_error(404)
+
+        with pytest.raises(ServerError):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_wait_for_analysis_raises_when_stream_never_reports(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.side_effect = lambda _: iter(
+            [{"status": "pending"}]
+        )
+
+        with pytest.raises(ValueError, match="did not finish after 3 attempts"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 3
+
+    def test_wait_for_analysis_does_not_retry_failed_analysis(
+        self, mock_sleep, connector
+    ):
+        connector.triage_client.sample_events.return_value = iter(
+            [{"status": "failed"}]
+        )
+
+        with pytest.raises(ValueError, match="Analysis sample-123 failed"):
+            connector._wait_for_analysis("sample-123")
+
+        assert connector.triage_client.sample_events.call_count == 1
+        mock_sleep.assert_not_called()
+
+
+class TestTriageClient:
+    @pytest.mark.parametrize("status_code", [404, 502])
+    def test_file_download_raises_on_http_error(self, status_code):
+        response = _html_response(status_code)
+
+        with patch("connector.connector.Session") as session_cls:
+            session = session_cls.return_value.__enter__.return_value
+            session.merge_environment_settings.return_value = {}
+            session.send.return_value = response
+
+            with pytest.raises(requests.HTTPError):
+                TriageClient("token", root_url="https://tria.ge/api").sample_task_file(
+                    "sample-123", "task-1", "file.bin"
+                )
+
+    def test_file_download_returns_content_on_success(self):
+        response = requests.Response()
+        response.status_code = 200
+        response._content = b"file-content"
+
+        with patch("connector.connector.Session") as session_cls:
+            session = session_cls.return_value.__enter__.return_value
+            session.merge_environment_settings.return_value = {}
+            session.send.return_value = response
+
+            result = TriageClient(
+                "token", root_url="https://tria.ge/api"
+            ).sample_task_file("sample-123", "task-1", "file.bin")
+
+        assert result == b"file-content"
+
+
+def _raise_json_error():
+    raise json.JSONDecodeError("Expecting value", "<html>", 0)
+    yield  # noqa: unreachable - makes this a generator
+
+
+class TestSendBundle:
+    def test_sends_bundle_without_cleanup_of_inconsistent_objects(self, connector):
+        connector.helper.stix2_create_bundle.return_value = "bundle"
+        connector.helper.send_stix2_bundle.return_value = ["bundle"]
+
+        result = connector._send_bundle(["stix-object"])
+
+        connector.helper.stix2_create_bundle.assert_called_once_with(["stix-object"])
+        connector.helper.send_stix2_bundle.assert_called_once_with("bundle")
+        assert result == "Sent 1 stix bundle(s) for worker import"
+
+
+class TestExtractedFileDownload:
+    OBSERVABLE = {
+        "id": "observable-id",
+        "standard_id": "artifact--4cb2c4c1-7a3c-4e2b-9a8e-3c6f7f1b2d10",
+    }
+    OVERVIEW = {
+        "analysis": {},
+        "extracted": [
+            {
+                "config": {"rule": "Agenttesla", "c2": [], "credentials": []},
+                "tasks": ["behavioral1"],
+                "dumped_file": "memory/file.bin",
+            }
+        ],
+    }
+
+    @pytest.fixture(autouse=True)
+    def _setup(self, connector):
+        connector.identity = "identity--7b0e9c3a-5d1f-4c8e-8f2a-1e6d3b9c4a70"
+        connector._send_bundle = MagicMock(return_value="sent")
+
+    def test_skips_extracted_file_when_not_available(self, connector):
+        connector._get_task_file = MagicMock(return_value=None)
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        connector._get_task_file.assert_called_once_with(
+            "sample-123", "behavioral1", "memory/file.bin"
+        )
+        connector.helper.api.stix_cyber_observable.upload_artifact.assert_not_called()
+        connector.helper.connector_logger.warning.assert_called_once()
+
+    @patch("connector.connector.magic.from_buffer", return_value="text/plain")
+    def test_uploads_extracted_file_when_available(self, _mock_magic, connector):
+        connector._get_task_file = MagicMock(return_value=b"file-content")
+        upload = connector.helper.api.stix_cyber_observable.upload_artifact
+        upload.return_value = {
+            "id": "artifact-id",
+            "standard_id": "artifact--9d1e2f3a-4b5c-4d6e-8f7a-0b1c2d3e4f50",
+        }
+
+        connector._process_overview_report(
+            self.OBSERVABLE, self.OVERVIEW, "sample-123", "artifact"
+        )
+
+        upload.assert_called_once()
+        assert upload.call_args.kwargs["data"] == b"file-content"
+        assert upload.call_args.kwargs["file_name"] == "sample-123_memory/file.bin"

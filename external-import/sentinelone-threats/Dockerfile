@@ -11,7 +11,7 @@ RUN apk --no-cache upgrade && \
 
 RUN cd /opt/opencti-connector-sentinelone-threats && \
     pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Expose and entrypoint
 COPY entrypoint.sh /
