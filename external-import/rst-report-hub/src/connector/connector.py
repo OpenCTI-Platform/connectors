@@ -246,7 +246,9 @@ class ReportHub:
                             "name": f"{report_id}.pdf",
                             "mime_type": "application/pdf",
                             "data": base64.b64encode(pdf_report).decode("utf-8"),
-                            "no_trigger_import": self._downloader_config["no_file_trigger_import"],
+                            "no_trigger_import": self._downloader_config[
+                                "no_file_trigger_import"
+                            ],
                         }
                         self._combine_report_and_send(stix_report, file_pdf, report_id)
                 except requests.exceptions.RequestException as ex:

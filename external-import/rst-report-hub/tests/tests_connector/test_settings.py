@@ -163,6 +163,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
 
+
 @pytest.mark.parametrize(
     "rst_config, expected",
     [
