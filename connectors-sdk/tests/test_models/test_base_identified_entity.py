@@ -3,6 +3,16 @@ from typing import OrderedDict
 import pytest
 import stix2
 import stix2.properties
+from connectors_sdk.models import (
+    AssociatedFile,
+    ExternalReference,
+    File,
+    Hostname,
+    IPV4Address,
+    MediaContent,
+    OrganizationAuthor,
+    Text,
+)
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
@@ -448,3 +458,52 @@ def test_check_deprecated_x_opencti_properties_rejects(
         implemented_base_identified_entity._check_deprecated_x_opencti_properties(
             properties
         )
+
+
+AUTHOR = OrganizationAuthor(name="Example Corp")
+COMMON_FIELDS = {
+    "author": AUTHOR,
+    "external_references": [
+        ExternalReference(source_name="example", url="https://example.com")
+    ],
+    "labels": ["label"],
+}
+OBSERVABLE_FIELDS = {
+    **COMMON_FIELDS,
+    "score": 80,
+    "description": "Description",
+    "create_indicator": True,
+    "associated_files": [AssociatedFile(name="file.txt", content=b"content")],
+}
+
+
+@pytest.mark.parametrize(
+    "model",
+    [
+        pytest.param(
+            IPV4Address(value="1.1.1.1", **OBSERVABLE_FIELDS), id="ipv4_address"
+        ),
+        pytest.param(
+            File(name="a.txt", additional_names=["b.txt"], **OBSERVABLE_FIELDS),
+            id="file",
+        ),
+        pytest.param(Hostname(value="example.com", **OBSERVABLE_FIELDS), id="hostname"),
+        pytest.param(Text(value="text", **OBSERVABLE_FIELDS), id="text"),
+        pytest.param(
+            MediaContent(url="https://example.com/a", **OBSERVABLE_FIELDS),
+            id="media_content",
+        ),
+    ],
+)
+def test_x_opencti_properties_match_their_counterparts(model) -> None:
+    """Test that each OpenCTI property has the same value in both of its places.
+
+    During the deprecation period, every model that writes OpenCTI properties must
+    write them in the platform layout and as x_opencti_* properties. The models
+    build their properties with _merge_stix2_properties, which checks it.
+    """
+    # Given a model with OpenCTI properties
+    # When converting it to a STIX object (the merge checks the properties)
+    stix2_object = model.to_stix2_object()
+    # Then it has x_opencti_* properties, so the check had something to verify
+    assert [key for key in stix2_object if key.startswith("x_opencti_")]
