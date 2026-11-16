@@ -9,7 +9,7 @@ from pycti import Identity as PyctiIdentity
 from stix2 import TLP_AMBER, Bundle, Identity, Malware
 
 
-def _importer(bundle_size: int) -> IndicatorImporter:
+def _importer(bundle_size: int | None = None) -> IndicatorImporter:
     config = IndicatorImporterConfig(
         config=MagicMock(),
         helper=MagicMock(),
@@ -33,9 +33,10 @@ def _importer(bundle_size: int) -> IndicatorImporter:
         no_file_trigger_import=True,
         scopes={"indicator"},
         attack_lookup=None,
-        bundle_size=bundle_size,
     )
     importer = IndicatorImporter(config)
+    if bundle_size is not None:
+        importer._BUNDLE_SIZE = bundle_size
     importer._send_bundle = MagicMock()
     return importer
 
@@ -63,7 +64,7 @@ def _bundle(indicator) -> Bundle:
 
 
 @pytest.mark.parametrize(
-    "bundle_size,expected_sizes", [(1, [4, 4, 4, 4, 4]), (2, [5, 5, 4]), (500, [8])]
+    "bundle_size,expected_sizes", [(1, [4, 4, 4, 4, 4]), (2, [5, 5, 4]), (None, [8])]
 )
 def test_indicators_are_sent_in_bundles_of_bundle_size(bundle_size, expected_sizes):
     importer = _importer(bundle_size)
@@ -91,7 +92,7 @@ def test_indicators_are_sent_in_bundles_of_bundle_size(bundle_size, expected_siz
 
 
 def test_discarded_indicator_is_not_sent():
-    importer = _importer(500)
+    importer = _importer()
     importer._create_indicator_bundle = MagicMock(side_effect=[None, _bundle(1)])
     indicators = [
         {"id": i, "last_updated": 1700000000 + i, "published_date": None}
@@ -111,7 +112,7 @@ def _indicators(ids) -> list[dict]:
 
 
 def test_run_starts_with_an_empty_batch_after_a_failed_run():
-    importer = _importer(500)
+    importer = _importer()
     # First run: two indicators are pending when the third one fails.
     importer._fetch_indicators = MagicMock(return_value=_indicators(range(3)))
     importer._create_indicator_bundle = MagicMock(
