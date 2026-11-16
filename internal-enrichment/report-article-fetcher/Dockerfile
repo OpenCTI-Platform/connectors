@@ -14,6 +14,7 @@ RUN apk --no-cache upgrade && \
     apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
+COPY requirements.txt /opt/opencti-connector-report-article-fetcher/requirements.txt
 COPY src /opt/opencti-connector-report-article-fetcher
 WORKDIR /opt/opencti-connector-report-article-fetcher
 
