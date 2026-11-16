@@ -282,6 +282,23 @@ def test_settings_should_accept_valid_input(settings_dict):
             "crowdstrike.indicator_ip_max_age",
             id="invalid_duration_format",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            "connector.id",
+            id="empty_connector_id",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
