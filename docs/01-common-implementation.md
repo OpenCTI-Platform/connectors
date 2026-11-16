@@ -297,8 +297,8 @@ from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    BaseExternalImportConnectorSettings,
 )
 from pydantic import Field, HttpUrl
 
@@ -338,7 +338,7 @@ class MyConnectorConfig(BaseConfigModel):
     )
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseExternalImportConnectorSettings):
     """
     Main settings class that combines all configuration sections.
     """
@@ -349,6 +349,11 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=MyConnectorConfig
     )
 ```
+
+> [!NOTE]
+> This example is for an external import connector. For another connector type, inherit the
+> `Base<Type>ConnectorSettings` matching it (for example `BaseInternalEnrichmentConnectorSettings`
+> or `BaseStreamConnectorSettings`), as done in the corresponding `templates/<type>/src/connector/settings.py`.
 
 ### Configuration File Format
 
