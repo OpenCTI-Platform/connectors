@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -71,6 +73,24 @@ class ReportArticleFetcherConfig(BaseConfigModel):
             "one external reference."
         ),
         default=False,
+    )
+    max_workers: int = Field(
+        description=(
+            "Reports processed at the same time by one connector process. Each worker "
+            "consumes the queue with its own OpenCTI client and HTTP session, like a "
+            "replica of the connector. Requires the AMQP listen protocol."
+        ),
+        default=1,
+        ge=1,
+        le=32,
+    )
+    summary_log_level: Literal["debug", "info", "warning", "error", "none"] = Field(
+        description=(
+            "Level of the one-line summary written for each report (outcome, skip "
+            "reason, fetch, extraction, check and send times). The default is "
+            "visible under the default log level; none turns it off."
+        ),
+        default="error",
     )
 
 
