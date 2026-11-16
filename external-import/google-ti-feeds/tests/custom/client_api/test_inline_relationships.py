@@ -4,6 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 from connector.src.custom.client_api.inline_relationships import (
+    INLINE_DESCRIPTOR_LIMIT,
+    inline_relationships_param,
     is_subentity_call_needed,
 )
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
@@ -62,10 +64,12 @@ def test_call_needed_when_block_missing():
         (("malware--1",), "software_toolkits", True),
         (("software-toolkit--1",), "software_toolkits", True),
         (("software-toolkit--1",), "malware_families", False),
-        # ids without a prefix (community sources) can be malware or toolkit
+        # ids without a prefix (community sources) have an unknown type
         (("malpedia_ios_predator",), "malware_families", True),
         (("malpedia_ios_predator",), "software_toolkits", True),
-        (("malpedia_ios_predator",), "threat_actors", False),
+        (("malpedia_ios_predator",), "threat_actors", True),
+        (("malpedia_ios_predator",), "vulnerabilities", True),
+        (("report--1", "malpedia_ios_predator"), "campaigns", True),
         ((), "malware_families", False),
         ((), "vulnerabilities", False),
     ],
@@ -80,6 +84,18 @@ def test_truncated_associations_always_called():
     relationships = _assoc(*[f"campaign--{i}" for i in range(20)], meta=CURSOR)
     assert is_subentity_call_needed("malware_families", relationships) is True
     assert is_subentity_call_needed("threat_actors", relationships) is True
+
+
+@pytest.mark.parametrize(
+    ("count", "expected"),
+    [(INLINE_DESCRIPTOR_LIMIT - 1, False), (INLINE_DESCRIPTOR_LIMIT, True)],
+)
+def test_full_page_without_cursor_is_incomplete(count, expected):
+    """Given a full page of descriptors and no cursor, then the call is made."""
+    associations = _assoc(*[f"campaign--{i}" for i in range(count)])
+    assert is_subentity_call_needed("threat_actors", associations) is expected
+    assert is_subentity_call_needed("attack_techniques", _ttp(count)) is True
+    assert is_subentity_call_needed("attack_techniques", _ttp(0)) is False
 
 
 def test_indicator_types_not_predicted():
@@ -136,3 +152,22 @@ def test_filter_keeps_everything_without_relationships():
     entity = SimpleNamespace(attributes=None, relationships=None)
     types = ["malware_families", "attack_techniques", "threat_actors"]
     assert BaseOrchestrator._filter_subentity_types(types, entity) == types
+
+
+# --- Scenario: the list call only asks for useful relationships --------------
+
+
+@pytest.mark.parametrize(
+    ("subentity_types", "expected"),
+    [
+        (None, "associations,attack_techniques"),
+        ([], None),
+        (["domains", "files", "urls", "ip_addresses"], None),
+        (["attack_techniques", "files"], "attack_techniques"),
+        (["malware_families", "files"], "associations"),
+        (["threat_actors", "attack_techniques"], "associations,attack_techniques"),
+    ],
+)
+def test_inline_relationships_param(subentity_types, expected):
+    """Given configured sub-entity types, then only useful blocks are asked for."""
+    assert inline_relationships_param(subentity_types) == expected
