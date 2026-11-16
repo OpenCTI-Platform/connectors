@@ -499,6 +499,7 @@ EXTRA_PACKAGES_UBI9="pango libbrotli"
 - `DEBIAN_RELEASE`: Debian release of the Debian image, `bookworm` (Python 3.11) by default, `trixie` for Python 3.13.
 - `POST_INSTALL`: a shell command run after `pip install`.
 - `WRITABLE_DIRS`: directories the connector writes to at runtime, made writable for any UID (for instance a cache under `src/`).
+- `CONNECTOR_UID`: UID the connector runs as, `0` (root) by default; any other UID, for instance `10001`, runs it as an unprivileged user.
 
 Build an image locally from the repository root:
 
@@ -508,7 +509,7 @@ Build an image locally from the repository root:
 ```
 
 A connector keeps its own `Dockerfile` only when the shared one cannot build it
-(multi-stage build, non-root user, package installed from `pyproject.toml`...).
+(multi-stage build, package installed from `pyproject.toml`...).
 
 ### Dockerfile Best Practices
 
@@ -516,7 +517,7 @@ A connector keeps its own `Dockerfile` only when the shared one cannot build it
 2. **Minimize layers** - Combine RUN commands
 3. **Clean up** - Remove build dependencies after installation
 4. **Use specific versions** - `python:3.12-alpine` not `python:alpine`
-5. **Don't run as root** - Add non-root user if possible
+5. **Don't run as root** - Set `CONNECTOR_UID` in `.build.env` when the connector can run unprivileged
 6. **Use .dockerignore** - Exclude unnecessary files
 
 ### .dockerignore

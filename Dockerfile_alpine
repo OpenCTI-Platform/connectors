@@ -61,6 +61,12 @@ EOT
 
 WORKDIR ${CONNECTOR_WORKDIR}
 
+# UID the connector runs as: root by default. Any other UID runs it unprivileged,
+# with no passwd entry needed, since the image is readable by any UID and
+# WRITABLE_DIRS writable.
+ARG CONNECTOR_UID="0"
+USER ${CONNECTOR_UID}
+
 # exec ensures python3 replaces the shell process and receives OS signals
 # (SIGTERM, SIGINT) directly as PID 1, while sh -c preserves the ${CONNECTOR_CMD}
 # variable expansion needed for per-connector overrides.
