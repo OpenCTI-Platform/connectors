@@ -93,6 +93,13 @@ class RstReportHubConfig(BaseConfigModel):
         default=False,
         description="Whether indicators from reports should be set for detection or not.",
     )
+    no_file_trigger_import: bool = Field(
+        default=True,
+        description=(
+            "Whether the PDF attached to imported reports should not trigger "
+            "file import connectors. Set to false to trigger them."
+        ),
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
