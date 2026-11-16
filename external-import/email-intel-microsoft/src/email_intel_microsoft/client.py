@@ -20,6 +20,7 @@ from msgraph.generated.models.message import (
 from msgraph.generated.models.message_collection_response import (
     MessageCollectionResponse,
 )
+from msgraph.generated.models.o_data_errors.o_data_error import ODataError
 from msgraph.generated.users.item.mail_folders.item.messages.messages_request_builder import (
     MessagesRequestBuilder,
 )
@@ -29,9 +30,15 @@ from msgraph.generated.users.item.mail_folders.mail_folders_request_builder impo
 
 logger = logging.getLogger(__name__)
 
+# Graph allows at most 4 concurrent requests per application and mailbox
+# (MailboxConcurrency); beyond that it answers 429 ApplicationThrottled.
+MAX_CONCURRENT_ATTACHMENT_DOWNLOADS = 4
+
+# Transient Graph errors, the same codes the kiota RetryHandler retries.
+TRANSIENT_STATUS_CODES = frozenset({429, 503, 504})
+
 
 class ConnectorClient(BaseClient):
-
     def __init__(
         self,
         tenant_id: str,
@@ -89,7 +96,10 @@ class ConnectorClient(BaseClient):
         raise ConnectorError(f"Folder '{mailbox}' not found for user '{self._email}'.")
 
     async def _load_file_attachments(self, message: Message) -> None:
-        """Download *FileAttachment* concurrently via `asyncio.gather`."""
+        """
+        Download *FileAttachment* concurrently via `asyncio.gather`, at most
+        MAX_CONCURRENT_ATTACHMENT_DOWNLOADS at a time.
+        """
 
         def _is_supported(content_type: str | None) -> bool:
             if content_type not in self._attachments_mime_types:
@@ -104,27 +114,59 @@ class ConnectorClient(BaseClient):
         if not message.attachments:
             return
 
-        async def _download(file_attachment: FileAttachment) -> None:
-            attachment: Attachment = await (
-                self._client.users.by_user_id(self._email)
-                .mail_folders.by_mail_folder_id(self._folder_id)
-                .messages.by_message_id(message.id)
-                .attachments.by_attachment_id(file_attachment.id)
-                .get()
-            )
+        attachments = message.attachments
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_ATTACHMENT_DOWNLOADS)
+
+        async def _download(index: int, file_attachment: FileAttachment) -> None:
+            async with semaphore:
+                try:
+                    attachment: Attachment = await (
+                        self._client.users.by_user_id(self._email)
+                        .mail_folders.by_mail_folder_id(self._folder_id)
+                        .messages.by_message_id(message.id)
+                        .attachments.by_attachment_id(file_attachment.id)
+                        .get()
+                    )
+                except ODataError as e:
+                    if e.response_status_code in TRANSIENT_STATUS_CODES:
+                        # Retries exhausted on a transient error: fail the run so the
+                        # state is not advanced and the next run retries this email.
+                        raise
+                    # Permanent error (e.g. 404, attachment deleted meanwhile): skip
+                    # this attachment rather than failing every future run on it.
+                    logger.warning(
+                        "Could not download attachment %s of message %s, skipping it: %s",
+                        file_attachment.name,
+                        message.id,
+                        e.error.code if e.error else e,
+                    )
+                    return
             if isinstance(attachment, FileAttachment):
-                file_attachment.content_bytes = attachment.content_bytes or b""
+                if attachment.content_bytes is None:
+                    attachment.content_bytes = b""
+                # Replace the listed attachment rather than setting content_bytes on it.
+                # The listed one is tracked by the message's kiota backing store, and
+                # mutating it re-enters the message's set(), which spins the CPU with
+                # microsoft-kiota-abstractions 1.12.x (msgraph-sdk-python#954). Item
+                # assignment on the list goes through no backing store.
+                attachments[index] = attachment
 
         # * unpacks the generator so every coroutine becomes
         # a separate positional arg to asyncio.gather()
-        await asyncio.gather(
+        results = await asyncio.gather(
             *(
-                _download(attachment)
-                for attachment in message.attachments
+                _download(index, attachment)
+                for index, attachment in enumerate(attachments)
                 if isinstance(attachment, FileAttachment)
                 and _is_supported(attachment.content_type)
-            )
+            ),
+            # Let every download finish before re-raising, so no task is left
+            # pending on the event loop that the next run reuses.
+            return_exceptions=True,
         )
+        for result in results:
+            if isinstance(result, BaseException):
+                raise result
 
     async def _fetch_from_relative_import_start_date(
         self,
