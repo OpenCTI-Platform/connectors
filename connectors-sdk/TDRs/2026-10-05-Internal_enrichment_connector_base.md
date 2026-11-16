@@ -121,6 +121,7 @@ return bundle_manager.outcome
 | Scope and TLP helpers | `is_entity_in_scope()` and `is_entity_tlp_allowed()` are static methods that do not log | Connectors not built on the base can use them. `is_entity_tlp_allowed()` also accepts the max TLP as a string. |
 | Merging properties | Not done by the SDK | The platform merges with its own rules (upsert, playbook executor). Rules in the SDK would duplicate them and could disagree. |
 | Ids that change (e.g. a file rebuilt with an MD5) | Sent as they are | The platform deduplicates hashed observables by their hashes. Deduplication logic in the SDK could drift from the platform's. |
+| Settings typing | `BaseEnrichmentProcessor[SettingsT]` and `InternalEnrichmentConnector[SettingsT]`, with `SettingsT` bound to `BaseInternalEnrichmentConnectorSettings` (the default) | Same design as the generic `BaseDataProcessor` (see the TDR on the generic data processor): type checkers know `self.settings` without redeclaring it, and `settings.connector.max_tlp` is typed. The connector still checks `settings.connector` at runtime, since connectors are not type-checked. |
 | Connector state | None | No analysed connector uses state; state holds checkpoints, not a cache. `BaseConnectorState` stays usable independently if needed. |
 | Work management | The base never creates a work | The platform creates the work in manual/auto mode and there is none in playbooks. A connector opening its own work duplicates it. |
 | Generators in `collect()`/`transform()` | Not supported | One message gives one bundle. |

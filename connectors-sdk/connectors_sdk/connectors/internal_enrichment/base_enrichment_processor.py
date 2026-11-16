@@ -15,18 +15,30 @@ from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
+from connectors_sdk.settings.base_settings import (
+    BaseInternalEnrichmentConnectorSettings,
+)
+from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
         EnrichmentMessage,
     )
-    from connectors_sdk.settings.base_settings import BaseConnectorSettings
+
+# PEP 696 default, through `typing_extensions` as the SDK supports Python 3.11.
+# An unparameterized `BaseEnrichmentProcessor` (or `InternalEnrichmentConnector`)
+# uses the default.
+SettingsT = TypeVar(
+    "SettingsT",
+    bound=BaseInternalEnrichmentConnectorSettings,
+    default=BaseInternalEnrichmentConnectorSettings,
+)
 
 
-class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
+class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT]):
     """Abstract base class defining the enrichment contract.
 
     Each ``BaseEnrichmentProcessor`` is responsible for:
@@ -44,6 +56,17 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
 
     Subclasses can override ``__init__`` to accept custom arguments.
 
+    The class is generic over the settings type (``SettingsT``). Parameterize it with
+    the connector's own settings class so that type checkers know ``self.settings``,
+    without redeclaring it::
+
+        class IPv4Processor(BaseEnrichmentProcessor[ConnectorSettings]):
+            handled_entity_types = frozenset({"IPv4-Addr"})
+
+    Without a parameter, it defaults to ``BaseInternalEnrichmentConnectorSettings``.
+    ``SettingsT`` is invariant: every processor given to an
+    ``InternalEnrichmentConnector`` must use the same parameter as the connector.
+
     Lifecycle:
         1. ``__init__()`` — called by connector code (custom args allowed)
         2. ``inject_dependencies()`` — called by the base connector (injects the settings)
@@ -58,10 +81,11 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
             (e.g. ``frozenset({"IPv4-Addr", "IPv6-Addr"})``), compared case-insensitively
             with the type of the entity to enrich. Required and not empty: otherwise
             defining the processor class raises ``TypeError``.
-        settings: The connector settings, injected via ``inject_dependencies()``.
+        settings: The connector settings (``SettingsT``), injected via
+            ``inject_dependencies()``.
 
     Example:
-        >>> class IPv4Processor(BaseEnrichmentProcessor):
+        >>> class IPv4Processor(BaseEnrichmentProcessor[MyConnectorSettings]):
         ...     handled_entity_types = frozenset({"IPv4-Addr"})
         ...
         ...     def post_init(self):
@@ -80,7 +104,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
     """
 
     handled_entity_types: ClassVar[frozenset[str]]
-    settings: BaseConnectorSettings
+    settings: SettingsT
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         """Check that a processor declares the entity types it supports.
@@ -101,7 +125,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC):
                 'e.g. `handled_entity_types = frozenset({"IPv4-Addr"})`.'
             )
 
-    def inject_dependencies(self, settings: BaseConnectorSettings) -> None:
+    def inject_dependencies(self, settings: SettingsT) -> None:
         """Inject dependencies from the base connector.
 
         Called by ``InternalEnrichmentConnector`` after helper initialization.

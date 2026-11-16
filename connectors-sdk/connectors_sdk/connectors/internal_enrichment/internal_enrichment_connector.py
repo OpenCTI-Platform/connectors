@@ -31,13 +31,14 @@ does, and sends exactly one bundle per playbook message.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Generic
 
 from connectors_sdk.connectors.internal_enrichment._bundle_manager import (
     BundleManager,
 )
 from connectors_sdk.connectors.internal_enrichment.base_enrichment_processor import (
     BaseEnrichmentProcessor,
+    SettingsT,
 )
 from connectors_sdk.connectors.internal_enrichment.enrichment_message import (
     EnrichmentMessage,
@@ -48,16 +49,13 @@ from connectors_sdk.connectors.internal_enrichment.exceptions import (
 )
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
 from connectors_sdk.models.enums import TLPLevel
-from connectors_sdk.settings.base_settings import (
-    BaseConnectorSettings,
-    BaseInternalEnrichmentConnectorConfig,
-)
+from connectors_sdk.settings.base_settings import BaseInternalEnrichmentConnectorConfig
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 
 
-class InternalEnrichmentConnector(_ClassLoggerMixin):
+class InternalEnrichmentConnector(_ClassLoggerMixin, Generic[SettingsT]):
     """Base class for internal enrichment connectors.
 
     This class provides the common message-handling logic for internal enrichment connectors:
@@ -79,14 +77,19 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
     A connector may have **multiple processors** to handle different entity types
     (e.g. one for IP addresses, one for domain names).
 
+    The class is generic over the settings type (``SettingsT``, a subclass of
+    ``BaseInternalEnrichmentConnectorSettings``). Type checkers infer it from the
+    arguments, so the settings and every processor must share the same parameter. It
+    defaults to the SDK base class.
+
     Attributes:
         logger: A logger named after the module defining the connector class.
-        settings: The connector configuration. ``settings.connector`` must be a
-            ``BaseInternalEnrichmentConnectorConfig`` (or subclass).
+        settings: The connector configuration (``SettingsT``). ``settings.connector``
+            must be a ``BaseInternalEnrichmentConnectorConfig`` (or subclass).
         enrichment_processors: The list of ``BaseEnrichmentProcessor`` instances.
 
     Example:
-        >>> class IPv4Processor(BaseEnrichmentProcessor):
+        >>> class IPv4Processor(BaseEnrichmentProcessor[MyConnectorSettings]):
         ...     handled_entity_types = frozenset({"IPv4-Addr"})
         ...     def collect(self, message):
         ...         return api_client.get_ip(message.stix_entity.value)
@@ -103,8 +106,8 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
 
     def __init__(
         self,
-        settings: BaseConnectorSettings,
-        enrichment_processors: list[BaseEnrichmentProcessor],
+        settings: SettingsT,
+        enrichment_processors: list[BaseEnrichmentProcessor[SettingsT]],
     ) -> None:
         """Initialize the base internal enrichment connector.
 
@@ -121,6 +124,8 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
             ConfigValidationError: If an entity type of ``connector.scope`` is declared
                 by no processor.
         """
+        # Connectors are not type-checked: settings that only inherit
+        # `BaseConnectorSettings` still reach this point at runtime.
         if not isinstance(settings.connector, BaseInternalEnrichmentConnectorConfig):
             raise TypeError(
                 "settings.connector must be a BaseInternalEnrichmentConnectorConfig (or subclass)."
@@ -183,7 +188,9 @@ class InternalEnrichmentConnector(_ClassLoggerMixin):
         except ValidationError as err:
             raise InvalidEnrichmentMessageError("Invalid enrichment message") from err
 
-    def _select_processor(self, message: EnrichmentMessage) -> BaseEnrichmentProcessor:
+    def _select_processor(
+        self, message: EnrichmentMessage
+    ) -> BaseEnrichmentProcessor[SettingsT]:
         """Return the only processor that supports the message.
 
         Args:
