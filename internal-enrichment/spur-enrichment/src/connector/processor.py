@@ -322,10 +322,11 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
     def _build_locations(
         self, ip_context: IPContext, ip: IPV4Address | IPV6Address
     ) -> list[Any]:
-        """Build the locations of the IP, chained by `located-at` relationships.
+        """Build the locations of the IP, each one linked to the IP by `located-at`.
 
-        The IP is located at its most precise location (city, then state, then
-        country), and each location at the next less precise one.
+        Locations are not linked to each other: a city or a state is identified
+        by its name only, so two places with the same name in different regions
+        are the same object, and chaining them would link it to both regions.
 
         Anycast IPs have no real location: Spur returns `Anycast` as city and
         state, and `ZZ` as country. Those values, like any country code that is
@@ -348,7 +349,6 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         ]
 
         objects: list[Any] = []
-        source: BaseIdentifiedEntity = ip
         for location_class, name in candidates:
             if not name or name.lower() == ANYCAST:
                 continue
@@ -356,10 +356,7 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                 name=name, author=self.author, markings=[self.tlp_marking]
             )
             objects.append(target)
-            objects.append(
-                self._relationship(RelationshipType.LOCATED_AT, source, target)
-            )
-            source = target
+            objects.append(self._relationship(RelationshipType.LOCATED_AT, ip, target))
         return objects
 
     def _build_infrastructures(
@@ -594,29 +591,35 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
     ) -> list[Any]:
         """Build the entry and exit nodes that a tunnel infrastructure `consists-of`.
 
-        The relationship description tells the role of the node. The enriched IP
-        itself is skipped (already linked), and at most `MAX_TUNNEL_NODES` nodes
-        are linked per enrichment.
+        The relationship description tells the role of the node. Nodes are
+        grouped by address, so that two spellings of the same IPv6 address make
+        one node. The enriched IP itself is skipped (already linked), and at most
+        `MAX_TUNNEL_NODES` nodes are linked per enrichment.
         """
-        roles_by_node: dict[str, list[str]] = {}
+        roles_by_node: dict[
+            ipaddress.IPv4Address | ipaddress.IPv6Address, list[str]
+        ] = {}
         for tunnel in tunnels:
             for role, values in (("entry", tunnel.entries), ("exit", tunnel.exits)):
                 for value in values:
-                    roles = roles_by_node.setdefault(value, [])
+                    try:
+                        address = ipaddress.ip_address(value)
+                    except ValueError:
+                        self.logger.warning(
+                            "Skipping an invalid tunnel node IP",
+                            meta={
+                                "infrastructure": infrastructure.name,
+                                "value": value,
+                            },
+                        )
+                        continue
+                    roles = roles_by_node.setdefault(address, [])
                     if role not in roles:
                         roles.append(role)
 
         objects: list[Any] = []
         linked_nodes = 0
-        for value, roles in roles_by_node.items():
-            try:
-                address = ipaddress.ip_address(value)
-            except ValueError:
-                self.logger.warning(
-                    "Skipping an invalid tunnel node IP",
-                    meta={"infrastructure": infrastructure.name, "value": value},
-                )
-                continue
+        for address, roles in roles_by_node.items():
             if address == enriched_ip:
                 continue
             if linked_nodes == MAX_TUNNEL_NODES:

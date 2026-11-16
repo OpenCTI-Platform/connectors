@@ -101,7 +101,7 @@ The connector makes a single call to `GET /v2/context/{ip}` per enrichment and c
 | `client.proxies` | Anonymization `Infrastructure` `related-to` the IP: the clients behind the IP use this proxy, but the IP is not necessarily part of it |
 | `ai.operator` | `Infrastructure` that `consists-of` the IP |
 | `as.number`, `as.organization` | `Autonomous-System`, the IP `belongs-to` it |
-| `location.city`, `location.state`, `location.country` | `City`, `Administrative-Area` and `Country`: the IP is `located-at` the most precise one, and each location is `located-at` the next less precise one. Anycast IPs (`Anycast` city and state, `ZZ` country) get no location. |
+| `location.city`, `location.state`, `location.country` | `City`, `Administrative-Area` and `Country`, each one `located-at` from the IP. Locations are not linked to each other: a city is identified by its name only, so a chain would link two homonyms to both regions. Anycast IPs (`Anycast` city and state, `ZZ` country) get no location. |
 | `organization`, `client.count`, `client.countries`, `client.spread`, `client.concentration` | `Note` attached to the IP |
 
 Infrastructures are named after the Spur service tag (e.g. `PROTON_VPN`), so the same service always gives the same

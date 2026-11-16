@@ -304,7 +304,7 @@ def test_transform_should_link_the_autonomous_system(processor):
     ]
 
 
-def test_transform_should_chain_the_locations(processor):
+def test_transform_should_locate_the_ip_at_each_location(processor):
     message = _make_message()
 
     stix_objects = _by_type(processor.transform(_context(IP_CONTEXT), message))
@@ -318,8 +318,8 @@ def test_transform_should_chain_the_locations(processor):
     assert locations["Country"]["name"] == "Netherlands"
     assert _links(stix_objects, "located-at") == [
         (message.stix_entity.id, locations["City"]["id"]),
-        (locations["City"]["id"], locations["Administrative-Area"]["id"]),
-        (locations["Administrative-Area"]["id"], locations["Country"]["id"]),
+        (message.stix_entity.id, locations["Administrative-Area"]["id"]),
+        (message.stix_entity.id, locations["Country"]["id"]),
     ]
 
 
@@ -484,6 +484,33 @@ def test_transform_should_create_ipv6_tunnel_nodes(processor):
     stix_objects = _by_type(processor.transform(ip_context, _make_message()))
 
     assert [ip["value"] for ip in stix_objects["ipv6-addr"]] == ["2001:db8::1"]
+
+
+def test_transform_should_group_the_spellings_of_an_ipv6_tunnel_node(processor):
+    # Given the same IPv6 node written differently as entry and exit
+    ip_context = _context(
+        {
+            "tunnels": [
+                {
+                    "operator": "TOR",
+                    "entries": ["2001:0db8::0001"],
+                    "exits": ["2001:db8::1"],
+                }
+            ]
+        }
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(ip_context, _make_message()))
+
+    # Then one node is created, with both roles
+    node = stix_objects["ipv6-addr"][-1]
+    infrastructure = _infrastructure(stix_objects, "TOR")
+    assert [ip["value"] for ip in stix_objects["ipv6-addr"]] == ["2001:db8::1"]
+    assert _relationship(stix_objects, infrastructure["id"], node["id"]) == {
+        "relationship_type": "consists-of",
+        "description": "Entry and exit node",
+    }
 
 
 def test_transform_should_skip_invalid_tunnel_nodes(processor):
