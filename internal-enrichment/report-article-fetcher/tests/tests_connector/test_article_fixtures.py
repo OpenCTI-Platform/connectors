@@ -1,6 +1,6 @@
 """Code of real report pages, through the extraction and the platform import.
 
-The fixtures are the article parts of four public report pages (scripts,
+The fixtures are the article parts of five public report pages (scripts,
 styles and images removed), so the tests cover the markup of the real pages
 and not only hand-built trees. Each report is checked as the platform stores
 it: the connector's HTML goes through pycti's import of a report, which
@@ -11,6 +11,8 @@ import re
 from html import unescape
 from pathlib import Path
 
+import lxml.etree
+import lxml.html
 import pytest
 from connector.article import extract_article
 from pycti.utils.opencti_stix2 import OpenCTIStix2
@@ -23,6 +25,7 @@ PAGES = {
     "fortimanager-cve-2024-47575-peerstitch-malware/",
     "cairn": "https://unit42.paloaltonetworks.com/cairn-framework-ai-autonomous-attacks/",
     "php2shell": "https://unit42.paloaltonetworks.com/cve-2026-109618-cve-2026-109619/",
+    "rapid7": "https://www.rapid7.com/blog/post/em-patch-tuesday-november-2026",
 }
 CODE = r"<code[^>]*>(.*?)</code>"
 
@@ -86,6 +89,55 @@ def test_prompt_blocks_are_code_blocks_without_a_fence():
     assert blocks[0].startswith("以拿到实质性高价值权限为止")
     assert blocks[1].startswith("你工作在已获授权的安全测试")
     assert not any(block.startswith("`") or block.endswith("`") for block in blocks)
+
+
+def _section_table(html: str, heading: str) -> lxml.etree._Element:
+    """The table right after a heading of the stored report."""
+    document = lxml.html.fromstring(html)
+    (title,) = document.xpath(f'//h2[normalize-space()="{heading}"]')
+    table = title.getnext()
+    assert table.tag == "table"
+    return table
+
+
+@pytest.mark.parametrize(
+    ("heading", "rows"),
+    [("Zero-Day Vulnerabilities: Known Exploited", 1), ("Critical RCEs and EoPs", 21)],
+)
+def test_markdown_pipe_tables_of_a_report_are_tables(heading, rows):
+    table = _section_table(_stored("rapid7"), heading)
+    assert len(table.xpath("./tr")) == rows
+    for row in table.xpath("./tr"):
+        cells = row.xpath("./td")
+        assert len(cells) == 5
+        (link,) = cells[0].xpath("./a")
+        assert link.get("href").startswith(
+            "https://msrc.microsoft.com/update-guide/en-US/vulnerability/CVE-"
+        )
+        assert link.text == cells[0].text_content().strip()
+        assert link.text.startswith("CVE-")
+
+
+def test_html_tables_of_a_report_are_unchanged_and_no_pipe_text_is_left():
+    html = _stored("rapid7")
+    document = lxml.html.fromstring(html)
+    tables = document.xpath("//table")
+    # 13 HTML tables on the page, plus the 2 written from pipe text.
+    assert len(tables) == 15
+    headed = [table for table in tables if table.xpath("./tr[1]/th")]
+    assert len(headed) == 13
+    for table in headed:
+        assert [th.text for th in table.xpath("./tr[1]/th")][:2] == ["CVE", "Title"]
+    assert not re.search(r"<p>\s*\|", html)
+
+
+def test_headings_left_without_content_by_the_images_are_dropped():
+    html = _stored("rapid7")
+    assert "Summary charts" not in html
+    # Followed by another h2 at once: nothing under it either.
+    assert "Summary tables" not in html
+    assert "<h2>Vulnerabilities by Product Family</h2>" in html
+    assert "<h3>Apps vulnerabilities</h3>" in html
 
 
 def test_hunting_queries_are_code_blocks_without_a_fence():

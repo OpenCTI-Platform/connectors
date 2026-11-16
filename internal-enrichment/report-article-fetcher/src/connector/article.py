@@ -4,6 +4,7 @@ Every function here is free of OpenCTI calls, so it can be tested and
 evaluated on real feeds without a platform.
 """
 
+import copy
 import ipaddress
 import re
 import socket
@@ -325,6 +326,7 @@ def extract_article(url: str, html: str) -> Article | None:
     tree = convert_to_html(document.body)
     _drop_page_anchors(tree, url)
     _restore_code_elements(tree)
+    _drop_empty_headings(tree)
     _drop_layout_attributes(tree)
     _shield_code_elements(tree)
     # HTML serialisation, not XML: an empty element is written <a ...></a>,
@@ -535,6 +537,224 @@ def _strip_fence(code: lxml.etree._Element) -> None:
 def _trim_fence_line(text: str) -> str:
     """The code between two fences, without the line breaks next to them."""
     return text.removeprefix("\n").rstrip(" \t").removesuffix("\n")
+
+
+# Elements a pipe-table paragraph may hold inside its cells: links and
+# inline formatting. Any other child means the block is not a text table.
+_CELL_CHILDREN = frozenset(
+    {"a", "code", "span", "br"}
+    | {"b", "strong", "i", "em", "u", "del", "sub", "sup", "small", "mark"}
+)
+# The separator row of a markdown table: |---|:---:|---|.
+_SEPARATOR_ROW = re.compile(r"^\|(?:\s*:?-+:?\s*\|)+$")
+_PIPE = object()
+_HEADINGS = {f"h{level}": level for level in range(1, 7)}
+
+
+def _pipe_tables(tree: lxml.etree._Element) -> bool:
+    """Write a markdown pipe table shipped as text in a block as a <table>.
+
+    Some pages publish a table as markdown text in one paragraph, one row
+    per line ("| <a>CVE-...</a> | Title | 9.0 |"): the extraction keeps it
+    as a paragraph of raw pipes. Such a block becomes a <table> with a <tr>
+    per line; a separator line (|---|---|) after the first line makes that
+    line a header row of <th>. Links and inline formatting stay in their
+    cell, and a pipe inside one of them (inline code) or an escaped pipe
+    (\\|) in the text is not a separator but a literal pipe of the cell.
+    Only a block made of such lines alone is changed: every line starts and
+    ends with a pipe, has at least two cells and as many as the others.
+    Lines are separated by line breaks or <br>. Returns whether a block
+    was changed.
+    """
+    changed = False
+    for block in list(tree.iter("p", "div")):
+        if block.getparent() is None or block.xpath("ancestor::pre|ancestor::code"):
+            continue
+        rows = _pipe_rows(block)
+        if rows is None:
+            continue
+        table = lxml.etree.Element("table")
+        header, rows = rows
+        for index, cells in enumerate(rows):
+            row = lxml.etree.SubElement(table, "tr")
+            for pieces in cells:
+                cell = lxml.etree.SubElement(
+                    row, "th" if header and index == 0 else "td"
+                )
+                _fill_cell(cell, pieces)
+        table.tail = block.tail
+        block.getparent().replace(block, table)
+        changed = True
+    return changed
+
+
+def _pipe_rows(block: lxml.etree._Element):
+    """The rows of a block that holds only a pipe table, else None.
+
+    Returns (header, rows): rows is a list of rows, each a list of cells,
+    each cell a list of pieces (text or element); header says whether the
+    first row is a header row.
+    """
+    if not (block.text or "").lstrip().startswith("|"):
+        return None
+    if any(
+        not isinstance(child.tag, str) or child.tag not in _CELL_CHILDREN
+        for child in block
+    ):
+        return None
+    lines: list[list] = [[]]
+    for piece in _pieces(block):
+        if not isinstance(piece, str):
+            lines[-1].append(piece)
+            continue
+        # An escaped backslash (\\) is read first, so the pipe after an even
+        # run of backslashes stays a cell separator.
+        for token in re.split(r"(\\\\|\\\||\n|\|)", piece):
+            if token == "\\\\":
+                lines[-1].append("\\")
+            elif token == "\\|":
+                # An escaped pipe (\|) is a literal pipe in the cell text.
+                lines[-1].append("|")
+            elif token == "\n":
+                lines.append([])
+            elif token == "|":
+                lines[-1].append(_PIPE)
+            elif token:
+                lines[-1].append(token)
+    rows = []
+    header = False
+    for line in lines:
+        line = _trim_blank(line)
+        if not line:
+            continue
+        if line[0] is not _PIPE or line[-1] is not _PIPE:
+            return None
+        text = _line_text(line)
+        if text is not None and _SEPARATOR_ROW.match(text):
+            if len(rows) != 1 or header:
+                return None
+            header = True
+            separator_cells = text.count("|") - 1
+            if separator_cells != len(rows[0]):
+                return None
+            continue
+        cells = _cells(line)
+        if len(cells) < 2:
+            return None
+        rows.append(cells)
+    if not rows or len({len(cells) for cells in rows}) != 1:
+        return None
+    return header, rows
+
+
+def _pieces(block: lxml.etree._Element):
+    """The block's content in order: its texts and its children (as copies
+    without their tail, which comes as the next text). The block itself is
+    left as it is, so a block that is not a table stays untouched."""
+    yield block.text or ""
+    for child in block:
+        if child.tag == "br":
+            yield "\n" + (child.tail or "")
+            continue
+        element = copy.deepcopy(child)
+        element.tail = None
+        yield element
+        yield child.tail or ""
+
+
+def _trim_blank(line: list) -> list:
+    """The line without the blank text at its ends."""
+    start, end = 0, len(line)
+    while start < end and isinstance(line[start], str) and not line[start].strip():
+        start += 1
+    while end > start and isinstance(line[end - 1], str) and not line[end - 1].strip():
+        end -= 1
+    return line[start:end]
+
+
+def _line_text(line: list) -> str | None:
+    """The text of a line made of text and pipes only, else None."""
+    parts = []
+    for piece in line:
+        if piece is _PIPE:
+            parts.append("|")
+        elif isinstance(piece, str):
+            parts.append(piece)
+        else:
+            return None
+    return "".join(parts).strip()
+
+
+def _cells(line: list) -> list[list]:
+    """The cells between the pipes of a line that opens and closes with one."""
+    cells: list[list] = []
+    for piece in line[:-1]:
+        if piece is _PIPE:
+            cells.append([])
+        else:
+            cells[-1].append(piece)
+    return cells
+
+
+def _fill_cell(cell: lxml.etree._Element, pieces: list) -> None:
+    """Put a cell's pieces in the cell, the blank at its ends dropped."""
+    pieces = _trim_blank(pieces)
+    if pieces and isinstance(pieces[0], str):
+        pieces[0] = pieces[0].lstrip()
+    if pieces and isinstance(pieces[-1], str):
+        pieces[-1] = pieces[-1].rstrip()
+    for piece in pieces:
+        if isinstance(piece, str):
+            if len(cell):
+                cell[-1].tail = (cell[-1].tail or "") + piece
+            else:
+                cell.text = (cell.text or "") + piece
+        else:
+            cell.append(piece)
+
+
+def _drop_empty_headings(tree: lxml.etree._Element) -> None:
+    """Drop a heading with nothing under it.
+
+    Images are not kept, so a section that held only images ("Summary
+    charts") would leave its heading alone before the next one. A heading is
+    dropped when no text comes after it before the next heading of the same
+    or a higher level, or the end; the text under a lower-level heading
+    counts as its own content, so a heading followed by sub-sections is kept.
+    """
+    flow = list(_flow(tree))
+    empty = []
+    for index, (heading, _) in enumerate(flow):
+        if heading is None:
+            continue
+        level = _HEADINGS[heading.tag]
+        for following, text in flow[index + 1 :]:
+            if following is None:
+                if text.strip():
+                    break
+            elif _HEADINGS[following.tag] <= level:
+                empty.append(heading)
+                break
+        else:
+            empty.append(heading)
+    for heading in empty:
+        # Its text and children go, its tail (blank or not) stays in place.
+        heading.text = None
+        del heading[:]
+        _unwrap(heading)
+
+
+def _flow(element: lxml.etree._Element, root: bool = True):
+    """The tree in reading order: (heading, None) for a heading (its own text
+    left out), (None, text) for any other text."""
+    if isinstance(element.tag, str) and element.tag in _HEADINGS:
+        yield element, None
+    else:
+        yield None, element.text or ""
+        for child in element:
+            yield from _flow(child, root=False)
+    if not root:
+        yield None, element.tail or ""
 
 
 def _drop_page_anchors(tree: lxml.etree._Element, url: str) -> None:
@@ -813,12 +1033,16 @@ def _prepare(html: str) -> str:
     - An article split across sibling blocks (Adobe AEM): trafilatura keeps
       one of them. The blocks are gathered into one element
       (_join_sibling_blocks).
+    - A markdown pipe table shipped as text in one paragraph (Rapid7): it
+      becomes a <table> (_pipe_tables) here, while its line breaks are still
+      there; trafilatura joins the lines of a paragraph's text.
     """
     try:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
     changed = _join_sibling_blocks(document)
+    changed = _pipe_tables(document) or changed
     for table in list(document.iter("table")):
         if table.getparent() is None or table.xpath("ancestor::table"):
             continue
