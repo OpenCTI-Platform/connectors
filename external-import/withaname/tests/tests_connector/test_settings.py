@@ -36,14 +36,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                },
-                "withaname": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
-                },
             },
             id="minimal_valid_settings_dict",
         ),
@@ -97,12 +89,20 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "withaname": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
             "opencti.url",
             id="invalid_opencti_url",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                },
+            },
+            "opencti.token",
+            id="missing_opencti_token",
         ),
         pytest.param(
             {
@@ -119,7 +119,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "withaname": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
