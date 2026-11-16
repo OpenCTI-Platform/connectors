@@ -34,9 +34,19 @@ reference).
    wrapper `<div>`s (Google Docs exports) are lifted out, the `embed` classes
    around tables (Webflow) are dropped, and indicators listed one per `<div>`
    become a list.
+   In-page anchors (`<a id>` or `<a name>` before a heading, links to `#part`
+   of the page) are unwrapped, their text kept, and the body is written with
+   HTML rules, so no empty link is left open in the report's content.
+   An article laid out as a run of sibling blocks of the same kind, figures
+   between them (Adobe AEM `div.cmp-text`), is gathered into one body first, so
+   every block is kept in order; the page's layout attributes (`class`, `id`,
+   `style`, `data-*`) are not written to the content.
 4. **Checks it is the article**: not an anti-bot or consent page, at least 500
    characters, and matching the report (page title, the report name's words at
-   the top of the text, or the URL slug). When the report's content is already
+   the top of the text, or the URL slug). When the article body was found as a
+   run of blocks, the extraction must keep at least 60% of its text: it is
+   retried on that body alone, then refused as a partial article, never
+   written partial. When the report's content is already
    filled, the article must also be 1.5 times longer than it, so a full text is
    never replaced by less; an empty content replaces nothing.
 5. **Writes the body to the report's content** through a bundle, so confidence
@@ -74,6 +84,47 @@ all optional, use the `REPORT_ARTICLE_FETCHER_` prefix:
 | `REPORT_ARTICLE_FETCHER_LENGTH_RATIO` | `1.5` | How many times longer than the report's current content the article must be |
 | `REPORT_ARTICLE_FETCHER_MIN_TITLE_SIMILARITY` | `0.6` | Lowest match accepted between the report name and the page, from 0 to 1 |
 | `REPORT_ARTICLE_FETCHER_MATCH_SINGLE_REFERENCE` | `false` | Also enrich reports not created by an RSS ingestion when they have exactly one external reference |
+| `REPORT_ARTICLE_FETCHER_MAX_WORKERS` | `1` | Reports processed at the same time by one connector process (1 to 32) |
+| `REPORT_ARTICLE_FETCHER_SUMMARY_LOG_LEVEL` | `error` | Level of the one-line summary of each report (`debug`, `info`, `warning`, `error`, `none`) |
+
+## Throughput and scale-out
+
+A playbook does not wait for the connector: every report of a batch is queued
+at once, and the connector drains the queue. One worker handles one report at
+a time (most of it is waiting for the article's site), so a batch of reports
+goes through one by one unless more workers consume the queue.
+
+- **In one container:** `REPORT_ARTICLE_FETCHER_MAX_WORKERS=4` runs 4 workers.
+  Each worker has its own OpenCTI client, queue consumer and HTTP session, so
+  the playbook context of one report never reaches another: it is the same as
+  running 4 replicas, in one process. It needs the default AMQP listen
+  protocol, and cannot be combined with `CONNECTOR_EXPOSE_METRICS` (each
+  worker would open the metrics port).
+- **Across containers:** run several replicas of the connector with the same
+  `CONNECTOR_ID`; they share its queue. This is the way to scale beyond one
+  host, or with metrics exposed.
+
+A worker keeps its HTTP connections open between reports (articles of one
+feed come from the same site), with its cookies cleared at each article, and
+extracts each page in a single pass.
+
+## Logs
+
+Each report gets one summary line, at the level of
+`REPORT_ARTICLE_FETCHER_SUMMARY_LOG_LEVEL` (`error` by default, so that it is
+visible under the default `CONNECTOR_LOG_LEVEL=error`; `none` turns it off):
+
+```
+Report skipped {"report_id": "report--...", "outcome": "skipped", "reason": "Skipped: HTTP 403", "total_ms": 412, "fetch_ms": 398, "send_ms": 12}
+```
+
+`outcome` is `enriched`, `skipped` or `error`; `reason` says why a report was
+left unchanged; `fetch_ms` (redirects included), `extract_ms`, `judge_ms` and
+`send_ms` say where the time went, and `total_ms` is the whole report.
+
+A report deleted while it waited in the queue is not read by the connector:
+pycti logs it as `Unable to read/access to the entity` before the connector
+sees the message.
 
 ## Evaluation
 

@@ -38,6 +38,8 @@ def _connector(max_tlp="amber"):
             length_ratio=1.5,
             min_title_similarity=0.6,
             match_single_reference=False,
+            max_workers=1,
+            summary_log_level="error",
         ),
     )
     return ReportArticleFetcherConnector(config=config, helper=helper), helper

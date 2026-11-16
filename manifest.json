@@ -33162,6 +33162,25 @@
             "default": false,
             "description": "Also accept reports not created by the RSS ingestion when they have exactly one external reference.",
             "type": "boolean"
+          },
+          "REPORT_ARTICLE_FETCHER_MAX_WORKERS": {
+            "default": 1,
+            "description": "Reports processed at the same time by one connector process. Each worker consumes the queue with its own OpenCTI client and HTTP session, like a replica of the connector. Requires the AMQP listen protocol.",
+            "maximum": 32,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "REPORT_ARTICLE_FETCHER_SUMMARY_LOG_LEVEL": {
+            "default": "error",
+            "description": "Level of the one-line summary written for each report (outcome, skip reason, fetch, extraction, check and send times). The default is visible under the default log level; none turns it off.",
+            "enum": [
+              "debug",
+              "info",
+              "warning",
+              "error",
+              "none"
+            ],
+            "type": "string"
           }
         },
         "required": [
