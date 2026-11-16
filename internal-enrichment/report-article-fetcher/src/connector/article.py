@@ -6,12 +6,13 @@ evaluated on real feeds without a platform.
 
 import copy
 import ipaddress
+import logging
 import re
 import socket
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from html import unescape
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import parse_qs, urldefrag, urljoin, urlparse
 
 import lxml.etree
 import lxml.html
@@ -23,6 +24,8 @@ from trafilatura.utils import normalize_unicode
 from trafilatura.xml import xmltotxt
 from urllib3.connection import HTTPConnection, HTTPSConnection
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+
+LOGGER = logging.getLogger(__name__)
 
 # The OpenCTI RSS ingestion writes the article link as the report's external
 # reference: source_name is the item title (the report name) and description
@@ -1010,9 +1013,127 @@ def _join_sibling_blocks(document: lxml.etree._Element) -> bool:
     return True
 
 
+# A paid ad unit holds at most this many characters of text: an element
+# that holds more is article content, whatever its links say.
+_AD_TEXT = 600
+
+
+def _is_paid_link(href: str | None) -> bool:
+    """The link carries paid-advertising tracking.
+
+    utm_medium paid, paid_display, paid_social... or utm_source
+    display_network. Any other medium (3rd-party, referral, display, email)
+    is a link of the article: publishers use them for their own sponsored
+    articles and partners, which are content.
+    """
+    if not href:
+        return False
+    try:
+        query = parse_qs(urlparse(href.strip()).query)
+    except ValueError:
+        return False
+    mediums = [value.strip().lower() for value in query.get("utm_medium", [])]
+    sources = [value.strip().lower() for value in query.get("utm_source", [])]
+    return any(medium.startswith("paid") for medium in mediums) or (
+        "display_network" in sources
+    )
+
+
+def _only_paid_links(element: lxml.etree._Element) -> bool:
+    """Every link of the element is a paid one (and it has at least one)."""
+    hrefs = [link.get("href") for link in element.iter("a")]
+    return bool(hrefs) and all(_is_paid_link(href) for href in hrefs)
+
+
+def _has_link(element: lxml.etree._Element) -> bool:
+    return any(True for _ in element.iter("a"))
+
+
+def _ad_unit(link: lxml.etree._Element) -> list[lxml.etree._Element]:
+    """The elements of the ad unit a paid link belongs to.
+
+    The closest enclosing block that holds only the ad: the highest ancestor
+    whose links are all paid and whose text stays short (_AD_TEXT); never
+    the page, its body, an <article> or <main>, the article body or a block
+    holding the title, so a short article is never taken for an ad. When
+    that block is the link's own heading or paragraph (no dedicated
+    container), it is an ad only when the paid links make most of its text
+    (a sentence of the article that cites an ad is kept), and the promo
+    siblings that follow it are added up to the last one carrying a paid
+    link, when none of them links anywhere else.
+    """
+    unit = link
+    parent = unit.getparent()
+    while (
+        parent is not None
+        and parent.tag not in ("html", "body", "article", "main")
+        and parent.get(_BODY_MARK) is None
+        and parent.get("itemprop") != "articleBody"
+        and not any(True for _ in parent.iter("h1"))
+        and _only_paid_links(parent)
+        and _length(parent.text_content()) <= _AD_TEXT
+    ):
+        unit = parent
+        parent = unit.getparent()
+    if parent is None:
+        return []
+    if unit is link and parent.tag in _INLINE_PARENTS:
+        # A paid link in a sentence of the article: the article cites it.
+        return []
+    elements = [unit]
+    if unit.tag not in _HEADINGS and unit.tag != "p":
+        return elements
+    text = _length(unit.text_content())
+    linked = sum(_length(anchor.text_content()) for anchor in unit.iter("a"))
+    if 2 * linked < text:
+        return []
+    run = []
+    for sibling in unit.itersiblings():
+        if not isinstance(sibling.tag, str):
+            continue
+        if _has_link(sibling) and not _only_paid_links(sibling):
+            break
+        text += _length(sibling.text_content())
+        if text > _AD_TEXT:
+            break
+        run.append(sibling)
+        if _has_link(sibling):
+            elements.extend(run)
+            run = []
+    return elements
+
+
+def _drop_paid_ads(document: lxml.etree._Element) -> int:
+    """Remove the sponsored ad units publishers inject in the article.
+
+    A paid display unit (BleepingComputer's div.article-callout: an image,
+    a heading, promo paragraphs and a call to action) sits inside the
+    article body, so trafilatura kept it as article text. It is told by the
+    paid-advertising tracking of its links (_is_paid_link), not by a list of
+    sites. Returns the number of units removed.
+    """
+    dropped = 0
+    for link in list(document.iter("a")):
+        if not _is_paid_link(link.get("href")):
+            continue
+        if link.getroottree().getroot() is not document:
+            # Already removed with an earlier unit.
+            continue
+        elements = _ad_unit(link)
+        if not elements:
+            continue
+        for element in elements:
+            element.drop_tree()
+        dropped += 1
+    return dropped
+
+
 def _prepare(html: str) -> str:
     """Rework the layouts that make trafilatura drop indicators.
 
+    - Sponsored ad units inside the article (paid display callouts): their
+      heading, promo text and call to action are not the article. They are
+      removed first (_drop_paid_ads).
     - Code shown by a syntax highlighter with a line-number gutter (Crayon,
       SyntaxHighlighter, Pygments, GitHub...) is a <table>: trafilatura
       kept the numbers as a column of paragraphs and each line of code as
@@ -1041,7 +1162,10 @@ def _prepare(html: str) -> str:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
-    changed = _join_sibling_blocks(document)
+    dropped = _drop_paid_ads(document)
+    if dropped:
+        LOGGER.debug("Dropped %d sponsored ad unit(s) from the page", dropped)
+    changed = _join_sibling_blocks(document) or bool(dropped)
     changed = _pipe_tables(document) or changed
     for table in list(document.iter("table")):
         if table.getparent() is None or table.xpath("ancestor::table"):
