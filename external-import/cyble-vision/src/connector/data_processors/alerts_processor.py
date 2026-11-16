@@ -98,11 +98,13 @@ class AlertsProcessor(BaseDataProcessor):
                             marking=self.tlp_marking,
                             portal_url_template=cfg.portal_url_template,
                             include_plaintext_credentials=cfg.include_plaintext_credentials,
+                            logger=self.logger,
                         )
                     )
                     last_created = alert.get("created_at") or last_created
                 except AlertConversionError as err:
-                    self.logger.warning(
+                    # Only reached when the generic fallback also failed.
+                    self.logger.error(
                         "Failed to convert alert, skipping it",
                         {
                             "alert_id": alert.get("id"),

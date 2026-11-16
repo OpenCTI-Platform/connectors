@@ -31,8 +31,16 @@ _SENSITIVE_KEY_PARTS = (
 _MIN_KNOWN_SECRET_LENGTH = 3
 _MIN_SUBSTRING_SECRET_LENGTH = 6
 
-# "Password: x", "pass=x", "pwd: x"
-_LABELED_SECRET = re.compile(r"(?i)\b(pass(?:word|wd)?|pwd)(\s*[:=]\s*)(\S+)")
+# "Password: x", "pass=x", "token=x", "api_key: x"
+_LABELED_SECRET = re.compile(
+    r"(?i)\b(pass(?:word|wd)?|pwd|token|secret|api[_-]?key|access[_-]?key)"
+    r"(\s*[:=]\s*)(\S+)"
+)
+# Header-style values span spaces and semicolons: "Cookie: a=1; b=2",
+# "Authorization: Bearer x". The rest of the line is masked.
+_HEADER_SECRET = re.compile(
+    r"(?i)\b(cookie|set-cookie|authorization)(\s*[:=]\s*)([^\r\n]+)"
+)
 # "user@example.com:secret". A numeric suffix is a port, not a password.
 _EMAIL_SECRET = re.compile(r"([\w.+-]+@[\w-]+(?:\.[\w-]+)+):(?!\d+\b)(\S+)")
 
@@ -53,6 +61,9 @@ def redact_alert(alert: dict[str, Any]) -> dict[str, Any]:
 
 def scrub_text(text: str, known_secrets: list[str]) -> str:
     """Mask credentials that appear inside a free-text value."""
+    text = _HEADER_SECRET.sub(
+        lambda m: f"{m.group(1)}{m.group(2)}{mask_secret(m.group(3).strip())}", text
+    )
     text = _LABELED_SECRET.sub(
         lambda m: f"{m.group(1)}{m.group(2)}{mask_secret(m.group(3))}", text
     )

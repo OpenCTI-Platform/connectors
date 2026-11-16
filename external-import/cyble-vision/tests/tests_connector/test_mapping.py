@@ -205,3 +205,29 @@ def test_same_name_and_time_alerts_get_distinct_incidents():
     first, second = incident(copy.deepcopy(ALERT)), incident(other)
     assert first["id"] != second["id"]
     assert first["name"].endswith(f"[{ALERT['id']}]")
+
+
+def test_failing_service_mapper_falls_back_to_a_generic_incident(monkeypatch):
+    from connector.mappers import registry
+
+    class _Broken:
+        def map(self, payload, context):
+            raise KeyError("unexpected payload shape")
+
+    warnings = []
+
+    class _Logger:
+        def warning(self, message, meta=None):
+            warnings.append((message, meta))
+
+    monkeypatch.setitem(registry.MAPPERS, ALERT["service"], _Broken())
+    objects = [
+        entity.to_stix2_object()
+        for entity in map_alert(copy.deepcopy(ALERT), AUTHOR, MARKING, logger=_Logger())
+    ]
+    incident = next(obj for obj in objects if obj["type"] == "incident")
+    note = next(obj for obj in objects if obj["type"] == "note")
+
+    assert incident["external_references"][0]["external_id"] == ALERT["id"]
+    assert note["object_refs"] == [incident["id"]]
+    assert warnings and warnings[0][1]["alert_id"] == ALERT["id"]

@@ -73,3 +73,23 @@ def test_short_passwords_are_masked_as_whole_words_only():
     )
     assert " pw42 " not in text
     assert "npw42x" in text
+
+
+@pytest.mark.parametrize(
+    "text, secret",
+    [
+        ("leaked token=ghp_abcdef1234567890 in repo", "ghp_abcdef1234567890"),
+        ("api_key: sk-live-0123456789abcdef", "sk-live-0123456789abcdef"),
+        ("Cookie: session=abc123def456; csrftoken=zzz999yyy", "csrftoken=zzz999yyy"),
+        ("Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload", "eyJhbGciOiJIUzI1NiJ9"),
+    ],
+)
+def test_labeled_tokens_and_headers_are_masked(text, secret):
+    masked = scrub_text(text, [])
+    assert secret not in masked
+    assert "chars)" in masked
+
+
+def test_token_label_masking_keeps_ordinary_words():
+    text = "The token economy grew; see https://example.com/tokens"
+    assert scrub_text(text, []) == text

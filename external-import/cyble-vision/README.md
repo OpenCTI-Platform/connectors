@@ -141,14 +141,16 @@ same content is not imported twice.
 
 | Source | OpenCTI object |
 |---|---|
-| Research advisories | Report (type `threat-report`) |
+| Research advisories | Report (type `threat-report`); the advisory's own TLP is used only when it is stricter than `CYBLE_VISION_TLP_LEVEL` |
 | Newsfeed articles | Report (type `intelligence-summary`) with the original article as an external reference |
 | Newsflash spot reports | Report (type `spotrep`) |
 
 ## Debugging
 
 Set `CONNECTOR_LOG_LEVEL=debug` for detailed logs. Each Vision page fetched is logged with its service, offset and
-size, and alerts that fail to convert are logged at `warning` level with their ID and service, then skipped.
+size. When a service mapper cannot handle an alert, the alert is imported as a generic Incident with its details Note
+and a `warning` is logged with its ID and service. Alerts that cannot be converted at all are logged at `error` level
+and skipped.
 
 ## Additional information
 

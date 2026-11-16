@@ -55,6 +55,7 @@ def map_alert(
     marking: TLPMarking,
     portal_url_template: str = DEFAULT_PORTAL_URL_TEMPLATE,
     include_plaintext_credentials: bool = False,
+    logger: Any = None,
 ) -> list[BaseIdentifiedEntity]:
     """Map one Vision alert to a list of STIX objects.
 
@@ -66,7 +67,25 @@ def map_alert(
         context = build_context(alert, author, marking, portal_url_template)
         payload = extract_payload(alert)
         mapper = MAPPERS.get(alert.get("service", ""), GenericMapper())
-        return attach_details_note(mapper.map(payload, context), context)
+        try:
+            objects = mapper.map(payload, context)
+        except Exception as err:  # pylint: disable=broad-exception-caught
+            # The checkpoint moves past this alert, so dropping it would lose
+            # it for good. The generic Incident keeps it importable and
+            # triageable, and the Note still carries the full payload.
+            if isinstance(mapper, GenericMapper):
+                raise
+            if logger is not None:
+                logger.warning(
+                    "Service mapper failed, importing alert as a generic Incident",
+                    {
+                        "alert_id": alert.get("id"),
+                        "service": alert.get("service"),
+                        "error": str(err),
+                    },
+                )
+            objects = GenericMapper().map(payload, context)
+        return attach_details_note(objects, context)
     except Exception as e:
         raise AlertConversionError(
             f"Failed to convert alert {alert.get('id')} "

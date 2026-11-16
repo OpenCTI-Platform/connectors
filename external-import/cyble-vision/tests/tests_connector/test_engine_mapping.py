@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from connector.mappers import map_alert
 from connector.mappers.engine_reports import map_advisory, map_newsfeed, map_newsflash
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
@@ -15,7 +16,7 @@ def _load(name: str) -> dict:
     return json.loads((FIXTURES / name).read_text())
 
 
-def test_advisory_uses_numeric_id_and_document_tlp():
+def test_advisory_uses_numeric_id_and_keeps_the_stricter_tlp():
     objects = [
         entity.to_stix2_object()
         for entity in map_advisory(_load("engine_advisory.json"), AUTHOR, MARKING)
@@ -24,7 +25,33 @@ def test_advisory_uses_numeric_id_and_document_tlp():
     assert report["name"].startswith("Malicious Firefox")
     assert report["external_references"][0]["external_id"] == "advisory:8082"
     assert "cyble:engine:advisory" in report["labels"]
-    assert report["object_marking_refs"][0] != MARKING.to_stix2_object()["id"]
+    # TLP:GREEN advisory on an AMBER installation stays AMBER.
+    assert report["object_marking_refs"] == [MARKING.to_stix2_object()["id"]]
+
+
+@pytest.mark.parametrize(
+    "source, configured, expected",
+    [
+        ("TLP:GREEN", "amber", "amber"),
+        ("TLP:RED", "amber", "red"),
+        ("TLP:AMBER+STRICT", "green", "amber+strict"),
+        ("TLP:CLEAR", "clear", "clear"),
+        ("not-a-tlp", "amber", "amber"),
+        (None, "green", "green"),
+    ],
+)
+def test_advisory_tlp_never_lowers_the_configured_marking(source, configured, expected):
+    item = _load("engine_advisory.json")
+    item["tlp_rating"] = source
+    configured_marking = TLPMarking(level=configured)
+    report = next(
+        entity.to_stix2_object()
+        for entity in map_advisory(item, AUTHOR, configured_marking)
+        if entity.to_stix2_object()["type"] == "report"
+    )
+    assert report["object_marking_refs"] == [
+        TLPMarking(level=expected).to_stix2_object()["id"]
+    ]
 
 
 def test_newsfeed_uses_post_url_and_actor():

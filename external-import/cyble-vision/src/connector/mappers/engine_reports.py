@@ -242,15 +242,28 @@ def _join(values: Any) -> str | None:
     return ", ".join(parts) if parts else None
 
 
+# Least to most restrictive.
+_TLP_ORDER = ("clear", "white", "green", "amber", "amber+strict", "red")
+
+
 def _tlp_marking(raw: Any, default: TLPMarking) -> TLPMarking:
+    """Use the document's TLP only when it is stricter than the configured one.
+
+    The configured CYBLE_VISION_TLP_LEVEL is a floor: a TLP:GREEN advisory
+    stays AMBER on an AMBER installation, but a TLP:RED one becomes RED.
+    """
     text = first_text(raw)
     if not text:
         return default
     level = text.split(":")[-1].strip().lower()
-    try:
-        return TLPMarking(level=TLPLevel(level))
-    except ValueError:
+    if level not in _TLP_ORDER:
         return default
+    configured = str(default.level).lower()
+    if configured in _TLP_ORDER and _TLP_ORDER.index(level) <= _TLP_ORDER.index(
+        configured
+    ):
+        return default
+    return TLPMarking(level=TLPLevel(level))
 
 
 def _actors(
