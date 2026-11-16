@@ -901,12 +901,9 @@ class ConverterToStix:
         Returns:
             domain: stix2 Identity object
         """
-        victim_name, identity_class = (
-            (victim_name, "organization")
-            if len(victim_name) > 2
-            else ((victim_name + ":<)"), "individual")
-        )
+        # Victims are always organizations, whatever the length of their name.
+        # OpenCTI accepts 1-character identity names since 6.8.14.
         victim = self.create_identity(
-            victim_name=victim_name, identity_class=identity_class
+            victim_name=victim_name, identity_class="organization"
         )
         return victim
