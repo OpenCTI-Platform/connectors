@@ -220,6 +220,12 @@ class MicrosoftSentinelIncidentsConnector:
                             )
                             stix_objects.append(stix_relationship_url)
                     case "host":
+                        if not entity.get("HostName"):
+                            self.helper.connector_logger.warning(
+                                "Host entity without HostName, skipping",
+                                meta={"entity_id": entity.get("$id")},
+                            )
+                            continue
                         stix_identity_system = (
                             self.converter_to_stix.create_evidence_identity_system(
                                 entity
