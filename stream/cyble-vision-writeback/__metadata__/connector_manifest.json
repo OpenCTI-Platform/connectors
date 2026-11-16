@@ -1,0 +1,28 @@
+{
+  "title": "Cyble Vision Writeback",
+  "slug": "cyble-vision-writeback",
+  "description": "The Cyble Vision Writeback connector keeps Cyble Vision in sync with the triage analysts do in OpenCTI.\n\nIt listens to the OpenCTI live stream for updates to Incidents imported by the Cyble Vision connector. When an analyst changes the severity or the workflow status of such an Incident, the connector writes the change back to the original Cyble Vision alert (user severity, and status: new to UNREVIEWED, in progress to UNDER_REVIEW, closed to RESOLVED).\n\nIt is a companion to the Cyble Vision external import connector, which must be deployed for this connector to have anything to synchronize. Changes made by the import connector itself are ignored so imported values are never echoed back to Vision.",
+  "short_description": "Writes analyst triage of Cyble Vision Incidents in OpenCTI (severity and workflow status) back to the original Cyble Vision alerts. Companion to the Cyble Vision import connector.",
+  "logo": "stream/cyble-vision-writeback/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Incident Response & Case Management"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@cyble.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://cyble.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/cyble-vision-writeback",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cyble-vision-writeback",
+  "container_type": "STREAM"
+}

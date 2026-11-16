@@ -1,0 +1,55 @@
+{
+  "created_at": "2026-03-05T01:04:42.232533+00:00",
+  "updated_at": "2026-03-18T07:02:34.211+00:00",
+  "deleted_at": null,
+  "id": "5ff87143-d306-514d-98d1-0caa76a069ac",
+  "data_id": "f12393dd-a8f7-5585-94ba-f05e12a02311",
+  "entity_id": 2607825,
+  "keyword_name": "example3.com",
+  "entity_type": 0,
+  "service": "compromised_endpoints_cookies",
+  "company_id": 2,
+  "description": null,
+  "status": "VIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": "76cb89cf-de8a-5858-aead-2f9a3c361717",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": 42,
+  "bucket_id": 12370,
+  "url": "example3.com",
+  "expiry_date": "2026-03-14T18:57:56+00:00",
+  "bucket_name": "Example Bucket",
+  "true_positive": true,
+  "llm_processed": false,
+  "llm_explanation": "A configured keyword is detected in a URL, and associated cookies have an expiry date set in the future. This may indicate potential misuse or persistence of compromised cookies and may require your attention.",
+  "data": {
+    "content": {
+      "Cookie Data": "{'sub': '00000000-0000-4000-8000-000000000000', 'email_verified': True}",
+      "Expiry": "2026-03-14 18:57:56",
+      "URL": "example3.com"
+    },
+    "created_on": "2026-03-04T17:04:15.966894",
+    "filename": "Google Chrome_Default.txt",
+    "is_updated_es": 0,
+    "meta-data": {
+      "c_date": "2026-03-04 08:27:36.199432",
+      "file_name": "Google Chrome_Default.txt",
+      "file_path": "/mnt/extracted/example/session1/Passwords.txt",
+      "file_size": 294781,
+      "m_date": "2026-01-23 14:10:36"
+    },
+    "parent_folder_path_id": "2f7e5eb75efcb707e39ed8a37fd46970",
+    "s3_key": "alias",
+    "source_id": "f02e9ca4a81752496bd6115f03242a75",
+    "ta": "redline",
+    "updated_at": "03/04/2026, 16:32:19",
+    "updated_on": "2026-03-04T17:04:15.966894"
+  },
+  "tags": [
+    "Probable Phone Number"
+  ]
+}

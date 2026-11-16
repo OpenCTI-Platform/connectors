@@ -1,0 +1,66 @@
+{
+  "created_at": "2026-04-09T19:11:57.090783+00:00",
+  "updated_at": "2026-04-09T19:11:57.090783+00:00",
+  "deleted_at": null,
+  "id": "d0cd409a-9494-5a87-99e9-1e548ad25a59",
+  "data_id": "02820d19-3314-5d25-a1eb-244c41c4762f",
+  "entity_id": 2607825,
+  "keyword_name": "example3.com",
+  "entity_type": 0,
+  "service": "stealer_logs",
+  "company_id": 2,
+  "description": null,
+  "status": "UNREVIEWED",
+  "assignee_id": null,
+  "assignment_date": null,
+  "archive_date": null,
+  "severity": "HIGH",
+  "updated_by_id": "3cb90972-78d3-50df-8eb2-2de52efacb2e",
+  "created_by": null,
+  "user_severity": "HIGH",
+  "risk_score": null,
+  "bucket_id": 12370,
+  "url": "https://example3.com/Website/AccountRegistration.aspx",
+  "username": "user01",
+  "compromised_date": "2026-03-31T08:37:58+00:00",
+  "malware_family": "NA",
+  "bucket_name": "Example Bucket",
+  "true_positive": true,
+  "llm_processed": false,
+  "llm_explanation": "We have identified that the compromised endpoint contains a URL with a keyword configured by the organization, suggesting a potential connection to the organization’s digital assets or services. Furthermore, the presence of leaked user information indicates that the exposed data may belong to individuals who are likely customers of the organization. This highlights a potential breach involving customer-related data and warrants further investigation.",
+  "processed_by_agentic_ai": false,
+  "agentic_ai_process_status": null,
+  "workflow_id": null,
+  "data": {
+    "content": {
+      "Application": "Google Chrome (Profile 1",
+      "Password": "redacted-password",
+      "URL": "https://example3.com/Website/AccountRegistration.aspx",
+      "Username": "user01"
+    },
+    "content_related_info": {
+      "compromise_date": "2026-03-31T08:37:58",
+      "country_name": "",
+      "domain": "example3.com",
+      "ta": "NA",
+      "user_hash_ad": "91e2cc7e9fdb88e646028cd71edbcf3e"
+    },
+    "created_on": "2026-04-09T18:27:35",
+    "doc_id": "4923dcfac3d90e4e899e413bcdfd6622",
+    "file_metadata": {
+      "c_date": "2026-04-09 18:02:08",
+      "creation_date": "",
+      "filename": "",
+      "full_filePath": "",
+      "last_modification_date": "",
+      "m_date": "2026-03-31 08:37:58",
+      "size": 0,
+      "type": ""
+    },
+    "filename": "passwords.txt",
+    "parent_folder_path_id": "ccc4911d1c52be7ff994f779199a629e"
+  },
+  "tags": [
+    "Probable Customer"
+  ]
+}

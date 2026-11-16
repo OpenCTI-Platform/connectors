@@ -1,0 +1,30 @@
+{
+  "post_title": "Web-Inject Campaign Debuts Fresh Interlock RAT Variant",
+  "post_description": "A cyberthreat campaign is using legitimate websites to inject victims with remote access Trojans.",
+  "post_url": "https://www.darkreading.com/threat-intelligence/web-inject-campaign-interlock-rat-variant",
+  "post_date": {
+    "$date": {
+      "$numberLong": "1752529395000"
+    }
+  },
+  "post_source": {
+    "url": "https://www.darkreading.com",
+    "name": "Darkreading"
+  },
+  "ai_summary": "The article discusses an ongoing Web-inject campaign by the Interlock ransomware group.",
+  "industries": [
+    "Multiple"
+  ],
+  "countries": [
+    "United States"
+  ],
+  "iocs": [],
+  "cves": [],
+  "threat_actors": [
+    "Interlock"
+  ],
+  "malwares": [],
+  "tags": [],
+  "news_feed_type": "threat_news",
+  "created_at": "2025-08-28T10:25:40.898000Z"
+}
