@@ -21,18 +21,32 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Generator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Generic
 
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.logger._class_logger import _ClassLoggerMixin
+from connectors_sdk.settings.base_settings import BaseExternalImportConnectorSettings
+from connectors_sdk.states.states import ExternalImportConnectorState
+from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
-    from connectors_sdk.settings.base_settings import BaseConnectorSettings
-    from connectors_sdk.states.states import ExternalImportConnectorState
     from pycti import OpenCTIConnectorHelper
 
+# PEP 696 defaults, through `typing_extensions` as the SDK supports Python 3.11.
+# An unparameterized `BaseDataProcessor` (or `ExternalImportConnector`) uses the defaults.
+SettingsT = TypeVar(
+    "SettingsT",
+    bound=BaseExternalImportConnectorSettings,
+    default=BaseExternalImportConnectorSettings,
+)
+StateT = TypeVar(
+    "StateT",
+    bound=ExternalImportConnectorState,
+    default=ExternalImportConnectorState,
+)
 
-class BaseDataProcessor(_ClassLoggerMixin, ABC):
+
+class BaseDataProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT, StateT]):
     """Abstract base class defining the data processing contract.
 
     Each ``BaseDataProcessor`` is responsible for:
@@ -54,6 +68,21 @@ class BaseDataProcessor(_ClassLoggerMixin, ABC):
     Subclasses can override ``__init__`` to accept custom arguments
     (e.g. API clients, configuration values).
 
+    The class is generic over the settings type (``SettingsT``) and the state type
+    (``StateT``). Parameterize it with the connector's own classes so that type
+    checkers know ``self.settings`` and ``self.state``, without redeclaring them::
+
+        class MyProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
+            work_name = "My import"
+
+            def collect(self) -> list[str]:
+                return [self.settings.my_connector.api_url]
+
+    Without parameters, both default to ``BaseExternalImportConnectorSettings``
+    and ``ExternalImportConnectorState``. ``SettingsT`` and ``StateT`` are
+    invariant: every processor given to an ``ExternalImportConnector`` must use
+    the same parameters as the connector.
+
     Lifecycle:
         1. ``__init__()`` — called by connector code (custom args allowed)
         2. ``inject_dependencies()`` — called by the base connector (injects dependencies, creates WorkManager)
@@ -66,21 +95,21 @@ class BaseDataProcessor(_ClassLoggerMixin, ABC):
             Changing ``work_name`` between calls to ``send()`` (or between iterations
             in a generator-based ``transform()``) will close the current work and
             open a new one with the updated name.
-        settings: The connector settings, injected via ``inject_dependencies()``.
+        settings: The connector settings (``SettingsT``), injected via ``inject_dependencies()``.
         work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
-        state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
+        state: The connector state (``StateT``), injected via ``inject_dependencies()``.
     """
 
     work_name: str
-    settings: BaseConnectorSettings
+    settings: SettingsT
     work_manager: WorkManager
-    state: ExternalImportConnectorState
+    state: StateT
 
     def inject_dependencies(
         self,
-        settings: BaseConnectorSettings,
+        settings: SettingsT,
         helper: OpenCTIConnectorHelper,
-        state: ExternalImportConnectorState,
+        state: StateT,
     ) -> None:
         """Inject dependencies from the base connector and create the WorkManager.
 
@@ -91,7 +120,7 @@ class BaseDataProcessor(_ClassLoggerMixin, ABC):
         Args:
             settings: The connector configuration settings.
             helper: The ``OpenCTIConnectorHelper`` instance.
-            state: The ``ExternalImportConnectorState`` instance.
+            state: The connector state instance.
         """
         self.settings = settings
         self.work_manager = WorkManager(helper)

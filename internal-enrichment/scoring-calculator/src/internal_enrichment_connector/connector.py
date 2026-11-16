@@ -3,7 +3,7 @@ from typing import Optional, Tuple
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_loader import ConfigConnector
+from .settings import ConnectorSettings
 
 
 def _coerce_score(value, default: int = 0) -> int:
@@ -41,6 +41,7 @@ LOCATION_ENTITIES = ["Country", "Region"]
 SECTOR_ENTITIES = ["Sector"]
 TTP_ENTITIES = ["Attack-Pattern"]
 AUTHOR_ENTITIES = ["Organization", "Individual"]
+CATEGORIES = ["Threat", "Toolbox", "Location", "Sector", "TTP", "Author"]
 
 
 def _category_of(entity_type):
@@ -79,8 +80,8 @@ class ConnectorScoring:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
+        - `settings (ConnectorSettings())`:
+            Validated configuration (environment variables, config.yml or .env)
 
         - `helper (OpenCTIConnectorHelper(config))`:
             This is the helper to use.
@@ -109,7 +110,7 @@ class ConnectorScoring:
 
     def __init__(
         self,
-        config: ConfigConnector,
+        settings: ConnectorSettings,
         helper: OpenCTIConnectorHelper,
         api: OpenCTIApiClient,
     ):
@@ -117,10 +118,34 @@ class ConnectorScoring:
         Initialize the Connector with necessary configurations
         """
 
-        # Load configuration file and connection helper
-        self.config = config
+        self.settings = settings
+        self.config = settings.connector_scoring
         self.helper = helper
         self.client = ConnectorClient(api)
+
+        # Labels are compared case-insensitively
+        self._high_priority_labels = {
+            v.lower() for v in self.config.high_priority_labels
+        }
+        self._medium_priority_labels = {
+            v.lower() for v in self.config.medium_priority_labels
+        }
+        self._low_priority_labels = {v.lower() for v in self.config.low_priority_labels}
+
+        # Impact of each category on the score, and whether it is enabled
+        self.impact_map = {
+            category: {
+                priority: getattr(
+                    self.config, f"{category.lower()}_{priority}_priority"
+                )
+                for priority in ("high", "medium", "low")
+            }
+            for category in CATEGORIES
+        }
+        self.impact_enabled = {
+            category: getattr(self.config, f"{category.lower()}_impact_score")
+            for category in CATEGORIES
+        }
 
     # In case labels of two different priorities are present, keep the highest priority
     def _priority_of(self, entity):
@@ -136,11 +161,11 @@ class ConnectorScoring:
             label_value = (label.get("value") or "").lower()
             if not label_value:
                 continue
-            if label_value in self.config.high_priority_labels:
+            if label_value in self._high_priority_labels:
                 return "high"
-            elif label_value in self.config.medium_priority_labels:
+            elif label_value in self._medium_priority_labels:
                 priority.append("medium")
-            elif label_value in self.config.low_priority_labels:
+            elif label_value in self._low_priority_labels:
                 priority.append("low")
 
         if "medium" in priority:
@@ -156,7 +181,7 @@ class ConnectorScoring:
         if not category:
             return 0
 
-        enabled = self.config.impact_enabled.get(category, False)
+        enabled = self.impact_enabled.get(category, False)
         self.helper.connector_logger.debug(
             "Impact configuration evaluated",
             meta={"category": category, "enabled": enabled},
@@ -168,7 +193,7 @@ class ConnectorScoring:
         if not prio:
             return 0
 
-        impact = self.config.impact_map.get(category, {}).get(prio, 0)
+        impact = self.impact_map.get(category, {}).get(prio, 0)
         return impact
 
     def _compute_score(

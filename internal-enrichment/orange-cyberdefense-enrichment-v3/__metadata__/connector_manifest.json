@@ -18,8 +18,8 @@
   "max_confidence_level": 50,
   "support_version": ">=5.5.4",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/orange-cyberdefense-enrichment-v3",
-  "manager_supported": false,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/orange-cyberdefense-enrichment-v3",
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-orange-cyberdefense-enrichment-v3",
   "container_type": "INTERNAL_ENRICHMENT"

@@ -55,18 +55,27 @@ class CheckfirstClient:
 
         self.base_url = base_url
         self.api_key = api_key
+        # Highest `_id` observed from the API this walk, including rows later
+        # skipped by validation / size checks. Used as a resume watermark so
+        # bad rows cannot pin the connector forever.
+        self.last_seen_id: str | None = None
 
     def fetch_paginated_data(
         self,
         api_endpoint: str,
-        start_page: int = 1,
+        after: str | None = None,
         since: datetime | None = None,
     ) -> Generator[dict[str, Any], None, None]:
-        """Fetch paginated data from the API endpoint.
+        """Fetch keyset-paginated data from the API endpoint.
+
+        Walks `/v1/articles` with `after` / `next_cursor` on `_id` ascending.
+        Omit `after` to start from the beginning; pass the last processed
+        article `_id` to resume.
 
         Args:
             api_endpoint: Endpoint path (e.g., "/v1/articles")
-            start_page: Starting page number for pagination (default: 1)
+            after: Exclusive `_id` cursor; only documents with `_id` greater
+                than this value are returned
             since: Only fetch articles published on or after this ISO 8601 date
 
         Yields:
@@ -92,10 +101,12 @@ class CheckfirstClient:
         session.mount(endpoint_url, http_adapter)
         session.headers.update({"Api-Key": self.api_key, "Accept": "application/json"})
 
-        current_page = start_page
+        cursor = after
         has_more = True
         while has_more:
-            params = {"page": current_page}
+            params: dict[str, Any] = {}
+            if cursor:
+                params["after"] = cursor
             if since:
                 params["since"] = since.isoformat(timespec="seconds").replace(
                     "+00:00", "Z"
@@ -104,7 +115,7 @@ class CheckfirstClient:
             try:
                 self.logger.debug(
                     f"[API] Fetching {endpoint_url}",
-                    {"params": {"page": current_page, "since": since}},
+                    {"params": {"after": cursor, "since": since}},
                 )
 
                 response = session.get(
@@ -122,31 +133,39 @@ class CheckfirstClient:
                     )
 
                 items = data["data"]
+                run_reporter.pages_fetched += 1
+
                 if not items:
-                    has_more = False
+                    break
 
-                yield from items  # one page contains 1_000 items
+                yield from items
 
-                has_more = data.get("pagination", {}).get("has_next", False)
-                current_page += 1
+                pagination = data.get("pagination", {})
+                has_more = bool(pagination.get("has_next", False))
+                # Prefer the API cursor; fall back to the last item `_id` so a
+                # missing next_cursor cannot stall a has_next=true response.
+                next_cursor = pagination.get("next_cursor") or items[-1].get("_id")
+                if not has_more or not next_cursor:
+                    break
+                cursor = str(next_cursor)
             except requests.HTTPError as err:
                 raise CheckfirstAPIError(
-                    f"HTTP error {err.response.status_code} when fetching page "
-                    f"{current_page}: {err.response.reason}"
+                    f"HTTP error {err.response.status_code} when fetching after "
+                    f"{cursor!r}: {err.response.reason}"
                 ) from err
             except JSONDecodeError as err:
                 raise CheckfirstAPIError(
-                    f"Invalid JSON response from API on page {current_page}"
+                    f"Invalid JSON response from API after cursor {cursor!r}"
                 ) from err
             except requests.RequestException as err:  # fallback
                 raise CheckfirstAPIError(
-                    f"Error when fetching page {current_page}: {err}"
+                    f"Error when fetching after cursor {cursor!r}: {err}"
                 ) from err
 
     def iter_api_rows(
         self,
         api_endpoint: str,
-        start_page: int = 1,
+        after: str | None = None,
         since: datetime | None = None,
         max_row_bytes: int | None = None,
     ) -> Generator[Article, None, None]:
@@ -154,7 +173,7 @@ class CheckfirstClient:
 
         Args:
             api_endpoint: API endpoint path
-            start_page: Starting page number for pagination
+            after: Exclusive `_id` cursor to resume from
             since: Only fetch articles published on or after this ISO 8601 date
             max_row_bytes: Skip any API row larger than this approximate number of bytes
 
@@ -162,13 +181,17 @@ class CheckfirstClient:
             Article objects with validated data
         """
         row_number = 0
+        self.last_seen_id = None
 
         for item in self.fetch_paginated_data(
             api_endpoint=api_endpoint,
-            start_page=start_page,
+            after=after,
             since=since,
         ):
             row_number += 1
+            item_id = item.get("_id")
+            if item_id is not None:
+                self.last_seen_id = str(item_id)
 
             # Basic row-size guard (approximate)
             if max_row_bytes is not None:

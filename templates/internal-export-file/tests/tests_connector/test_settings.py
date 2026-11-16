@@ -2,7 +2,21 @@ from typing import Any
 
 import pytest
 from connector import ConnectorSettings
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseInternalExportFileConnectorSettings,
+    ConfigValidationError,
+)
+
+
+def test_settings_should_be_internal_export_file_connector_settings():
+    """
+    Test that `ConnectorSettings` is an implementation of `BaseInternalExportFileConnectorSettings`
+    (from `connectors-sdk`), the settings base class dedicated to `INTERNAL_EXPORT_FILE` connectors.
+    """
+    assert (
+        issubclass(ConnectorSettings, BaseInternalExportFileConnectorSettings) is True
+    )
 
 
 @pytest.mark.parametrize(

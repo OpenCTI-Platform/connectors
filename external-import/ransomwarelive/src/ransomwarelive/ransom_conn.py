@@ -10,6 +10,7 @@ from ransomwarelive.utils import (
     domain_extractor,
     get_group_entry,
     is_domain,
+    normalize_country_code,
     safe_datetime,
 )
 from ransomwarelive_client import (
@@ -286,11 +287,16 @@ class RansomwareAPIConnector:
         victim = self.converter_to_stix.process_victim(victim_name=victim_name)
         bundle_objects.append(victim)
 
-        attack_date = item.get("attackdate")
-        attack_date_iso = safe_datetime(attack_date)
-
         discovered = item.get("discovered")
         discovered_iso = safe_datetime(discovered)
+
+        # The attack date is sometimes empty in the API: keep it unknown
+        # (``None``) for the attack timeline (Campaign ``first_seen``,
+        # relationship ``start_time``). Only the Report, which requires a
+        # ``published`` date, falls back to the disclosure date.
+        attack_date = item.get("attackdate")
+        attack_date_iso = safe_datetime(attack_date)
+        report_published_iso = attack_date_iso or discovered_iso
 
         # Build the canonical external-reference list ONCE up-front so
         # every emitted SDO (Threat Actor, Campaign, Report, …) sees the
@@ -549,9 +555,15 @@ class RansomwareAPIConnector:
         # ``create_intrusion_set``, so the call site has to forward the
         # flag (without it the relationship always came back ``None``
         # even when the user had explicitly opted into intrusion sets).
-        if item.get("country"):
-            country_name = item["country"]
-            location = self.location_fetcher(country_name)
+        raw_country = item.get("country")
+        country_code = normalize_country_code(raw_country)
+        if raw_country and not country_code:
+            self.helper.connector_logger.warning(
+                "Invalid country code, location skipped",
+                {"country": raw_country, "victim": victim_name},
+            )
+        if country_code:
+            location = self.location_fetcher(country_code)
 
             if location:
                 (
@@ -600,11 +612,18 @@ class RansomwareAPIConnector:
         # makes the data flow much harder to follow. Building the full
         # ``object_refs`` list first and constructing the Report once
         # is the canonical stix2 idiom.
-        if self.config.ransomwarelive.create_report:
+        if self.config.ransomwarelive.create_report and report_published_iso is None:
+            # A Report needs a ``published`` date: without an attack date or a
+            # discovered date, skip the Report but keep the other objects.
+            self.helper.connector_logger.warning(
+                "Missing attack and discovered dates, report skipped",
+                {"victim": victim_name},
+            )
+        elif self.config.ransomwarelive.create_report:
             report = self.converter_to_stix.process_report(
                 report_name=item.get("group"),
                 victim_name=victim_name,
-                attack_date_iso=attack_date_iso,
+                attack_date_iso=report_published_iso,
                 description=item.get("description"),
                 object_refs=object_refs,
                 discovered_iso=discovered_iso,
@@ -820,6 +839,12 @@ class RansomwareAPIConnector:
         for item in response_json:
             discovered_raw = item.get("discovered")
             created = safe_datetime(discovered_raw)
+            if created is None:
+                self.helper.connector_logger.warning(
+                    "Invalid discovered date, victim skipped",
+                    {"discovered": discovered_raw, "victim": item.get("victim")},
+                )
+                continue
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 

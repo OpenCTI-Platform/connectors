@@ -1,7 +1,7 @@
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    BaseStreamConnectorSettings,
 )
 from pydantic import Field, HttpUrl
 
@@ -31,9 +31,9 @@ class TemplateConfig(BaseConfigModel):
     api_key: str = Field(description="API key for authentication.")
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseStreamConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `TemplateConfig`.
+    Override `BaseStreamConnectorSettings` to include `StreamConnectorConfig` and `TemplateConfig`.
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)

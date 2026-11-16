@@ -8,11 +8,11 @@ WORKDIR /opt/opencti-connector-cve
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev
+    apk --no-cache add git build-base libffi-dev
 
 RUN cd /opt/opencti-connector-cve/src && \
     pip3 install --no-cache-dir -r /opt/opencti-connector-cve/src/requirements.txt && \
-    apk del git build-base && \
+    apk del git build-base libffi-dev && \
     rm -rf /var/cache/apk/*
 
 CMD ["python", "-m", "src"]
