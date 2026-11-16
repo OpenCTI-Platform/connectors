@@ -88,7 +88,7 @@ class SeenDetail(BaseModel):
     )
     value: str = Field(
         ...,
-        description="Date when the observation was made (YYYY-MM-DDTHH:mm:ssZ format).",
+        description="Date when the observation was made (ISO 8601, with or without fractional seconds).",
     )
 
 
