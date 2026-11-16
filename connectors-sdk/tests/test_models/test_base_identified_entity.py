@@ -1,21 +1,38 @@
+from datetime import datetime, timezone
 from typing import OrderedDict
 
 import pytest
 import stix2
 import stix2.properties
 from connectors_sdk.models import (
+    AdministrativeArea,
     AssociatedFile,
+    City,
+    Country,
+    CourseOfAction,
     ExternalReference,
     File,
     Hostname,
+    Indicator,
+    Individual,
     IPV4Address,
     MediaContent,
+    Organization,
     OrganizationAuthor,
+    Region,
+    Report,
+    Sector,
+    Sighting,
+    System,
     Text,
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_object import BaseObject
-from connectors_sdk.models.enums import ExtensionDefinitionId, ExtensionType
+from connectors_sdk.models.enums import (
+    ExtensionDefinitionId,
+    ExtensionType,
+    Reliability,
+)
 from pycti import STIX_EXT_OCTI, STIX_EXT_OCTI_SCO
 from pydantic import Field, ValidationError
 
@@ -475,6 +492,17 @@ OBSERVABLE_FIELDS = {
     "create_indicator": True,
     "associated_files": [AssociatedFile(name="file.txt", content=b"content")],
 }
+INDICATOR = Indicator(
+    name="Indicator",
+    pattern="[ipv4-addr:value = '1.1.1.1']",
+    pattern_type="stix",
+    valid_from="2026-01-01T00:00:00Z",
+    score=70,
+    main_observable_type="IPv4-Addr",
+    create_observables=True,
+    associated_files=[AssociatedFile(name="file.txt", content=b"content")],
+    **COMMON_FIELDS,
+)
 
 
 @pytest.mark.parametrize(
@@ -492,6 +520,74 @@ OBSERVABLE_FIELDS = {
         pytest.param(
             MediaContent(url="https://example.com/a", **OBSERVABLE_FIELDS),
             id="media_content",
+        ),
+        pytest.param(INDICATOR, id="indicator"),
+        pytest.param(
+            Organization(
+                name="Organization",
+                organization_type="vendor",
+                reliability=Reliability.A,
+                aliases=["alias"],
+                **COMMON_FIELDS,
+            ),
+            id="organization",
+        ),
+        pytest.param(
+            Individual(
+                name="Individual",
+                reliability=Reliability.A,
+                aliases=["a"],
+                **COMMON_FIELDS,
+            ),
+            id="individual",
+        ),
+        pytest.param(
+            Sector(
+                name="Sector", reliability=Reliability.A, aliases=["a"], **COMMON_FIELDS
+            ),
+            id="sector",
+        ),
+        pytest.param(
+            System(
+                name="System", reliability=Reliability.A, aliases=["a"], **COMMON_FIELDS
+            ),
+            id="system",
+        ),
+        pytest.param(City(name="Paris", aliases=["a"], **COMMON_FIELDS), id="city"),
+        pytest.param(
+            Country(name="France", aliases=["a"], **COMMON_FIELDS), id="country"
+        ),
+        pytest.param(
+            Region(name="Europe", aliases=["a"], **COMMON_FIELDS), id="region"
+        ),
+        pytest.param(
+            AdministrativeArea(name="Area", aliases=["a"], **COMMON_FIELDS),
+            id="administrative_area",
+        ),
+        pytest.param(
+            CourseOfAction(name="Course of action", aliases=["a"], **COMMON_FIELDS),
+            id="course_of_action",
+        ),
+        pytest.param(
+            Report(
+                name="Report",
+                publication_date="2025-01-01T12:00:00Z",
+                reliability=Reliability.A,
+                objects=[AUTHOR],
+                **COMMON_FIELDS,
+            ),
+            id="report",
+        ),
+        pytest.param(
+            Sighting(
+                sighting_of=INDICATOR,
+                where_sighted=[AUTHOR],
+                first_seen=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                last_seen=datetime(2026, 3, 1, tzinfo=timezone.utc),
+                qualification=True,
+                **COMMON_FIELDS,
+            ),
+            id="sighting",
         ),
     ],
 )
