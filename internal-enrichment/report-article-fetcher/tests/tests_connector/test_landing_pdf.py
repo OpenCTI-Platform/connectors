@@ -19,7 +19,11 @@ from connector.article import (
 from connector.connector import STIX_EXT_OCTI, ReportArticleFetcherConnector
 from pdf_builder import build_pdf
 from test_article_fixtures import PAGES as LONG_PAGES
-from test_fetch import ROUTES, checked, server  # noqa: F401 (fixtures)
+from test_fetch import (  # noqa: F401 pylint: disable=unused-import (pytest fixtures)
+    ROUTES,
+    checked,
+    server,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 CERTFR = "https://www.cert.cyber.gouv.fr/cti/CERTFR-2026-CTI-010/"
