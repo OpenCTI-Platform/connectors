@@ -128,10 +128,34 @@ def find_sdk_external_import_connector(
     and ``to_processed`` (``in_error=True`` on failure). A connector built on
     it delegates all of this to the SDK, so its own code has none of these calls.
     """
+    return _find_sdk_import(trees, "ExternalImportConnector")
+
+
+def find_sdk_internal_enrichment_connector(
+    trees: dict[Path, ast.Module],
+) -> ImportInfo | None:
+    """Return the import of connectors-sdk's ``InternalEnrichmentConnector``, if any.
+
+    ``InternalEnrichmentConnector`` owns the message handling: it creates the
+    helper with ``playbook_compatible=True``, listens with ``helper.listen()``,
+    checks the scope and the entity TLP (``check_max_tlp`` on the TLP of the
+    entity markings), and sends exactly one bundle per playbook message, with
+    the ``stix_objects`` received, whatever happens. A connector built on it
+    delegates all of this to the SDK, so its own code has none of these patterns.
+    """
+    return _find_sdk_import(trees, "InternalEnrichmentConnector")
+
+
+def _find_sdk_import(trees: dict[Path, ast.Module], name: str) -> ImportInfo | None:
+    """Return the first import of ``name`` from connectors-sdk, if any.
+
+    Only imports from ``connectors_sdk`` count: a connector can define its own
+    class with the same name (e.g. a local ``InternalEnrichmentConnector``).
+    """
     imports = find_imports(
         trees,
         module_pattern=r"^connectors_sdk(\.|$)",
-        name_pattern=r"^ExternalImportConnector$",
+        name_pattern=rf"^{name}$",
     )
     return imports[0] if imports else None
 
