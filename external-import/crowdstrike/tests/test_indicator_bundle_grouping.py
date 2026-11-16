@@ -102,3 +102,34 @@ def test_discarded_indicator_is_not_sent():
 
     importer._send_bundle.assert_called_once()
     assert len(importer._send_bundle.call_args.args[0].objects) == 4
+
+
+def _indicators(ids) -> list[dict]:
+    return [
+        {"id": i, "last_updated": 1700000000 + i, "published_date": None} for i in ids
+    ]
+
+
+def test_run_starts_with_an_empty_batch_after_a_failed_run():
+    importer = _importer(500)
+    # First run: two indicators are pending when the third one fails.
+    importer._fetch_indicators = MagicMock(return_value=_indicators(range(3)))
+    importer._create_indicator_bundle = MagicMock(
+        side_effect=[_bundle(0), _bundle(1), RuntimeError("unexpected")]
+    )
+    with pytest.raises(RuntimeError):
+        importer.run({})
+    importer._send_bundle.assert_not_called()
+
+    # Next run: only its own indicators are sent.
+    importer._fetch_indicators = MagicMock(return_value=_indicators([10, 11]))
+    importer._create_indicator_bundle = MagicMock(side_effect=_bundle)
+    importer.run({})
+
+    importer._send_bundle.assert_called_once()
+    own_names = {
+        obj["name"]
+        for obj in importer._send_bundle.call_args.args[0].objects
+        if obj["type"] == "malware" and obj["name"].startswith("Own")
+    }
+    assert own_names == {"Own 10", "Own 11"}

@@ -128,6 +128,12 @@ class IndicatorImporter(BaseImporter):
 
         self._clear_report_fetcher_cache()
 
+        # Start every run with an empty batch. A previous run that failed
+        # mid-batch did not save its state, so its pending indicators are
+        # fetched again by this run.
+        self._pending_objects = {}
+        self._pending_indicators = 0
+
         fetch_timestamp = state.get(
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
