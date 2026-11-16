@@ -396,7 +396,7 @@ class CrowdStrike:
             f"{self.helper.connect_name}/{importer_name} run @ {datetime_str}"
         )
         work_id = self.helper.api.work.initiate_work(
-            cast(str, self.helper.connect_id), friendly_name
+            self.config.connector.id, friendly_name
         )
         work_id = cast(str, work_id)
 
