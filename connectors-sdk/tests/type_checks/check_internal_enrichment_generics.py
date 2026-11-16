@@ -65,7 +65,7 @@ class TypedProcessor(BaseEnrichmentProcessor[MySettings]):
         assert_type(self.settings.connector.max_tlp, TLPLevel)
         return None
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         """Do nothing."""
         return []
 
@@ -79,7 +79,7 @@ class OtherProcessor(BaseEnrichmentProcessor[OtherSettings]):
         """Do nothing."""
         return None
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         """Do nothing."""
         return []
 
@@ -95,7 +95,7 @@ class DefaultProcessor(BaseEnrichmentProcessor):
         assert_type(self.settings.connector.max_tlp, TLPLevel)
         return None
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         """Do nothing."""
         return []
 

@@ -5,7 +5,7 @@ the contract for enriching one or more entity types from an external source.
 
 Pipeline (run by ``InternalEnrichmentConnector`` for each message)::
 
-    objects = processor.process(message)  # transform(message, collect(message))
+    objects = processor.process(message)  # transform(collect(message), message)
 
 A connector's processor only fetches and converts: the connector checks the scope and
 the TLP, then gives the objects to the ``BundleManager`` that builds and sends the bundle.
@@ -96,7 +96,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT]):
         ...     def collect(self, message):
         ...         return self.client.get_ip(message.stix_entity.value)
         ...
-        ...     def transform(self, message, data):
+        ...     def transform(self, data, message):
         ...         if not data:
         ...             return []
         ...         ip = IPV4Address(value=message.stix_entity.value, score=data["score"])
@@ -181,7 +181,9 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT]):
         Returns:
             The objects to add to the bundle, or ``[]`` when there is nothing to add.
         """
-        return list(self.transform(message, self.collect(message)))
+        data = self.collect(message)
+        # By keyword: an override that swaps the two parameters still works
+        return list(self.transform(data=data, message=message))
 
     @abstractmethod
     def collect(self, message: EnrichmentMessage) -> Any:
@@ -203,7 +205,7 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT]):
         ...
 
     @abstractmethod
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         """Transform raw data into STIX objects to add to the bundle.
 
         This method should convert the raw data from ``collect()`` into
@@ -223,9 +225,11 @@ class BaseEnrichmentProcessor(_ClassLoggerMixin, ABC, Generic[SettingsT]):
         Skip and log (WARNING) a single item that fails to convert instead of raising.
         Raise ``UseCaseError`` (``raise ... from err``) only when nothing can be converted.
 
+        The data comes first, as in ``BaseDataProcessor.transform(data)``.
+
         Args:
-            message: The enrichment message.
             data: The raw data returned by ``collect()``.
+            message: The enrichment message.
 
         Returns:
             The STIX objects to add to the bundle, or ``[]`` when there is nothing to add.

@@ -58,7 +58,7 @@ connectors_sdk/connectors/
 ```
 
 - `EnrichmentMessage`: a frozen Pydantic model, built with `EnrichmentMessage.model_validate(data)` by the connector for each message. It gives the entity to enrich twice, never mixed: `enrichment_entity` (an `OpenCTIEntity`, as read from OpenCTI) and `stix_entity` (a `StixEntity`, as a STIX object). Both models only declare their `id` and their type (`entity_type`, `type`); any other field sent by pycti can be read as an attribute (e.g. `message.stix_entity.value`). It also holds `stix_objects` (the bundle containing the entity) and `from_playbook`. `OpenCTIEntity.tlp_levels` gives the TLP markings of the entity, and `EnrichmentMessage.to_log_metadata()` the context to log (`octi_id`, `octi_entity_type`, `from_playbook`).
-- `BaseEnrichmentProcessor`: same lifecycle as `BaseDataProcessor` (`inject_dependencies()`, `post_init()`). It declares `handled_entity_types`, may override `can_process(message)` to filter within a type (e.g. an indicator's `pattern_type`), and implements `collect(message)` (network, no STIX) and `transform(message, data)` (STIX, no network). `process(message)` runs `transform(message, collect(message))` and returns the objects: a processor never sends anything. The message is always passed as an argument: a processor keeps no state about the current message.
+- `BaseEnrichmentProcessor`: same lifecycle as `BaseDataProcessor` (`inject_dependencies()`, `post_init()`). It declares `handled_entity_types`, may override `can_process(message)` to filter within a type (e.g. an indicator's `pattern_type`), and implements `collect(message)` (network, no STIX) and `transform(data, message)` (STIX, no network). The data comes first, as in `BaseDataProcessor.transform(data)`. `process(message)` runs `transform(data=collect(message), message=message)`, by keyword so that an override swapping the two parameters still works, and returns the objects: a processor never sends anything. The message is always passed as an argument: a processor keeps no state about the current message.
 - `BundleManager(helper, data)`: created by the connector for each message, from the raw message data, never seen by processors. It is a context manager that wraps the handling of the message (`with BundleManager(helper, data) as bundle_manager:`). The connector gives it the validated message in `message` (for the context of the logs) and the processor's objects in `new_objects`, and the manager builds and sends the bundle when the `with` block ends. `outcome` is the message stored on the work.
 - `InternalEnrichmentConnector(settings, enrichment_processors)`: checks the configuration, creates the helper (with `playbook_compatible=True`) in `start()`, injects the processors' dependencies, then listens. Its callback checks the message, passes it to the processor, and stores the objects returned in the message's `BundleManager`.
 
@@ -141,7 +141,7 @@ class IPv4Processor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> dict | None:
         return self.client.get_ip(message.stix_entity.value)
 
-    def transform(self, message: EnrichmentMessage, data: dict | None) -> list:
+    def transform(self, data: dict | None, message: EnrichmentMessage) -> list:
         if not data:
             return []
         ip = IPV4Address(value=message.stix_entity.value, score=data["score"])

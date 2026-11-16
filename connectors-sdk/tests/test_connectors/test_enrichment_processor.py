@@ -18,7 +18,7 @@ class DummyProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> Any:
         return message.stix_entity.value
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return [data] if data else []
 
 
@@ -85,6 +85,19 @@ class TestProcess:
 
         assert objects == []
 
+    def test_passes_data_and_message_by_keyword_to_transform(self):
+        class SwappedProcessor(DummyProcessor):
+            # The two parameters swapped, as in an older signature
+            def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+                return [data]
+
+        processor = SwappedProcessor()
+        processor.inject_dependencies(settings=MagicMock())
+
+        objects = processor.process(_make_message())
+
+        assert objects == ["v"]
+
     def test_returns_a_list_from_any_iterable(self):
         processor = _make_processor()
         processor.transform = MagicMock(return_value=(obj for obj in ["a", "b"]))
@@ -101,7 +114,7 @@ class TestHandledEntityTypes:
     ):
         namespace = {
             "collect": lambda self, message: None,
-            "transform": lambda self, message, data: [],
+            "transform": lambda self, data, message: [],
         }
         if handled_entity_types is not None:
             namespace["handled_entity_types"] = handled_entity_types
@@ -117,7 +130,7 @@ class TestHandledEntityTypes:
         class IPv4Processor(SharedProcessor):
             handled_entity_types = frozenset({"IPv4-Addr"})
 
-            def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+            def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
                 return []
 
         assert IPv4Processor().handled_entity_types == frozenset({"IPv4-Addr"})

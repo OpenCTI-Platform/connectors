@@ -63,7 +63,7 @@ class IPv4Processor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> dict[str, Any] | None:
         return self.client.get_ip(message.stix_entity.value)
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         if not data:
             return []
         common = {"author": self.author, "markings": [self.tlp_marking]}
@@ -82,7 +82,7 @@ class DomainProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> dict[str, Any]:
         return {"score": 42}
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         entity = message.stix_entity.model_dump()
         entity["x_opencti_score"] = data["score"]
         return [entity]
@@ -102,7 +102,7 @@ class ShodanIndicatorProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> str:
         return "shodan"
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return [{"type": "note", "id": "note--1", "content": data}]
 
 
@@ -120,7 +120,7 @@ class GenericIndicatorProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> str:
         return "generic"
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return [{"type": "note", "id": "note--2", "content": data}]
 
 
@@ -132,7 +132,7 @@ class AnyIndicatorProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> str:
         return "any"
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return [{"type": "note", "id": "note--4", "content": data}]
 
 
@@ -145,7 +145,7 @@ class ChangingProcessor(BaseEnrichmentProcessor):
         message.stix_objects[0]["object_marking_refs"].append("changed")
         raise DataRetrievalError("source unavailable")
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return []
 
 
@@ -155,7 +155,7 @@ class InterruptedProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> Any:
         raise KeyboardInterrupt
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return []
 
 
@@ -165,7 +165,7 @@ class FailingProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> Any:
         raise DataRetrievalError("source unavailable")
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return []
 
 
@@ -175,7 +175,7 @@ class UnserializableProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> Any:
         return datetime.now(tz=timezone.utc)
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         # A plain dict holding a datetime cannot be serialized to JSON
         return [{"type": "note", "id": "note--3", "created": data}]
 
@@ -192,7 +192,7 @@ class FileHashesProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> dict[str, str]:
         return {"md5": "b" * 32}
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         file = message.stix_entity.model_dump()
         file["hashes"]["MD5"] = data["md5"]
         asn = AutonomousSystem(number=64500)
@@ -210,7 +210,7 @@ class LabelProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> list[str]:
         return ["vpn"]
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         return [IPV4Address(value=message.stix_entity.value, labels=data)]
 
 
@@ -222,7 +222,7 @@ class ReferenceProcessor(BaseEnrichmentProcessor):
     def collect(self, message: EnrichmentMessage) -> int:
         return 64500
 
-    def transform(self, message: EnrichmentMessage, data: Any) -> list[Any]:
+    def transform(self, data: Any, message: EnrichmentMessage) -> list[Any]:
         entity = Reference(id=message.stix_entity.id)
         asn = AutonomousSystem(number=data)
         relationship = Relationship(type="belongs-to", source=entity, target=asn)

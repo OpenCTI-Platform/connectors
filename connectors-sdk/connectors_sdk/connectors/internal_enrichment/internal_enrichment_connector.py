@@ -93,7 +93,7 @@ class InternalEnrichmentConnector(_ClassLoggerMixin, Generic[SettingsT]):
         ...     handled_entity_types = frozenset({"IPv4-Addr"})
         ...     def collect(self, message):
         ...         return api_client.get_ip(message.stix_entity.value)
-        ...     def transform(self, message, data):
+        ...     def transform(self, data, message):
         ...         return [author, tlp_marking, *to_stix(data)]
         ...
         >>> settings = MyConnectorSettings()
