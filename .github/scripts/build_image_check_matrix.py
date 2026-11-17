@@ -15,7 +15,8 @@ DIFF_HEAD are built, with the same variants and platforms as on master:
     image is built by the amd64 job when Dockerfile_fips exists.
   - UBI9 image (shared Dockerfile_ubi9), amd64 and arm64, for connectors
     listed in .github/ubi9-connectors.json. A change to Dockerfile_ubi9
-    itself selects every UBI9 connector.
+    itself selects every UBI9 connector, and a connector newly added to
+    ubi9-connectors.json is selected even if its directory is unchanged.
 A change to the build tooling (build action, retry script, this check)
 adds one canary connector, so a broken tooling change cannot pass the
 queue just because no connector changed alongside it.
@@ -93,10 +94,32 @@ def load_ubi9_connectors() -> list[str]:
     return json.loads(UBI9_CONNECTORS_FILE.read_text())
 
 
+def added_ubi9_connectors(base: str, changed_files: set[str]) -> set[str]:
+    """Entries of ubi9-connectors.json that are new since *base*.
+
+    Master builds every listed connector, so a connector added to the list
+    gets its first UBI9 image on the next master build: check it here.
+    """
+    if UBI9_CONNECTORS_FILE.as_posix() not in changed_files:
+        return set()
+    result = subprocess.run(
+        ["git", "show", f"{base}:{UBI9_CONNECTORS_FILE.as_posix()}"],
+        capture_output=True,
+        text=True,
+    )
+    # The file did not exist at base: every entry is new.
+    base_paths = set(json.loads(result.stdout)) if result.returncode == 0 else set()
+    added = set(load_ubi9_connectors()) - base_paths
+    if added:
+        print(f"  ➕ Added to {UBI9_CONNECTORS_FILE.name}: {sorted(added)}")
+    return added
+
+
 def select_images(
     changed_files: set[str],
     alpine_by_path: dict[str, dict],
     ubi9_paths: list[str],
+    ubi9_added: set[str],
 ) -> tuple[list[dict], list[dict]]:
     """Return (alpine, ubi9) connector entries to build."""
     changed_connectors = get_changed_connectors(changed_files)
@@ -112,7 +135,7 @@ def select_images(
         print(f"  🔄 {UBI9_DOCKERFILE} changed → every UBI9 connector")
         ubi9_selected = set(ubi9_paths)
     else:
-        ubi9_selected = changed_connectors & set(ubi9_paths)
+        ubi9_selected = (changed_connectors | ubi9_added) & set(ubi9_paths)
     # A connector removed by the change has nothing left to build.
     ubi9 = [
         {"path": p, "name": Path(p).name}
@@ -174,7 +197,12 @@ def main() -> None:
     alpine_by_path = {
         c["path"]: c for entries in discover_connectors().values() for c in entries
     }
-    alpine, ubi9 = select_images(changed_files, alpine_by_path, load_ubi9_connectors())
+    alpine, ubi9 = select_images(
+        changed_files,
+        alpine_by_path,
+        load_ubi9_connectors(),
+        added_ubi9_connectors(base, changed_files),
+    )
 
     entries = matrix_entries(alpine, ubi9)
     if len(entries) > max_jobs:
