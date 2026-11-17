@@ -20,6 +20,9 @@ from tests.conftest import StubHelper
 
 EXPECTED_UA = f"PolySwarm-OpenCTI-Sandbox/{pycti.__version__} (OpenCTI)"
 API_URL = "https://api.polyswarm.network/v3"
+# conftest stubs the account read for every test; the transport mock here
+# keeps it offline, so this file restores the real SDK method.
+_REAL_ACCOUNT_FEATURES = PolyswarmAPI.account_features
 
 
 def _response(request, status=404, body=b'{"status": "NOT_FOUND"}'):
@@ -144,3 +147,32 @@ def test_polykg_profile(sent):
     builder._fetch_polykg_profile("DTrack")
     _assert_ua(sent, "/v3/kg/profile")
     assert sent[0].headers["Authorization"] == "Bearer test-key"
+
+
+# ── Sandbox v3 call paths ────────────────────────────────────────────────────
+
+
+def test_hash_search(client, sent):
+    client.find_instance_by_hash("a" * 64)
+    _assert_ua(sent, "/search/hash")
+
+
+def test_latest_sandbox_task_by_hash(client, sent):
+    client.get_latest_sandbox_task("a" * 64, "cape")
+    _assert_ua(sent, "/sandbox")
+
+
+def test_detonate_by_hash(client, sent):
+    client.submit_sandbox_by_instance_async("123456", "cape", "win-10-build-19041")
+    _assert_ua(sent, "/sandbox")
+
+
+def test_quota_account_read(client, sent, monkeypatch):
+    monkeypatch.setattr(PolyswarmAPI, "account_features", _REAL_ACCOUNT_FEATURES)
+    client.quota.refresh(force=True)
+    _assert_ua(sent, "/accounts")
+
+
+def test_sandbox_artifact_download(client, sent):
+    client.download_sandbox_artifact_bytes("654321", "123456", 1024)
+    _assert_ua(sent, "/sandbox/sandboxtask/instance")
