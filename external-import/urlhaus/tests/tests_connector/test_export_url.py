@@ -173,6 +173,30 @@ def test_unauthorized_download_raises_without_leaking_the_key():
     assert AUTH_KEY not in _logged_text(client.helper)
 
 
+@pytest.mark.parametrize(
+    "status, expected",
+    [
+        pytest.param(403, "HTTP 403 Forbidden: check URLHAUS_AUTH_KEY", id="known"),
+        pytest.param(599, "HTTP 599", id="unknown"),
+    ],
+)
+def test_server_reason_phrase_is_not_reported(status, expected):
+    """A proxy can echo the request URL, and so the key, in its reason phrase."""
+    reason = (
+        "Denied for "
+        f"https://urlhaus-api.abuse.ch/v2/files/exports/{AUTH_KEY}/recent.csv"
+    )
+    client = _client_with_response(response=_http_error_response(status, reason))
+
+    with pytest.raises(DataRetrievalError) as exc_info:
+        list(client.get_entities())
+
+    message = str(exc_info.value)
+    assert message.startswith(f"URLhaus export download failed: {expected}")
+    assert "Denied" not in message
+    assert AUTH_KEY not in message
+
+
 def test_connection_error_raises_without_leaking_the_key():
     client = _client_with_response(
         side_effect=requests.ConnectionError(

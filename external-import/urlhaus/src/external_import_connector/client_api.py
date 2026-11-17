@@ -1,4 +1,5 @@
 import csv
+from http import HTTPStatus
 from io import StringIO
 from typing import Generator
 
@@ -40,13 +41,19 @@ class ConnectorClient:
             return response
         except requests.HTTPError as err:
             status = err.response.status_code
+            # Use the standard phrase, not the server's reason, which a proxy
+            # could fill with the request URL.
+            try:
+                phrase = f" {HTTPStatus(status).phrase}"
+            except ValueError:
+                phrase = ""
             hint = (
                 ": check URLHAUS_AUTH_KEY or URLHAUS_CSV_URL"
                 if status in (401, 403)
                 else ""
             )
             raise DataRetrievalError(
-                f"URLhaus export download failed: HTTP {status} {err.response.reason}{hint}"
+                f"URLhaus export download failed: HTTP {status}{phrase}{hint}"
             ) from None
         except requests.RequestException as err:
             raise DataRetrievalError(
