@@ -559,7 +559,7 @@ class HatchingTriageSandboxConnector:
                 file_contents = self.triage_client.sample_task_file(
                     sample_id, task_id, filename
                 )
-            except RequestException as err:
+            except (json.JSONDecodeError, ServerError, RequestException) as err:
                 response = getattr(err, "response", None)
                 if response is not None:
                     status = response.status_code
@@ -603,13 +603,7 @@ class HatchingTriageSandboxConnector:
             status = None
             try:
                 search_paginator = self.triage_client.search(query=search_query, max=1)
-            except ServerError as e:
-                self.helper.connector_logger.warning(
-                    f"Search API returned an error for query '{search_query}': {e}. "
-                    "Falling back to submitting a new sample."
-                )
-                return None
-            except RequestException as err:
+            except (json.JSONDecodeError, ServerError, RequestException) as err:
                 response = getattr(err, "response", None)
                 if response is not None:
                     status = response.status_code
@@ -669,7 +663,7 @@ class HatchingTriageSandboxConnector:
                     )
                 elif url is not None:
                     sample_json = self.triage_client.submit_sample_url(url=url)
-            except RequestException as err:
+            except (json.JSONDecodeError, RequestException, ServerError) as err:
                 response = getattr(err, "response", None)
                 status = response.status_code if response is not None else None
                 if status is not None and status < 500:
