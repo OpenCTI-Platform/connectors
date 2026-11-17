@@ -7,12 +7,13 @@ DEFAULT_UTC_DATETIME = "%Y-%m-%dT%H:%M:%SZ"
 # Align to Traffic light protocol
 # https://www.cisa.gov/news-events/news/traffic-light-protocol-tlp-definitions-and-usage
 # https://www.first.org/tlp/
+# TheHive 5.2+ numbering: 0=CLEAR, 1=GREEN, 2=AMBER, 3=AMBER+STRICT, 4=RED
+# https://docs.strangebee.com/thehive/release-notes/release-notes-5.2/
 TLP_MAPPINGS = {
     0: stix2.TLP_WHITE,
     1: stix2.TLP_GREEN,
     2: stix2.TLP_AMBER,
-    3: stix2.TLP_RED,
-    4: stix2.MarkingDefinition(
+    3: stix2.MarkingDefinition(
         id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
         definition_type="statement",
         definition={"statement": "custom"},
@@ -21,6 +22,7 @@ TLP_MAPPINGS = {
         x_opencti_definition="TLP:AMBER+STRICT",
         x_opencti_color="#FFC000",
     ),
+    4: stix2.TLP_RED,
 }
 
 PAP_MAPPINGS = {
