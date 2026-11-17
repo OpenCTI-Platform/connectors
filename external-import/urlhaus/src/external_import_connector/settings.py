@@ -9,7 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 
 EXPORT_URL_TEMPLATE = (
     "https://urlhaus-api.abuse.ch/v2/files/exports/{auth_key}/recent.csv"
@@ -78,6 +78,15 @@ class UrlhausConfig(BaseConfigModel):
         description="Create relationships to existing threats based on URL tags.",
         default=True,
     )
+
+    @field_validator("auth_key", "csv_url", mode="before")
+    @classmethod
+    def _blank_to_none(cls, value):
+        """Treat a blank value, such as an empty `${VAR}` in compose, as unset."""
+        raw = value.get_secret_value() if isinstance(value, SecretStr) else value
+        if isinstance(raw, str) and not raw.strip():
+            return None
+        return value
 
     @model_validator(mode="after")
     def _require_auth_key_or_csv_url(self) -> "UrlhausConfig":

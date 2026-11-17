@@ -58,6 +58,39 @@ def test_missing_auth_key_is_rejected(values, expected_message):
         UrlhausConfig(**values)
 
 
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_blank_auth_key_is_rejected(blank):
+    with pytest.raises(ValueError, match="abuse.ch requires an Auth-Key"):
+        UrlhausConfig(auth_key=blank)
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_blank_csv_url_falls_back_to_auth_key(blank):
+    config = UrlhausConfig(auth_key=AUTH_KEY, csv_url=blank)
+
+    assert config.csv_url is None
+    assert config.export_url == (
+        f"https://urlhaus-api.abuse.ch/v2/files/exports/{AUTH_KEY}/recent.csv"
+    )
+
+
+def test_blank_settings_from_env_are_treated_as_unset(monkeypatch):
+    """End to end through the SDK loader, as an empty `${VAR}` in compose."""
+    monkeypatch.setattr(
+        "connectors_sdk.settings._settings_loader._SettingsLoader."
+        "_get_config_yml_file_path",
+        classmethod(lambda cls: None),
+    )
+    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+    monkeypatch.setenv("URLHAUS_AUTH_KEY", AUTH_KEY)
+    monkeypatch.setenv("URLHAUS_CSV_URL", "")
+
+    settings = ConnectorSettings()
+
+    assert settings.urlhaus.export_url.endswith(f"/{AUTH_KEY}/recent.csv")
+
+
 @pytest.mark.parametrize(
     "csv_url, expected_legacy",
     [
