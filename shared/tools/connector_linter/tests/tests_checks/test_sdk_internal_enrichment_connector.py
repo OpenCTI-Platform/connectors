@@ -56,6 +56,46 @@ class MyConnector(InternalEnrichmentConnector):
         return "done"
 """
 
+# A legacy connector keeping its own message handling, using only the SDK
+# static helpers: it delegates nothing to the SDK controller
+_SDK_HELPERS_ONLY_MAIN = """\
+from connectors_sdk import InternalEnrichmentConnector
+from pycti import OpenCTIConnectorHelper
+
+
+class MyConnector:
+    def __init__(self, config):
+        self.helper = OpenCTIConnectorHelper(config)
+
+    def _process_message(self, data):
+        entity_type = data["enrichment_entity"]["entity_type"]
+        if not InternalEnrichmentConnector.is_entity_in_scope(entity_type, ["IPv4-Addr"]):
+            return "out of scope"
+        return "done"
+"""
+
+_SDK_ALIASED_MAIN = """\
+from connectors_sdk import InternalEnrichmentConnector as BaseConnector
+
+BaseConnector(settings=settings, enrichment_processors=[]).start()
+"""
+
+_SDK_GENERIC_MAIN = """\
+from connectors_sdk import InternalEnrichmentConnector
+
+InternalEnrichmentConnector[ConnectorSettings](
+    settings=settings, enrichment_processors=[]
+).start()
+"""
+
+_SDK_SUBCLASS = """\
+from connectors_sdk import InternalEnrichmentConnector as Base
+
+
+class MyConnector(Base[ConnectorSettings]):
+    pass
+"""
+
 
 class TestSdkInternalEnrichmentConnector:
     """Enrichment checks pass on a connector built on InternalEnrichmentConnector."""
@@ -82,6 +122,34 @@ class TestSdkInternalEnrichmentConnector:
         )
         results = run_checks(path, select=[check_code])
         assert [r.severity for r in results] == [Severity.INFO]
+
+    @pytest.mark.parametrize("check_code", _DELEGATED_CHECKS)
+    @pytest.mark.parametrize(
+        "source",
+        [_SDK_ALIASED_MAIN, _SDK_GENERIC_MAIN, _SDK_SUBCLASS],
+        ids=["alias", "generic", "subclass"],
+    )
+    def test_passes_with_other_controller_uses(self, connector_src, check_code, source):
+        """Aliased, generic and subclassed uses of the base are recognised."""
+        path = connector_src(
+            ("src/connector/connector.py", source),
+            connector_type="INTERNAL_ENRICHMENT",
+        )
+        results = run_checks(path, select=[check_code])
+        assert [r.severity for r in results] == [Severity.INFO]
+
+    @pytest.mark.parametrize("check_code", _DELEGATED_CHECKS)
+    def test_static_helpers_only_do_not_satisfy_the_checks(
+        self, connector_src, check_code
+    ):
+        """Importing the base only to call its static helpers delegates nothing."""
+        path = connector_src(
+            ("src/main.py", _SDK_HELPERS_ONLY_MAIN),
+            connector_type="INTERNAL_ENRICHMENT",
+        )
+        results = run_checks(path, select=[check_code])
+        assert results
+        assert all(r.severity != Severity.INFO for r in results)
 
     @pytest.mark.parametrize("check_code", _DELEGATED_CHECKS)
     def test_local_class_with_same_name_is_not_the_sdk(self, connector_src, check_code):
