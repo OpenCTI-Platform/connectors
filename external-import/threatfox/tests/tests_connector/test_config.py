@@ -40,6 +40,15 @@ def test_csv_url_takes_precedence_for_existing_setups():
     assert config.export_url == url
 
 
+def test_csv_url_is_hidden_when_dumped():
+    config = _ConfigLoaderThreatFox(
+        csv_url="https://threatfox-api.abuse.ch/v2/files/exports/legacy-key/recent.csv"
+    )
+
+    assert "legacy-key" not in str(config)
+    assert "legacy-key" not in str(config.model_dump(mode="json"))
+
+
 def test_missing_auth_key_is_rejected():
     with pytest.raises(ValidationError, match="THREATFOX_AUTH_KEY is required"):
         _ConfigLoaderThreatFox()

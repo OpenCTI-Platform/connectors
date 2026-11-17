@@ -18,7 +18,8 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         description="abuse.ch Auth-Key, available at https://auth.abuse.ch. "
         "Required unless `csv_url` is set.",
     )
-    csv_url: Optional[str] = Field(
+    # Secret: setups that predate `auth_key` put the key in this URL.
+    csv_url: Optional[SecretStr] = Field(
         default=None,
         description="Override of the ThreatFox CSV export URL. "
         "Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, "
@@ -74,7 +75,7 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
     def export_url(self) -> str:
         """URL of the CSV export: `csv_url` if set, otherwise built from `auth_key`."""
         if self.csv_url is not None:
-            return self.csv_url
+            return self.csv_url.get_secret_value()
         # Encode the key so `/`, `?`, `#` or `%` cannot change the URL path.
         return EXPORT_URL_TEMPLATE.format(
             auth_key=quote(self.auth_key.get_secret_value(), safe="")
