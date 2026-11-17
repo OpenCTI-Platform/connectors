@@ -593,43 +593,103 @@ class HatchingTriageSandboxConnector:
         return None
 
     def _search_for_analysis(self, search_query):
-        sample_id = None
+        if not self.use_existing_analysis:
+            return None
 
-        if self.use_existing_analysis:
+        sample_id = None
+        search_paginator = None
+
+        for attempt in range(1, self.max_attempts + 1):
+            status = None
             try:
                 search_paginator = self.triage_client.search(query=search_query, max=1)
-                for search in search_paginator:
-                    existing_status = search["status"]
-                    if existing_status == "reported":
-                        sample_id = search["id"]
-                        self.helper.connector_logger.info(
-                            f"Found existing analysis with id {sample_id} and status {existing_status}."
-                        )
-                    elif existing_status == "pending":
-                        sample_id = search["id"]
-                        self.helper.connector_logger.info(
-                            f"Found existing analysis with id {sample_id} and status {existing_status}."
-                        )
-                        self._wait_for_analysis(sample_id)
-                    break
             except ServerError as e:
                 self.helper.connector_logger.warning(
                     f"Search API returned an error for query '{search_query}': {e}. "
                     "Falling back to submitting a new sample."
                 )
+                return None
+            except RequestException as err:
+                response = getattr(err, "response", None)
+                if response is not None:
+                    status = response.status_code
+                if status is not None and status < 500:
+                    self.helper.connector_logger.warning(
+                        "Search API returned an error, skipping search and falling back to "
+                        "submitting a new sample.",
+                        meta={
+                            "search_query": search_query,
+                            "status": status,
+                        },
+                    )
+                    return None
+                elif attempt == self.max_attempts:
+                    raise
+            else:
+                break
+            self.helper.connector_logger.warning(
+                "Search API request failed, retrying...",
+                meta={
+                    "search_query": search_query,
+                    "status": status,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
+            )
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
+
+        for search in search_paginator:
+            existing_status = search["status"]
+            if existing_status == "reported":
+                sample_id = search["id"]
+                self.helper.connector_logger.info(
+                    f"Found existing analysis with id {sample_id} and status {existing_status}."
+                )
+            elif existing_status == "pending":
+                sample_id = search["id"]
+                self.helper.connector_logger.info(
+                    f"Found existing analysis with id {sample_id} and status {existing_status}."
+                )
+                self._wait_for_analysis(sample_id)
+            break
 
         return sample_id
 
     def _submit_sample(self, url=None, file_name=None, file_content=None):
         sample_json = None
 
-        if file_content is not None:
-            file_obj = io.BytesIO(file_content)
-            sample_json = self.triage_client.submit_sample_file(
-                filename=file_name, file=file_obj
+        for attempt in range(1, self.max_attempts + 1):
+            status = None
+            try:
+                if file_content is not None:
+                    file_obj = io.BytesIO(file_content)
+                    sample_json = self.triage_client.submit_sample_file(
+                        filename=file_name, file=file_obj
+                    )
+                elif url is not None:
+                    sample_json = self.triage_client.submit_sample_url(url=url)
+            except RequestException as err:
+                response = getattr(err, "response", None)
+                status = response.status_code if response is not None else None
+                if status is not None and status < 500:
+                    raise
+                elif attempt == self.max_attempts:
+                    raise
+            else:
+                break
+            self.helper.connector_logger.warning(
+                "Sample submission failed, retrying...",
+                meta={
+                    "file_name": file_name,
+                    "url": url,
+                    "status": status,
+                    "attempt": attempt,
+                    "max_attempts": self.max_attempts,
+                },
             )
-        elif url is not None:
-            sample_json = self.triage_client.submit_sample_url(url=url)
+            if attempt < self.max_attempts:
+                time.sleep(RETRY_DELAY_SECONDS)
 
         sample_id = sample_json["id"]
         sample_status = sample_json["status"]
