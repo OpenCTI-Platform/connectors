@@ -42,15 +42,13 @@ class AttackTechnique:
 class AttackTechniqueLookup:
     """In-memory lookup from normalized technique name -> MITRE technique external_id (T####)."""
 
-    def __init__(
-        self,
-        attack_version: str,
-        enterprise_attack_url: str | None = None,
-        timeout_seconds: int = 30,
-    ):
-        self.attack_version = attack_version
-        self.timeout_seconds = timeout_seconds
-        self.retrievers = self._build_retrievers(enterprise_attack_url)
+    def __init__(self, retrieval_urls: list[str]):
+        """Load the dataset from the first of `retrieval_urls` that provides it.
+
+        Args:
+            retrieval_urls: the URLs of the ATT&CK Enterprise dataset, in the order to try them.
+        """
+        self.retrievers = [JsonRetriever(url=url) for url in retrieval_urls]
         self.retrieval_errors: list[str] = []
 
         # Load attack_techniques on initialization
@@ -73,37 +71,6 @@ class AttackTechniqueLookup:
 
         attack_technique = self.attack_techniques.get(key)
         return attack_technique.mitre_id if attack_technique else None
-
-    def _build_enterprise_attack_url(self) -> str:
-        """Build the raw GitHub URL for the MITRE ATT&CK Enterprise STIX dataset for a given version.
-
-        This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
-        Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`).
-
-        Notes:
-        * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
-        """
-        return (
-            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
-            f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
-        )
-
-    def _build_retrievers(
-        self, enterprise_attack_url: str | None
-    ) -> list[JsonRetriever]:
-        """Build the retrievers to try, in order.
-
-        Without an explicit URL, the versioned dataset is tried first, then the generic one.
-        With an explicit URL, only that URL is tried.
-        """
-        if enterprise_attack_url is None:
-            urls = [self._build_enterprise_attack_url(), DEFAULT_ATTACK_URL]
-        else:
-            urls = [enterprise_attack_url]
-
-        return [
-            JsonRetriever(url=url, timeout_seconds=self.timeout_seconds) for url in urls
-        ]
 
     def _retrieve_attack_json(self) -> tuple[str, Any] | None:
         """Try the retrievers in order.
@@ -184,7 +151,26 @@ class GithubAttackTechniqueLookup(AttackTechniqueLookup):
     """
 
     def __init__(self, attack_version: str):
-        super().__init__(attack_version=attack_version)
+        self.attack_version = attack_version
+        super().__init__(
+            retrieval_urls=[
+                self._build_versioned_attack_url(attack_version),
+                DEFAULT_ATTACK_URL,
+            ]
+        )
+
+    @staticmethod
+    def _build_versioned_attack_url(attack_version: str) -> str:
+        """Build the raw GitHub URL of the Enterprise dataset of a given ATT&CK version.
+
+        This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
+        Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`), to keep mappings
+        deterministic.
+        """
+        return (
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
+            f"enterprise-attack/enterprise-attack-{attack_version}.json"
+        )
 
 
 class CustomAttackTechniqueLookup(AttackTechniqueLookup):
@@ -194,7 +180,4 @@ class CustomAttackTechniqueLookup(AttackTechniqueLookup):
     """
 
     def __init__(self, enterprise_attack_url: str):
-        # The version only builds the GitHub URLs, which are not used with a custom URL.
-        super().__init__(
-            attack_version=None, enterprise_attack_url=enterprise_attack_url
-        )
+        super().__init__(retrieval_urls=[enterprise_attack_url])

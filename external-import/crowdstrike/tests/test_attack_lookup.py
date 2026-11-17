@@ -61,28 +61,37 @@ def requested_urls(mock_get) -> list[str]:
     return [call.args[0] for call in mock_get.call_args_list]
 
 
-def test_without_custom_url_tries_versioned_then_generic_dataset(mock_get):
+def test_lookup_tries_the_given_urls_in_order(mock_get):
+    mock_get.side_effect = [not_found(), ok()]
+
+    lookup = AttackTechniqueLookup(retrieval_urls=[CUSTOM_URL, DEFAULT_ATTACK_URL])
+
+    assert [r.url for r in lookup.retrievers] == [CUSTOM_URL, DEFAULT_ATTACK_URL]
+    assert requested_urls(mock_get) == [CUSTOM_URL, DEFAULT_ATTACK_URL]
+    assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
+
+
+def test_github_lookup_tries_versioned_then_generic_dataset(mock_get):
     mock_get.return_value = ok()
 
-    lookup = AttackTechniqueLookup(attack_version=VERSION)
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert [r.url for r in lookup.retrievers] == [VERSIONED_URL, DEFAULT_ATTACK_URL]
 
 
-def test_with_custom_url_tries_only_that_url(mock_get):
+def test_custom_lookup_tries_only_the_custom_url(mock_get):
     mock_get.return_value = ok()
 
-    lookup = AttackTechniqueLookup(
-        attack_version=VERSION, enterprise_attack_url=CUSTOM_URL
-    )
+    lookup = CustomAttackTechniqueLookup(enterprise_attack_url=CUSTOM_URL)
 
     assert [r.url for r in lookup.retrievers] == [CUSTOM_URL]
+    assert lookup.enterprise_attack_url == CUSTOM_URL
 
 
 def test_versioned_dataset_is_used_when_available(mock_get):
     mock_get.return_value = ok()
 
-    lookup = AttackTechniqueLookup(attack_version=VERSION)
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert requested_urls(mock_get) == [VERSIONED_URL]
     assert lookup.enterprise_attack_url == VERSIONED_URL
@@ -93,7 +102,7 @@ def test_versioned_dataset_is_used_when_available(mock_get):
 def test_missing_versioned_dataset_falls_back_to_generic_dataset(mock_get):
     mock_get.side_effect = [not_found(), ok()]
 
-    lookup = AttackTechniqueLookup(attack_version=VERSION)
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert requested_urls(mock_get) == [VERSIONED_URL, DEFAULT_ATTACK_URL]
     assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
@@ -106,7 +115,7 @@ def test_missing_versioned_dataset_falls_back_to_generic_dataset(mock_get):
 def test_invalid_versioned_payload_falls_back_to_generic_dataset(mock_get):
     mock_get.side_effect = [make_response(200, b"<html></html>"), ok()]
 
-    lookup = AttackTechniqueLookup(attack_version=VERSION)
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
 
@@ -115,7 +124,7 @@ def test_failed_fallback_raises_lookup_error(mock_get):
     mock_get.side_effect = [not_found(), requests.ConnectionError("unreachable")]
 
     with pytest.raises(AttackTechniqueLookupError) as exc_info:
-        AttackTechniqueLookup(attack_version=VERSION)
+        GithubAttackTechniqueLookup(attack_version=VERSION)
 
     assert "HTTP 404" in str(exc_info.value)
     assert "unreachable" in str(exc_info.value)
@@ -125,7 +134,7 @@ def test_failed_custom_url_raises_lookup_error_without_fallback(mock_get):
     mock_get.side_effect = requests.ConnectionError("unreachable")
 
     with pytest.raises(AttackTechniqueLookupError, match="unreachable"):
-        AttackTechniqueLookup(attack_version=VERSION, enterprise_attack_url=CUSTOM_URL)
+        CustomAttackTechniqueLookup(enterprise_attack_url=CUSTOM_URL)
 
     assert requested_urls(mock_get) == [CUSTOM_URL]
 
@@ -133,24 +142,6 @@ def test_failed_custom_url_raises_lookup_error_without_fallback(mock_get):
 def test_non_object_payload_gives_empty_lookup(mock_get):
     mock_get.return_value = make_response(200, b"[]")
 
-    lookup = AttackTechniqueLookup(attack_version=VERSION)
+    lookup = AttackTechniqueLookup(retrieval_urls=[CUSTOM_URL])
 
     assert lookup.attack_techniques == {}
-
-
-def test_github_lookup_tries_versioned_then_generic_dataset(mock_get):
-    mock_get.side_effect = [not_found(), ok()]
-
-    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
-
-    assert [r.url for r in lookup.retrievers] == [VERSIONED_URL, DEFAULT_ATTACK_URL]
-    assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
-
-
-def test_custom_lookup_tries_only_the_custom_url(mock_get):
-    mock_get.return_value = ok()
-
-    lookup = CustomAttackTechniqueLookup(enterprise_attack_url=CUSTOM_URL)
-
-    assert [r.url for r in lookup.retrievers] == [CUSTOM_URL]
-    assert lookup.enterprise_attack_url == CUSTOM_URL
