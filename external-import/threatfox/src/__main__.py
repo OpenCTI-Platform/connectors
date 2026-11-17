@@ -19,6 +19,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import stix2
 import validators
+from connectors_sdk.exceptions.error import DataRetrievalError
 from pycti import (
     Indicator,
     Malware,
@@ -32,7 +33,7 @@ ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
-class ThreatFoxDownloadError(Exception):
+class ThreatFoxDownloadError(DataRetrievalError):
     """Download of the ThreatFox export failed; the message never holds the URL."""
 
 
@@ -266,8 +267,11 @@ class ThreatFox:
 
         self.helper.log_info("Fetching Threat Fox dataset")
         # The export URL contains the Auth-Key, and some urlopen errors
-        # (InvalidURL, unknown url type) quote it. Re-raise without the
-        # original message and context so the logged traceback stays clean.
+        # (InvalidURL, unknown url type) quote it. Re-raise with `from None`
+        # instead of `from err`: chaining would print the original message,
+        # and so the key, in the logged traceback (see "Use `from None`
+        # intentionally, to remove sensitive values" in
+        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
         try:
             with urllib.request.urlopen(
                 self.threatfox_csv_url,

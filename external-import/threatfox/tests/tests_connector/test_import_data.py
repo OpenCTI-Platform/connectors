@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
+from connectors_sdk.exceptions.error import DataRetrievalError
 from src.__main__ import ThreatFox
 
 SECRET_URL = "https://threatfox-api.abuse.ch/v2/files/exports/my-secret-key/recent.csv"
@@ -123,3 +124,15 @@ def test_unparseable_row_is_skipped_and_run_succeeds(connector, bad_row):
     connector.process_row.assert_called_once()
     connector.helper.connector_logger.warning.assert_called_once()
     connector.helper.set_state.assert_called_once()
+
+
+def test_download_error_is_an_sdk_data_retrieval_error(connector):
+    error = urllib.error.HTTPError(SECRET_URL, 401, "Unauthorized", {}, None)
+
+    with patch("urllib.request.urlopen", side_effect=error):
+        with pytest.raises(DataRetrievalError) as raised:
+            list(connector.download_csv())
+
+    assert raised.value.__cause__ is None
+    assert raised.value.__suppress_context__
+    assert "my-secret-key" not in str(raised.value)
