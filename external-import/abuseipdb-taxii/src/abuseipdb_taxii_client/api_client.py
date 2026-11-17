@@ -90,7 +90,7 @@ class AbuseIPDBTaxiiClient(BaseClientApi):
         if not content_type.startswith(TAXII_MEDIA_TYPE):
             raise ProviderApiInvalidResponseError(
                 "AbuseIPDB TAXII response has an unexpected content type"
-            ) from None
+            )
         try:
             payload = response.json()
         except ValueError:
@@ -100,7 +100,7 @@ class AbuseIPDBTaxiiClient(BaseClientApi):
         if not isinstance(payload, dict):
             raise ProviderApiInvalidResponseError(
                 "AbuseIPDB TAXII response is not a JSON object"
-            ) from None
+            )
         return payload
 
     def _get_taxii(
@@ -231,15 +231,23 @@ class AbuseIPDBTaxiiClient(BaseClientApi):
         more = payload.get("more", False)
         next_value = payload.get("next")
 
-        if not isinstance(objects, list) or not all(
-            isinstance(item, dict)
+        if not isinstance(objects, list):
+            raise ProviderApiInvalidResponseError(
+                "AbuseIPDB TAXII response has an invalid objects list"
+            )
+        relayable = [
+            item
+            for item in objects
+            if isinstance(item, dict)
             and isinstance(item.get("type"), str)
             and isinstance(item.get("id"), str)
-            for item in objects
-        ):
-            raise ProviderApiInvalidResponseError(
-                "AbuseIPDB TAXII response contains invalid STIX objects"
+        ]
+        if len(relayable) != len(objects):
+            self.logger.warning(
+                "AbuseIPDB TAXII page has objects without a type or an id; they are skipped",
+                meta={"skipped": len(objects) - len(relayable)},
             )
+            objects = relayable
         if not isinstance(more, bool):
             raise ProviderApiInvalidResponseError(
                 "AbuseIPDB TAXII response has an invalid more flag"

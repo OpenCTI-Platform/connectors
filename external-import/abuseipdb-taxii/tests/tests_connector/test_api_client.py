@@ -110,12 +110,8 @@ def test_more_false_without_objects_is_an_empty_final_page():
     [
         pytest.param(objects_response({"more": True}), id="more_without_next"),
         pytest.param(
-            objects_response({"objects": [{"id": "indicator--1"}], "more": False}),
-            id="object_without_type",
-        ),
-        pytest.param(
-            objects_response({"objects": [{"type": "indicator"}], "more": False}),
-            id="object_without_id",
+            objects_response({"objects": {}, "more": False}),
+            id="objects_not_a_list",
         ),
         pytest.param(
             objects_response({"more": "yes"}),
@@ -142,6 +138,20 @@ def test_invalid_responses_are_rejected(response: requests.Response):
 
     with pytest.raises(ProviderApiInvalidResponseError):
         get_page(client)
+
+
+def test_objects_without_a_type_or_an_id_are_skipped():
+    relayable = {"type": "indicator", "id": "indicator--1"}
+    client = make_client(
+        objects_response(
+            {
+                "objects": [relayable, {"id": "indicator--2"}, {"type": "indicator"}],
+                "more": False,
+            }
+        )
+    )
+
+    assert get_page(client).objects == [relayable]
 
 
 @pytest.mark.parametrize(

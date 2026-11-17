@@ -1,7 +1,7 @@
 {
   "title": "AbuseIPDB TAXII",
   "slug": "abuseipdb-taxii",
-  "description": "AbuseIPDB is a community-driven project dedicated to fighting hackers, spammers, and abusive activity on the internet. Its TAXII 2.1 feeds serve reported IP addresses as ready-made STIX 2.1 Indicators.\n\nThis connector authenticates to the AbuseIPDB TAXII 2.1 API with the account email and an API key, discovers the account's feed (or uses the feed chosen by its Collection ID when the account has several), and relays every STIX object the feed serves into OpenCTI unchanged, page by page, until the feed reports no more data. If a pull is interrupted, the next run resumes from the first page that was not yet handed to OpenCTI.",
+  "description": "AbuseIPDB is a community-driven project dedicated to fighting hackers, spammers, and abusive activity on the internet. Its TAXII 2.1 feeds serve reported IP addresses as ready-made STIX 2.1 Indicators.\n\nThis connector authenticates to the AbuseIPDB TAXII 2.1 API with the account email and an API key, discovers the account's feed (or uses the feed chosen by its Collection ID when the account has several), and relays every STIX object the feed serves into OpenCTI unchanged, page by page, until the feed reports no more data. If a request fails partway through a pull, the next run resumes from the first page that was not yet handed to OpenCTI; on Free and Paid feeds it continues from the position AbuseIPDB keeps.",
   "short_description": "Relays STIX 2.1 Indicators from an AbuseIPDB TAXII 2.1 feed into OpenCTI unchanged, page by page, and resumes an interrupted pull on the next run.",
   "logo": "external-import/abuseipdb-taxii/__metadata__/logo.png",
   "use_cases": [

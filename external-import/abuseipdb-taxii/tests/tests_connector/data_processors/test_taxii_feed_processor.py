@@ -6,6 +6,7 @@ from abuseipdb_taxii_client import TaxiiBadRequestError, TaxiiPage
 from conftest import COLLECTION_ID, CONFIGURED_COLLECTION_ID, make_processor
 from connector import ConnectorState
 from connector.data_processors import TaxiiFeedProcessor
+from connector.data_processors.taxii_feed_processor import ABUSEIPDB_IDENTITY_ID
 from connectors_sdk import ProviderApiServerError
 
 IMPORT_SINCE = "2026-08-19T04:00:00Z"
@@ -14,7 +15,7 @@ MARK_2 = "2026-08-21T15:00:00.123456Z"
 
 IDENTITY = {
     "type": "identity",
-    "id": "identity--5b2a6e3f-2d3c-4c4b-9a0e-1f7f5b6c8d9e",
+    "id": ABUSEIPDB_IDENTITY_ID,
     "name": "AbuseIPDB",
 }
 SIGHTING = {
@@ -46,7 +47,7 @@ def page(
     )
 
 
-def run_pull(processor: TaxiiFeedProcessor) -> list[list[dict[str, Any]]]:
+def run_pull(processor: TaxiiFeedProcessor) -> list[list[Any]]:
     return list(processor.transform(processor.collect()))
 
 
@@ -54,8 +55,10 @@ def final_meta(processor: TaxiiFeedProcessor) -> dict[str, Any]:
     return processor.logger.info.call_args_list[-1].kwargs["meta"]
 
 
-def delivered_ids(bundles: list[list[dict[str, Any]]]) -> set[str]:
-    return {obj["id"] for bundle in bundles for obj in bundle}
+def delivered_ids(bundles: list[list[Any]]) -> set[str]:
+    """IDs of the feed objects handed over, leaving out the author."""
+    ids = {obj["id"] for bundle in bundles for obj in bundle}
+    return ids - {ABUSEIPDB_IDENTITY_ID}
 
 
 def test_drain_relays_every_page_unchanged_and_advances_the_mark():
@@ -68,9 +71,11 @@ def test_drain_relays_every_page_unchanged_and_advances_the_mark():
 
     bundles = run_pull(processor)
 
-    assert len(bundles) == 3
-    for bundle, served in zip(bundles, pages):
-        assert bundle is served.objects
+    assert bundles[0] is pages[0].objects
+    assert bundles[1:] == [
+        [processor.author, *pages[1].objects],
+        [processor.author, *pages[2].objects],
+    ]
     assert processor.client.configured_id == CONFIGURED_COLLECTION_ID
     assert [r["next_cursor"] for r in processor.client.requests] == [None, "c1", "c2"]
     assert processor.client.requests[0]["added_after"] == IMPORT_SINCE
@@ -142,7 +147,7 @@ def test_next_utc_day_replay_is_relayed():
     second = make_processor([page(list(served), added_last=MARK_2)], state=first.state)
     bundles = run_pull(second)
 
-    assert bundles == [served]
+    assert bundles == [[second.author, *served]]
 
 
 def test_interrupted_first_pull_saves_its_start():
@@ -236,6 +241,20 @@ def test_repeated_cursor_delivers_the_page_then_stops():
         "next_cursor": None,
         "limit": 100,
     }
+
+
+@pytest.mark.parametrize(
+    "error",
+    [ProviderApiServerError("server error"), TaxiiBadRequestError("rejected")],
+    ids=["server_error", "bad_request_without_a_saved_cursor"],
+)
+def test_failure_before_any_page_fails_the_run(error: Exception):
+    processor = make_processor([error])
+
+    with pytest.raises(type(error)):
+        run_pull(processor)
+
+    assert processor.state.next_cursor is None
 
 
 def test_unexpected_error_escapes_the_pull():

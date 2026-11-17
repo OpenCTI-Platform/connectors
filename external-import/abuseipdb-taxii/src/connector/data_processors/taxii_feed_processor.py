@@ -3,6 +3,7 @@
 from collections.abc import Generator, Iterable
 from typing import Any
 
+import stix2
 from abuseipdb_taxii_client import (
     AbuseIPDBTaxiiClient,
     TaxiiBadRequestError,
@@ -15,6 +16,8 @@ from connectors_sdk import (
     ConnectorError,
     ProviderApiInvalidResponseError,
 )
+
+ABUSEIPDB_IDENTITY_ID = "identity--89c1ec37-f635-5775-9022-cabeff7cf105"
 
 
 class TaxiiRepeatedCursorError(ProviderApiInvalidResponseError):
@@ -33,6 +36,21 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
     work_name = "AbuseIPDB TAXII feed import"
 
     def post_init(self) -> None:
+        # The feed's objects name this identity in ``created_by_ref`` but the
+        # feed does not send it on every page, so each bundle carries a copy
+        # for OpenCTI to resolve the reference against.
+        self.author = stix2.Identity(
+            id=ABUSEIPDB_IDENTITY_ID,
+            created="2020-01-01T00:00:00.000Z",
+            modified="2020-01-01T00:00:00.000Z",
+            name="AbuseIPDB",
+            description="AbuseIPDB is a project dedicated to helping combat the "
+            "spread of hackers, spammers, and abusive activity on the internet.",
+            identity_class="organization",
+            contact_information="support@abuseipdb.com",
+            sectors=["cybersecurity"],
+            roles=["CTI source provider"],
+        )
         config = self.settings.abuseipdb_taxii
         self.client = AbuseIPDBTaxiiClient(
             api_root=config.api_root,
@@ -89,16 +107,17 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
                 seen_cursors.add(page.next_cursor)
                 cursor = page.next_cursor
 
-    def transform(
-        self, pages: Iterable[TaxiiPage]
-    ) -> Generator[list[dict[str, Any]], None, None]:
+    def transform(self, pages: Iterable[TaxiiPage]) -> Generator[list[Any], None, None]:
         page_count = 0
         objects_submitted = 0
         drained = False
         try:
             for page in pages:
                 if page.objects:
-                    yield page.objects
+                    if any(obj["id"] == ABUSEIPDB_IDENTITY_ID for obj in page.objects):
+                        yield page.objects
+                    else:
+                        yield [self.author, *page.objects]
                 page_count += 1
                 objects_submitted += len(page.objects)
                 if page.more:
@@ -111,10 +130,15 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
         # Only connector errors end the pull here; any other error must reach the
         # SDK so the work fails and no state from this run is saved.
         except ConnectorError as err:
-            if (
+            cursor_refused = (
                 isinstance(err, (TaxiiBadRequestError, TaxiiRepeatedCursorError))
                 and self.state.next_cursor is not None
-            ):
+            )
+            # With no page handed over and no cursor to drop, there is no
+            # position to save: the error reaches the SDK and the run fails.
+            if page_count == 0 and not cursor_refused:
+                raise
+            if cursor_refused:
                 self.state.next_cursor = None
             self.logger.exception(
                 "AbuseIPDB TAXII pull stopped early",

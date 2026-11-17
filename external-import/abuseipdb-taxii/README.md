@@ -25,9 +25,10 @@ reported IP addresses as STIX 2.1 Indicators.
 
 This connector authenticates to the AbuseIPDB TAXII 2.1 API root, discovers the account's
 feed (or uses the feed chosen by its Collection ID when the account has several), and
-relays every STIX object the feed serves into OpenCTI, page by page. The objects
-are passed through unchanged, so they keep the identity, labels and external references
-AbuseIPDB attaches to them. The connector creates no STIX objects of its own.
+relays every STIX object the feed serves into OpenCTI, page by page. The feed's objects
+are passed through unchanged, so they keep the author, labels and external references
+AbuseIPDB attaches to them. The only object the connector adds is a copy of AbuseIPDB's
+own identity, on pages where the feed does not send it (see [Behavior](#behavior)).
 
 ## Installation
 
@@ -151,15 +152,23 @@ graph LR
   means either that nothing new matches the feed or that the day's cap is used up. The
   connector cannot tell which, treats both as the end of the pull, does not track the cap,
   and does not wait for the next UTC day: the next scheduled run simply asks again.
+- **Author.** The feed's objects name AbuseIPDB's identity as their author, but the feed
+  sends that identity object only on the first page of a pull, and on Free and Paid feeds
+  once per UTC day. So that OpenCTI can always resolve the author, the connector adds a
+  copy of that identity, with the same ID, to every bundle whose page does not carry it.
 - **High-water mark.** The first run saves the start resolved from
-  `ABUSEIPDB_TAXII_IMPORT_SINCE`, so a first pull that is interrupted, or a container that
-  restarts before a pull completes, begins again from the same start. After that, the
+  `ABUSEIPDB_TAXII_IMPORT_SINCE`. Once a run has ended and saved its state, a first pull
+  that was interrupted, or a container that restarts before a pull completes, begins
+  again from the same start. A process killed during the very first run saves nothing,
+  so a relative start is resolved again. After that, the
   saved timestamp advances only when a pull reaches `more: false`, and only from the
   server's `X-TAXII-Date-Added-Last` header. If the header is missing or unreadable, the
   previous value is kept. The connector never substitutes its own clock for it.
 - **Interrupted pulls.** State is saved once, at the end of a run. If a request still fails
   after its retries, the connector logs the error, ends the run, and saves the cursor of
-  the first page that was not yet handed to OpenCTI; the next run resumes there. A position
+  the first page that was not yet handed to OpenCTI; the next run resumes there. A failure
+  before any page was handed over (wrong credentials, no usable feed, a server that does
+  not answer) fails the run instead, and nothing is saved. A position
   is recorded only after its page was handed to OpenCTI. If the process is killed, nothing
   from that run is saved, so the next run starts again from the last saved position (the
   timestamp, or the cursor an earlier run recorded): pages already sent are sent again and
@@ -174,6 +183,8 @@ graph LR
   timeouts before the response arrives, and HTTP 408, 429, 500, 502, 503 and 504, with
   exponential backoff. A response that breaks off mid-body is not retried. The server may
   rate-limit requests; the connector honors `Retry-After`. There is no retry setting.
+- **Invalid objects.** An object without a `type` or an `id` cannot be relayed. It is
+  skipped, the number skipped is logged as a warning, and the rest of the page is sent.
 - **Works.** A work is opened only when the feed serves objects, with one bundle per page.
   A pull that stops early is reported in the connector log, not on the work.
 - **Run summary.** At `info` level each run logs `pages`, `objects_submitted` and
