@@ -13,7 +13,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | Determines the verbosity of the logs. |
 | THREATFOX_AUTH_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | abuse.ch Auth-Key, available at https://auth.abuse.ch. Required unless `csv_url` is set. |
-| THREATFOX_CSV_URL | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. |
+| THREATFOX_CSV_URL | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. The retired public URL (https://threatfox.abuse.ch/export/...) is ignored. |
 | THREATFOX_IMPORT_OFFLINE | `boolean` |  | boolean |  | `true` | Create records for indicators that are offline. |
 | THREATFOX_CREATE_INDICATORS | `boolean` |  | boolean |  | `true` | Create indicators in addition to observables. |
 | THREATFOX_DEFAULT_X_OPENCTI_SCORE | `integer` |  | integer |  | `50` | The default x_opencti_score to use. |

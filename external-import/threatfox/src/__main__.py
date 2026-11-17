@@ -48,6 +48,12 @@ class ThreatFox:
         self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
 
         # Extra config
+        if self.config.threatfox.has_legacy_csv_url:
+            self.helper.connector_logger.warning(
+                "THREATFOX_CSV_URL points to the retired public export and is "
+                "ignored: the export URL is built from THREATFOX_AUTH_KEY. "
+                "Remove THREATFOX_CSV_URL from the configuration."
+            )
         self.threatfox_csv_url = self.config.threatfox.export_url
         self.threatfox_import_offline = self.config.threatfox.import_offline
         self.threatfox_interval = self.config.threatfox.interval

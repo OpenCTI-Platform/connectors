@@ -60,7 +60,7 @@
     },
     "THREATFOX_CSV_URL": {
       "default": null,
-      "description": "Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`.",
+      "description": "Override of the ThreatFox CSV export URL. Defaults to https://threatfox-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, built from `auth_key`. The retired public URL (https://threatfox.abuse.ch/export/...) is ignored.",
       "format": "password",
       "minLength": 1,
       "type": "string",

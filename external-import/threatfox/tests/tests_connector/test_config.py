@@ -37,6 +37,7 @@ def test_csv_url_takes_precedence_for_existing_setups():
 
     config = _ConfigLoaderThreatFox(csv_url=url, auth_key="other-key")
 
+    assert not config.has_legacy_csv_url
     assert config.export_url == url
 
 
@@ -47,6 +48,27 @@ def test_csv_url_is_hidden_when_dumped():
 
     assert "legacy-key" not in str(config)
     assert "legacy-key" not in str(config.model_dump(mode="json"))
+
+
+@pytest.mark.parametrize(
+    "legacy_url",
+    [
+        "https://threatfox.abuse.ch/export/csv/recent/",
+        "http://threatfox.abuse.ch/export/csv/full/",
+    ],
+)
+def test_legacy_csv_url_falls_back_to_auth_key(legacy_url):
+    config = _ConfigLoaderThreatFox(csv_url=legacy_url, auth_key="my-secret-key")
+
+    assert config.has_legacy_csv_url
+    assert config.export_url == (
+        "https://threatfox-api.abuse.ch/v2/files/exports/my-secret-key/recent.csv"
+    )
+
+
+def test_legacy_csv_url_without_auth_key_is_rejected():
+    with pytest.raises(ValidationError, match="retired public export"):
+        _ConfigLoaderThreatFox(csv_url="https://threatfox.abuse.ch/export/csv/recent/")
 
 
 def test_missing_auth_key_is_rejected():
