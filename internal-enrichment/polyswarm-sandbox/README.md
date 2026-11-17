@@ -43,6 +43,7 @@ The connector sends data to PolySwarm only when it enriches an artifact or a URL
 - **Sandbox network access.** With `POLYSWARM_SANDBOX_NETWORK_ENABLED=true` (the default), the sample can reach the internet from the sandbox while it runs.
 - **AI summaries (opt-in).** With `POLYSWARM_LLM_REPORT_ENABLED=true`, PolySwarm writes a summary from the scan and sandbox results it already holds. Nothing more is sent from OpenCTI.
 - **Malware profiles (opt-in).** With `POLYSWARM_POLYKG_API_URL` set, the detected malware family name is sent to that URL, together with your PolySwarm API key for authentication.
+- **User-Agent.** Every request to PolySwarm identifies the connector as `PolySwarm-OpenCTI-Sandbox/<connector version> (OpenCTI)`.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements

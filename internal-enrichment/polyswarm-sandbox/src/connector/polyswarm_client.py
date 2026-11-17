@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 import requests
-from connector.polyswarm import PolyswarmAPI
+from connector.polyswarm import PolyswarmAPI, apply_user_agent
 from polyswarm_api.exceptions import NotFoundException, PolyswarmException
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -222,6 +222,7 @@ class PolySwarmClient:
         self.api = PolyswarmAPI(
             key=api_key, uri=api_url, community=community, timeout=timeout
         )
+        apply_user_agent(self.api.session)
 
         # PROD-01 + PROD-09: Shared session with retry and connection pooling.
         # Used for non-SDK HTTP calls (LLM report download, PDF download).
@@ -356,6 +357,7 @@ class PolySwarmClient:
         Connection pooling (pool_maxsize=10) avoids socket churn under load.
         """
         session = requests.Session()
+        apply_user_agent(session)
         retry_strategy = Retry(
             total=retries,
             backoff_factor=backoff_factor,

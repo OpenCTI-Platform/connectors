@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
+from connector.polyswarm import USER_AGENT
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
@@ -175,7 +176,7 @@ class StixBuilder:
             StixBuilder._POLYKG_CIRCUIT_OPENED_AT = None
 
         try:
-            headers: dict = {}
+            headers: dict = {"User-Agent": USER_AGENT}
             if self._polyswarm_api_key:
                 headers["Authorization"] = f"Bearer {self._polyswarm_api_key}"
 
