@@ -603,7 +603,9 @@ class HatchingTriageSandboxConnector:
             status = None
             try:
                 # Consume paginator to force API call
-                search_paginator = list(self.triage_client.search(query=search_query, max=1))
+                search_paginator = list(
+                    self.triage_client.search(query=search_query, max=1)
+                )
             except (json.JSONDecodeError, ServerError, RequestException) as err:
                 response = getattr(err, "response", None)
                 if response is not None:
