@@ -19,7 +19,7 @@ from external_import_connector import ConnectorSettings
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -33,7 +33,7 @@ from external_import_connector import ConnectorSettings
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {},
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -84,7 +84,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,
@@ -105,7 +105,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "urlhaus": {
-                    "csv_url": "https://urlhaus.abuse.ch/downloads/csv_recent/",
+                    "auth_key": "test-auth-key",
                     "default_x_opencti_score": 80,
                     "import_offline": True,
                     "interval": 3,

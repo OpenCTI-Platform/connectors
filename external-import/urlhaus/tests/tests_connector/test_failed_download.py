@@ -5,10 +5,12 @@ import requests
 from external_import_connector.client_api import ConnectorClient
 from external_import_connector.connector import ConnectorState, ConnectorURLhaus
 
+SECRET_URL = "https://urlhaus-api.abuse.ch/v2/files/exports/my-secret-key/recent.csv"
+
 
 def _client(get_side_effect=None, get_return=None):
     config = MagicMock()
-    config.urlhaus.csv_url = "https://urlhaus.abuse.ch/downloads/csv_recent/"
+    config.urlhaus.export_url = SECRET_URL
     config.urlhaus.import_offline = True
     client = ConnectorClient(MagicMock(), config, ConnectorState())
     client.session = MagicMock()

@@ -1,5 +1,7 @@
 import warnings
 from datetime import timedelta
+from typing import Optional
+from urllib.parse import quote, urlparse
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -7,7 +9,15 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
+
+EXPORT_URL_TEMPLATE = (
+    "https://urlhaus-api.abuse.ch/v2/files/exports/{auth_key}/recent.csv"
+)
+# Public feeds retired by abuse.ch (they answer 410 Gone), such as the
+# former default https://urlhaus.abuse.ch/downloads/csv_recent/.
+LEGACY_EXPORT_HOST = "urlhaus.abuse.ch"
+LEGACY_EXPORT_PATH_PREFIX = "/downloads/"
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -39,9 +49,18 @@ class UrlhausConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `UrlhausConnector`.
     """
 
-    csv_url: str = Field(
-        description="URLhaus CSV feed URL.",
-        default="https://urlhaus.abuse.ch/downloads/csv_recent/",
+    auth_key: Optional[SecretStr] = Field(
+        description="abuse.ch Auth-Key, available at https://auth.abuse.ch. "
+        "Required unless `csv_url` is set.",
+        default=None,
+    )
+    # Secret: setups that predate `auth_key` put the key in this URL.
+    csv_url: Optional[SecretStr] = Field(
+        description="Override of the URLhaus CSV export URL. "
+        "Defaults to https://urlhaus-api.abuse.ch/v2/files/exports/<AUTH-KEY>/recent.csv, "
+        "built from `auth_key`. The retired public URL "
+        "(https://urlhaus.abuse.ch/downloads/...) is ignored.",
+        default=None,
     )
     default_x_opencti_score: int = Field(
         description="Default x_opencti_score for imported indicators.", default=80
@@ -59,6 +78,48 @@ class UrlhausConfig(BaseConfigModel):
         description="Create relationships to existing threats based on URL tags.",
         default=True,
     )
+
+    @model_validator(mode="after")
+    def _require_auth_key_or_csv_url(self) -> "UrlhausConfig":
+        if self.auth_key is None and self.has_legacy_csv_url:
+            raise ValueError(
+                "URLHAUS_AUTH_KEY is required: URLHAUS_CSV_URL points to the "
+                "retired public feed, which abuse.ch no longer serves. Get an "
+                "Auth-Key at https://auth.abuse.ch and remove URLHAUS_CSV_URL."
+            )
+        if self.auth_key is None and self.csv_url is None:
+            raise ValueError(
+                "URLHAUS_AUTH_KEY is required: abuse.ch requires an Auth-Key to "
+                "download URLhaus exports. Get one at https://auth.abuse.ch."
+            )
+        if self.has_legacy_csv_url:
+            warnings.warn(
+                "URLHAUS_CSV_URL points to the retired public feed and is ignored: "
+                "the export URL is built from URLHAUS_AUTH_KEY. Remove "
+                "URLHAUS_CSV_URL from the configuration."
+            )
+        return self
+
+    @property
+    def has_legacy_csv_url(self) -> bool:
+        """True when `csv_url` points to a retired public feed."""
+        if self.csv_url is None:
+            return False
+        url = urlparse(self.csv_url.get_secret_value())
+        return url.hostname == LEGACY_EXPORT_HOST and url.path.startswith(
+            LEGACY_EXPORT_PATH_PREFIX
+        )
+
+    @property
+    def export_url(self) -> str:
+        """URL of the CSV export: `csv_url` if set (and not a retired public
+        feed), otherwise built from `auth_key`."""
+        if self.csv_url is not None and not self.has_legacy_csv_url:
+            return self.csv_url.get_secret_value()
+        # Encode the key so `/`, `?`, `#` or `%` cannot change the URL path.
+        return EXPORT_URL_TEMPLATE.format(
+            auth_key=quote(self.auth_key.get_secret_value(), safe="")
+        )
 
 
 class ConnectorSettings(BaseConnectorSettings):

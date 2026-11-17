@@ -50,7 +50,7 @@ class ConnectorClient:
         """
         # Errors are not swallowed here: a failed download or an unreadable
         # file must reach process_message() and mark the work in error.
-        response = self._request_data(self.config.urlhaus.csv_url, params=params)
+        response = self._request_data(self.config.urlhaus.export_url, params=params)
         file = StringIO(response.text)
         rdr = csv.reader(filter(lambda row: row[0] != "#", file))
 
