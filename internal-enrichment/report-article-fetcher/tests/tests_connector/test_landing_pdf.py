@@ -285,8 +285,11 @@ def test_an_unreadable_pdf_keeps_the_landing_page_alone(landing, monkeypatch):
 
 
 @pytest.mark.parametrize("name", list(LONG_PAGES))
-def test_long_articles_never_follow_a_pdf(name):
+def test_real_articles_never_follow_a_pdf(name):
     html = (FIXTURES / f"{name}.html").read_text(encoding="utf-8")
     article = extract_article(LONG_PAGES[name], html)
-    # Above the landing threshold: the PDF step does not even look for a link.
-    assert len(article.text) >= 4000
+    # Above the landing threshold the PDF step does not even look for a link;
+    # a short news article (bleepingcomputer) links no report PDF of its own.
+    assert (
+        len(article.text) >= 4000 or find_report_pdf(article, LONG_PAGES[name]) is None
+    )
