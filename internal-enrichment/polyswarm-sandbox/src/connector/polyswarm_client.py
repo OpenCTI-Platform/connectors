@@ -958,6 +958,8 @@ class PolySwarmClient:
         Separated from ``create_llm_report`` so callers can fire creation early
         (as soon as scan/sandbox succeeds) and defer polling until other work finishes.
         Uses monotonic clock to avoid wall-clock drift affecting the timeout.
+        A quota or rate error is raised as a PolySwarmAPIError; other
+        failures return None.
         """
         if not llm_task_id:
             return None
@@ -1007,16 +1009,32 @@ class PolySwarmClient:
             )
             return None
 
+        except UsageLimitsExceededException as e:
+            raise self._quota_exhausted_error("LLM report poll") from e
         except (OSError, requests.RequestException, AttributeError) as e:
+            self._raise_if_quota_or_rate(e, "LLM report poll")
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] LLM report collection failed: {str(e)}"
             )
             return None
         except Exception as e:
+            self._raise_if_quota_or_rate(e, "LLM report poll")
             self.helper.connector_logger.warning(
                 f"[POLYSWARM] LLM report collection unexpected error: {type(e).__name__}: {str(e)}"
             )
             return None
+
+    @staticmethod
+    def _raise_if_quota_or_rate(error: Exception, operation: str) -> None:
+        """Raise a quota (402) or rate (429) status as a PolySwarmAPIError."""
+        code = _status_code_of(error)
+        if code in (402, 429):
+            category, detail, recs = _HTTP_ERROR_MAP[code]
+            raise PolySwarmAPIError(
+                category=f"{category} ({operation})",
+                detail=f"{detail} (HTTP {code} during {operation})",
+                recommendations=recs,
+            ) from error
 
     def close(self) -> None:
         """Close the underlying requests session."""

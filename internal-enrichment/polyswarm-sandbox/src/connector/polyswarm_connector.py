@@ -1391,9 +1391,15 @@ class PolySwarmConnector(HashLookupMixin):
                 f"[CONNECTOR] Collecting {len(llm_task_ids)} LLM report(s): {list(llm_task_ids.keys())}"
             )
             for source, llm_id in llm_task_ids.items():
-                report_text = self.polyswarm_client.collect_llm_report(
-                    llm_id, timeout=llm_timeout
+                # A quota or rate error is kept for the quota note, and the
+                # remaining reports are not polled
+                report_text = self._request_report(
+                    self.polyswarm_client.collect_llm_report,
+                    llm_id,
+                    timeout=llm_timeout,
                 )
+                if self._report_quota_error() is not None and not report_text:
+                    break
                 if report_text:
                     llm_reports[source] = report_text
                     self.helper.connector_logger.info(

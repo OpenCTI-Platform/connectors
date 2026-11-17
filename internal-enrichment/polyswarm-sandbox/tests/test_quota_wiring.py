@@ -331,6 +331,53 @@ class TestQuotaNotSwallowed:
         assert self._titles(c) == ["API Rate Limit Exceeded (LLM)"]
 
 
+class TestLlmCollectQuota:
+    """A quota or rate error while collecting an LLM report is not hidden."""
+
+    @pytest.mark.parametrize(
+        "error,category",
+        [
+            (_usage_limits, "API Quota Exhausted"),
+            (lambda: _status_error(402), "API Quota Exceeded"),
+            (lambda: _status_error(429), "API Rate Limit Exceeded"),
+        ],
+    )
+    def test_collect_raises_quota_errors(self, error, category):
+        client = _quota_client()
+        client.api.llm_report_get = MagicMock(side_effect=error())
+        with pytest.raises(PolySwarmAPIError) as exc_info:
+            client.collect_llm_report("llm-1", timeout=10, poll_interval=0)
+        assert exc_info.value.category.startswith(category)
+
+    def test_collect_other_errors_stay_soft(self):
+        client = _quota_client()
+        client.api.llm_report_get = MagicMock(side_effect=_status_error(500))
+        assert client.collect_llm_report("llm-1", timeout=10, poll_interval=0) is None
+
+    def test_collect_quota_gives_the_quota_note_not_unavailable(self):
+        c = TestQuotaNotSwallowed()._artifact_connector(llm_report_enabled=True)
+        c._local.report_quota_error = None
+        client = c.polyswarm_client
+        client.api.llm_report_get = MagicMock(side_effect=_usage_limits())
+        reports = c._phase_reports(
+            {"id": "artifact--1"},
+            None,
+            None,
+            None,
+            {},
+            {},
+            {"cape": "llm-cape", "triage": "llm-triage"},
+            "s",
+            None,
+        )
+        assert reports == {}
+        titles = [call.args[1] for call in c._send_error_note.call_args_list]
+        assert len(titles) == 1
+        assert titles[0].startswith("API Quota Exhausted")
+        # The second report is not polled after the quota error
+        assert client.api.llm_report_get.call_count == 1
+
+
 class TestSettings:
     def test_quota_warn_below_default_and_env(self, monkeypatch):
         ConnectorSettings = pytest.importorskip(
