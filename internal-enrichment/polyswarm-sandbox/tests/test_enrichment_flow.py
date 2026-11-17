@@ -117,6 +117,18 @@ class TestTlpCheck:
         assert result["status"] == "skipped"
         c.artifact_handler.download_artifact.assert_not_called()
 
+    @pytest.mark.parametrize("definition", ["TLP:RED", "tlp:red"])
+    def test_lowercase_tlp_entity_marking_is_skipped(self, definition):
+        """A lower-case definition_type on the entity's marking is still a TLP."""
+        c = make_connector()
+        opencti_entity = _opencti_entity()
+        opencti_entity["objectMarking"] = [
+            {"definition_type": "tlp", "definition": definition}
+        ]
+        result = c._enrich_file(ENTITY_ID, _entity(), opencti_entity, [])
+        assert result["status"] == "skipped"
+        c.artifact_handler.download_artifact.assert_not_called()
+
     @pytest.mark.parametrize("tlp, skipped", [("TLP:RED", True), ("TLP:GREEN", False)])
     def test_tlp_check_without_stix_objects(self, tlp, skipped):
         """An empty stix_objects list must not bypass the TLP limit (#8351)."""

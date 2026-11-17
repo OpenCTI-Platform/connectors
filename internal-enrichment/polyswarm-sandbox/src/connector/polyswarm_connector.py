@@ -452,12 +452,13 @@ class PolySwarmConnector(HashLookupMixin):
             # present, from the bundle's TLP marking definitions the entity
             # references. An entity with no resolvable marking is allowed, as
             # on the file path.
+            # Entity markings are read like bundled ones: TLP in any case
             tlp_levels = [
-                m["definition"]
+                tlp
                 for m in opencti_entity.get("objectMarking") or []
                 if isinstance(m, dict)
-                and m.get("definition_type") == "TLP"
-                and m.get("definition")
+                for tlp in [tlp_of_marking(m)]
+                if tlp
             ]
             by_id = dict(WELL_KNOWN_TLP_IDS)
             for o in stix_objects or []:
