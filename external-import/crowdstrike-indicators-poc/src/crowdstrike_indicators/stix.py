@@ -22,7 +22,9 @@ class CrowdStrikeStix2Indicator(Indicator):
     field. The fields no native property holds are kept as is in an
     ``x_crowdstrike_<field>`` property, named after the API field without its
     leading underscore. Fields the record model does not declare are kept
-    together in ``x_crowdstrike_extra``.
+    together in ``x_crowdstrike_extra``. The actors an enriched indicator
+    resolved to are kept, as the actors API returned them, in
+    ``x_crowdstrike_actor_objects_list``.
 
     ``id``, ``indicator``, ``type``, ``last_updated``, ``published_date`` and
     ``deleted`` are held natively and have no ``x_`` property.
@@ -48,6 +50,7 @@ class CrowdStrikeStix2Indicator(Indicator):
             ("x_crowdstrike_domain_types", _string_list()),
             ("x_crowdstrike_ip_address_types", _string_list()),
             ("x_crowdstrike_labels", ListProperty(DictionaryProperty())),
+            ("x_crowdstrike_actor_objects_list", ListProperty(DictionaryProperty())),
             ("x_crowdstrike_extra", DictionaryProperty()),
         ]
     )

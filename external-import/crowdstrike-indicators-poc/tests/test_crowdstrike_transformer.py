@@ -9,10 +9,13 @@ from unittest import mock
 
 import pytest
 import stix2
-from conftest import load_fixture, make_indicator
+from conftest import load_fixture, make_actor, make_indicator
 from crowdstrike_indicators import transformer as transformer_module
 from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.models import (
+    CrowdStrikeIndicator,
+    EnrichedCrowdStrikeIndicator,
+)
 from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
 from crowdstrike_indicators.transformer import (
     CROWDSTRIKE_NAMESPACE,
@@ -46,14 +49,14 @@ T1 = datetime(2026, 11, 1, 10, 0, 0, tzinfo=UTC)
 T2 = datetime(2026, 11, 2, 10, 0, 0, tzinfo=UTC)
 
 
-def record(**fields: Any) -> CrowdStrikeIndicator:
+def record(**fields: Any) -> EnrichedCrowdStrikeIndicator:
     """Build a validated record; ``fields`` override the API fields."""
     raw = make_indicator(1, second=int(T2.timestamp()))
     raw.update(fields)
-    return CrowdStrikeIndicator.model_validate(raw)
+    return EnrichedCrowdStrikeIndicator.model_validate(raw)
 
 
-def convert(item: CrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
+def convert(item: EnrichedCrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
     return CrowdStrikeIndicatorTransformer().convert(item)
 
 
@@ -80,7 +83,7 @@ KILL_CHAIN_BY_PHASE = {
 NATIVELY_HELD = {"id", "indicator", "type", "last_updated", "published_date", "deleted"}
 
 
-def rebuild(indicator: CrowdStrikeStix2Indicator) -> CrowdStrikeIndicator:
+def rebuild(indicator: CrowdStrikeStix2Indicator) -> EnrichedCrowdStrikeIndicator:
     """Recover the CrowdStrike record from native and ``x_crowdstrike_*`` data."""
     (reference,) = [
         ref for ref in indicator.external_references if ref.source_name == "CrowdStrike"
@@ -101,12 +104,12 @@ def rebuild(indicator: CrowdStrikeStix2Indicator) -> CrowdStrikeIndicator:
             KILL_CHAIN_BY_PHASE[phase.phase_name]
             for phase in indicator.kill_chain_phases
         ]
-    for name, field in CrowdStrikeIndicator.model_fields.items():
+    for name, field in EnrichedCrowdStrikeIndicator.model_fields.items():
         api_name = field.alias or name
         if name not in NATIVELY_HELD and x_property_name(api_name) in indicator:
             data[api_name] = indicator[x_property_name(api_name)]
     data.update(indicator.get(X_EXTRA, {}))
-    return CrowdStrikeIndicator.model_validate(data)
+    return EnrichedCrowdStrikeIndicator.model_validate(data)
 
 
 def comparable(item: CrowdStrikeIndicator) -> dict[str, Any]:
@@ -364,13 +367,13 @@ def test_crowdstrike_reference():
 
 @pytest.mark.parametrize("raw", SAMPLE_ROWS, ids=SAMPLE_IDS)
 def test_sample_row_round_trips(raw):
-    item = CrowdStrikeIndicator.model_validate(raw)
+    item = EnrichedCrowdStrikeIndicator.model_validate(raw)
 
     assert comparable(rebuild(convert(item))) == comparable(item)
 
 
 def test_round_trip_survives_json_serialization():
-    item = CrowdStrikeIndicator.model_validate(SAMPLE_ROWS[0])
+    item = EnrichedCrowdStrikeIndicator.model_validate(SAMPLE_ROWS[0])
     serialized = convert(item).serialize()
 
     data = json.loads(serialized)
@@ -381,7 +384,7 @@ def test_round_trip_survives_json_serialization():
 
 def test_every_model_field_is_held_natively_or_declared():
     declared = set(CrowdStrikeStix2Indicator._properties)
-    for name, field in CrowdStrikeIndicator.model_fields.items():
+    for name, field in EnrichedCrowdStrikeIndicator.model_fields.items():
         x_name = x_property_name(field.alias or name)
         if name in NATIVELY_HELD_FIELDS:
             assert x_name not in declared, name
@@ -480,3 +483,70 @@ def test_result_goes_into_a_bundle():
     objects = [convert(CrowdStrikeIndicator.model_validate(raw)) for raw in SAMPLE_ROWS]
 
     assert len(stix2.Bundle(objects=objects).objects) == len(SAMPLE_ROWS)
+
+
+# --- Resolved actors ---------------------------------------------------------
+
+SALTY = make_actor(
+    "SALTY SPIDER",
+    actor_id=1,
+    first_activity_date=1700000005,
+    known_as="Salty",
+    motivations=[{"id": 1001, "slug": "criminal", "value": "Criminal"}],
+)
+WIZARD = make_actor("WIZARD SPIDER", actor_id=2, foo="bar")
+
+
+def test_resolved_actors_are_kept_with_their_api_fields():
+    result = convert(record(actors=["WIZARDSPIDER"], actor_objects_list=[WIZARD]))
+
+    assert result.x_crowdstrike_actor_objects_list == [WIZARD]
+    assert X_EXTRA not in result
+
+
+def test_actor_dates_are_kept_in_json_form():
+    result = convert(record(actors=["SALTYSPIDER"], actor_objects_list=[SALTY]))
+
+    [actor] = result.x_crowdstrike_actor_objects_list
+    assert actor["first_activity_date"] == "2023-11-14T22:13:25Z"
+    assert actor["motivations"] == SALTY["motivations"]
+
+
+def test_no_resolved_actor_gives_no_property():
+    result = convert(record(actors=["SALTYSPIDER"], actor_objects_list=[]))
+
+    assert "x_crowdstrike_actor_objects_list" not in result
+    assert X_EXTRA not in result
+
+
+def test_round_trip_with_actors():
+    item = record(
+        actors=["SALTYSPIDER", "WIZARDSPIDER"], actor_objects_list=[SALTY, WIZARD]
+    )
+
+    rebuilt = rebuild(convert(item))
+
+    assert rebuilt.actor_objects_list == item.actor_objects_list
+    assert comparable(rebuilt) == comparable(item)
+
+
+def test_round_trip_with_actors_through_json():
+    item = record(
+        actors=["SALTYSPIDER", "WIZARDSPIDER"], actor_objects_list=[SALTY, WIZARD]
+    )
+    data = json.loads(convert(item).serialize())
+    parsed = CrowdStrikeStix2Indicator(id=data.pop("id"), **data)
+
+    rebuilt = rebuild(parsed)
+
+    assert rebuilt.actor_objects_list == item.actor_objects_list
+    assert comparable(rebuilt) == comparable(item)
+
+
+def test_plain_indicator_record_still_converts():
+    plain = CrowdStrikeIndicator.model_validate(make_indicator(1, actors=["X"]))
+    item = EnrichedCrowdStrikeIndicator.model_validate(
+        plain.model_dump(by_alias=True, exclude_unset=True)
+    )
+
+    assert "x_crowdstrike_actor_objects_list" not in convert(item)
