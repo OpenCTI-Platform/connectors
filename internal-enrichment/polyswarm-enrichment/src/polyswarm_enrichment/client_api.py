@@ -10,7 +10,11 @@ from urllib.parse import urlparse, urlsplit, urlunsplit
 
 import requests
 from dateutil import parser as dateutil_parser
-from polyswarm_enrichment.polyswarm_client import PolyswarmAPI, polyswarm_exceptions
+from polyswarm_enrichment.polyswarm_client import (
+    PolyswarmAPI,
+    polyswarm_exceptions,
+    polyswarm_headers,
+)
 from polyswarm_enrichment.quota import is_quota_exhausted_error
 
 # OpenCTI entity types enriched by URL search (and IOC search for IPs/domains)
@@ -1192,10 +1196,12 @@ class ConnectorClient:
     # ------------------------------------------------------------------
 
     def _polykg_headers(self) -> dict:
-        """Auth headers for polykg requests."""
+        """User-Agent and auth headers for polykg requests."""
         if self.polyswarm_api_key:
-            return {"Authorization": f"Bearer {self.polyswarm_api_key}"}
-        return {}
+            return polyswarm_headers(
+                {"Authorization": f"Bearer {self.polyswarm_api_key}"}
+            )
+        return polyswarm_headers()
 
     def _check_polykg_connectivity(self) -> None:
         """Log whether the polykg profile endpoint is reachable."""

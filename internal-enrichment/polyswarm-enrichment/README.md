@@ -560,6 +560,7 @@ What leaves your environment, and when. The connector sends data to PolySwarm on
 - **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
 - **Pivots (opt-in, off by default).** With `POLYSWARM_PIVOT_IMPHASH_MAX` above 0, the file's imphash (a 32 character hash of its import table, as reported by PolySwarm) is sent back to PolySwarm as a search value. With `POLYSWARM_PIVOT_TTP_MAX` above 0, the MITRE ATT&CK id of an enriched Attack-Pattern (for example `T1486`) is sent as a search value. Nothing else about the file or the Attack-Pattern is sent, and Attack-Patterns without an ATT&CK id are never sent. Both are searches, so each one spends API lookups from your quota.
 - **YARA hunting (opt-in).** With `POLYSWARM_YARA_HUNT_ENABLED=true`, the full YARA rule text of each Indicator you enrich is sent to PolySwarm, and a historical hunt is created in your PolySwarm account (it spends hunt quota and stays in the account until you delete it). Indicators above `CONNECTOR_MAX_TLP`, and Indicators carrying a marking the connector can't resolve to a TLP (unless `CONNECTOR_MAX_TLP` is `TLP:RED`), are never sent. Nothing is sent for non-YARA Indicators.
+- **User-Agent.** Every request to PolySwarm identifies the connector with the User-Agent `PolySwarm-OpenCTI-Enrichment/<version> (OpenCTI)`, where `<version>` is the OpenCTI release the connector is built for.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ---
