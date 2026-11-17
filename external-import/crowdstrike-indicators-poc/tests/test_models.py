@@ -3,7 +3,12 @@
 from datetime import UTC, datetime
 
 import pytest
-from crowdstrike_indicators.models import CrowdStrikeIndicator, CrowdStrikeLabel
+from crowdstrike_indicators.models import (
+    CrowdStrikeActor,
+    CrowdStrikeIndicator,
+    CrowdStrikeLabel,
+    EnrichedCrowdStrikeIndicator,
+)
 from pydantic import ValidationError
 
 MINIMAL = {
@@ -120,3 +125,74 @@ def test_labels():
 def test_label_without_name_is_invalid():
     with pytest.raises(ValidationError):
         CrowdStrikeIndicator.model_validate({**MINIMAL, "labels": [{"x": 1}]})
+
+
+# --- Actors ----------------------------------------------------------------
+
+MINIMAL_ACTOR = {"id": 123, "name": "SALTY SPIDER"}
+
+
+def test_minimal_actor_is_valid():
+    actor = CrowdStrikeActor.model_validate(MINIMAL_ACTOR)
+    assert actor.id == 123
+    assert actor.name == "SALTY SPIDER"
+
+
+@pytest.mark.parametrize("missing", ["id", "name"])
+def test_actor_missing_required_field_is_invalid(missing):
+    raw = {k: v for k, v in MINIMAL_ACTOR.items() if k != missing}
+    with pytest.raises(ValidationError):
+        CrowdStrikeActor.model_validate(raw)
+
+
+def test_unknown_actor_field_is_kept_on_serialization():
+    actor = CrowdStrikeActor.model_validate({**MINIMAL_ACTOR, "foo": {"bar": 1}})
+    assert _dump(actor)["foo"] == {"bar": 1}
+
+
+def test_actor_activity_dates_are_aware_datetimes():
+    actor = CrowdStrikeActor.model_validate(
+        {**MINIMAL_ACTOR, "first_activity_date": 1700000005, "last_activity_date": 0}
+    )
+    assert actor.first_activity_date == datetime(2023, 11, 14, 22, 13, 25, tzinfo=UTC)
+    assert actor.last_activity_date == datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def test_actor_lists_of_unknown_shape_are_kept_verbatim():
+    raw = {
+        **MINIMAL_ACTOR,
+        "known_as": "Salty, Pepper Spider",
+        "motivations": [{"id": 1, "slug": "criminal", "value": "Criminal"}],
+        "objectives": [{"id": 2, "slug": "money", "value": "Money"}],
+    }
+    dumped = _dump(CrowdStrikeActor.model_validate(raw))
+    for field in ("known_as", "motivations", "objectives"):
+        assert dumped[field] == raw[field]
+
+
+# --- Enriched indicators ---------------------------------------------------
+
+
+def test_enriched_indicator_defaults_to_no_actor():
+    enriched = EnrichedCrowdStrikeIndicator.model_validate(MINIMAL)
+    assert enriched.actor_objects_list == []
+    assert "actor_objects_list" not in _dump(enriched)
+
+
+def test_enriched_indicator_validates_actor_dicts():
+    enriched = EnrichedCrowdStrikeIndicator.model_validate(
+        {**MINIMAL, "actor_objects_list": [MINIMAL_ACTOR]}
+    )
+    assert enriched.actor_objects_list == [CrowdStrikeActor(**MINIMAL_ACTOR)]
+    assert _dump(enriched)["actor_objects_list"] == [MINIMAL_ACTOR]
+
+
+def test_enriched_indicator_rejects_an_invalid_actor():
+    with pytest.raises(ValidationError):
+        EnrichedCrowdStrikeIndicator.model_validate(
+            {**MINIMAL, "actor_objects_list": [{"id": 1}]}
+        )
+
+
+def test_enriched_indicator_is_an_indicator():
+    assert issubclass(EnrichedCrowdStrikeIndicator, CrowdStrikeIndicator)

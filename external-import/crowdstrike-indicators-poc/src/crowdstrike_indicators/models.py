@@ -7,6 +7,10 @@ on purpose (``extra="allow"``, few required fields) until real responses
 confirm their shape. ``reports``, ``relations`` and ``scope`` are known to
 exist but are left undeclared: their shape is unknown, and ``extra="allow"``
 keeps them verbatim.
+
+``CrowdStrikeActor`` mirrors an actor of ``QueryIntelActorEntities`` the same
+way. ``EnrichedCrowdStrikeIndicator`` is the one model that adds a field: the
+actors an indicator names, looked up by the extractor.
 """
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -54,3 +58,37 @@ class CrowdStrikeIndicator(BaseModel):
     domain_types: list[str] | None = None
     ip_address_types: list[str] | None = None
     labels: list[CrowdStrikeLabel] | None = None
+
+
+class CrowdStrikeActor(BaseModel):
+    """An actor as returned by ``GET /intel/combined/actors/v1``.
+
+    Only fields whose shape the existing connector shows to be scalar are
+    declared. ``known_as``, ``motivations`` and ``objectives`` are requested
+    too, but the existing connector handles several shapes for them, so they
+    are left undeclared: ``extra="allow"`` keeps them verbatim.
+    """
+
+    model_config = _API_MODEL_CONFIG
+
+    id: int
+    name: str
+
+    slug: str | None = None
+    url: str | None = None
+    description: str | None = None
+    short_description: str | None = None
+    actor_type: str | None = None
+    first_activity_date: AwareDatetime | None = None
+    last_activity_date: AwareDatetime | None = None
+
+
+class EnrichedCrowdStrikeIndicator(CrowdStrikeIndicator):
+    """An indicator with the actors its ``actors`` names resolve to.
+
+    ``actor_objects_list`` is the only field that does not come from the
+    indicator API. It is empty when the indicator names no actor or none
+    resolves, and when it was never filled (a raw API row).
+    """
+
+    actor_objects_list: list[CrowdStrikeActor] = Field(default_factory=list)
