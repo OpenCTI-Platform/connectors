@@ -75,17 +75,17 @@
       "writeOnly": true
     },
     "CROWDSTRIKE_TLP": {
-      "default": "amber+strict",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
       "enum": [
-        "red",
-        "amber+strict",
-        "amber",
-        "green",
         "clear",
-        "white"
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "amber+strict"
     },
     "CROWDSTRIKE_CREATE_OBSERVABLES": {
       "default": true,

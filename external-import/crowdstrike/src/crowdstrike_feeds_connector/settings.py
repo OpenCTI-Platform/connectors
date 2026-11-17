@@ -8,6 +8,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from crowdstrike_feeds_services.utils import is_timestamp_in_future
 from pydantic import (
     Field,
@@ -69,8 +70,8 @@ class CrowdstrikeConfig(BaseConfigModel):
     client_secret: SecretStr = Field(
         description="CrowdStrike API client secret for authentication.",
     )
-    tlp: Literal["red", "amber+strict", "amber", "green", "clear", "white"] = Field(
-        default="amber+strict",
+    tlp: TLPLevel = Field(
+        default=TLPLevel.AMBER_STRICT,
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
     create_observables: bool = Field(
@@ -304,7 +305,7 @@ class CrowdstrikeConfig(BaseConfigModel):
         new_value_factory=lambda x: timedelta(seconds=x),
     )
 
-    @field_validator("tlp", "report_status", mode="before")
+    @field_validator("report_status", mode="before")
     @classmethod
     def to_lowercase(cls, v: str) -> str:
         """Convert value to lowercase."""
