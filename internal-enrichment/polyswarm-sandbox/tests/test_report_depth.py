@@ -674,6 +674,45 @@ class TestBuildBundleHook:
         assert len(matching) == 1
         assert matching[0]["object_marking_refs"] == [marking]
 
+    def test_contacted_network_observables_carry_source_markings(self, builder):
+        """Contacted domains, IPs and C2 candidates are marked like the source."""
+        marking = "marking-definition--00000000-0000-4000-8000-0000000000ab"
+        entity = dict(ENTITY, object_marking_refs=[marking])
+        results = {
+            "triage": SandboxProcessor.process(_triage_task()),
+            "cape": SandboxProcessor.process(_cape_task()),
+        }
+        results["cape"]["domains"] = ["contacted.example.net"]
+        results["cape"]["ips"] = ["198.51.100.77", "93.184.216.34"]
+        results["cape"]["c2_candidates"] = [
+            {"ip": "203.0.113.200", "port": 4444, "reason": "test"}
+        ]
+        objs = builder.build_bundle(
+            entity=entity,
+            sandbox_results=results,
+            config=self.CONFIG,
+        )
+        contacted = {
+            o["id"]
+            for o in objs
+            if o["type"] in ("domain-name", "ipv4-addr")
+            and o["value"]
+            in (
+                "contacted.example.net",
+                "198.51.100.77",
+                "93.184.216.34",
+                "203.0.113.200",
+            )
+        }
+        assert len(contacted) == 4
+        for obj in objs:
+            if obj["id"] in contacted or (
+                obj["type"] == "relationship" and obj["target_ref"] in contacted
+            ):
+                assert marking in obj.get("object_marking_refs", []), obj["id"]
+        # The author and the enriched entity itself are not re-marked here
+        assert "object_marking_refs" not in builder.author
+
     def test_relationships_sorted_after_objects(self, builder):
         objs = self._bundle(builder, self.CONFIG)
         first_rel = next(i for i, o in enumerate(objs) if o["type"] == "relationship")

@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
-from connector.report_depth import build_report_depth_objects
+from connector.report_depth import (
+    build_report_depth_objects,
+    entity_marking_refs,
+)
 from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
@@ -545,6 +548,18 @@ class StixBuilder:
                 ioc_objs = self._create_network_observables(
                     deduped_ioc_data, entity, malware_id
                 )
+                # Hosts the sample contacted are derived from it: they carry
+                # the source observable's markings, as the report-depth
+                # objects below do
+                source_markings = entity_marking_refs(entity)
+                if source_markings:
+                    for obj in ioc_objs:
+                        obj["object_marking_refs"] = list(
+                            dict.fromkeys(
+                                list(obj.get("object_marking_refs") or [])
+                                + source_markings
+                            )
+                        )
                 objects.extend(ioc_objs)
 
         # === REPORT DEPTH: dropped files and configured C2 ===
