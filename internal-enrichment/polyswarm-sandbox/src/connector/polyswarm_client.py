@@ -15,7 +15,7 @@ import time
 from typing import Any
 
 import requests
-from connector.polyswarm import PolyswarmAPI
+from connector.polyswarm import PolyswarmAPI, apply_user_agent
 from connector.quota import QuotaMonitor
 from polyswarm_api.exceptions import (
     NoResultsException,
@@ -292,6 +292,7 @@ class PolySwarmClient:
         self.api = PolyswarmAPI(
             key=api_key, uri=api_url, community=community, timeout=timeout
         )
+        apply_user_agent(self.api.session)
 
         # Read-only account plan and quota visibility; never raises
         self.quota = QuotaMonitor(
@@ -449,6 +450,7 @@ class PolySwarmClient:
         Connection pooling (pool_maxsize=10) avoids socket churn under load.
         """
         session = requests.Session()
+        apply_user_agent(session)
         retry_strategy = Retry(
             total=retries,
             backoff_factor=backoff_factor,

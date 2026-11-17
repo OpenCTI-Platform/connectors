@@ -51,6 +51,7 @@ The connector sends data to PolySwarm only when it enriches an artifact or a URL
 - **Account quota.** Once an hour the connector reads your account's plan and quotas from PolySwarm. Only your API key is sent; nothing from OpenCTI is.
 - **Sandbox report depth.** Dropped files and extracted malware configuration are read from the sandbox report the connector already downloads. Nothing extra is requested or sent. Only the hashes and metadata of dropped files are used, the files themselves are not downloaded.
 - **Network capture (opt-in).** With `POLYSWARM_SANDBOX_ATTACH_PCAP=true`, the connector downloads the sandbox pcap from PolySwarm (one extra download per detonation, read only) and stores it as an attachment in OpenCTI. Captures larger than `POLYSWARM_SANDBOX_PCAP_MAX_SIZE` are downloaded but not attached (the size is only known after the download). Nothing is sent from OpenCTI.
+- **User-Agent.** Every request to PolySwarm identifies the connector as `PolySwarm-OpenCTI-Sandbox/<connector version> (OpenCTI)`.
 - **Nothing else.** No other OpenCTI data (other entities, reports, markings or users) is sent.
 
 ## 📋 Requirements
