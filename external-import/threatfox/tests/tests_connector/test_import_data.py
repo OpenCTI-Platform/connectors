@@ -95,3 +95,31 @@ def test_loop_logs_the_run_outcome(connector, succeeded, expected_log):
     assert any(expected_log in message for message in logged)
     if not succeeded:
         assert not any("Last_run stored" in message for message in logged)
+
+
+VALID_ROW = (
+    '"2026-11-10 10:00:00", "1", "1.2.3.4:80", "ip:port", "botnet_cc", '
+    '"win.foo", "None", "Foo", "", "100", "False", "None", "tag", "0", "reporter"'
+)
+
+
+@pytest.mark.parametrize(
+    "bad_row",
+    [
+        '"2026-11-10 10:00:00", "2", "1.2.3.4:81"',
+        VALID_ROW.replace("2026-11-10 10:00:00", "not-a-date"),
+        VALID_ROW.replace('"100"', '"high"'),
+    ],
+    ids=["short_row", "bad_date", "non_integer_field"],
+)
+def test_unparseable_row_is_skipped_and_run_succeeds(connector, bad_row):
+    now_dt = datetime.now(UTC)
+    connector.download_csv = MagicMock(return_value=iter([bad_row, VALID_ROW]))
+    connector.process_row = MagicMock(return_value=[])
+
+    result = connector.import_data({}, now_dt, now_dt.timestamp())
+
+    assert result is True
+    connector.process_row.assert_called_once()
+    connector.helper.connector_logger.warning.assert_called_once()
+    connector.helper.set_state.assert_called_once()

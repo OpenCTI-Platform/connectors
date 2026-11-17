@@ -178,7 +178,16 @@ class ThreatFox:
                         f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
                     )
                     continue
-                ioc = FeedRow(row)
+                # A bad row must not fail the run: it would fail again on
+                # every retry for as long as it stays in the export.
+                try:
+                    ioc = FeedRow(row)
+                except (IndexError, ValueError) as err:
+                    self.helper.connector_logger.warning(
+                        "The csv line cannot be parsed and will be ignored",
+                        meta={"line": i, "error": str(err), "data": row},
+                    )
+                    continue
 
                 # skip unwanted IOC types
                 if ALL_TYPES not in self.ioc_to_import:
