@@ -30,6 +30,11 @@ reference).
 3. **Keeps the article body** with [trafilatura](https://trafilatura.readthedocs.io)
    (Apache-2.0): no menus, footers, cookie banners or comments; tables, lists,
    code and links kept.
+   Sponsored ad units the publisher injects inside the article (a paid display
+   callout: heading, promo text, call to action) are removed first: they are
+   told by the paid-advertising tracking of their links (`utm_medium=paid*` or
+   `utm_source=display_network`), on any site. Links with another medium
+   (`3rd-party`, `referral`...) are article content and stay.
    Three layouts that would lose indicators are reworked first: tables nested in
    wrapper `<div>`s (Google Docs exports) are lifted out, the `embed` classes
    around tables (Webflow) are dropped, and indicators listed one per `<div>`
