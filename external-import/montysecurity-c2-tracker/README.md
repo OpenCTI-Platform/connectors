@@ -35,11 +35,10 @@
 
 | Item | Value |
 |------|-------|
-| Status | Deprecated since [DEPRECATION_DATE] |
+| Status | Deprecated since 17/11/2026 |
 | Reason | The upstream `montysecurity/C2-Tracker` repository is archived and its `data` directory was removed (issue #8169) |
 | Planned removal | Not scheduled yet, announced in advance |
 | Recommended alternative | None available |
-| Support contact | [SUPPORT_CONTACT] |
 
 At runtime the connector logs a `[DEPRECATED]` warning at startup and at every
 run. The cleanup steps are in [DEPRECATION.md](./DEPRECATION.md).

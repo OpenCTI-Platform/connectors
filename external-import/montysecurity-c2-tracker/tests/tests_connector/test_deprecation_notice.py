@@ -1,8 +1,10 @@
+import re
 from unittest.mock import MagicMock
 
 import pytest
 from connector import MontysecurityC2TrackerConnector
 from deprecation_notice import (
+    DEPRECATION_DATE,
     DEPRECATION_MESSAGE,
     REASON,
     log_deprecation,
@@ -63,3 +65,18 @@ def test_connector_should_log_deprecation_when_instantiated(
     # Then the deprecation is logged at WARNING level
     warning = mock_connector_helper.connector_logger.warning
     assert any("[DEPRECATED]" in call.args[0] for call in warning.call_args_list)
+
+
+def test_runtime_notice_should_not_contain_a_placeholder_when_logged():
+    # Given a connector logger
+    logger = MagicMock()
+
+    # When the deprecation is warned and logged
+    log_deprecation(logger)
+
+    # Then no `[PLACEHOLDER]` token reaches users through the runtime output
+    placeholder = re.compile(r"\[[A-Z_0-9]+\]")
+    meta = logger.warning.call_args.args[1]
+    assert not placeholder.search(DEPRECATION_MESSAGE.replace("[DEPRECATED]", ""))
+    assert not placeholder.search(DEPRECATION_DATE)
+    assert not any(placeholder.search(str(value)) for value in meta.values())

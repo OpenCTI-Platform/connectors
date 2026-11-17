@@ -1,8 +1,8 @@
 """Deprecation notice of the Monty Security C2 Tracker connector.
 
 Single source of truth for every runtime warning about the deprecation of this
-connector. ``DEPRECATION_DATE`` is a placeholder until the deprecation is
-announced: replace it once the date is known.
+connector. ``DEPRECATION_DATE`` is the date the deprecation took effect
+(DD/MM/YYYY).
 
 The module is deliberately not named ``deprecation`` to avoid shadowing the
 PyPI package of the same name.
@@ -11,7 +11,7 @@ PyPI package of the same name.
 import warnings
 from typing import Any, Protocol
 
-DEPRECATION_DATE = "[DEPRECATION_DATE]"
+DEPRECATION_DATE = "17/11/2026"
 REASON = (
     "the upstream MontySecurity C2-Tracker repository is archived and its data "
     "was removed, so the connector no longer imports data"
