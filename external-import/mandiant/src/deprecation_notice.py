@@ -1,8 +1,7 @@
 """Deprecation notice of the Mandiant connector.
 
 Single source of truth for every runtime warning about the deprecation of this
-connector. ``REPLACEMENT`` is a placeholder until the replacement connector is
-confirmed: replace it once it is known.
+connector: the deprecation date and the replacement connector.
 
 The module is deliberately not named ``deprecation`` to avoid shadowing the
 PyPI package of the same name.
