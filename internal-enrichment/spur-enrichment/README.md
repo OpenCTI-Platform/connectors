@@ -96,16 +96,16 @@ The connector makes a single call to `GET /v2/context/{ip}` per enrichment and c
 | `ai.types` | Labels on the IP: `spur-ai-type:crawler`... |
 | `risks` | Score on the IP when it has offensive risks (`AD_FRAUD`, `CALLBACK_PROXY`, `LOGIN_BRUTEFORCE`, `WEB_SCRAPING`): `SPUR_DEFAULT_SCORE + 5 x number of offensive risks`, capped at 100. Other IPs keep their current score, so a consumer VPN exit is not flagged as malicious. |
 | `ip` | External reference to the Spur page of the IP (`https://spur.us/context/{ip}`) |
-| `tunnels[].operator` | Anonymization `Infrastructure` that `consists-of` the IP. Labelled `spur-infra:anonymous` when the tunnel is anonymous, with the IP `services` in its description. |
-| `tunnels[].entries`, `tunnels[].exits` | IP observables that the tunnel `Infrastructure` `consists-of`, the relationship description giving the role (`Entry node`, `Exit node`). At most 50 nodes per tunnel, no score and no label. |
+| `tunnels[].operator` | Anonymization `Infrastructure` that `consists-of` the IP, labelled `spur-infra:anonymous` when the tunnel is anonymous. The IP `services` go in the description of the relationship, since the infrastructure is shared by every IP of the service. |
+| `tunnels[].entries`, `tunnels[].exits` | IP observables that the tunnel `Infrastructure` `consists-of`, the relationship description giving the role (`Entry node`, `Exit node`). At most 50 nodes per infrastructure (the tunnels of a service share them), taken in address order and alternately among entries and exits; a warning is logged when nodes are left out. No score and no label. |
 | `client.proxies` | Anonymization `Infrastructure` `related-to` the IP: the clients behind the IP use this proxy, but the IP is not necessarily part of it |
-| `ai.operator` | `Infrastructure` that `consists-of` the IP |
+| `ai.operator` | `Infrastructure` that `consists-of` the IP. A service that is also a client proxy keeps this relationship only. |
 | `as.number`, `as.organization` | `Autonomous-System`, the IP `belongs-to` it |
 | `location.city`, `location.state`, `location.country` | `City`, `Administrative-Area` and `Country`, each one `located-at` from the IP. Locations are not linked to each other: a city is identified by its name only, so a chain would link two homonyms to both regions. Anycast IPs (`Anycast` city and state, `ZZ` country) get no location. |
 | `organization`, `client.count`, `client.countries`, `client.spread`, `client.concentration` | `Note` attached to the IP |
 
-Infrastructures are named after the Spur service tag (e.g. `PROTON_VPN`), so the same service always gives the same
-infrastructure. Service tags are not labels: they are an open catalog of thousands of values.
+Infrastructures are named after the Spur service tag (e.g. `PROTON_VPN`). Service tags are not labels: they are an open
+catalog of thousands of values.
 
 ### Service metadata
 
@@ -114,7 +114,7 @@ the IP (tunnel operators, client proxies, AI operator) and describes their infra
 
 | Tag metadata field | OpenCTI |
 | ------------------ | ------- |
-| `aliasOf` | The infrastructure is named after the canonical tag, the tag seen on the IP becomes an alias |
+| `aliasOf` | The infrastructure is named after the canonical tag, the tag seen on the IP becomes an alias. Without metadata, the infrastructure is named after the tag seen on the IP: OpenCTI still keeps one infrastructure, as it also resolves infrastructures by their aliases. |
 | `name`, `aliases`, `allTags` | `Infrastructure` aliases (e.g. `Proton VPN`) |
 | `categories` | Labels on the infrastructure: `spur-category:commercial_vpn`... |
 | `isAnonymous`, `isNoLog` | Labels on the infrastructure: `spur-infra:anonymous`, `spur-infra:no-log` |
@@ -142,8 +142,6 @@ The connector can be debugged by setting the appropriate log level (`CONNECTOR_L
 ## Additional information
 
 - The Spur labels and the score can also be set by the Spur external-import connector, which uses unprefixed labels.
-- Without service metadata, the infrastructure description lists the services of the last enriched IP of this
-  service: it is replaced at each enrichment.
 - Labels are only added, never removed: an IP keeps its Spur labels after Spur stops reporting them.
 - The service metrics change often: each new set of metrics gives a new note on the infrastructure, and the older ones
-  remain.
+  remain. The same goes for the note on the IP, whose client counts and concentration change between enrichments.

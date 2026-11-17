@@ -1,4 +1,5 @@
 import ipaddress
+import itertools
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
@@ -61,9 +62,9 @@ def build_author() -> OrganizationAuthor:
     )
 
 
-def _label(field: str, value: str | bool) -> str:
+def _label(name: str, value: str | bool) -> str:
     """Build a Spur label, e.g. `spur-risk:geo_mismatch`."""
-    return f"spur-{field}:{str(value).lower()}"
+    return f"spur-{name}:{str(value).lower()}"
 
 
 def _unique(values: Iterable[str | None]) -> list[str]:
@@ -368,13 +369,16 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         """Build the services the IP belongs to or is used by.
 
         - Tunnel operator: anonymization infrastructure that `consists-of` the IP
-          and the tunnel entry and exit nodes.
+          and the tunnel entry and exit nodes. The relationship with the IP lists
+          the services seen on the IP: the infrastructure is shared by every IP of
+          the service, so this per-IP data cannot go in its description.
+        - AI operator: infrastructure that `consists-of` the IP.
         - Client proxy: anonymization infrastructure `related-to` the IP. The
           clients behind the IP use it, but the IP is not necessarily part of it.
-        - AI operator: infrastructure that `consists-of` the IP.
 
-        A service seen several times (e.g. as tunnel operator and client proxy) is
-        built once, with the strongest relationship.
+        A service seen several times (e.g. as AI operator and client proxy) is
+        built once, with the strongest relationship: services are handled from the
+        strongest relationship to the weakest.
         """
         objects: list[Any] = []
         names: set[str] = set()
@@ -395,22 +399,38 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                 tag_metadata,
                 infrastructure_types=[InfrastructureType.ANONYMIZATION],
                 anonymous=any(tunnel.anonymous for tunnel in tunnels),
-                fallback_description=(
-                    f"Services seen by Spur on {ip_context.ip}: "
-                    f"{', '.join(ip_context.services)}"
-                    if ip_context.services
-                    else None
-                ),
             )
             objects.append(infrastructure)
             objects.extend(extra_objects)
             objects.append(
-                self._relationship(RelationshipType.CONSISTS_OF, infrastructure, ip)
+                self._relationship(
+                    RelationshipType.CONSISTS_OF,
+                    infrastructure,
+                    ip,
+                    description=(
+                        f"Services seen by Spur: {', '.join(ip_context.services)}"
+                        if ip_context.services
+                        else None
+                    ),
+                )
             )
             objects.extend(
                 self._build_tunnel_nodes(infrastructure, tunnels, ip_context.ip)
             )
             names.add(infrastructure.name)
+
+        ai_operator = ip_context.ai.operator if ip_context.ai else None
+        if ai_operator:
+            infrastructure, extra_objects = self._build_infrastructure(
+                ai_operator, tag_metadata
+            )
+            if infrastructure.name not in names:
+                objects.append(infrastructure)
+                objects.extend(extra_objects)
+                objects.append(
+                    self._relationship(RelationshipType.CONSISTS_OF, infrastructure, ip)
+                )
+                names.add(infrastructure.name)
 
         proxies = ip_context.client.proxies if ip_context.client else []
         for proxy in _unique(proxies):
@@ -427,18 +447,6 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                 self._relationship(RelationshipType.RELATED_TO, infrastructure, ip)
             )
             names.add(infrastructure.name)
-
-        ai_operator = ip_context.ai.operator if ip_context.ai else None
-        if ai_operator:
-            infrastructure, extra_objects = self._build_infrastructure(
-                ai_operator, tag_metadata
-            )
-            if infrastructure.name not in names:
-                objects.append(infrastructure)
-                objects.extend(extra_objects)
-                objects.append(
-                    self._relationship(RelationshipType.CONSISTS_OF, infrastructure, ip)
-                )
         return objects
 
     def _build_infrastructure(
@@ -447,14 +455,16 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         tag_metadata: dict[str, TagMetadata],
         infrastructure_types: list[InfrastructureType] | None = None,
         anonymous: bool = False,
-        fallback_description: str | None = None,
     ) -> tuple[Infrastructure, list[Any]]:
         """Build the infrastructure of a service tag, described by its metadata if fetched.
 
-        The infrastructure is named after the canonical Spur tag (the tag itself,
-        or the tag it is an alias of). This name must never change, as the
-        infrastructure id only depends on it: the readable name and the other tags
-        go to `aliases`.
+        The infrastructure is named after the canonical Spur tag: the tag itself,
+        or, when the metadata is fetched, the tag it is an alias of. Its id only
+        depends on this name, so an alias tag gives another id depending on
+        whether the metadata is fetched. OpenCTI still keeps one infrastructure:
+        the tag seen on the IP is in `aliases`, and OpenCTI resolves an
+        infrastructure by its aliases as well as by its id. The readable name and
+        the other tags go to `aliases` too.
 
         Returns:
             The infrastructure, and the note holding the service metrics, if any.
@@ -464,7 +474,6 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
         if metadata is None:
             infrastructure = Infrastructure(
                 name=tag,
-                description=fallback_description,
                 infrastructure_types=infrastructure_types,
                 labels=[_label("infra", "anonymous")] if anonymous else None,
                 author=self.author,
@@ -593,12 +602,13 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
 
         The relationship description tells the role of the node. Nodes are
         grouped by address, so that two spellings of the same IPv6 address make
-        one node. The enriched IP itself is skipped (already linked), and at most
-        `MAX_TUNNEL_NODES` nodes are linked per enrichment.
+        one node. The enriched IP itself is skipped (already linked).
+
+        At most `MAX_TUNNEL_NODES` nodes are linked per infrastructure, taken in
+        address order and alternately among entries and exits.
         """
-        roles_by_node: dict[
-            ipaddress.IPv4Address | ipaddress.IPv6Address, list[str]
-        ] = {}
+        nodes_by_role: dict[str, set[ipaddress.IPv4Address | ipaddress.IPv6Address]]
+        nodes_by_role = {"entry": set(), "exit": set()}
         for tunnel in tunnels:
             for role, values in (("entry", tunnel.entries), ("exit", tunnel.exits)):
                 for value in values:
@@ -613,25 +623,38 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                             },
                         )
                         continue
-                    roles = roles_by_node.setdefault(address, [])
-                    if role not in roles:
-                        roles.append(role)
+                    if address != enriched_ip:
+                        nodes_by_role[role].add(address)
+
+        # Sorted, so that the same nodes give the same selection whatever the API
+        # order, and interleaved, so that a long list of entries leaves room for exits
+        entries, exits = (
+            sorted(nodes_by_role[role], key=lambda node: (node.version, node))
+            for role in ("entry", "exit")
+        )
+        nodes = list(
+            dict.fromkeys(
+                node
+                for pair in itertools.zip_longest(entries, exits)
+                for node in pair
+                if node is not None
+            )
+        )
+        if len(nodes) > MAX_TUNNEL_NODES:
+            self.logger.warning(
+                "Tunnel node limit reached, skipping the remaining nodes",
+                meta={
+                    "infrastructure": infrastructure.name,
+                    "limit": MAX_TUNNEL_NODES,
+                    "nodes": len(nodes),
+                },
+            )
 
         objects: list[Any] = []
-        linked_nodes = 0
-        for address, roles in roles_by_node.items():
-            if address == enriched_ip:
-                continue
-            if linked_nodes == MAX_TUNNEL_NODES:
-                self.logger.info(
-                    "Tunnel node limit reached, skipping the remaining nodes",
-                    meta={
-                        "infrastructure": infrastructure.name,
-                        "limit": MAX_TUNNEL_NODES,
-                        "nodes": len(roles_by_node),
-                    },
-                )
-                break
+        for address in nodes[:MAX_TUNNEL_NODES]:
+            roles = [
+                role for role in ("entry", "exit") if address in nodes_by_role[role]
+            ]
             node_class = IPV6Address if address.version == 6 else IPV4Address
             node = node_class(
                 value=str(address), author=self.author, markings=[self.tlp_marking]
@@ -645,7 +668,6 @@ class SpurIPProcessor(BaseEnrichmentProcessor[ConnectorSettings]):
                     description=f"{' and '.join(roles).capitalize()} node",
                 )
             )
-            linked_nodes += 1
         return objects
 
     def _build_note(

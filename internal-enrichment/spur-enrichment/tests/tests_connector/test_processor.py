@@ -366,12 +366,13 @@ def test_transform_should_link_the_tunnel_operator_to_the_ip(processor):
     infrastructure = _infrastructure(stix_objects, "PROTON_VPN")
     assert infrastructure["infrastructure_types"] == ["anonymization"]
     assert infrastructure["labels"] == ["spur-infra:anonymous"]
-    assert infrastructure["description"] == (
-        "Services seen by Spur on 89.39.106.191: OPENVPN, IPSEC"
-    )
-    assert (infrastructure["id"], message.stix_entity.id) in _links(
-        stix_objects, "consists-of"
-    )
+    assert "description" not in infrastructure
+    assert _relationship(
+        stix_objects, infrastructure["id"], message.stix_entity.id
+    ) == {
+        "relationship_type": "consists-of",
+        "description": "Services seen by Spur: OPENVPN, IPSEC",
+    }
 
 
 def test_transform_should_not_flag_a_non_anonymous_tunnel(processor):
@@ -424,6 +425,24 @@ def test_transform_should_deduplicate_infrastructures(processor):
     # Then a single infrastructure is linked once, as tunnel operator
     assert len(stix_objects["infrastructure"]) == 1
     assert len(_links(stix_objects, "consists-of")) == 1
+    assert _links(stix_objects, "related-to") == []
+
+
+def test_transform_should_prefer_the_ai_operator_link_to_the_proxy_link(processor):
+    # Given the same service tag as client proxy and AI operator, without tunnel
+    message = _make_message()
+    ip_context = _context(
+        {"client": {"proxies": ["OPENAI"]}, "ai": {"operator": "OPENAI"}}
+    )
+
+    # When transforming
+    stix_objects = _by_type(processor.transform(ip_context, message))
+
+    # Then the infrastructure is linked once, with the strongest relationship
+    infrastructure = _infrastructure(stix_objects, "OPENAI")
+    assert _links(stix_objects, "consists-of") == [
+        (infrastructure["id"], message.stix_entity.id)
+    ]
     assert _links(stix_objects, "related-to") == []
 
 
@@ -532,15 +551,42 @@ def test_transform_should_skip_invalid_tunnel_nodes(processor):
 
 
 def test_transform_should_limit_the_tunnel_nodes(processor):
-    # Given a tunnel with more nodes than the limit
+    # Given a tunnel with more entries and exits than the limit
+    processor.logger = MagicMock()
     entries = [f"10.0.0.{index}" for index in range(1, 61)]
-    ip_context = _context({"tunnels": [{"operator": "TOR", "entries": entries}]})
+    exits = [f"10.0.1.{index}" for index in range(1, 65)]
+    ip_context = _context(
+        {"tunnels": [{"operator": "TOR", "entries": entries, "exits": exits}]}
+    )
 
     # When transforming
     stix_objects = _by_type(processor.transform(ip_context, _make_message()))
 
-    # Then only the first 50 nodes are linked
+    # Then 50 nodes are linked, half entries and half exits, and a warning is logged
+    descriptions = [
+        relationship.get("description")
+        for relationship in stix_objects["relationship"]
+        if relationship["relationship_type"] == "consists-of"
+    ]
     assert len(stix_objects["ipv4-addr"]) == 1 + 50
+    assert descriptions.count("Entry node") == 25
+    assert descriptions.count("Exit node") == 25
+    processor.logger.warning.assert_called_once()
+
+
+def test_transform_should_select_the_same_tunnel_nodes_whatever_the_order(processor):
+    # Given the same nodes, over the limit, in two different orders
+    entries = [f"10.0.0.{index}" for index in range(1, 61)]
+
+    def node_values(tunnel_entries: list[str]) -> set[str]:
+        ip_context = _context(
+            {"tunnels": [{"operator": "TOR", "entries": tunnel_entries}]}
+        )
+        stix_objects = _by_type(processor.transform(ip_context, _make_message()))
+        return {ip["value"] for ip in stix_objects["ipv4-addr"]}
+
+    # When / Then the same nodes are linked
+    assert node_values(entries) == node_values(entries[::-1])
 
 
 def test_transform_should_ignore_the_nodes_of_a_tunnel_without_operator(processor):
@@ -794,16 +840,26 @@ def test_transform_should_not_build_a_metrics_note_without_metrics(processor):
     assert "note" not in stix_objects
 
 
-def test_transform_should_keep_the_ip_services_without_metadata(processor):
+def test_transform_should_keep_the_ip_services_out_of_the_shared_infrastructure(
+    processor,
+):
+    # Given a tunnel operator without metadata, and services seen on the IP
+    message = _make_message()
     data = _context({"tunnels": [{"operator": "CORP_VPN"}], "services": ["IPSEC"]})
 
-    stix_objects = _by_type(processor.transform(data, _make_message()))
+    # When transforming
+    stix_objects = _by_type(processor.transform(data, message))
 
+    # Then the services are on the relationship with the IP, not on the infrastructure
     infrastructure = _infrastructure(stix_objects, "CORP_VPN")
-    assert infrastructure["description"] == (
-        "Services seen by Spur on 89.39.106.191: IPSEC"
-    )
+    assert "description" not in infrastructure
     assert "aliases" not in infrastructure
+    assert _relationship(
+        stix_objects, infrastructure["id"], message.stix_entity.id
+    ) == {
+        "relationship_type": "consists-of",
+        "description": "Services seen by Spur: IPSEC",
+    }
 
 
 def _infrastructure(stix_objects: dict[str, list[dict]], name: str) -> dict:

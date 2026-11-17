@@ -1,4 +1,5 @@
 import time
+from urllib.parse import quote
 
 from connectors_sdk import ApiClientError, BaseClientApi
 from spur_client.models import IPContext, TagMetadata
@@ -62,7 +63,7 @@ class SpurClient(BaseClientApi):
             return cached[1]
         try:
             tag_metadata: TagMetadata | None = TagMetadata.model_validate(
-                self._get(f"/v2/metadata/tags/{tag}")
+                self._get(f"/v2/metadata/tags/{quote(tag, safe='')}")
             )
         except ApiClientError as err:
             if err.status_code != 404:

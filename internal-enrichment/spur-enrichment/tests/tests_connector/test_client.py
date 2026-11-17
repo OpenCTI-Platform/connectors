@@ -89,6 +89,19 @@ def test_get_tag_metadata_should_query_the_tag_metadata_endpoint(client):
     assert metadata == TagMetadata(tag="PROTON_VPN", name="Proton VPN", is_no_log=True)
 
 
+def test_get_tag_metadata_should_escape_the_tag_in_the_path(client):
+    # Given a tag holding characters that are special in a URL
+    client._raw_request.return_value = _response(404)
+
+    # When fetching its metadata
+    client.get_tag_metadata("A/B?C#D E")
+
+    # Then the tag stays one path segment
+    client._raw_request.assert_called_once_with(
+        "GET", "/v2/metadata/tags/A%2FB%3FC%23D%20E", params=None
+    )
+
+
 def test_get_tag_metadata_should_return_none_for_an_unknown_tag(client):
     # Given Spur does not know the tag
     client._raw_request.return_value = _response(404)
