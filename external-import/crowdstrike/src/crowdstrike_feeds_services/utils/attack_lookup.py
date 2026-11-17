@@ -14,12 +14,13 @@ Design goals:
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Literal
 
 from crowdstrike_feeds_services.utils.json_retriever import (
     JsonRetrievalError,
     JsonRetriever,
 )
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 DEFAULT_ATTACK_URL = (
     "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
@@ -29,6 +30,26 @@ DEFAULT_ATTACK_URL = (
 
 class AttackTechniqueLookupError(Exception):
     """Custom exception for ATT&CK lookup errors."""
+
+
+class StixObjectEnvelope(BaseModel):
+    """A STIX object, checked only for its `type`; the other fields are kept as they are."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str
+
+
+class StixBundleEnvelope(BaseModel):
+    """The envelope of a STIX bundle: `{"type": "bundle", "objects": [...]}`.
+
+    Only the envelope is checked; extra fields are allowed.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    type: Literal["bundle"]
+    objects: list[StixObjectEnvelope]
 
 
 @dataclass(frozen=True)
@@ -59,8 +80,8 @@ class AttackTechniqueLookup:
                 "Unable to retrieve the ATT&CK Enterprise dataset: "
                 + "; ".join(self.retrieval_errors)
             )
-        self.enterprise_attack_url, data = retrieved
-        self.attack_techniques = self._parse_attack_json(data)
+        self.enterprise_attack_url, bundle = retrieved
+        self.attack_techniques = self._parse_attack_bundle(bundle)
 
     def lookup_mitre_id(self, technique_name: str) -> str | None:
         """Return the MITRE technique ID (external_id) for a given technique name."""
@@ -72,34 +93,43 @@ class AttackTechniqueLookup:
         attack_technique = self.attack_techniques.get(key)
         return attack_technique.mitre_id if attack_technique else None
 
-    def _retrieve_attack_json(self) -> tuple[str, Any] | None:
+    def _retrieve_attack_json(self) -> tuple[str, StixBundleEnvelope] | None:
         """Try the retrievers in order.
 
-        Returns the URL and the JSON document of the first retriever that succeeds,
+        Returns the URL and the STIX bundle of the first retriever that provides a valid one,
         or None if all of them fail (the failures are kept in `retrieval_errors`).
         """
         for retriever in self.retrievers:
             try:
-                return retriever.url, retriever.retrieve()
+                data = retriever.retrieve()
             except JsonRetrievalError as e:
                 self.retrieval_errors.append(str(e))
+                continue
+
+            try:
+                return retriever.url, StixBundleEnvelope.model_validate(data)
+            except ValidationError as e:
+                problems = "; ".join(
+                    f"{'.'.join(map(str, error['loc'])) or 'payload'}: {error['msg']}"
+                    for error in e.errors()
+                )
+                self.retrieval_errors.append(
+                    f"Payload from {retriever.url} is not a STIX bundle: {problems}"
+                )
 
         return None
 
-    def _parse_attack_json(self, data: Any) -> dict[str, AttackTechnique]:
+    def _parse_attack_bundle(
+        self, bundle: StixBundleEnvelope
+    ) -> dict[str, AttackTechnique]:
         """Parse techniques from STIX bundle."""
 
         attack_techniques: dict[str, AttackTechnique] = {}
-        if not isinstance(data, dict):
-            return attack_techniques
-
-        objects = data.get("objects") or []
-        for obj in objects:
-            if not isinstance(obj, dict):
-                continue
-            if obj.get("type") != "attack-pattern":
+        for stix_object in bundle.objects:
+            if stix_object.type != "attack-pattern":
                 continue
 
+            obj = stix_object.model_extra or {}
             name = obj.get("name")
             if not name:
                 continue

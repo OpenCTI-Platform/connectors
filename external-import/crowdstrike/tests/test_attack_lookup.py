@@ -11,7 +11,9 @@ from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookupError,
     CustomAttackTechniqueLookup,
     GithubAttackTechniqueLookup,
+    StixBundleEnvelope,
 )
+from pydantic import ValidationError
 
 VERSION = "17.1"
 VERSIONED_URL = (
@@ -139,8 +141,75 @@ def test_failed_custom_url_raises_lookup_error_without_fallback(mock_get):
     assert requested_urls(mock_get) == [CUSTOM_URL]
 
 
-def test_non_object_payload_gives_empty_lookup(mock_get):
-    mock_get.return_value = make_response(200, b"[]")
+def test_bundle_envelope_allows_extra_fields():
+    bundle = StixBundleEnvelope.model_validate(
+        {
+            "type": "bundle",
+            "id": "bundle--1",
+            "objects": [{"type": "attack-pattern", "name": "Phishing"}],
+        }
+    )
+
+    assert bundle.model_extra == {"id": "bundle--1"}
+    assert bundle.objects[0].type == "attack-pattern"
+    assert bundle.objects[0].model_extra == {"name": "Phishing"}
+
+
+def test_bundle_envelope_accepts_empty_objects():
+    bundle = StixBundleEnvelope.model_validate({"type": "bundle", "objects": []})
+
+    assert bundle.objects == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        [],
+        {"objects": []},
+        {"type": "report", "objects": []},
+        {"type": "bundle"},
+        {"type": "bundle", "objects": {}},
+        {"type": "bundle", "objects": ["attack-pattern"]},
+        {"type": "bundle", "objects": [{"name": "Phishing"}]},
+        {"type": "bundle", "objects": [{"type": 1}]},
+    ],
+)
+def test_bundle_envelope_rejects_invalid_envelope(payload):
+    with pytest.raises(ValidationError):
+        StixBundleEnvelope.model_validate(payload)
+
+
+def test_payload_that_is_not_a_bundle_falls_back_to_next_url(mock_get):
+    mock_get.side_effect = [make_response(200, b"[]"), ok()]
+
+    lookup = GithubAttackTechniqueLookup(attack_version=VERSION)
+
+    assert lookup.enterprise_attack_url == DEFAULT_ATTACK_URL
+    assert lookup.lookup_mitre_id("Command and Scripting Interpreter") == "T1059"
+    assert len(lookup.retrieval_errors) == 1
+    assert f"Payload from {VERSIONED_URL} is not a STIX bundle" in (
+        lookup.retrieval_errors[0]
+    )
+
+
+def test_payload_that_is_not_a_bundle_raises_lookup_error(mock_get):
+    mock_get.return_value = make_response(
+        200, json.dumps({"type": "report", "objects": []}).encode()
+    )
+
+    with pytest.raises(AttackTechniqueLookupError) as exc_info:
+        CustomAttackTechniqueLookup(enterprise_attack_url=CUSTOM_URL)
+
+    message = str(exc_info.value)
+    assert "is not a STIX bundle" in message
+    assert "type:" in message
+    assert "\n" not in message
+
+
+def test_bundle_without_attack_patterns_gives_empty_lookup(mock_get):
+    mock_get.return_value = make_response(
+        200, json.dumps({"type": "bundle", "objects": [{"type": "x"}]}).encode()
+    )
 
     lookup = AttackTechniqueLookup(retrieval_urls=[CUSTOM_URL])
 
