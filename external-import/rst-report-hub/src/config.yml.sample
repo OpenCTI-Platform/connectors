@@ -25,3 +25,4 @@ rst_report_hub:
   create_custom_ttps: true
   report_labels_disabled: label_you_do_not_want_to_be_populated,another_label_you_want_to_avoid
   set_detection_flag: false
+  # no_file_trigger_import: true

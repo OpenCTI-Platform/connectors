@@ -26,6 +26,8 @@ PAGES = {
     "cairn": "https://unit42.paloaltonetworks.com/cairn-framework-ai-autonomous-attacks/",
     "php2shell": "https://unit42.paloaltonetworks.com/cve-2026-109618-cve-2026-109619/",
     "rapid7": "https://www.rapid7.com/blog/post/em-patch-tuesday-november-2026",
+    "bleepingcomputer": "https://www.bleepingcomputer.com/news/security/"
+    "tsmc-employee-data-breach-linked-to-cloud-provider/",
 }
 CODE = r"<code[^>]*>(.*?)</code>"
 
@@ -138,6 +140,31 @@ def test_headings_left_without_content_by_the_images_are_dropped():
     assert "Summary tables" not in html
     assert "<h2>Vulnerabilities by Product Family</h2>" in html
     assert "<h3>Apps vulnerabilities</h3>" in html
+
+
+def test_sponsored_ad_unit_inside_the_article_body_is_dropped():
+    html = (FIXTURES / "bleepingcomputer.html").read_text(encoding="utf-8")
+    article = extract_article(PAGES["bleepingcomputer"], html)
+    for text in (article.text, article.html):
+        assert "Uncover email threats" not in text
+        assert "Adaptive Security" not in text
+        assert "Start your free email security scan" not in text
+        assert "adaptivesecurity.com" not in text
+    assert article.text.rstrip().endswith(
+        "A spokesperson declined to comment at this stage."
+    )
+    page = lxml.html.fromstring(html)
+    (body,) = page.xpath('//div[@class="articleBody"]')
+    paragraphs = [
+        re.sub(r"\s+", " ", p.text_content()).strip()
+        for p in body.xpath("./p")
+        if p.text_content().strip()
+    ]
+    assert len(paragraphs) == 15
+    # The stored content's text: the text output writes links as markdown.
+    text = re.sub(r"\s+", " ", lxml.html.fromstring(article.html).text_content())
+    for paragraph in paragraphs:
+        assert paragraph in text
 
 
 def test_hunting_queries_are_code_blocks_without_a_fence():

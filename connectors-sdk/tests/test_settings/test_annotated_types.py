@@ -50,6 +50,36 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
             ["a"],
             id="leading_and_trailing_commas",
         ),
+        pytest.param(
+            '""',
+            [],
+            id="empty_double_quotes",  # quotes kept literally -> empty list
+        ),
+        pytest.param(
+            "''",
+            [],
+            id="empty_single_quotes",
+        ),
+        pytest.param(
+            ' "" ',
+            [],
+            id="empty_quotes_with_whitespaces",
+        ),
+        pytest.param(
+            'a,"",c',
+            ["a", "c"],
+            id="empty_quotes_between_commas",
+        ),
+        pytest.param(
+            '"a","b"',
+            ['"a"', '"b"'],
+            id="quoted_items_kept_unchanged",
+        ),
+        pytest.param(
+            "\"'",
+            ["\"'"],
+            id="mismatched_quotes_kept_unchanged",
+        ),
     ],
 )
 def test_parse_comma_separated_list_handles_string(
