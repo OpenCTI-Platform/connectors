@@ -13,7 +13,7 @@
 | Deprecated since | 2026-11-17 |
 | Reason | The upstream repository `montysecurity/C2-Tracker` is archived and its `data` directory returns 404. Tracked in issue #8169. |
 | Planned removal | Not scheduled yet. It will be announced in advance. |
-| Last working release | 6.8.13 |
+| Last working release | 7.260409.0 |
 | Support until removal | No fix is possible: the data source no longer exists. |
 | Recommended alternative | None available. |
 
