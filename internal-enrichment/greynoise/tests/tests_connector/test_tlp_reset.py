@@ -1,8 +1,5 @@
-from unittest.mock import MagicMock
-
 import pytest
 from connector import GreyNoiseConnector
-from pycti import OpenCTIConnectorHelper
 
 
 @pytest.fixture

@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-from pycti import OpenCTIConnectorHelper
 from urlscan_enrichment_services import UrlscanConnector
 
 
