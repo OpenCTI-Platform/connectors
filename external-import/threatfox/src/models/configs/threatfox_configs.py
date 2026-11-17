@@ -1,4 +1,5 @@
 from typing import Optional
+from urllib.parse import quote
 
 from pydantic import Field, SecretStr, model_validator
 from src.models.configs.base_settings import ConfigBaseSettings
@@ -74,4 +75,7 @@ class _ConfigLoaderThreatFox(ConfigBaseSettings):
         """URL of the CSV export: `csv_url` if set, otherwise built from `auth_key`."""
         if self.csv_url is not None:
             return self.csv_url
-        return EXPORT_URL_TEMPLATE.format(auth_key=self.auth_key.get_secret_value())
+        # Encode the key so `/`, `?`, `#` or `%` cannot change the URL path.
+        return EXPORT_URL_TEMPLATE.format(
+            auth_key=quote(self.auth_key.get_secret_value(), safe="")
+        )

@@ -17,6 +17,14 @@ def test_export_url_is_built_from_auth_key():
     )
 
 
+def test_auth_key_is_encoded_in_export_url():
+    config = _ConfigLoaderThreatFox(auth_key="a/b?c#d%e")
+
+    assert config.export_url == (
+        "https://threatfox-api.abuse.ch/v2/files/exports/a%2Fb%3Fc%23d%25e/recent.csv"
+    )
+
+
 def test_auth_key_is_hidden_when_dumped():
     config = _ConfigLoaderThreatFox(auth_key="my-secret-key")
 
