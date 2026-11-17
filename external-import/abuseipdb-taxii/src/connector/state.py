@@ -13,7 +13,8 @@ class ConnectorState(ExternalImportConnectorState):
     Attributes:
         added_after: The high-water mark, a ``Z``-suffixed UTC timestamp taken
             from the server's ``X-TAXII-Date-Added-Last`` header of the last
-            completed pull.
+            completed pull. Until a pull completes, it holds the import start
+            resolved on the first run.
         next_cursor: The cursor of the first page not yet handed to OpenCTI, or
             ``None`` when the last pull reached the end of the feed.
         collection_id: The ID of the feed ``added_after`` and ``next_cursor``

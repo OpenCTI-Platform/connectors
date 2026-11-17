@@ -61,7 +61,8 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 - `ABUSEIPDB_TAXII_IMPORT_SINCE`: where the first pull starts on an Enterprise feed, as an
   ISO 8601 duration relative to now (default `P30D`) or an absolute datetime. A start older
   than the feed's look-back window is served from the start of that window. Free and Paid
-  feeds ignore it.
+  feeds ignore it. The start is resolved on the first run and saved in the connector
+  state, so a later change takes effect only after a state reset.
 - `ABUSEIPDB_TAXII_PAGE_SIZE`: objects requested per page (default `1000`, range `10` to
   `1000`). It does not limit a pull: pages are fetched until the feed reports `more: false`.
 - `CONNECTOR_DURATION_PERIOD`: time between two runs (default `PT1H`). AbuseIPDB recommends
@@ -150,9 +151,12 @@ graph LR
   means either that nothing new matches the feed or that the day's cap is used up. The
   connector cannot tell which, treats both as the end of the pull, does not track the cap,
   and does not wait for the next UTC day: the next scheduled run simply asks again.
-- **High-water mark.** The saved timestamp advances only when a pull reaches `more: false`,
-  and only from the server's `X-TAXII-Date-Added-Last` header. If the header is missing or
-  unreadable, the previous value is kept. The connector never substitutes its own clock.
+- **High-water mark.** The first run saves the start resolved from
+  `ABUSEIPDB_TAXII_IMPORT_SINCE`, so a first pull that is interrupted, or a container that
+  restarts before a pull completes, begins again from the same start. After that, the
+  saved timestamp advances only when a pull reaches `more: false`, and only from the
+  server's `X-TAXII-Date-Added-Last` header. If the header is missing or unreadable, the
+  previous value is kept. The connector never substitutes its own clock for it.
 - **Interrupted pulls.** State is saved once, at the end of a run. If a request still fails
   after its retries, the connector logs the error, ends the run, and saves the cursor of
   the first page that was not yet handed to OpenCTI; the next run resumes there. A position
@@ -172,23 +176,9 @@ graph LR
   rate-limit requests; the connector honors `Retry-After`. There is no retry setting.
 - **Works.** A work is opened only when the feed serves objects, with one bundle per page.
   A pull that stops early is reported in the connector log, not on the work.
-- **Run summary.** At `info` level each run logs `pages`, `objects_submitted`,
-  `new_indicators`, `re_served_indicators` and `drained`. These numbers describe what was
-  submitted to OpenCTI, classified against what OpenCTI's API showed when each page was
-  fetched. They are not what the workers finally persisted: workers may merge, reject, or
-  still be processing objects.
-  - An Indicator is counted as re-served when OpenCTI already holds an Indicator with the
-    feed's ID or with the ID OpenCTI derives from the same pattern (so an Indicator first
-    created by another source counts as re-served).
-  - An identical replay of an object OpenCTI already holds counts as re-served.
-  - An Indicator deleted from OpenCTI counts as new the next time the feed serves it.
-  - An Indicator submitted earlier, in the same run or a previous one, that the workers
-    have not processed yet is not visible to the lookup and is counted as new again. The
-    connector keeps no record of what it has sent, so its memory use does not grow with
-    the size of a pull.
-  - Other object types are relayed and counted only in `objects_submitted`.
-  - If the lookup fails, a warning is logged, the page is still sent, and its Indicators
-    are counted as new.
+- **Run summary.** At `info` level each run logs `pages`, `objects_submitted` and
+  `drained`. These numbers describe what was submitted to OpenCTI, not what the workers
+  finally persisted: workers may merge, reject, or still be processing objects.
 - **How this was verified.** The Free and Paid behavior, the change of UTC day, and the
   interruption cases are covered by automated tests against a simulated TAXII service,
   not against the live service.
@@ -199,8 +189,7 @@ Set `CONNECTOR_LOG_LEVEL=debug` for verbose output. A pull that stops early is l
 error level with a fixed message and an error type. The connector's own messages never
 contain credentials, URLs, collection IDs, cursors, or response bodies. At `info` level the
 SDK logs the saved connector state, which includes the resume cursor (an opaque position
-token, not a credential) and the Collection ID of the feed, and `pycti` logs the filter
-of each existence lookup, which lists the Indicator IDs of the page.
+token, not a credential) and the Collection ID of the feed.
 
 - "has no readable TAXII feed": create a feed on My TAXII Feeds.
 - "has several readable TAXII feeds": set `ABUSEIPDB_TAXII_COLLECTION_ID` to the

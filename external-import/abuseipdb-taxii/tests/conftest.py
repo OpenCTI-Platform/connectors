@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from collections.abc import Iterable
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -110,20 +109,16 @@ def make_processor(
     script: list[TaxiiPage | Exception],
     *,
     state: ConnectorState | None = None,
-    known: Iterable[str] = (),
+    helper: MagicMock | None = None,
 ) -> TaxiiFeedProcessor:
     """Build a `TaxiiFeedProcessor` wired to a mock helper and a `FakeTaxiiClient`."""
     processor = TaxiiFeedProcessor()
-    helper = MagicMock()
     processor.inject_dependencies(
         settings=make_settings(VALID_SETTINGS_DICT),
-        helper=helper,
+        helper=helper if helper is not None else MagicMock(),
         state=state if state is not None else ConnectorState(),
     )
     processor.post_init()
-    helper.api.stix_core_object.list.return_value = [
-        {"standard_id": known_id, "x_opencti_stix_ids": []} for known_id in known
-    ]
     processor.client = FakeTaxiiClient(script)
     processor.logger = MagicMock()
     return processor

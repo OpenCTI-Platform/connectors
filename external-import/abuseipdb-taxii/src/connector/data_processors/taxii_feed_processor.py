@@ -1,10 +1,7 @@
 """Relay the account's AbuseIPDB TAXII feed into OpenCTI, one bundle per page."""
 
-from __future__ import annotations
-
 from collections.abc import Generator, Iterable
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from abuseipdb_taxii_client import (
     AbuseIPDBTaxiiClient,
@@ -18,63 +15,10 @@ from connectors_sdk import (
     ConnectorError,
     ProviderApiInvalidResponseError,
 )
-from pycti import Indicator
-
-if TYPE_CHECKING:
-    from pycti import OpenCTIConnectorHelper
 
 
 class TaxiiRepeatedCursorError(ProviderApiInvalidResponseError):
     """The TAXII server returned a continuation cursor already seen in this pull."""
-
-
-def _indicator_ids(stix_object: dict[str, Any]) -> set[str]:
-    """Return the IDs OpenCTI may know an indicator by.
-
-    That is the feed's own ID, plus the ID OpenCTI derives from the pattern.
-    """
-    ids = {stix_object["id"]}
-    pattern = stix_object.get("pattern")
-    if isinstance(pattern, str) and pattern:
-        ids.add(Indicator.generate_id(pattern))
-    return ids
-
-
-@dataclass(frozen=True)
-class CollectedPage:
-    """A fetched page and the indicator IDs OpenCTI already held when it was fetched."""
-
-    page: TaxiiPage
-    known_ids: frozenset[str]
-
-
-@dataclass
-class PullStats:
-    """Counts of what one pull submitted to OpenCTI."""
-
-    pages: int = 0
-    objects_submitted: int = 0
-    new_indicators: int = 0
-    re_served_indicators: int = 0
-
-    def record_page(
-        self, objects: list[dict[str, Any]], known_ids: frozenset[str]
-    ) -> None:
-        """Count one delivered page.
-
-        An indicator is re-served when OpenCTI already held it when the page was
-        fetched; otherwise it is new. Nothing is remembered between pages, so
-        memory does not grow with the size of the pull.
-        """
-        self.pages += 1
-        self.objects_submitted += len(objects)
-        for stix_object in objects:
-            if stix_object["type"] != "indicator":
-                continue
-            if _indicator_ids(stix_object) & known_ids:
-                self.re_served_indicators += 1
-            else:
-                self.new_indicators += 1
 
 
 class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
@@ -88,15 +32,6 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
 
     work_name = "AbuseIPDB TAXII feed import"
 
-    def inject_dependencies(
-        self,
-        settings: ConnectorSettings,
-        helper: OpenCTIConnectorHelper,
-        state: ConnectorState,
-    ) -> None:
-        super().inject_dependencies(settings=settings, helper=helper, state=state)
-        self._helper = helper
-
     def post_init(self) -> None:
         config = self.settings.abuseipdb_taxii
         self.client = AbuseIPDBTaxiiClient(
@@ -107,56 +42,7 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
             ssl_verify=config.verify_ssl,
         )
 
-    def _known_indicator_ids(self, objects: list[dict[str, Any]]) -> frozenset[str]:
-        """Return the IDs of the page's indicators that OpenCTI already holds."""
-        indicators = [obj for obj in objects if obj["type"] == "indicator"]
-        if not indicators:
-            return frozenset()
-
-        feed_ids = sorted({obj["id"] for obj in indicators})
-        canonical_ids = sorted(
-            {
-                Indicator.generate_id(obj["pattern"])
-                for obj in indicators
-                if isinstance(obj.get("pattern"), str) and obj["pattern"]
-            }
-        )
-        filters: list[dict[str, Any]] = [
-            {"key": "x_opencti_stix_ids", "values": feed_ids}
-        ]
-        if canonical_ids:
-            filters.append({"key": "standard_id", "values": canonical_ids})
-
-        known: set[str] = set()
-        # The lookup only feeds the run summary, so a failure must never cost the
-        # page: on server-paced feeds a page that is not sent is not served again.
-        try:
-            matches = self._helper.api.stix_core_object.list(
-                types=["Indicator"],
-                filters={"mode": "or", "filters": filters, "filterGroups": []},
-                first=len(feed_ids) + len(canonical_ids),
-                customAttributes="standard_id x_opencti_stix_ids",
-            )
-            for match in matches:
-                if not isinstance(match, dict):
-                    continue
-                standard_id = match.get("standard_id")
-                if isinstance(standard_id, str):
-                    known.add(standard_id)
-                stix_ids = match.get("x_opencti_stix_ids")
-                if isinstance(stix_ids, list):
-                    known.update(
-                        stix_id for stix_id in stix_ids if isinstance(stix_id, str)
-                    )
-        except Exception as err:
-            self.logger.warning(
-                "AbuseIPDB TAXII indicator lookup failed; the page's indicators are counted as new",
-                meta={"error_type": type(err).__name__},
-            )
-            return frozenset()
-        return frozenset(known)
-
-    def collect(self) -> Generator[CollectedPage, None, None]:
+    def collect(self) -> Generator[TaxiiPage, None, None]:
         config = self.settings.abuseipdb_taxii
         collection_id = self.client.discover_collection_id(config.collection_id)
         # The server accepts a position from another feed, so a saved position
@@ -172,7 +58,12 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
             )
         self.state.collection_id = collection_id
 
-        added_after = self.state.added_after or config.import_since_iso
+        # A relative import start is resolved again at every process start, so
+        # it is saved: a pull that restarts before its first server watermark
+        # must begin where the first attempt did.
+        if self.state.added_after is None:
+            self.state.added_after = config.import_since_iso
+        added_after = self.state.added_after
         cursor = self.state.next_cursor
         seen_cursors: set[str | None] = {cursor} if cursor else set()
 
@@ -188,9 +79,7 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
                 next_cursor=cursor,
                 limit=config.page_size,
             )
-            yield CollectedPage(
-                page=page, known_ids=self._known_indicator_ids(page.objects)
-            )
+            yield page
             more = page.more
             if more:
                 if page.next_cursor in seen_cursors:
@@ -201,16 +90,17 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
                 cursor = page.next_cursor
 
     def transform(
-        self, pages: Iterable[CollectedPage]
+        self, pages: Iterable[TaxiiPage]
     ) -> Generator[list[dict[str, Any]], None, None]:
-        stats = PullStats()
+        page_count = 0
+        objects_submitted = 0
         drained = False
         try:
-            for collected in pages:
-                page = collected.page
+            for page in pages:
                 if page.objects:
                     yield page.objects
-                stats.record_page(page.objects, collected.known_ids)
+                page_count += 1
+                objects_submitted += len(page.objects)
                 if page.more:
                     self.state.next_cursor = page.next_cursor
                 else:
@@ -234,9 +124,7 @@ class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
             "AbuseIPDB TAXII pull finished",
             meta={
                 "drained": drained,
-                "pages": stats.pages,
-                "objects_submitted": stats.objects_submitted,
-                "new_indicators": stats.new_indicators,
-                "re_served_indicators": stats.re_served_indicators,
+                "pages": page_count,
+                "objects_submitted": objects_submitted,
             },
         )
