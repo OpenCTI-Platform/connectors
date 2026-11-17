@@ -35,7 +35,7 @@
 
 | Item | Value |
 |------|-------|
-| Status | Deprecated since 17/11/2026 |
+| Status | Deprecated since 2026-11-17 |
 | Reason | The upstream `montysecurity/C2-Tracker` repository is archived and its `data` directory was removed (issue #8169) |
 | Planned removal | Not scheduled yet, announced in advance |
 | Recommended alternative | None available |

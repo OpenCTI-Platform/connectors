@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from unittest.mock import MagicMock
 
 import pytest
@@ -80,3 +81,10 @@ def test_runtime_notice_should_not_contain_a_placeholder_when_logged():
     assert not placeholder.search(DEPRECATION_MESSAGE.replace("[DEPRECATED]", ""))
     assert not placeholder.search(DEPRECATION_DATE)
     assert not any(placeholder.search(str(value)) for value in meta.values())
+
+
+def test_deprecation_date_should_be_an_iso_8601_date():
+    # Given the shared deprecation date
+    # When it is parsed as ISO 8601
+    # Then it is valid, and cannot be read as a US or European format
+    assert date.fromisoformat(DEPRECATION_DATE).isoformat() == DEPRECATION_DATE

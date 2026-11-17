@@ -10,7 +10,7 @@
 | Item | Value |
 |------|-------|
 | Connector | `external-import/montysecurity-c2-tracker` (image `opencti/connector-montysecurity-c2-tracker`) |
-| Deprecated since | 17/11/2026 |
+| Deprecated since | 2026-11-17 |
 | Reason | The upstream repository `montysecurity/C2-Tracker` is archived and its `data` directory returns 404. Tracked in issue #8169. |
 | Planned removal | Not scheduled yet. It will be announced in advance. |
 | Last working release | 6.8.13 |
@@ -55,7 +55,7 @@ Ready to publish.
 
 > The Monty Security C2 Tracker connector for OpenCTI
 > (`external-import/montysecurity-c2-tracker`) is deprecated as of
-> 17/11/2026. It will be removed in a future release. The removal date
+> 2026-11-17. It will be removed in a future release. The removal date
 > will be announced in advance.
 >
 > **Why:** the upstream C2-Tracker repository is archived and its data was
