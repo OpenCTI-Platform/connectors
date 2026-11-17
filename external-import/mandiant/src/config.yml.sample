@@ -1,4 +1,4 @@
-# DEPRECATED: this connector is deprecated, effective April 2027, and will be removed in a future release.
+# DEPRECATED: this connector is deprecated, its support ends in April 2027, and it will be removed in a future release.
 # Migrate to google-ti-feeds. See DEPRECATION.md.
 opencti:
   url: 'http://localhost'

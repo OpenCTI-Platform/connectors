@@ -1,7 +1,7 @@
 # OpenCTI Mandiant Connector (Deprecated)
 
 > [!CAUTION]
-> **This connector is DEPRECATED**, effective April 2027. It will be removed in a future release.
+> **This connector is DEPRECATED.** Support ends in April 2027 and it will be removed in a future release.
 > Migrate to **[`google-ti-feeds`](../google-ti-feeds)**.
 > See the [deprecation notice](#deprecation-notice) and [DEPRECATION.md](./DEPRECATION.md).
 
@@ -33,7 +33,7 @@ The Mandiant connector imports threat intelligence from Mandiant Advantage into 
 
 ## Deprecation notice
 
-This connector is deprecated, effective April 2027. It keeps working until it is removed, and its
+This connector is deprecated and its support ends in April 2027. It keeps working until it is removed, and its
 behaviour and configuration do not change. The removal date is not scheduled yet and will be announced in advance.
 
 - Recommended alternative: [`google-ti-feeds`](../google-ti-feeds)

@@ -3,9 +3,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from connector.base import Mandiant
 from deprecation_notice import (
-    DEPRECATION_DATE,
     DEPRECATION_MESSAGE,
     REPLACEMENT,
+    SUPPORT_END_DATE,
     log_deprecation,
     warn_deprecated,
 )
@@ -33,16 +33,16 @@ def test_log_deprecation_should_log_a_single_warning_when_called():
     assert "[DEPRECATED]" in message
 
 
-def test_log_deprecation_should_log_date_and_replacement_when_called():
+def test_log_deprecation_should_log_support_end_and_replacement_when_called():
     # Given a connector logger
     logger = MagicMock()
 
     # When the deprecation is logged
     log_deprecation(logger)
 
-    # Then the context dict carries the date and where to migrate
+    # Then the context dict carries the end-of-support date and where to migrate
     context = logger.warning.call_args.args[1]
-    assert context["deprecation_date"] == DEPRECATION_DATE
+    assert context["support_end"] == SUPPORT_END_DATE
     assert context["replacement"] == REPLACEMENT
 
 
@@ -50,7 +50,7 @@ def test_deprecation_message_should_mention_date_and_replacement():
     # Given the shared deprecation message
     # When it is read
     # Then it tells users when and where to migrate
-    assert DEPRECATION_DATE in DEPRECATION_MESSAGE
+    assert SUPPORT_END_DATE in DEPRECATION_MESSAGE
     assert REPLACEMENT in DEPRECATION_MESSAGE
 
 

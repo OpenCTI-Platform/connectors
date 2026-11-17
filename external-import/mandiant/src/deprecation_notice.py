@@ -1,7 +1,7 @@
 """Deprecation notice of the Mandiant connector.
 
 Single source of truth for every runtime warning about the deprecation of this
-connector: the deprecation date and the replacement connector.
+connector: the end-of-support date and the replacement connector.
 
 The module is deliberately not named ``deprecation`` to avoid shadowing the
 PyPI package of the same name.
@@ -10,12 +10,12 @@ PyPI package of the same name.
 import warnings
 from typing import Any, Protocol
 
-DEPRECATION_DATE = "April 2027"
+SUPPORT_END_DATE = "April 2027"
 REPLACEMENT = "google-ti-feeds"
 
 DEPRECATION_MESSAGE = (
-    f"The Mandiant connector is DEPRECATED, effective {DEPRECATION_DATE}, and will "
-    f"be removed in a future release. Migrate to {REPLACEMENT}."
+    f"The Mandiant connector is DEPRECATED. Support ends in {SUPPORT_END_DATE} and "
+    f"it will be removed in a future release. Migrate to {REPLACEMENT}."
 )
 
 
@@ -43,7 +43,7 @@ def log_deprecation(logger: _ConnectorLogger) -> None:
     logger.warning(
         "[DEPRECATED] The Mandiant connector is deprecated and will be removed",
         {
-            "deprecation_date": DEPRECATION_DATE,
+            "support_end": SUPPORT_END_DATE,
             "replacement": REPLACEMENT,
         },
     )

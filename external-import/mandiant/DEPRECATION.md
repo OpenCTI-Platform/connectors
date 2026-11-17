@@ -1,8 +1,8 @@
 # Mandiant connector: deprecation notice
 
 > [!CAUTION]
-> The Mandiant connector is **deprecated**, effective April 2027, and will be
-> removed in a future release. Migrate to [`google-ti-feeds`](../google-ti-feeds).
+> The Mandiant connector is **deprecated**. Support ends in April 2027 and it
+> will be removed in a future release. Migrate to [`google-ti-feeds`](../google-ti-feeds).
 
 Values in `[...]` are placeholders for information that is not known yet. They
 are filled in as soon as it is.
@@ -12,16 +12,17 @@ are filled in as soon as it is.
 | Item | Value |
 |------|-------|
 | Connector | `external-import/mandiant` (image `opencti/connector-mandiant`) |
-| Deprecation date | April 2027 |
+| Deprecated since | [DEPRECATION_DATE] |
+| End of support | April 2027 |
 | Planned removal | Not scheduled yet. It will be announced in advance. |
 | Last supported release | [LAST_SUPPORTED_VERSION] |
-| Support until removal | [SUPPORT_POLICY] |
+| Support until April 2027 | [SUPPORT_POLICY] |
 | Recommended alternative | [`google-ti-feeds`](../google-ti-feeds) |
 | Contact | [SUPPORT_CONTACT] |
 
 ## What changes for you
 
-- Until the removal the connector keeps running. Support level: [SUPPORT_POLICY].
+- Until the removal the connector keeps running. Support ends in April 2027 (what is still fixed until then: [SUPPORT_POLICY]).
 - It logs a `[DEPRECATED]` warning at startup and at every run, and prints a
   `FutureWarning` on stderr when the process starts.
 - The connector is listed as "Mandiant (Deprecated)" in the catalog.
@@ -46,9 +47,9 @@ Ready to publish once the placeholders are filled in.
 
 **Body:**
 
-> The Mandiant connector for OpenCTI (`external-import/mandiant`) is deprecated,
-> effective April 2027. It will be removed in a future release. The removal
-> date will be announced in advance.
+> The Mandiant connector for OpenCTI (`external-import/mandiant`) is deprecated.
+> Support ends in April 2027 and it will be removed in a future release. The
+> removal date will be announced in advance.
 >
 > **What you need to do:** migrate to [`google-ti-feeds`](../google-ti-feeds). Until the removal, the
 > connector keeps running and logs a deprecation warning at every run.
@@ -61,7 +62,7 @@ Ready to publish once the placeholders are filled in.
 
 **Short version (chat, release notes):**
 
-> ⚠️ Mandiant connector deprecated (April 2027), use google-ti-feeds. Removal date
+> ⚠️ Mandiant connector deprecated, support ends April 2027, use google-ti-feeds. Removal date
 > to be announced.
 
 ## Where this deprecation is marked
