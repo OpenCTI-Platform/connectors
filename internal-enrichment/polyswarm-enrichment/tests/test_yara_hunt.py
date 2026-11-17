@@ -484,6 +484,34 @@ class TestNoSecondHunt:
         api.historical_get.assert_not_called()
         assert outcome.failed and "Could not check PolySwarm" in outcome.error
 
+    def test_no_readable_state_and_failed_listing_do_not_start_a_hunt(self):
+        # pycti's get_state returns None both for an empty state and for one it
+        # could not read, so None never proves that no hunt is running
+        helper = FakeHelper()
+        helper.get_state = MagicMock(return_value=None)
+        api = _api()
+        api.historical_list.side_effect = ConnectionError("read timed out")
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt") as create:
+            outcome = hunter.run(RULE)
+        create.assert_not_called()
+        api.historical_get.assert_not_called()
+        assert outcome.failed and "Could not check PolySwarm" in outcome.error
+
+    def test_no_readable_state_with_empty_listing_starts_a_hunt(self):
+        # A fresh connector (no state yet) still hunts once the listing answers
+        helper = FakeHelper()
+        helper.get_state = MagicMock(return_value=None)
+        api = _api()
+        api.historical_list.side_effect = polyswarm_exceptions.NoResultsException("x")
+        api.historical_get.return_value = _hunt("9", "COMPLETED", 0)
+        api.historical_results.return_value = iter([])
+        hunter = _hunter(api, helper=helper)
+        with patch.object(hunter, "_create_hunt", return_value=_hunt("9")) as create:
+            outcome = hunter.run(RULE)
+        create.assert_called_once()
+        assert outcome.hunt_id == "9" and not outcome.failed
+
     def test_no_saved_entry_and_failed_listing_still_starts_first_hunt(self):
         api = _api()
         api.historical_list.side_effect = ConnectionError("read timed out")

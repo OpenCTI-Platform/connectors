@@ -172,12 +172,17 @@ class YaraHunter:
     def _load_state(self, strict: bool = False) -> dict:
         """The saved hunts, keeping only well-formed entries.
 
-        A read error gives {} unless ``strict`` (then it raises). ``strict``
-        covers helpers whose get_state raises; pycti's helper catches its own
-        errors and returns None, which reads as "no saved hunts".
+        A read error gives {} unless ``strict`` (then it raises). With
+        ``strict``, a None state also raises: pycti's get_state returns None
+        both for an empty state and for one it could not read, so None never
+        proves that no hunt was saved.
         """
         try:
-            state = self.helper.get_state() or {}
+            state = self.helper.get_state()
+            if state is None:
+                if strict:
+                    raise RuntimeError("no readable saved state")
+                state = {}
         except Exception:
             if strict:
                 raise
@@ -265,8 +270,8 @@ class YaraHunter:
         try:
             remembered = self._load_state(strict=True).get(digest)
         except Exception as err:
-            # Only for a helper whose get_state raises (pycti's returns None,
-            # read as no saved entry): same as a failed hunt read
+            # No readable saved state (raised, or None from pycti): same as a
+            # failed hunt read, so a failed listing too means no new hunt
             remembered = None
             remembered_failed = True
             self.helper.connector_logger.warning(
