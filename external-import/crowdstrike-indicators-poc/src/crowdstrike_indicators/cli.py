@@ -18,8 +18,9 @@ import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
+from crowdstrike_indicators.actors import ActorsClient, CrowdStrikeActorEnricher
 from crowdstrike_indicators.attack import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
@@ -37,6 +38,7 @@ from crowdstrike_indicators.extractor import (
     validate_indicator,
 )
 from crowdstrike_indicators.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.models import EnrichedCrowdStrikeIndicator
 from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
 from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
 
@@ -71,7 +73,11 @@ def build_transform_steps(
     return (*TRANSFORM_STEPS, *attack_steps, MakeStixBundle())
 
 
-def build_client(client_id: str, client_secret: str, base_url: str) -> IndicatorsClient:
+class IntelClient(IndicatorsClient, ActorsClient, Protocol):
+    """The FalconPy ``Intel`` operations ``extract`` uses: indicators and actors."""
+
+
+def build_client(client_id: str, client_secret: str, base_url: str) -> IntelClient:
     """Build the FalconPy ``Intel`` service class."""
     from falconpy import Intel
 
@@ -239,7 +245,9 @@ def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
     pages: list[dict[str, Any]] = []
     client = build_client(config[CLIENT_ID], config[CLIENT_SECRET], config[BASE_URL])
     extractor = CrowdStrikeIndicatorExtractor(
-        client, on_raw_page=pages.append if args.dump_raw else None
+        client,
+        CrowdStrikeActorEnricher(client),
+        on_raw_page=pages.append if args.dump_raw else None,
     )
 
     try:
@@ -318,7 +326,7 @@ def _run_transform(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
 
     steps: list[dict[str, Any]] = []
     try:
-        value: Any = validate_indicator(raw)
+        value: Any = validate_indicator(raw, EnrichedCrowdStrikeIndicator)
         for number, step in enumerate(build_transform_steps(catalog), start=1):
             value = step.convert(value)
             steps.append(

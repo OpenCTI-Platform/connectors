@@ -3,6 +3,7 @@
 import calendar
 import json
 import logging
+from collections import Counter
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -13,9 +14,14 @@ from crowdstrike_indicators.api import (  # noqa: F401 - re-exported
     response_body,
 )
 from crowdstrike_indicators.errors import IndicatorValidationError
-from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.models import (
+    CrowdStrikeActor,
+    CrowdStrikeIndicator,
+    EnrichedCrowdStrikeIndicator,
+)
 from pydantic import ValidationError
 
+from shared.enricher import AbstractEnricher
 from shared.extractor import AbstractExtractor
 
 LOGGER = logging.getLogger(__name__)
@@ -62,14 +68,16 @@ def first_marker_cursor(from_date: datetime) -> str:
     return f"{max(seconds, 0):010d}"
 
 
-def validate_indicator(raw: Any) -> CrowdStrikeIndicator:
-    """Validate one raw API indicator.
+def validate_indicator(
+    raw: Any, model: type[CrowdStrikeIndicator] = CrowdStrikeIndicator
+) -> CrowdStrikeIndicator:
+    """Validate one raw indicator as ``model``, a raw API indicator by default.
 
     :raises IndicatorValidationError: with the id, the JSON-safe validation
         errors and the raw indicator.
     """
     try:
-        return CrowdStrikeIndicator.model_validate(raw)
+        return model.model_validate(raw)
     except ValidationError as error:
         raw_id = raw.get("id") if isinstance(raw, dict) else None
         raise IndicatorValidationError(
@@ -79,8 +87,8 @@ def validate_indicator(raw: Any) -> CrowdStrikeIndicator:
         ) from error
 
 
-class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
-    """Extract indicators with marker-based deep pagination.
+class CrowdStrikeIndicatorExtractor(AbstractExtractor[EnrichedCrowdStrikeIndicator]):
+    """Extract indicators with marker-based deep pagination, with their actors.
 
     Pages are requested in ascending ``_marker`` order with the filter
     ``_marker:>='<cursor>'``. That filter includes the cursor, so every page
@@ -89,24 +97,51 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
     a page that brings no new row then really means nothing is left. Once at
     least ``max_element_count`` rows are collected, the result is cut to the
     earliest ``max_element_count``.
+
+    Only then are the actors of the kept indicators looked up through
+    ``actor_enricher``, whose cache is emptied at the start of every
+    extraction. A missing actor never fails the extraction: a name that
+    resolves to nothing, or whose lookup raises, is logged and left out of
+    ``actor_objects_list``. ``on_raw_page`` receives indicator pages only.
     """
 
     def __init__(
         self,
         client: IndicatorsClient,
+        actor_enricher: AbstractEnricher[CrowdStrikeActor],
         *,
         on_raw_page: RawPageCallback | None = None,
         page_size: int = PAGE_SIZE,
     ) -> None:
         self.client = client
+        self.actor_enricher = actor_enricher
         self.on_raw_page = on_raw_page
         self.page_size = page_size
 
     def extract(
         self, from_date: datetime, max_element_count: int
-    ) -> list[tuple[datetime, CrowdStrikeIndicator]]:
+    ) -> list[tuple[datetime, EnrichedCrowdStrikeIndicator]]:
         self.check_arguments(from_date, max_element_count)
+        self.actor_enricher.reset_cache()
+        collected = self._collect(from_date, max_element_count)[:max_element_count]
 
+        stats: Counter[str] = Counter()
+        enriched = [(dt, self._enrich(indicator, stats)) for dt, indicator in collected]
+        if stats["looked_up"]:
+            LOGGER.log(
+                logging.WARNING if stats["failed"] else logging.INFO,
+                "Looked up %d actor name(s): %d resolved, %d unresolved, %d failed",
+                stats["looked_up"],
+                stats["resolved"],
+                stats["unresolved"],
+                stats["failed"],
+            )
+        return enriched
+
+    def _collect(
+        self, from_date: datetime, max_element_count: int
+    ) -> list[tuple[datetime, CrowdStrikeIndicator]]:
+        """Paginate until ``max_element_count`` rows or nothing new."""
         collected: list[tuple[datetime, CrowdStrikeIndicator]] = []
         seen_ids: set[str] = set()
         cursor = first_marker_cursor(from_date)
@@ -136,7 +171,43 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
                 break
             cursor = collected[-1][1].marker
 
-        return collected[:max_element_count]
+        return collected
+
+    def _enrich(
+        self, indicator: CrowdStrikeIndicator, stats: Counter[str]
+    ) -> EnrichedCrowdStrikeIndicator:
+        """Return ``indicator`` with the actors its names resolve to."""
+        actors: list[CrowdStrikeActor] = []
+        actor_ids: set[int] = set()
+        for name in dict.fromkeys(indicator.actors or []):
+            stats["looked_up"] += 1
+            try:
+                actor = self.actor_enricher.extract(name)
+            except Exception as error:  # a missing actor never fails extraction
+                stats["failed"] += 1
+                LOGGER.warning(
+                    "Actor %s of indicator %s could not be looked up: %s",
+                    name,
+                    indicator.id,
+                    error,
+                )
+                continue
+            if actor is None:
+                stats["unresolved"] += 1
+                LOGGER.info(
+                    "Actor %s of indicator %s did not resolve", name, indicator.id
+                )
+                continue
+            stats["resolved"] += 1
+            if actor.id not in actor_ids:
+                actor_ids.add(actor.id)
+                actors.append(actor)
+        return EnrichedCrowdStrikeIndicator.model_validate(
+            {
+                **indicator.model_dump(by_alias=True, exclude_unset=True),
+                "actor_objects_list": actors,
+            }
+        )
 
     def _fetch_page(self, cursor: str) -> dict[str, Any]:
         response = self.client.query_indicator_entities(

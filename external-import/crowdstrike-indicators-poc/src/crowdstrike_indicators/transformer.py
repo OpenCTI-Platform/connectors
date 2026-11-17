@@ -10,7 +10,10 @@ from crowdstrike_indicators.ids import (
     CROWDSTRIKE_NAMESPACE,
     indicator_id,
 )
-from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.models import (
+    CrowdStrikeIndicator,
+    EnrichedCrowdStrikeIndicator,
+)
 from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
 from stix2 import (
     EqualityComparisonExpression,
@@ -111,7 +114,7 @@ def _x_properties(item: CrowdStrikeIndicator, confidence: int | None) -> dict[st
     set, and ``kill_chains`` only when one of its values has no phase.
     """
     properties: dict[str, Any] = {}
-    for name, field in CrowdStrikeIndicator.model_fields.items():
+    for name, field in type(item).model_fields.items():
         value = getattr(item, name)
         if value is None or value == []:
             continue  # stix2 drops empty lists: absent and empty look the same
@@ -124,6 +127,11 @@ def _x_properties(item: CrowdStrikeIndicator, confidence: int | None) -> dict[st
         if name == "labels":
             value = [
                 label.model_dump(mode="json", exclude_none=True) for label in value
+            ]
+        if name == "actor_objects_list":
+            value = [
+                actor.model_dump(mode="json", by_alias=True, exclude_unset=True)
+                for actor in value
             ]
         properties[x_property_name(field.alias or name)] = value
     if item.model_extra:
@@ -158,16 +166,17 @@ def _created(item: CrowdStrikeIndicator) -> datetime:
 
 
 class CrowdStrikeIndicatorTransformer(
-    AbstractTransformer[CrowdStrikeIndicator, CrowdStrikeStix2Indicator]
+    AbstractTransformer[EnrichedCrowdStrikeIndicator, CrowdStrikeStix2Indicator]
 ):
     """Convert a CrowdStrike indicator into one STIX 2.1 indicator.
 
     The native STIX properties whose meaning matches are filled, and the
     CrowdStrike fields they cannot hold are kept in ``x_crowdstrike_*``
-    properties, so nothing is lost. No network call is made.
+    properties, so nothing is lost: ``actor_objects_list`` included, in
+    ``x_crowdstrike_actor_objects_list``. No network call is made.
     """
 
-    def convert(self, item: CrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
+    def convert(self, item: EnrichedCrowdStrikeIndicator) -> CrowdStrikeStix2Indicator:
         """Return the STIX indicator of ``item``.
 
         :raises IndicatorConversionError: if the type has no pattern mapping,

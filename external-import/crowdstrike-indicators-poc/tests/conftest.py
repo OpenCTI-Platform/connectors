@@ -51,49 +51,6 @@ def make_indicator(
     }
 
 
-class FakeIndicatorsAPI:
-    """Simulates ``query_indicator_entities`` over a dataset.
-
-    Applies the same rules as CrowdStrike for the parameters the extractor
-    uses: ``filter=_marker:>='<cursor>'`` (inclusive, compared as strings),
-    ``sort=_marker.asc`` and ``limit``. Records the arguments of every call.
-    """
-
-    def __init__(self, indicators: list[dict[str, Any]]) -> None:
-        self.indicators = sorted(indicators, key=lambda raw: raw["_marker"])
-        self.calls: list[dict[str, Any]] = []
-
-    def query_indicator_entities(self, **kwargs: Any) -> dict[str, Any]:
-        self.calls.append(kwargs)
-        assert kwargs["sort"] == "_marker.asc"
-        match = _MARKER_FILTER.match(kwargs["filter"])
-        assert match, kwargs["filter"]
-        cursor = match["cursor"]
-        matching = [raw for raw in self.indicators if raw["_marker"] >= cursor]
-        page = matching[: kwargs["limit"]]
-        return ok(
-            {
-                "meta": {"pagination": {"total": len(matching)}},
-                "errors": [],
-                "resources": copy.deepcopy(page),
-            }
-        )
-
-
-class ScriptedClient:
-    """Returns the given FalconPy responses in order, one per call."""
-
-    def __init__(self, responses: list[dict[str, Any]]) -> None:
-        self.responses = list(responses)
-        self.calls: list[dict[str, Any]] = []
-
-    def query_indicator_entities(self, **kwargs: Any) -> dict[str, Any]:
-        self.calls.append(kwargs)
-        if not self.responses:
-            return ok({"resources": []})
-        return self.responses.pop(0)
-
-
 def make_actor(name: str, actor_id: int | None = None, **fields: Any) -> dict[str, Any]:
     """Build a raw API actor named ``name`` (``SALTY SPIDER``), with its slug."""
     return {
@@ -165,6 +122,76 @@ class ScriptedActorsClient:
         if not self.responses:
             return ok({"resources": []})
         return self.responses.pop(0)
+
+
+class FakeIndicatorsAPI(FakeActorsAPI):
+    """Simulates ``query_indicator_entities`` over a dataset.
+
+    Applies the same rules as CrowdStrike for the parameters the extractor
+    uses: ``filter=_marker:>='<cursor>'`` (inclusive, compared as strings),
+    ``sort=_marker.asc`` and ``limit``. Records the arguments of every call.
+    Answers the actors API too, from ``actors`` (none by default): see
+    :class:`FakeActorsAPI`.
+    """
+
+    def __init__(
+        self,
+        indicators: list[dict[str, Any]],
+        actors: list[dict[str, Any]] | None = None,
+        actor_failures: dict[str, list[dict[str, Any]]] | None = None,
+    ) -> None:
+        super().__init__(actors, actor_failures)
+        self.indicators = sorted(indicators, key=lambda raw: raw["_marker"])
+        self.calls: list[dict[str, Any]] = []
+
+    def query_indicator_entities(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(kwargs)
+        assert kwargs["sort"] == "_marker.asc"
+        match = _MARKER_FILTER.match(kwargs["filter"])
+        assert match, kwargs["filter"]
+        cursor = match["cursor"]
+        matching = [raw for raw in self.indicators if raw["_marker"] >= cursor]
+        page = matching[: kwargs["limit"]]
+        return ok(
+            {
+                "meta": {"pagination": {"total": len(matching)}},
+                "errors": [],
+                "resources": copy.deepcopy(page),
+            }
+        )
+
+
+class ScriptedClient(FakeActorsAPI):
+    """Returns the given FalconPy responses in order, one per call.
+
+    Answers the actors API too, from ``actors`` (none by default).
+    """
+
+    def __init__(
+        self,
+        responses: list[dict[str, Any]],
+        actors: list[dict[str, Any]] | None = None,
+    ) -> None:
+        super().__init__(actors)
+        self.responses = list(responses)
+        self.calls: list[dict[str, Any]] = []
+
+    def query_indicator_entities(self, **kwargs: Any) -> dict[str, Any]:
+        self.calls.append(kwargs)
+        if not self.responses:
+            return ok({"resources": []})
+        return self.responses.pop(0)
+
+
+def build_extractor(client: Any, **kwargs: Any) -> Any:
+    """Build a ``CrowdStrikeIndicatorExtractor`` whose actor enricher uses
+    the same client, as the CLI does."""
+    from crowdstrike_indicators.actors import CrowdStrikeActorEnricher
+    from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
+
+    return CrowdStrikeIndicatorExtractor(
+        client, CrowdStrikeActorEnricher(client), **kwargs
+    )
 
 
 @pytest.fixture

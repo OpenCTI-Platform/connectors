@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from conftest import FakeIndicatorsAPI, load_fixture
+from conftest import FakeIndicatorsAPI, build_extractor, load_fixture
 from crowdstrike_indicators.bundle import MakeStixBundle
 from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
 from crowdstrike_indicators.malware import CrowdStrikeAddMalware
@@ -122,7 +122,7 @@ CROWDSTRIKE_ROWS = load_fixture("indicators_sample.json")["resources"]
 
 
 def crowdstrike_extractor() -> CrowdStrikeIndicatorExtractor:
-    return CrowdStrikeIndicatorExtractor(FakeIndicatorsAPI(CROWDSTRIKE_ROWS))
+    return build_extractor(FakeIndicatorsAPI(CROWDSTRIKE_ROWS))
 
 
 def test_fitting_crowdstrike_chain_is_accepted(tmp_path):

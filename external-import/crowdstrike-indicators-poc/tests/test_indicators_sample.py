@@ -12,8 +12,7 @@ import ipaddress
 from datetime import datetime
 
 import pytest
-from conftest import ScriptedClient, load_fixture, ok
-from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
+from conftest import ScriptedClient, build_extractor, load_fixture, ok
 from crowdstrike_indicators.models import CrowdStrikeIndicator
 
 PAGE = load_fixture("indicators_sample.json")
@@ -32,7 +31,7 @@ def test_every_sample_row_validates(raw):
 
 def test_extractor_returns_the_whole_sample_in_order():
     client = ScriptedClient([ok(PAGE)])
-    result = CrowdStrikeIndicatorExtractor(client).extract(FROM, 100)
+    result = build_extractor(client).extract(FROM, 100)
 
     assert [indicator.id for _, indicator in result] == [r["id"] for r in ROWS]
     for dt, indicator in result:
