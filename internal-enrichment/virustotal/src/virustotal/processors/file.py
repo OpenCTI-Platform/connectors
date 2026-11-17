@@ -125,8 +125,7 @@ class FileProcessor(EntityProcessor):
             f"The file {hash_value} was not found in VirusTotal repositories. "
             "Beginning upload and analysis."
         )
-        self.helper.api.work.to_received(self.helper.work_id, message)
-        self.helper.log_debug(message)
+        self._report_progress(message)
 
         artifact_url = (
             f"{self.helper.opencti_url.rstrip('/')}/storage/get/{file_meta['id']}"
