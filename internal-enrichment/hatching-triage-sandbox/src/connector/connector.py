@@ -654,37 +654,13 @@ class HatchingTriageSandboxConnector:
     def _submit_sample(self, url=None, file_name=None, file_content=None):
         sample_json = None
 
-        for attempt in range(1, self.max_attempts + 1):
-            status = None
-            try:
-                if file_content is not None:
-                    file_obj = io.BytesIO(file_content)
-                    sample_json = self.triage_client.submit_sample_file(
-                        filename=file_name, file=file_obj
-                    )
-                elif url is not None:
-                    sample_json = self.triage_client.submit_sample_url(url=url)
-            except (json.JSONDecodeError, RequestException, ServerError) as err:
-                response = getattr(err, "response", None)
-                status = response.status_code if response is not None else None
-                if status is not None and status < 500:
-                    raise
-                elif attempt == self.max_attempts:
-                    raise
-            else:
-                break
-            self.helper.connector_logger.warning(
-                "Sample submission failed, retrying...",
-                meta={
-                    "file_name": file_name,
-                    "url": url,
-                    "status": status,
-                    "attempt": attempt,
-                    "max_attempts": self.max_attempts,
-                },
+        if file_content is not None:
+            file_obj = io.BytesIO(file_content)
+            sample_json = self.triage_client.submit_sample_file(
+                filename=file_name, file=file_obj
             )
-            if attempt < self.max_attempts:
-                time.sleep(RETRY_DELAY_SECONDS)
+        elif url is not None:
+            sample_json = self.triage_client.submit_sample_url(url=url)
 
         sample_id = sample_json["id"]
         sample_status = sample_json["status"]
