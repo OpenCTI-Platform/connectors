@@ -1,0 +1,28 @@
+{
+  "title": "IntelOwl",
+  "slug": "intelowl",
+  "description": "The IntelOwl internal-enrichment connector runs an IntelOwl playbook (FREE_TO_USE_ANALYZERS by default) on IPv4/IPv6 addresses, domains, hostnames, URLs and file hashes, waits for the job to finish, and writes the results back to OpenCTI: a Note on the observable with IntelOwl's aggregated verdict, reliability, tags and the status of every analyzer, linked to the job in IntelOwl; the observable's score from the verdict and IntelOwl's tags as labels (both optional); and a Malware entity with a related-to relationship when IntelOwl names a malware family. The observable's TLP is passed to IntelOwl so it only runs analyzers allowed for that TLP. IntelOwl is open source and self-hosted.",
+  "short_description": "Enrich IPs, domains, hostnames, URLs and file hashes by running an IntelOwl playbook: verdict note, score, labels and malware family.",
+  "logo": "internal-enrichment/intelowl/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": "https://github.com/Mohith26",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://intelowlproject.github.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/intelowl",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-intelowl",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

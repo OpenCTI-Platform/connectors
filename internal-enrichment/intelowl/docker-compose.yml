@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-intelowl:
+    image: opencti/connector-intelowl:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=IntelOwl
+      # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Hostname,Url,StixFile
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_MAX_TLP=TLP:AMBER
+      # IntelOwl parameters
+      - INTELOWL_URL=ChangeMe
+      - INTELOWL_API_KEY=ChangeMe
+      # - INTELOWL_PLAYBOOK=FREE_TO_USE_ANALYZERS
+      # - INTELOWL_VERIFY_SSL=true
+      # - INTELOWL_POLL_INTERVAL=5
+      # - INTELOWL_JOB_TIMEOUT=300
+      # - INTELOWL_UPDATE_SCORE=true
+      # - INTELOWL_CREATE_LABELS=true
+    restart: always
