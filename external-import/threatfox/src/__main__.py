@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import stix2
@@ -31,6 +31,9 @@ from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+RETRY_BASE_DELAY = 60  # seconds, first retry after a failed run
+# Bounds 2**n for a long run of failures; the interval caps the delay long before.
+MAX_BACKOFF_EXPONENT = 30
 
 
 class ThreatFoxDownloadError(DataRetrievalError):
@@ -83,6 +86,13 @@ class ThreatFox:
 
         return float(self.threatfox_interval) * 60 * 60 * 24
 
+    def get_retry_delay(self, failed_attempts: int) -> float:
+        """Seconds to wait after `failed_attempts` consecutive failed runs:
+        1, 2, 4... minutes, capped at the interval."""
+
+        exponent = min(failed_attempts - 1, MAX_BACKOFF_EXPONENT)
+        return min(RETRY_BASE_DELAY * 2**exponent, self.get_interval())
+
     def get_x_opencti_score(self, observable_type: str) -> int:
         """Get the x_opencti_score for the observable type"""
 
@@ -133,18 +143,45 @@ class ThreatFox:
             last_run_dt = datetime.fromtimestamp(last_run_ts, UTC)
             self.helper.log_info(f"Connector last run: {last_run_dt}")
 
+        # After failed runs, wait for the backoff delay instead of the interval,
+        # so a permanent error (revoked key, ...) does not start a new work
+        # every minute.
+        failed_attempts = state.get("failed_attempts", 0)
+        if failed_attempts:
+            wait = self.get_retry_delay(failed_attempts)
+            elapsed = now_ts - state.get("last_failure", 0)
+        else:
+            wait = self.get_interval()
+            elapsed = now_ts - last_run_ts
+
         next_dt = datetime.fromtimestamp(now_ts + self.get_interval(), UTC)
-        if (now_ts - last_run_ts) >= self.get_interval():
+        if elapsed >= wait:
             self.helper.log_info("Connector will run!")
             if self.import_data(state, now_dt, now_ts):
                 self.helper.log_info(
                     f"Last_run stored, next run in: {next_dt - now_dt}"
                 )
             else:
-                self.helper.log_info("Run failed, last_run not stored")
+                failed_attempts += 1
+                self.helper.set_state(
+                    {
+                        **state,
+                        "failed_attempts": failed_attempts,
+                        "last_failure": now_ts,
+                    }
+                )
+                self.helper.connector_logger.info(
+                    "Run failed, last_run not stored, retrying after a backoff",
+                    meta={
+                        "failed_attempts": failed_attempts,
+                        "next_attempt_in": str(
+                            timedelta(seconds=self.get_retry_delay(failed_attempts))
+                        ),
+                    },
+                )
         else:
             self.helper.log_info(
-                f"Connector will not run, next run in: {next_dt - now_dt}"
+                f"Connector will not run, next run in: {timedelta(seconds=wait - elapsed)}"
             )
 
     def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> bool:

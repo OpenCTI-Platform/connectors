@@ -70,32 +70,84 @@ def test_successful_download_stores_last_run(connector):
     now_dt = datetime.now(UTC)
     connector.download_csv = MagicMock(return_value=iter([]))
 
-    result = connector.import_data({}, now_dt, now_dt.timestamp())
+    result = connector.import_data(
+        {"failed_attempts": 3, "last_failure": 1}, now_dt, now_dt.timestamp()
+    )
 
     assert result is True
     connector.helper.set_state.assert_called_once()
-    assert connector.helper.set_state.call_args.args[0]["last_run"] == (
-        now_dt.timestamp()
-    )
+    stored = connector.helper.set_state.call_args.args[0]
+    assert stored["last_run"] == now_dt.timestamp()
+    # The success resets the backoff.
+    assert "failed_attempts" not in stored
+    assert "last_failure" not in stored
     assert "in_error" not in connector.helper.api.work.to_processed.call_args.kwargs
 
 
-@pytest.mark.parametrize(
-    "succeeded, expected_log",
-    [(True, "Last_run stored"), (False, "Run failed, last_run not stored")],
-    ids=["success", "failure"],
-)
-def test_loop_logs_the_run_outcome(connector, succeeded, expected_log):
+def test_loop_logs_last_run_stored_after_a_successful_run(connector):
     connector.threatfox_interval = 3
     connector.helper.get_state.return_value = {}
-    connector.import_data = MagicMock(return_value=succeeded)
+    connector.import_data = MagicMock(return_value=True)
 
     connector.loop()
 
     logged = [call.args[0] for call in connector.helper.log_info.call_args_list]
-    assert any(expected_log in message for message in logged)
-    if not succeeded:
-        assert not any("Last_run stored" in message for message in logged)
+    assert any("Last_run stored" in message for message in logged)
+    connector.helper.set_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "failed_attempts, expected_delay",
+    [(1, 60), (2, 120), (3, 240), (12, 122880), (14, 3 * 86400), (10_000, 3 * 86400)],
+)
+def test_retry_delay_doubles_and_is_capped_at_interval(
+    connector, failed_attempts, expected_delay
+):
+    connector.threatfox_interval = 3
+
+    assert connector.get_retry_delay(failed_attempts) == expected_delay
+
+
+@pytest.mark.parametrize("previous_failures", [0, 2])
+def test_failed_run_counts_the_failure_and_keeps_last_run(connector, previous_failures):
+    connector.threatfox_interval = 3
+    state = {"last_run": 1, "last_processed_entry": 5}
+    if previous_failures:
+        state.update(failed_attempts=previous_failures, last_failure=1)
+    connector.helper.get_state.return_value = dict(state)
+    connector.import_data = MagicMock(return_value=False)
+
+    connector.loop()
+
+    stored = connector.helper.set_state.call_args.args[0]
+    assert stored["last_run"] == 1
+    assert stored["last_processed_entry"] == 5
+    assert stored["failed_attempts"] == previous_failures + 1
+    assert stored["last_failure"] > 1
+    logged = [c.args[0] for c in connector.helper.log_info.call_args_list]
+    assert not any("Last_run stored" in message for message in logged)
+
+
+@pytest.mark.parametrize(
+    "seconds_since_failure, should_run",
+    [(60, False), (121, True)],
+    ids=["within_backoff", "backoff_elapsed"],
+)
+def test_loop_waits_for_the_backoff_after_failures(
+    connector, seconds_since_failure, should_run
+):
+    connector.threatfox_interval = 3
+    now_ts = datetime.now(UTC).timestamp()
+    connector.helper.get_state.return_value = {
+        "last_run": 1,
+        "failed_attempts": 2,  # 2 minutes of backoff
+        "last_failure": now_ts - seconds_since_failure,
+    }
+    connector.import_data = MagicMock(return_value=True)
+
+    connector.loop()
+
+    assert connector.import_data.called is should_run
 
 
 VALID_ROW = (

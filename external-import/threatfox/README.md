@@ -215,7 +215,7 @@ CONNECTOR_LOG_LEVEL=debug
 ## Additional information
 
 - **Auth-Key**: abuse.ch requires an Auth-Key to download ThreatFox exports. Create an account on [abuse.ch Authentication Portal](https://auth.abuse.ch) to get one. The same key works for URLhaus. The export endpoint only accepts the key in the URL path, so the connector builds the URL from `THREATFOX_AUTH_KEY` and never logs it.
-- **Failed runs**: if the download fails, the work is marked as failed and the next attempt happens one minute later instead of after a full interval.
+- **Failed runs**: if the run fails, the work is marked as failed and `last_run` is kept. The next attempt waits 1 minute, then 2, 4, 8... minutes after each new failure, up to the interval. A successful run resets the delay.
 - **IOC Freshness**: The `csv_recent` endpoint provides IOCs from the last 7 days
 - **Confidence Levels**: ThreatFox includes confidence levels that can be reflected in scores
 - **Reference**: [ThreatFox](https://threatfox.abuse.ch/)
