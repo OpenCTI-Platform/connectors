@@ -22,4 +22,5 @@ services:
       - RST_REPORT_HUB_CREATE_RELATED_TO=true
       - RST_REPORT_HUB_CREATE_CUSTOM_TTPS=true
       - RST_REPORT_HUB_SET_DETECTION_FLAG=false
+      # - RST_REPORT_HUB_NO_FILE_TRIGGER_IMPORT=true      
     restart: always
