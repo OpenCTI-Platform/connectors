@@ -1,13 +1,24 @@
+from datetime import timedelta
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["ctm360-cyna"],
+    )
     name: str = Field(default="CTM360-CYNA")
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+        default=timedelta(hours=24),
+    )
 
 
 class CTM360CynaConfig(BaseConfigModel):
