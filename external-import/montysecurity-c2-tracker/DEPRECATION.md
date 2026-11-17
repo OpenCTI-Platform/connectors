@@ -5,9 +5,6 @@
 > in a future release. It already **no longer imports data**, because its
 > upstream source was removed. No replacement connector is available.
 
-Values in `[...]` are placeholders for information that is not known yet. They
-are filled in as soon as it is.
-
 ## Status
 
 | Item | Value |
@@ -16,7 +13,7 @@ are filled in as soon as it is.
 | Deprecated since | 17/11/2026 |
 | Reason | The upstream repository `montysecurity/C2-Tracker` is archived and its `data` directory returns 404. Tracked in issue #8169. |
 | Planned removal | Not scheduled yet. It will be announced in advance. |
-| Last working release | [LAST_WORKING_VERSION] |
+| Last working release | 6.8.13 |
 | Support until removal | No fix is possible: the data source no longer exists. |
 | Recommended alternative | None available. |
 
@@ -42,16 +39,15 @@ There is no replacement connector, so the steps are about cleaning up.
    from `config.yml`.
 2. Remove the connector from `Data management` -> `Ingestion` -> `Connectors`
    in OpenCTI, so that it no longer shows as inactive.
-3. [MIGRATION_STEP_3]
+3. Delete the connector's Works from the Ingestion page.
 
 Data already imported (Malware, IP address observables and their relationships,
-authored by Monty Security) stays in OpenCTI. It is not updated any more, so
-review it before relying on it for detection. Whether it should be deleted is:
-[DATA_RETENTION_ADVICE].
+authored by Monty Security) stays in OpenCTI. Keep the imported data. It is no
+longer updated, so review it before relying on it for detection.
 
 ## Announcement text
 
-Ready to publish once the placeholders are filled in.
+Ready to publish.
 
 **Title:** Monty Security C2 Tracker connector deprecated, no replacement
 
