@@ -633,16 +633,18 @@ class PolySwarmClient:
         """Latest scan instance PolySwarm holds for a hash, read only.
 
         Accepts an MD5, SHA-1 or SHA-256. Returns the instance JSON (``id``,
-        ``sha256``, ``community``, ``created`` ...), or None when PolySwarm
-        does not hold the sample. Only the hash is sent.
+        ``sha256``, ``community``, ``created`` ...), an empty dict when
+        PolySwarm confirmed it does not hold the sample, or None when the
+        search failed and it is not known whether it does. Callers must not
+        treat None as "not held". Only the hash is sent.
         """
 
-        def _search() -> dict | None:
+        def _search() -> dict:
             try:
                 instances = list(self.api.search(hash_value))
             except (NoResultsException, NotFoundException):
-                return None
-            return instances[0].json if instances else None
+                return {}
+            return instances[0].json if instances else {}
 
         try:
             return self._retry_sdk_call(_search, operation="search by hash")

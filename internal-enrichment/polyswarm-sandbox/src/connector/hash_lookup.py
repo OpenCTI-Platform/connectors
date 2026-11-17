@@ -296,6 +296,19 @@ class HashLookupMixin:
             ],
         )
 
+    def _send_hash_search_failed_note(self, entity: dict[str, Any], outcome: str):
+        """Error note for a PolySwarm hash search that failed (not a miss)."""
+        self._send_error_note(
+            entity,
+            "Hash Search Failed",
+            "The PolySwarm search for this hash failed, so it is not known "
+            f"whether PolySwarm holds the sample; {outcome}.",
+            [
+                "Retry the enrichment in a few minutes.",
+                "Check the connector logs for the PolySwarm API error.",
+            ],
+        )
+
     def _deliver_existing(
         self,
         entity: dict[str, Any],
@@ -519,8 +532,10 @@ class HashLookupMixin:
         the remaining providers are not tried.
 
         Returns (provider to task id, outcome) where outcome is one of
-        "started", "refused", "not_held", "submit_failed", "api_error" (no
-        task started, every failure was an API error and is already noted).
+        "started", "refused", "not_held", "search_failed" (the search for the
+        held sample failed, nothing was detonated, already noted),
+        "submit_failed", "api_error" (no task started, every failure was an
+        API error and is already noted).
         """
         if not self._upload_community_allowed():
             self.helper.connector_logger.warning(
@@ -543,7 +558,11 @@ class HashLookupMixin:
             return {}, "refused"
 
         instance = self.polyswarm_client.find_instance_by_hash(hash_value)
-        if not instance or not instance.get("id"):
+        if instance is None:
+            # Unknown is not "not held": never detonate on a failed search
+            self._send_hash_search_failed_note(entity, "nothing was detonated")
+            return {}, "search_failed"
+        if not instance.get("id"):
             return {}, "not_held"
 
         tasks: dict[str, str] = {}
@@ -644,7 +663,17 @@ class HashLookupMixin:
             if not sha256:
                 # PolySwarm's sandbox lookup takes a SHA-256: resolve the other hash
                 instance = self.polyswarm_client.find_instance_by_hash(hash_value)
-                sha256 = (instance or {}).get("sha256")
+                if instance is None:
+                    # Unknown is not "no record": nothing is looked up or
+                    # detonated, and the original bundle is forwarded
+                    self._send_hash_search_failed_note(
+                        entity, "nothing was looked up or detonated"
+                    )
+                    return {
+                        "status": "error",
+                        "error": "Hash search failed, nothing was looked up",
+                    }
+                sha256 = instance.get("sha256")
                 if not sha256:
                     self._send_info_note(
                         entity,
@@ -730,6 +759,12 @@ class HashLookupMixin:
                     return {
                         "status": "error",
                         "error": "Sandbox start for the held sample failed",
+                    }
+                elif held_outcome == "search_failed" and not results:
+                    return {
+                        "status": "error",
+                        "error": "Search for the held sample failed, nothing was "
+                        "detonated",
                     }
                 elif held_outcome == "refused" and not results:
                     return {

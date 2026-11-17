@@ -341,7 +341,7 @@ class TestLookupMissing:
 
     def test_note_omits_setting_hint_when_already_on_and_not_held(self):
         c = _connector(latest={}, sandbox_detonate_by_hash=True)
-        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value={})
         assert _run(c) is None
         text = _notes(c)[0]["content"]
         assert "does not hold the sample" in text
@@ -358,12 +358,48 @@ class TestLookupMissing:
 
     def test_unknown_hash_for_sha1_gives_note(self):
         c = _connector(latest={})
-        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value={})
         assert _run(c, _stixfile({"MD5": "c" * 32})) is None
         c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
         content = _notes(c)[0]["content"]
         assert "no record of this hash" in content
         assert "'acme-private'" in content
+
+    def test_failed_hash_search_is_an_error_not_a_missing_sample(self):
+        """A failed MD5/SHA-1 search is not "no record": error, nothing looked up."""
+        c = _connector(latest={}, sandbox_detonate_by_hash=True)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c._send_error_note = MagicMock()
+        c._send_info_note = MagicMock()
+        result = _run(c, _stixfile({"MD5": "c" * 32}))
+        assert result["status"] == "error"
+        assert c._send_error_note.call_args.args[1] == "Hash Search Failed"
+        c._send_info_note.assert_not_called()
+        c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+
+    def test_failed_held_sample_search_never_detonates(self):
+        c = _connector(latest={}, sandbox_detonate_by_hash=True)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c._send_error_note = MagicMock()
+        c._send_info_note = MagicMock()
+        result = _run(c)
+        assert result["status"] == "error"
+        assert c._send_error_note.call_args.args[1] == "Hash Search Failed"
+        c._send_info_note.assert_not_called()
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+
+    def test_failed_held_sample_search_keeps_found_reports(self):
+        c = _connector(
+            latest={"triage": _task("triage")},
+            sandbox_provider="both",
+            sandbox_detonate_by_hash=True,
+        )
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        assert _run(c) is None
+        c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
+        abstracts = [n["abstract"] for n in _notes(c)]
+        assert any("Triage Sandbox Analysis" in a for a in abstracts)
 
     def _playbook_objects(self, entity):
         other = {
@@ -389,7 +425,7 @@ class TestLookupMissing:
 
     def test_unknown_hash_forwards_the_original_bundle(self):
         c = _connector(latest={})
-        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value={})
         entity = _stixfile({"MD5": "c" * 32})
         incoming = self._playbook_objects(entity)
         assert _run(c, entity, stix_objects=incoming) is None
@@ -524,7 +560,7 @@ class TestDetonateByHash:
 
     def test_sample_not_held(self):
         c = _connector(latest={}, sandbox_detonate_by_hash=True)
-        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value=None)
+        c.polyswarm_client.find_instance_by_hash = MagicMock(return_value={})
         assert _run(c) is None
         c.polyswarm_client.submit_sandbox_by_instance_async.assert_not_called()
         text = _notes(c)[0]["content"]
@@ -1675,17 +1711,32 @@ class TestClientLookup:
     def test_find_instance_not_held(self, exc):
         c = _client()
         c.api.search = MagicMock(side_effect=exc(MagicMock(), "none"))
-        assert c.find_instance_by_hash("0" * 64) is None
+        assert c.find_instance_by_hash("0" * 64) == {}
 
     def test_find_instance_empty_list(self):
         c = _client()
         c.api.search = MagicMock(return_value=iter([]))
-        assert c.find_instance_by_hash("0" * 64) is None
+        assert c.find_instance_by_hash("0" * 64) == {}
 
     def test_find_instance_unexpected_error(self):
         c = _client()
         c.api.search = MagicMock(side_effect=ValueError("boom"))
         assert c.find_instance_by_hash("0" * 64) is None
+
+    def test_find_instance_transient_error_is_none_not_empty(self):
+        """A search that keeps failing is unknown (None), never "not held" ({})."""
+        c = _client()
+        c.api.search = MagicMock(side_effect=requests.ConnectionError("down"))
+        with patch("connector.polyswarm_client.time.sleep"):
+            assert c.find_instance_by_hash("0" * 64) is None
+
+    def test_find_instance_breaker_open_is_none(self):
+        c = _client()
+        for _ in range(c._breaker.failure_threshold):
+            c._breaker.record_failure()
+        c.api.search = MagicMock()
+        assert c.find_instance_by_hash("0" * 64) is None
+        c.api.search.assert_not_called()
 
     def test_get_scan_by_hash(self):
         c = _client()
@@ -1695,6 +1746,8 @@ class TestClientLookup:
         c.get_scan_results = MagicMock(return_value=None)
         assert c.get_scan_by_hash(EICAR_SHA256) == (None, None)
         c.find_instance_by_hash = MagicMock(return_value=None)
+        assert c.get_scan_by_hash(EICAR_SHA256) == (None, None)
+        c.find_instance_by_hash = MagicMock(return_value={})
         assert c.get_scan_by_hash(EICAR_SHA256) == (None, None)
 
 
