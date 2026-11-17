@@ -11,6 +11,7 @@ from conftest import (
     FakeIndicatorsAPI,
     ScriptedClient,
     load_fixture,
+    make_actor,
     make_indicator,
     ok,
 )
@@ -578,3 +579,79 @@ def test_transform_invalid_attack_data_exits_2(isolated, no_api, capsys):
     captured = capsys.readouterr()
     assert captured.out == ""
     assert "attack.json" in captured.err
+
+
+# --- Resolved actors ---------------------------------------------------------
+
+SALTY = make_actor("SALTY SPIDER", actor_id=1, known_as="Salty")
+
+
+def _salty_api() -> FakeIndicatorsAPI:
+    return FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER"]), make_indicator(2)], actors=[SALTY]
+    )
+
+
+def test_extract_output_holds_the_resolved_actors(monkeypatch, credentials, capsys):
+    api = _salty_api()
+    _install(monkeypatch, api)
+
+    assert _extract("--from", FROM, "--max", "10") == 0
+
+    first, second = json.loads(capsys.readouterr().out)
+    assert first["indicator"]["actor_objects_list"] == [SALTY]
+    assert second["indicator"]["actor_objects_list"] == []
+    assert api.tokens == ["SALTYSPIDER"]
+
+
+def test_dump_raw_leaves_actor_responses_out(monkeypatch, credentials, isolated):
+    page = {"resources": [make_indicator(1, actors=["SALTYSPIDER"])]}
+    client = ScriptedClient([ok(page)], actors=[SALTY])
+    _install(monkeypatch, client)
+
+    dump = isolated / "pages.json"
+    assert _extract("--from", FROM, "--max", "1", "--dump-raw", str(dump)) == 0
+
+    assert len(client.actor_calls) == 1
+    assert json.loads(dump.read_text()) == [page]
+
+
+def test_transform_takes_an_element_of_the_extract_output(
+    monkeypatch, credentials, isolated, capsys
+):
+    _install(monkeypatch, _salty_api())
+    assert _extract("--from", FROM, "--max", "1") == 0
+    [element] = json.loads(capsys.readouterr().out)
+    (isolated / "indicator.json").write_text(json.dumps(element["indicator"]))
+
+    def forbidden(*args: Any) -> Any:
+        raise AssertionError("transform must not build a CrowdStrike client")
+
+    monkeypatch.setattr(cli, "build_client", forbidden)
+    assert _run("transform", "indicator.json") == 0
+
+    stix = _transform_output(capsys)
+    assert stix["x_crowdstrike_actor_objects_list"] == [SALTY]
+    assert "x_crowdstrike_extra" not in stix
+
+
+def test_transform_takes_a_raw_row_without_actor_objects(isolated, no_api, capsys):
+    raw = make_indicator(1, actors=["SALTYSPIDER"])
+    (isolated / "indicator.json").write_text(json.dumps(raw))
+
+    assert _run("transform", "indicator.json") == 0
+
+    stix = _transform_output(capsys)
+    assert stix["x_crowdstrike_actors"] == ["SALTYSPIDER"]
+    assert "x_crowdstrike_actor_objects_list" not in stix
+
+
+def test_transform_rejects_an_invalid_actor_object(isolated, no_api, capsys):
+    raw = {**make_indicator(1), "actor_objects_list": [{"id": 1}]}
+    (isolated / "indicator.json").write_text(json.dumps(raw))
+
+    assert _run("transform", "indicator.json") == 1
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "ioc-1" in captured.err and "actor_objects_list" in captured.err
