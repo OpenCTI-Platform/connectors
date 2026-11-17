@@ -28,6 +28,7 @@ contracts that do not depend on OpenCTI:
 src/
   shared/                     contracts, independent of any source
     extractor.py              AbstractExtractor[T: BaseModel]
+    enricher.py               AbstractEnricher[T: BaseModel]
     transformer.py            AbstractTransformer[InputType, OutputType]
     loader.py                 AbstractLoader (loads stix2 Bundles)
     record_to_file.py         RecordToFile
@@ -73,6 +74,28 @@ its `_marker`, the field the API paginates on. Any timezone-aware `from_date`
 works, including dates before 2001-09-09 and before 1970: the first cursor is
 always written with 10 digits (`0946684800` for 2000-01-01, `0000000000` before
 1970), since markers compare as strings.
+
+### The enrichment contract
+
+```python
+class AbstractEnricher[T: BaseModel](ABC):
+    def extract(self, key: str) -> T | None: ...
+    def reset_cache(self) -> None: ...
+    def _fetch(self, key: str) -> T | None: ...   # the only method to implement
+```
+
+An enricher looks up, by key, an item that an extractor's items only name,
+such as an actor named by an indicator.
+
+- `extract(key)` returns the validated item the source holds for `key`, or
+  `None` when it holds none. `None` never reports an error: errors are raised.
+- Every result is cached under its key, `None` included: a key reaches the
+  source at most once until the cache is reset.
+- A lookup that raises caches nothing, so the next lookup of that key tries
+  the source again.
+- `reset_cache()` empties the cache. The caller decides how long a cache
+  lives; an extractor using an enricher typically resets it at the start of
+  each extraction.
 
 ### The transformation contract
 
