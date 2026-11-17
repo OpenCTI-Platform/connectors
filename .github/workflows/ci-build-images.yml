@@ -79,14 +79,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Pull-only: authenticated pulls avoid Docker Hub anonymous rate limits.
-      # Nothing is pushed (no packages: write, push: false below).
-      - name: Login to DockerHub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
-          password: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
-
+      # No registry login on purpose: this job runs code that is not merged
+      # yet (it can change the build action), so it must not hold the
+      # publishing credentials. Base images are pulled anonymously.
       - name: Build connector image (no push)
         uses: ./.github/actions/build-connector-image
         with:
