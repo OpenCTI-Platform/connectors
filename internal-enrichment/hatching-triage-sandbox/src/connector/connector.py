@@ -602,7 +602,8 @@ class HatchingTriageSandboxConnector:
         for attempt in range(1, self.max_attempts + 1):
             status = None
             try:
-                search_paginator = self.triage_client.search(query=search_query, max=1)
+                # Consume paginator to force API call
+                search_paginator = list(self.triage_client.search(query=search_query, max=1))
             except (json.JSONDecodeError, ServerError, RequestException) as err:
                 response = getattr(err, "response", None)
                 if response is not None:
