@@ -168,6 +168,36 @@ class TestUrlRules:
     @pytest.mark.parametrize(
         "url",
         [
+            # RFC 3986 reg-name characters (unreserved and sub-delims)
+            "https://foo+bar.example.com/",
+            "https://under_score.example.com/x",
+            "http://a~b.example.com/",
+            "http://a!b$c&d'e(f)g*h,i;j=k.example.com/",
+        ],
+    )
+    def test_reg_name_public_hosts_are_allowed(self, url):
+        assert url_utils.is_non_public_url(url) is False
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            # Reg-name characters never hide an internal name or address
+            "http://intranet.corp;/",
+            "http://files.local+/x",
+            "http://127.0.0.1&/",
+            "http://10.0.0.1,/",
+            "http://local+host/",
+            "http://box_1/",
+            "http://%31%32%37.0.0.1+/",
+            "http://example.com+\\@10.0.0.1/",
+        ],
+    )
+    def test_reg_name_characters_do_not_hide_private_hosts(self, url):
+        assert url_utils.is_non_public_url(url) is True
+
+    @pytest.mark.parametrize(
+        "url",
+        [
             "http://user:pass@example.com/",
             "http://example.com\\@10.0.0.1/",
             "http://example.com\\x@10.0.0.1/",
