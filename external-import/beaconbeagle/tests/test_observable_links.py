@@ -1,5 +1,7 @@
+from unittest.mock import MagicMock
+
 import stix2
-from BeaconBeagle import _build_observable_link, _observable_ref
+from BeaconBeagle import BeaconBeagle, _build_observable_link, _observable_ref
 from pycti import AttackPattern, Identity, StixCoreRelationship, Tool
 
 TOOL_ID = Tool.generate_id("CobaltStrike")
@@ -68,3 +70,56 @@ def test_link_keeps_author_marking_and_start_time():
     assert relation.created_by_ref == IDENTITY_ID
     assert relation.object_marking_refs == [MARKING]
     assert relation.start_time == stix2.utils.parse_into_datetime(START_TIME)
+
+
+def _connector(tool_id=TOOL_ID, ap_id=AP_ID):
+    connector = BeaconBeagle.__new__(BeaconBeagle)
+    connector.helper = MagicMock()
+    connector.beaconbeagle_link_tool = "CobaltStrike"
+    connector.beaconbeagle_link_tool_id = tool_id
+    connector.beaconbeagle_link_ap = "Standard Application Layer Protocol"
+    connector.beaconbeagle_link_ap_id = ap_id
+    connector.beaconbeagle_marking = MARKING
+    return connector
+
+
+def test_link_observables_links_every_observable_to_tool_and_attack_pattern():
+    domain = stix2.DomainName(value="beacon.example.org")
+    read_back = {"id": "a1b2", "standard_id": IPV4.id, "name": "read back"}
+
+    links = _connector().link_observables(
+        [IPV4, domain, read_back], IDENTITY_ID, START_TIME
+    )
+
+    assert [(link.source_ref, link.target_ref) for link in links] == [
+        (IPV4.id, TOOL_ID),
+        (IPV4.id, AP_ID),
+        (domain.id, TOOL_ID),
+        (domain.id, AP_ID),
+        (IPV4.id, TOOL_ID),
+        (IPV4.id, AP_ID),
+    ]
+    assert "(Link ObsTool)" in links[0].description
+    assert "(Link ObsAttackPattern)" in links[1].description
+
+
+def test_link_observables_without_tool_or_attack_pattern_writes_nothing():
+    links = _connector(tool_id=None, ap_id=None).link_observables(
+        [IPV4], IDENTITY_ID, START_TIME
+    )
+
+    assert links == []
+
+
+def test_link_observables_logs_and_skips_an_observable_without_id():
+    connector = _connector()
+
+    links = connector.link_observables(
+        [{"value": "no id"}, IPV4], IDENTITY_ID, START_TIME
+    )
+
+    assert [(link.source_ref, link.target_ref) for link in links] == [
+        (IPV4.id, TOOL_ID),
+        (IPV4.id, AP_ID),
+    ]
+    assert connector.helper.connector_logger.error.call_count == 2

@@ -1828,8 +1828,21 @@ class BeaconBeagle:
             return None
 
         # STIX: Linking Tool (StixCoreRelationship)
-        # Linking Elements with Tool/Threat-Actor/Attack-Pattern/Country/Campaign if requested
-        for observable in Observables:
+        # Linking Elements with Tool/Attack-Pattern if requested
+        stix_objects.extend(self.link_observables(Observables, identity_id, start_time))
+        # ---------------------------------------------------------------
+        return stix_objects
+
+    def link_observables(self, observables, identity_id, start_time):
+        """Link every observable to the configured Tool and Attack Pattern.
+
+        The observable is the source of these links: the platform only skips
+        locking the target of a ``related-to`` whose source is an observable,
+        so ``Observable -> Tool`` keeps every write off the shared Tool /
+        Attack Pattern (issue #8250).
+        """
+        links = []
+        for observable in observables:
             if "value" in observable.keys():
                 self.helper.connector_logger.debug(
                     f"  -  Working on observable created: {observable['value']}."
@@ -1842,10 +1855,6 @@ class BeaconBeagle:
                 self.helper.connector_logger.debug(
                     f"  -  Working on observable created: {observable['id']}."
                 )
-            # The observable is the source of these links: the platform
-            # only skips locking the target of a ``related-to`` whose source
-            # is an observable, so ``Observable -> Tool`` keeps every write
-            # off the shared Tool / Attack Pattern (issue #8250).
             try:
                 if self.beaconbeagle_link_tool_id is None:
                     self.helper.connector_logger.debug(
@@ -1855,7 +1864,7 @@ class BeaconBeagle:
                     self.helper.connector_logger.debug(
                         f"    [+] StixCoreRelationship creation between Observable and Tool ({_observable_ref(observable)} > {self.beaconbeagle_link_tool})."
                     )
-                    stix_objects.append(
+                    links.append(
                         _build_observable_link(
                             observable,
                             self.beaconbeagle_link_tool_id,
@@ -1879,7 +1888,7 @@ class BeaconBeagle:
                     self.helper.connector_logger.debug(
                         f"    [+] StixCoreRelationship creation between Observable and Attack-Pattern ({_observable_ref(observable)} > {self.beaconbeagle_link_ap})."
                     )
-                    stix_objects.append(
+                    links.append(
                         _build_observable_link(
                             observable,
                             self.beaconbeagle_link_ap_id,
@@ -1893,8 +1902,7 @@ class BeaconBeagle:
                 self.helper.connector_logger.error(
                     f"Error while creating STIX object from Attack-Pattern: {self.beaconbeagle_link_ap}, error: {e}"
                 )
-        # ---------------------------------------------------------------
-        return stix_objects
+        return links
 
     def create_stix_bundle(self, targeted):
         # create start_date: Now
