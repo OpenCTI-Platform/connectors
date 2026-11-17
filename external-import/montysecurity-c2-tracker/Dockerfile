@@ -23,6 +23,9 @@ RUN --mount=type=bind,source=src/requirements.txt,target=/tmp/requirements.txt \
 
 
 FROM python:3.12-alpine AS runner
+
+# DEPRECATED: see DEPRECATION.md
+LABEL org.opencontainers.image.description="[DEPRECATED] Monty Security C2 Tracker connector, upstream data removed, no replacement"
 WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
 
 # Install runtime dependencies
