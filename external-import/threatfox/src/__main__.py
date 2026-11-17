@@ -129,15 +129,19 @@ class ThreatFox:
         next_dt = datetime.fromtimestamp(now_ts + self.get_interval(), UTC)
         if (now_ts - last_run_ts) >= self.get_interval():
             self.helper.log_info("Connector will run!")
-            self.import_data(state, now_dt, now_ts)
-            self.helper.log_info(f"Last_run stored, next run in: {next_dt - now_dt}")
+            if self.import_data(state, now_dt, now_ts):
+                self.helper.log_info(
+                    f"Last_run stored, next run in: {next_dt - now_dt}"
+                )
+            else:
+                self.helper.log_info("Run failed, last_run not stored")
         else:
             self.helper.log_info(
                 f"Connector will not run, next run in: {next_dt - now_dt}"
             )
 
-    def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> None:
-        """Pull and import ThreatFox data"""
+    def import_data(self, state: Dict, now_dt: datetime, now_ts: int) -> bool:
+        """Pull and import ThreatFox data. Return False when the run failed."""
 
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
@@ -224,7 +228,7 @@ class ThreatFox:
             self.helper.api.work.to_processed(
                 work_id, "Connector run failed, see connector logs", in_error=True
             )
-            return
+            return False
 
         # Store the current timestamp as a last run
         message = f"Connector successfully run, storing last_run as {now_ts}"
@@ -236,6 +240,7 @@ class ThreatFox:
             }
         )
         self.helper.api.work.to_processed(work_id, message)
+        return True
 
     def download_csv(self) -> Iterable[str]:
         """

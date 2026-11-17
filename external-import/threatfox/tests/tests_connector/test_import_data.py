@@ -31,7 +31,9 @@ def test_failed_download_fails_work_and_keeps_last_run(connector, error):
     now_dt = datetime.now(UTC)
 
     with patch("urllib.request.urlopen", side_effect=error):
-        connector.import_data({"last_run": 1}, now_dt, now_dt.timestamp())
+        result = connector.import_data({"last_run": 1}, now_dt, now_dt.timestamp())
+
+    assert result is False
 
     connector.helper.set_state.assert_not_called()
     connector.helper.api.work.to_processed.assert_called_once()
@@ -67,10 +69,29 @@ def test_successful_download_stores_last_run(connector):
     now_dt = datetime.now(UTC)
     connector.download_csv = MagicMock(return_value=iter([]))
 
-    connector.import_data({}, now_dt, now_dt.timestamp())
+    result = connector.import_data({}, now_dt, now_dt.timestamp())
 
+    assert result is True
     connector.helper.set_state.assert_called_once()
     assert connector.helper.set_state.call_args.args[0]["last_run"] == (
         now_dt.timestamp()
     )
     assert "in_error" not in connector.helper.api.work.to_processed.call_args.kwargs
+
+
+@pytest.mark.parametrize(
+    "succeeded, expected_log",
+    [(True, "Last_run stored"), (False, "Run failed, last_run not stored")],
+    ids=["success", "failure"],
+)
+def test_loop_logs_the_run_outcome(connector, succeeded, expected_log):
+    connector.threatfox_interval = 3
+    connector.helper.get_state.return_value = {}
+    connector.import_data = MagicMock(return_value=succeeded)
+
+    connector.loop()
+
+    logged = [call.args[0] for call in connector.helper.log_info.call_args_list]
+    assert any(expected_log in message for message in logged)
+    if not succeeded:
+        assert not any("Last_run stored" in message for message in logged)
