@@ -8,7 +8,8 @@ contracts that do not depend on OpenCTI:
 
 1. an extractor: typed, validated CrowdStrike Falcon Intelligence indicators,
    run from the command line against the real API, so the indicator model can
-   be refined from actual data;
+   be refined from actual data, each with the actors it names, looked up
+   through an enricher;
 2. transformers, chained:
    - each indicator converted into one STIX 2.1 indicator that loses nothing
      of the source data;
@@ -34,8 +35,11 @@ src/
     record_to_file.py         RecordToFile
     connector.py              Connector, CycleResult
   crowdstrike_indicators/     CrowdStrike implementation
-    models.py                 CrowdStrikeIndicator (Pydantic)
+    models.py                 CrowdStrikeIndicator, CrowdStrikeActor,
+                              EnrichedCrowdStrikeIndicator (Pydantic)
+    api.py                    FalconPy response checks shared by every call
     extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
+    actors.py                 CrowdStrikeActorEnricher (FalconPy)
     stix.py                   CrowdStrikeStix2Indicator (stix2 Indicator subclass),
                               CrowdStrikeIndicatorBundle
     ids.py                    deterministic STIX ids in the CrowdStrike namespace
@@ -167,6 +171,7 @@ extract(cursor, max) -> [(dt, item)] -> t1 -> t2 -> ... -> tn -> loader.load  |
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from crowdstrike_indicators.actors import CrowdStrikeActorEnricher
 from crowdstrike_indicators.bundle import MakeStixBundle
 from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
 from crowdstrike_indicators.malware import CrowdStrikeAddMalware
@@ -175,7 +180,8 @@ from shared.connector import Connector
 from shared.record_to_file import RecordToFile
 
 connector = Connector(
-    CrowdStrikeIndicatorExtractor(client),        # a FalconPy Intel client
+    # client: a FalconPy Intel client, for both indicators and actors
+    CrowdStrikeIndicatorExtractor(client, CrowdStrikeActorEnricher(client)),
     [CrowdStrikeIndicatorTransformer(), CrowdStrikeAddMalware(), MakeStixBundle()],
     RecordToFile(Path("bundles")),
 )
@@ -187,7 +193,8 @@ connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
   and the last output type `stix2.v21.Bundle`, the loader's input. A
   mismatch raises a `TypeError` naming both types, for example
   `transformer 1 (CrowdStrikeAddMalware) expects CrowdStrikeStix2Indicator but
-  extractor (CrowdStrikeIndicatorExtractor) produces CrowdStrikeIndicator`.
+  extractor (CrowdStrikeIndicatorExtractor) produces
+  EnrichedCrowdStrikeIndicator`.
   A component that does not declare its type arguments is rejected too.
 - **`run_once(from_date, max_element_count)`** runs one cycle and returns a
   `CycleResult(extracted, loaded, skipped, next_from_date)`. The next
@@ -210,9 +217,49 @@ connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
   it is given. The waiting function can be injected (`sleep=`), which the
   tests use to stop the endless loop.
 
+### CrowdStrike actors
+
+An indicator names its actors by a token such as `SALTYSPIDER`. The extractor
+looks each one up with `CrowdStrikeActorEnricher` and returns
+`EnrichedCrowdStrikeIndicator` items: a `CrowdStrikeIndicator`, unchanged,
+plus `actor_objects_list`, the `CrowdStrikeActor` records its `actors`
+resolve to.
+
+- **One request per name.** The enricher calls `QueryIntelActorEntities`
+  (`GET /intel/combined/actors/v1`) with the filter `name:'<token>'` and the
+  explicit field list `id`, `name`, `slug`, `url`, `known_as`, `description`,
+  `short_description`, `first_activity_date`, `last_activity_date`,
+  `motivations`, `objectives` and `actor_type`: what the existing connector
+  packs into its Intrusion Sets, plus `slug`.
+- **Matching.** A returned actor matches when its `name` or `slug`,
+  uppercased without spaces and hyphens, equals the token: `SALTY SPIDER`
+  and `salty-spider` both match `SALTYSPIDER`. The first match wins; with
+  none, the name is unresolved. Unlike the existing connector, there is no
+  fallback to another actor of the response. This rule is provisional until
+  checked against the real API.
+- **Cache.** Each name, resolved or not, is looked up at most once per
+  extraction: the extractor empties the enricher's cache when an extraction
+  starts. A month of real data names 6 distinct actors on 445 of 178,695
+  indicators.
+- **Only for returned indicators.** Actors are looked up after the cut to
+  `max_element_count`, and not at all when the extraction fails.
+- **A missing actor never fails the extraction.** A name that resolves to
+  nothing, or whose lookup fails (an API error such as a 403 when the actors
+  scope is missing, a network error), is logged and left out of
+  `actor_objects_list`. A failed lookup is not cached, so the next indicator
+  naming that actor tries again. One summary line per extraction counts the
+  names looked up, resolved, unresolved and failed, at warning level when
+  any lookup failed.
+- `actor_objects_list` follows the order of `actors`, holds each actor once
+  (by `id`), and is `[]` when the indicator names no actor or none resolves.
+- `CrowdStrikeActor` is as lenient as the indicator model: it requires `id`
+  and `name`, keeps undeclared fields as received (`known_as`, `motivations`
+  and `objectives` are left undeclared until their shape is confirmed), and
+  an actor that fails validation is logged and skipped.
+
 ### CrowdStrike indicators as STIX
 
-`CrowdStrikeIndicatorTransformer` converts a `CrowdStrikeIndicator` into a
+`CrowdStrikeIndicatorTransformer` converts an `EnrichedCrowdStrikeIndicator` into a
 `CrowdStrikeStix2Indicator`: a stix2 `Indicator` (STIX 2.1) that declares extra
 `x_crowdstrike_*` properties. Two rules apply:
 
@@ -226,6 +273,7 @@ connector.run(datetime(2026, 11, 1, tzinfo=UTC), timedelta(minutes=30), 10_000)
 | `malicious_confidence` | `confidence`; also `x_crowdstrike_malicious_confidence` when `confidence` cannot be set (`unverified`, an unknown value) |
 | `kill_chains` | `kill_chain_phases`; also `x_crowdstrike_kill_chains`, with the whole list, when a value has no phase |
 | `_marker`, `labels` (with their dates), `actors`, `malware_families`, `targets`, `vulnerabilities`, `threat_types`, `domain_types`, `ip_address_types` | `x_crowdstrike_<field>`, named after the API field without its leading underscore (`_marker` becomes `x_crowdstrike_marker`) |
+| `actor_objects_list` | `x_crowdstrike_actor_objects_list`, each actor as the actors API returned it, undeclared fields included; never in `x_crowdstrike_extra` |
 | fields the model does not declare (`reports`, `relations`, `scope`, ...) | together in `x_crowdstrike_extra` |
 
 Native properties:
@@ -419,7 +467,10 @@ cp .env.example .env                           # then fill in the credentials
 | `CROWDSTRIKE_CLIENT_SECRET` | yes | |
 | `CROWDSTRIKE_BASE_URL` | no | `https://api.crowdstrike.com` (US-1). Other regions: `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`, ... |
 
-The API client needs the **Indicators (Falcon Intelligence): Read** scope.
+The API client needs the **Indicators (Falcon Intelligence): Read** scope, and
+the **Actors (Falcon Intelligence): Read** scope to resolve actors. Without
+the actors scope, `extract` still succeeds, with every `actor_objects_list`
+empty and the failures in the logs.
 `.env` is git-ignored. Never commit it.
 
 ## Usage
@@ -450,7 +501,7 @@ PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01 --max 
 | `--from DATETIME` | required. ISO 8601. Without a timezone, it is read as UTC. |
 | `--max N` | required. Maximum number of indicators, 1 or more. |
 | `--env-file PATH` | credentials file, `./.env` by default. |
-| `--dump-raw PATH` | also write every raw API page received, as a JSON array, even when the extraction fails. `raw-dumps/` and `*.raw.json` are git-ignored. |
+| `--dump-raw PATH` | also write every raw indicator API page received, as a JSON array, even when the extraction fails. Actors API responses are not written: the actors are in the output. `raw-dumps/` and `*.raw.json` are git-ignored. |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. |
 
 Standard output holds a single JSON array, so it can be piped (`| jq ...`).
@@ -466,20 +517,27 @@ Logs and errors go to standard error.
       "type": "domain",
       "_marker": "1793491203a1b2c3",
       "last_updated": "2026-11-01T00:00:03Z",
-      "...": "every other field returned by the API, declared or not"
+      "actors": ["SALTYSPIDER"],
+      "...": "every other field returned by the API, declared or not",
+      "actor_objects_list": [
+        {"id": 123, "name": "SALTY SPIDER", "slug": "salty-spider", "...": "the other requested actor fields"}
+      ]
     }
   }
 ]
 ```
 
 Fields the API did not return are left out. Fields the model does not declare
-yet (`reports`, `relations`, ...) are printed as received.
+yet (`reports`, `relations`, ...) are printed as received. Every indicator
+holds `actor_objects_list`, `[]` when it names no actor or none resolves.
 
 ### `transform`
 
 `transform` reads **one** indicator as a JSON object, in the API shape (one
 element of an API page's `resources`, such as a row of
-`tests/fixtures/indicators_sample.json`), from a file or from standard input,
+`tests/fixtures/indicators_sample.json`, or the `indicator` object of an
+`extract` output element, with its `actor_objects_list`), from a file or from
+standard input,
 runs it through the chain of transformers, and prints every step's result as
 JSON:
 
@@ -493,6 +551,9 @@ JSON:
    objects, ready for a STIX consumer (see [STIX bundle](#stix-bundle)).
 
 The chain is therefore three steps without `--attack-data` and four with it.
+
+`transform` never looks actors up: it keeps the `actor_objects_list` it is
+given, and an indicator without one converts as having no resolved actor.
 
 ```sh
 # Take a domain row of the committed sample as input
@@ -597,6 +658,16 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   deliberately lenient. Use `--dump-raw` to see the real shape.
 - **One invalid indicator stops the run**, with nothing printed on standard
   output. This is on purpose while the model is being refined.
+- **The actor matching rule is provisional.** Nothing yet shows that the
+  actors API's `name` filter matches a token like `SALTYSPIDER` against a name
+  like `SALTY SPIDER`. If it does not, every actor stays unresolved, which
+  only the summary log line shows.
+- **A missing actors scope only shows in the logs.** The extraction succeeds
+  with empty actor lists. Failed lookups are not cached, so each indicator
+  naming an actor costs one failing request (about 445 a month on real data).
+- **Actors are copied onto each indicator** that names them: on real data,
+  `SALTY SPIDER` appears on about 418 indicators a month. The explicit field
+  list keeps each copy small.
 - **No state, no OpenCTI.** Every run is independent. `extract` prints the raw
   API data, and `transform` converts one indicator at a time.
 - **A few distinctions do not survive the conversion.** stix2 drops empty
