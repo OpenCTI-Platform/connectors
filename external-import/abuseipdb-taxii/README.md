@@ -179,12 +179,13 @@ graph LR
   still be processing objects.
   - An Indicator is counted as re-served when OpenCTI already holds an Indicator with the
     feed's ID or with the ID OpenCTI derives from the same pattern (so an Indicator first
-    created by another source counts as re-served), or when it appeared earlier in the
-    same run.
-  - An identical replay of an object counts as re-served.
+    created by another source counts as re-served).
+  - An identical replay of an object OpenCTI already holds counts as re-served.
   - An Indicator deleted from OpenCTI counts as new the next time the feed serves it.
-  - An Indicator submitted by an earlier run that the workers have not processed yet is
-    not visible to the lookup and is counted as new again.
+  - An Indicator submitted earlier, in the same run or a previous one, that the workers
+    have not processed yet is not visible to the lookup and is counted as new again. The
+    connector keeps no record of what it has sent, so its memory use does not grow with
+    the size of a pull.
   - Other object types are relayed and counted only in `objects_submitted`.
   - If the lookup fails, a warning is logged, the page is still sent, and its Indicators
     are counted as new.

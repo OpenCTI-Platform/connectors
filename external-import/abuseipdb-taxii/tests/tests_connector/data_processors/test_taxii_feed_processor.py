@@ -84,13 +84,13 @@ def test_indicator_known_to_opencti_is_re_served(known_id: str):
     assert (stats.new_indicators, stats.re_served_indicators) == (0, 1)
 
 
-def test_indicator_seen_earlier_in_the_run_is_re_served():
+def test_stats_remember_nothing_between_pages():
     stats = PullStats()
 
     stats.record_page([indicator(1)], frozenset())
     stats.record_page([indicator(1)], frozenset())
 
-    assert (stats.new_indicators, stats.re_served_indicators) == (1, 1)
+    assert (stats.new_indicators, stats.re_served_indicators) == (2, 0)
 
 
 def test_other_objects_count_only_as_submitted():

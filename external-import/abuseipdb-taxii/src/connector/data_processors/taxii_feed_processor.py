@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator, Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from abuseipdb_taxii_client import (
@@ -56,27 +56,25 @@ class PullStats:
     objects_submitted: int = 0
     new_indicators: int = 0
     re_served_indicators: int = 0
-    _seen_ids: set[str] = field(default_factory=set, init=False, repr=False)
 
     def record_page(
         self, objects: list[dict[str, Any]], known_ids: frozenset[str]
     ) -> None:
         """Count one delivered page.
 
-        An indicator is re-served when OpenCTI already held it, or when it was
-        delivered earlier in the same pull; otherwise it is new.
+        An indicator is re-served when OpenCTI already held it when the page was
+        fetched; otherwise it is new. Nothing is remembered between pages, so
+        memory does not grow with the size of the pull.
         """
         self.pages += 1
         self.objects_submitted += len(objects)
         for stix_object in objects:
             if stix_object["type"] != "indicator":
                 continue
-            ids = _indicator_ids(stix_object)
-            if ids & known_ids or ids & self._seen_ids:
+            if _indicator_ids(stix_object) & known_ids:
                 self.re_served_indicators += 1
             else:
                 self.new_indicators += 1
-            self._seen_ids |= ids
 
 
 class TaxiiFeedProcessor(BaseDataProcessor[ConnectorSettings, ConnectorState]):
