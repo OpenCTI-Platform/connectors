@@ -10,7 +10,8 @@ copied here because the two connectors are separate packages:
 - Hosts are normalised (NFKC, then IDNA) before they are classified, so
   full-width and other Unicode spellings of an address or name are caught.
   A host that is still percent-encoded or not plain ASCII afterwards, or
-  that has characters outside the normal host set, is never sent.
+  that has characters outside the RFC 3986 host set, is never sent. A
+  name with sub-delims ("+", ";", ...) is also checked without them.
 - URLs with a backslash in the authority (before the first "/") are never
   sent: browsers read it as a path separator and other parsers do not, so
   the host is ambiguous (``http://127.0.0.1\\example.com/``,
@@ -45,9 +46,14 @@ _SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
 # Characters of a legacy numeric IPv4 form (127.1, 0x7f.0.0.1, 2130706433)
 _LEGACY_IPV4_CHARS = frozenset("0123456789abcdefx.")
 
-# Characters a normalised URL host may contain (IPv6 brackets are removed by
-# urlparse). Anything else, such as "%" or "\\", is refused.
-_HOST_CHARS = re.compile(r"[a-z0-9._:-]+")
+# Characters a normalised URL host may contain: the RFC 3986 reg-name set
+# (unreserved and sub-delims) plus ":" for IPv6 literals, whose brackets
+# urlparse removes. Anything else, such as "%" or "\\", is refused.
+_HOST_CHARS = re.compile(r"[a-z0-9._~!$&'()*+,;=:-]+")
+
+# RFC 3986 sub-delims. Removed from a name for a second check so they can't
+# hide an internal name or address ("intranet.corp;", "127.0.0.1&").
+_SUB_DELIMS = re.compile(r"[!$&'()*+,;=]")
 
 
 def _is_private_or_noise(ip_str: str) -> bool:
@@ -134,7 +140,15 @@ def _normalise_host(host: str) -> str | None:
 def _is_non_public_host(host: str) -> bool:
     """Check a URL host: IP literals as IPs, everything else as a name."""
     name = _normalise_host(host)
-    if not name or _is_legacy_ipv4(name):
+    if not name:
+        return True
+    if _SUB_DELIMS.search(name):
+        # A public name that only differs by sub-delims is still checked as
+        # what it would be without them
+        bare = _SUB_DELIMS.sub("", name)
+        if not bare or _is_non_public_host(bare):
+            return True
+    if _is_legacy_ipv4(name):
         return True
     if ":" in name or name.startswith("["):
         # IPv6 literal (brackets already removed by urlparse for URLs)
