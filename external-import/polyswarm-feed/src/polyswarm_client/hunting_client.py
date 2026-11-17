@@ -26,6 +26,7 @@ from connectors_sdk import (
     ApiUnauthorizedError,
     BaseClientApi,
 )
+from polyswarm_client.user_agent import with_user_agent
 
 LIVE_HUNT_LIST_PATH = "/v3/hunt/live/list"
 MAX_PAGE_SIZE = 300
@@ -86,7 +87,7 @@ class PolySwarmHuntingClient(BaseClientApi):
 
     @property
     def session_headers(self) -> dict[str, str]:
-        return {"Authorization": self._api_key}
+        return with_user_agent({"Authorization": self._api_key})
 
     def _get_page(self, params: dict[str, Any]) -> dict[str, Any] | None:
         try:

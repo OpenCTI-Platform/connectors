@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from connectors_sdk import ApiClientError, BaseClientApi
+from polyswarm_client.user_agent import with_user_agent
 
 ACCOUNT_PATH = "/v3/public/accounts"
 
@@ -55,7 +56,7 @@ class PolySwarmAccountClient(BaseClientApi):
 
     @property
     def session_headers(self) -> dict[str, str]:
-        return {"Authorization": self._api_key}
+        return with_user_agent({"Authorization": self._api_key})
 
     def account_features(self) -> SimpleNamespace:
         """Return the account's plan and quotas as an attribute object.

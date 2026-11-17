@@ -26,6 +26,7 @@ from connectors_sdk import (
     ApiUnauthorizedError,
     BaseClientApi,
 )
+from polyswarm_client.user_agent import with_user_agent
 
 TAXII_MEDIA_TYPE = "application/taxii+json;version=2.1"
 
@@ -91,12 +92,14 @@ class PolySwarmTaxiiClient(BaseClientApi):
 
     @property
     def session_headers(self) -> dict[str, str]:
-        """Headers sent with every request: TAXII media type and Basic auth."""
+        """Headers sent with every request: TAXII media type, Basic auth, User-Agent."""
         credentials = f"{self._account_number}:{self._api_key}".encode()
-        return {
-            "Accept": TAXII_MEDIA_TYPE,
-            "Authorization": "Basic " + base64.b64encode(credentials).decode(),
-        }
+        return with_user_agent(
+            {
+                "Accept": TAXII_MEDIA_TYPE,
+                "Authorization": "Basic " + base64.b64encode(credentials).decode(),
+            }
+        )
 
     # ------------------------------------------------------------------
     # TAXII endpoints

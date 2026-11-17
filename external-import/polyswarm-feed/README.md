@@ -42,6 +42,7 @@ The connector only pulls data.
 - **Where requests go.** Outbound calls go to the PolySwarm API URL only (`POLYSWARM_API_URL`, default `https://api.polyswarm.network`).
 - **Account quota.** About once an hour, the connector reads your account's plan and quotas from the same API URL. Only your API key is sent.
 - **What is sent with each request.** Your PolySwarm account number and API key, for authentication, plus the paging and time-range parameters needed to ask for new data.
+- **How the connector identifies itself.** Every request carries the User-Agent `PolySwarm-OpenCTI-Feed/<version> (OpenCTI)`, where `<version>` is the OpenCTI release the connector ships with (its pycti version).
 
 ## Installation
 
