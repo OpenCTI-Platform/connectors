@@ -10,6 +10,7 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.x509_certificate import X509Certificate
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 
 
@@ -117,6 +118,19 @@ def test_x509_certificate_to_stix2_object(
         object_marking_refs=[
             marking.to_stix2_object().id for marking in fake_valid_tlp_markings
         ],
+        extensions={
+            STIX_EXT_OCTI_SCO: {
+                "extension_type": "property-extension",
+                "labels": ["test", "x509_certificate"],
+                "description": "Test description",
+                "score": 85,
+                "created_by_ref": fake_valid_organization_author.id,
+                "external_references": [
+                    external_ref.to_stix2_object()
+                    for external_ref in fake_valid_external_references
+                ],
+            }
+        },
         x_opencti_external_references=[
             external_ref.to_stix2_object()
             for external_ref in fake_valid_external_references
@@ -175,3 +189,14 @@ def test_x509_certificate_to_stix2_object(
         certificate_policies="",
         policy_mappings="",
     )
+
+
+def test_x509_certificate_without_hashes() -> None:
+    """Test that a X509Certificate can be created without hashes."""
+    # Given a X509Certificate with only a serial number
+    x509_certificate = X509Certificate(serial_number="123456789")
+    # When converting it to a STIX object
+    stix2_obj = x509_certificate.to_stix2_object()
+    # Then it has no hashes, and its id comes from its serial number
+    assert "hashes" not in stix2_obj
+    assert stix2_obj.id == stix2.X509Certificate(serial_number="123456789").id

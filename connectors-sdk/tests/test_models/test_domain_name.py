@@ -1,6 +1,7 @@
 import pytest
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.ipv4_address import IPV4Address
+from pycti import STIX_EXT_OCTI_SCO
 from pydantic import ValidationError
 from stix2.v21 import DomainName as Stix2DomainName
 
@@ -55,6 +56,19 @@ def test_domain_name_to_stix2_object(
     assert stix2_obj == Stix2DomainName(
         value="example.com",
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        extensions={
+            STIX_EXT_OCTI_SCO: {
+                "extension_type": "property-extension",
+                "labels": ["test-label"],
+                "description": "Example domain name",
+                "score": 85,
+                "created_by_ref": fake_valid_organization_author.id,
+                "external_references": [
+                    external_ref.to_stix2_object()
+                    for external_ref in fake_valid_external_references
+                ],
+            }
+        },
         custom_properties=dict(
             x_opencti_score=85,
             x_opencti_description="Example domain name",

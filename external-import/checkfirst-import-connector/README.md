@@ -7,13 +7,13 @@ This is an `EXTERNAL_IMPORT` connector that:
 - On first run, sends a one-off bundle of known Pravda network infrastructure (36 `pravda-XX.com` domains, 60+ `news-pravda.com` subdomains, shared hosting IP `178.21.15.85`) attributed to the Portal-Kombat intrusion set per SGDSN/VIGINUM reports (Feb + Apr 2024)
 - Fetches articles from a paginated REST API (`Api-Key` header auth)
 - Maps each article to STIX 2.1 objects and sends them in batches
-- Persists page-based progress in OpenCTI connector state so reruns resume where they left off
+- Persists an `_id` cursor in OpenCTI connector state so reruns resume with keyset pagination (`after` / `next_cursor`)
 
 ## STIX object model
 
 ### First-run infrastructure bundle
 
-Sent once when `start_page == 1` (first ever run, or `CHECKFIRST_FORCE_REPROCESS=true`):
+Sent once on a fresh walk (no saved cursor, or `CHECKFIRST_FORCE_REPROCESS=true`):
 
 ```
 IntrusionSet (Portal-Kombat)
@@ -101,6 +101,16 @@ See `.env.sample` for a ready-to-use local template.
    docker compose up --build
    ```
 
+3. Optional log file: set `CHECKFIRST_LOG_FILE` (e.g.
+   `/var/log/checkfirst-connector/connector.log`) and mount its parent directory
+   as a volume to keep JSON logs on the host. With `CONNECTOR_LOG_LEVEL=info`,
+   `[BENCH]` timing lines are recorded too:
+   ```sh
+   grep BENCH logs/connector.log
+   ```
+   Tune parallelism with `CHECKFIRST_CONVERT_WORKERS` (process pool for Row → STIX;
+   HTTP fetch and the `_id` watermark stay single-threaded). Default is `1`.
+
 ## Verify in OpenCTI
 
 - **Data > Connectors** — confirm the connector registers and shows as active
@@ -121,7 +131,12 @@ See `.env.sample` for a ready-to-use local template.
 ## Notes
 
 - STIX IDs are deterministic — reruns do not create duplicate entities.
-- The infrastructure bundle is sent only when `start_page == 1`. Set `CHECKFIRST_FORCE_REPROCESS=true` to resend it.
-- The connector saves the last successfully processed API page in OpenCTI state; on restart it resumes from the next page.
+- The infrastructure bundle is sent only on a fresh walk (no cursor). Set `CHECKFIRST_FORCE_REPROCESS=true` to clear the cursor and resend it.
+- The connector saves the last processed article `_id` as `last_cursor` in OpenCTI state; the next run requests `after=<last_cursor>` so new inserts (higher `_id`s) are picked up without re-walking the corpus.
+- Legacy `last_page` state from offset pagination is ignored.
 - The `since` filter is resolved to an absolute UTC datetime at connector startup; duration strings like `P365D` are supported for convenience.
 - API requests use a 300-second timeout per page. The Checkfirst infrastructure can be slow to respond on large result pages.
+- `CHECKFIRST_CONVERT_WORKERS>1` parallelizes only Row → STIX conversion. Cursor advances only after a successful bundle send; a failed send stops the run without skipping ahead (no gaps).
+- Bundle prepare/send runs on a background thread so the next convert batch can overlap. With `CONNECTOR_LOG_LEVEL=info`, grep logs for `[BENCH]`: `overlapped_with_send`, `prepare_seconds`, `to_stix2_seconds`, `send_bundle_seconds`, `wait_seconds`. `error` omits those lines.
+- `CHECKFIRST_BUNDLE_SIZE` caps unique objects per OpenCTI send (default `10000`). Smaller → more work items, shorter per-send stalls; same deterministic STIX IDs / no data gaps if sends succeed.
+- Article `Infrastructure` omits `first_seen` so the same domain dedupes across articles (known domains keep `first_seen` from the first-run infrastructure bundle).

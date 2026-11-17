@@ -1,12 +1,10 @@
 import datetime
 import json
-import os
 import re
 import sys
 
 import stix2
 import utils
-import yaml
 from datalake import AtomType, Datalake, Output
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -14,8 +12,8 @@ from pycti import (
     OpenCTIConnectorHelper,
     OpenCTIStix2,
     StixCoreRelationship,
-    get_config_variable,
 )
+from settings import ConnectorSettings
 
 
 def validate_scope(value: str) -> str:
@@ -52,151 +50,42 @@ class OrangeCyberdefenseEnrichment:
         self._init_datalake_instance()
 
     def _init_config(self):
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf8") as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        else:
-            config = {}
+        self.config = ConnectorSettings()
 
-        connector_default_config = {
-            "name": "Orange Cyberdefense CTI Enrichment",
-            "scope": (
-                """IPv4-Addr,IPv6-Addr,Domain-Name,URL,Email-Addr,Autonomous-System,
-                X509-Certificate,Cryptocurrency-Wallet,StixFile,Phone-Number"""
-            ),
-            "auto": False,
-            "log_level": "info",
-        }
-
-        config["connector"] = {
-            **connector_default_config,
-            **config.get("connector", {}),
-        }
-
-        config["connector"]["scope"] = validate_scope(config["connector"]["scope"])
-        config["connector"]["type"] = "INTERNAL_ENRICHMENT"
-
-        self.helper = OpenCTIConnectorHelper(config)
-
-        self.ocd_enrich_datalake_token = get_config_variable(
-            "OCD_ENRICH_DATALAKE_TOKEN",
-            ["ocd_enrich", "datalake_token"],
-            config,
+        helper_config = self.config.to_helper_config()
+        helper_config["connector"]["scope"] = validate_scope(
+            helper_config["connector"]["scope"]
         )
 
-        self.ocd_enrich_datalake_env = get_config_variable(
-            "OCD_ENRICH_DATALAKE_ENV",
-            ["ocd_enrich", "datalake_env"],
-            config,
-            default="prod",
-        )
+        self.helper = OpenCTIConnectorHelper(config=helper_config)
 
-        self.ocd_enrich_ignore_unscored_indicators = get_config_variable(
-            "OCD_ENRICH_IGNORE_UNSCORED_INDICATORS",
-            ["ocd_enrich", "ignore_unscored_indicators"],
-            config,
-            default=True,
+        self.ocd_enrich_datalake_token = (
+            self.config.ocd_enrich.datalake_token.get_secret_value()
         )
-
-        self.ocd_enrich_ignore_whitelisted_indicators = get_config_variable(
-            "OCD_ENRICH_IGNORE_WHITELISTED_INDICATORS",
-            ["ocd_enrich", "ignore_whitelisted_indicators"],
-            config,
-            default=True,
+        self.ocd_enrich_datalake_env = self.config.ocd_enrich.datalake_env
+        self.ocd_enrich_ignore_unscored_indicators = (
+            self.config.ocd_enrich.ignore_unscored_indicators
         )
-
-        self.ocd_enrich_fallback_score = get_config_variable(
-            "OCD_ENRICH_FALLBACK_SCORE",
-            ["ocd_enrich", "fallback_score"],
-            config,
-            isNumber=True,
-            default=0,
+        self.ocd_enrich_ignore_whitelisted_indicators = (
+            self.config.ocd_enrich.ignore_whitelisted_indicators
         )
-
-        self.ocd_enrich_add_tags_as_labels = get_config_variable(
-            "OCD_ENRICH_ADD_TAGS_AS_LABELS",
-            ["ocd_enrich", "add_tags_as_labels"],
-            config,
-            default=True,
+        self.ocd_enrich_fallback_score = self.config.ocd_enrich.fallback_score
+        self.ocd_enrich_add_tags_as_labels = self.config.ocd_enrich.add_tags_as_labels
+        self.ocd_enrich_add_scores_as_labels = (
+            self.config.ocd_enrich.add_scores_as_labels
         )
-
-        self.ocd_enrich_add_scores_as_labels = get_config_variable(
-            "OCD_ENRICH_ADD_SCORES_AS_LABELS",
-            ["ocd_enrich", "add_scores_as_labels"],
-            config,
-            default=True,
+        self.ocd_enrich_add_tlp = self.config.ocd_enrich.add_tlp
+        self.ocd_enrich_threat_actor_as_intrusion_set = (
+            self.config.ocd_enrich.threat_actor_as_intrusion_set
         )
-
-        self.ocd_enrich_add_tlp = get_config_variable(
-            "OCD_ENRICH_ADD_TLP",
-            ["ocd_enrich", "add_tlp"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_threat_actor_as_intrusion_set = get_config_variable(
-            "OCD_ENRICH_THREAT_ACTOR_AS_INTRUSION_SET",
-            ["ocd_enrich", "threat_actor_as_intrusion_set"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_score = get_config_variable(
-            "OCD_ENRICH_ADD_SCORE",
-            ["ocd_enrich", "add_score"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_extref = get_config_variable(
-            "OCD_ENRICH_ADD_EXTREF",
-            ["ocd_enrich", "add_extref"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_summary = get_config_variable(
-            "OCD_ENRICH_ADD_SUMMARY",
-            ["ocd_enrich", "add_summary"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_related = get_config_variable(
-            "OCD_ENRICH_ADD_RELATED",
-            ["ocd_enrich", "add_related"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_sightings = get_config_variable(
-            "OCD_ENRICH_ADD_SIGHTINGS",
-            ["ocd_enrich", "add_sightings"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_add_createdby = get_config_variable(
-            "OCD_ENRICH_ADD_CREATEDBY",
-            ["ocd_enrich", "add_createdby"],
-            config,
-            default=True,
-        )
-
-        self.ocd_enrich_curate_labels = get_config_variable(
-            "OCD_ENRICH_CURATE_LABELS",
-            ["ocd_enrich", "curate_labels"],
-            config,
-            default=True,
-        )
-
-        self.max_tlp = get_config_variable(
-            "OCD_ENRICH_MAX_TLP",
-            ["ocd_enrich", "max_tlp"],
-            config,
-            default="TLP:GREEN",
-        )
+        self.ocd_enrich_add_score = self.config.ocd_enrich.add_score
+        self.ocd_enrich_add_extref = self.config.ocd_enrich.add_extref
+        self.ocd_enrich_add_summary = self.config.ocd_enrich.add_summary
+        self.ocd_enrich_add_related = self.config.ocd_enrich.add_related
+        self.ocd_enrich_add_sightings = self.config.ocd_enrich.add_sightings
+        self.ocd_enrich_add_createdby = self.config.ocd_enrich.add_createdby
+        self.ocd_enrich_curate_labels = self.config.ocd_enrich.curate_labels
+        self.max_tlp = f"TLP:{self.config.connector.max_tlp.upper()}"
 
     def _init_variables(self):
         self.identity = None

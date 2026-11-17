@@ -27,3 +27,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RST_REPORT_HUB_CREATE_CUSTOM_TTPS | `boolean` |  | boolean | `true` | Whether `attack-pattern` objects with custom names (not present in MITRE ATT&CK) are to be created or not. |
 | RST_REPORT_HUB_REPORT_LABELS_DISABLED | `string` |  | string | `""` | Comma-separated list of labels to ignore when creating Report objects. It does not prevent reports from being created. |
 | RST_REPORT_HUB_SET_DETECTION_FLAG | `boolean` |  | boolean | `false` | Whether indicators from reports should be set for detection or not. |
+| RST_REPORT_HUB_NO_FILE_TRIGGER_IMPORT | `boolean` |  | boolean | `true` | Whether the PDF attached to imported reports should not trigger file import connectors. Set to false to trigger them. |

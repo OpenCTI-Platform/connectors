@@ -1,5 +1,6 @@
 """Define the OpenCTI Observable."""
 
+import re
 from abc import abstractmethod
 from datetime import datetime
 from ipaddress import IPv4Address
@@ -16,7 +17,7 @@ from proofpoint_tap.domain.models.octi.common import (
     TLPMarking,
 )
 from proofpoint_tap.domain.models.octi.domain import KillChainPhase
-from pydantic import EmailStr, Field, field_validator
+from pydantic import Field, field_validator
 
 
 class Observable(BaseEntity):
@@ -322,11 +323,32 @@ class IPV4Address(Observable):
         )
 
 
+# Same rule as the OpenCTI platform for Email-Addr observables (see `emailChecker`
+# in opencti-graphql/src/utils/syntax.js). A stricter rule would reject addresses
+# that OpenCTI accepts.
+OPENCTI_EMAIL_PATTERN = re.compile(
+    r"[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+    r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*"
+)
+
+
 class EmailAddress(Observable):
     """Represent an Email Address observable."""
 
     display_name: Optional[str] = Field(None, description="Display name.")
-    value: EmailStr = Field(..., description="The Email address value.", min_length=1)
+    value: str = Field(..., description="The Email address value.", min_length=1)
+
+    @field_validator("value", mode="after")
+    @classmethod
+    def validate_value(cls, value: str) -> str:
+        """Check the value with the OpenCTI rule and lower the domain case.
+
+        The domain is lowered to keep the same value as before for known addresses.
+        """
+        if not OPENCTI_EMAIL_PATTERN.fullmatch(value):
+            raise ValueError(f"Invalid email address {value}")
+        local_part, domain = value.rsplit("@", 1)
+        return f"{local_part}@{domain.lower()}"
 
     def to_stix2_object(self) -> stix2.v21.EmailAddress:
         """Make stix object."""

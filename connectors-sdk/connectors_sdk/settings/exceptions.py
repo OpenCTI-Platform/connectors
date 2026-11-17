@@ -1,7 +1,9 @@
 """Custom exceptions that are raised during _Config and _Settings classes."""
 
+from connectors_sdk.exceptions.connector_errors import Criticity, LegacyError
 
-class ConfigError(Exception):
+
+class ConfigError(LegacyError):
     """Base class for configuration-related errors.
 
     This exception is raised when there is an issue with the configuration of the connector.
@@ -9,6 +11,9 @@ class ConfigError(Exception):
     other configuration-related issues that prevent the connector from starting correctly.
     It signals a actionable problem in configuration and allows the user to respond appropriately immediately.
     """
+
+    code = "config.invalid.legacy"
+    criticity = Criticity.ERROR
 
 
 class ConfigValidationError(ConfigError):

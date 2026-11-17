@@ -8,7 +8,6 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT \
 WORKDIR /opt/opencti-connector-ransomlook
 COPY src/requirements.txt ./requirements.txt
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic && \
     apk --no-cache add --virtual .build-deps \
         git \
         build-base \

@@ -6,12 +6,12 @@ COPY src /opt/opencti-connector-misp-intel
 
 # Install system dependencies
 RUN apk --no-cache upgrade && \
-    apk add --no-cache git build-base libffi-dev libxml2-dev libxslt-dev && \
-    apk add --no-cache curl jq
+    apk add --no-cache git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Install Python dependencies
 WORKDIR /opt/opencti-connector-misp-intel
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy entrypoint script
 COPY entrypoint.sh /

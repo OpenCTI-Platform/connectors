@@ -30,7 +30,9 @@ class ConnectorState(BaseModel):
     _cache: "ConnectorState | None" = PrivateAttr(default=None)
 
     last_run: datetime | None = Field(default=None)
-    last_page: int = Field(default=1)
+    # Exclusive `_id` watermark: next run requests `after=last_cursor`.
+    # None means start from the beginning of the filtered result set.
+    last_cursor: str | None = Field(default=None)
 
     def __init__(self, helper: OpenCTIConnectorHelper, **kwargs: Any):
         """Initialize the state manager with the connector helper."""
@@ -51,10 +53,15 @@ class ConnectorState(BaseModel):
         return self._cache
 
     def save(self) -> None:
-        """Save the state to OpenCTI."""
-        state_dict = self.model_dump_json(exclude_none=True)
+        """Save the state to OpenCTI.
 
-        self._helper.set_state(json.loads(state_dict))
+        `last_cursor` is always written (including JSON null) so
+        `force_reprocess` can clear a previous watermark instead of leaving
+        a stale key behind when nulls are omitted.
+        """
+        state_dict = json.loads(self.model_dump_json(exclude_none=True))
+        state_dict["last_cursor"] = self.last_cursor
+        self._helper.set_state(state_dict)
         self._cache = self.model_copy()
 
     def clear_cache(self) -> None:

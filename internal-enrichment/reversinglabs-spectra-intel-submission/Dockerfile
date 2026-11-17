@@ -3,9 +3,10 @@ ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Install Python modules
 RUN apk --no-cache upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libffi-dev libxml2-dev libxslt-dev
 COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+    apk del git build-base libffi-dev libxml2-dev libxslt-dev
 
 # Copy the connector
 COPY src /opt/opencti-connector-reversinglabs-spectra-intel-submission

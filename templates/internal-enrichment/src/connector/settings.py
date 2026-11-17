@@ -1,7 +1,7 @@
 from connectors_sdk import (
     BaseConfigModel,
-    BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    BaseInternalEnrichmentConnectorSettings,
 )
 from pydantic import Field, HttpUrl
 
@@ -27,9 +27,9 @@ class TemplateConfig(BaseConfigModel):
     api_key: str = Field(description="API key for authentication.")
 
 
-class ConnectorSettings(BaseConnectorSettings):
+class ConnectorSettings(BaseInternalEnrichmentConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TemplateConfig`.
+    Override `BaseInternalEnrichmentConnectorSettings` to include `InternalEnrichmentConnectorConfig` and `TemplateConfig`.
     """
 
     connector: InternalEnrichmentConnectorConfig = Field(

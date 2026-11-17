@@ -27,7 +27,8 @@ RUN apk --no-cache upgrade && \
 COPY src/requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    apk del build-base libffi-dev openssl-dev git
 
 # Copy full source code (including config.yml.sample)
 COPY src/ .

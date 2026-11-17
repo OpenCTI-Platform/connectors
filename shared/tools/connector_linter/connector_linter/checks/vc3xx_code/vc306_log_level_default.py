@@ -44,8 +44,9 @@ def check_log_level_default(ctx: ConnectorContext) -> list[CheckFinding]:
     #
     #   1. Explicit field default — log_level found in a class body with a default
     #      value. Check if the value is "error"/"err".
-    #   2. SDK base config — connector inherits from Base*ConnectorConfig which
-    #      already defaults log_level to "error" (no override needed).
+    #   2. SDK base config — connector inherits from Base*ConnectorConfig or
+    #      Base*ConnectorSettings which already default log_level to "error"
+    #      (no override needed).
     #   3. Nothing found — no log_level config at all (PASS with suggestion).
     # ---------------------------------------------------------------------------
 
@@ -86,7 +87,7 @@ def check_log_level_default(ctx: ConnectorContext) -> list[CheckFinding]:
     sdk_imports = find_imports(
         trees,
         module_pattern=r"^connectors_sdk",
-        name_pattern=r"^Base(ExternalImport|InternalEnrichment|Stream|InternalExportFile|InternalImportFile)ConnectorConfig$",
+        name_pattern=r"^Base(ExternalImport|InternalEnrichment|Stream|InternalExportFile|InternalImportFile)Connector(Config|Settings)$",
     )
     if sdk_imports:
         imp = sdk_imports[0]
