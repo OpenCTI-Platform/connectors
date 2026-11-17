@@ -341,6 +341,56 @@ class TestExtractC2:
     def test_classify_keeps_global_addresses(self, text):
         assert _classify_c2(text)["type"] == "ipv4-addr"
 
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("https://user:s3cret@c2.example.net/gate", "https://c2.example.net/gate"),
+            (
+                "http://admin@c2.example.net:8080/p?q=1",
+                "http://c2.example.net:8080/p?q=1",
+            ),
+            ("ftp://anonymous:@files.example.org/x", "ftp://files.example.org/x"),
+            ("https://u:p@[2606:4700::1111]/x", "https://[2606:4700::1111]/x"),
+            ("http://a:b@C2.Example.NET/", "http://c2.example.net/"),
+        ],
+    )
+    def test_url_credentials_are_removed(self, text, expected):
+        c = _classify_c2(text)
+        assert c == {"type": "url", "value": expected}
+
+    @pytest.mark.parametrize(
+        "text", ["http://u:p@10.0.0.1/x", "http://u:p@c2.example.net:99999/"]
+    )
+    def test_url_with_credentials_still_checked(self, text):
+        assert _classify_c2(text) is None
+
+    def test_url_credentials_never_reach_the_bundle(self, builder):
+        task = _triage_task()
+        task["report"]["extracted"] = [
+            {
+                "config": {
+                    "family": "x",
+                    "c2": ["https://bot:s3cret@c2.example.net/gate.php"],
+                }
+            }
+        ]
+        depth = extract_report_depth(task)
+        objs = build_report_depth_objects(
+            builder,
+            ENTITY,
+            None,
+            [depth],
+            max_dropped_files=0,
+            create_observables=True,
+            c2_indicators=True,
+            create_indicators=True,
+        )
+        assert _of(objs, "indicator")
+        dumped = json.dumps(objs, default=str)
+        assert "s3cret" not in dumped
+        assert "bot:" not in dumped
+        assert "https://c2.example.net/gate.php" in dumped
+
     def test_cgnat_c2_is_not_extracted(self):
         """Only extracted C2 items become observables and indicators."""
         task = _triage_task()

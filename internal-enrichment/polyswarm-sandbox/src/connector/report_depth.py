@@ -31,7 +31,7 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 import stix2
 
@@ -258,6 +258,19 @@ def _is_shared_service(sco_type: str, value: str) -> bool:
     return False
 
 
+def _without_userinfo(parts: SplitResult) -> str | None:
+    """The URL without its userinfo, or None when its port is invalid."""
+    host = parts.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    try:
+        port = parts.port
+    except ValueError:
+        return None
+    netloc = host if port is None else f"{host}:{port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 def _classify_c2(value: str) -> dict[str, Any] | None:
     """Turn one configured C2 string into ``{type, value, port?}`` or None."""
     text = value.strip()
@@ -273,6 +286,12 @@ def _classify_c2(value: str) -> dict[str, Any] | None:
             return None
         if not _public_host(url_host.lower().strip(".")):
             return None
+        if "@" in parts.netloc:
+            # Never publish credentials (user:password@) from a configuration:
+            # keep the endpoint, rebuilt from the host and port only
+            text = _without_userinfo(parts)
+            if text is None:
+                return None
         return {"type": "url", "value": text}
 
     host, port = text, None
