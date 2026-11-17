@@ -1,3 +1,4 @@
+import base64
 import copy
 import queue
 import threading
@@ -5,13 +6,20 @@ import time
 from collections.abc import Callable
 
 from connector.article import (
+    Article,
     FetchError,
+    PdfReport,
     extract_article,
     fetch_html,
+    fetch_pdf,
     find_article_reference,
+    find_report_pdf,
     html_to_text,
     judge,
     new_session,
+    pdf_name,
+    pdf_to_html,
+    with_pdf,
 )
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
@@ -94,6 +102,9 @@ class ReportArticleFetcherConnector:
         timings["extract_ms"] = _elapsed_ms(started)
         if article is None:
             return None, "Skipped: no article body found in the page"
+        pdf = self._landing_pdf(article, final_url, timings)
+        if pdf is not None:
+            article = with_pdf(article, pdf)
         started = time.monotonic()
         verdict = judge(
             article,
@@ -111,7 +122,60 @@ class ReportArticleFetcherConnector:
         enriched.setdefault("extensions", {}).setdefault(
             STIX_EXT_OCTI, {"extension_type": "property-extension"}
         )["content"] = article.html
-        return enriched, f"Article written to the report: {verdict.reason}"
+        if pdf is None:
+            return enriched, f"Article written to the report: {verdict.reason}"
+        enriched["x_opencti_files"] = [
+            *(report.get("x_opencti_files") or []),
+            {
+                "name": pdf.name,
+                "data": base64.b64encode(pdf.data).decode("ascii"),
+                "mime_type": "application/pdf",
+                "no_trigger_import": True,
+            },
+        ]
+        return enriched, (
+            f"Article and its PDF report {pdf.name} written to the report:"
+            f" {verdict.reason}"
+        )
+
+    def _landing_pdf(
+        self, article: Article, page_url: str, timings: dict
+    ) -> PdfReport | None:
+        """The PDF report of a landing page, or None.
+
+        A landing page is a short page (a summary) that links its report as a
+        PDF on the same site. Any failure here (too large, not a PDF, no text)
+        keeps the page alone, with one log line saying why: it never fails
+        the enrichment.
+        """
+        if not self.settings.follow_pdf:
+            return None
+        if len(article.text) >= self.settings.landing_max_length:
+            return None
+        url = find_report_pdf(article, page_url)
+        if url is None:
+            return None
+        started = time.monotonic()
+        try:
+            final_url, data = fetch_pdf(
+                url,
+                user_agent=self.settings.user_agent,
+                timeout=self.settings.request_timeout,
+                max_size=self.settings.max_pdf_size,
+                session=self.session,
+            )
+            html, text = pdf_to_html(data)
+        except (FetchError, ValueError) as err:
+            self.helper.connector_logger.warning(
+                "PDF report of a landing page not used, the page is kept alone",
+                meta={"url": url, "reason": str(err)},
+            )
+            return None
+        finally:
+            timings["pdf_ms"] = _elapsed_ms(started)
+        return PdfReport(
+            url=final_url, name=pdf_name(final_url), html=html, text=text, data=data
+        )
 
     def process_message(self, data: dict) -> str:
         started = time.monotonic()
