@@ -4,6 +4,7 @@ import copy
 import json
 import re
 import sys
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ sys.path.insert(0, str(SRC_DIR))
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 _MARKER_FILTER = re.compile(r"^_marker:>='(?P<cursor>[^']*)'$")
+_NAME_FILTER = re.compile(r"^name:'(?P<token>(?:[^'\\]|\\.)*)'$")
 
 
 def load_fixture(name: str) -> dict[str, Any]:
@@ -87,6 +89,79 @@ class ScriptedClient:
 
     def query_indicator_entities(self, **kwargs: Any) -> dict[str, Any]:
         self.calls.append(kwargs)
+        if not self.responses:
+            return ok({"resources": []})
+        return self.responses.pop(0)
+
+
+def make_actor(name: str, actor_id: int | None = None, **fields: Any) -> dict[str, Any]:
+    """Build a raw API actor named ``name`` (``SALTY SPIDER``), with its slug."""
+    return {
+        "id": zlib.crc32(name.encode()) if actor_id is None else actor_id,
+        "name": name,
+        "slug": name.lower().replace(" ", "-"),
+        **fields,
+    }
+
+
+def filter_token(fql: str) -> str:
+    """Return the token of a ``name:'<token>'`` filter, unescaped."""
+    match = _NAME_FILTER.match(fql)
+    assert match, fql
+    return re.sub(r"\\(.)", r"\1", match["token"])
+
+
+class FakeActorsAPI:
+    """Simulates ``query_actor_entities`` over a dataset of actors.
+
+    A ``name:'<token>'`` filter returns the actors whose name or slug,
+    uppercased without spaces and hyphens, equals the token: the behavior
+    the enricher assumes of the real API. ``failures`` maps a token to the
+    responses to return, in order, before answering from the dataset.
+    Records the arguments of every call.
+    """
+
+    def __init__(
+        self,
+        actors: list[dict[str, Any]] | None = None,
+        failures: dict[str, list[dict[str, Any]]] | None = None,
+    ) -> None:
+        self.actors = list(actors or [])
+        self.failures = {token: list(rs) for token, rs in (failures or {}).items()}
+        self.actor_calls: list[dict[str, Any]] = []
+
+    @property
+    def tokens(self) -> list[str]:
+        """The token of every actors request, in order."""
+        return [filter_token(call["filter"]) for call in self.actor_calls]
+
+    def query_actor_entities(self, **kwargs: Any) -> dict[str, Any]:
+        self.actor_calls.append(kwargs)
+        token = filter_token(kwargs["filter"])
+        if self.failures.get(token):
+            return self.failures[token].pop(0)
+
+        def key(value: str | None) -> str:
+            return (value or "").upper().replace(" ", "").replace("-", "")
+
+        wanted = key(token)
+        matching = [
+            actor
+            for actor in self.actors
+            if wanted in (key(actor.get("name")), key(actor.get("slug")))
+        ]
+        return ok({"errors": [], "resources": copy.deepcopy(matching)})
+
+
+class ScriptedActorsClient:
+    """Returns the given FalconPy actors responses in order, one per call."""
+
+    def __init__(self, responses: list[dict[str, Any]]) -> None:
+        self.responses = list(responses)
+        self.actor_calls: list[dict[str, Any]] = []
+
+    def query_actor_entities(self, **kwargs: Any) -> dict[str, Any]:
+        self.actor_calls.append(kwargs)
         if not self.responses:
             return ok({"resources": []})
         return self.responses.pop(0)
