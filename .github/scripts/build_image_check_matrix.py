@@ -59,6 +59,11 @@ BUILD_TOOLING_PATHS = (
     ".github/actions/build-connector-image/",
     ".github/scripts/buildx_with_retry.sh",
     ".github/scripts/build_image_check_matrix.py",
+    # Imported by this script.
+    ".github/scripts/build_alpine_matrix.py",
+    ".github/scripts/_matrix_common.py",
+    # Called by the build action to resolve RELEASE_REF.
+    "shared/tools/ci/detect-base-branch.sh",
     ".github/workflows/ci-build-images.yml",
 )
 
