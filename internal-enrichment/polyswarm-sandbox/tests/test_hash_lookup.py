@@ -461,6 +461,18 @@ class TestLookupGuards:
         assert result["status"] == "skipped"
         c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
 
+    @pytest.mark.parametrize("definition", ["TLP:RED", "tlp:red"])
+    def test_tlp_skip_lowercase_definition_type(self, definition):
+        c = _connector()
+        c.max_tlp = "TLP:AMBER"
+        opencti = _opencti_file(
+            objectMarking=[{"definition_type": "tlp", "definition": definition}]
+        )
+        result = _run(c, opencti=opencti)
+        assert result["status"] == "skipped"
+        c.polyswarm_client.get_latest_sandbox_task.assert_not_called()
+        c.polyswarm_client.find_instance_by_hash.assert_not_called()
+
     def test_tlp_skip_from_stix_entity_markings(self):
         """The STIX entity's own markings count, as on the Artifact and Url paths."""
         from stix2 import TLP_RED
