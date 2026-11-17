@@ -224,6 +224,9 @@ class CVEConnector:
         }
 
     def process_data(self) -> None:
+        # Each run starts with no work: the converter creates one with the
+        # first bundle the run sends, so a work never outlives its run.
+        self.converter.work_id = None
         try:
             """
             Get the current state and check if connector already runs
@@ -306,3 +309,18 @@ class CVEConnector:
             detail = self._format_exception(e)
             error_msg = f"[CONNECTOR] Error while processing data: {detail}"
             self.helper.connector_logger.error(error_msg, meta={"error": detail})
+            self._close_work_in_error(error_msg)
+
+    def _close_work_in_error(self, message: str) -> None:
+        """Close the work of a failed run in error."""
+        work_id = self.converter.work_id
+        if work_id is None:
+            return
+        try:
+            self.helper.api.work.to_processed(work_id, message, in_error=True)
+        except Exception as err:  # pylint: disable=broad-except
+            # The run has already failed: do not hide its error behind this one.
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Unable to close the work of the failed run",
+                meta={"work_id": work_id, "error": str(err)},
+            )
