@@ -174,7 +174,7 @@ def test_domain_resolutions_capped():
         "resolutions": [
             {
                 "recordType": "A",
-                "answer": f"10.0.0.{i}",
+                "answer": f"9.9.9.{i}",
                 "firstSeen": f"2026-01-{i:02d}T00:00:00Z",
                 "observationCount": i,
             }
@@ -610,7 +610,7 @@ def test_domain_resolutions_limit_zero_emits_no_resolutions():
     res = {
         "resolutions": [
             {"recordType": "A", "answer": "1.2.3.4"},
-            {"recordType": "AAAA", "answer": "2001:db8::1"},
+            {"recordType": "AAAA", "answer": "2620:fe::fe"},
         ]
     }
     helper = _helper()
@@ -627,15 +627,21 @@ def test_domain_resolution_answers_must_be_valid_addresses():
     res = {
         "resolutions": [
             {"recordType": "A", "answer": "1.2.3.4:80"},
-            {"recordType": "A", "answer": "198.51.100.7"},
-            {"recordType": "AAAA", "answer": "198.51.100.8"},
+            {"recordType": "A", "answer": "9.9.9.7"},
+            {"recordType": "AAAA", "answer": "9.9.9.8"},
+            # A sinkholed answer is no infrastructure of the domain.
+            {"recordType": "A", "answer": "0.0.0.0"},
+            {"recordType": "A", "answer": "127.0.0.1"},
         ]
     }
     helper = _helper()
     _domain_enricher(helper, _domain_client((200,) * 4, res)).enrich(_DOMAIN_OBS)
     objects = json.loads(helper.send_stix2_bundle.call_args[0][0])["objects"]
     ips = [(o["type"], o["value"]) for o in objects if o["type"].startswith("ipv")]
-    assert ips == [("ipv4-addr", "198.51.100.7")]
+    assert ips == [("ipv4-addr", "9.9.9.7")]
+    history = next(o for o in objects if o.get("abstract") == "Stairwell DNS History")
+    assert "`0.0.0.0`" in history["content"]
+    assert "`127.0.0.1`" in history["content"]
 
 
 @pytest.mark.parametrize("statuses", [(500, 500), (0, 401), (503, 0)])

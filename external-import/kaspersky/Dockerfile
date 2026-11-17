@@ -33,7 +33,6 @@ WORKDIR /opt/opencti-connector-kaspersky
 
 # Install OS dependencies.
 RUN apk --no-cache upgrade && \
-    apk --no-cache add libmagic libxml2 libxslt && \
     rm -rf /var/cache/apk/*
 
 # Copy the venv from the builder.

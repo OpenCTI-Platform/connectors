@@ -13,7 +13,11 @@ from crowdstrike_feeds_connector.actor.builder import ActorBundleBuilder
 from crowdstrike_feeds_connector.actor.importer import ActorImporter
 from crowdstrike_feeds_connector.settings import ConnectorSettings
 from crowdstrike_feeds_services.client.actors import ActorsAPI
-from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
+from crowdstrike_feeds_services.utils.attack_lookup import (
+    DEFAULT_ATTACK_URL,
+    AttackTechniqueLookup,
+    StixBundleEnvelope,
+)
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 
@@ -39,10 +43,10 @@ def _attack_lookup_for(ttps_response: dict) -> AttackTechniqueLookup:
     }
     with patch.object(
         AttackTechniqueLookup,
-        "_load_enterprise_attack_techniques",
-        lambda self: self._parse_attack_json(dataset),
+        "_retrieve_attack_json",
+        lambda self: (DEFAULT_ATTACK_URL, StixBundleEnvelope.model_validate(dataset)),
     ):
-        return AttackTechniqueLookup(attack_version="latest")
+        return AttackTechniqueLookup(retrieval_urls=[DEFAULT_ATTACK_URL])
 
 
 # =====================

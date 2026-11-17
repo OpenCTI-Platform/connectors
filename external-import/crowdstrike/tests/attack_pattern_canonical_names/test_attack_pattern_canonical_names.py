@@ -18,6 +18,8 @@ from crowdstrike_feeds_services.utils import create_attack_pattern, create_organ
 from crowdstrike_feeds_services.utils.attack_lookup import (
     DEFAULT_ATTACK_URL,
     AttackTechniqueLookup,
+    GithubAttackTechniqueLookup,
+    StixBundleEnvelope,
     normalize_mitre_id,
 )
 from stix2 import TLP_AMBER
@@ -71,10 +73,13 @@ AUTHOR = create_organization("CrowdStrike")
 def attack_lookup() -> AttackTechniqueLookup:
     with patch.object(
         AttackTechniqueLookup,
-        "_load_enterprise_attack_techniques",
-        lambda self: self._parse_attack_json(ATTACK_DATASET),
+        "_retrieve_attack_json",
+        lambda self: (
+            DEFAULT_ATTACK_URL,
+            StixBundleEnvelope.model_validate(ATTACK_DATASET),
+        ),
     ):
-        return AttackTechniqueLookup(attack_version="17.1")
+        return AttackTechniqueLookup(retrieval_urls=[DEFAULT_ATTACK_URL])
 
 
 def _importer(importer_class, attack_lookup):
@@ -224,10 +229,17 @@ def test_actor_importer_without_dataset_sends_no_technique():
 @pytest.mark.parametrize("attack_version", ["latest", "LATEST", ""])
 def test_latest_version_uses_the_latest_dataset(attack_version):
     with patch.object(
-        AttackTechniqueLookup, "_load_enterprise_attack_techniques", lambda self: []
+        AttackTechniqueLookup,
+        "_retrieve_attack_json",
+        lambda self: (
+            DEFAULT_ATTACK_URL,
+            StixBundleEnvelope.model_validate({"type": "bundle", "objects": []}),
+        ),
     ):
-        attack_lookup = AttackTechniqueLookup(attack_version=attack_version)
-    assert attack_lookup.enterprise_attack_url == DEFAULT_ATTACK_URL  # noqa: S101
+        attack_lookup = GithubAttackTechniqueLookup(attack_version=attack_version)
+    assert [r.url for r in attack_lookup.retrievers] == [  # noqa: S101
+        DEFAULT_ATTACK_URL
+    ]
 
 
 def test_indicator_importer_sends_the_mitre_name_and_id(attack_lookup):

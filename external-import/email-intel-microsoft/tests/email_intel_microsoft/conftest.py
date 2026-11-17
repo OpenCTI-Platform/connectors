@@ -74,12 +74,16 @@ def fixture_messages_builder(
 
             builder.with_url.return_value.get = AsyncMock(side_effect=_next)
 
-        attachment_builder: MagicMock = MagicMock()
-        attachment_builder.get = AsyncMock(
-            side_effect=lambda: attachment(with_bytes=True)
-        )
-        builder.by_message_id.return_value.attachments.by_attachment_id.return_value = (
-            attachment_builder
+        def _by_attachment_id(att_id: str) -> MagicMock:
+            # Like Graph, GET by id returns that very attachment, with its content.
+            attachment_builder: MagicMock = MagicMock()
+            attachment_builder.get = AsyncMock(
+                side_effect=lambda: attachment(att_id, with_bytes=True)
+            )
+            return attachment_builder
+
+        builder.by_message_id.return_value.attachments.by_attachment_id.side_effect = (
+            _by_attachment_id
         )
         return builder
 

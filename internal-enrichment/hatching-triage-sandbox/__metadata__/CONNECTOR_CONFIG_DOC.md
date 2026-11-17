@@ -21,4 +21,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR | `string` |  | string |  | `"#f79e00"` | Label color for botnet. |
 | HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR | `string` |  | string |  | `"#7a01e5"` | Label color for campaign. |
 | HATCHING_TRIAGE_SANDBOX_TAG_COLOR | `string` |  | string |  | `"#54483b"` | Label color for all other labels. |
+| HATCHING_TRIAGE_SANDBOX_MAX_ATTEMPTS | `integer` |  | `0 < x ` |  | `5` | Maximum number of attempts to fetch the overview report, wait for an analysis or download an extracted file when the Triage API returns an error (e.g. 502) or the file is not available yet. |
 | HATCHING_TRIAGE_SANDBOX_MAX_TLP | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_MAX_TLP instead. |

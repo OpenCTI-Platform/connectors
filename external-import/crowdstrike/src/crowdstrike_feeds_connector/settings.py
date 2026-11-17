@@ -33,6 +33,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     id: str = Field(
         default="crowdstrike--1234abcd-1234-1234-1234-abcd12345678",
+        min_length=1,
         description="A unique UUIDv4 identifier for this connector instance.",
     )
     name: str = Field(

@@ -14,8 +14,13 @@ Design goals:
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
-import requests
+from crowdstrike_feeds_services.utils.json_retriever import (
+    JsonRetrievalError,
+    JsonRetriever,
+)
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 DEFAULT_ATTACK_URL = (
     "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
@@ -38,6 +43,26 @@ class AttackTechniqueLookupError(Exception):
     """Custom exception for ATT&CK lookup errors."""
 
 
+class StixObjectEnvelope(BaseModel):
+    """A STIX object, checked only for its `type`; the other fields are kept as they are."""
+
+    model_config = ConfigDict(extra="allow")
+
+    type: str
+
+
+class StixBundleEnvelope(BaseModel):
+    """The envelope of a STIX bundle: `{"type": "bundle", "objects": [...]}`.
+
+    Only the envelope is checked; extra fields are allowed.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    type: Literal["bundle"]
+    objects: list[StixObjectEnvelope]
+
+
 @dataclass(frozen=True)
 class AttackTechnique:
     """Represents a MITRE ATT&CK technique with its name and external ID."""
@@ -49,27 +74,30 @@ class AttackTechnique:
 class AttackTechniqueLookup:
     """In-memory lookup from normalized technique name -> MITRE technique external_id (T####)."""
 
-    def __init__(
-        self,
-        attack_version: str,
-        enterprise_attack_url: str | None = None,
-        timeout_seconds: int = 30,
-    ):
-        self.attack_version = attack_version
-        self.enterprise_attack_url = (
-            enterprise_attack_url or self._build_enterprise_attack_url()
-        )
-        self.timeout_seconds = timeout_seconds
+    def __init__(self, retrieval_urls: list[str]):
+        """Load the dataset from the first of `retrieval_urls` that provides it.
+
+        Args:
+            retrieval_urls: the URLs of the ATT&CK Enterprise dataset, in the order to try them.
+        """
+        self.retrievers = [JsonRetriever(url=url) for url in retrieval_urls]
+        self.retrieval_errors: list[str] = []
 
         # Load attack_techniques on initialization
         # If it fails, the connector can choose to run in degraded mode without ATT&CK lookups.
-        techniques = self._load_enterprise_attack_techniques()
+        retrieved = self._retrieve_attack_json()
+        if retrieved is None:
+            raise AttackTechniqueLookupError(
+                "Unable to retrieve the ATT&CK Enterprise dataset: "
+                + "; ".join(self.retrieval_errors)
+            )
+        self.enterprise_attack_url, bundle = retrieved
         # Several techniques can share a name (sub-techniques such as "Cloud Accounts"
         # exist under several parents): the name lookup keeps the first one, the
         # external ID lookup keeps them all.
         self.attack_techniques: dict[str, AttackTechnique] = {}
         self.attack_techniques_by_mitre_id: dict[str, AttackTechnique] = {}
-        for technique in techniques:
+        for technique in self._parse_attack_bundle(bundle):
             self.attack_techniques.setdefault(
                 self._normalize_technique_name(technique.name), technique
             )
@@ -95,38 +123,33 @@ class AttackTechniqueLookup:
 
         return self.attack_techniques_by_mitre_id.get(key)
 
-    def _build_enterprise_attack_url(self) -> str:
-        """Build the raw GitHub URL for the MITRE ATT&CK Enterprise STIX dataset for a given version.
+    def _retrieve_attack_json(self) -> tuple[str, StixBundleEnvelope] | None:
+        """Try the retrievers in order.
 
-        This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
-        Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`).
-
-        Notes:
-        * We intentionally pin to a specific versioned dataset file to keep mappings deterministic.
-        * "latest" (the default) uses the latest release, as the MITRE ATT&CK connector does.
+        Returns the URL and the STIX bundle of the first retriever that provides a valid one,
+        or None if all of them fail (the failures are kept in `retrieval_errors`).
         """
-        if not self.attack_version or self.attack_version.lower() == "latest":
-            return DEFAULT_ATTACK_URL
-        return (
-            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
-            f"enterprise-attack/enterprise-attack-{self.attack_version}.json"
-        )
+        for retriever in self.retrievers:
+            try:
+                data = retriever.retrieve()
+            except JsonRetrievalError as e:
+                self.retrieval_errors.append(str(e))
+                continue
 
-    def _load_from_url(self, url: str) -> list[AttackTechnique]:
-        """Download the enterprise dataset and build the lookup.
+            try:
+                return retriever.url, StixBundleEnvelope.model_validate(data)
+            except ValidationError as e:
+                problems = "; ".join(
+                    f"{'.'.join(map(str, error['loc'])) or 'payload'}: {error['msg']}"
+                    for error in e.errors()
+                )
+                self.retrieval_errors.append(
+                    f"Payload from {retriever.url} is not a STIX bundle: {problems}"
+                )
 
-        Caller should handle exceptions and decide whether to run in degraded mode.
-        """
-        response = requests.get(
-            url,
-            headers={"User-Agent": "opencti-crowdstrike-connector"},
-            timeout=self.timeout_seconds,
-        )
-        response.raise_for_status()
+        return None
 
-        return self._parse_attack_json(response.json())
-
-    def _parse_attack_json(self, data: dict) -> list[AttackTechnique]:
+    def _parse_attack_bundle(self, bundle: StixBundleEnvelope) -> list[AttackTechnique]:
         """Parse the techniques of a STIX bundle, leaving out the revoked ones.
 
         The MITRE ATT&CK connector does not import revoked objects either, so a revoked
@@ -134,13 +157,11 @@ class AttackTechniqueLookup:
         """
 
         attack_techniques: list[AttackTechnique] = []
+        for stix_object in bundle.objects:
+            if stix_object.type != "attack-pattern":
+                continue
 
-        objects = data.get("objects") or []
-        for obj in objects:
-            if not isinstance(obj, dict):
-                continue
-            if obj.get("type") != "attack-pattern":
-                continue
+            obj = stix_object.model_extra or {}
             if obj.get("revoked") is True:
                 continue
 
@@ -172,30 +193,6 @@ class AttackTechniqueLookup:
 
         return attack_techniques
 
-    def _load_enterprise_attack_techniques(self) -> list[AttackTechnique]:
-        """Load the enterprise technique lookup using a configured version.
-
-        Returns (resolved_url, lookup).
-        """
-        # If the user did not explicitly override the URL, attempt to load the versioned file first.
-        if self.enterprise_attack_url == self._build_enterprise_attack_url():
-            try:
-                return self._load_from_url(url=self.enterprise_attack_url)
-            except requests.RequestException as e:
-                if e.response and e.response.status_code == 404:
-                    # Versioned file not found; will attempt fallback to generic URL.
-                    pass
-                else:
-                    raise AttackTechniqueLookupError(
-                        f"Error while fetching ATT&CK data: {str(e)}"
-                    ) from e
-
-            # Fallback to the generic enterprise bundle if the versioned file does not exist.
-            return self._load_from_url(url=DEFAULT_ATTACK_URL)
-
-        # If the user explicitly overrides the URL, do not attempt fallbacks.
-        return self._load_from_url(url=self.enterprise_attack_url)
-
     @staticmethod
     def _normalize_technique_name(name: str) -> str:
         """Normalize a technique name for lookup.
@@ -207,3 +204,42 @@ class AttackTechniqueLookup:
             return str(name).strip().lower()
 
         return ""
+
+
+class GithubAttackTechniqueLookup(AttackTechniqueLookup):
+    """Lookup built from the MITRE ATT&CK Enterprise dataset published on GitHub.
+
+    Tries the dataset of the given version first, then the generic one. "latest" (the
+    default) and an empty version use the generic dataset, the latest release, which the
+    MITRE ATT&CK connector imports by default.
+    """
+
+    def __init__(self, attack_version: str):
+        self.attack_version = attack_version
+        retrieval_urls = [DEFAULT_ATTACK_URL]
+        if attack_version and attack_version.lower() != "latest":
+            retrieval_urls.insert(0, self._build_versioned_attack_url(attack_version))
+        super().__init__(retrieval_urls=retrieval_urls)
+
+    @staticmethod
+    def _build_versioned_attack_url(attack_version: str) -> str:
+        """Build the raw GitHub URL of the Enterprise dataset of a given ATT&CK version.
+
+        This connector uses the `mitre-attack/attack-stix-data` repository and the versioned
+        Enterprise bundle filenames (e.g. `enterprise-attack-17.1.json`), to keep mappings
+        deterministic.
+        """
+        return (
+            "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/"
+            f"enterprise-attack/enterprise-attack-{attack_version}.json"
+        )
+
+
+class CustomAttackTechniqueLookup(AttackTechniqueLookup):
+    """Lookup built from an ATT&CK Enterprise dataset at a custom URL (mirror, air-gapped host).
+
+    Only the given URL is tried.
+    """
+
+    def __init__(self, enterprise_attack_url: str):
+        super().__init__(retrieval_urls=[enterprise_attack_url])

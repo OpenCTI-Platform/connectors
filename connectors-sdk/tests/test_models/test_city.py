@@ -3,6 +3,7 @@ import pytest
 from connectors_sdk.models import ExternalReference, OrganizationAuthor, TLPMarking
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.city import City
+from pycti import STIX_EXT_OCTI
 from pydantic import ValidationError
 from stix2.v21 import Location as Stix2Location
 
@@ -90,6 +91,12 @@ def test_city_to_stix2_object(
         ],
         created=city.created,
         modified=city.modified,
+        extensions={
+            STIX_EXT_OCTI: {
+                "extension_type": "property-extension",
+                "location_type": "City",
+            }
+        },
         custom_properties=dict(
             x_opencti_location_type="City",
         ),

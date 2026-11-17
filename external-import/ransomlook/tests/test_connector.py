@@ -730,6 +730,8 @@ def test_collect_builds_expected_graph():
             {"id": "empty", "content": ""},
         ]
     )
+    # No dedicated claim detail: the index and group data are imported as is.
+    connector.client.get_post = MagicMock(return_value={})
 
     objects = connector._collect(
         datetime(2026, 1, 1, tzinfo=timezone.utc),
@@ -747,6 +749,7 @@ def test_collect_builds_expected_graph():
         "relationship",
     } <= types
     connector.client.get_group.assert_called_once_with("akira")
+    assert connector.client.get_post.call_count == 2
     assert helper.connector_logger.warning.call_count == 2
 
 
