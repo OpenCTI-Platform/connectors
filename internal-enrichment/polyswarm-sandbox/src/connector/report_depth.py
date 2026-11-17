@@ -272,7 +272,10 @@ def _without_userinfo(parts: SplitResult) -> str | None:
 
 
 def _classify_c2(value: str) -> dict[str, Any] | None:
-    """Turn one configured C2 string into ``{type, value, port?}`` or None."""
+    """Turn one configured C2 string into ``{type, value, port?}`` or None.
+
+    The extraction adds ``ports`` (every port seen for the same host).
+    """
     text = value.strip()
     if not text or len(text) > 2048:
         return None
@@ -334,7 +337,9 @@ def _extract_config_c2(report: dict, raw: dict) -> list[dict[str, Any]]:
     if not isinstance(extracted, list):
         return []
     found: list[dict[str, Any]] = []
-    seen: set[tuple[str, str]] = set()
+    # One entry per host: a domain or IP observable has no port, so the same
+    # host on several ports is one observable that lists every port
+    by_key: dict[tuple[str, str], dict[str, Any]] = {}
     for ext in extracted:
         cfg = ext.get("config") if isinstance(ext, dict) else None
         if not isinstance(cfg, dict):
@@ -349,9 +354,14 @@ def _extract_config_c2(report: dict, raw: dict) -> list[dict[str, Any]]:
             if not isinstance(c2, str):
                 continue
             item = _classify_c2(c2)
-            if not item or (item["type"], item["value"]) in seen:
+            if not item:
                 continue
-            seen.add((item["type"], item["value"]))
+            key = (item["type"], item["value"])
+            if key in by_key:
+                _add_port(by_key[key], item.get("port"))
+                continue
+            by_key[key] = item
+            _add_port(item, item.get("port"))
             if isinstance(family, str) and family.strip():
                 item["family"] = family.strip()[:100]
             if provider:
@@ -360,6 +370,22 @@ def _extract_config_c2(report: dict, raw: dict) -> list[dict[str, Any]]:
             if len(found) >= MAX_C2_PER_REPORT:
                 return found
     return found
+
+
+def _add_port(item: dict[str, Any], port: Any) -> None:
+    """Record a port on a C2 entry's sorted ``ports`` list."""
+    if isinstance(port, int) and not isinstance(port, bool):
+        item["ports"] = sorted({*(item.get("ports") or []), port})
+
+
+def _c2_ports(c2: dict[str, Any]) -> list[int]:
+    """Every port of a C2 entry (``ports``, or the single ``port``)."""
+    ports = {
+        p
+        for p in [*(c2.get("ports") or []), c2.get("port")]
+        if isinstance(p, int) and not isinstance(p, bool)
+    }
+    return sorted(ports)
 
 
 def select_pcap_artifact(raw: dict | None) -> dict | None:
@@ -501,22 +527,28 @@ def _build_objects(
                     objects.append(builder._create_rel(malware_id, "drops", fid))
 
     # --- configured C2 -----------------------------------------------------
-    seen_c2: set[tuple[str, str]] = set()
+    # The same host from several providers is one observable listing the
+    # ports of all of them
+    merged: dict[tuple[str, str], dict[str, Any]] = {}
     for depth in depths:
         for c2 in depth.get("c2", []):
             key = (c2["type"], c2["value"])
-            if key in seen_c2:
+            if key in merged:
+                ports = sorted({*_c2_ports(merged[key]), *_c2_ports(c2)})
+                if ports:
+                    merged[key]["ports"] = ports
                 continue
-            seen_c2.add(key)
-            objects.extend(
-                _c2_objects(
-                    builder,
-                    entity_id,
-                    malware_id,
-                    c2,
-                    with_indicator=c2_indicators and create_indicators,
-                )
+            merged[key] = dict(c2)
+    for c2 in merged.values():
+        objects.extend(
+            _c2_objects(
+                builder,
+                entity_id,
+                malware_id,
+                c2,
+                with_indicator=c2_indicators and create_indicators,
             )
+        )
     return objects
 
 
@@ -536,7 +568,13 @@ def _c2_objects(
         origin += f" ({c2['provider']})"
     if c2.get("family"):
         origin += f", family {c2['family']}"
-    port = f" Port {c2['port']}." if c2.get("port") else ""
+    ports = _c2_ports(c2)
+    if len(ports) > 1:
+        port = f" Ports {', '.join(str(p) for p in ports)}."
+    elif ports:
+        port = f" Port {ports[0]}."
+    else:
+        port = ""
 
     oid = _sco_id(sco_type, value)
     objects: list[dict] = [

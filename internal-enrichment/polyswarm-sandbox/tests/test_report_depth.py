@@ -391,6 +391,19 @@ class TestExtractC2:
         assert "bot:" not in dumped
         assert "https://c2.example.net/gate.php" in dumped
 
+    def test_same_host_on_several_ports_keeps_every_port(self):
+        task = _triage_task()
+        task["report"]["extracted"] = [
+            {"config": {"family": "x", "c2": ["c2.example.net:443"]}},
+            {"config": {"family": "x", "c2": ["c2.example.net:8080", "8.8.8.8"]}},
+            {"config": {"family": "x", "c2": ["c2.example.net:443"]}},
+        ]
+        c2 = extract_report_depth(task)["c2"]
+        hosts = [c for c in c2 if c["value"] == "c2.example.net"]
+        assert len(hosts) == 1
+        assert hosts[0]["ports"] == [443, 8080]
+        assert "ports" not in next(c for c in c2 if c["value"] == "8.8.8.8")
+
     def test_cgnat_c2_is_not_extracted(self):
         """Only extracted C2 items become observables and indicators."""
         task = _triage_task()
@@ -946,6 +959,58 @@ def _only_c2(builder, kind, value):
         c2_indicators=True,
         create_indicators=True,
     )
+
+
+class TestC2Ports:
+    def _depth(self, provider, *entries):
+        return {
+            "dropped_files": [],
+            "c2": [
+                dict(
+                    {"type": "domain-name", "value": "c2.example.net"},
+                    provider=provider,
+                    **entry,
+                )
+                for entry in entries
+            ],
+        }
+
+    def test_ports_from_every_provider_are_described(self, builder):
+        depths = [
+            self._depth("triage", {"port": 443, "ports": [443, 8443]}),
+            self._depth("cape", {"port": 8080, "ports": [8080]}),
+        ]
+        objs = build_report_depth_objects(
+            builder,
+            ENTITY,
+            None,
+            depths,
+            max_dropped_files=0,
+            create_observables=True,
+            c2_indicators=True,
+            create_indicators=True,
+        )
+        domains = _of(objs, "domain-name")
+        assert len(domains) == 1
+        assert "Ports 443, 8080, 8443." in domains[0]["x_opencti_description"]
+        indicators = _of(objs, "indicator")
+        assert len(indicators) == 1
+        assert "Ports 443, 8080, 8443." in indicators[0]["description"]
+
+    def test_single_port_wording(self, builder):
+        objs = build_report_depth_objects(
+            builder,
+            ENTITY,
+            None,
+            [self._depth("triage", {"port": 443})],
+            max_dropped_files=0,
+            create_observables=True,
+            c2_indicators=False,
+            create_indicators=True,
+        )
+        assert _of(objs, "domain-name")[0]["x_opencti_description"].endswith(
+            " Port 443."
+        )
 
 
 class TestRereview:
