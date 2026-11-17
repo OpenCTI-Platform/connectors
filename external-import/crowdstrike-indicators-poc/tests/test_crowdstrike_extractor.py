@@ -1,5 +1,6 @@
 """Tests for the CrowdStrike indicator extractor."""
 
+import logging
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -8,6 +9,7 @@ from conftest import (
     ScriptedClient,
     build_extractor,
     load_fixture,
+    make_actor,
     make_indicator,
     ok,
 )
@@ -17,7 +19,11 @@ from crowdstrike_indicators.extractor import (
     first_marker_cursor,
     marker_datetime,
 )
-from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.models import (
+    CrowdStrikeActor,
+    CrowdStrikeIndicator,
+    EnrichedCrowdStrikeIndicator,
+)
 
 BASE = 1_700_000_000
 FROM_BASE = datetime.fromtimestamp(BASE, tz=UTC)
@@ -327,3 +333,272 @@ def test_every_page_is_observed_including_the_final_empty_one():
         ["ioc-1", "ioc-2"],
         ["ioc-2"],
     ]
+
+
+# --- Actor enrichment --------------------------------------------------------
+
+SALTY = make_actor("SALTY SPIDER", actor_id=1)
+WIZARD = make_actor("WIZARD SPIDER", actor_id=2)
+SERVER_ERROR = {"status_code": 500, "headers": {}, "body": {"errors": []}}
+FORBIDDEN = {
+    "status_code": 403,
+    "headers": {},
+    "body": {"errors": [{"code": 403, "message": "access denied"}]},
+}
+
+
+def _actor_names(indicator) -> list[str]:
+    return [actor.name for actor in indicator.actor_objects_list]
+
+
+def test_resolved_actors_follow_the_order_of_actors():
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER", "WIZARDSPIDER"])],
+        actors=[WIZARD, SALTY],
+    )
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert isinstance(indicator, EnrichedCrowdStrikeIndicator)
+    assert indicator.actor_objects_list == [
+        CrowdStrikeActor.model_validate(SALTY),
+        CrowdStrikeActor.model_validate(WIZARD),
+    ]
+
+
+@pytest.mark.parametrize("fields", [{}, {"actors": []}, {"actors": None}])
+def test_indicator_without_actors_gets_an_empty_list_and_no_lookup(fields):
+    api = FakeIndicatorsAPI([make_indicator(1, **fields)], actors=[SALTY])
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert indicator.actor_objects_list == []
+    assert api.actor_calls == []
+
+
+def test_two_names_for_one_actor_give_one_entry():
+    alias = make_actor("SALTY SPIDER", actor_id=1, slug="pepper-spider")
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER", "PEPPERSPIDER"])], actors=[alias]
+    )
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert api.tokens == ["SALTYSPIDER", "PEPPERSPIDER"]
+    assert [actor.id for actor in indicator.actor_objects_list] == [1]
+
+
+def test_repeated_name_is_looked_up_once_and_listed_once():
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER", "SALTYSPIDER"])], actors=[SALTY]
+    )
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert api.tokens == ["SALTYSPIDER"]
+    assert _actor_names(indicator) == ["SALTY SPIDER"]
+
+
+def test_undeclared_field_survives_enrichment():
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER"], scope=["s1"])], actors=[SALTY]
+    )
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert indicator.model_extra == {"scope": ["s1"]}
+
+
+def test_enrichment_adds_only_the_actor_list():
+    raw = make_indicator(1, actors=["SALTYSPIDER"], scope=["s1"], deleted=False)
+    api = FakeIndicatorsAPI([raw], actors=[SALTY])
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    dumped = indicator.model_dump(mode="json", by_alias=True, exclude_unset=True)
+    assert set(dumped) - set(raw) == {"actor_objects_list"}
+    assert set(raw) <= set(dumped)
+
+
+def test_indicator_beyond_the_cap_is_not_looked_up():
+    api = FakeIndicatorsAPI(
+        [make_indicator(1), make_indicator(2, actors=["SALTYSPIDER"])],
+        actors=[SALTY],
+    )
+
+    result = build_extractor(api).extract(FROM_BASE, 1)
+
+    assert _ids(result) == ["ioc-1"]
+    assert api.actor_calls == []
+
+
+def test_no_lookup_when_pagination_fails(error_403):
+    client = ScriptedClient(
+        [ok({"resources": [make_indicator(1, actors=["SALTYSPIDER"])]}), error_403],
+        actors=[SALTY],
+    )
+
+    with pytest.raises(CrowdStrikeAPIError):
+        build_extractor(client, page_size=1).extract(FROM_BASE, 10)
+
+    assert client.actor_calls == []
+
+
+def test_no_lookup_when_validation_fails():
+    client = ScriptedClient(
+        [
+            ok(
+                {
+                    "resources": [
+                        make_indicator(1, actors=["SALTYSPIDER"]),
+                        make_indicator(2, _marker="bad"),
+                    ]
+                }
+            )
+        ],
+        actors=[SALTY],
+    )
+
+    with pytest.raises(IndicatorValidationError):
+        build_extractor(client).extract(FROM_BASE, 10)
+
+    assert client.actor_calls == []
+
+
+def test_shared_actor_is_looked_up_once_per_extraction():
+    api = FakeIndicatorsAPI(
+        [make_indicator(i, actors=["SALTYSPIDER"]) for i in range(418)],
+        actors=[SALTY],
+    )
+
+    result = build_extractor(api).extract(FROM_BASE, 1000)
+
+    assert len(result) == 418
+    assert all(_actor_names(ind) == ["SALTY SPIDER"] for _, ind in result)
+    assert api.tokens == ["SALTYSPIDER"]
+
+
+def test_miss_is_looked_up_once_per_extraction():
+    api = FakeIndicatorsAPI(
+        [make_indicator(i, actors=["NOSUCHACTOR"]) for i in range(3)]
+    )
+
+    build_extractor(api).extract(FROM_BASE, 10)
+
+    assert api.tokens == ["NOSUCHACTOR"]
+
+
+def test_next_extraction_looks_up_again():
+    api = FakeIndicatorsAPI([make_indicator(1, actors=["SALTYSPIDER"])], actors=[SALTY])
+    extractor = build_extractor(api)
+
+    extractor.extract(FROM_BASE, 10)
+    extractor.extract(FROM_BASE, 10)
+
+    assert api.tokens == ["SALTYSPIDER", "SALTYSPIDER"]
+
+
+def test_unknown_name_is_dropped_and_logged(caplog):
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER", "NOSUCHACTOR"])], actors=[SALTY]
+    )
+
+    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+        [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert _actor_names(indicator) == ["SALTY SPIDER"]
+    assert "NOSUCHACTOR" in caplog.text and "ioc-1" in caplog.text
+
+
+def test_missing_actors_scope_does_not_fail_the_extraction(caplog):
+    indicators = [make_indicator(i, actors=["SALTYSPIDER"]) for i in range(3)]
+    api = FakeIndicatorsAPI(
+        indicators, actors=[SALTY], actor_failures={"SALTYSPIDER": [FORBIDDEN] * 3}
+    )
+
+    with caplog.at_level(logging.WARNING, logger="crowdstrike_indicators.extractor"):
+        result = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert _ids(result) == ["ioc-0", "ioc-1", "ioc-2"]
+    assert all(indicator.actor_objects_list == [] for _, indicator in result)
+    assert "403" in caplog.text and "access denied" in caplog.text
+
+
+def test_failed_lookup_is_retried_for_the_next_indicator():
+    api = FakeIndicatorsAPI(
+        [make_indicator(i, actors=["SALTYSPIDER"]) for i in range(2)],
+        actors=[SALTY],
+        actor_failures={"SALTYSPIDER": [SERVER_ERROR]},
+    )
+
+    result = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert api.tokens == ["SALTYSPIDER", "SALTYSPIDER"]
+    assert [_actor_names(indicator) for _, indicator in result] == [
+        [],
+        ["SALTY SPIDER"],
+    ]
+
+
+def test_exception_raised_by_the_actors_client_does_not_fail_the_extraction():
+    class BrokenActorsAPI(FakeIndicatorsAPI):
+        def query_actor_entities(self, **kwargs):
+            raise ConnectionError("network down")
+
+    api = BrokenActorsAPI([make_indicator(1, actors=["SALTYSPIDER"])])
+
+    [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
+
+    assert indicator.actor_objects_list == []
+
+
+def test_actors_api_error_does_not_stop_the_extraction():
+    api = FakeIndicatorsAPI(
+        [make_indicator(1, actors=["SALTYSPIDER"])],
+        actor_failures={"SALTYSPIDER": [SERVER_ERROR]},
+    )
+
+    assert _ids(build_extractor(api).extract(FROM_BASE, 10)) == ["ioc-1"]
+
+
+def test_raw_page_callback_receives_indicator_pages_only():
+    seen: list[dict] = []
+    client = ScriptedClient(
+        [ok({"resources": [make_indicator(1, actors=["SALTYSPIDER"])]})],
+        actors=[SALTY],
+    )
+
+    build_extractor(client, on_raw_page=seen.append).extract(FROM_BASE, 1)
+
+    assert len(client.actor_calls) == 1
+    assert seen == [{"resources": [make_indicator(1, actors=["SALTYSPIDER"])]}]
+
+
+def test_summary_line_counts_the_lookups(caplog):
+    api = FakeIndicatorsAPI(
+        [
+            make_indicator(1, actors=["SALTYSPIDER", "NOSUCHACTOR"]),
+            make_indicator(2, actors=["WIZARDSPIDER"]),
+        ],
+        actors=[SALTY],
+        actor_failures={"WIZARDSPIDER": [SERVER_ERROR]},
+    )
+
+    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+        build_extractor(api).extract(FROM_BASE, 10)
+
+    [summary] = [r for r in caplog.records if "actor name(s)" in r.getMessage()]
+    assert summary.levelno == logging.WARNING
+    assert summary.getMessage() == (
+        "Looked up 3 actor name(s): 1 resolved, 1 unresolved, 1 failed"
+    )
+
+
+def test_summary_line_is_info_without_failure(caplog):
+    api = FakeIndicatorsAPI([make_indicator(1, actors=["SALTYSPIDER"])], actors=[SALTY])
+
+    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+        build_extractor(api).extract(FROM_BASE, 10)
+
+    [summary] = [r for r in caplog.records if "actor name(s)" in r.getMessage()]
+    assert summary.levelno == logging.INFO
