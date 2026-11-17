@@ -354,6 +354,33 @@ class TestUrlRefusals:
             assert result is None
             c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
 
+    @pytest.mark.parametrize(
+        "marking, skipped",
+        [
+            ({"definition_type": "tlp", "definition": "TLP:RED"}, True),
+            ({"definition_type": "Tlp", "definition": "tlp:red"}, True),
+            ({"definition_type": "tlp", "definition": "tlp:amber+strict"}, True),
+            ({"definition_type": "tlp", "definition": "TLP:GREEN"}, False),
+            ({"definition_type": "PAP", "definition": "PAP:RED"}, False),
+        ],
+    )
+    def test_tlp_check_entity_marking_any_case(self, marking, skipped):
+        """The entity's own TLP marking is read in any case."""
+        c = _url_connector()
+        c.helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+        c.max_tlp = "TLP:AMBER"
+        opencti = _opencti_url()
+        opencti["objectMarking"] = [marking]
+        with patch("connector.polyswarm_connector.time.sleep"):
+            result = c._enrich_url(URL_ID, _url_entity(), opencti, [])
+
+        if skipped:
+            assert result["status"] == "skipped"
+            assert c.polyswarm_client.mock_calls == []
+        else:
+            assert result is None
+            c.polyswarm_client.submit_sandbox_url_async.assert_called_once()
+
     def test_tlp_check_from_bundle_marking_refs(self):
         """A TLP marking only present in the bundle is still enforced."""
         c = _url_connector()
