@@ -606,6 +606,24 @@ class TestUrlSubmission:
             self._run(c)
         assert excinfo.value is first
 
+    def test_quota_error_stops_the_next_provider_submit(self):
+        """Quota is account wide: Triage is not submitted after CAPE's quota error."""
+        c = _url_connector(sandbox_provider="both")
+        quota = PolySwarmAPIError(
+            f"{PolySwarmAPIError.QUOTA_CATEGORY} (URL sandbox submit (cape))", "q"
+        )
+        c.polyswarm_client.submit_sandbox_url_async = MagicMock(
+            side_effect=[quota, "task-triage"]
+        )
+        with pytest.raises(PolySwarmAPIError) as excinfo:
+            self._run(c)
+        assert excinfo.value is quota
+        providers = [
+            call.kwargs["provider"]
+            for call in c.polyswarm_client.submit_sandbox_url_async.call_args_list
+        ]
+        assert providers == ["cape"]
+
     def test_polls_with_file_timeouts(self):
         c = _url_connector(poll_interval=7, sandbox_timeout=123)
         c._phase_poll_sandboxes = MagicMock(return_value={"cape": None})

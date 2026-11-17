@@ -515,7 +515,8 @@ class HashLookupMixin:
 
         ``kept`` names providers with a report found or a task running: an
         API error on every submit is then noted per provider instead of
-        raised, so those are still delivered.
+        raised, so those are still delivered. After a quota or rate error
+        the remaining providers are not tried.
 
         Returns (provider to task id, outcome) where outcome is one of
         "started", "refused", "not_held", "submit_failed", "api_error" (no
@@ -547,7 +548,7 @@ class HashLookupMixin:
 
         tasks: dict[str, str] = {}
         errors: dict[str, PolySwarmAPIError] = {}
-        for provider in missing:
+        for index, provider in enumerate(missing):
             vm_slug = self._get_vm_for_provider(provider)
             try:
                 task_id = self.polyswarm_client.submit_sandbox_by_instance_async(
@@ -564,6 +565,12 @@ class HashLookupMixin:
                     f"sample: {e.category}"
                 )
                 errors[provider] = e
+                if e.is_quota_or_rate_limited:
+                    # Quota is account wide: never submit to the next
+                    # provider. The ones not tried are noted with this error.
+                    for untried in missing[index + 1 :]:
+                        errors[untried] = e
+                    break
                 continue
             if task_id:
                 tasks[provider] = task_id

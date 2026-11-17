@@ -1772,11 +1772,13 @@ class PolySwarmConnector(HashLookupMixin):
         Returns a dict mapping provider name to task ID for successful
         submissions. Providers with no VM that accepts URLs are skipped. An
         API error on one provider does not drop a task another provider
-        already started (see ``_settle_submit_errors``).
+        already started (see ``_settle_submit_errors``). After a quota or
+        rate error the remaining providers are not tried.
         """
         sandbox_tasks: dict[str, str] = {}
         errors: dict[str, PolySwarmAPIError] = {}
-        for provider in self._get_sandbox_providers():
+        providers = self._get_sandbox_providers()
+        for index, provider in enumerate(providers):
             vm_slug = self.polyswarm_client.get_url_vm_for_provider(
                 provider, preferred=self.config.polyswarm.sandbox_vm
             )
@@ -1794,6 +1796,12 @@ class PolySwarmConnector(HashLookupMixin):
                     f"[CONNECTOR] URL submit to {provider} sandbox failed: {e.category}"
                 )
                 errors[provider] = e
+                if e.is_quota_or_rate_limited:
+                    # Quota is account wide: never submit to the next
+                    # provider. The ones not tried are noted with this error.
+                    for untried in providers[index + 1 :]:
+                        errors[untried] = e
+                    break
                 continue
             if task_id:
                 sandbox_tasks[provider] = task_id
