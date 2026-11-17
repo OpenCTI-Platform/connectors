@@ -30,6 +30,11 @@ reference).
 3. **Keeps the article body** with [trafilatura](https://trafilatura.readthedocs.io)
    (Apache-2.0): no menus, footers, cookie banners or comments; tables, lists,
    code and links kept.
+   Sponsored ad units the publisher injects inside the article (a paid display
+   callout: heading, promo text, call to action) are removed first: they are
+   told by the paid-advertising tracking of their links (`utm_medium=paid*` or
+   `utm_source=display_network`), on any site. Links with another medium
+   (`3rd-party`, `referral`...) are article content and stay.
    Three layouts that would lose indicators are reworked first: tables nested in
    wrapper `<div>`s (Google Docs exports) are lifted out, the `embed` classes
    around tables (Webflow) are dropped, and indicators listed one per `<div>`
@@ -41,7 +46,21 @@ reference).
    between them (Adobe AEM `div.cmp-text`), is gathered into one body first, so
    every block is kept in order; the page's layout attributes (`class`, `id`,
    `style`, `data-*`) are not written to the content.
-4. **Checks it is the article**: not an anti-bot or consent page, at least 500
+4. **Follows the PDF report of a landing page.** Some publishers put only a
+   summary at the article URL and link the report itself as a PDF ("Download
+   the report", "Télécharger le rapport"). When the extracted text is shorter
+   than 4,000 characters and the article links a PDF on the page's registrable
+   domain, that PDF is fetched with the same checks as a page (public addresses
+   at every hop, 20 MB at most, `application/pdf` starting with `%PDF` only).
+   Only the links of the extracted article count, so the PDFs of the site's
+   menu or footer are never followed; a link whose text names the report wins
+   over another PDF. Its text, read with [pypdf](https://pypdf.readthedocs.io)
+   (BSD-3-Clause), is added after the summary as paragraphs, running headers,
+   footers and page numbers dropped, and the PDF is attached to the report.
+   Any failure there (too large, not a PDF, no text) keeps the summary alone,
+   with a warning saying why; it never fails the enrichment.
+5. **Checks it is the article** (on a landing page, the summary and the report
+   together): not an anti-bot or consent page, at least 500
    characters, and matching the report (page title, the report name's words at
    the top of the text, or the URL slug). When the article body was found as a
    run of blocks, the extraction must keep at least 60% of its text: it is
@@ -49,8 +68,9 @@ reference).
    written partial. When the report's content is already
    filled, the article must also be 1.5 times longer than it, so a full text is
    never replaced by less; an empty content replaces nothing.
-5. **Writes the body to the report's content** through a bundle, so confidence
-   levels and playbooks apply. The description is left as it is.
+6. **Writes the body to the report's content** through a bundle, so confidence
+   levels and playbooks apply, with the PDF report attached when one was
+   followed. The description is left as it is.
 
 ## Confidence of the connector's user
 
@@ -83,6 +103,9 @@ all optional, use the `REPORT_ARTICLE_FETCHER_` prefix:
 | `REPORT_ARTICLE_FETCHER_MIN_LENGTH` | `500` | Shortest article accepted, in characters of text |
 | `REPORT_ARTICLE_FETCHER_LENGTH_RATIO` | `1.5` | How many times longer than the report's current content the article must be |
 | `REPORT_ARTICLE_FETCHER_MIN_TITLE_SIMILARITY` | `0.6` | Lowest match accepted between the report name and the page, from 0 to 1 |
+| `REPORT_ARTICLE_FETCHER_FOLLOW_PDF` | `true` | On a landing page, also fetch the PDF report it links: its text follows the page and the file is attached to the report |
+| `REPORT_ARTICLE_FETCHER_LANDING_MAX_LENGTH` | `4000` | A page shorter than this, in characters of text, is a landing page whose PDF report is followed |
+| `REPORT_ARTICLE_FETCHER_MAX_PDF_SIZE` | `20000000` | Largest PDF report downloaded, in bytes |
 | `REPORT_ARTICLE_FETCHER_MATCH_SINGLE_REFERENCE` | `false` | Also enrich reports not created by an RSS ingestion when they have exactly one external reference |
 | `REPORT_ARTICLE_FETCHER_MAX_WORKERS` | `1` | Reports processed at the same time by one connector process (1 to 32) |
 | `REPORT_ARTICLE_FETCHER_SUMMARY_LOG_LEVEL` | `error` | Level of the one-line summary of each report (`debug`, `info`, `warning`, `error`, `none`) |

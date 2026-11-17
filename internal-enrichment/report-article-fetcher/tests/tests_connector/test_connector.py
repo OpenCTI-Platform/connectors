@@ -40,6 +40,9 @@ def _connector(max_tlp="amber"):
             match_single_reference=False,
             max_workers=1,
             summary_log_level="error",
+            follow_pdf=True,
+            landing_max_length=4000,
+            max_pdf_size=20_000_000,
         ),
     )
     return ReportArticleFetcherConnector(config=config, helper=helper), helper

@@ -6,23 +6,30 @@ evaluated on real feeds without a platform.
 
 import copy
 import ipaddress
+import logging
 import re
 import socket
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from html import unescape
-from urllib.parse import urldefrag, urljoin, urlparse
+from html import escape, unescape
+from io import BytesIO
+from statistics import median
+from urllib.parse import parse_qs, unquote, urldefrag, urljoin, urlparse
 
 import lxml.etree
 import lxml.html
+import pypdf
 import requests
 import trafilatura
 from requests.adapters import HTTPAdapter
+from tld import get_fld
 from trafilatura.htmlprocessing import convert_to_html
 from trafilatura.utils import normalize_unicode
 from trafilatura.xml import xmltotxt
 from urllib3.connection import HTTPConnection, HTTPSConnection
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+
+LOGGER = logging.getLogger(__name__)
 
 # The OpenCTI RSS ingestion writes the article link as the report's external
 # reference: source_name is the item title (the report name) and description
@@ -46,6 +53,19 @@ _BLOCKED_MARKERS = (
 )
 
 _HTML_TYPES = ("text/html", "application/xhtml+xml")
+_PDF_TYPES = ("application/pdf",)
+# Words that say a link is the report itself: "Download the report",
+# "Télécharger le rapport", "Full report (PDF)".
+_REPORT_WORDS = (
+    "download",
+    "report",
+    "rapport",
+    "télécharger",
+    "telecharger",
+    "whitepaper",
+    "white paper",
+    "full",
+)
 # A stub page that only redirects: <meta http-equiv="refresh" content="0;URL='...'">
 _META_REFRESH = re.compile(
     r"<meta[^>]+http-equiv=[\"']?refresh[^>]+url=['\"]?([^'\">\s]+)", re.IGNORECASE
@@ -230,6 +250,47 @@ def fetch_html(
     if session is None:
         session = new_session(user_agent)
     session.cookies.clear()
+    url, content_type, body = _download(
+        url, session, timeout, max_size, _HTML_TYPES, "an HTML page", "Page"
+    )
+    return url, _decode(body, content_type)
+
+
+def fetch_pdf(
+    url: str,
+    user_agent: str,
+    timeout: int,
+    max_size: int,
+    session: requests.Session | None = None,
+) -> tuple[str, bytes]:
+    """Download a PDF document over plain HTTP. Returns (final URL, bytes).
+
+    The same checks as for a page: public addresses only at every hop, the
+    size capped before and while reading. Only application/pdf is accepted,
+    and the body must start as a PDF does. The session keeps the cookies of
+    the page that linked the document (same site).
+    """
+    if session is None:
+        session = new_session(user_agent)
+    url, _, body = _download(
+        url, session, timeout, max_size, _PDF_TYPES, "a PDF", "PDF", refresh=False
+    )
+    if not body.lstrip()[:5].startswith(b"%PDF"):
+        raise FetchError("Not a PDF: the content does not start with %PDF")
+    return url, body
+
+
+def _download(
+    url: str,
+    session: requests.Session,
+    timeout: int,
+    max_size: int,
+    accepted: tuple[str, ...],
+    expected: str,
+    what: str,
+    refresh: bool = True,
+) -> tuple[str, str, bytes]:
+    """GET a URL, every redirect checked. Returns (final URL, type, body)."""
     for _ in range(_MAX_REDIRECTS + 1):
         check_public_url(url)
         try:
@@ -250,22 +311,22 @@ def fetch_html(
             if response.status_code != 200:
                 raise FetchError(f"HTTP {response.status_code}")
             content_type = response.headers.get("Content-Type", "").lower()
-            if not content_type.startswith(_HTML_TYPES):
-                raise FetchError(f"Not an HTML page: {content_type or 'unknown'}")
+            if not content_type.startswith(accepted):
+                raise FetchError(f"Not {expected}: {content_type or 'unknown'}")
             declared_size = response.headers.get("Content-Length", "")
             if declared_size.isdigit() and int(declared_size) > max_size:
-                raise FetchError(f"Page larger than {max_size} bytes")
+                raise FetchError(f"{what} larger than {max_size} bytes")
             body = bytearray()
             for chunk in response.iter_content(65536):
                 body.extend(chunk)
                 if len(body) > max_size:
-                    raise FetchError(f"Page larger than {max_size} bytes")
-            html = _decode(bytes(body), content_type)
-            refresh = _META_REFRESH.search(html) if len(html) < 4096 else None
-            if refresh:
-                url = urljoin(url, refresh.group(1))
-                continue
-            return url, html
+                    raise FetchError(f"{what} larger than {max_size} bytes")
+            if refresh and len(body) < 4096:
+                stub = _META_REFRESH.search(_decode(bytes(body), content_type))
+                if stub:
+                    url = urljoin(url, stub.group(1))
+                    continue
+            return url, content_type, bytes(body)
     raise FetchError("Too many redirects")
 
 
@@ -344,6 +405,156 @@ def extract_article(url: str, html: str) -> Article | None:
         html=_strip_document(body),
         text=text,
         body_length=body_length,
+    )
+
+
+@dataclass
+class PdfReport:
+    """The text of a PDF report, and the file itself to attach."""
+
+    url: str
+    name: str
+    html: str
+    text: str
+    data: bytes
+
+
+def _same_site(url: str, page_url: str) -> bool:
+    """Both URLs are on the same registrable domain (www.x.fr and x.fr)."""
+    first = get_fld(url, fail_silently=True)
+    return first is not None and first == get_fld(page_url, fail_silently=True)
+
+
+def find_report_pdf(article: Article, page_url: str) -> str | None:
+    """The PDF report a landing page links, or None.
+
+    Only the links of the extracted article are read: the extraction has
+    already dropped the page's header, navigation and footer, where sites
+    link their own PDFs (a security policy, terms of use). The PDF must be
+    on the page's registrable domain. When the article links several, the
+    first whose text says it is the report (download, report, rapport,
+    télécharger) wins, else the first one.
+    """
+    try:
+        tree = lxml.html.fragment_fromstring(article.html, create_parent="div")
+    except (lxml.etree.ParserError, ValueError):
+        return None
+    candidates = []
+    for link in tree.iter("a"):
+        href = urljoin(page_url, (link.get("href") or "").strip())
+        parsed = urlparse(href)
+        if parsed.scheme not in ("http", "https"):
+            continue
+        if not parsed.path.lower().endswith(".pdf"):
+            continue
+        if not _same_site(href, page_url):
+            continue
+        candidates.append((urldefrag(href)[0], link.text_content().lower()))
+    for href, text in candidates:
+        if any(word in text for word in _REPORT_WORDS):
+            return href
+    return candidates[0][0] if candidates else None
+
+
+def pdf_name(url: str) -> str:
+    """The file name of a PDF URL, as it is attached to the report."""
+    name = unquote(urlparse(url).path.rstrip("/").rsplit("/", 1)[-1]).strip()
+    return name or "report.pdf"
+
+
+# A line that is only a page number: "3", "3 / 12", "Page 3", "- 3 -".
+_PAGE_NUMBER = re.compile(r"^(page\s*)?[-–—\s]*\d+(\s*(/|sur|of)\s*\d+)?[-–—\s]*$")
+_CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+_SENTENCE_END = (".", "!", "?", ":", "»", '"', ";")
+
+
+def _page_lines(text: str) -> list[str]:
+    return [line.strip() for line in _CONTROL.sub("", text).splitlines()]
+
+
+def _repeated_lines(pages: list[list[str]]) -> set[str]:
+    """Lines at the top or bottom of most pages: running headers, footers."""
+    if len(pages) < 3:
+        return set()
+    counts: dict[str, int] = {}
+    for lines in pages:
+        filled = [line for line in lines if line]
+        for line in set(filled[:3] + filled[-3:]):
+            counts[line] = counts.get(line, 0) + 1
+    return {line for line, count in counts.items() if count >= 0.6 * len(pages)}
+
+
+def _paragraphs(lines: list[str]) -> list[str]:
+    """Join the lines of a page into paragraphs.
+
+    A blank line ends a paragraph, and so does a short line that ends a
+    sentence (shorter than most lines of the page: the last line of a
+    paragraph) or a line of half the usual width at most (a heading). A
+    word cut by a hyphen at the end of a line is joined.
+    """
+    filled = [len(line) for line in lines if line]
+    if not filled:
+        return []
+    width = median(filled)
+    paragraphs: list[str] = []
+    current = ""
+    for line in lines:
+        if not line:
+            if current:
+                paragraphs.append(current)
+            current = ""
+            continue
+        if not current:
+            current = line
+        elif re.search(r"[^\W\d_]-$", current) and line[:1].islower():
+            current = current[:-1] + line
+        else:
+            current += " " + line
+        ends_sentence = line.endswith(_SENTENCE_END) and len(line) < 0.85 * width
+        if ends_sentence or (len(line) <= 0.5 * width and not line.endswith(",")):
+            paragraphs.append(current)
+            current = ""
+    if current:
+        paragraphs.append(current)
+    return paragraphs
+
+
+def pdf_to_html(data: bytes) -> tuple[str, str]:
+    """The text of a PDF as HTML paragraphs, and as plain text.
+
+    Lines repeated at the top or bottom of most pages (running headers and
+    footers) and lines that are only a page number are dropped. Raises
+    ValueError when the document cannot be read or holds no text.
+    """
+    try:
+        reader = pypdf.PdfReader(BytesIO(data))
+        pages = [_page_lines(page.extract_text() or "") for page in reader.pages]
+    except Exception as err:  # pypdf raises many types on a broken file
+        raise ValueError(f"cannot read the PDF ({err})") from err
+    repeated = _repeated_lines(pages)
+    paragraphs = []
+    for lines in pages:
+        kept = [
+            "" if line in repeated or _PAGE_NUMBER.match(line.lower()) else line
+            for line in lines
+        ]
+        paragraphs += _paragraphs(kept)
+    paragraphs = [normalize_unicode(re.sub(r"\s+", " ", p)).strip() for p in paragraphs]
+    paragraphs = [p for p in paragraphs if p]
+    if not paragraphs:
+        raise ValueError("no text in the PDF")
+    html = "\n".join(f"<p>{escape(p, quote=False)}</p>" for p in paragraphs)
+    return html, "\n".join(paragraphs)
+
+
+def with_pdf(article: Article, pdf: PdfReport) -> Article:
+    """The landing page followed by the text of the report it links."""
+    return Article(
+        url=article.url,
+        title=article.title,
+        html=f"{article.html}\n{pdf.html}",
+        text=f"{article.text}\n{pdf.text}",
+        body_length=article.body_length,
     )
 
 
@@ -1010,9 +1221,127 @@ def _join_sibling_blocks(document: lxml.etree._Element) -> bool:
     return True
 
 
+# A paid ad unit holds at most this many characters of text: an element
+# that holds more is article content, whatever its links say.
+_AD_TEXT = 600
+
+
+def _is_paid_link(href: str | None) -> bool:
+    """The link carries paid-advertising tracking.
+
+    utm_medium paid, paid_display, paid_social... or utm_source
+    display_network. Any other medium (3rd-party, referral, display, email)
+    is a link of the article: publishers use them for their own sponsored
+    articles and partners, which are content.
+    """
+    if not href:
+        return False
+    try:
+        query = parse_qs(urlparse(href.strip()).query)
+    except ValueError:
+        return False
+    mediums = [value.strip().lower() for value in query.get("utm_medium", [])]
+    sources = [value.strip().lower() for value in query.get("utm_source", [])]
+    return any(medium.startswith("paid") for medium in mediums) or (
+        "display_network" in sources
+    )
+
+
+def _only_paid_links(element: lxml.etree._Element) -> bool:
+    """Every link of the element is a paid one (and it has at least one)."""
+    hrefs = [link.get("href") for link in element.iter("a")]
+    return bool(hrefs) and all(_is_paid_link(href) for href in hrefs)
+
+
+def _has_link(element: lxml.etree._Element) -> bool:
+    return any(True for _ in element.iter("a"))
+
+
+def _ad_unit(link: lxml.etree._Element) -> list[lxml.etree._Element]:
+    """The elements of the ad unit a paid link belongs to.
+
+    The closest enclosing block that holds only the ad: the highest ancestor
+    whose links are all paid and whose text stays short (_AD_TEXT); never
+    the page, its body, an <article> or <main>, the article body or a block
+    holding the title, so a short article is never taken for an ad. When
+    that block is the link's own heading or paragraph (no dedicated
+    container), it is an ad only when the paid links make most of its text
+    (a sentence of the article that cites an ad is kept), and the promo
+    siblings that follow it are added up to the last one carrying a paid
+    link, when none of them links anywhere else.
+    """
+    unit = link
+    parent = unit.getparent()
+    while (
+        parent is not None
+        and parent.tag not in ("html", "body", "article", "main")
+        and parent.get(_BODY_MARK) is None
+        and parent.get("itemprop") != "articleBody"
+        and not any(True for _ in parent.iter("h1"))
+        and _only_paid_links(parent)
+        and _length(parent.text_content()) <= _AD_TEXT
+    ):
+        unit = parent
+        parent = unit.getparent()
+    if parent is None:
+        return []
+    if unit is link and parent.tag in _INLINE_PARENTS:
+        # A paid link in a sentence of the article: the article cites it.
+        return []
+    elements = [unit]
+    if unit.tag not in _HEADINGS and unit.tag != "p":
+        return elements
+    text = _length(unit.text_content())
+    linked = sum(_length(anchor.text_content()) for anchor in unit.iter("a"))
+    if 2 * linked < text:
+        return []
+    run = []
+    for sibling in unit.itersiblings():
+        if not isinstance(sibling.tag, str):
+            continue
+        if _has_link(sibling) and not _only_paid_links(sibling):
+            break
+        text += _length(sibling.text_content())
+        if text > _AD_TEXT:
+            break
+        run.append(sibling)
+        if _has_link(sibling):
+            elements.extend(run)
+            run = []
+    return elements
+
+
+def _drop_paid_ads(document: lxml.etree._Element) -> int:
+    """Remove the sponsored ad units publishers inject in the article.
+
+    A paid display unit (BleepingComputer's div.article-callout: an image,
+    a heading, promo paragraphs and a call to action) sits inside the
+    article body, so trafilatura kept it as article text. It is told by the
+    paid-advertising tracking of its links (_is_paid_link), not by a list of
+    sites. Returns the number of units removed.
+    """
+    dropped = 0
+    for link in list(document.iter("a")):
+        if not _is_paid_link(link.get("href")):
+            continue
+        if link.getroottree().getroot() is not document:
+            # Already removed with an earlier unit.
+            continue
+        elements = _ad_unit(link)
+        if not elements:
+            continue
+        for element in elements:
+            element.drop_tree()
+        dropped += 1
+    return dropped
+
+
 def _prepare(html: str) -> str:
     """Rework the layouts that make trafilatura drop indicators.
 
+    - Sponsored ad units inside the article (paid display callouts): their
+      heading, promo text and call to action are not the article. They are
+      removed first (_drop_paid_ads).
     - Code shown by a syntax highlighter with a line-number gutter (Crayon,
       SyntaxHighlighter, Pygments, GitHub...) is a <table>: trafilatura
       kept the numbers as a column of paragraphs and each line of code as
@@ -1041,7 +1370,10 @@ def _prepare(html: str) -> str:
         document = lxml.html.fromstring(html)
     except (lxml.etree.ParserError, ValueError):
         return html
-    changed = _join_sibling_blocks(document)
+    dropped = _drop_paid_ads(document)
+    if dropped:
+        LOGGER.debug("Dropped %d sponsored ad unit(s) from the page", dropped)
+    changed = _join_sibling_blocks(document) or bool(dropped)
     changed = _pipe_tables(document) or changed
     for table in list(document.iter("table")):
         if table.getparent() is None or table.xpath("ancestor::table"):

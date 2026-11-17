@@ -13,6 +13,7 @@ from connector.article import (
     FetchError,
     _code_lines,
     _drop_empty_headings,
+    _is_paid_link,
     _restore_code_elements,
     article_match,
     check_public_url,
@@ -767,3 +768,90 @@ def test_refuses_a_connection_that_lands_on_an_internal_address(monkeypatch):
             fetch_html(f"http://127.0.0.1:{server.server_port}/", "test", 5, 1000)
     finally:
         server.shutdown()
+
+
+PAID = (
+    "https://ads.example.net/lp?utm_source=display_network&amp;utm_medium=paid_display"
+)
+PARTNER = "https://partner.example.org/post?utm_source=blog&amp;utm_medium=3rd-party"
+
+
+@pytest.mark.parametrize(
+    ("href", "paid"),
+    [
+        ("https://a.example/?utm_medium=paid_display", True),
+        ("https://a.example/?utm_medium=paid_social&utm_source=x", True),
+        ("https://a.example/?utm_medium=Paid", True),
+        ("https://a.example/?utm_source=display_network", True),
+        ("https://a.example/?utm_medium=3rd-party", False),
+        ("https://a.example/?utm_medium=referral", False),
+        ("https://a.example/?utm_source=blog&utm_medium=display", False),
+        ("https://a.example/paid_display", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_tells_paid_advertising_links(href, paid):
+    assert _is_paid_link(href) is paid
+
+
+def _ad_post(ad: str, closing: str = "Closing words of the article.") -> str:
+    return (
+        f"<html><head><title>{NAME}</title></head><body><article><h1>{NAME}</h1>"
+        + "".join(
+            f"<p>Paragraph {i} of the report on the ransomware campaign.</p>"
+            for i in range(20)
+        )
+        + f"<p>{closing}</p>{ad}</article></body></html>"
+    )
+
+
+def test_drops_a_paid_ad_callout_inside_the_article():
+    ad = (
+        f'<div class="callout"><div class="media"><a href="{PAID}"></a></div>'
+        f'<div class="text"><h2><a href="{PAID}">Try our scanner today.</a></h2>'
+        "<p>Our agents find what your tools miss.</p>"
+        f'<a class="cta" href="{PAID}">Start your free scan.</a></div></div>'
+    )
+    article = extract_article(RSS_REFERENCE["url"], _ad_post(ad))
+    assert "Try our scanner" not in article.text
+    assert "Our agents find" not in article.text
+    assert "Start your free scan" not in article.text
+    assert "ads.example.net" not in article.html
+    assert article.text.rstrip().endswith("Closing words of the article.")
+    assert all(f"Paragraph {i} of the report" in article.text for i in range(20))
+
+
+def test_drops_a_paid_heading_and_its_promo_siblings_without_a_container():
+    ad = (
+        f'<h2><a href="{PAID}">Try our scanner today.</a></h2>'
+        "<p>Our agents find what your tools miss.</p>"
+        f'<p><a href="{PAID}">Start your free scan.</a></p>'
+        "<p>Last words written by the author.</p>"
+    )
+    html = _ad_post("").replace(
+        "<p>Closing words of the article.</p>",
+        f"<p>Closing words of the article.</p>{ad}",
+    )
+    article = extract_article(RSS_REFERENCE["url"], html)
+    assert "Try our scanner" not in article.text
+    assert "Our agents find" not in article.text
+    assert "Start your free scan" not in article.text
+    assert "Last words written by the author." in article.text
+
+
+def test_keeps_a_paragraph_with_a_non_paid_tracked_link():
+    closing = f'Read the <a href="{PARTNER}">partner analysis</a> of the loader.'
+    article = extract_article(RSS_REFERENCE["url"], _ad_post("", closing))
+    assert "partner analysis" in article.text
+    assert "partner.example.org/post?utm_source=blog" in article.html
+
+
+def test_keeps_an_article_paragraph_that_holds_a_paid_link():
+    closing = (
+        "The loader was spread through a malvertising campaign that bought "
+        f'<a href="{PAID}">this display ad</a> on several news sites.'
+    )
+    article = extract_article(RSS_REFERENCE["url"], _ad_post("", closing))
+    assert "malvertising campaign" in article.text
+    assert "on several news sites." in article.text

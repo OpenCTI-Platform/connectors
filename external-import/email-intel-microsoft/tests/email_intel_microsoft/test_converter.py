@@ -5,8 +5,46 @@ from unittest.mock import Mock
 import pycti
 import pytest
 from email_intel_microsoft.converter import ConnectorConverter
+from kiota_serialization_json.json_parse_node import JsonParseNode
+from msgraph.generated.models.message import Message
 from stix2 import TLPMarking
 from stix2.utils import STIXdatetime
+
+# Minimal but valid one-page PDF: raw bytes, as a mailbox attachment really is.
+PDF_BYTES = (
+    b"%PDF-1.4\n"
+    b"1 0 obj\n"
+    b"<< /Type /Catalog /Pages 2 0 R >>\n"
+    b"endobj\n"
+    b"2 0 obj\n"
+    b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>\n"
+    b"endobj\n"
+    b"3 0 obj\n"
+    b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\n"
+    b"endobj\n"
+    b"4 0 obj\n"
+    b"<< /Length 68 >>\n"
+    b"stream\n"
+    b"BT /F1 12 Tf 50 780 Td (Email Intel Microsoft test attachment) Tj ET\n"
+    b"endstream\n"
+    b"endobj\n"
+    b"5 0 obj\n"
+    b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\n"
+    b"endobj\n"
+    b"xref\n"
+    b"0 6\n"
+    b"0000000000 65535 f \n"
+    b"0000000009 00000 n \n"
+    b"0000000058 00000 n \n"
+    b"0000000115 00000 n \n"
+    b"0000000241 00000 n \n"
+    b"0000000359 00000 n \n"
+    b"trailer\n"
+    b"<< /Size 6 /Root 1 0 R >>\n"
+    b"startxref\n"
+    b"429\n"
+    b"%%EOF\n"
+)
 
 
 @pytest.fixture(name="converter")
@@ -154,12 +192,12 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
     pdf_file = Mock()
     pdf_file.name = "test.pdf"
     pdf_file.content_type = "application/pdf"
-    pdf_file.content_bytes = base64.b64encode(b"%PDF-1.4\nTest PDF Content")
+    pdf_file.content_bytes = b"%PDF-1.4\nTest PDF Content"
 
     csv_file = Mock()
     csv_file.name = "test.csv"
     csv_file.content_type = "text/csv"
-    csv_file.content_bytes = base64.b64encode(b"Test CSV Content")
+    csv_file.content_bytes = b"Test CSV Content"
 
     mocked_email = Mock(
         subject="",
@@ -226,3 +264,36 @@ def test_converter_to_stix_with_attachment(converter: ConnectorConverter) -> Non
         "  \n"
         "Please consult the content section to view the email content."
     )
+
+
+def test_converter_should_keep_pdf_attachment_when_kiota_decodes_content_bytes(
+    converter: ConnectorConverter,
+) -> None:
+    """
+    Graph sends `contentBytes` base64-encoded, and microsoft-kiota-serialization-json
+    >= 1.12 decodes it, so `FileAttachment.content_bytes` holds the raw file bytes.
+    """
+    graph_message = {
+        "id": "message-id",
+        "subject": "Report with PDF",
+        "receivedDateTime": "2025-04-16T10:10:10Z",
+        "body": {"contentType": "html", "content": "<p>See attached</p>"},
+        "from": {"emailAddress": {"address": "sender@example.com"}},
+        "attachments": [
+            {
+                "@odata.type": "#microsoft.graph.fileAttachment",
+                "id": "attachment-id",
+                "name": "report.pdf",
+                "contentType": "application/pdf",
+                "contentBytes": base64.b64encode(PDF_BYTES).decode(),
+            }
+        ],
+    }
+    message = JsonParseNode(graph_message).get_object_value(Message)
+
+    reports = list(converter.to_stix_objects(entity=message))
+
+    assert len(reports) == 1
+    assert len(reports[0].x_opencti_files) == 1
+    assert reports[0].x_opencti_files[0]["name"] == "report.pdf"
+    assert base64.b64decode(reports[0].x_opencti_files[0]["data"]) == PDF_BYTES

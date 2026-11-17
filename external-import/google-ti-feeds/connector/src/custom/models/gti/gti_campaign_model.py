@@ -445,6 +445,7 @@ class GTICampaignData(BaseModel):
     id: str | None = Field(default=None, description="Campaign ID")
     links: Links | None = Field(default=None, description="Campaign links")
     type: str | None = Field(default=None, description="Campaign type")
+    relationships: dict[str, Any] | None = None
 
 
 class GTICampaignResponse(BaseModel):

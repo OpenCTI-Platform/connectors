@@ -102,6 +102,23 @@
       "minimum": 0,
       "type": "number"
     },
+    "REPORT_ARTICLE_FETCHER_FOLLOW_PDF": {
+      "default": true,
+      "description": "On a landing page (a short page that links its report as a PDF on the same site), also fetch the PDF: its text follows the page in the report's content and the file is attached to the report.",
+      "type": "boolean"
+    },
+    "REPORT_ARTICLE_FETCHER_LANDING_MAX_LENGTH": {
+      "default": 4000,
+      "description": "A page whose extracted text is shorter than this, in characters, is a landing page whose linked PDF report is followed.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "REPORT_ARTICLE_FETCHER_MAX_PDF_SIZE": {
+      "default": 20000000,
+      "description": "Largest PDF report downloaded from a landing page, in bytes.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
     "REPORT_ARTICLE_FETCHER_MATCH_SINGLE_REFERENCE": {
       "default": false,
       "description": "Also accept reports not created by the RSS ingestion when they have exactly one external reference.",
