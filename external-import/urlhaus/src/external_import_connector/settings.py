@@ -99,7 +99,12 @@ class UrlhausConfig(BaseConfigModel):
         """True when `csv_url` points to a retired public download."""
         if self.csv_url is None:
             return False
-        url = urlparse(self.csv_url.get_secret_value())
+        # The SDK settings loader runs this check on an untyped copy of the
+        # model, where `csv_url` is still the raw string.
+        csv_url = self.csv_url
+        if isinstance(csv_url, SecretStr):
+            csv_url = csv_url.get_secret_value()
+        url = urlparse(csv_url)
         return url.hostname == LEGACY_EXPORT_HOST and url.path.startswith(
             LEGACY_EXPORT_PATH_PREFIX
         )

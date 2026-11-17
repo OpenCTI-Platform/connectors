@@ -3,6 +3,8 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 from connectors_sdk.exceptions.error import DataRetrievalError
+from connectors_sdk.settings._settings_loader import _SettingsLoader
+from external_import_connector import ConnectorSettings
 from external_import_connector.client_api import ConnectorClient
 from external_import_connector.connector import ConnectorState, ConnectorURLhaus
 from external_import_connector.settings import UrlhausConfig
@@ -54,6 +56,47 @@ def test_legacy_csv_url_is_ignored_when_auth_key_is_set():
 def test_missing_auth_key_is_rejected(values, expected_message):
     with pytest.raises(ValueError, match=expected_message):
         UrlhausConfig(**values)
+
+
+@pytest.mark.parametrize(
+    "csv_url, expected_legacy",
+    [
+        pytest.param("https://mirror.example/key/recent.csv", False, id="override"),
+        pytest.param(LEGACY_URL, True, id="legacy"),
+    ],
+)
+def test_untyped_settings_loader_accepts_raw_csv_url(csv_url, expected_legacy):
+    """The SDK loader validates raw values with an untyped copy of the model
+    that inherits its validators: they must accept a plain string."""
+    loader = _SettingsLoader.build_loader_from_model(ConnectorSettings)
+    untyped_config = loader.model_fields["urlhaus"].annotation
+
+    config = untyped_config(
+        auth_key="raw-key",
+        csv_url=csv_url,
+        default_x_opencti_score="80",
+        import_offline="true",
+        interval="3",
+        threats_from_labels="true",
+    )
+
+    assert config.has_legacy_csv_url is expected_legacy
+
+
+def test_untyped_settings_loader_accepts_raw_csv_url_without_auth_key():
+    loader = _SettingsLoader.build_loader_from_model(ConnectorSettings)
+    untyped_config = loader.model_fields["urlhaus"].annotation
+
+    config = untyped_config(
+        auth_key=None,
+        csv_url="https://mirror.example/key/recent.csv",
+        default_x_opencti_score="80",
+        import_offline="true",
+        interval="3",
+        threats_from_labels="true",
+    )
+
+    assert config.has_legacy_csv_url is False
 
 
 def test_auth_key_and_csv_url_are_masked():
