@@ -7,7 +7,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from crowdstrike_indicators.errors import CrowdStrikeAPIError, IndicatorValidationError
+from crowdstrike_indicators.api import (  # noqa: F401 - re-exported
+    NO_ERROR_MESSAGE,
+    api_error_message,
+    response_body,
+)
+from crowdstrike_indicators.errors import IndicatorValidationError
 from crowdstrike_indicators.models import CrowdStrikeIndicator
 from pydantic import ValidationError
 
@@ -18,7 +23,6 @@ LOGGER = logging.getLogger(__name__)
 # Same page size as the existing CrowdStrike importer: bounded payloads and
 # regular progress logs. The API accepts up to 10000.
 PAGE_SIZE = 1000
-NO_ERROR_MESSAGE = "no error message returned by CrowdStrike API"
 
 type RawPageCallback = Callable[[dict[str, Any]], None]
 
@@ -56,20 +60,6 @@ def first_marker_cursor(from_date: datetime) -> str:
     if from_date.microsecond:
         seconds += 1
     return f"{max(seconds, 0):010d}"
-
-
-def api_error_message(body: Any) -> str:
-    """Extract the first error message of a CrowdStrike response body.
-
-    The upstream shape is not guaranteed: ``body`` or ``errors`` may be
-    missing, ``None``, not a list, or hold a non-dict entry.
-    """
-    errors = body.get("errors") if isinstance(body, dict) else None
-    if not isinstance(errors, list | tuple) or not errors:
-        return NO_ERROR_MESSAGE
-    first_error = errors[0]
-    message = first_error.get("message") if isinstance(first_error, dict) else None
-    return str(message) if message else NO_ERROR_MESSAGE
 
 
 def validate_indicator(raw: Any) -> CrowdStrikeIndicator:
@@ -154,15 +144,7 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[CrowdStrikeIndicator]):
             sort="_marker.asc",
             filter=f"_marker:>='{cursor}'",
         )
-        status_code = response.get("status_code")
-        body = response.get("body")
-        if not isinstance(status_code, int):
-            # Unexpected FalconPy shape: never read it as an empty success.
-            raise CrowdStrikeAPIError(0, api_error_message(body))
-        if status_code >= 400:
-            raise CrowdStrikeAPIError(status_code, api_error_message(body))
-        if not isinstance(body, dict):
-            body = {}
+        body = response_body(response)
         if self.on_raw_page is not None:
             self.on_raw_page(body)
         return body
