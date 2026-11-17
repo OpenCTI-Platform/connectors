@@ -14,9 +14,7 @@ from difflib import SequenceMatcher
 from html import escape, unescape
 from io import BytesIO
 from statistics import median
-from urllib.parse import unquote, urldefrag, urljoin, urlparse
-from html import unescape
-from urllib.parse import parse_qs, urldefrag, urljoin, urlparse
+from urllib.parse import parse_qs, unquote, urldefrag, urljoin, urlparse
 
 import lxml.etree
 import lxml.html
