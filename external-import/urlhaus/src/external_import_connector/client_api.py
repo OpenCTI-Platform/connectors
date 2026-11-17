@@ -3,7 +3,12 @@ from io import StringIO
 from typing import Generator
 
 import requests
+from connectors_sdk.exceptions.error import DataRetrievalError
 from dateutil.parser import parse
+
+
+class UrlhausDownloadError(DataRetrievalError):
+    """Download of the URLhaus export failed; the message never holds the URL."""
 
 
 class ConnectorClient:
@@ -22,25 +27,33 @@ class ConnectorClient:
         """
         Internal method to handle API requests
         :return: the HTTP response
-        :raises requests.RequestException: when the download fails, so that the
+        :raises UrlhausDownloadError: when the download fails, so that the
             run is reported as failed instead of successful with no data
         """
+        # The export URL contains the Auth-Key, and requests quotes it in its
+        # error messages (HTTPError, ConnectionError, InvalidURL). Neither the
+        # URL nor the original error is logged, and the error is re-raised
+        # `from None` instead of `from err`: chaining would print the original
+        # message, and so the key, in the traceback (see "Use `from None`
+        # intentionally, to remove sensitive values" in
+        # connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md).
+        self.helper.connector_logger.info("[API] Downloading the URLhaus export")
         try:
             response = self.session.get(api_url, params=params)
-
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
-
             response.raise_for_status()
             return response
-
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": api_url, "error": str(err)}
-            )
-            raise
+        except requests.HTTPError as err:
+            status = getattr(err.response, "status_code", None)
+            reason = getattr(err.response, "reason", None)
+            meta = {"status_code": status, "reason": reason}
+            error_msg = f"URLhaus export download failed: HTTP {status} {reason}"
+        except Exception as err:  # pylint:disable=broad-exception-caught
+            meta = {"error_type": type(err).__name__}
+            error_msg = f"URLhaus export download failed ({type(err).__name__})"
+        self.helper.connector_logger.error(
+            "[API] URLhaus export download failed", meta=meta
+        )
+        raise UrlhausDownloadError(error_msg) from None
 
     def get_entities(self, params=None) -> Generator[list, None, None]:
         """
