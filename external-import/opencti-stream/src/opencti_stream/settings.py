@@ -74,13 +74,6 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         ),
         default=False,
     )
-    live_stream_include_file_data: bool = Field(
-        description=(
-            "Whether to add encoded file data to exported bundle. "
-            "False by default so file data isn't encoded into the bundle."
-        ),
-        default=False,
-    )
 
 
 class OpenCTIStreamSettings(BaseConfigModel):
@@ -93,6 +86,16 @@ class OpenCTIStreamSettings(BaseConfigModel):
             "not set an applicant ID in that case."
         ),
         default=None,
+    )
+    include_files: bool = Field(
+        description=(
+            "Whether to embed the content of the files attached to each object "
+            "(base64-encoded) in the forwarded bundle, so that the target instance "
+            "also receives the files. Files are downloaded from the OpenCTI the "
+            "stream is read from. Disabled by default because it increases the "
+            "size of every bundle carrying files."
+        ),
+        default=False,
     )
 
 
