@@ -13,6 +13,7 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.rule_file import (
     RuleFileFormatError,
+    describe_download,
     extract_rule_file,
 )
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
@@ -177,15 +178,7 @@ class YaraMasterImporter(BaseImporter):
             )
             return None
 
-        try:
-            rules = self._parse_download(download)
-        except RuleFileFormatError as err:
-            self._error(
-                "Failed to read YARA master from CrowdStrike (ignored): {0}",
-                err,
-            )
-            return None
-
+        rules = self._parse_download(download)
         return YaraMaster(
             rules=rules,
             e_tag=None,
@@ -210,7 +203,14 @@ class YaraMasterImporter(BaseImporter):
 
     def _parse_download(self, download: bytes) -> list[YaraRule]:
         yara_str = extract_rule_file(download, self._RULE_FILE_NAME)
-        return self._parse_yara_rules(yara_str)
+        rules = self._parse_yara_rules(yara_str)
+        if not rules:
+            # An empty body or a proxy error page decodes as text but holds
+            # no rule: fail the work instead of reporting an empty success.
+            raise RuleFileFormatError(
+                f"No YARA rule in the download ({describe_download(download)})"
+            )
+        return rules
 
     @staticmethod
     def _parse_yara_rules(yara_rules: str) -> list[YaraRule]:

@@ -22,6 +22,7 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.rule_file import (
     RuleFileFormatError,
+    describe_download,
     extract_rule_file,
 )
 from crowdstrike_feeds_services.utils.snort_parser import SnortParser, SnortRule
@@ -183,15 +184,7 @@ class SnortMasterImporter(BaseImporter):
             )
             return None
 
-        try:
-            rules = self._parse_download(download)
-        except RuleFileFormatError as err:
-            self._error(
-                "Failed to read Snort master from CrowdStrike (ignored): {0}",
-                err,
-            )
-            return None
-
+        rules = self._parse_download(download)
         return SnortMaster(
             rules=rules,
             e_tag=None,
@@ -215,8 +208,17 @@ class SnortMasterImporter(BaseImporter):
         )
 
     def _parse_download(self, download: bytes) -> List[SnortRule]:
-        snort_str = extract_rule_file(download, self._RULE_FILE_NAME)
-        return self._parse_snort_rules(snort_str)
+        snort_str = extract_rule_file(
+            download, self._RULE_FILE_NAME, excluded=("suricata",)
+        )
+        rules = self._parse_snort_rules(snort_str)
+        if not rules:
+            # An empty body or a proxy error page decodes as text but holds
+            # no rule: fail the work instead of reporting an empty success.
+            raise RuleFileFormatError(
+                f"No Snort rule in the download ({describe_download(download)})"
+            )
+        return rules
 
     @staticmethod
     def _parse_snort_rules(snort_rules: str) -> List[SnortRule]:
