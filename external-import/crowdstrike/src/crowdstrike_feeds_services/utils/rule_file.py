@@ -13,7 +13,7 @@ import zlib
 from io import BytesIO
 from pathlib import PurePosixPath
 
-from . import CrowdStrikeAPIError
+from crowdstrike_feeds_services.utils import CrowdStrikeAPIError
 
 logger = logging.getLogger(__name__)
 
