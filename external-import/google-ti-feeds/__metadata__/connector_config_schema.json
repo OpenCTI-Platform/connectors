@@ -130,6 +130,11 @@
         "google threat intelligence"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -156,6 +161,10 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -174,6 +183,12 @@
       ],
       "description": "Comma-separated list of IOC types to import. Allowed: file, ip, url, domain",
       "items": {
+        "enum": [
+          "file",
+          "ip",
+          "url",
+          "domain"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -213,6 +228,12 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "threat_actors",
+          "software_toolkits",
+          "attack_techniques"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -240,6 +261,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -269,6 +296,18 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "vulnerabilities",
+          "threat_actors",
+          "domains",
+          "files",
+          "urls",
+          "ip_addresses",
+          "software_toolkits",
+          "reports"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -301,6 +340,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -328,6 +373,11 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "threat_actors"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -355,6 +405,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -387,6 +443,11 @@
         ""
       ],
       "items": {
+        "enum": [
+          "threat_actors",
+          "attack_techniques",
+          "vulnerabilities"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -414,6 +475,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -447,6 +514,12 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "attack_techniques",
+          "vulnerabilities",
+          "software_toolkits"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -473,6 +546,26 @@
         "Threat Activity Alert"
       ],
       "items": {
+        "enum": [
+          "All",
+          "Actor Profile",
+          "Country Profile",
+          "Cyber Physical Security Roundup",
+          "Event Coverage/Implication",
+          "Industry Reporting",
+          "Malware Profile",
+          "Net Assessment",
+          "Network Activity Reports",
+          "News Analysis",
+          "OSINT Article",
+          "Patch Report",
+          "Strategic Perspective",
+          "TTP Deep Dive",
+          "Threat Activity Alert",
+          "Threat Activity Report",
+          "Trends and Forecasting",
+          "Weekly Vulnerability Exploitation Report"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -494,6 +587,12 @@
         "crowdsourced"
       ],
       "items": {
+        "enum": [
+          "All",
+          "partner",
+          "crowdsourced",
+          "google threat intelligence"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -528,6 +627,18 @@
         ""
       ],
       "items": {
+        "enum": [
+          "malware_families",
+          "threat_actors",
+          "attack_techniques",
+          "vulnerabilities",
+          "campaigns",
+          "domains",
+          "files",
+          "urls",
+          "ip_addresses",
+          "software_toolkits"
+        ],
         "type": "string"
       },
       "type": "array"

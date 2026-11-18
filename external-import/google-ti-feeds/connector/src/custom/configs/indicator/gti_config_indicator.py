@@ -1,19 +1,23 @@
 """GTI configuration for indicator (IOC delta) imports."""
 
 from datetime import timedelta
+from typing import Literal, get_args
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_INDICATOR_SUBENTITIES,
     GTIBaseConfig,
+    IndicatorSubentity,
+    ListOfFromString,
     validate_subentities_list,
 )
 from connector.src.custom.exceptions.gti_configuration_error import (
     GTIConfigurationError,
 )
-from connectors_sdk import ListFromString
+from connectors_sdk.settings.annotated_types import parse_comma_separated_list
 from pydantic import Field, field_validator
 
-ALLOWED_IOC_TYPES = ["file", "ip", "url", "domain"]
+IocType = Literal["file", "ip", "url", "domain"]
+ALLOWED_IOC_TYPES = list(get_args(IocType))
 
 
 class GTIIndicatorConfig(GTIBaseConfig):
@@ -24,7 +28,7 @@ class GTIIndicatorConfig(GTIBaseConfig):
         description="Whether to enable importing IOC indicator data from GTI via "
         "Steady-State IOC Deltas API",
     )
-    indicator_types: ListFromString = Field(
+    indicator_types: ListOfFromString[IocType] = Field(
         default=["file", "ip", "url", "domain"],
         description="Comma-separated list of IOC types to import. "
         "Allowed: file, ip, url, domain",
@@ -57,7 +61,7 @@ class GTIIndicatorConfig(GTIBaseConfig):
         "using OR logic, and with indicator_min_score using AND logic.",
     )
 
-    indicator_subentities: ListFromString = Field(
+    indicator_subentities: ListOfFromString[IndicatorSubentity] = Field(
         default=[
             "malware_families",
             "threat_actors",
@@ -87,10 +91,11 @@ class GTIIndicatorConfig(GTIBaseConfig):
             )
         return v
 
-    @field_validator("indicator_types", mode="after")
+    @field_validator("indicator_types", mode="before")
     @classmethod
-    def validate_indicator_types(cls, v: list[str]) -> list[str]:
+    def validate_indicator_types(cls, v: str | list[str]) -> list[str]:
         """Validate indicator types against allowed values."""
+        v = parse_comma_separated_list(v)
         if not v:
             raise GTIConfigurationError(
                 "At least one indicator type must be specified."
@@ -103,9 +108,9 @@ class GTIIndicatorConfig(GTIBaseConfig):
             )
         return v
 
-    @field_validator("indicator_subentities", mode="after")
+    @field_validator("indicator_subentities", mode="before")
     @classmethod
-    def validate_indicator_subentities(cls, v: list[str]) -> list[str]:
+    def validate_indicator_subentities(cls, v: str | list[str]) -> list[str]:
         """Validate indicator sub-entities against allowed values."""
         return validate_subentities_list(
             v, "indicator subentity", ALLOWED_INDICATOR_SUBENTITIES
