@@ -5,8 +5,18 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "connectors-sdk"
 dynamic = ["version"]
-description = "Connectors SDK for Octi Connectors."
+description = "SDK to build OpenCTI connectors: STIX models with deterministic IDs, settings and connector base classes."
+readme = "README.md"
+license = "Apache-2.0"
+authors = [{ name = "Filigran" }]
 requires-python = ">=3.11, <3.13"
+keywords = ["opencti", "connectors", "stix", "threat-intelligence", "cti"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
 
 dependencies = [
     "limits>=5.0,<6",
@@ -16,6 +26,11 @@ dependencies = [
     "requests>=2.31.0,<3",
     "typing_extensions>=4.6.1,<5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/OpenCTI-Platform/connectors"
+Repository = "https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk"
+Issues = "https://github.com/OpenCTI-Platform/connectors/issues"
 
 # Loaded by pytest when the SDK is installed (see `_connectors_sdk_plugins`)
 [project.entry-points.pytest11]
@@ -42,7 +57,8 @@ doc = [
 ]
 
 [tool.poetry]
-version = "0.0.0" # unused as the vrsion is dynamically set by project.dynamic but needed for poetry to work
+# Placeholder: the release-connectors-sdk.yml workflow replaces it with the released version before building
+version = "0.0.0"
 packages = [{include = "connectors_sdk"}, {include = "_connectors_sdk_plugins"}]
 
 [tool.pytest.ini_options]

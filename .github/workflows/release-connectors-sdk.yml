@@ -1,0 +1,164 @@
+name: "Release connectors-sdk"
+
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('📦 {0}', github.ref_name)
+      || format('📦 connectors-sdk@{0} → {1}', inputs.version, inputs.repository)
+  }}
+
+# Builds the connectors-sdk package (sdist + wheel) and publishes it to PyPI.
+#
+# Triggers:
+#   1. Automatic: push a tag `connectors-sdk/{version}`, published to PyPI.
+#      e.g.  git tag connectors-sdk/7.261117.0 && git push origin connectors-sdk/7.261117.0
+#      (release-connector.yml already excludes `connectors-sdk/*` tags.)
+#   2. Manual: workflow_dispatch with a version, published to TestPyPI (to
+#      try a release) or PyPI.
+#
+# Authentication uses PyPI Trusted Publishing (OIDC): no API token is stored
+# in the repository. Each index must declare a trusted publisher for
+# owner `OpenCTI-Platform`, repository `connectors`, workflow
+# `release-connectors-sdk.yml` and environment `pypi` (or `testpypi`).
+#
+# The version lives only in the tag: `tool.poetry.version` stays `0.0.0` in
+# the repository and is replaced in the CI checkout before the build.
+
+on:
+  push:
+    tags:
+      - 'connectors-sdk/*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: >
+          Version to publish (PEP 440, e.g. 7.261117.0 or 7.261117.0rc1).
+        required: true
+        type: string
+      repository:
+        description: Package index to publish to.
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-connectors-sdk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      repository: ${{ steps.version.outputs.repository }}
+    defaults:
+      run:
+        working-directory: connectors-sdk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Resolve version and target index
+        id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_REPOSITORY: ${{ inputs.repository }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            version="${REF_NAME#connectors-sdk/}"
+            repository="pypi"
+          else
+            version="$INPUT_VERSION"
+            repository="$INPUT_REPOSITORY"
+          fi
+          python -m pip install --quiet packaging
+          # Fail on a version that is not valid PEP 440, or not in canonical form
+          VERSION="$version" python - <<'EOF'
+          import os, sys
+          from packaging.version import InvalidVersion, Version
+          raw = os.environ["VERSION"]
+          try:
+              parsed = Version(raw)
+          except InvalidVersion:
+              sys.exit(f"::error::'{raw}' is not a valid PEP 440 version")
+          if str(parsed) != raw:
+              sys.exit(f"::error::Use the canonical form '{parsed}' instead of '{raw}'")
+          EOF
+          # The SDK pins pycti exactly, so its version is expected to follow the platform one
+          pycti_pin="$(sed -nE 's/^ *"pycti==([^"]+)".*/\1/p' pyproject.toml)"
+          if [ "${version%%[a-z]*}" != "$pycti_pin" ]; then
+            echo "::warning::Version $version does not match the pycti pin ($pycti_pin)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "repository=$repository" >> "$GITHUB_OUTPUT"
+          echo "Publishing connectors-sdk $version to $repository" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set package version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i -E "s/^version = \"0\.0\.0\"/version = \"$VERSION\"/" pyproject.toml
+          grep -q "^version = \"$VERSION\"" pyproject.toml \
+            || { echo "::error::Could not set the version in pyproject.toml"; exit 1; }
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --quiet build twine
+          python -m build --outdir dist .
+          twine check --strict dist/*
+
+      - name: Smoke test the wheel
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --quiet dist/*.whl
+          /tmp/smoke/bin/python -c "import connectors_sdk, connectors_sdk.models; from importlib.metadata import version; print(version('connectors-sdk'))"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: connectors-sdk-dist
+          path: connectors-sdk/dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to ${{ needs.build.outputs.repository }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ needs.build.outputs.repository }}
+      url: >-
+        ${{
+          needs.build.outputs.repository == 'pypi'
+            && format('https://pypi.org/project/connectors-sdk/{0}/', needs.build.outputs.version)
+            || format('https://test.pypi.org/project/connectors-sdk/{0}/', needs.build.outputs.version)
+        }}
+    permissions:
+      id-token: write # Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: connectors-sdk-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        if: needs.build.outputs.repository == 'pypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+
+      - name: Publish to TestPyPI
+        if: needs.build.outputs.repository == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
