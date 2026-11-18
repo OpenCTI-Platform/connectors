@@ -14,7 +14,7 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, field_validator
+from pydantic import ConfigDict, Field, HttpUrl, SecretStr, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -114,6 +114,9 @@ class AbuseIPDBTaxiiConfig(BaseConfigModel):
 
 class ConnectorSettings(BaseExternalImportConnectorSettings):
     """Aggregates all configuration objects the connector needs."""
+
+    # A missing-field error echoes the raw values of the whole section.
+    model_config = ConfigDict(hide_input_in_errors=True)
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig

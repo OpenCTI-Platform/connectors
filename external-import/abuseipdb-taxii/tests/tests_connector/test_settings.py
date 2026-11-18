@@ -157,3 +157,15 @@ def test_password_is_not_exposed_in_helper_config(settings: ConnectorSettings):
     assert "test-password" not in repr(settings)
     assert settings.abuseipdb_taxii.password.get_secret_value() == "test-password"
     assert helper_config["connector"]["type"] == "EXTERNAL_IMPORT"
+
+
+def test_password_is_not_exposed_when_username_is_missing():
+    with pytest.raises(ConfigValidationError) as err:
+        make_settings(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "abuseipdb_taxii": {"password": "test-password"},
+            }
+        )
+
+    assert "test-password" not in str(err.value.__cause__)
