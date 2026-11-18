@@ -82,6 +82,19 @@ def _deflate64_zip(file_name: str, text: str) -> bytes:
     return bytes(content)
 
 
+def _corrupt_lzma_zip(file_name: str, text: str) -> bytes:
+    """LZMA ZIP whose member has invalid LZMA properties (zipfile raises LZMAError)."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_LZMA) as archive:
+        archive.writestr(file_name, text)
+    content = bytearray(buffer.getvalue())
+    # The member data starts after the 30-byte local header and the name; its
+    # first 4 bytes are the LZMA version and properties size, then the properties.
+    properties = 30 + len(file_name) + 4
+    content[properties : properties + 5] = b"\xff" * 5
+    return bytes(content)
+
+
 def _tar_gz(members: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
@@ -151,6 +164,12 @@ class TestExtractRuleFile:
     def test_deflate64_zip(self):
         content = _deflate64_zip(YARA_FILE_NAME, YARA_RULES)
         with pytest.raises(RuleFileFormatError, match="compression method"):
+            extract_rule_file(content, YARA_FILE_NAME)
+
+    def test_zip_with_corrupt_lzma_member(self):
+        content = _corrupt_lzma_zip(YARA_FILE_NAME, YARA_RULES)
+
+        with pytest.raises(RuleFileFormatError, match="Cannot read"):
             extract_rule_file(content, YARA_FILE_NAME)
 
     def test_binary_garbage(self):

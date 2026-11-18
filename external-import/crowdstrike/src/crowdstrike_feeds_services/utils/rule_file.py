@@ -7,6 +7,7 @@ format. Detect it from the content instead of assuming ZIP.
 
 import gzip
 import logging
+import lzma
 import tarfile
 import zipfile
 import zlib
@@ -54,6 +55,7 @@ def extract_rule_file(
         zipfile.LargeZipFile,
         tarfile.TarError,
         zlib.error,
+        lzma.LZMAError,
         OSError,
         EOFError,
         NotImplementedError,
