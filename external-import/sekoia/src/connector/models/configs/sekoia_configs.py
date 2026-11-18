@@ -94,7 +94,12 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         if isinstance(value, int):
             value = str(value)
         if isinstance(value, datetime):
-            return _to_utc(value)
+            try:
+                return _to_utc(value)
+            except OverflowError as err:
+                raise ValueError(
+                    f"Datetime out of range, it cannot be converted to UTC: {value!r}"
+                ) from err
         if isinstance(value, date):
             return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
         if not isinstance(value, str):

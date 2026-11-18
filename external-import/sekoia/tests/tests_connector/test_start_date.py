@@ -257,3 +257,14 @@ def test_out_of_range_legacy_date_is_a_validation_error_without_warning(
 
     assert "start_date" in str(exc_info.value)
     assert [r for r in caplog.records if r.name == SETTINGS_LOGGER] == []
+
+
+def test_out_of_range_aware_datetime_is_a_validation_error():
+    # e.g. an unquoted YAML timestamp: the UTC conversion overflows
+    extreme = datetime(9999, 12, 31, 23, tzinfo=timezone(timedelta(hours=-5)))
+
+    with pytest.raises(ValidationError) as exc_info:
+        _build(extreme)
+
+    assert "start_date" in str(exc_info.value)
+    assert "out of range" in str(exc_info.value)
