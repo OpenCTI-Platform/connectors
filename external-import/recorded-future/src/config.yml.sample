@@ -27,7 +27,13 @@ rf:
   analyst_notes_include_context_entities: False # optional. Set to true to also import analyst notes context entities (can be noisy).
   pull_risk_list: False
   riskrules_as_label: False # optional
-  risk_list_threshold: 70 # optional
+  risk_list_threshold: 70 # optional. Risk list entities below this risk score are not imported. 0 imports all entities.
+  # optional. Per risk list thresholds, each overrides risk_list_threshold for its list when set.
+  # risk_list_threshold_ip: 70
+  # risk_list_threshold_domain: 70
+  # risk_list_threshold_url: 70
+  # risk_list_threshold_hash: 70
+  # risk_list_threshold_vulnerability: 0
   # if pull_risk_list is true, risklist_related_entities is required.
   # Available choices: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier
   risklist_related_entities: 'Malware,Threat Actor,MitreAttackIdentifier'

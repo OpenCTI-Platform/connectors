@@ -78,7 +78,12 @@ There are a number of configuration options, which are set either in `docker-com
 | Analyst Notes Include Context Entities  | recorded_future.analyst_notes_include_context_entities | `RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES` | false     | No        | Also import entities referenced only in a note's context (can be noisy).    |
 | Pull Risk List                          | recorded_future.pull_risk_list                 | `RECORDED_FUTURE_PULL_RISK_LIST`                          | false               | No        | Import risk list data.                                                      |
 | Risk Rules as Label                     | recorded_future.riskrules_as_label             | `RECORDED_FUTURE_RISKRULES_AS_LABEL`                      | false               | No        | Convert risk rules to labels.                                               |
-| Risk List Threshold                     | recorded_future.risk_list_threshold            | `RECORDED_FUTURE_RISK_LIST_THRESHOLD`                     | 70                  | No        | Minimum score for risk list import.                                         |
+| Risk List Threshold                     | recorded_future.risk_list_threshold            | `RECORDED_FUTURE_RISK_LIST_THRESHOLD`                     | 70                  | No        | Minimum risk score (0-100) for risk list import, for every list without a threshold of its own. `0` imports all entities. |
+| Risk List Threshold IP                  | recorded_future.risk_list_threshold_ip         | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP`                  |                     | No        | Minimum risk score for the IP address risk list. Overrides `risk_list_threshold` when set. |
+| Risk List Threshold Domain              | recorded_future.risk_list_threshold_domain     | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN`              |                     | No        | Minimum risk score for the domain risk list. Overrides `risk_list_threshold` when set. |
+| Risk List Threshold URL                 | recorded_future.risk_list_threshold_url        | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL`                 |                     | No        | Minimum risk score for the URL risk list. Overrides `risk_list_threshold` when set. |
+| Risk List Threshold Hash                | recorded_future.risk_list_threshold_hash       | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH`                |                     | No        | Minimum risk score for the hash risk list. Overrides `risk_list_threshold` when set. |
+| Risk List Threshold Vulnerability       | recorded_future.risk_list_threshold_vulnerability | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY`       |                     | No        | Minimum risk score for the vulnerability risk list. Overrides `risk_list_threshold` when set. |
 | Risk List Related Entities              | recorded_future.risklist_related_entities      | `RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES`               |                     | Cond.     | Entity types for relationships (required if pull_risk_list is true).        |
 | Pull Threat Maps                        | recorded_future.pull_threat_maps               | `RECORDED_FUTURE_PULL_THREAT_MAPS`                        | false               | No        | Import threat maps.                                                         |
 | **Alerts Configuration**                |                                                |                                                           |                     |           |                                                                             |
@@ -316,11 +321,45 @@ Subscribers who have API access can retrieve lists of entities that have been as
 
 Every item in a Risk List, whether it's an IP address, domain, or another element, comes with a risk score and the details that influenced that score. Additionally, having Fusion access enables the customization of Risk Lists.
 
-Vulnerabilities are not handled by the connector.
+The vulnerability risk list is only imported when the subscription includes the Recorded Future vulnerability module.
 
 #### Initial population
 
 The connector allows you to pull STIX formatted risk lists selected by risk score and indicators with risk score >= 65 are included in the list.
+
+#### Risk score thresholds
+
+`risk_list_threshold` (`RECORDED_FUTURE_RISK_LIST_THRESHOLD`, default `70`) is the minimum risk score
+of the entities imported from the risk lists. Each risk list can have its own threshold, which
+overrides `risk_list_threshold` for that list only:
+
+| Risk list     | Parameter                           | Environment variable                                |
+|---------------|-------------------------------------|-----------------------------------------------------|
+| IP addresses  | `risk_list_threshold_ip`            | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_IP`            |
+| Domains       | `risk_list_threshold_domain`        | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_DOMAIN`        |
+| URLs          | `risk_list_threshold_url`           | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_URL`           |
+| File hashes   | `risk_list_threshold_hash`          | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_HASH`          |
+| Vulnerabilities | `risk_list_threshold_vulnerability` | `RECORDED_FUTURE_RISK_LIST_THRESHOLD_VULNERABILITY` |
+
+For example, to keep a strict threshold on indicators but import every vulnerability of the list:
+
+```yaml
+recorded_future:
+  risk_list_threshold: 70
+  risk_list_threshold_vulnerability: 0
+```
+
+- A list without a threshold of its own uses `risk_list_threshold`. A `null` `risk_list_threshold`
+  disables the filtering for those lists.
+- `0` imports every entity of the list, including those with an empty or non-numeric risk score.
+- Risk lists are imported incrementally: a run only imports the entities whose `LastSeen` is
+  after the previous run. Lowering a threshold therefore does not import the entities excluded
+  before, unless the connector state is reset (see [Usage](#usage)), which re-imports everything.
+- The thresholds only filter the content of the files provided by Recorded Future, which are
+  already limited by Recorded Future: about 100,000 entities per list, and only entities with a
+  risk score of 65 or more in the vulnerability list. A threshold of `0` cannot import
+  vulnerabilities below that score.
+- Each skipped entity is logged at `info` level with its risk list, its risk score and the threshold.
 
 The following fields are included with each Risk List:
 
