@@ -60,6 +60,7 @@ FULL_VALID_SETTINGS_DICT = {
         "import_ioc_relationships": False,
         "confidence_score": 50,
         "send_confidence": False,
+        "max_external_references": 50,
     },
 }
 
@@ -108,6 +109,7 @@ def test_settings_should_read_every_field():
     assert settings.sekoia.import_ioc_relationships is False
     assert settings.sekoia.confidence_score == 50
     assert settings.sekoia.send_confidence is False
+    assert settings.sekoia.max_external_references == 50
 
 
 def assert_default_values(settings: ConnectorSettings) -> None:
@@ -125,6 +127,7 @@ def assert_default_values(settings: ConnectorSettings) -> None:
     assert settings.sekoia.import_ioc_relationships is True
     assert settings.sekoia.confidence_score is None
     assert settings.sekoia.send_confidence is True
+    assert settings.sekoia.max_external_references is None
 
 
 def test_settings_should_apply_defaults():
@@ -156,6 +159,7 @@ def test_settings_should_ignore_empty_values():
                 "import_ioc_relationships": "",
                 "confidence_score": "",
                 "send_confidence": "",
+                "max_external_references": "",
             },
         }
     )
@@ -237,6 +241,13 @@ def test_settings_should_default_connector_id():
             },
             id="invalid_sekoia_limit",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "sekoia": {"api_key": "test-api-key", "max_external_references": 0},
+            },
+            id="invalid_sekoia_max_external_references",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict):
@@ -269,6 +280,7 @@ ENV_VARS = {
     "SEKOIA_IMPORT_IOC_RELATIONSHIPS": "false",
     "SEKOIA_CONFIDENCE_SCORE": "80",
     "SEKOIA_SEND_CONFIDENCE": "false",
+    "SEKOIA_MAX_EXTERNAL_REFERENCES": "50",
 }
 
 
@@ -311,6 +323,7 @@ def test_settings_should_read_environment_variables(monkeypatch, connector_dir):
     assert settings.sekoia.import_ioc_relationships is False
     assert settings.sekoia.confidence_score == 80
     assert settings.sekoia.send_confidence is False
+    assert settings.sekoia.max_external_references == 50
 
 
 def test_settings_should_ignore_empty_environment_variables(monkeypatch, connector_dir):

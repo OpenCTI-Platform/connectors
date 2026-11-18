@@ -20,4 +20,5 @@ services:
       # - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true
       # - SEKOIA_CONFIDENCE_SCORE=50
       # - SEKOIA_SEND_CONFIDENCE=true
+      # - SEKOIA_MAX_EXTERNAL_REFERENCES=50
     restart: always

@@ -54,6 +54,7 @@ connector-sekoia:
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
       - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
       - SEKOIA_SEND_CONFIDENCE=true # Optional, include Sekoia's native STIX confidence on bundle objects - Default: true
+      - SEKOIA_MAX_EXTERNAL_REFERENCES=50 # Optional, maximum number of external references kept on each object - Default: no limit
 ```
 
 2. Replace the following parameters:
@@ -124,6 +125,22 @@ maintaining data completeness. The separation of concerns allows:
 - Reduced load during peak ingestion windows
 
 - Gradual relationship mapping without blocking core ingestion
+
+### Indicators with thousands of external references
+
+Some indicators of the Sekoia.io feed have thousands of external references, almost all of them links to sandbox
+reports (Triage). OpenCTI creates each external reference as a separate entity, so these indicators take minutes to
+import and can block the other messages in the queue. Sekoia.io also updates them after each new sandbox analysis, so
+they are imported again on later runs.
+
+To avoid this, set `SEKOIA_MAX_EXTERNAL_REFERENCES` (50 is a good value). The connector then keeps at most this number of
+external references on each object it sends, in this order:
+
+1. The Sekoia.io reference, which is always kept and counts toward the limit.
+2. The references from other sources.
+3. The sandbox references (Triage Sandbox, Hatching Triage).
+
+By default, there is no limit. The limit does not remove the external references already imported in OpenCTI.
 
 ## Troubleshoot
 

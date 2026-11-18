@@ -20,3 +20,4 @@ sekoia:
   # import_ioc_relationships: true
   # confidence_score: 50
   # send_confidence: true
+  # max_external_references: 50
