@@ -237,13 +237,18 @@ resolve to.
   explicit field list `id`, `name`, `slug`, `url`, `known_as`, `description`,
   `short_description`, `first_activity_date`, `last_activity_date`,
   `motivations`, `objectives` and `actor_type`: what the existing connector
-  packs into its Intrusion Sets, plus `slug`.
+  packs into its Intrusion Sets, plus `slug`. The API does not honor this
+  list: on real data it returns 10 more fields (`active`, `capabilities`,
+  `created_date`, `last_modified_date`, `notify_users`, `origins`, `status`,
+  `target_countries`, `target_industries`, `target_regions`), which are kept
+  as undeclared fields.
 - **Matching.** A returned actor matches when its `name` or `slug`,
   uppercased without spaces and hyphens, equals the token: `SALTY SPIDER`
   and `salty-spider` both match `SALTYSPIDER`. The first match wins; with
   none, the name is unresolved. Unlike the existing connector, there is no
-  fallback to another actor of the response. This rule is provisional until
-  checked against the real API.
+  fallback to another actor of the response. Checked on the real API with
+  the indicators of November 2026: every name they carry (`SALTYSPIDER`,
+  `WIZARDSPIDER`, `CHARMINGKITTEN`, `MYTHICLEOPARD`, `QUILTEDTIGER`) resolves.
 - **Cache.** Each name, resolved or not, is looked up at most once per
   extraction: the extractor empties the enricher's cache when an extraction
   starts. A month of real data names 6 distinct actors on 445 of 178,695
@@ -685,16 +690,16 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   undeclared ones included, so it shows the real shape.
 - **One invalid indicator stops the run**, with nothing printed on standard
   output. This is on purpose while the model is being refined.
-- **The actor matching rule is provisional.** Nothing yet shows that the
-  actors API's `name` filter matches a token like `SALTYSPIDER` against a name
-  like `SALTY SPIDER`. If it does not, every actor stays unresolved, which
-  only the summary log line shows.
+- **The actor matching rule is checked on five names only.** Those of
+  November 2026 all resolve. A name whose actor's `name` and `slug` both
+  differ from the token by more than spaces, hyphens and case would stay
+  unresolved, which only the summary log line shows.
 - **A missing actors scope only shows in the logs.** The extraction succeeds
   with empty actor lists. Failed lookups are not cached, so each indicator
   naming an actor costs one failing request (about 445 a month on real data).
 - **Actors are copied onto each indicator** that names them: on real data,
-  `SALTY SPIDER` appears on about 418 indicators a month. The explicit field
-  list keeps each copy small.
+  `SALTY SPIDER` appears on about 418 indicators a month. Since the API
+  ignores the requested field list, each copy holds all 22 fields it returns.
 - **No state, no OpenCTI.** Every run is independent. `extract` prints the raw
   API data, and `transform` converts one indicator at a time.
 - **A few distinctions do not survive the conversion.** stix2 drops empty
