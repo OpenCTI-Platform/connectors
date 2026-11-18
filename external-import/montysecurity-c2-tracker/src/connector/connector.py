@@ -12,6 +12,7 @@ from connectors_sdk.models import (
     TLPMarking,
 )
 from connectors_sdk.models.enums import RelationshipType
+from deprecation_notice import log_deprecation
 from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
 from pycti import OpenCTIConnectorHelper
 
@@ -64,6 +65,7 @@ class MontysecurityC2TrackerConnector:
         """
         self.config = config
         self.helper = helper
+        log_deprecation(self.helper.connector_logger)
 
         self.client = MontysecurityC2TrackerClient(
             self.helper,
@@ -123,6 +125,8 @@ class MontysecurityC2TrackerConnector:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+
+        log_deprecation(self.helper.connector_logger)
 
         work_id: str | None = None
 

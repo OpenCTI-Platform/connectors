@@ -31,7 +31,7 @@ TheHive is a scalable security incident response platform designed for SOCs and 
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- TheHive 4.x or 5.x instance
+- TheHive 5.2+ instance
 - TheHive API key with read access
 
 ## Configuration variables
@@ -199,8 +199,8 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
-- **TheHive Versions**: Supports TheHive 4.x and 5.x
+- **TheHive Versions**: Supports TheHive 5.2+ (TLP numbering `0=CLEAR, 1=GREEN, 2=AMBER, 3=AMBER+STRICT, 4=RED`). On TheHive before 5.2, `3` meant RED and would be imported as TLP:AMBER+STRICT.
 - **Organization**: Specify the organization to filter cases
-- **TLP Filtering**: Use `IMPORT_ONLY_TLP` to control what data is imported
+- **TLP Filtering**: Use `THEHIVE_IMPORT_ONLY_TLP` to control what data is imported (`0=CLEAR, 1=GREEN, 2=AMBER, 3=AMBER+STRICT, 4=RED`). Earlier versions of this connector documented `3=RED, 4=AMBER+STRICT`: a configuration written to exclude RED (for example `0,1,2,4`) must be changed to `0,1,2,3`.
 - **User Mapping**: Map TheHive assignees to OpenCTI users for proper attribution
 - **Reference**: [TheHive Project](https://thehive-project.org/)

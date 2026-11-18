@@ -1,6 +1,7 @@
 import traceback
 
 from connector import ConnectorSettings, MontysecurityC2TrackerConnector
+from deprecation_notice import warn_deprecated
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -13,6 +14,7 @@ if __name__ == "__main__":
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
+    warn_deprecated()
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())

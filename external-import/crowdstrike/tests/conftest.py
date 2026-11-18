@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
+from connectors_sdk.models import TLPMarking
+from connectors_sdk.models.enums import TLPLevel
 from pytest import fixture
 
 # Add src to Python path for imports
@@ -33,6 +35,12 @@ def mock_env_vars(os_environ: "_Environ[str]", wanted_env: dict[str, str]) -> An
     mock_manager.stop = lambda: (mock_env.stop(), mock_path_exists.stop())
 
     return mock_manager
+
+
+@fixture
+def tlp_marking() -> Any:
+    """TLP marking the connector applies by default (amber+strict)."""
+    return TLPMarking(level=TLPLevel.AMBER_STRICT).to_stix2_object()
 
 
 @fixture(autouse=True)
