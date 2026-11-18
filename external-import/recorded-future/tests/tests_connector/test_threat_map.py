@@ -74,7 +74,7 @@ def _given_threat_map(entities_with_links):
         {"id": entity["entity"]["id"]} for entity in entities_with_links
     ]
     rfapi.get_entities_links.return_value = entities_with_links
-    return ThreatMap(helper, rfapi, "amber+strict", 60)
+    return ThreatMap(helper, rfapi, "amber+strict")
 
 
 def _given_malware_with_hash(malware_name, file_hash):
