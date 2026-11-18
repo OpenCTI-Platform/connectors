@@ -318,6 +318,14 @@ def test_unknown_subcommand_exits_2_with_the_usage(capsys):
     assert "usage:" in capsys.readouterr().err
 
 
+def test_help_names_the_console_command(capsys):
+    with pytest.raises(SystemExit) as caught:
+        _run("--help")
+
+    assert caught.value.code == 0
+    assert capsys.readouterr().out.startswith("usage: crowdstrike-indicators-cli")
+
+
 # --- transform ---------------------------------------------------------------
 
 SAMPLE_DOMAIN = next(

@@ -457,14 +457,31 @@ such as OpenCTI takes.
 
 ## Setup
 
-Python 3.12 or later.
+Python 3.12 or later. The project is declared in `pyproject.toml`, which
+installs the command line as the `crowdstrike-indicators-cli` command.
+
+With [uv](https://docs.astral.sh/uv/), there is nothing to install by hand:
+the first `uv run` creates `.venv` in this folder and installs the project
+and its dependencies in it.
+
+```sh
+cd external-import/crowdstrike-indicators-poc
+cp .env.example .env                           # then fill in the credentials
+uv run crowdstrike-indicators-cli --help
+```
+
+Or with pip, in a virtual environment of your own:
 
 ```sh
 cd external-import/crowdstrike-indicators-poc
 python3.12 -m venv .venv && . .venv/bin/activate
-pip install -r tests/test-requirements.txt     # runtime + pytest
+pip install -e '.[test]'                       # runtime + pytest
 cp .env.example .env                           # then fill in the credentials
+crowdstrike-indicators-cli --help
 ```
+
+The install is editable: changes under `src/` apply without reinstalling.
+`uv run` writes a `uv.lock`, which is git-ignored.
 
 `.env` keys (a variable set in the environment wins over the file):
 
@@ -482,7 +499,9 @@ empty and the failures in the logs.
 
 ## Usage
 
-Run from this folder, with `src` on the Python path. The command has two
+Run from this folder, with `uv run crowdstrike-indicators-cli`, or with
+`crowdstrike-indicators-cli` alone in an activated virtual environment where
+the project is installed. The examples below use `uv run`. The command has two
 subcommands:
 
 - `extract` calls the CrowdStrike API and prints the indicators;
@@ -492,14 +511,14 @@ subcommands:
 
 ```sh
 # The 50 earliest indicators from 1 November 2026 (UTC) onwards
-PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01T00:00:00Z --max 50
+uv run crowdstrike-indicators-cli extract --from 2026-11-01T00:00:00Z --max 50
 
 # Same, and also save the raw API pages, to study the real response shape
-PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01 --max 50 \
+uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 50 \
     --dump-raw raw-dumps/first.raw.json
 
 # Credentials from another file, with debug logs
-PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01 --max 10 \
+uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 10 \
     --env-file ~/secrets/crowdstrike.env --log-level DEBUG
 ```
 
@@ -564,18 +583,18 @@ given, and an indicator without one converts as having no resolved actor.
 
 ```sh
 # Take a domain row of the committed sample as input
-python -c "import json; rows = json.load(open('tests/fixtures/indicators_sample.json'))['resources']; print(json.dumps(next(r for r in rows if r['type'] == 'domain')))" > indicator.json
+uv run python -c "import json; rows = json.load(open('tests/fixtures/indicators_sample.json'))['resources']; print(json.dumps(next(r for r in rows if r['type'] == 'domain')))" > indicator.json
 
 # From a file
-PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
+uv run crowdstrike-indicators-cli transform indicator.json
 
 # From standard input
-PYTHONPATH=src python -m crowdstrike_indicators transform < indicator.json
+uv run crowdstrike-indicators-cli transform < indicator.json
 
 # With attack patterns: a row with ATT&CK labels, and a local ATT&CK dataset
 # (the test extract here, or a downloaded enterprise-attack-17.1.json)
-python -c "import json; print(json.dumps(json.load(open('tests/fixtures/indicators_sample.json'))['resources'][0]))" > indicator-attack.json
-PYTHONPATH=src python -m crowdstrike_indicators transform indicator-attack.json \
+uv run python -c "import json; print(json.dumps(json.load(open('tests/fixtures/indicators_sample.json'))['resources'][0]))" > indicator-attack.json
+uv run crowdstrike-indicators-cli transform indicator-attack.json \
     --attack-data tests/fixtures/attack_extract.json
 ```
 
@@ -645,7 +664,7 @@ output, is rejected. It takes `--log-level` too.
 ## Tests
 
 ```sh
-pytest tests                                    # from this folder
+uv run --extra test pytest                      # from this folder
 # or as CI does, from the repository root:
 bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requirements.txt
 ```

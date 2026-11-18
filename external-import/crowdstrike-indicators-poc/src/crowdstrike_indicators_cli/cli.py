@@ -1,9 +1,10 @@
 """Command-line entry point: extract CrowdStrike indicators, or transform one.
 
-Usage, from the proof of concept folder::
+Installed as the ``crowdstrike-indicators-cli`` console command, for example
+with ``uv run`` from the proof of concept folder::
 
-    PYTHONPATH=src python -m crowdstrike_indicators extract --from 2026-11-01T00:00:00Z --max 50
-    PYTHONPATH=src python -m crowdstrike_indicators transform indicator.json
+    uv run crowdstrike-indicators-cli extract --from 2026-11-01T00:00:00Z --max 50
+    uv run crowdstrike-indicators-cli transform indicator.json
 
 Exit codes: 0 on success, 1 when the extraction or the transformation fails
 (API, validation or conversion error, unreadable input), 2 on a usage or
@@ -114,7 +115,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser = argparse.ArgumentParser(
-        prog="python -m crowdstrike_indicators",
+        prog="crowdstrike-indicators-cli",
         description="CrowdStrike Falcon Intelligence indicators proof of concept.",
     )
     commands = parser.add_subparsers(

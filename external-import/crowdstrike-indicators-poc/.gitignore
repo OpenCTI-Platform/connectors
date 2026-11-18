@@ -2,3 +2,4 @@
 *.raw.json
 raw-dumps/
 mitre/
+uv.lock
