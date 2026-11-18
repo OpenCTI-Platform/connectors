@@ -11,6 +11,11 @@ from src.services.utils import (
     convert_hours_to_seconds,
 )
 
+# Connector state keys of an interrupted history import. They are written after
+# each history window is sent and replaced by last_run once the history is done.
+HISTORY_PROGRESS_KEY = "history_last_window_end"
+HISTORY_START_YEAR_KEY = "history_start_year"
+
 
 class CVEConnector:
     def __init__(self):
@@ -96,78 +101,99 @@ class CVEConnector:
 
         asyncio.run(self._async_ingest(cve_params))
 
+    @staticmethod
+    def _history_windows(start_date: datetime, end_date: datetime):
+        """
+        Split the history range into consecutive NVD windows.
+
+        Windows never cross a year boundary and never exceed MAX_AUTHORIZED
+        days (the NVD API rejects longer lastModStartDate/lastModEndDate
+        ranges). The last window ends at end_date.
+        :param start_date: Start date in datetime
+        :param end_date: End date in datetime
+        :return: Iterator of (year, window_start, window_end)
+        """
+        max_date_range = timedelta(days=MAX_AUTHORIZED)
+        window_start = start_date
+        while window_start < end_date:
+            year = window_start.year
+            year_end = datetime(year + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+            window_end = min(window_start + max_date_range, year_end, end_date)
+            yield year, window_start, window_end
+            window_start = window_end
+
+    def _save_history_progress(self, window_end: datetime) -> None:
+        """
+        Save the end of the last history window sent, so a restart of the
+        connector or of the OpenCTI API resumes the history from there
+        instead of starting it again from CVE_HISTORY_START_YEAR.
+        The maintain mode's last_run is never written here: it is written
+        once, when the whole history is imported.
+        :param window_end: End of the last window sent, in datetime
+        """
+        self.helper.set_state(
+            {
+                HISTORY_START_YEAR_KEY: self.config.cve.history_start_year,
+                HISTORY_PROGRESS_KEY: int(window_end.timestamp()),
+            }
+        )
+
+    def _history_resume_date(self, current_state: dict | None) -> datetime | None:
+        """
+        Read where an interrupted history import stopped.
+        :param current_state: Connector state
+        :return: End of the last history window sent, or None to start the
+            history from CVE_HISTORY_START_YEAR
+        """
+        if not current_state or HISTORY_PROGRESS_KEY not in current_state:
+            return None
+        if (
+            current_state.get(HISTORY_START_YEAR_KEY)
+            != self.config.cve.history_start_year
+        ):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] CVE_HISTORY_START_YEAR changed since the history "
+                "import was interrupted, starting the history again"
+            )
+            return None
+        return datetime.fromtimestamp(
+            current_state[HISTORY_PROGRESS_KEY], tz=timezone.utc
+        )
+
     def _import_history(self, start_date: datetime, end_date: datetime) -> None:
         """
-        Import CVEs history if pull_history config is True
+        Import CVEs history if pull_history config is True.
+        The progress is saved after each window is sent: if the run is
+        interrupted (connector or OpenCTI API restart, failed send), the next
+        run starts again at the first window not sent.
         :param start_date: Start date in datetime
         :param end_date: End date in datetime
         """
-        years = range(start_date.year, end_date.year + 1)
-        start, end = start_date, end_date + timedelta(1)
-
-        for year in years:
-            year_start = datetime(year, 1, 1, 0, 0, tzinfo=timezone.utc)
-            year_end = datetime(year + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
-
-            date_range = min(end, year_end) - max(start, year_start)
-            days_in_year = date_range.days
-
-            # If the year is the current year, get all days from start year to now
-            if year == end_date.year:
-                date_range = end_date - year_start
-                days_in_year = date_range.days
-
-            start_date_current_year = year_start
-
-            while days_in_year > 0:
-                end_date_current_year = start_date_current_year + timedelta(
-                    days=MAX_AUTHORIZED
+        current_year = None
+        for year, window_start, window_end in self._history_windows(
+            start_date, end_date
+        ):
+            if current_year is not None and year != current_year:
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] Importing CVE history for year {current_year} finished"
                 )
-                info_msg = (
-                    f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
-                    f"{days_in_year} days left"
-                )
-                self.helper.connector_logger.info(info_msg)
+            current_year = year
+            days_left = (
+                min(end_date, datetime(year + 1, 1, 1, tzinfo=timezone.utc))
+                - window_start
+            ).days
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Connector retrieve CVE history for year {year}, "
+                f"{days_left} days left"
+            )
+            cve_params = self._update_cve_params(window_start, window_end)
+            asyncio.run(self._async_ingest(cve_params))
+            self._save_history_progress(window_end)
 
-                """
-                If retrieve history for this year and days_in_year left are less than 120 days
-                Retrieve CVEs from the rest of days
-                """
-                if year == end_date.year and days_in_year < MAX_AUTHORIZED:
-                    end_date_current_year = start_date_current_year + timedelta(
-                        days=days_in_year
-                    )
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
-
-                    asyncio.run(self._async_ingest(cve_params))
-                    days_in_year = 0
-
-                """
-                Retrieving for each year MAX_AUTHORIZED = 120 days
-                1 year % 120 days => 5 or 6 (depends if it is a leap year or not)
-                """
-                if days_in_year > 6:
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
-
-                    asyncio.run(self._async_ingest(cve_params))
-                    start_date_current_year += timedelta(days=MAX_AUTHORIZED)
-                    days_in_year -= MAX_AUTHORIZED
-                else:
-                    end_date_current_year = start_date_current_year + timedelta(
-                        days=days_in_year
-                    )
-                    cve_params = self._update_cve_params(
-                        start_date_current_year, end_date_current_year
-                    )
-                    asyncio.run(self._async_ingest(cve_params))
-                    days_in_year = 0
-
-            info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
-            self.helper.connector_logger.info(info_msg)
+        if current_year is not None:
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Importing CVE history for year {current_year} finished"
+            )
 
     def _maintain_data(self, now: datetime, last_run: float) -> None:
         """
@@ -267,9 +293,19 @@ class CVEConnector:
                 =================================================================
                 """
                 if self.config.cve.pull_history:
-                    start_date = datetime(
-                        self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
-                    )
+                    start_date = self._history_resume_date(current_state)
+                    if start_date is None:
+                        start_date = datetime(
+                            self.config.cve.history_start_year,
+                            1,
+                            1,
+                            tzinfo=timezone.utc,
+                        )
+                    else:
+                        self.helper.connector_logger.info(
+                            "[CONNECTOR] Resuming the interrupted CVE history "
+                            f"import from {start_date.strftime('%Y-%m-%d %H:%M:%S')}"
+                        )
                     end_date = now
                     self._import_history(start_date, end_date)
                 else:

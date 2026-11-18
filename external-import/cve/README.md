@@ -241,6 +241,7 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
    - Imports all CVEs from specified year to present
    - Useful for initial population
    - Requires `history_start_year` (minimum 2019)
+   - Saves its progress in the connector state after each NVD window (at most 120 days) is sent: if the connector or the OpenCTI API restarts, or a window fails, the next run resumes at the first window not sent instead of starting again from 1 January of `history_start_year`. The resumed date is logged at INFO (`Resuming the interrupted CVE history import from ...`). Changing `history_start_year` before the history completes starts the history again. Once the whole history is imported, the progress is replaced by the `last_run` used by the incremental updates; resetting the connector state starts the history from the beginning.
 
 3. **Software Import** (`import_software=true`):
    - Resolves CPEs for each CVE via the NVD CPE Match API
