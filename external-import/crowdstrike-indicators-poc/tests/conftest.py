@@ -3,18 +3,11 @@
 import copy
 import json
 import re
-import sys
 import zlib
 from pathlib import Path
 from typing import Any
 
 import pytest
-
-# ``src`` goes first on the path so that ``import shared`` resolves to this
-# proof of concept's ``src/shared`` package, not to the repository root
-# ``shared`` package (CI tooling).
-SRC_DIR = Path(__file__).resolve().parent.parent / "src"
-sys.path.insert(0, str(SRC_DIR))
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
