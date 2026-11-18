@@ -10,15 +10,15 @@ from conftest import (
     make_actor,
     ok,
 )
-from crowdstrike_indicators.actors import (
+from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
+from crowdstrike_indicators.entities.models import CrowdStrikeActor
+from crowdstrike_indicators.extract.actors import (
     ACTOR_FIELDS,
     CrowdStrikeActorEnricher,
     name_filter,
     normalize,
 )
-from crowdstrike_indicators.api import NO_ERROR_MESSAGE
-from crowdstrike_indicators.errors import CrowdStrikeAPIError
-from crowdstrike_indicators.models import CrowdStrikeActor
+from crowdstrike_indicators.extract.api import NO_ERROR_MESSAGE
 
 
 def _scripted(*resources_lists: list[dict]) -> ScriptedActorsClient:
@@ -151,7 +151,9 @@ def test_invalid_actor_before_a_valid_match_is_skipped(caplog):
     invalid = {"id": 9, "slug": "salty-spider"}
     valid = make_actor("SALTY SPIDER", actor_id=1)
 
-    with caplog.at_level(logging.WARNING, logger="crowdstrike_indicators.actors"):
+    with caplog.at_level(
+        logging.WARNING, logger="crowdstrike_indicators.extract.actors"
+    ):
         result = CrowdStrikeActorEnricher(_scripted([invalid, valid])).extract(
             "SALTYSPIDER"
         )

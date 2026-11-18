@@ -13,19 +13,19 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import FIXTURES_DIR, load_fixture, make_indicator
-from crowdstrike_indicators import attack as attack_module
-from crowdstrike_indicators.attack import (
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.ids import indicates_id
+from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
+from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
+from crowdstrike_indicators.transform import attack as attack_module
+from crowdstrike_indicators.transform.attack import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
     light_attack_pattern,
     match_key,
 )
-from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.ids import indicates_id
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.models import CrowdStrikeIndicator
-from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 from stix2.exceptions import InvalidValueError
 from stix2.v21 import Relationship
 

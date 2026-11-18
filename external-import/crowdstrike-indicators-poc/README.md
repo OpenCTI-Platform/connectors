@@ -35,27 +35,34 @@ src/
     record_to_file.py         RecordToFile
     connector.py              Connector, CycleResult
   crowdstrike_indicators/     CrowdStrike implementation
-    models.py                 CrowdStrikeIndicator, CrowdStrikeActor,
+    entities/                 records, STIX classes, ids and errors
+      models.py               CrowdStrikeIndicator, CrowdStrikeActor,
                               EnrichedCrowdStrikeIndicator (Pydantic)
-    api.py                    FalconPy response checks shared by every call
-    extractor.py              CrowdStrikeIndicatorExtractor (FalconPy)
-    actors.py                 CrowdStrikeActorEnricher (FalconPy)
-    stix.py                   CrowdStrikeStix2Indicator (stix2 Indicator subclass),
+      stix.py                 CrowdStrikeStix2Indicator (stix2 Indicator subclass),
                               CrowdStrikeIndicatorBundle
-    ids.py                    deterministic STIX ids in the CrowdStrike namespace
-    transformer.py            CrowdStrikeIndicatorTransformer
-    malware.py                CrowdStrikeAddMalware
-    attack.py                 AttackPatternCatalog, CrowdStrikeAddAttackPatterns
-    bundle.py                 MakeStixBundle
-    errors.py                 CrowdStrikeAPIError, IndicatorValidationError,
+      ids.py                  deterministic STIX ids in the CrowdStrike namespace
+      errors.py               CrowdStrikeAPIError, IndicatorValidationError,
                               IndicatorConversionError
+    extract/                  calls to the CrowdStrike API
+      api.py                  FalconPy response checks shared by every call
+      extractor.py            CrowdStrikeIndicatorExtractor (FalconPy)
+      actors.py               CrowdStrikeActorEnricher (FalconPy)
+    transform/                pure conversions to STIX
+      transformer.py          CrowdStrikeIndicatorTransformer
+      malware.py              CrowdStrikeAddMalware
+      attack.py               AttackPatternCatalog, CrowdStrikeAddAttackPatterns
+      bundle.py               MakeStixBundle
+  crowdstrike_indicators_cli/ command line
+    cli.py                    the crowdstrike-indicators-cli command
     dotenv.py                 minimal .env reader
-    cli.py, __main__.py       command line
 tests/                        pytest, no network
 ```
 
 Dependency rule: `shared/` depends only on the standard library, Pydantic and
-stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/` depends on `shared/`. Runtime
+stix2 (loaders take STIX bundles), never on a source. `crowdstrike_indicators/`
+depends on `shared/`: inside it, `extract/` and `transform/` both depend on
+`entities/`, never on each other. `crowdstrike_indicators_cli/` depends on
+`crowdstrike_indicators/` and `shared/`, and nothing depends on it. Runtime
 dependencies are `crowdstrike-falconpy`, `pydantic` and `stix2`. There is no
 pycti and no connectors-sdk.
 
@@ -171,11 +178,11 @@ extract(cursor, max) -> [(dt, item)] -> t1 -> t2 -> ... -> tn -> loader.load  |
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from crowdstrike_indicators.actors import CrowdStrikeActorEnricher
-from crowdstrike_indicators.bundle import MakeStixBundle
-from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.extract.actors import CrowdStrikeActorEnricher
+from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
+from crowdstrike_indicators.transform.bundle import MakeStixBundle
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 from shared.connector import Connector
 from shared.record_to_file import RecordToFile
 

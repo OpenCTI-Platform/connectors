@@ -8,16 +8,16 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from crowdstrike_indicators.api import (  # noqa: F401 - re-exported
-    NO_ERROR_MESSAGE,
-    api_error_message,
-    response_body,
-)
-from crowdstrike_indicators.errors import IndicatorValidationError
-from crowdstrike_indicators.models import (
+from crowdstrike_indicators.entities.errors import IndicatorValidationError
+from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
     EnrichedCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.extract.api import (  # noqa: F401 - re-exported
+    NO_ERROR_MESSAGE,
+    api_error_message,
+    response_body,
 )
 from pydantic import ValidationError
 

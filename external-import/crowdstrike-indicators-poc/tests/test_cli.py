@@ -15,8 +15,8 @@ from conftest import (
     make_indicator,
     ok,
 )
-from crowdstrike_indicators import cli
-from crowdstrike_indicators.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators_cli import cli
 
 SECRET = "s3cr3t-value-never-shown"
 CREDENTIAL_KEYS = (cli.CLIENT_ID, cli.CLIENT_SECRET, cli.BASE_URL)

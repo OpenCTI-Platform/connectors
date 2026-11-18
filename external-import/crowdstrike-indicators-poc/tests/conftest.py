@@ -186,8 +186,8 @@ class ScriptedClient(FakeActorsAPI):
 def build_extractor(client: Any, **kwargs: Any) -> Any:
     """Build a ``CrowdStrikeIndicatorExtractor`` whose actor enricher uses
     the same client, as the CLI does."""
-    from crowdstrike_indicators.actors import CrowdStrikeActorEnricher
-    from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
+    from crowdstrike_indicators.extract.actors import CrowdStrikeActorEnricher
+    from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
 
     return CrowdStrikeIndicatorExtractor(
         client, CrowdStrikeActorEnricher(client), **kwargs

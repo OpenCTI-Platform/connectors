@@ -20,27 +20,27 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from crowdstrike_indicators.actors import ActorsClient, CrowdStrikeActorEnricher
-from crowdstrike_indicators.attack import (
-    AttackPatternCatalog,
-    CrowdStrikeAddAttackPatterns,
-)
-from crowdstrike_indicators.bundle import MakeStixBundle
-from crowdstrike_indicators.dotenv import read_dotenv
-from crowdstrike_indicators.errors import (
+from crowdstrike_indicators.entities.errors import (
     CrowdStrikeAPIError,
     IndicatorConversionError,
     IndicatorValidationError,
 )
-from crowdstrike_indicators.extractor import (
+from crowdstrike_indicators.entities.models import EnrichedCrowdStrikeIndicator
+from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
+from crowdstrike_indicators.extract.actors import ActorsClient, CrowdStrikeActorEnricher
+from crowdstrike_indicators.extract.extractor import (
     CrowdStrikeIndicatorExtractor,
     IndicatorsClient,
     validate_indicator,
 )
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.models import EnrichedCrowdStrikeIndicator
-from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.attack import (
+    AttackPatternCatalog,
+    CrowdStrikeAddAttackPatterns,
+)
+from crowdstrike_indicators.transform.bundle import MakeStixBundle
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators_cli.dotenv import read_dotenv
 
 from shared.transformer import AbstractTransformer
 

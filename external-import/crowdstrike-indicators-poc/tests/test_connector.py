@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 from conftest import FakeIndicatorsAPI, build_extractor, load_fixture
-from crowdstrike_indicators.bundle import MakeStixBundle
-from crowdstrike_indicators.extractor import CrowdStrikeIndicatorExtractor
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.extract.extractor import CrowdStrikeIndicatorExtractor
+from crowdstrike_indicators.transform.bundle import MakeStixBundle
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 from pydantic import BaseModel
 from stix2.v21 import Bundle, DomainName
 

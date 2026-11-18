@@ -4,8 +4,8 @@ import json
 import logging
 from typing import Any, Protocol
 
-from crowdstrike_indicators.api import response_body
-from crowdstrike_indicators.models import CrowdStrikeActor
+from crowdstrike_indicators.entities.models import CrowdStrikeActor
+from crowdstrike_indicators.extract.api import response_body
 from pydantic import ValidationError
 
 from shared.enricher import AbstractEnricher

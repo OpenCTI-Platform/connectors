@@ -7,10 +7,10 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import load_fixture
-from crowdstrike_indicators.bundle import MakeStixBundle
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.models import CrowdStrikeIndicator
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
+from crowdstrike_indicators.transform.bundle import MakeStixBundle
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 
 from shared.record_to_file import RecordToFile
 

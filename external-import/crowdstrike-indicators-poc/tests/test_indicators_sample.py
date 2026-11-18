@@ -13,7 +13,7 @@ from datetime import datetime
 
 import pytest
 from conftest import ScriptedClient, build_extractor, load_fixture, ok
-from crowdstrike_indicators.models import CrowdStrikeIndicator
+from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
 
 PAGE = load_fixture("indicators_sample.json")
 ROWS = PAGE["resources"]

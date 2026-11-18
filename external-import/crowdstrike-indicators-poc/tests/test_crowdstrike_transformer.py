@@ -10,14 +10,14 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import load_fixture, make_actor, make_indicator
-from crowdstrike_indicators import transformer as transformer_module
-from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.models import (
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.models import (
     CrowdStrikeIndicator,
     EnrichedCrowdStrikeIndicator,
 )
-from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
-from crowdstrike_indicators.transformer import (
+from crowdstrike_indicators.entities.stix import CrowdStrikeStix2Indicator
+from crowdstrike_indicators.transform import transformer as transformer_module
+from crowdstrike_indicators.transform.transformer import (
     CROWDSTRIKE_NAMESPACE,
     NATIVELY_HELD_FIELDS,
     X_EXTRA,

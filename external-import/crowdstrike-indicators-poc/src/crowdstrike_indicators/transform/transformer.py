@@ -5,16 +5,16 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.ids import (
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.ids import (
     CROWDSTRIKE_NAMESPACE,
     indicator_id,
 )
-from crowdstrike_indicators.models import (
+from crowdstrike_indicators.entities.models import (
     CrowdStrikeIndicator,
     EnrichedCrowdStrikeIndicator,
 )
-from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
+from crowdstrike_indicators.entities.stix import CrowdStrikeStix2Indicator
 from stix2 import (
     EqualityComparisonExpression,
     KillChainPhase,

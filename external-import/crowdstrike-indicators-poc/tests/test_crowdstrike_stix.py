@@ -4,7 +4,7 @@ import json
 
 import pytest
 import stix2
-from crowdstrike_indicators.stix import CrowdStrikeStix2Indicator
+from crowdstrike_indicators.entities.stix import CrowdStrikeStix2Indicator
 from stix2.exceptions import ExtraPropertiesError
 
 NATIVE = {

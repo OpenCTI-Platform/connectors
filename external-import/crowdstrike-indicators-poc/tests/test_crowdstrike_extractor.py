@@ -13,16 +13,19 @@ from conftest import (
     make_indicator,
     ok,
 )
-from crowdstrike_indicators.errors import CrowdStrikeAPIError, IndicatorValidationError
-from crowdstrike_indicators.extractor import (
-    NO_ERROR_MESSAGE,
-    first_marker_cursor,
-    marker_datetime,
+from crowdstrike_indicators.entities.errors import (
+    CrowdStrikeAPIError,
+    IndicatorValidationError,
 )
-from crowdstrike_indicators.models import (
+from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
     EnrichedCrowdStrikeIndicator,
+)
+from crowdstrike_indicators.extract.extractor import (
+    NO_ERROR_MESSAGE,
+    first_marker_cursor,
+    marker_datetime,
 )
 
 BASE = 1_700_000_000
@@ -503,7 +506,9 @@ def test_unknown_name_is_dropped_and_logged(caplog):
         [make_indicator(1, actors=["SALTYSPIDER", "NOSUCHACTOR"])], actors=[SALTY]
     )
 
-    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+    with caplog.at_level(
+        logging.INFO, logger="crowdstrike_indicators.extract.extractor"
+    ):
         [(_, indicator)] = build_extractor(api).extract(FROM_BASE, 10)
 
     assert _actor_names(indicator) == ["SALTY SPIDER"]
@@ -516,7 +521,9 @@ def test_missing_actors_scope_does_not_fail_the_extraction(caplog):
         indicators, actors=[SALTY], actor_failures={"SALTYSPIDER": [FORBIDDEN] * 3}
     )
 
-    with caplog.at_level(logging.WARNING, logger="crowdstrike_indicators.extractor"):
+    with caplog.at_level(
+        logging.WARNING, logger="crowdstrike_indicators.extract.extractor"
+    ):
         result = build_extractor(api).extract(FROM_BASE, 10)
 
     assert _ids(result) == ["ioc-0", "ioc-1", "ioc-2"]
@@ -584,7 +591,9 @@ def test_summary_line_counts_the_lookups(caplog):
         actor_failures={"WIZARDSPIDER": [SERVER_ERROR]},
     )
 
-    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+    with caplog.at_level(
+        logging.INFO, logger="crowdstrike_indicators.extract.extractor"
+    ):
         build_extractor(api).extract(FROM_BASE, 10)
 
     [summary] = [r for r in caplog.records if "actor name(s)" in r.getMessage()]
@@ -597,7 +606,9 @@ def test_summary_line_counts_the_lookups(caplog):
 def test_summary_line_is_info_without_failure(caplog):
     api = FakeIndicatorsAPI([make_indicator(1, actors=["SALTYSPIDER"])], actors=[SALTY])
 
-    with caplog.at_level(logging.INFO, logger="crowdstrike_indicators.extractor"):
+    with caplog.at_level(
+        logging.INFO, logger="crowdstrike_indicators.extract.extractor"
+    ):
         build_extractor(api).extract(FROM_BASE, 10)
 
     [summary] = [r for r in caplog.records if "actor name(s)" in r.getMessage()]

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from crowdstrike_indicators.errors import CrowdStrikeAPIError
+from crowdstrike_indicators.entities.errors import CrowdStrikeAPIError
 
 NO_ERROR_MESSAGE = "no error message returned by CrowdStrike API"
 

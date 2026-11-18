@@ -3,7 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
-from crowdstrike_indicators.models import (
+from crowdstrike_indicators.entities.models import (
     CrowdStrikeActor,
     CrowdStrikeIndicator,
     CrowdStrikeLabel,

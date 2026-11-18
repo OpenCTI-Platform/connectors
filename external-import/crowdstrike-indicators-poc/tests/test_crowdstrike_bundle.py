@@ -9,16 +9,16 @@ from unittest import mock
 import pytest
 import stix2
 from conftest import load_fixture, make_indicator
-from crowdstrike_indicators.attack import (
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.models import CrowdStrikeIndicator
+from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
+from crowdstrike_indicators.transform.attack import (
     AttackPatternCatalog,
     CrowdStrikeAddAttackPatterns,
 )
-from crowdstrike_indicators.bundle import MakeStixBundle, missing_references
-from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.malware import CrowdStrikeAddMalware
-from crowdstrike_indicators.models import CrowdStrikeIndicator
-from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
-from crowdstrike_indicators.transformer import CrowdStrikeIndicatorTransformer
+from crowdstrike_indicators.transform.bundle import MakeStixBundle, missing_references
+from crowdstrike_indicators.transform.malware import CrowdStrikeAddMalware
+from crowdstrike_indicators.transform.transformer import CrowdStrikeIndicatorTransformer
 
 SAMPLE_ROWS = load_fixture("indicators_sample.json")["resources"]
 SAMPLE_IDS = [f"{row['type']}-{i}" for i, row in enumerate(SAMPLE_ROWS)]

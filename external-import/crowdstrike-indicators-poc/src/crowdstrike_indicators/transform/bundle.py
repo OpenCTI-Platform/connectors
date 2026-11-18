@@ -3,10 +3,10 @@
 from collections.abc import Iterable, Iterator
 from typing import Any
 
-from crowdstrike_indicators.errors import IndicatorConversionError
-from crowdstrike_indicators.ids import bundle_id
-from crowdstrike_indicators.malware import crowdstrike_id
-from crowdstrike_indicators.stix import CrowdStrikeIndicatorBundle
+from crowdstrike_indicators.entities.errors import IndicatorConversionError
+from crowdstrike_indicators.entities.ids import bundle_id
+from crowdstrike_indicators.entities.stix import CrowdStrikeIndicatorBundle
+from crowdstrike_indicators.transform.malware import crowdstrike_id
 from stix2.exceptions import STIXError
 from stix2.v21 import Bundle
 

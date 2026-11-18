@@ -2,14 +2,14 @@
 
 import uuid
 
-from crowdstrike_indicators import transformer
-from crowdstrike_indicators.ids import (
+from crowdstrike_indicators.entities.ids import (
     CROWDSTRIKE_NAMESPACE,
     bundle_id,
     indicates_id,
     indicator_id,
     malware_id,
 )
+from crowdstrike_indicators.transform import transformer
 
 INDICATOR_ID = "indicator--f975582d-ec64-5f6c-ac8c-1fdea0f69e0b"
 MALWARE_ID = "malware--06d31b08-d590-5298-8440-23b86775f679"

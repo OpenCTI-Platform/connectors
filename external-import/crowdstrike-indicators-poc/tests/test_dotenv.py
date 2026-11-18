@@ -1,6 +1,6 @@
 """Tests for the minimal .env reader."""
 
-from crowdstrike_indicators.dotenv import parse_dotenv, read_dotenv
+from crowdstrike_indicators_cli.dotenv import parse_dotenv, read_dotenv
 
 
 def test_key_value():
