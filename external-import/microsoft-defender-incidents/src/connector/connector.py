@@ -352,6 +352,9 @@ class MicrosoftDefenderIncidentsConnector:
             # A token is valid for 1 hour so we get a fresh one on every run
             self.client.set_oauth_token()
 
+            # Resolve the optional Defender status mapping into Status ids once per run
+            self.converter_to_stix.refresh_workflow_ids()
+
             # Get incidents
             stix_objects = []
             incidents = self.client.get_incidents(last_incident_timestamp)
