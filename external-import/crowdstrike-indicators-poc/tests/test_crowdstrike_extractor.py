@@ -311,33 +311,6 @@ def test_error_on_a_later_page_stops_the_extraction():
     assert (caught.value.status_code, caught.value.message) == (429, "slow down")
 
 
-# --- Raw page observation ----------------------------------------------------
-
-
-def test_raw_pages_are_observed_before_a_validation_failure():
-    page_1 = {"resources": [make_indicator(1)]}
-    page_2 = {"resources": [make_indicator(1), make_indicator(2, _marker="bad")]}
-    seen: list[dict] = []
-    client = ScriptedClient([ok(page_1), ok(page_2)])
-
-    with pytest.raises(IndicatorValidationError):
-        build_extractor(client, on_raw_page=seen.append).extract(FROM_BASE, 10)
-
-    assert seen == [page_1, page_2]
-
-
-def test_every_page_is_observed_including_the_final_empty_one():
-    seen: list[dict] = []
-    api = FakeIndicatorsAPI([make_indicator(i) for i in range(3)])
-    build_extractor(api, on_raw_page=seen.append, page_size=2).extract(FROM_BASE, 10)
-    # Page 1: ioc-0, ioc-1. Page 2: ioc-1 (repeat), ioc-2. Page 3: ioc-2 only.
-    assert [[raw["id"] for raw in page["resources"]] for page in seen] == [
-        ["ioc-0", "ioc-1"],
-        ["ioc-1", "ioc-2"],
-        ["ioc-2"],
-    ]
-
-
 # --- Actor enrichment --------------------------------------------------------
 
 SALTY = make_actor("SALTY SPIDER", actor_id=1)
@@ -566,19 +539,6 @@ def test_actors_api_error_does_not_stop_the_extraction():
     )
 
     assert _ids(build_extractor(api).extract(FROM_BASE, 10)) == ["ioc-1"]
-
-
-def test_raw_page_callback_receives_indicator_pages_only():
-    seen: list[dict] = []
-    client = ScriptedClient(
-        [ok({"resources": [make_indicator(1, actors=["SALTYSPIDER"])]})],
-        actors=[SALTY],
-    )
-
-    build_extractor(client, on_raw_page=seen.append).extract(FROM_BASE, 1)
-
-    assert len(client.actor_calls) == 1
-    assert seen == [{"resources": [make_indicator(1, actors=["SALTYSPIDER"])]}]
 
 
 def test_summary_line_counts_the_lookups(caplog):

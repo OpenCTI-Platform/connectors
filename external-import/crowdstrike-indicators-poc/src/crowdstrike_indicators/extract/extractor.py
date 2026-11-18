@@ -4,7 +4,6 @@ import calendar
 import json
 import logging
 from collections import Counter
-from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -29,8 +28,6 @@ LOGGER = logging.getLogger(__name__)
 # Same page size as the existing CrowdStrike importer: bounded payloads and
 # regular progress logs. The API accepts up to 10000.
 PAGE_SIZE = 1000
-
-type RawPageCallback = Callable[[dict[str, Any]], None]
 
 
 class IndicatorsClient(Protocol):
@@ -102,7 +99,7 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[EnrichedCrowdStrikeIndicat
     ``actor_enricher``, whose cache is emptied at the start of every
     extraction. A missing actor never fails the extraction: a name that
     resolves to nothing, or whose lookup raises, is logged and left out of
-    ``actor_objects_list``. ``on_raw_page`` receives indicator pages only.
+    ``actor_objects_list``.
     """
 
     def __init__(
@@ -110,12 +107,10 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[EnrichedCrowdStrikeIndicat
         client: IndicatorsClient,
         actor_enricher: AbstractEnricher[CrowdStrikeActor],
         *,
-        on_raw_page: RawPageCallback | None = None,
         page_size: int = PAGE_SIZE,
     ) -> None:
         self.client = client
         self.actor_enricher = actor_enricher
-        self.on_raw_page = on_raw_page
         self.page_size = page_size
 
     def extract(
@@ -215,7 +210,4 @@ class CrowdStrikeIndicatorExtractor(AbstractExtractor[EnrichedCrowdStrikeIndicat
             sort="_marker.asc",
             filter=f"_marker:>='{cursor}'",
         )
-        body = response_body(response)
-        if self.on_raw_page is not None:
-            self.on_raw_page(body)
-        return body
+        return response_body(response)
