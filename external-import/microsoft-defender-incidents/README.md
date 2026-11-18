@@ -118,6 +118,35 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
+## Behavior
+
+### Defender incident status, classification and determination
+
+Each Defender incident becomes a Case-Incident whose id is derived from the incident name and creation date, so
+every Defender update re-fetched by the connector upserts the same Case-Incident.
+
+- **Labels**: when present, the incident's `status`, `classification` and `determination` are added as labels
+  `defender-status:<value>`, `defender-classification:<value>` and `defender-determination:<value>` (values
+  lower-cased as Defender returns them, e.g. `defender-classification:truepositive`).
+- **Description**: the description carries one structured line with the status, classification, determination and
+  `assignedTo` of the incident. `assignedTo` is not mapped to a participant: Defender returns a free-text account
+  that cannot be matched reliably to an OpenCTI user.
+- **Workflow status (optional)**: set `MICROSOFT_DEFENDER_INCIDENTS_STATUS_MAPPING` to map Defender statuses
+  (`active`, `inProgress`, `resolved`, `redirected`, `awaitingAction`) to Case-Incident workflow statuses, by status
+  name or id, e.g. `active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,resolved:CLOSED,redirected:CLOSED`.
+  Names are resolved once per run against the statuses of the Case-Incident workflow (Settings > Customization >
+  Case-Incident); a name with no matching status is logged as a warning and ignored. When the incident's status is
+  mapped, the Case-Incident is sent with that workflow status; an unmapped status leaves the workflow status as it
+  is. Without a mapping (the default) no workflow status is sent. The upsert changes the workflow status of an
+  existing Case-Incident only when the connector's user confidence level is at least the Case-Incident's confidence;
+  a Case-Incident edited by an analyst with a higher confidence keeps its workflow status. Unknown Defender values
+  (e.g. `unknownFutureValue`) are left unmapped.
+
+Note on labels after a status change: the platform upsert adds labels to the existing ones, it does not replace
+them. A Case-Incident that moved from `active` to `resolved` in Defender keeps `defender-status:active` next to
+`defender-status:resolved`. Use the workflow status (with a mapping) as the current state; the
+`defender-status:*` labels record every status the incident went through.
+
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.

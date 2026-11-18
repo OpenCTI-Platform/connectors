@@ -83,6 +83,11 @@
       "default": "/security/incidents",
       "description": "Microsoft Graph API path for retrieving security incidents.",
       "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_STATUS_MAPPING": {
+      "default": "",
+      "description": "Optional mapping from a Microsoft Defender incident status to an OpenCTI Case-Incident workflow status, as comma-separated '<defender status>:<status name or id>' pairs (e.g. 'active:NEW,inProgress:IN_PROGRESS,awaitingAction:IN_PROGRESS,resolved:CLOSED,redirected:CLOSED'). Defender statuses: active, inProgress, resolved, redirected, awaitingAction (matched case-insensitively). A status name is resolved once per run against the Case-Incident statuses; a UUID is used as the status id. When the incident's status is mapped, the Case-Incident workflow status is set; otherwise it is left unchanged. Empty (default): no workflow status is set.",
+      "type": "string"
     }
   },
   "required": [
