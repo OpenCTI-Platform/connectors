@@ -2,7 +2,7 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from src import (
-    ConfigLoader,
+    ConnectorSettings,
     SekoiaConnector,
 )
 
@@ -17,9 +17,9 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigLoader()
-        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
-        connector = SekoiaConnector(config, helper)
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+        connector = SekoiaConnector(settings, helper)
         connector.run()
     except Exception:
         traceback.print_exc()

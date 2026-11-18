@@ -5,13 +5,13 @@ import sys
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
 from posixpath import join as urljoin
-from typing import Any, Dict, Iterable, List, Set
+from typing import Dict, Iterable, List, Set
 
 import requests
 from dateutil.parser import ParserError, parse
-from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils, get_config_variable
+from pycti import OpenCTIConnectorHelper, OpenCTIStix2Utils
 from requests import RequestException
-from src.connector.models import ConfigLoader
+from src.connector.settings import ConnectorSettings
 
 ## MODIFICATION BY CYRILYXE (OPENCTI 6.0.5, the 2022-08-12)
 # By default, the def '_load_data_sets' (line 370ish in this file) uses relative path
@@ -24,7 +24,7 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 
 
 class SekoiaConnector(object):
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config
 
         self.config = config
@@ -99,12 +99,6 @@ class SekoiaConnector(object):
         self.helper.schedule_iso(
             message_callback=self.process_message, duration_period=self.duration_period
         )
-
-    @staticmethod
-    def get_config(name: str, config, default: Any = None):
-        env_name = f"SEKOIA_{name.upper()}"
-        result = get_config_variable(env_name, ["sekoia", name], config)
-        return result or default
 
     def get_collection_url(self):
         return urljoin(

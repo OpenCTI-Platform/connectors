@@ -1,7 +1,6 @@
-from src.connector import ConfigLoader, ConnectorSettings, SekoiaConnector
+from src.connector import ConnectorSettings, SekoiaConnector
 
 __all__ = [
     "SekoiaConnector",
-    "ConfigLoader",
     "ConnectorSettings",
 ]
