@@ -192,6 +192,7 @@ def test_high_fanout_is_processed_and_sent_in_bounded_chunks():
         ]
     )
     data = payload()
+    data["event_type"] = "INTERNAL_ENRICHMENT"  # direct enrichment is chunked
     data["stix_entity"]["name"] = " ".join(
         f"CVE-2024-{i:04d}" for i in range(MAX_CVES_PER_ENTITY + 1)
     )
@@ -216,6 +217,25 @@ def test_high_fanout_is_processed_and_sent_in_bounded_chunks():
         for obj in objects:
             if obj["type"] == "relationship":
                 assert {obj["source_ref"], obj["target_ref"]} <= ids
+
+
+def test_playbook_step_sends_one_complete_bundle_across_chunks():
+    connector = _make_enrichment_connector()
+    connector.converter.client_api.get_vulnerability_by_id = AsyncMock(
+        side_effect=lambda cid, **kw: make_vulnerability(cid)
+    )
+    data = payload()  # no event_type: playbook execution
+    count = CVES_PER_CHUNK * 2 + 1
+    data["stix_entity"]["name"] = " ".join(f"CVE-2024-{i:04d}" for i in range(count))
+    assert f"Enriched {count} CVE" in connector.process_message(data)
+    assert connector.helper.send_stix2_bundle.call_count == 1
+    objects = json.loads(connector.helper.send_stix2_bundle.call_args.kwargs["bundle"])[
+        "objects"
+    ]
+    vulnerabilities = {o["id"] for o in objects if o["type"] == "vulnerability"}
+    assert len(vulnerabilities) == count
+    report = next(o for o in objects if o["type"] == "report")
+    assert vulnerabilities <= set(report["object_refs"])
 
 
 def test_chunk_splitting_preserves_existing_and_previous_vulnerability_refs():

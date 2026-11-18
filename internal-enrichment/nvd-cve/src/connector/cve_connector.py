@@ -368,7 +368,10 @@ class CVEConnector:
         entity_id = data.get("entity_id") or (
             stix_entity.get("id") if stix_entity else None
         )
-        last_successful_bundle: list[dict[str, Any]] | None = None
+        is_playbook = not data.get("event_type")
+        marking_definitions: list[dict[str, Any]] = []
+        playbook_enriched: list[dict[str, Any]] = []
+        playbook_relationships: list[dict[str, Any]] = []
 
         if not stix_entity:
             self.helper.connector_logger.warning(
@@ -424,21 +427,49 @@ class CVEConnector:
                 {"entity_id": entity_id, "cve_ids": cve_ids},
             )
 
-            # Process and send bounded CVE chunks with their dependencies.
+            # Fetch bounded CVE chunks with their dependencies. Direct enrichment
+            # sends one bundle per chunk. A playbook step must emit a single,
+            # complete bundle, so its chunks are accumulated and sent once.
             total_enriched = 0
             total_bundles = 0
             for start in range(0, len(cve_ids), CVES_PER_CHUNK):
-                count, sent, chunk_bundle = self._enrich_and_send_chunk(
+                enriched, relationships, vuln_ids = self._enrich_chunk(
                     cve_ids[start : start + CVES_PER_CHUNK],
                     stix_entity,
                     enrichment_entity,
                     stix_objects,
+                )
+                if not vuln_ids:
+                    continue
+                total_enriched += len(vuln_ids)
+                if is_playbook:
+                    playbook_enriched.extend(enriched)
+                    playbook_relationships.extend(relationships)
+                else:
+                    total_bundles += len(
+                        self._send_bundle(
+                            self._merge_bundle(
+                                enriched,
+                                relationships,
+                                stix_entity,
+                                stix_objects,
+                                marking_definitions,
+                            )
+                        )
+                    )
+            if is_playbook and playbook_enriched:
+                playbook_bundle = self._merge_bundle(
+                    playbook_enriched,
+                    playbook_relationships,
+                    stix_entity,
+                    stix_objects,
                     marking_definitions,
                 )
-                total_enriched += count
-                total_bundles += sent
-                if count:
-                    last_successful_bundle = deepcopy(chunk_bundle)
+                # Drop the accumulators first: if this send fails, the error
+                # path must forward the unchanged input, not retry the same bundle.
+                playbook_enriched.clear()
+                playbook_relationships.clear()
+                total_bundles += len(self._send_bundle(playbook_bundle))
             msg = (
                 f"[CONNECTOR] Enriched {total_enriched} CVE(s) "
                 f"({', '.join(cve_ids)}), sent {total_bundles} bundle(s)."
@@ -458,31 +489,42 @@ class CVEConnector:
             if data.get("event_type"):
                 # Let the worker report direct enrichment as failed.
                 raise
+            # Nothing was sent yet for a playbook step: forward whatever was
+            # enriched so far (or the unchanged input) as one complete bundle.
             self._passthrough_if_playbook(
                 data,
                 (
-                    last_successful_bundle
-                    if last_successful_bundle is not None
+                    self._merge_bundle(
+                        playbook_enriched,
+                        playbook_relationships,
+                        stix_entity,
+                        stix_objects,
+                        marking_definitions,
+                    )
+                    if playbook_enriched
                     else (former_bundle or [])
                 ),
             )
             return error_msg
 
-    def _enrich_and_send_chunk(
+    def _enrich_chunk(
         self,
         cve_ids: list[str],
         stix_entity: dict[str, Any],
         enrichment_entity: dict[str, Any],
         stix_objects: list[dict[str, Any]],
-        marking_definitions: list[dict[str, Any]],
-    ) -> tuple[int, int, list[dict[str, Any]]]:
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+        """Fetch NVD data for a chunk and link it to the triggering entity.
+
+        Returns the enriched objects, the relationships and the vulnerability IDs.
+        """
         # 4. Fetch NVD data and convert to STIX objects
         enriched_objects, vulnerability_ids = asyncio.run(
             self._async_enrich_cves(cve_ids)
         )
 
         if not enriched_objects:
-            return 0, 0, []
+            return [], [], []
 
         # Preserve markings from triggering entity on enriched objects
         self._propagate_markings(stix_entity, enriched_objects)
@@ -508,11 +550,24 @@ class CVEConnector:
             ]
             self._append_container_object_refs(stix_entity, stix_objects, ref_ids)
 
-        # 6. Deduplicate and merge all objects into a single bundle.
-        # If an enriched object has the same STIX ID as an incoming object in
-        # stix_objects (e.g. direct Vulnerability enrichment), merge the NVD
-        # fields onto a copy of the incoming object so existing custom
-        # properties, labels, and markings are preserved.
+        return enriched_objects, relationship_objects, vulnerability_ids
+
+    def _merge_bundle(
+        self,
+        enriched_objects: list[dict[str, Any]],
+        relationship_objects: list[dict[str, Any]],
+        stix_entity: dict[str, Any],
+        stix_objects: list[dict[str, Any]],
+        marking_definitions: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Deduplicate and merge all objects into a single bundle.
+
+        If an enriched object has the same STIX ID as an incoming object in
+        `stix_objects` (e.g. direct Vulnerability enrichment), the NVD fields
+        are merged onto a copy of the incoming object so existing custom
+        properties, labels, and markings are preserved.
+        """
+        author_dict = json.loads(self.converter.author.serialize())
         existing_by_id: dict[str, dict[str, Any]] = {
             obj["id"]: obj
             for obj in stix_objects
@@ -549,9 +604,7 @@ class CVEConnector:
                         base["object_marking_refs"] = merged_markings
                     obj = base
             merged_objects.append(obj)
-
-        bundles_sent = self._send_bundle(merged_objects)
-        return len(vulnerability_ids), len(bundles_sent), merged_objects
+        return merged_objects
 
     def run(self) -> None:
         """Start listening for enrichment messages from OpenCTI."""

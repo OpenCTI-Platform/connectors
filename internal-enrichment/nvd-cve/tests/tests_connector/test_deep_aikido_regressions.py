@@ -230,7 +230,7 @@ def test_direct_partial_lookup_failure_does_not_send_a_successful_chunk():
 
 
 @pytest.mark.parametrize("failure_stage", ["lookup", "send"])
-def test_later_chunk_failure_preserves_last_successful_playbook_bundle(failure_stage):
+def test_playbook_failure_forwards_one_complete_fallback_bundle(failure_stage):
     connector = _make_enrichment_connector()
 
     async def lookup(cve_id, **kwargs):
@@ -243,8 +243,7 @@ def test_later_chunk_failure_preserves_last_successful_playbook_bundle(failure_s
     )
     if failure_stage == "send":
         connector.helper.send_stix2_bundle.side_effect = [
-            ["bundle-1"],
-            RuntimeError("Second send failed"),
+            RuntimeError("Playbook send failed"),
             ["fallback"],
         ]
     data = payload()
@@ -255,13 +254,18 @@ def test_later_chunk_failure_preserves_last_successful_playbook_bundle(failure_s
     original = deepcopy(data)
     assert "Error while enriching" in connector.process_message(data)
     calls = connector.helper.send_stix2_bundle.call_args_list
-    assert len(calls) == (2 if failure_stage == "lookup" else 3)
-    successful = json.loads(calls[0].kwargs["bundle"])["objects"]
     fallback = json.loads(calls[-1].kwargs["bundle"])["objects"]
-    assert fallback == successful
     vulnerabilities = {obj["id"] for obj in fallback if obj["type"] == "vulnerability"}
-    assert len(vulnerabilities) == 5
-    report = next(obj for obj in fallback if obj["type"] == "report")
-    assert vulnerabilities <= set(report["object_refs"])
-    assert any(obj["type"] == "marking-definition" for obj in fallback)
+    if failure_stage == "lookup":
+        # Nothing was sent before the failure: the results gathered so far are
+        # forwarded once, as one complete bundle.
+        assert len(calls) == 1
+        assert len(vulnerabilities) == 5
+        report = next(obj for obj in fallback if obj["type"] == "report")
+        assert vulnerabilities <= set(report["object_refs"])
+        assert any(obj["type"] == "marking-definition" for obj in fallback)
+    else:
+        # The complete bundle failed to send: forward the unchanged input.
+        assert len(calls) == 2
+        assert not vulnerabilities
     assert data == original

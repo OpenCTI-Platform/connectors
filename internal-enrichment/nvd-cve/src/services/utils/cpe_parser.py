@@ -1,5 +1,9 @@
 import re
 
+# A CPE 2.3 component is a run of escaped characters (e.g. "\\:" or "\\*")
+# or any character other than the ":" separator and the "\\" escape character.
+_CPE23_COMPONENT = r"(?:\\.|[^:\\])+"
+
 CPE_PATTERNS = {
     "cpe:/": (
         r"^cpe:/(?P<part>[a-z]):"
@@ -9,9 +13,9 @@ CPE_PATTERNS = {
     ),
     "cpe:2.3": (
         r"^cpe:2\.3:(?P<part>[a-z]+):"
-        r"(?P<vendor>[^:]+):"
-        r"(?P<product>[^:]+):"
-        r"(?P<version>[^:]+)"
+        rf"(?P<vendor>{_CPE23_COMPONENT}):"
+        rf"(?P<product>{_CPE23_COMPONENT}):"
+        rf"(?P<version>{_CPE23_COMPONENT})"
     ),
 }
 

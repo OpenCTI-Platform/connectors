@@ -5,6 +5,6 @@ init:
 
 test:
 	echo "Launching tests suite..."
-	pytest
+	cd .. && python -m pytest tests
 
 .PHONY: init test

@@ -13,6 +13,7 @@ CVSS31_MAPPING = {
 }
 
 CVSS2_MAPPING = {
+    "x_opencti_cvss_v2_vector_string": "vectorString",
     "x_opencti_cvss_v2_base_score": "baseScore",
     "x_opencti_cvss_v2_access_vector": "accessVector",
     "x_opencti_cvss_v2_access_complexity": "accessComplexity",
@@ -23,6 +24,7 @@ CVSS2_MAPPING = {
 }
 
 CVSS40_MAPPING = {
+    "x_opencti_cvss_v4_vector_string": "vectorString",
     "x_opencti_cvss_v4_base_score": "baseScore",
     "x_opencti_cvss_v4_base_severity": "baseSeverity",
     "x_opencti_cvss_v4_attack_vector": "attackVector",
