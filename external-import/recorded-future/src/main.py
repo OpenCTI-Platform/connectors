@@ -54,6 +54,14 @@ class BaseRFConnector:
         self.risk_as_score = self.config.recorded_future.risk_as_score
         self.risk_threshold = self.config.recorded_future.risk_threshold
         self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
+        # Keyed like RISK_LIST_TYPE_MAPPER, None falls back to risk_list_threshold
+        self.risk_list_thresholds = {
+            "IpAddress": self.config.recorded_future.risk_list_threshold_ip,
+            "InternetDomainName": self.config.recorded_future.risk_list_threshold_domain,
+            "URL": self.config.recorded_future.risk_list_threshold_url,
+            "Hash": self.config.recorded_future.risk_list_threshold_hash,
+            "Vuln": self.config.recorded_future.risk_list_threshold_vulnerability,
+        }
         self.analyst_notes_guess_relationships = (
             self.config.recorded_future.analyst_notes_guess_relationships
         )
@@ -179,6 +187,7 @@ class RFConnector:
                     self.RF.risklist_related_entities,
                     self.RF.rf_riskrules_as_label,
                     self.RF.ta_to_intrusion_set,
+                    self.RF.risk_list_thresholds,
                 )
                 self.risk_list.start()
                 threads.append(self.risk_list)
@@ -193,7 +202,6 @@ class RFConnector:
                     self.RF.helper,
                     self.RF.rfapi,
                     self.RF.tlp,
-                    self.RF.risk_list_threshold,
                 )
                 self.threat_maps.start()
                 threads.append(self.threat_maps)
