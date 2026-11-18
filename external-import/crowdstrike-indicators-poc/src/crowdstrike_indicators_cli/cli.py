@@ -157,10 +157,13 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"file holding the credentials (default: ./{DEFAULT_ENV_FILE})",
     )
     extract.add_argument(
-        "--dump-raw",
+        "--output",
         type=Path,
-        metavar="PATH",
-        help="also write every raw API page received, as a JSON array",
+        metavar="FILE",
+        help=(
+            "write the result to FILE instead of standard output, "
+            "only when the extraction succeeds"
+        ),
     )
 
     transform = commands.add_parser(
@@ -209,10 +212,10 @@ def _load_config(env_file: Path) -> dict[str, str | None]:
     }
 
 
-def _write_dump(path: Path, pages: list[dict[str, Any]]) -> None:
+def _write_output(path: Path, text: str, count: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(pages, indent=2) + "\n", encoding="utf-8")
-    LOGGER.info("Wrote %d raw page(s) to %s", len(pages), path)
+    path.write_text(text + "\n", encoding="utf-8")
+    LOGGER.info("Wrote %d indicator(s) to %s", count, path)
 
 
 def _report_validation_error(error: IndicatorValidationError) -> None:
@@ -243,13 +246,8 @@ def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
         )
         return EXIT_USAGE_ERROR
 
-    pages: list[dict[str, Any]] = []
     client = build_client(config[CLIENT_ID], config[CLIENT_SECRET], config[BASE_URL])
-    extractor = CrowdStrikeIndicatorExtractor(
-        client,
-        CrowdStrikeActorEnricher(client),
-        on_raw_page=pages.append if args.dump_raw else None,
-    )
+    extractor = CrowdStrikeIndicatorExtractor(client, CrowdStrikeActorEnricher(client))
 
     try:
         result = extractor.extract(args.from_date, args.max_element_count)
@@ -259,9 +257,6 @@ def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
     except IndicatorValidationError as error:
         _report_validation_error(error)
         return EXIT_FAILURE
-    finally:
-        if args.dump_raw:
-            _write_dump(args.dump_raw, pages)
 
     output = [
         {
@@ -272,7 +267,11 @@ def _run_extract(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
         }
         for dt, indicator in result
     ]
-    print(json.dumps(output, indent=2))
+    text = json.dumps(output, indent=2)
+    if args.output is not None:
+        _write_output(args.output, text, len(result))
+    else:
+        print(text)
     LOGGER.info("Extracted %d indicator(s)", len(result))
     return EXIT_OK
 

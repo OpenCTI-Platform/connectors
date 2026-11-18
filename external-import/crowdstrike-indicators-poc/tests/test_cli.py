@@ -217,35 +217,42 @@ def test_logs_go_to_standard_error_only(monkeypatch, credentials, capsys):
     assert "Fetched indicator page" in captured.err
 
 
-# --- Raw dump ----------------------------------------------------------------
+# --- Output file -------------------------------------------------------------
 
 
-def test_dump_raw_on_success(monkeypatch, credentials, isolated):
-    api = FakeIndicatorsAPI([make_indicator(i) for i in range(3)])
-    _install(monkeypatch, api)
+def test_output_file_holds_what_standard_output_would(
+    monkeypatch, credentials, isolated, capsys
+):
+    indicators = [make_indicator(i) for i in range(2)]
+    _install(monkeypatch, FakeIndicatorsAPI(indicators))
+    assert _extract("--from", FROM, "--max", "10") == 0
+    printed = capsys.readouterr().out
 
-    dump = isolated / "dumps" / "pages.json"
-    assert _extract("--from", FROM, "--max", "10", "--dump-raw", str(dump)) == 0
+    _install(monkeypatch, FakeIndicatorsAPI(indicators))
+    output = isolated / "out" / "result.json"
+    assert _extract("--from", FROM, "--max", "10", "--output", str(output)) == 0
 
-    pages = json.loads(dump.read_text())
-    # One page with the 3 rows, then the page repeating the last one.
-    assert len(pages) == len(api.calls) == 2
-    assert [raw["id"] for raw in pages[0]["resources"]] == ["ioc-0", "ioc-1", "ioc-2"]
+    assert capsys.readouterr().out == ""
+    assert output.read_text() == printed
+    assert [item["indicator"]["id"] for item in json.loads(printed)] == [
+        "ioc-0",
+        "ioc-1",
+    ]
 
 
-def test_dump_raw_on_validation_failure(monkeypatch, credentials, isolated, capsys):
+def test_no_output_file_on_failure(monkeypatch, credentials, isolated, capsys):
     page_1 = {"resources": [make_indicator(1)]}
     page_2 = {"resources": [make_indicator(1), make_indicator(2, _marker="bad")]}
     _install(monkeypatch, ScriptedClient([ok(page_1), ok(page_2)]))
 
-    dump = isolated / "pages.json"
-    assert _extract("--from", FROM, "--max", "10", "--dump-raw", str(dump)) == 1
+    output = isolated / "result.json"
+    assert _extract("--from", FROM, "--max", "10", "--output", str(output)) == 1
 
-    assert json.loads(dump.read_text()) == [page_1, page_2]
+    assert not output.exists()
     assert capsys.readouterr().out == ""
 
 
-def test_no_dump_without_the_option(monkeypatch, credentials, isolated):
+def test_no_file_without_the_option(monkeypatch, credentials, isolated):
     _install(monkeypatch, FakeIndicatorsAPI([make_indicator(1)]))
     assert _extract("--from", FROM, "--max", "10") == 0
     assert [p.name for p in isolated.iterdir()] == [".env"]
@@ -288,15 +295,13 @@ def test_secret_is_never_displayed(monkeypatch, credentials, capsys, isolated):
         {"status_code": 500, "body": {"errors": [{"message": "boom"}]}},
     ]
     _install(monkeypatch, ScriptedClient(responses))
-    dump = isolated / "pages.json"
 
     args = ["--from", FROM, "--max", "5", "--log-level", "DEBUG"]
-    assert _extract(*args, "--dump-raw", str(dump)) == 1
+    assert _extract(*args) == 1
 
     captured = capsys.readouterr()
     assert SECRET not in captured.out
     assert SECRET not in captured.err
-    assert SECRET not in dump.read_text()
 
 
 # --- Subcommands -------------------------------------------------------------
@@ -610,18 +615,6 @@ def test_extract_output_holds_the_resolved_actors(monkeypatch, credentials, caps
     assert first["indicator"]["actor_objects_list"] == [SALTY]
     assert second["indicator"]["actor_objects_list"] == []
     assert api.tokens == ["SALTYSPIDER"]
-
-
-def test_dump_raw_leaves_actor_responses_out(monkeypatch, credentials, isolated):
-    page = {"resources": [make_indicator(1, actors=["SALTYSPIDER"])]}
-    client = ScriptedClient([ok(page)], actors=[SALTY])
-    _install(monkeypatch, client)
-
-    dump = isolated / "pages.json"
-    assert _extract("--from", FROM, "--max", "1", "--dump-raw", str(dump)) == 0
-
-    assert len(client.actor_calls) == 1
-    assert json.loads(dump.read_text()) == [page]
 
 
 def test_transform_takes_an_element_of_the_extract_output(

@@ -513,9 +513,9 @@ subcommands:
 # The 50 earliest indicators from 1 November 2026 (UTC) onwards
 uv run crowdstrike-indicators-cli extract --from 2026-11-01T00:00:00Z --max 50
 
-# Same, and also save the raw API pages, to study the real response shape
+# Same, written to a file instead of standard output, to read it later
 uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 50 \
-    --dump-raw raw-dumps/first.raw.json
+    --output raw-dumps/2026-11-01.json
 
 # Credentials from another file, with debug logs
 uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 10 \
@@ -527,7 +527,7 @@ uv run crowdstrike-indicators-cli extract --from 2026-11-01 --max 10 \
 | `--from DATETIME` | required. ISO 8601. Without a timezone, it is read as UTC. |
 | `--max N` | required. Maximum number of indicators, 1 or more. |
 | `--env-file PATH` | credentials file, `./.env` by default. |
-| `--dump-raw PATH` | also write every raw indicator API page received, as a JSON array, even when the extraction fails. Actors API responses are not written: the actors are in the output. `raw-dumps/` and `*.raw.json` are git-ignored. |
+| `--output FILE` | write the result, the same JSON array as on standard output, to `FILE` instead, only when the extraction succeeds. Missing parent directories are created and an existing file is replaced. `raw-dumps/` and `*.raw.json` are git-ignored. |
 | `--log-level LEVEL` | `DEBUG`, `INFO` (default), `WARNING` or `ERROR`. |
 
 Standard output holds a single JSON array, so it can be piped (`| jq ...`).
@@ -681,7 +681,8 @@ bash run_test.sh external-import/crowdstrike-indicators-poc/tests/test-requireme
   always moves forward.
 - **The model is inferred, not verified.** Fields come from FalconPy's filter
   documentation and from the existing CrowdStrike connector. It is
-  deliberately lenient. Use `--dump-raw` to see the real shape.
+  deliberately lenient. The `extract` output keeps every field the API sent,
+  undeclared ones included, so it shows the real shape.
 - **One invalid indicator stops the run**, with nothing printed on standard
   output. This is on purpose while the model is being refined.
 - **The actor matching rule is provisional.** Nothing yet shows that the
