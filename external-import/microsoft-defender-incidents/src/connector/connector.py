@@ -356,6 +356,9 @@ class MicrosoftDefenderIncidentsConnector:
             # A token is valid for 1 hour so we get a fresh one on every run
             self.client.set_oauth_token()
 
+            # Resolve the optional Defender status mapping into Status ids once per run
+            self.converter_to_stix.refresh_workflow_ids()
+
             # Get incidents. If a page fails, the incidents fetched so far are still sent (their ids are
             # deterministic) but the state does not move: older incidents of the window were never fetched.
             fetch_complete = True
