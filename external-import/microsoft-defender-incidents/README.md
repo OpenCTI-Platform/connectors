@@ -137,7 +137,10 @@ every Defender update re-fetched by the connector upserts the same Case-Incident
   Names are resolved once per run against the statuses of the Case-Incident workflow (Settings > Customization >
   Case-Incident); a name with no matching status is logged as a warning and ignored. When the incident's status is
   mapped, the Case-Incident is sent with that workflow status; an unmapped status leaves the workflow status as it
-  is. Without a mapping (the default) no workflow status is sent.
+  is. Without a mapping (the default) no workflow status is sent. The upsert changes the workflow status of an
+  existing Case-Incident only when the connector's user confidence level is at least the Case-Incident's confidence;
+  a Case-Incident edited by an analyst with a higher confidence keeps its workflow status. Unknown Defender values
+  (e.g. `unknownFutureValue`) are left unmapped.
 
 Note on labels after a status change: the platform upsert adds labels to the existing ones, it does not replace
 them. A Case-Incident that moved from `active` to `resolved` in Defender keeps `defender-status:active` next to
